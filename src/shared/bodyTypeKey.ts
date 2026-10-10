@@ -32,9 +32,15 @@ function squash(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
-/** `High metal content world` and `High metal content body` are the same rock. */
+/**
+ * `High metal content world` and `High metal content body` are the same rock.
+ *
+ * Gas giants first (code review B7, 2026-10-11): "Gas giant with ammonia-based life" contains
+ * "ammonia" and was counted with the ammonia worlds.
+ */
 export function bodyTypePlanetClass(subType: string | null | undefined): string {
   const t = (subType ?? "").toLowerCase();
+  if (t.includes("gas giant") || t.includes("water giant")) return squash(t).slice(0, 14) || "?";
   if (t.includes("rocky ice")) return "rockyice";
   if (t.includes("high metal")) return "hmc";
   if (t.includes("metal rich") || t.includes("metal-rich")) return "metalrich";
@@ -54,7 +60,10 @@ export function bodyTypePlanetClass(subType: string | null | undefined): string 
  */
 export function bodyTypeAtmosphere(atmosphereType: string | null | undefined): string {
   const raw = (atmosphereType ?? "").toLowerCase().replace(/^(hot\s+)?(thin|thick)\s+/, "");
-  return squash(raw.replace(/\s+atmosphere$/, "")).replace(/rich$/, "") || "none";
+  const key = squash(raw.replace(/\s+atmosphere$/, "")).replace(/rich$/, "");
+  // One token for an airless body (code review B6, 2026-10-11): the journal writes "None", Spansh and
+  // EDSM "No atmosphere", which folded to "no" and split every airless cell of the prior in two.
+  return !key || key === "no" || key === "none" ? "none" : key;
 }
 
 /**

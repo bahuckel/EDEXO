@@ -68,6 +68,10 @@ type PendingMatch = Omit<SpeciesMatch, "photoUrl" | "photoNote" | "priceCredits"
  * One row per named genus, the least-objected-to first. Everything else stays demoted: this is a
  * floor under the shown list, not a reprieve for the whole genus.
  */
+/** A row's soft-band factor, to carry over when it is restored. */
+const factorOf = (m: PendingMatch): { presenceFactor?: number } =>
+  m.presenceFactor !== undefined ? { presenceFactor: m.presenceFactor } : {};
+
 function restoreNamedGenera(
   strict: PendingMatch[],
   unlikely: PendingMatch[],
@@ -118,7 +122,9 @@ function restoreNamedGenera(
       );
     const best = candidates[0];
     if (!best) continue;
-    strict.push({ entry: best.m.entry, reasons: best.m.reasons });
+    // The row's soft factor comes back with it (code review B11, 2026-10-11): a row kept at ×0.07 by a
+    // band before a later gate demoted it was restored at full weight.
+    strict.push({ entry: best.m.entry, reasons: best.m.reasons, ...factorOf(best.m) });
     restored.add(best.i);
   }
   if (!restored.size) return;
@@ -170,7 +176,7 @@ export function restoreDemotionsBelowSignalCount(
   const restored = new Set<number>();
   for (const { m, i } of eligible) {
     if (generaOf(strict).size >= signalCount) break;
-    strict.push({ entry: m.entry, reasons: m.reasons, restoredForSignalCount: true });
+    strict.push({ entry: m.entry, reasons: m.reasons, restoredForSignalCount: true, ...factorOf(m) });
     restored.add(i);
   }
   if (restored.size === 0) return;
