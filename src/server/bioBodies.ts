@@ -42,7 +42,7 @@
  * is built from a dump only its owner has, so a missing file is the ordinary case and not an error
  * — the feature hides itself, exactly as the galaxy search already does without `bio-index.bin`.
  */
-import { closeSync, existsSync, openSync, readFileSync, readSync, statSync } from "node:fs";
+import { closeSync, existsSync, openSync, readSync, statSync } from "node:fs";
 import path from "node:path";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 
@@ -186,29 +186,39 @@ export interface BioBodies {
 
 class Cursor implements BioBodyCursor {
   bodyIndex = -1;
+  // The body's record, resolved to its page once per seek (plan 4.2: the file is read through pages).
+  private v!: DataView;
   private o = 0;
+  // Its version-2 extras, resolved on first use.
+  private ev: DataView | null = null;
+  private eo = 0;
   constructor(private readonly f: Bodies) {}
   seek(bodyIndex: number): void {
     this.bodyIndex = bodyIndex;
-    this.o = this.f.bodiesAt + bodyIndex * BODY_RECORD;
+    [this.v, this.o] = this.f.view.record(this.f.bodiesAt + bodyIndex * BODY_RECORD, BODY_RECORD);
+    this.ev = null;
+  }
+  private ext(): DataView {
+    if (!this.ev) [this.ev, this.eo] = this.f.view.record(this.f.bodyExtAt + this.bodyIndex * BODY_EXT, BODY_EXT);
+    return this.ev;
   }
   get systemIndex(): number {
-    return this.f.view.getUint32(this.o, true);
+    return this.v.getUint32(this.o, true);
   }
   get bodyId(): number {
-    return this.f.view.getUint16(this.o + 4, true);
+    return this.v.getUint16(this.o + 4, true);
   }
   get subType(): string {
-    return this.f.strings.subTypes[this.f.view.getUint8(this.o + 6) - 1] ?? "";
+    return this.f.strings.subTypes[this.v.getUint8(this.o + 6) - 1] ?? "";
   }
   get atmosphere(): string {
-    return this.f.strings.atmospheres[this.f.view.getUint8(this.o + 7) - 1] ?? "";
+    return this.f.strings.atmospheres[this.v.getUint8(this.o + 7) - 1] ?? "";
   }
   get volcanism(): string {
-    return this.f.strings.volcanisms[this.f.view.getUint8(this.o + 8) - 1] ?? "";
+    return this.f.strings.volcanisms[this.v.getUint8(this.o + 8) - 1] ?? "";
   }
   get flags(): number {
-    return this.f.view.getUint8(this.o + 9);
+    return this.v.getUint8(this.o + 9);
   }
   get landable(): boolean {
     return (this.flags & BODY_LANDABLE) !== 0;
@@ -217,25 +227,25 @@ class Cursor implements BioBodyCursor {
     return (this.flags & BODY_DSS) !== 0;
   }
   get temperatureK(): number {
-    return this.f.view.getFloat32(this.o + 10, true);
+    return this.v.getFloat32(this.o + 10, true);
   }
   get gravityG(): number {
-    return this.f.view.getFloat32(this.o + 14, true);
+    return this.v.getFloat32(this.o + 14, true);
   }
   get pressureAtm(): number {
-    return this.f.view.getFloat32(this.o + 18, true);
+    return this.v.getFloat32(this.o + 18, true);
   }
   get bioCount(): number {
-    return this.f.view.getUint8(this.o + 22);
+    return this.v.getUint8(this.o + 22);
   }
   get arrivalLs(): number | null {
     if (this.f.bodyExtAt < 0) return null;
-    const v = this.f.view.getFloat32(this.f.bodyExtAt + this.bodyIndex * BODY_EXT, true);
+    const v = this.ext().getFloat32(this.eo, true);
     return Number.isFinite(v) ? v : null;
   }
   get hostStarType(): string {
     if (this.f.bodyExtAt < 0) return "";
-    const ix = this.f.view.getUint16(this.f.bodyExtAt + this.bodyIndex * BODY_EXT + 4, true);
+    const ix = this.ext().getUint16(this.eo + 4, true);
     return this.f.strings.hostStarTypes[ix - 1] ?? "";
   }
   snapshot(): BioBodyRow {
@@ -267,8 +277,119 @@ interface StringTables {
   hostStarTypes: string[];
 }
 
+/**
+ * The file read through a small page cache instead of held whole (plan 4.2, 2026-10-11).
+ *
+ * The body file is 683 MB since version 2, and `readFileSync` kept all of it for as long as the map
+ * had been used. Its tables are fixed-stride and a region's bodies sit together, so a walk touches a
+ * few pages in order: 1 MB pages, at most 32 held, the least recently used dropped first. The getters
+ * are DataView's, so the reader's offset arithmetic is unchanged.
+ */
+const PAGE = 1 << 20;
+const MAX_PAGES = 32;
+export class PagedFile {
+  /** Each page with its DataView, made once when the page is read (the getters are DataView's). */
+  private readonly pages = new Map<number, { b: Buffer; v: DataView }>();
+  private fd: number | null = null;
+  constructor(
+    private readonly file: string,
+    readonly length: number,
+  ) {}
+  /** The page used last: a walk reads the same page many times in a row, so it skips the lookup. */
+  private lastN = -1;
+  private last: { b: Buffer; v: DataView } | null = null;
+  private view(n: number): DataView {
+    return this.entry(n).v;
+  }
+  private page(n: number): Buffer {
+    return this.entry(n).b;
+  }
+  private entry(n: number): { b: Buffer; v: DataView } {
+    if (n === this.lastN && this.last) return this.last;
+    // First in, first out: a walk reads four tables in step, each in order, so the oldest page is the
+    // one done with; reordering on every hit cost more than it saved.
+    let e = this.pages.get(n);
+    if (!e) {
+      // Opened on first read, and again if the idle release closed it under a walk still running.
+      if (this.fd === null) this.fd = openSync(this.file, "r");
+      const start = n * PAGE;
+      const size = Math.max(0, Math.min(PAGE, this.length - start));
+      const b = Buffer.allocUnsafe(size);
+      let got = 0;
+      while (got < size) {
+        const r = readSync(this.fd, b, got, size - got, start + got);
+        if (r <= 0) break;
+        got += r;
+      }
+      e = { b, v: new DataView(b.buffer, b.byteOffset, b.byteLength) };
+      this.pages.set(n, e);
+      if (this.pages.size > MAX_PAGES) this.pages.delete(this.pages.keys().next().value!);
+    }
+    this.lastN = n;
+    this.last = e;
+    return e;
+  }
+  /**
+   * A record of `len` bytes at `o` as a view and the record's offset in it: the page's own view when the
+   * record fits in the page (nearly always), else a copy. Resolved once per record, so a reader that
+   * takes ten fields of it pays the page lookup once.
+   */
+  record(o: number, len: number): [DataView, number] {
+    const at = o % PAGE;
+    if (at + len <= PAGE) return [this.view((o / PAGE) | 0), at];
+    const b = this.bytes(o, len);
+    return [new DataView(b.buffer, b.byteOffset, b.byteLength), 0];
+  }
+  /** `len` bytes at `o`, from one page when they fit in it, else copied across. */
+  bytes(o: number, len: number): Buffer {
+    const n = Math.floor(o / PAGE);
+    const at = o - n * PAGE;
+    if (at + len <= PAGE) return this.page(n).subarray(at, at + len);
+    const out = Buffer.allocUnsafe(len);
+    let done = 0;
+    while (done < len) {
+      const pn = Math.floor((o + done) / PAGE);
+      const pa = o + done - pn * PAGE;
+      const take = Math.min(len - done, PAGE - pa);
+      this.page(pn).copy(out, done, pa, pa + take);
+      done += take;
+    }
+    return out;
+  }
+  getUint8(o: number): number {
+    return this.page((o / PAGE) | 0)[o % PAGE]!;
+  }
+  // Read straight off the page when the value fits in it (nearly always); across two pages, copied.
+  getUint16(o: number, _le?: boolean): number {
+    const at = o % PAGE;
+    return at + 2 <= PAGE ? this.view((o / PAGE) | 0).getUint16(at, true) : this.bytes(o, 2).readUInt16LE(0);
+  }
+  getUint32(o: number, _le?: boolean): number {
+    const at = o % PAGE;
+    return at + 4 <= PAGE ? this.view((o / PAGE) | 0).getUint32(at, true) : this.bytes(o, 4).readUInt32LE(0);
+  }
+  getFloat32(o: number, _le?: boolean): number {
+    const at = o % PAGE;
+    return at + 4 <= PAGE ? this.view((o / PAGE) | 0).getFloat32(at, true) : this.bytes(o, 4).readFloatLE(0);
+  }
+  getBigUint64(o: number, _le?: boolean): bigint {
+    const at = o % PAGE;
+    return at + 8 <= PAGE ? this.view((o / PAGE) | 0).getBigUint64(at, true) : this.bytes(o, 8).readBigUInt64LE(0);
+  }
+  toString(encoding: BufferEncoding, start: number, end: number): string {
+    return end > start ? this.bytes(start, end - start).toString(encoding) : "";
+  }
+  close(): void {
+    if (this.fd !== null) closeSync(this.fd);
+    this.fd = null;
+    this.pages.clear();
+    this.lastN = -1;
+    this.last = null;
+  }
+}
+
 class Bodies implements BioBodies {
-  readonly view: DataView;
+  readonly view: PagedFile;
   readonly strings: StringTables;
   readonly systemCount: number;
   readonly bodyCount: number;
@@ -291,14 +412,17 @@ class Bodies implements BioBodies {
   readonly sysExtAt: number;
   readonly bodyExtAt: number;
 
+  /** Each system's region, kept in memory (5 MB) so a region walk does not read the system table. */
+  private readonly regionOf: Uint8Array;
+
   constructor(
-    private readonly buf: Buffer,
+    private readonly buf: PagedFile,
     fileBytes: number,
   ) {
     if (buf.length < HEADER || buf.toString("ascii", 0, 8) !== MAGIC) {
       throw new Error("not a bio bodies file");
     }
-    this.view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+    this.view = buf;
     this.fileBytes = fileBytes;
     this.systemCount = this.view.getUint32(12, true);
     this.bodyCount = this.view.getUint32(16, true);
@@ -329,6 +453,8 @@ class Bodies implements BioBodies {
     this.sysNameOffsets[this.systemCount] = at;
     if (at > buf.length) throw new Error("bio bodies system name run is truncated");
     this.bodyNamesAt = at;
+    this.regionOf = new Uint8Array(this.systemCount);
+    for (let i = 0; i < this.systemCount; i++) this.regionOf[i] = this.view.getUint8(this.systemsAt + i * SYS_RECORD + 20);
     // Version 2 appends its runs at the end, so they are found from the file's length.
     const version = this.view.getUint16(8, true);
     const extBytes = this.systemCount * SYS_EXT + this.bodyCount * BODY_EXT;
@@ -348,17 +474,17 @@ class Bodies implements BioBodies {
   }
 
   system(i: number): BioBodySystem {
-    const o = this.sysOffset(i);
+    const [v, o] = this.view.record(this.sysOffset(i), SYS_RECORD);
     return {
       index: i,
-      id64: this.view.getBigUint64(o, true),
+      id64: v.getBigUint64(o, true),
       name: this.systemName(i),
-      x: this.view.getFloat32(o + 8, true),
-      y: this.view.getFloat32(o + 12, true),
-      z: this.view.getFloat32(o + 16, true),
-      regionId: this.view.getUint8(o + 20),
-      starType: this.strings.starTypes[this.view.getUint8(o + 21) - 1] ?? "",
-      bioBodyCount: this.view.getUint16(o + 22, true),
+      x: v.getFloat32(o + 8, true),
+      y: v.getFloat32(o + 12, true),
+      z: v.getFloat32(o + 16, true),
+      regionId: v.getUint8(o + 20),
+      starType: this.strings.starTypes[v.getUint8(o + 21) - 1] ?? "",
+      bioBodyCount: v.getUint16(o + 22, true),
       ...this.systemExtras(i),
     };
   }
@@ -417,7 +543,7 @@ class Bodies implements BioBodies {
     const cur = this.cursor;
     for (let i = 0; i < this.systemCount; i++) {
       const o = this.sysOffset(i);
-      if (this.view.getUint8(o + 20) !== regionId) continue;
+      if (this.regionOf[i] !== regionId) continue;
       const n = this.view.getUint16(o + 22, true);
       const first = this.view.getUint32(o + 24, true);
       for (let b = 0; b < n; b++) {
@@ -432,12 +558,12 @@ class Bodies implements BioBodies {
     // systems, and growing an array to that through doubling costs more than the second pass.
     let n = 0;
     for (let i = 0; i < this.systemCount; i++) {
-      if (this.view.getUint8(this.sysOffset(i) + 20) === regionId) n++;
+      if (this.regionOf[i] === regionId) n++;
     }
     const out = new Uint32Array(n);
     let at = 0;
     for (let i = 0; i < this.systemCount && at < n; i++) {
-      if (this.view.getUint8(this.sysOffset(i) + 20) === regionId) out[at++] = i;
+      if (this.regionOf[i] === regionId) out[at++] = i;
     }
     return out;
   }
@@ -455,7 +581,7 @@ class Bodies implements BioBodies {
 
   systemsByRegion(): Uint32Array {
     const out = new Uint32Array(256);
-    for (let i = 0; i < this.systemCount; i++) out[this.view.getUint8(this.sysOffset(i) + 20)]!++;
+    for (let i = 0; i < this.systemCount; i++) out[this.regionOf[i]!]!++;
     return out;
   }
 
@@ -529,20 +655,32 @@ export function bioBodiesPath(): string {
 
 let cached: BioBodies | null | undefined;
 
-/** The body file, or null when this machine has not built one. Read once and held. */
+let cachedFile: PagedFile | null = null;
+
+/**
+ * The body file, or null when this machine has not built one. Opened once and kept open, read through
+ * the page cache; `clearBioBodiesCache` (the galaxy map's idle release) closes it.
+ */
 export function loadBioBodies(file = bioBodiesPath()): BioBodies | null {
   if (cached !== undefined) return cached;
   if (!existsSync(file)) return (cached = null);
+  let paged: PagedFile | null = null;
   try {
-    cached = new Bodies(readFileSync(file), statSync(file).size);
+    const size = statSync(file).size;
+    paged = new PagedFile(file, size);
+    cached = new Bodies(paged, size);
+    cachedFile = paged;
   } catch (e) {
+    paged?.close();
     console.warn(`ED Exo Compare — bio bodies file unreadable, continuing without it: ${String(e)}`);
     cached = null;
   }
   return cached;
 }
 
-/** Test seam. */
+/** Drops the file and closes it (the galaxy map's idle release; a test seam too). */
 export function clearBioBodiesCache(): void {
+  cachedFile?.close();
+  cachedFile = null;
   cached = undefined;
 }
