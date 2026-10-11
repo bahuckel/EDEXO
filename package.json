@@ -57,6 +57,7 @@
     "typecheck:client": "tsc --noEmit"
   },
   "dependencies": {
+    "@radix-ui/react-popover": "^1.2.0",
     "express": "^4.21.2",
     "ws": "^8.18.0"
   },
