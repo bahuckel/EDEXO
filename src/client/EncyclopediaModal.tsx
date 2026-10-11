@@ -18,7 +18,9 @@ import { useModal } from "./ui/useModal";
 import { SkeletonRows } from "./ui/Skeleton";
 import { Tooltip } from "./ui/Tooltip";
 import {
+  applyCardVerdicts,
   buildEncyclopediaSpawnConditionCards,
+  type EncyclopediaCardVerdict,
   type EncyclopediaSpawnTier,
 } from "@shared/speciesSpawnConditionCards";
 import {
@@ -131,22 +133,61 @@ export type EncyclopediaSpawnCompare = {
   bodyTabLabel?: string;
 };
 
+type CardVerdicts = Record<string, Record<string, EncyclopediaCardVerdict>>;
+
+/**
+ * The matcher's grade of every species' cards on the compared body (plan 1.10): one request per body,
+ * null until it answers (the cards show their own tiers meanwhile) or when there is no body.
+ */
+function useCardVerdicts(spawnCompare: EncyclopediaSpawnCompare | null): CardVerdicts | null {
+  const [v, setV] = useState<CardVerdicts | null>(null);
+  // Each snapshot brings new objects for the same body: keyed on the content, not the identity.
+  const body = spawnCompare?.scan
+    ? JSON.stringify({ scan: spawnCompare.scan, est: spawnCompare.estimatedSurfaceTempK, ctx: spawnCompare.speciesMatchContext })
+    : null;
+  useEffect(() => {
+    setV(null);
+    if (!body) return;
+    const ac = new AbortController();
+    void fetch("/api/encyclopedia/card-verdicts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      signal: ac.signal,
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { verdicts?: CardVerdicts } | null) => {
+        if (!ac.signal.aborted) setV(j?.verdicts ?? null);
+      })
+      .catch(() => {
+        /* the cards keep their own tiers */
+      });
+    return () => ac.abort();
+  }, [body]);
+  return v;
+}
+
 function EncyclopediaSpeciesConditions({
   entry,
   spawnCompare,
+  verdicts,
 }: {
   entry: SpeciesEntry;
   spawnCompare: EncyclopediaSpawnCompare | null;
+  verdicts: Record<string, EncyclopediaCardVerdict> | null;
 }) {
   const cards = useMemo(
     () =>
-      buildEncyclopediaSpawnConditionCards({
-        entry,
-        scan: spawnCompare?.scan ?? null,
-        estimatedSurfaceTempK: spawnCompare?.estimatedSurfaceTempK ?? null,
-        speciesMatchContext: spawnCompare?.speciesMatchContext ?? null,
-      }),
-    [entry, spawnCompare?.scan, spawnCompare?.estimatedSurfaceTempK, spawnCompare?.speciesMatchContext],
+      applyCardVerdicts(
+        buildEncyclopediaSpawnConditionCards({
+          entry,
+          scan: spawnCompare?.scan ?? null,
+          estimatedSurfaceTempK: spawnCompare?.estimatedSurfaceTempK ?? null,
+          speciesMatchContext: spawnCompare?.speciesMatchContext ?? null,
+        }),
+        verdicts,
+      ),
+    [entry, spawnCompare?.scan, spawnCompare?.estimatedSurfaceTempK, spawnCompare?.speciesMatchContext, verdicts],
   );
 
   // The field-guide layout (owner, 2026-09-29): one row per condition — what the species needs, and
@@ -490,6 +531,7 @@ export function EncyclopediaModal({
         /* the cards still show everything else */
       });
   }, []);
+  const cardVerdicts = useCardVerdicts(spawnCompare);
   const guideBody = useMemo(
     () =>
       spawnCompare
@@ -799,7 +841,11 @@ export function EncyclopediaModal({
               <span className="fg-h">
                 Conditions{spawnCompare ? ` · vs ${spawnCompare.bodyTabLabel ?? "this body"}` : ""}
               </span>
-              <EncyclopediaSpeciesConditions entry={entry} spawnCompare={spawnCompare} />
+              <EncyclopediaSpeciesConditions
+                entry={entry}
+                spawnCompare={spawnCompare}
+                verdicts={cardVerdicts?.[entry.id] ?? null}
+              />
             </div>
             {g?.bands ? <GuideBandsBlock b={g.bands} body={guideBody} /> : null}
             {g?.bands ? <GuideWithinBlock b={g.bands} name={entry.displayName} body={guideBody} /> : null}

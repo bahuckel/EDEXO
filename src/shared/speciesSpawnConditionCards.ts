@@ -878,3 +878,28 @@ export function buildEncyclopediaSpawnConditionCards(args: {
 
   return out;
 }
+
+/** The matcher's grade for one card (server `cardVerdicts.ts`). */
+export interface EncyclopediaCardVerdict {
+  tier: "blue" | "yellow" | "red";
+  detail: string;
+}
+
+/**
+ * The cards with the matcher's tiers (plan 1.10, code review B9): a card the matcher graded takes its
+ * tier, and its caption becomes the matcher's reason where the two disagreed. Only the matcher can
+ * exclude a species, so a card it did not grade is never red: its own red reads yellow, with the
+ * caption saying the matcher does not exclude on it.
+ */
+export function applyCardVerdicts(
+  cards: EncyclopediaSpawnConditionCard[],
+  verdicts: Record<string, EncyclopediaCardVerdict> | null | undefined,
+): EncyclopediaSpawnConditionCard[] {
+  if (!verdicts) return cards;
+  return cards.map((c) => {
+    const v = verdicts[c.id];
+    if (v) return v.tier === c.tier ? c : { ...c, tier: v.tier, caption: v.detail || c.caption };
+    if (c.tier === "red") return { ...c, tier: "yellow", caption: `${c.caption} — not a reason the app excludes it` };
+    return c;
+  });
+}

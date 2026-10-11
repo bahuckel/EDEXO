@@ -533,6 +533,7 @@ export function speciesMatchesExcludingTempPressure(
         if (!belowMin && !aboveMax) {
           reasons.push({
             field: "AtmosphereType",
+            card: "gas-share",
             detail: `${band.gas} ${pct.toFixed(1)} % of the atmosphere${
               band.min !== undefined && band.max !== undefined
                 ? ` (needs ${band.min}-${band.max} %)`
@@ -551,6 +552,7 @@ export function speciesMatchesExcludingTempPressure(
               : `at most ${band.max} %`;
         failures.push({
           field: "AtmosphereType",
+          card: "gas-share",
           soft: true,
           detail: `${entry.displayName} needs ${want} ${band.gas}; this body is ${pct.toFixed(2)} % — ${GAS_BAND_NOTE} ${DEMOTED_NOTE}`,
         });
@@ -581,6 +583,7 @@ export function speciesMatchesExcludingTempPressure(
     if (verdict.kind !== "ok") {
       failures.push({
         field: "AtmosphereType",
+        card: "required-gas",
         soft: true,
         detail:
           verdict.kind === "trace"
@@ -590,6 +593,7 @@ export function speciesMatchesExcludingTempPressure(
     } else if (verdict.pct != null) {
       reasons.push({
         field: "AtmosphereType",
+        card: "required-gas",
         detail: `${verdict.gas} ${verdict.pct.toFixed(1)} % of the atmosphere`,
       });
     }
@@ -771,6 +775,7 @@ export function speciesMatchesExcludingTempPressure(
         // bodies orbit an A-type star. The missing artwork is ours; the species is really there.
         reasons.push({
           field: "StarType",
+          card: "supported-star-types",
           detail: `${ctx.parentStarType} — no colour variant in our genus table, but ${starVerdict.observations} of ${starVerdict.total} observed bodies have this host class.`,
         });
       } else if (excluded) {
@@ -778,6 +783,7 @@ export function speciesMatchesExcludingTempPressure(
         // species cannot grow there — and it is the app's own data saying so.
         failures.push({
           field: "StarType",
+          card: "supported-star-types",
           soft: true,
           detail: `Genus colour table has no variant for host class ${specKeys.join("/")} — “${ctx.parentStarType}”.`,
         });
@@ -1140,6 +1146,7 @@ export function speciesMatchesCriteria(
     if (below || above) {
       failures.push({
         field: "SurfaceTemperature",
+        card: "soft-temp",
         soft: true,
         detail:
           `${tMeasured.toFixed(1)} K is ${above ? `above ${softBand.max}` : `below ${softBand.min}`} K, ` +
@@ -1167,6 +1174,7 @@ export function speciesMatchesCriteria(
     orbitFactor = STAR_ORBIT_FACTOR;
     extraOkReasons.push({
       field: "Orbit",
+      card: "soft-orbit",
       detail: `Orbits a star, not a planet: this species grows on close moons, and on a planet round a star about ${Math.round(
         STAR_ORBIT_FACTOR * 100,
       )} % as often — kept at that chance.`,
@@ -1176,6 +1184,7 @@ export function speciesMatchesCriteria(
     if (ls > smaMax) {
       failures.push({
         field: "Orbit",
+        card: "soft-orbit",
         soft: true,
         detail:
           `Orbits its parent at ${ls >= 100 ? Math.round(ls).toLocaleString() : ls.toFixed(1)} ls; this species is rarely ` +
@@ -1188,6 +1197,7 @@ export function speciesMatchesCriteria(
   if (c.softNoVolcanism && scan.Volcanism !== undefined && scan.Volcanism !== null && presenceReportsAnyVolcanism(scan)) {
     failures.push({
       field: "Volcanism",
+      card: "soft-volcanism",
       soft: true,
       detail: `${String(scan.Volcanism).trim()} — this species is almost never recorded on a volcanic body. ${DEMOTED_NOTE}`,
     });
@@ -1216,6 +1226,7 @@ export function speciesMatchesCriteria(
       if (!planetTempBand) {
         failures.push({
           field: "SurfaceTemperature",
+          card: "linked-temp-cap",
           detail:
             "Atmosphere-linked temperature cap needs SurfaceTemperature (or a mappable PlanetClass) to estimate the surface band.",
         });
@@ -1249,6 +1260,7 @@ export function speciesMatchesCriteria(
         if (observedLinkedRaw && !observedLinked) {
           failures.push({
             field: "SurfaceTemperature",
+            card: "linked-temp-cap",
             soft: true,
             detail:
               `${(scan.SurfaceTemperature ?? 0).toFixed(0)} K is outside the codex band for this atmosphere, and only ` +
@@ -1257,12 +1269,14 @@ export function speciesMatchesCriteria(
         } else if (observedLinked) {
           extraOkReasons.push({
             field: "SurfaceTemperature",
+            card: "linked-temp-cap",
             detail: `${(scan.SurfaceTemperature ?? 0).toFixed(0)} K is outside the codex band for this atmosphere, but ${observedLinked.observations} of ${observedLinked.total} observed bodies for this species sit at this temperature.`,
           });
         } else if (linkedMax !== undefined && planetTempBand.maxK > linkedMax) {
           const near = rangeFit(planetTempBand.maxK, undefined, linkedMax) === "near";
           failures.push({
             field: "SurfaceTemperature",
+            card: "linked-temp-cap",
             ...(near ? { soft: true } : {}),
             detail: `With matching atmosphere, codex caps the mean band at ≤ ${linkedMax} K (estimated band max ${planetTempBand.maxK.toFixed(0)} K).${near ? ` Within ${NUMERIC_GATE_TOLERANCE * 100}%. ${DEMOTED_NOTE}` : ""}`,
           });
@@ -1278,6 +1292,7 @@ export function speciesMatchesCriteria(
           const near = rangeFit(planetTempBand.minK, linkedMin, undefined) === "near";
           failures.push({
             field: "SurfaceTemperature",
+            card: "linked-temp-cap",
             ...(near ? { soft: true } : {}),
             detail: `With matching atmosphere, codex floors the mean band at ≥ ${linkedMin} K (estimated band min ${planetTempBand.minK.toFixed(0)} K).${near ? ` Within ${NUMERIC_GATE_TOLERANCE * 100}%. ${DEMOTED_NOTE}` : ""}`,
           });
@@ -1286,6 +1301,7 @@ export function speciesMatchesCriteria(
         const atNote = linkedAtmo?.length ? ` (${linkedAtmo.join(" / ")})` : "";
         extraOkReasons.push({
           field: "SurfaceTemperature",
+          card: "linked-temp-cap",
           detail:
             linkedMin !== undefined && linkedMax !== undefined
               ? `Atmosphere-linked band ${linkedMin}–${linkedMax} K satisfied (estimated ${planetTempBand.minK.toFixed(0)}–${planetTempBand.maxK.toFixed(0)} K)${atNote}`
@@ -1314,6 +1330,7 @@ export function speciesMatchesCriteria(
     if (rawP === undefined || rawP === null) {
       failures.push({
         field: "SurfacePressure",
+        card: "surface-pressure",
         detail: "This species defines a pressure range — need SurfacePressure from the detailed scan.",
       });
     } else {
@@ -1323,11 +1340,12 @@ export function speciesMatchesCriteria(
       if (fit !== "in") {
         failures.push({
           field: "SurfacePressure",
+          card: "surface-pressure",
           soft: true,
           detail: `${shown} atm outside ${c.surfacePressure.min ?? "−∞"}–${c.surfacePressure.max ?? "∞"} atm${fit === "near" ? `, by under ${NUMERIC_GATE_TOLERANCE * 100}%` : ""}. ${DEMOTED_NOTE}`,
         });
       } else {
-        extraOkReasons.push({ field: "SurfacePressure", detail: `${shown} atm` });
+        extraOkReasons.push({ field: "SurfacePressure", card: "surface-pressure", detail: `${shown} atm` });
       }
     }
   }
@@ -1342,11 +1360,12 @@ export function speciesMatchesCriteria(
       if (p > cap) {
         failures.push({
           field: "SurfacePressure",
+          card: "pressure-by-atmosphere",
           soft: true,
           detail: `${shown} atm on ${scan.AtmosphereType}, over the ${cap} atm it has been found at on this atmosphere. ${DEMOTED_NOTE}`,
         });
       } else {
-        extraOkReasons.push({ field: "SurfacePressure", detail: `${shown} atm (up to ${cap} on ${scan.AtmosphereType})` });
+        extraOkReasons.push({ field: "SurfacePressure", card: "pressure-by-atmosphere", detail: `${shown} atm (up to ${cap} on ${scan.AtmosphereType})` });
       }
     }
   }

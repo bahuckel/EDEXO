@@ -1,6 +1,7 @@
 import { flushNavRouteLog, navRouteLog, recordNavRoute } from "./navRouteLog.js";
 import { enablePredictionAudit, flushPredictionAudit, predictionRecords } from "./predictionAuditLog.js";
 import { predictionQuality } from "./predictionQuality.js";
+import { cardVerdictsFor } from "./cardVerdicts.js";
 import { flushSurfaceMarks } from "./surfaceMarksFile.js";
 import { startEddnLedgerWatch } from "./eddnLedger.js";
 import path from "node:path";
@@ -1858,6 +1859,11 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     },
     searchEdsmSystems: (query) => searchEdsmSystemsByName(query),
     getStatisticsScan,
+    getCardVerdicts: (scan, est, ctx) => {
+      const out: Record<string, ReturnType<typeof cardVerdictsFor>> = {};
+      for (const e of getCachedSpeciesDatabase().species) out[e.id] = cardVerdictsFor(e, scan, est, ctx);
+      return out;
+    },
     getPredictionQuality: () => {
       const byId = new Map(getCachedSpeciesDatabase().species.map((e) => [e.id, e]));
       return predictionQuality(predictionRecords(), (id) => {

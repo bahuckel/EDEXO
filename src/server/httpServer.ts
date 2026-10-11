@@ -4,6 +4,8 @@ import type { OwnGreenGiant } from "./galaxyLayers.js";
 import type { SavedBoxelsService } from "./savedBoxels.js";
 import type { FieldGuideDTO } from "../shared/fieldGuide.js";
 import type { RegionalRarity } from "../shared/speciesRarity.js";
+import type { EstimatedSurfaceTempBand, PlanetScan, SpeciesMatchContext } from "../shared/types.js";
+import type { EncyclopediaCardVerdict } from "../shared/speciesSpawnConditionCards.js";
 import { findMatchDetail, parseWsChannel, slimSnapshotForChannel, type WsChannel } from "./wsChannels.js";
 import { eliteDisplaySettingsPath, eliteDisplayWarning, readEliteDisplayMode } from "./eliteDisplayMode.js";
 import { linuxCheckForThisMachine } from "./linuxProbes.js";
@@ -117,6 +119,12 @@ export interface HttpServerOptions {
   getFieldGuide?: () => FieldGuideDTO;
   /** GET /api/encyclopedia-region?name= — every species' rarity in one region (null = no data). */
   getEncyclopediaRegion?: (name: string) => Record<string, RegionalRarity | null>;
+  /** POST /api/encyclopedia/card-verdicts — the matcher's grade of every species' condition cards on a body (plan 1.10). */
+  getCardVerdicts?: (
+    scan: PlanetScan,
+    est: EstimatedSurfaceTempBand | null,
+    ctx: SpeciesMatchContext | null,
+  ) => Record<string, Record<string, EncyclopediaCardVerdict>>;
   /**
    * GET /api/first-discovery-backlog — biology left uncollected in systems this commander found.
    *
@@ -607,6 +615,29 @@ export function createHttpServer(opts: HttpServerOptions): {
       return;
     }
     res.json({ region: name, species: opts.getEncyclopediaRegion(name) });
+  });
+
+  /*
+    The body comes from the client, which already holds it (the Encyclopedia's "vs this body"), so the
+    route needs no lookup and grades exactly the scan the cards are drawn from.
+  */
+  app.post("/api/encyclopedia/card-verdicts", (req, res) => {
+    const b = (req.body ?? {}) as { scan?: unknown; est?: unknown; ctx?: unknown };
+    if (typeof opts.getCardVerdicts !== "function" || !b.scan || typeof b.scan !== "object") {
+      res.status(400).json({ error: "scan is required" });
+      return;
+    }
+    try {
+      res.json({
+        verdicts: opts.getCardVerdicts(
+          b.scan as PlanetScan,
+          (b.est && typeof b.est === "object" ? b.est : null) as EstimatedSurfaceTempBand | null,
+          (b.ctx && typeof b.ctx === "object" ? b.ctx : null) as SpeciesMatchContext | null,
+        ),
+      });
+    } catch (e) {
+      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+    }
   });
 
   app.get("/api/field-guide", (req, res) => {

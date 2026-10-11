@@ -437,6 +437,12 @@ export interface MatchReason {
    * about habitat, it is a missing measurement.
    */
   soft?: boolean;
+  /**
+   * The Encyclopedia condition card this reason grades (`speciesSpawnConditionCards` ids), where the
+   * field alone does not say: a StarType reason may be the host-star gate or the colour table (plan
+   * 1.10). Unset: the field's own card (`server/cardVerdicts.ts`).
+   */
+  card?: string;
 }
 
 export interface SpeciesProvenance {
