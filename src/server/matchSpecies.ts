@@ -69,6 +69,7 @@ import { observedWithVolcanism } from "./speciesVolcanismObservations.js";
 import { hostStarVerdict, type HostStarVerdict } from "./speciesHostStarObservations.js";
 import { volcanismJournalMatchesFragments } from "../shared/volcanismMatch.js";
 import { isBacteriumSpeciesEntry } from "../shared/speciesBacterium.js";
+import { reportsVolcanism } from "../shared/volcanismText.js";
 import {
   DEMOTED_NOTE,
   GAS_BAND_NOTE,
@@ -156,13 +157,7 @@ function codexListMeansAll(values: string[] | undefined): boolean {
 }
 
 function journalReportsAnyVolcanism(scan: PlanetScan): boolean {
-  const raw = scan.Volcanism;
-  if (raw === undefined || raw === null) return false;
-  const v = String(raw).trim();
-  if (!v) return false;
-  const lo = v.toLowerCase();
-  if (lo.includes("no volcanism")) return false;
-  return true;
+  return reportsVolcanism(scan.Volcanism);
 }
 
 function inRange(v: number, min?: number, max?: number): boolean {

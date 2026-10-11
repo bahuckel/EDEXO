@@ -8,6 +8,7 @@
  * second line in the "matches" blue, or an arrow at the edge when it lies outside the measured range.
  */
 import type { EstimatedSurfaceTempBand, PlanetScan, SpeciesMatchContext } from "@shared/types";
+import { reportsVolcanism } from "@shared/volcanismText";
 import { foldSpelling } from "@shared/spelling";
 import {
   GUIDE_ATMO_PREFIX,
@@ -68,10 +69,7 @@ const norm = (s: string) =>
     .trim();
 
 /** "", "No volcanism" and "none" are the same thing. */
-const normVolc = (s: string) => {
-  const n = norm(s);
-  return n === "" || n === "no" || n === "none" || n === "no volcanism" ? "no volcanism" : n;
-};
+const normVolc = (s: string) => (reportsVolcanism(s) ? norm(s) : "no volcanism");
 
 export function guideBodyFrom(
   scan: PlanetScan | null,

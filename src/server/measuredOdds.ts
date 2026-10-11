@@ -19,6 +19,7 @@
 import type { PlanetScan, SpeciesMatch } from "../shared/types.js";
 import { gasSharePercent } from "../shared/atmosphereGasShare.js";
 import { atmosphereTypeKeyOf } from "../shared/scanAtmosphereMatch.js";
+import { reportsVolcanism } from "../shared/volcanismText.js";
 
 /**
  * Recepta on a thin carbon dioxide (or oxygen) body: how often it is there by the sulphur dioxide share,
@@ -77,8 +78,7 @@ function receptaRate(so2: number): number | null {
 }
 
 function hasVolcanism(scan: PlanetScan): boolean {
-  const v = String(scan.Volcanism ?? "").trim().toLowerCase();
-  return v !== "" && !v.startsWith("no ");
+  return reportsVolcanism(scan.Volcanism);
 }
 
 /** Lays the measured odds over the model's `presenceProbabilityPercent` / `genusSharePercent` on the shown rows. */

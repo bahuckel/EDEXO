@@ -18,6 +18,7 @@ import {
   type ExomasteryProfileV1,
 } from "./exomasteryProfile.js";
 import { getProjectRoot } from "./paths.js";
+import { reportsVolcanism } from "../shared/volcanismText.js";
 import { volcanismJournalMatchesFragments } from "../shared/volcanismMatch.js";
 import { dssHintsMissingCandidateGenera, resolveSpeciesEntryFromOrganicLock } from "./footScannedCatalog.js";
 
@@ -36,8 +37,7 @@ function speciesCodexConstrainsVolcanism(c: SpeciesEntry["criteria"]): boolean {
 }
 
 function profileVolcanismLabelAllowedByCodex(volLabel: string, c: SpeciesEntry["criteria"]): boolean {
-  const lo = volLabel.toLowerCase();
-  if (lo.includes("no volcanism")) {
+  if (!reportsVolcanism(volLabel)) {
     if (c.volcanismActiveRequired === true) return false;
     if (c.volcanismIncludes?.length) return false;
     return true;

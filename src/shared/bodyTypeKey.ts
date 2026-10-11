@@ -13,6 +13,9 @@
  * writes `CarbonDioxide` — so every part squashes to letters and digits and drops the noun or suffix
  * only one side uses.
  */
+import { reportsVolcanism } from "./volcanismText.js";
+import { foldSpelling } from "./spelling.js";
+import { planetClassId } from "./normalise/planetClass.js";
 
 /**
  * Temperature band edges, in kelvin.
@@ -40,7 +43,9 @@ function squash(s: string): string {
  */
 export function bodyTypePlanetClass(subType: string | null | undefined): string {
   const t = (subType ?? "").toLowerCase();
-  if (t.includes("gas giant") || t.includes("water giant")) return squash(t).slice(0, 14) || "?";
+  // Every spelling of a giant to one id ("Sudarsky class I gas giant" and "Class I gas giant"; plan 1.1
+  // audit, 2026-10-11). No giant carries surface biology, so no table cell depends on it.
+  if (t.includes("gas giant") || t.includes("water giant")) return planetClassId(subType) ?? (squash(t).slice(0, 14) || "?");
   if (t.includes("rocky ice")) return "rockyice";
   if (t.includes("high metal")) return "hmc";
   if (t.includes("metal rich") || t.includes("metal-rich")) return "metalrich";
@@ -59,7 +64,9 @@ export function bodyTypePlanetClass(subType: string | null | undefined): string 
  * glued on the other — the same fold `bucketCategoricalValue` makes for the likelihood terms.
  */
 export function bodyTypeAtmosphere(atmosphereType: string | null | undefined): string {
-  const raw = (atmosphereType ?? "").toLowerCase().replace(/^(hot\s+)?(thin|thick)\s+/, "");
+  // Any run of density words (the dump writes "Hot Water" as well as "Hot thin Water"), and the American
+  // spelling folded (plan 1.1 audit, 2026-10-11: docs/perf/atmo-key-audit.mts).
+  const raw = foldSpelling(atmosphereType ?? "").toLowerCase().replace(/^((hot|thin|thick)\s+)+/, "");
   const key = squash(raw.replace(/\s+atmosphere$/, "")).replace(/rich$/, "");
   // One token for an airless body (code review B6, 2026-10-11): the journal writes "None", Spansh and
   // EDSM "No atmosphere", which folded to "no" and split every airless cell of the prior in two.
@@ -75,7 +82,7 @@ export function bodyTypeAtmosphere(atmosphereType: string | null | undefined): s
  */
 export function bodyTypeVolcanism(volcanismType: string | null | undefined): string {
   const t = (volcanismType ?? "").trim().toLowerCase();
-  if (!t || t.includes("no volcanism")) return "none";
+  if (!reportsVolcanism(t)) return "none";
   const stripped = t.replace(/^(minor|major)\s+/, "").replace(/\s*volcanism\s*$/, "");
   const s = squash(stripped);
   return !s || s === "no" || s === "none" ? "none" : s;

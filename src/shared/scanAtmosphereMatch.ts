@@ -55,7 +55,8 @@ export function normalizeScanAtmosphereForMatch(scan: PlanetScan): string {
  * 2026-10-10, B4/B5: the letters-only key missed every looked-up or sibling-hydrated body).
  */
 export function atmosphereTypeKeyOf(scan: PlanetScan): string {
-  return normalizeScanAtmosphereForMatch(scan).toLowerCase().replace(/[^a-z]/g, "");
+  // "Sulfur" folded as the composition key does (plan 1.1 audit, 2026-10-11).
+  return foldSpelling(normalizeScanAtmosphereForMatch(scan)).toLowerCase().replace(/[^a-z]/g, "");
 }
 
 export function atmosphereCompositionKey(token: string): string {

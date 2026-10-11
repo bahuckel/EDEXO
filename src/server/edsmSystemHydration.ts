@@ -1,4 +1,5 @@
 import { journalPlanetClass } from "../shared/spanshPlanetClass.js";
+import { reportsVolcanism } from "../shared/volcanismText.js";
 import { journalStarTypeFromSubType } from "../shared/spanshStarType.js";
 import type { ExplorationScanRecord } from "../shared/types.js";
 import { APP_USER_AGENT } from "./appVersion.js";
@@ -224,7 +225,7 @@ export function mapEdsmBodyToExplorationRecord(
   // "No volcanism" is a reading, and the journal writes it as an empty string. Dropping the field
   // made it indistinguishable from a body nobody had looked at: 1,753 of the corpus' Osseus spiralis
   // bodies read "unknown" rather than "none".
-  if (vol) rec.volcanism = vol.toLowerCase() === "no volcanism" ? "" : vol;
+  if (vol) rec.volcanism = reportsVolcanism(vol) ? vol : "";
   if (body.tidalLock === true || body.rotationalPeriodTidallyLocked === true) rec.tidalLock = true;
 
   const ringCount = planetRingCount(body.rings);

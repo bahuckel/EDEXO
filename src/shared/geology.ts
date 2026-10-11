@@ -11,6 +11,7 @@
  * type each make up at least {@link GEOLOGY_MIN_SHARE} of that entry's bodies.
  */
 import { planetClassId } from "./normalise/planetClass.js";
+import { reportsVolcanism } from "./volcanismText.js";
 
 /** One geology codex entry's measured hosts. */
 export interface GeologyHosts {
@@ -54,7 +55,7 @@ export interface BodyGeologyDTO {
 /** "minor metallic magma volcanism" → "metallic magma"; null for none. */
 export function volcanismKind(raw: string | null | undefined): string | null {
   const v = (raw ?? "").trim().toLowerCase();
-  if (!v || v.includes("no volcanism")) return null;
+  if (!reportsVolcanism(v)) return null;
   const k = v
     .replace(/^(major|minor)\s+/, "")
     .replace(/\s*volcanism$/, "")

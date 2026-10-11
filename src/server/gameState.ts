@@ -1,3 +1,4 @@
+import { reportsVolcanism } from "../shared/volcanismText.js";
 import type {
   RemoteSystemRecord,
   BodyExoState,
@@ -246,9 +247,7 @@ function strEqLoose(a: string | undefined, b: string | undefined): boolean {
 }
 
 function normVolc(s: string | undefined): string {
-  const v = (s ?? "").trim().toLowerCase();
-  if (!v || v.includes("no volcanism")) return "";
-  return v;
+  return reportsVolcanism(s) ? (s ?? "").trim().toLowerCase() : "";
 }
 
 /**

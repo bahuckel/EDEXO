@@ -1,4 +1,5 @@
 import type { PlanetScan } from "../shared/types.js";
+import { reportsVolcanism } from "../shared/volcanismText.js";
 import { AU_METERS } from "../shared/journalPhysics.js";
 import {
   estimateTemperatureRange,
@@ -15,9 +16,7 @@ export function journalSemiMajorAxisToAU(meters: number | undefined): number | u
 }
 
 function hasMeaningfulVolcanism(scan: PlanetScan): boolean {
-  const v = (scan.Volcanism ?? "").trim().toLowerCase();
-  if (!v) return false;
-  return !v.includes("no volcanism") && v !== "none";
+  return reportsVolcanism(scan.Volcanism);
 }
 
 export { normalizeScanAtmosphereForMatch, atmosphereCompositionKey } from "../shared/scanAtmosphereMatch.js";

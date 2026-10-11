@@ -19,6 +19,7 @@
  * vocabulary problem as §27 and §40, in a field where the game itself supplies the adjectives.
  */
 import type { SpeciesEntry } from "../shared/types.js";
+import { reportsVolcanism } from "../shared/volcanismText.js";
 import { loadExomasteryProfile } from "./exomasteryProfile.js";
 import { getProjectRoot } from "./paths.js";
 import { observationFloor } from "./observationFloors.js";
@@ -61,8 +62,7 @@ export const NO_VOLCANISM = "none";
  */
 export function volcanismKey(value: string | null | undefined): string {
   const raw = (value ?? "").trim().toLowerCase();
-  if (!raw) return NO_VOLCANISM;
-  if (raw.includes("no volcanism")) return NO_VOLCANISM;
+  if (!reportsVolcanism(raw)) return NO_VOLCANISM;
   return raw
     .replace(/\bvolcanism\b/g, " ")
     .replace(/^\s*(minor|major)\s+/g, " ")

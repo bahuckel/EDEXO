@@ -48,6 +48,8 @@
  * a row with no score, and anything the commander has sampled here.
  */
 import { existsSync, readFileSync } from "node:fs";
+import { reportsVolcanism } from "../shared/volcanismText.js";
+import { planetClassId } from "../shared/normalise/planetClass.js";
 import { foldSpelling } from "../shared/spelling.js";
 import path from "node:path";
 import type { PlanetScan, SpeciesMatch } from "../shared/types.js";
@@ -122,7 +124,7 @@ const PLANET_TYPES: Record<string, string> = {
 /** The volcanism kind, as the table counts it (the first named material). */
 export function volcanismKind(v: string | null | undefined): string {
   const s = (v ?? "").toLowerCase();
-  if (!s.trim() || s === "no volcanism") return "none";
+  if (!reportsVolcanism(s)) return "none";
   for (const k of ["water", "nitrogen", "ammonia", "methane", "carbon dioxide", "silicate", "metallic", "rocky"]) {
     if (s.includes(k)) return k;
   }
@@ -144,7 +146,8 @@ export function atmosphereKey(a: string | null | undefined): string {
     .toLowerCase()
     .split(/\s+/)
     .filter((w) => w !== "thin" && w !== "thick" && w !== "hot");
-  return words.join(" ") || "none";
+  // "Neon Rich" is "Neon-rich" (plan 1.1 audit, 2026-10-11).
+  return words.join(" ").replace(/\s+rich$/, "-rich") || "none";
 }
 
 /** The body's facts in the table's terms; null where the scan does not say. */
@@ -152,7 +155,9 @@ export function bodyFacts(scan: PlanetScan): Record<string, string | null> {
   const cls = (scan.PlanetClass ?? "").trim().toLowerCase();
   const t = scan.SurfaceTemperature;
   return {
-    type: cls ? (PLANET_TYPES[cls] ?? cls) : null,
+    // Unlisted classes by their canonical id, so EDSM's and the journal's spellings of a giant or an
+    // Earth-like agree (plan 1.1 audit, 2026-10-11); the landable ones keep the table's own keys.
+    type: cls ? (PLANET_TYPES[cls] ?? planetClassId(cls) ?? cls) : null,
     volc: volcanismKind(scan.Volcanism),
     temp25: t != null && Number.isFinite(t) ? String(Math.floor(t / 25)) : null,
     atmo: scan.AtmosphereType != null ? atmosphereKey(scan.AtmosphereType) : null,
