@@ -14,12 +14,13 @@
  *
  * Both are applied after the model has shared out the body's probability, and both keep what the model
  * got right: Recepta's split among its three species, and Bacterium's total, of which tela's and
- * omentum's measured shares are all that changes (omentum since 2026-10-10, the same evidence for it).
+ * omentum's measured shares are all that changes (omentum since 2026-10-10, the same evidence for it;
+ * verrata and scopulum with them on cold volcanic bodies since 2026-10-11, COLD_VOLCANIC_SHARE).
  */
 import type { PlanetScan, SpeciesMatch } from "../shared/types.js";
 import { gasSharePercent } from "../shared/atmosphereGasShare.js";
 import { atmosphereTypeKeyOf } from "../shared/scanAtmosphereMatch.js";
-import { reportsVolcanism } from "../shared/volcanismText.js";
+import { reportsVolcanism, volcanismFamily } from "../shared/volcanismText.js";
 
 /**
  * Recepta on a thin carbon dioxide (or oxygen) body: how often it is there by the sulphur dioxide share,
@@ -71,6 +72,47 @@ export const OMENTUM_SHARE: Readonly<Record<string, number>> = {
   methane: 30,
 };
 
+/**
+ * The cold volcanic Bacterium (1.2.15, owner: "do verrata and proceed with other bacterium"): on a body
+ * below 300 K with water, nitrogen, ammonia, carbon dioxide or methane volcanism the Bacterium splits
+ * about three ways — tela (any volcanism) near 30 %, the volcanism's own species near a third (verrata
+ * water, omentum nitrogen / ammonia, scopulum carbon dioxide / methane), and the atmosphere's own species
+ * the rest. The model scored them field by field and put verrata first on 18 of 36 and scopulum on 2 of
+ * 29 of their September bodies. Share of the Bacterium-logged bodies, by atmosphere | volcanism family,
+ * cells of 30+ (docs/perf/bacterium-volcanic-shares.py, EDDN year); the other rows share the rest as the
+ * model has them. Where a cell is missing, TELA_SHARE and OMENTUM_SHARE below still apply.
+ */
+export const COLD_VOLCANIC_SHARE: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  "ammonia|water": { tela: 35, verrata: 61 },
+  "argon|carbon dioxide": { tela: 21, scopulum: 28 },
+  "argon|nitrogen": { tela: 24, omentum: 28 },
+  "argon|water": { tela: 32, verrata: 34 },
+  "helium|ammonia": { tela: 31, omentum: 29 },
+  "helium|methane": { tela: 23, scopulum: 37 },
+  "helium|water": { tela: 29, verrata: 28 },
+  "methane|methane": { tela: 28, scopulum: 31 },
+  "methane|nitrogen": { tela: 29, omentum: 31 },
+  "neon|ammonia": { tela: 31, omentum: 32 },
+  "neon|carbon dioxide": { tela: 28, scopulum: 38 },
+  "neon|methane": { tela: 31, scopulum: 33 },
+  "neon|nitrogen": { tela: 29, omentum: 33 },
+  "neon|water": { tela: 33, verrata: 37 },
+  "neonrich|ammonia": { tela: 49, omentum: 51 },
+  "neonrich|carbon dioxide": { tela: 41, scopulum: 59 },
+  "neonrich|methane": { tela: 46, scopulum: 54 },
+  "neonrich|nitrogen": { tela: 48, omentum: 52 },
+  "neonrich|water": { tela: 48, verrata: 52 },
+  "oxygen|water": { tela: 33, verrata: 38 },
+  "sulphurdioxide|water": { tela: 93 },
+};
+
+/** The cold volcanic cell a body falls in, or null. */
+function coldVolcanicCell(scan: PlanetScan, atmo: string): Readonly<Record<string, number>> | null {
+  const t = Number(scan.SurfaceTemperature);
+  if (!Number.isFinite(t) || t >= 300) return null;
+  return COLD_VOLCANIC_SHARE[`${atmo}|${volcanismFamily(scan.Volcanism)}`] ?? null;
+}
+
 function receptaRate(so2: number): number | null {
   if (!(so2 > 1)) return null;
   for (const [upTo, rate] of RECEPTA_BY_SO2) if (so2 <= upTo) return rate;
@@ -105,9 +147,14 @@ export function applyMeasuredOdds(shown: SpeciesMatch[], scan: PlanetScan): void
   const nmagma = /nitrogen magma|ammonia magma/.test(volc);
   const branch = Number.isFinite(t) && t >= 300 ? "hot" : hasVolcanism(scan) ? (nmagma ? "cold-nmagma" : "cold") : null;
   const fixed = new Map<string, number>();
-  const telaShare = branch ? (TELA_SHARE[`${atmo}|${branch}`] ?? (branch === "cold-nmagma" ? TELA_SHARE[`${atmo}|cold`] : undefined)) : undefined;
-  if (telaShare !== undefined) fixed.set("bacterium_bacterium_tela", telaShare);
-  if (nmagma && OMENTUM_SHARE[atmo] !== undefined) fixed.set("bacterium_bacterium_omentum", OMENTUM_SHARE[atmo]!);
+  const cell = coldVolcanicCell(scan, atmo);
+  if (cell) {
+    for (const [sp, share] of Object.entries(cell)) fixed.set(`bacterium_bacterium_${sp}`, share);
+  } else {
+    const telaShare = branch ? (TELA_SHARE[`${atmo}|${branch}`] ?? (branch === "cold-nmagma" ? TELA_SHARE[`${atmo}|cold`] : undefined)) : undefined;
+    if (telaShare !== undefined) fixed.set("bacterium_bacterium_tela", telaShare);
+    if (nmagma && OMENTUM_SHARE[atmo] !== undefined) fixed.set("bacterium_bacterium_omentum", OMENTUM_SHARE[atmo]!);
+  }
   const bac = shown.filter((m) => m.entry.genusDataDir === "bacterium");
   const set = bac.filter((m) => fixed.has(m.entry.id));
   const others = bac.filter((m) => !fixed.has(m.entry.id));
@@ -145,6 +192,14 @@ export function measuredOddsNote(m: SpeciesMatch, scan: PlanetScan): string | nu
     const so2 = gasSharePercent(scan, "SulphurDioxide") ?? 0;
     const rate = receptaRate(so2);
     if (rate != null) return `Recepta grows on ${rate} % of such bodies with ${so2.toFixed(2)} % sulphur dioxide (a year of EDDN finds)`;
+  }
+  const cell = coldVolcanicCell(scan, atmo);
+  if (cell && m.entry.genusDataDir === "bacterium") {
+    const sp = m.entry.id.replace(/^bacterium_bacterium_/, "");
+    const share = cell[sp];
+    return share !== undefined
+      ? `${sp} is ${share} % of the Bacterium on cold bodies with ${volcanismFamily(scan.Volcanism)} volcanism and this atmosphere (a year of EDDN finds)`
+      : null;
   }
   const t = Number(scan.SurfaceTemperature);
   const volc = String(scan.Volcanism ?? "").toLowerCase();
