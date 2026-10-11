@@ -27,6 +27,7 @@ import {
   type GreenGiantVerdict,
 } from "@shared/greenGasGiant";
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 import type { DiscoveriesDTO, DiscoveryBodyRow, DiscoveryStarRow, DiscoverySystemRow } from "@shared/types";
 import { fuzzyRankAny } from "./fuzzyMatch";
 import { CopySystemButton } from "./CopySystemButton";
@@ -93,7 +94,19 @@ function SortHeader<T>({
  * than its row, and the copy icon rides along with the name (owner: "everything it currently has but
  * in a card").
  */
-export function Table<T>({
+/**
+ * The table in an error boundary: a row that fails to draw leaves a message and a button in its place, not an
+ * empty screen (owner, 2026-10-11).
+ */
+export function Table<T>(props: Parameters<typeof TableInner<T>>[0]) {
+  return (
+    <ErrorBoundary label="This table">
+      <TableInner {...props} />
+    </ErrorBoundary>
+  );
+}
+
+function TableInner<T>({
   rows,
   columns,
   sort,
@@ -178,8 +191,13 @@ export function Table<T>({
     }
     return lo;
   };
-  const from = rowAt(view.top - OVERSCAN_PX);
-  const to = Math.min(sorted.length, rowAt(view.top + view.height + OVERSCAN_PX) + 1);
+  /*
+    Never past the end: a position beyond the rows (the list shrank, or a jump outran the estimate) drew
+    nothing but the spacers.
+  */
+  const top = Math.max(0, Math.min(view.top, offsets[sorted.length]! - view.height));
+  const from = rowAt(top - OVERSCAN_PX);
+  const to = Math.min(sorted.length, rowAt(top + view.height + OVERSCAN_PX) + 1);
   /*
     The columns are as wide as the rows drawn, so a row can measure differently in another window.
     A few re-measures per scroll position settle it; past that the estimate stands until the next

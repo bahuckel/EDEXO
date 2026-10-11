@@ -254,6 +254,16 @@
   display: flex;
   flex-direction: column;
 }
+/*
+  A windowed list (DiscoveriesTables) draws only the rows in view, and each row's real height replaces an
+  estimate as it is drawn. Chrome's scroll anchoring answered every such change by moving scrollTop to keep
+  its anchor row still; the move asked for other rows, whose heights moved it again, and fast scrolling ran
+  the position off the drawn rows — an empty screen until Ctrl+R (owner, 2026-10-11). The list keeps its own
+  place, so the browser must not.
+*/
+.scroll-area__viewport--windowed {
+  overflow-anchor: none;
+}
 .scroll-area__viewport {
   flex: 1 1 auto;
   min-height: 0;
@@ -927,4 +937,16 @@ tr:hover .disc-ggg-mark--quiet,
   display: flex;
   justify-content: flex-end;
   margin: 0 0 0.35rem;
+}
+
+/* A part that failed to draw (ui/ErrorBoundary.tsx): the message and a button, in place of the part. */
+.error-boundary {
+  margin: 0.6rem 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--warn, #ffd23f);
+  background: rgba(255, 210, 63, 0.06);
+  font-size: var(--fs-xs);
+}
+.error-boundary p {
+  margin: 0 0 0.4rem;
 }

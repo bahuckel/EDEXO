@@ -63,7 +63,10 @@ export function ScrollArea({
     <div
       className={`scroll-area${more.down ? " scroll-area--more-down" : ""}${more.right ? " scroll-area--more-right" : ""}`}
     >
-      <div ref={ref} className={`scroll-area__viewport${className ? ` ${className}` : ""}`}>
+      <div
+        ref={ref}
+        className={`scroll-area__viewport${onView ? " scroll-area__viewport--windowed" : ""}${className ? ` ${className}` : ""}`}
+      >
         {children}
       </div>
       {more.right ? <span className="scroll-area__fade-right" aria-hidden /> : null}
