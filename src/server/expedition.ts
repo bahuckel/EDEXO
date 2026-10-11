@@ -148,6 +148,23 @@ export function boxelsWithin(
   return { boxels: out, skipped };
 }
 
+/**
+ * A boxel's place on its mass code's global grid as one number (gx + 2^14 gy + 2^28 gz; the galaxy is under
+ * 10,000 a-boxels across): what the recorded count is keyed on, so a pass over 1.7 M systems builds no strings.
+ */
+export function gridIdAt(code: MassCode, p: Xyz): number {
+  const size = boxelCubeLy(code);
+  const gx = Math.floor((p.x - SECTOR_ORIGIN.x) / size);
+  const gy = Math.floor((p.y - SECTOR_ORIGIN.y) / size);
+  const gz = Math.floor((p.z - SECTOR_ORIGIN.z) / size);
+  return gx + gy * 16384 + gz * 268435456;
+}
+
+/** The same for an enumerated boxel (its centre lies inside its own cube). */
+export function gridIdOf(b: Pick<ExpeditionBoxel, "code" | "center">): number {
+  return gridIdAt(b.code, b.center);
+}
+
 /** The key two boxels share when they are the same one. */
 export function boxelKey(b: Pick<ExpeditionBoxel, "code" | "cell" | "position">): string {
   return `${b.code}:${b.cell.join(",")}:${b.position}`;
@@ -166,26 +183,42 @@ export function boxelKeyAt(code: MassCode, p: Xyz): string {
   return `${code}:${cell.join(",")}:${position}`;
 }
 
-/**
- * Recorded systems per boxel, from points (the bio index's systems) near the field: one pass, only the
- * points within `radiusLy` + the largest cube of `center`, bucketed into the codes asked for.
- */
-export function countRecorded(
-  points: Iterable<Xyz>,
-  center: Xyz,
-  radiusLy: number,
-  codes: readonly MassCode[],
-): Map<string, number> {
-  const reach = radiusLy + Math.max(...codes.map((c) => boxelCubeLy(c))) * 0.9;
-  const out = new Map<string, number>();
-  for (const p of points) {
-    if (Math.abs(p.x - center.x) > reach || Math.abs(p.y - center.y) > reach || Math.abs(p.z - center.z) > reach) continue;
-    for (const code of codes) {
-      const k = boxelKeyAt(code, p);
-      out.set(k, (out.get(k) ?? 0) + 1);
+/** Counts recorded systems per boxel near a field, one mass code at a time, keyed by `gridIdAt`. */
+export class RecordedCounter {
+  private readonly maps: Map<number, number>[];
+  private readonly reach: number[];
+  constructor(
+    private readonly center: Xyz,
+    radiusLy: number,
+    private readonly codes: readonly MassCode[],
+  ) {
+    this.maps = codes.map(() => new Map());
+    // A point counts when its boxel's centre can be in the field: the radius plus the half-diagonal.
+    this.reach = codes.map((c) => radiusLy + (boxelCubeLy(c) * Math.sqrt(3)) / 2);
+  }
+  add(x: number, y: number, z: number): void {
+    const dx = Math.abs(x - this.center.x);
+    const dy = Math.abs(y - this.center.y);
+    const dz = Math.abs(z - this.center.z);
+    for (let i = 0; i < this.codes.length; i++) {
+      const r = this.reach[i]!;
+      if (dx > r || dy > r || dz > r) continue;
+      const m = this.maps[i]!;
+      const k = gridIdAt(this.codes[i]!, { x, y, z });
+      m.set(k, (m.get(k) ?? 0) + 1);
     }
   }
-  return out;
+  countIn(b: Pick<ExpeditionBoxel, "code" | "center">): number {
+    const i = this.codes.indexOf(b.code);
+    return i < 0 ? 0 : (this.maps[i]!.get(gridIdOf(b)) ?? 0);
+  }
+}
+
+/** Recorded systems per boxel from a list of points (tests and small sets). */
+export function countRecorded(points: Iterable<Xyz>, center: Xyz, radiusLy: number, codes: readonly MassCode[]): RecordedCounter {
+  const c = new RecordedCounter(center, radiusLy, codes);
+  for (const p of points) c.add(p.x, p.y, p.z);
+  return c;
 }
 
 /** The table cell a boxel scores from: its region's when it has enough known systems, else its mass code's. */
@@ -309,6 +342,14 @@ export function boxelEVForSpecies(
 }
 
 /**
+ * What a boxel's system numbers follow: "Synuefai EB-R c4" → "Synuefai EB-R c4-", and for boxel 0, whose
+ * number the game leaves out, "Swoilz AA-A d" → "Swoilz AA-A d" (its systems are "… d23").
+ */
+export function systemPrefixOf(boxelName: string): string {
+  return /[a-h]\d+$/i.test(boxelName) ? `${boxelName}-` : boxelName;
+}
+
+/**
  * The procedural names of a boxel's systems nobody has recorded, for the in-game target: `<boxel>-0` up to
  * the estimate of how many it holds, without the ones in `known` (case-insensitive), capped at `limit`.
  */
@@ -316,11 +357,43 @@ export function candidateSystems(b: ExpeditionBoxel, systems: number, known: Rea
   if (!b.name) return [];
   const out: string[] = [];
   const n = Math.max(1, Math.ceil(systems));
+  const prefix = systemPrefixOf(b.name);
   for (let i = 0; i < n && out.length < limit; i++) {
-    const name = `${b.name}-${i}`;
+    const name = `${prefix}${i}`;
     if (!known.has(name.toLowerCase())) out.push(name);
   }
   return out;
 }
 
 export const EXPEDITION_CODES: readonly MassCode[] = MASS_CODE_LETTERS.filter((c) => c >= "c");
+
+/** A boxel back from its key (`boxelKey`), measured from `from`; null for a malformed key. */
+export function boxelFromKey(key: string, names: SectorNames | null, from: Xyz): ExpeditionBoxel | null {
+  const m = /^([a-h]):(-?\d+),(-?\d+),(-?\d+):(\d+)$/.exec(key.trim());
+  if (!m) return null;
+  const code = m[1] as MassCode;
+  const cell: [number, number, number] = [Number(m[2]), Number(m[3]), Number(m[4])];
+  const position = Number(m[5]);
+  const per = boxelsPerAxis(code);
+  const bx = position % 128;
+  const by = Math.floor(position / 128) % 128;
+  const bz = Math.floor(position / 16384);
+  if (bx >= per || by >= per || bz >= per) return null;
+  const size = boxelCubeLy(code);
+  const center = {
+    x: SECTOR_ORIGIN.x + (cell[0] * per + bx + 0.5) * size,
+    y: SECTOR_ORIGIN.y + (cell[1] * per + by + 0.5) * size,
+    z: SECTOR_ORIGIN.z + (cell[2] * per + bz + 0.5) * size,
+  };
+  const sector = names?.byCell.get(cell.join(",")) ?? null;
+  return {
+    code,
+    cell,
+    position,
+    name: sector ? `${sector.name} ${boxelNameAt(code, position)}` : null,
+    mixed: sector?.mixed ?? false,
+    center,
+    cubeLy: size,
+    distanceLy: Math.hypot(center.x - from.x, center.y - from.y, center.z - from.z),
+  };
+}

@@ -2,6 +2,7 @@ import { flushNavRouteLog, navRouteLog, recordNavRoute } from "./navRouteLog.js"
 import { enablePredictionAudit, flushPredictionAudit, predictionRecords } from "./predictionAuditLog.js";
 import { predictionQuality } from "./predictionQuality.js";
 import { cardVerdictsFor } from "./cardVerdicts.js";
+import { clearExpeditionCache } from "./expeditionService.js";
 import { flushSurfaceMarks } from "./surfaceMarksFile.js";
 import { startEddnLedgerWatch } from "./eddnLedger.js";
 import path from "node:path";
@@ -242,6 +243,7 @@ function reloadSpeciesDerivedCaches(): void {
   clearExomasteryProfileCache();
   clearEncyclopediaPayloadCache();
   clearFieldGuideCache();
+  clearExpeditionCache();
   clearSpeciesPhotoCache();
   clearGenusPhotosFolderCache();
   clearEddsnColourVariantsCache();

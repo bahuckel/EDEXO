@@ -70,8 +70,13 @@ describe("expedition: the boxels around a point", () => {
   it("buckets recorded systems into the boxels near the field only", () => {
     const pts = [SWOILZ, { ...SWOILZ, x: SWOILZ.x + 1 }, { x: 9000, y: 0, z: 9000 }];
     const m = countRecorded(pts, SWOILZ, 50, ["b", "d"]);
-    expect(m.get(boxelKeyAt("b", SWOILZ))).toBe(2);
-    expect([...m.values()].reduce((a, x) => a + x, 0)).toBe(4);
+    const own = boxelsWithin(SWOILZ, 80, ["b", "d"], null).boxels;
+    const b = own.find((x) => x.code === "b" && boxelKey(x) === boxelKeyAt("b", SWOILZ))!;
+    expect(m.countIn(b)).toBe(2);
+    const d = own.find((x) => x.code === "d" && boxelKey(x) === boxelKeyAt("d", SWOILZ))!;
+    expect(m.countIn(d)).toBe(2);
+    // The far point counts nowhere near the field.
+    expect(m.countIn({ code: "b", center: { x: 9000, y: 0, z: 9000 } })).toBe(0);
   });
 });
 
@@ -152,6 +157,8 @@ describe("expedition: candidate systems", () => {
     expect(names[0]).toBe("Swoilz KI-E b4-1");
     expect(names).not.toContain("Swoilz KI-E b4-9");
     expect(candidateSystems(box({ name: null }), 12, new Set())).toEqual([]);
+    // Boxel 0: the game leaves its number out, and the systems follow the mass code directly.
+    expect(candidateSystems(box({ name: "Swoilz AA-A d" }), 3, new Set())).toEqual(["Swoilz AA-A d0", "Swoilz AA-A d1", "Swoilz AA-A d2"]);
   });
 
   it("loads the shipped table", () => {
