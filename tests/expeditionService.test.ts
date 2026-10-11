@@ -6,7 +6,16 @@
 import { describe, expect, it } from "vitest";
 import path from "node:path";
 import { boxelPassesSpatialGate, boxelsWithin, boxelKey, loadSectorNames } from "../src/server/expedition.js";
-import { catalogueNear, expeditionCandidates, expeditionField, expeditionPlan, type ExpeditionDeps } from "../src/server/expeditionService.js";
+import {
+  catalogueNear,
+  expeditionCandidates,
+  expeditionField,
+  expeditionPlan,
+  MAX_RULE_POINTS,
+  ruleText,
+  type ExpeditionDeps,
+} from "../src/server/expeditionService.js";
+import { gateForSpeciesId } from "../src/shared/spatialGates.js";
 import { loadSpatialCatalogue } from "../src/server/spatialCatalogue.js";
 import { loadRegionMap } from "../src/server/regionMapData.js";
 import { loadPriceList } from "../src/server/priceList.js";
@@ -78,10 +87,26 @@ describe("expedition service", () => {
     );
     expect(f.species).toBe("electricae_electricae_radialem");
     expect(f.boxels.length).toBeGreaterThan(0);
+    // The rule in words, the points it is measured from with their radius, how many boxels met it.
+    expect(f.rule!.text).toBe("within 150 ly of a nebula or 50 ly of a radialem cluster");
+    expect(f.rule!.boxelsPassing).toBeGreaterThanOrEqual(f.boxels.length);
+    expect(f.rule!.boxelsPassing).toBeLessThanOrEqual(f.rule!.boxelsChecked);
+    expect(f.rule!.points.length).toBeGreaterThan(0);
+    expect(f.rule!.points.length).toBeLessThanOrEqual(MAX_RULE_POINTS);
+    expect(new Set(f.rule!.points.map((p) => p.radiusLy))).toEqual(new Set([150, 50]));
     for (const b of f.boxels) {
       expect(b.passesGate).toBe(true);
       expect(b.speciesBodies).toBeGreaterThan(0);
     }
+  });
+
+  it("says each position rule in words, and has none to give for a species without one", async () => {
+    expect(ruleText(gateForSpeciesId("bark_mounds_bark_mounds")!)).toBe("within 150 ly of a nebula, at 50 % of the chance out to 300 ly");
+    expect(ruleText(gateForSpeciesId("brain_trees_brain_tree_aureum")!)).toBe("within 1.25 kly of a Guardian site");
+    expect(ruleText(gateForSpeciesId("crystalline_shards_crystalline_shards")!)).toBe("at least 19.5 kly from Sgr A*");
+    const f = await expeditionField({ from: SWOILZ, radiusLy: 200, jumpRangeLy: 60, codes: ["d"], speciesId: "stratum_stratum_paleas" }, deps());
+    expect(f.rule).toBeNull();
+    expect(f.boxels.length).toBeGreaterThan(0);
   });
 
   it("orders a plan from the ship and adds up its legs", () => {

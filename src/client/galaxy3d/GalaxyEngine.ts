@@ -1010,6 +1010,43 @@ export class GalaxyEngine {
     this.invalidate();
   }
 
+  private circleSets = new Map<string, THREE.LineSegments>();
+
+  /**
+   * Rings in the galactic plane, one per centre, radius in ly (an expedition species' position rule, plan
+   * 2.6: the nebulae and the cluster records it is measured from). An empty list removes them.
+   */
+  setCircles(name: string, circles: { x: number; y: number; z: number; r: number }[], colour: number): void {
+    const old = this.circleSets.get(name);
+    if (old) {
+      this.overlay.remove(old);
+      old.geometry.dispose();
+      (old.material as THREE.Material).dispose();
+      this.circleSets.delete(name);
+    }
+    if (circles.length) {
+      const SEG = 48;
+      const pos = new Float32Array(circles.length * SEG * 6);
+      let o = 0;
+      for (const c of circles) {
+        for (let i = 0; i < SEG; i++) {
+          const a0 = (i / SEG) * Math.PI * 2;
+          const a1 = ((i + 1) / SEG) * Math.PI * 2;
+          pos.set([c.x + c.r * Math.cos(a0), c.y, -(c.z + c.r * Math.sin(a0)), c.x + c.r * Math.cos(a1), c.y, -(c.z + c.r * Math.sin(a1))], o);
+          o += 6;
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      const lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.55, depthTest: false }));
+      lines.frustumCulled = false;
+      lines.renderOrder = 3;
+      this.overlay.add(lines);
+      this.circleSets.set(name, lines);
+    }
+    this.invalidate();
+  }
+
   getShip(): { x: number; y: number; z: number } | null {
     return this.shipPos;
   }

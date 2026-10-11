@@ -13,7 +13,7 @@ const boxel = (key: string, evPerJump: number, over: Partial<ExpeditionBoxelDTO>
   systems: 300, pBio: 0.075, recorded: 2, visited: 0, ev: evPerJump * 300, jumps: 302, evPerJump, topGenera: [{ genus: "Stratum", share: 0.3 }], ...over,
 });
 const field = (boxels: ExpeditionBoxelDTO[], species: string | null = null): ExpeditionFieldDTO => ({
-  from: { x: 0, y: 0, z: 0 }, radiusLy: 500, jumpRangeLy: 60, scored: boxels.length, skipped: [], species, boxels, builtAt: "2026-10-11",
+  from: { x: 0, y: 0, z: 0 }, radiusLy: 500, jumpRangeLy: 60, scored: boxels.length, skipped: [], species, rule: null, boxels, builtAt: "2026-10-11",
 });
 
 describe("expedition drawer", () => {

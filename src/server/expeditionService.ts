@@ -11,7 +11,7 @@ import type { BioIndex } from "./bioIndex.js";
 import { runSliced, SLICE } from "./sliced.js";
 import { lookupPrice, type PriceIndex } from "./priceList.js";
 import { regionForCoords, type RegionMapData } from "../shared/regionMap.js";
-import { gateForSpeciesId, type SpatialCatalogue, type SpatialPoint } from "../shared/spatialGates.js";
+import { gateForSpeciesId, type SpatialCatalogue, type SpatialGate, type SpatialPoint } from "../shared/spatialGates.js";
 import type { SpeciesEntry } from "../shared/types.js";
 import { BOXEL_BIO_RATES } from "../shared/boxelBioRates.js";
 import { MASS_CODE_LETTERS, type MassCode } from "../shared/boxelAdvice.js";
@@ -21,6 +21,7 @@ import type {
   ExpeditionCandidatesDTO,
   ExpeditionFieldDTO,
   ExpeditionPlanDTO,
+  ExpeditionRuleDTO,
 } from "../shared/dto/expedition.js";
 import {
   boxelEV,
@@ -171,6 +172,43 @@ export function catalogueNear(cat: SpatialCatalogue | null, center: Xyz, reachLy
   return { ...cat, nebulae: near(cat.nebulae)!, guardian: near(cat.guardian)!, ...(records ? { records } : {}) };
 }
 
+const ly = (v: number) => (v >= 1000 ? `${(v / 1000).toLocaleString("en-US")} kly` : `${v} ly`);
+
+/** A position rule in the reader's words: "within 150 ly of a nebula or 50 ly of a radialem cluster". */
+export function ruleText(gate: SpatialGate): string {
+  if (gate.kind === "core") return gate.beyond ? `at least ${ly(gate.thresholdLy)} from Sgr A*` : `within ${ly(gate.thresholdLy)} of Sgr A*`;
+  const what = gate.kind === "nebula" ? "a nebula" : "a Guardian site";
+  let t = `within ${ly(gate.thresholdLy)} of ${what}`;
+  if (gate.records) t += ` or ${ly(gate.records.withinLy)} of a ${gate.records.label.replace(/^Electricae /, "")}`;
+  if (gate.softBandLy) t += `, at ${Math.round((gate.softFactor ?? 0.5) * 100)} % of the chance out to ${ly(gate.softBandLy)}`;
+  return t;
+}
+
+/** At most this many rule points go to the map (the nearest first): radialem has 15,284 cluster records. */
+export const MAX_RULE_POINTS = 400;
+
+/** The points a rule is measured from near the field, each with the radius it allows, nearest first. */
+export function rulePoints(
+  gate: SpatialGate,
+  cat: SpatialCatalogue | null,
+  from: Xyz,
+  radiusLy: number,
+): { points: ExpeditionRuleDTO["points"]; truncated: boolean } {
+  if (!cat) return { points: [], truncated: false };
+  const out: (ExpeditionRuleDTO["points"][number] & { d: number })[] = [];
+  const add = (pts: readonly SpatialPoint[] | undefined, r: number) => {
+    for (const p of pts ?? []) {
+      const d = Math.hypot(p.x - from.x, p.y - from.y, p.z - from.z);
+      if (d <= radiusLy + r) out.push({ name: p.n, x: p.x, y: p.y, z: p.z, radiusLy: r, d });
+    }
+  };
+  if (gate.kind === "core") add([cat.core], gate.thresholdLy);
+  else add(gate.kind === "nebula" ? cat.nebulae : cat.guardian, gate.softBandLy ?? gate.thresholdLy);
+  if (gate.records) add(cat.records?.[gate.records.key], gate.records.withinLy);
+  out.sort((a, b) => a.d - b.d);
+  return { points: out.slice(0, MAX_RULE_POINTS).map(({ d: _d, ...p }) => p), truncated: out.length > MAX_RULE_POINTS };
+}
+
 const fieldCache = new Map<string, { at: number; value: ExpeditionFieldDTO }>();
 
 export function clearExpeditionCache(): void {
@@ -224,6 +262,7 @@ export async function expeditionField(
     ? catalogueNear(deps.catalogue, q.from, radiusLy + gate.thresholdLy + (gate.records?.withinLy ?? 0) + 1280 * Math.sqrt(3) / 2)
     : deps.catalogue;
   const scored: ExpeditionBoxelDTO[] = [];
+  let passing = 0;
   for (const b of boxels) {
     const region = deps.regionMap ? regionForCoords(deps.regionMap, b.center.x, b.center.y, b.center.z) : null;
     const rec = recorded.countIn(b);
@@ -236,6 +275,7 @@ export async function expeditionField(
       });
       dto.speciesBodies = Math.round(sp.bodies * 1000) / 1000;
       dto.passesGate = sp.passesGate;
+      if (sp.passesGate) passing++;
       if (!(sp.bodies > 0)) continue;
     } else if (dto.ev < (q.minEv ?? 0)) continue;
     scored.push(dto);
@@ -248,6 +288,9 @@ export async function expeditionField(
     scored: scored.length,
     skipped,
     species: entry?.id ?? null,
+    rule: gate
+      ? { text: ruleText(gate), ...rulePoints(gate, deps.catalogue, q.from, radiusLy), boxelsChecked: boxels.length, boxelsPassing: passing }
+      : null,
     boxels: scored.slice(0, limit),
     builtAt: table.builtAt,
   };

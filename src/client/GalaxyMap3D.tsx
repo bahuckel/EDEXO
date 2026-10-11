@@ -549,6 +549,13 @@ export function GalaxyMap3D() {
     );
     e.setMarkerLayerVisible("expedition", drawer === "expedition");
   }, [expField, drawer, stats?.phase]);
+  // A picked species' position rule: a ring round every point it is measured from, while the drawer is open.
+  useEffect(() => {
+    const e = engine.current;
+    if (!e) return;
+    const rule = drawer === "expedition" ? expField?.rule : null;
+    e.setCircles("expedition-rule", rule ? rule.points.map((p) => ({ x: p.x, y: p.y, z: p.z, r: p.radiusLy })) : [], 0x5fd8ff);
+  }, [expField, drawer, stats?.phase]);
   useEffect(() => {
     const e = engine.current;
     if (!e) return;

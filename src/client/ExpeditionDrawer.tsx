@@ -234,6 +234,19 @@ export function ExpeditionDrawer({
             {Math.round(field.jumpRangeLy)} ly
           </p>
         ) : null}
+        {field?.species ? (
+          <p className="g3d-panel__note" data-testid="g3d-expedition-rule">
+            {field.rule ? (
+              <>
+                Grows {field.rule.text}: {field.rule.boxelsPassing.toLocaleString("en-US")} of{" "}
+                {field.rule.boxelsChecked.toLocaleString("en-US")} boxels here can meet it
+                {field.rule.points.length ? ` · rings round the ${field.rule.points.length}${field.rule.truncated ? " nearest" : ""} it is measured from` : ""}
+              </>
+            ) : (
+              "No position rule: every boxel can hold it, ranked by how often its genus and it are found there."
+            )}
+          </p>
+        ) : null}
         <ol className="g3d-exp-list" data-testid="g3d-expedition-list">
           {rows.map((b) => (
             <li key={b.key} className="g3d-exp-row">

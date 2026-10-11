@@ -34,6 +34,19 @@ export interface ExpeditionBoxelDTO {
   passesGate?: boolean;
 }
 
+/**
+ * Target-species mode: the species' position rule (plan 2.6) — in words, the points it is measured from near
+ * the field with the radius each one allows, and how many boxels met it.
+ */
+export interface ExpeditionRuleDTO {
+  text: string;
+  points: { name: string; x: number; y: number; z: number; radiusLy: number }[];
+  /** More points than were sent (the nearest are kept). */
+  truncated: boolean;
+  boxelsChecked: number;
+  boxelsPassing: number;
+}
+
 export interface ExpeditionFieldDTO {
   from: { x: number; y: number; z: number };
   radiusLy: number;
@@ -43,6 +56,8 @@ export interface ExpeditionFieldDTO {
   /** Mass codes left out because the radius holds too many of their boxels. */
   skipped: string[];
   species: string | null;
+  /** The species' position rule, or null when it has none (or no species is picked). */
+  rule: ExpeditionRuleDTO | null;
   boxels: ExpeditionBoxelDTO[];
   /** The tables behind it. */
   builtAt: string;
