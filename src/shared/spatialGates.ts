@@ -86,6 +86,12 @@ export interface SpatialGate {
    */
   records?: { key: string; withinLy: number; label: string; evidence: string };
   /**
+   * Outside the gate, a body the game counts at least `signals` biological signals on keeps the
+   * species shown at `factor` of its chance instead of demoting it (radialem lead, 2026-10-11). A count
+   * the app only assumed does not qualify.
+   */
+  keepFromSignals?: { signals: number; factor: number; evidence: string };
+  /**
    * Turned round (core gates only): the system has to be at least `thresholdLy` from Sgr A*, not
    * within it. Crystalline Shards (2026-10-09) grow only far out.
    */
@@ -127,6 +133,18 @@ export const SPATIAL_GATES: { idIncludes: string; gate: SpatialGate }[] = [
         label: "Electricae radialem cluster",
         evidence:
           "90 % of 16,634 radialem systems are within 150 ly of a nebula or 50 ly of a radialem cluster (79 % from nebulae alone)",
+      },
+      /*
+        Radialem lead, 2026-10-11 (docs/perf/radialem-rate.py, EDDN year, 46,564 icy thin helium / neon /
+        argon bodies at most 0.275 g): outside the gate radialem is on 0 % of 1-signal bodies and 0.17 %
+        of 2-signal ones, but 6.7 % of 3-signal (156 of 2,328) and 9.3 % of 4-signal; inside it, 65 %.
+        12 of the 17 radialem rows hidden on the September samples a and b were 3-signal bodies 435 to
+        7,746 ly from any catalogued nebula. Above the 1 % floor, so shown, at a tenth of the chance.
+      */
+      keepFromSignals: {
+        signals: 3,
+        factor: 0.1,
+        evidence: "outside the nebula rule radialem is still on 6.7 % of 3-signal and 9.3 % of 4-signal bodies like this (EDDN year)",
       },
     },
   },

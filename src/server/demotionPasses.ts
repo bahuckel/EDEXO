@@ -211,6 +211,8 @@ export function demoteFailedSpatialGates(
   unlikely: Omit<SpeciesMatch, "photoUrl" | "photoNote" | "priceCredits">[],
   matchContext: SpeciesMatchContext | null | undefined,
   catalogue: SpatialCatalogue | null,
+  /** The game's biological signal count on the body; null when unknown or only assumed. */
+  countedSignals: number | null = null,
 ): void {
   const coords = matchContext?.systemCoords;
 
@@ -240,6 +242,16 @@ export function demoteFailedSpatialGates(
     // Inside the gate's soft band (Bark Mounds 150–300 ly): stays shown, at a lower chance.
     if (verdict.softBand) {
       strict[i] = { ...m, reasons: [...m.reasons, reason], presenceFactor: (m.presenceFactor ?? 1) * verdict.softBand.factor };
+      continue;
+    }
+    // Enough counted signals that the species is still above the floor out here (radialem, 3+).
+    const keep = gateForSpeciesId(m.entry.id)?.keepFromSignals;
+    if (keep && countedSignals != null && countedSignals >= keep.signals) {
+      const kept: MatchReason = {
+        ...reason,
+        detail: `${describeVerdict(verdict)} Kept at ×${keep.factor} chance: ${keep.evidence}.`,
+      };
+      strict[i] = { ...m, reasons: [...m.reasons, kept], presenceFactor: (m.presenceFactor ?? 1) * keep.factor };
       continue;
     }
     strict.splice(i, 1);
@@ -630,7 +642,13 @@ export function runDemotionPasses(
     restore: boolean;
   },
 ): void {
-  demoteFailedSpatialGates(strict, unlikely, o.matchContext, o.spatialCatalogue);
+  demoteFailedSpatialGates(
+    strict,
+    unlikely,
+    o.matchContext,
+    o.spatialCatalogue,
+    o.signalCountAssumed ? null : o.biologicalSignals,
+  );
   demoteFailedHostStarGates(strict, unlikely, o.matchContext);
   demoteFailedSystemBodyGates(strict, unlikely, o.matchContext);
   weighOutsideStarlight(strict, unlikely, o.matchContext);

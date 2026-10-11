@@ -71,6 +71,23 @@ describe("demoting on a failed gate", () => {
     expect(reason.soft).toBe(true);
   });
 
+  it("keeps radialem shown at a tenth of its chance on a body with 3+ counted signals (2026-10-11)", () => {
+    const run = (signals: number | null) => {
+      const strict: Pending[] = [pending("electricae_electricae_radialem"), pending("sinuous_tuber_sinuous_tubers_roseum")];
+      const unlikely: Pending[] = [];
+      demoteFailedSpatialGates(strict, unlikely, { systemCoords: HOME }, cat, signals);
+      return { strict, unlikely };
+    };
+    const three = run(3);
+    expect(three.strict.map((m) => m.entry.id)).toEqual(["electricae_electricae_radialem"]);
+    expect(three.strict[0]!.presenceFactor).toBeCloseTo(0.1, 5);
+    expect(three.strict[0]!.reasons.at(-1)!.detail).toMatch(/Kept at ×0.1 chance/);
+    // Other gates have no such rule: Sinuous Tubers is still demoted.
+    expect(three.unlikely.map((m) => m.entry.id)).toEqual(["sinuous_tuber_sinuous_tubers_roseum"]);
+    // Two signals, or a count the app only assumed (passed as null): demoted as before.
+    for (const s of [2, null]) expect(run(s).unlikely.map((m) => m.entry.id)).toContain("electricae_electricae_radialem");
+  });
+
   it("leaves a gated species alone where its gate passes", () => {
     // Inside the Coalsack, well within 150 ly of a catalogued nebula.
     const strict: Pending[] = [pending("electricae_electricae_radialem")];
