@@ -13,3 +13,16 @@ export function reportsVolcanism(raw: string | null | undefined): boolean {
   if (v === "none" || v === "no" || v.includes("no volcanism")) return false;
   return true;
 }
+
+/**
+ * The volcanism's family as the measured tables count it: "water", "nitrogen", ..., "silicate",
+ * "metallic", "rocky", "other", or "none" for a quiet body.
+ */
+export function volcanismFamily(raw: string | null | undefined): string {
+  const s = String(raw ?? "").toLowerCase();
+  if (!reportsVolcanism(s)) return "none";
+  for (const k of ["water", "nitrogen", "ammonia", "methane", "carbon dioxide", "silicate", "metallic", "rocky"]) {
+    if (s.includes(k)) return k;
+  }
+  return "other";
+}

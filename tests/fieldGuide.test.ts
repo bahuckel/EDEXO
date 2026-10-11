@@ -128,7 +128,9 @@ describe("field guide", () => {
       values: {},
       planet: null,
       atmosphere: "thin sulfur dioxide atmosphere",
+      atmoKey: "sulphurdioxide",
       volcanism: null,
+      volcFamily: null,
       star: null,
       materials: {},
     };

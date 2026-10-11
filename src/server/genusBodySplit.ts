@@ -48,7 +48,7 @@
  * a row with no score, and anything the commander has sampled here.
  */
 import { existsSync, readFileSync } from "node:fs";
-import { reportsVolcanism } from "../shared/volcanismText.js";
+import { volcanismFamily } from "../shared/volcanismText.js";
 import { planetClassId } from "../shared/normalise/planetClass.js";
 import { foldSpelling } from "../shared/spelling.js";
 import path from "node:path";
@@ -123,12 +123,7 @@ const PLANET_TYPES: Record<string, string> = {
 
 /** The volcanism kind, as the table counts it (the first named material). */
 export function volcanismKind(v: string | null | undefined): string {
-  const s = (v ?? "").toLowerCase();
-  if (!reportsVolcanism(s)) return "none";
-  for (const k of ["water", "nitrogen", "ammonia", "methane", "carbon dioxide", "silicate", "metallic", "rocky"]) {
-    if (s.includes(k)) return k;
-  }
-  return "other";
+  return volcanismFamily(v);
 }
 
 /**

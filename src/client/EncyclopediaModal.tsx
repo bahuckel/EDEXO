@@ -36,7 +36,7 @@ import { rarityTierInfo, type RegionalRarity } from "@shared/speciesRarity";
 import { EncyclopediaFilterBar } from "./EncyclopediaFilterBar";
 import { RarityGem } from "./RarityGem";
 import { ExomasteryPlanetsBody, FoundSpeciesPopup } from "./EncyclopediaPanels";
-import { GuideColoursBlock, GuideGenusIntro, GuideMeasuredBlock, guideBodyFrom } from "./FieldGuide";
+import { GuideBandsBlock, GuideColoursBlock, GuideGenusIntro, GuideMeasuredBlock, GuideWithinBlock, guideBodyFrom } from "./FieldGuide";
 import type { FieldGuideDTO, GuideGenus, GuideSpecies } from "@shared/fieldGuide";
 import { fmtCrExact, fmtCrTick } from "@shared/format";
 
@@ -801,9 +801,11 @@ export function EncyclopediaModal({
               </span>
               <EncyclopediaSpeciesConditions entry={entry} spawnCompare={spawnCompare} />
             </div>
+            {g?.bands ? <GuideBandsBlock b={g.bands} body={guideBody} /> : null}
+            {g?.bands ? <GuideWithinBlock b={g.bands} name={entry.displayName} body={guideBody} /> : null}
             {g?.measured ? (
-              <GuideMeasuredBlock m={g.measured} body={guideBody} />
-            ) : guide ? (
+              <GuideMeasuredBlock m={g.measured} body={guideBody} bands={g.bands} />
+            ) : guide && !g?.bands ? (
               <p className="fg-none">
                 Not measured yet: the corpus has not confirmed this species on enough bodies to chart. The
                 conditions above are what the app predicts from.

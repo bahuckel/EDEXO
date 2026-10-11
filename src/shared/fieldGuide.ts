@@ -61,6 +61,87 @@ export interface GuideSpecies {
   requires: GuideRequirement[];
   colours: GuideColours | null;
   measured: GuideMeasured | null;
+  /** Where most of its bodies lie, by atmosphere, and its share of its genus (plan 1.8); null when too few. */
+  bands?: GuideBands | null;
+}
+
+/** 5 / 25 / 50 / 75 / 95 % of a parameter over the bodies it was confirmed on. */
+export type GuideBand = [number, number, number, number, number];
+
+export interface GuideAtmoBands {
+  /** The atmosphere as `atmosphereTypeKeyOf` spells it ("carbondioxide", "neonrich", "none"). */
+  key: string;
+  /** "thin carbon dioxide" */
+  label: string;
+  n: number;
+  /** keyed by parameter id ({@link GUIDE_PARAMS}): temperature, gravity, pressure, distance from arrival */
+  bands: Record<string, GuideBand>;
+}
+
+/** Given the genus is on a body of this kind, on how many it is this species. */
+export interface GuideWithinRow {
+  key: string;
+  label: string;
+  genusN: number;
+  n: number;
+}
+
+export interface GuideBands {
+  /** bodies it was confirmed on */
+  n: number;
+  /** every parameter over all its bodies: the charts' "most at" */
+  all: Record<string, GuideBand>;
+  /** atmospheres with at least 20 bodies, the commonest first */
+  atmo: GuideAtmoBands[];
+  within: {
+    genus: string;
+    genusN: number;
+    atmosphere: GuideWithinRow[];
+    volcanism: GuideWithinRow[];
+    host: GuideWithinRow[];
+  } | null;
+}
+
+const isBand = (v: unknown): v is GuideBand =>
+  Array.isArray(v) && v.length === 5 && v.every((x) => typeof x === "number" && Number.isFinite(x));
+
+/**
+ * One species' entry of `data/exomastery/species-bands.json` (built by
+ * `docs/perf/formula/export_bands.py` from the EDDN year), checked and given labels.
+ */
+export function guideBands(raw: unknown, atmoLabels: Record<string, string>): GuideBands | null {
+  if (!isObj(raw)) return null;
+  const n = num(raw.n);
+  if (n == null || n <= 0) return null;
+  const all: Record<string, GuideBand> = {};
+  if (isObj(raw.all)) for (const [k, v] of Object.entries(raw.all)) if (isBand(v)) all[k] = v;
+  const atmo: GuideAtmoBands[] = [];
+  for (const a of Array.isArray(raw.atmo) ? raw.atmo : []) {
+    if (!isObj(a)) continue;
+    const bands: Record<string, GuideBand> = {};
+    for (const p of GUIDE_PARAMS) if (isBand(a[p.id])) bands[p.id] = a[p.id] as GuideBand;
+    const key = str(a.key);
+    if (key && Object.keys(bands).length) atmo.push({ key, label: str(a.label) || key, n: num(a.n) ?? 0, bands });
+  }
+  const rows = (v: unknown, label: (k: string) => string): GuideWithinRow[] =>
+    (Array.isArray(v) ? v : [])
+      .filter((r): r is [string, number, number] => Array.isArray(r) && typeof r[0] === "string" && num(r[1]) != null && num(r[2]) != null)
+      .map(([key, genusN, k]) => ({ key, label: label(key), genusN, n: k }));
+  const w = isObj(raw.within) ? raw.within : null;
+  return {
+    n,
+    all,
+    atmo,
+    within: w
+      ? {
+          genus: str(w.genus),
+          genusN: num(w.genusN) ?? 0,
+          atmosphere: rows(w.atmosphere, (k) => atmoLabels[k] ?? k),
+          volcanism: rows(w.volcanism, (k) => (k === "none" ? "no volcanism" : k)),
+          host: rows(w.host, (k) => k),
+        }
+      : null,
+  };
 }
 
 export interface GuideGenus {
@@ -336,7 +417,12 @@ export function guideMeasured(p: unknown): GuideMeasured | null {
  * One genus file (`<genus>_new.json`, parsed) and a profile per species, slimmed. `profileFor` gets
  * the species id and display name and returns the parsed profile or null.
  */
-export function buildGuideGenus(dir: string, genusJson: unknown, profileFor: (id: string, name: string) => unknown): GuideGenus {
+export function buildGuideGenus(
+  dir: string,
+  genusJson: unknown,
+  profileFor: (id: string, name: string) => unknown,
+  bandsFor: (id: string) => GuideBands | null = () => null,
+): GuideGenus {
   const j = isObj(genusJson) ? genusJson : {};
   const meta = isObj(j.meta) ? j.meta : {};
   const general = isObj(meta.general) ? meta.general : {};
@@ -360,6 +446,7 @@ export function buildGuideGenus(dir: string, genusJson: unknown, profileFor: (id
       requires: requirements(c),
       colours: colourTable(s.color_rules),
       measured: guideMeasured(profileFor(id, name)),
+      bands: bandsFor(id),
     };
   });
   species.sort((a, b) => a.name.localeCompare(b.name));
