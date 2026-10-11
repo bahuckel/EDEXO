@@ -289,8 +289,13 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
             ⚠
           </span>
         ) : null}
-        {badgeCount > 0 ? <span className="exo-data-alerts-trigger__badge">{badgeCount}</span> : null}
       </button>
+      {/* Beside the button, not in it: its cut corner (clip-path) clipped the number (owner, 2026-10-11). */}
+      {badgeCount > 0 ? (
+        <span className="exo-data-alerts-trigger__badge" aria-hidden>
+          {badgeCount}
+        </span>
+      ) : null}
       {open ? (
         <div
           className={`exo-data-alerts-popover exo-data-alerts-popover--${side}`}

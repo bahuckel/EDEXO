@@ -382,6 +382,9 @@ body::before {
 
 .exo-data-alerts-trigger__badge {
   position: absolute;
+  /* A sibling of the button, over its corner: clicks go through to the button. */
+  pointer-events: none;
+  z-index: 1;
   top: -0.38rem;
   right: -0.42rem;
   min-width: 1.05rem;
@@ -636,7 +639,7 @@ button.data-value-pill.data-value-pill--clickable:active {
   color: #f5b83d;
   filter: drop-shadow(0 0 4px rgba(245, 184, 61, 0.55));
 }
-.exo-data-alerts-trigger--notice .exo-data-alerts-trigger__badge {
+.exo-data-alerts-trigger__badge--notice {
   background: #b7791f;
   box-shadow: 0 0 8px rgba(245, 184, 61, 0.55);
 }

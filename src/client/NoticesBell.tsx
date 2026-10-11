@@ -179,8 +179,14 @@ export const NoticesBell = memoOnSnapSlice(BELL_FIELDS, function NoticesBell({
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
-        {unread.length ? <span className="exo-data-alerts-trigger__badge">{unread.length}</span> : null}
       </button>
+      {/* Beside the button, not in it: the cockpit's cut corner (clip-path) clipped it to the button's
+          square, so most numbers could not be read (owner, 2026-10-11). */}
+      {unread.length ? (
+        <span className="exo-data-alerts-trigger__badge exo-data-alerts-trigger__badge--notice" aria-hidden>
+          {unread.length}
+        </span>
+      ) : null}
       {open ? (
         <div className={`exo-data-alerts-popover exo-data-alerts-popover--${side}`} role="dialog" aria-label="Notices">
           <div className="notices-group__head">
