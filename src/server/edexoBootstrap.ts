@@ -1,5 +1,6 @@
 import { flushNavRouteLog, navRouteLog, recordNavRoute } from "./navRouteLog.js";
-import { enablePredictionAudit, flushPredictionAudit } from "./predictionAuditLog.js";
+import { enablePredictionAudit, flushPredictionAudit, predictionRecords } from "./predictionAuditLog.js";
+import { predictionQuality } from "./predictionQuality.js";
 import { flushSurfaceMarks } from "./surfaceMarksFile.js";
 import { startEddnLedgerWatch } from "./eddnLedger.js";
 import path from "node:path";
@@ -1857,6 +1858,13 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     },
     searchEdsmSystems: (query) => searchEdsmSystemsByName(query),
     getStatisticsScan,
+    getPredictionQuality: () => {
+      const byId = new Map(getCachedSpeciesDatabase().species.map((e) => [e.id, e]));
+      return predictionQuality(predictionRecords(), (id) => {
+        const e = byId.get(id);
+        return e ? { name: e.displayName, genus: e.genus ?? "" } : null;
+      });
+    },
     searchSpanshSystems: (query) => searchSpanshSystemsByName(query),
     hydrateSystemFromEdsm: async (systemAddress, systemName) => {
       const gate = hydrateGate(systemAddress, "EDSM");

@@ -34,6 +34,7 @@ import { collectOwnOrganicLockSpeciesIds } from "./organicLocks.js";
 import type { BodyExoState, SpeciesDatabase, SpeciesMatch } from "../shared/types.js";
 import type { SurfaceMark } from "./surfaceMarksFile.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { APP_VERSION } from "./appVersion.js";
 
 /** Which of the game's three narrowings produced this list. */
 export type PredictionStageName = "fss" | "dss" | "organic";
@@ -89,6 +90,8 @@ export interface PredictionStage {
    * it costs nothing to notice, because the game volunteers it before the commander lands.
    */
   unofferedGenera: string[];
+  /** The app version that made this list (since 1.2.15, plan 1.9), so a refit shows in Statistics. */
+  appVersion?: string;
 }
 
 /** Where a confirmed species sat in the last list offered before it was confirmed. */
@@ -476,6 +479,7 @@ export function recordPredictionForBody(input: {
       offered,
       dropped,
       unofferedGenera,
+      appVersion: APP_VERSION,
     });
     rec.scan = scanOf(body);
     rec.bodyName = body.bodyName;

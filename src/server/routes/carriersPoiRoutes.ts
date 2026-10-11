@@ -72,6 +72,19 @@ export function registerCarriersPoiRoutes(
     }
   });
 
+  /** How the app's lists fared against what grew (plan 1.9): read from the prediction log, no scan. */
+  app.get("/api/predictions/quality", (_req, res) => {
+    if (typeof opts.getPredictionQuality !== "function") {
+      res.status(501).json({ error: "Not available" });
+      return;
+    }
+    try {
+      res.json(opts.getPredictionQuality());
+    } catch (e) {
+      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+
   app.get("/api/poi/status", (_req, res) => {
     res.json(readPoiStatus());
   });

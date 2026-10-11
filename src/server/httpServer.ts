@@ -56,6 +56,7 @@ import {
   requestOriginIsAllowed,
 } from "./lanAuth.js";
 import type { JournalScan } from "./statisticsScan.js";
+import type { PredictionQualityDTO } from "../shared/dto/predictions.js";
 import { isLauncherOpenMode, readLauncherOpenMode, writeLanAccess, writeLauncherOpenMode } from "./launcherPrefs.js";
 import { type EdsmCatchUpScope } from "./edsmCatchUp.js";
 
@@ -333,6 +334,8 @@ export interface HttpServerOptions {
    * journal folder — the bootstrap already knows where it is and which files count.
    */
   getStatisticsScan?: () => Promise<JournalScan>;
+  /** GET /api/predictions/quality — the prediction log scored (plan 1.9, predictionQuality.ts). */
+  getPredictionQuality?: () => PredictionQualityDTO;
   /** POST /api/system/hydrate-from-spansh — bodies from Spansh's dump for a system the journal never scanned. */
   hydrateSystemFromSpansh?: (
     systemAddress: number,

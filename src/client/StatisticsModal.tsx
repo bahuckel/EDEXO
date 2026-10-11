@@ -26,6 +26,7 @@ import { fmtCrTick, fmtPct } from "@shared/format";
 import { STATS_WINDOWS, type CarrierAccountDTO, type StatisticsDTO } from "@shared/statisticsWindows";
 import { Tooltip } from "./ui/Tooltip";
 import { LoadingNote, RefreshBar } from "./ui/Loading";
+import { PredictionQualitySection } from "./PredictionQuality";
 import { useModal } from "./ui/useModal";
 import { formatWeeks } from "@shared/carrierUpkeep";
 import type { RankEstimateDTO } from "@shared/rankProgress";
@@ -566,6 +567,8 @@ export function StatisticsModal({ onClose }: { onClose: () => void }) {
             </div>
 
             <RecordsSection />
+
+            <PredictionQualitySection />
 
             <h3 className="stats-h3">Commander balance</h3>
             <BalanceChart points={data.commanderBalance} />
