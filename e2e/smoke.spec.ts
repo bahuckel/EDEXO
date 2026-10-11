@@ -1080,7 +1080,8 @@ test("system map: opens from the system card and draws the fixture body", async 
   await page.locator(".sys-card__btn").first().click();
   const modal = page.locator(".system-map-modal, [aria-label*='System map' i]").first();
   await expect(modal).toBeVisible();
-  await expect(page.locator("svg circle").first()).toBeVisible();
+  // The map's own circles: with Tab view on it opens in a tab, and Main's hidden pane has icon circles too.
+  await expect(page.locator(".tab-pane--systemMap svg circle, .system-map-modal svg circle").first()).toBeVisible();
   await page.screenshot({ path: `${OUT}/system-map.png` });
   // The legend folds and remembers it (plan 3.7).
   const legend = page.locator("details.system-map-legend");
@@ -1091,8 +1092,8 @@ test("system map: opens from the system card and draws the fixture body", async 
   // A body on the map opens its facts.
   await page.locator("g.system-map-node-g").last().click();
   await expect(page.locator(".body-detail-kv-label").first()).toBeVisible();
-  // Escape closes the map.
-  await page.keyboard.press("Escape");
+  // Its tab's × closes the map (Escape, as a pop-up, with Tab view off).
+  await closeScreen(page, "System map");
   await expect(page.locator("details.system-map-legend")).toHaveCount(0);
   expect(errors).toEqual([]);
 });

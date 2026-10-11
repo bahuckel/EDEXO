@@ -233,6 +233,20 @@
   margin-top: 0;
 }
 
+/* Next boxel (plan 2.7) may shrink in a narrow window, its line cut with an ellipsis (the full text is
+   in its tooltip): at 390 px it was 371 px wide and pushed the whole page sideways. */
+.header-route-mini.d-scan-card.header-next-boxel {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+.header-next-boxel .header-route-line {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .d-scan-card--route {
   border-color: rgba(130, 200, 255, 0.45);
   color: #93d4ff;
