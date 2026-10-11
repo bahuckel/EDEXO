@@ -10,40 +10,50 @@
  * ties, so reordering these lines can restyle the app without a single rule being edited. Add a
  * new region at the end unless it genuinely needs to be overridden by an existing one.
  */
+/*
+ * **Cascade layers (plan 3.1, 2026-10-12).** Every file below sits in the one layer `app`, in the
+ * same order, so inside it nothing changed: specificity and order decide as they always did. The
+ * layer is there for what comes after it: utilities declared in a later layer (Tailwind, plan 3.2)
+ * win over any `app` rule without a specificity fight. Unlayered CSS would beat every rule here, so
+ * nothing outside this list may be imported unlayered. Split `app` into finer layers only screen by
+ * screen, with a computed-style comparison: between layers the order wins over specificity.
+ */
+@layer app;
+
 /* The shared palette (launcher, HUD, app), first as when index.html linked it: now part of this
    bundle rather than a second render-blocking, unhashed request (plan 2.6, Fable 9.2). */
-@import "../../public/tokens.css";
-@import "./styles/tokens.css";
-@import "./styles/shell.css";
-@import "./styles/body-pane.css";
-@import "./styles/boot-and-empty.css";
-@import "./styles/species-compare.css";
-@import "./styles/exomastery.css";
-@import "./styles/my-exobiology.css";
-@import "./styles/system-map.css";
-@import "./styles/header.css";
-@import "./styles/body-info.css";
-@import "./styles/encyclopedia.css";
-@import "./styles/primitives.css";
-@import "./styles/select.css";
-@import "./styles/appbar.css";
-@import "./styles/species-cards.css";
-@import "./styles/triage.css";
-@import "./styles/photos-and-options.css";
-@import "./styles/second-screen.css";
-@import "./styles/galaxy-map.css";
-@import "./styles/prices.css";
-@import "./styles/fold.css";
-@import "./styles/species-rows.css";
-@import "./styles/layout.css";
-@import "./styles/backlog.css";
-@import "./styles/boxel.css";
-@import "./styles/carriers.css";
-@import "./styles/statistics.css";
-@import "./styles/cockpit.css";
-@import "./styles/bridge.css";
-@import "./styles/system-card.css";
-@import "./styles/achievements.css";
-@import "./styles/galaxy-3d.css";
-@import "./styles/streamer.css";
-@import "./styles/tabs.css";
+@import "../../public/tokens.css" layer(app);
+@import "./styles/tokens.css" layer(app);
+@import "./styles/shell.css" layer(app);
+@import "./styles/body-pane.css" layer(app);
+@import "./styles/boot-and-empty.css" layer(app);
+@import "./styles/species-compare.css" layer(app);
+@import "./styles/exomastery.css" layer(app);
+@import "./styles/my-exobiology.css" layer(app);
+@import "./styles/system-map.css" layer(app);
+@import "./styles/header.css" layer(app);
+@import "./styles/body-info.css" layer(app);
+@import "./styles/encyclopedia.css" layer(app);
+@import "./styles/primitives.css" layer(app);
+@import "./styles/select.css" layer(app);
+@import "./styles/appbar.css" layer(app);
+@import "./styles/species-cards.css" layer(app);
+@import "./styles/triage.css" layer(app);
+@import "./styles/photos-and-options.css" layer(app);
+@import "./styles/second-screen.css" layer(app);
+@import "./styles/galaxy-map.css" layer(app);
+@import "./styles/prices.css" layer(app);
+@import "./styles/fold.css" layer(app);
+@import "./styles/species-rows.css" layer(app);
+@import "./styles/layout.css" layer(app);
+@import "./styles/backlog.css" layer(app);
+@import "./styles/boxel.css" layer(app);
+@import "./styles/carriers.css" layer(app);
+@import "./styles/statistics.css" layer(app);
+@import "./styles/cockpit.css" layer(app);
+@import "./styles/bridge.css" layer(app);
+@import "./styles/system-card.css" layer(app);
+@import "./styles/achievements.css" layer(app);
+@import "./styles/galaxy-3d.css" layer(app);
+@import "./styles/streamer.css" layer(app);
+@import "./styles/tabs.css" layer(app);
