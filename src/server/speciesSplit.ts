@@ -8,11 +8,13 @@
  * Guardian site, signal count), softmaxed within the genus. Fitted on the EDDN year's complete-list
  * bodies before September 2026 (docs/perf/formula/fit_eval.py v5, exported by export_split.py).
  *
- * Used only for the seven genera where it put the true species first more often than the app on both
+ * Used only for the five genera where it put the true species first more often than the app on both
  * September hold-outs, the one the formula was chosen on and a fresh one (first-in-genus rows, app →
- * formula): Stratum 1,567 → 1,591, Clypeus 184 → 200, Concha 635 → 644, Electricae 88 → 94, Recepta
- * 39 → 44, Cactoida 431 → 434, Fungoida 1,103 → 1,106. Elsewhere (Tussock, Aleoida, Osseus, Tubus) the
- * codex windows order better and the app's split stays.
+ * formula): Stratum 1,567 → 1,591, Clypeus 184 → 200, Concha 635 → 644, Electricae 88 → 94, Fungoida
+ * 1,103 → 1,106 — and did not lose on the third, sealed until then (plan 1.6, 2026-10-11). Cactoida and
+ * Recepta were in it for 1.2.14 and came out on that sample (first in genus −13 / −8 and −12 / −11 of
+ * 468 and 110 rows). Elsewhere (Tussock, Aleoida, Osseus, Tubus) the codex windows order better and the
+ * app's split stays.
  *
  * Only the order inside a genus changes: the genus keeps its chance, the rows shown stay the ones shown,
  * and each shown row of the genus gets its share of the genus from the table.

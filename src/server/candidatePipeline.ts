@@ -132,7 +132,7 @@ export function rankCandidates(
   */
   if (scan) applyMeasuredOdds(matches.filter((m) => !m.unlikely), scan);
   /*
-    Which species of the genus, from the fitted tables, for the seven genera where they order better
+    Which species of the genus, from the fitted tables, for the five genera where they order better
     than the model (speciesSplit.ts; owner, 2026-10-10). The genus keeps its chance.
   */
   const split = scan

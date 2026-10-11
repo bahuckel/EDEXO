@@ -3,7 +3,7 @@
  * 2026-10-11).
  *
  * The number comes from a chain (the ranking model, the genus prior, the measured odds, the fitted
- * which-of-the-genus tables for seven genera), and a raw term of it — a log-probability — means
+ * which-of-the-genus tables for five genera), and a raw term of it — a log-probability — means
  * nothing to a reader. What does: how often this genus grows on bodies like this one, how this species
  * compares with the others of its genus on this body field by field, a measured rate where one applies,
  * and how often it has been logged in the region. Each line carries the nudge it gives where there is

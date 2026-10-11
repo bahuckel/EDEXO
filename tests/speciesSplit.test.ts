@@ -1,6 +1,6 @@
 /**
  * The fitted which-of-the-genus tables (owner, 2026-10-10: "build point 2"; speciesSplit.ts): only the
- * seven covered genera are re-split, a genus keeps its total chance, and a genus with a shown species
+ * five covered genera are re-split, a genus keeps its total chance, and a genus with a shown species
  * the table does not know is left as the model had it.
  */
 import { describe, expect, it } from "vitest";
@@ -37,8 +37,9 @@ const inputs = {
 };
 
 describe("species split", () => {
-  it("covers the seven genera that ordered better on both hold-outs", () => {
-    expect(speciesSplitGenera(root).sort()).toEqual(["Cactoida", "Clypeus", "Concha", "Electricae", "Fungoida", "Recepta", "Stratum"]);
+  it("covers the five genera that ordered better on all three hold-outs", () => {
+    // Cactoida and Recepta came out on the sealed sample c (plan 1.6, 2026-10-11).
+    expect(speciesSplitGenera(root).sort()).toEqual(["Clypeus", "Concha", "Electricae", "Fungoida", "Stratum"]);
   });
 
   it("shares a genus between its species, summing to one", () => {
@@ -67,8 +68,8 @@ describe("species split", () => {
       row("stratum_stratum_paleas", "Stratum", 30),
       row("stratum_stratum_excutitus", "Stratum", 10),
       row("bacterium_bacterium_aurasus", "Bacterium", 60),
-      row("recepta_recepta_umbrux", "Recepta", 5),
-      row("recepta_not_a_species", "Recepta", 5),
+      row("concha_concha_labiata", "Concha", 5),
+      row("concha_not_a_species", "Concha", 5),
     ];
     const done = applySpeciesSplit(m, inputs);
     expect([...done]).toEqual(["Stratum"]);
