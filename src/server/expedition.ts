@@ -27,6 +27,13 @@ export interface EvCell {
   systems: number;
   known: number;
   bio: number;
+  /**
+   * The same two counts over systems Spansh last updated since the table's `recentFrom` (2.8): signals reach
+   * the dump only where somebody uploaded them, which became common after Odyssey, so `bio / known` reads
+   * P(bio) several times too low — 5 % where his own d boxels in the Inner Scutum-Centaurus Arm held 36 %.
+   */
+  knownRecent?: number;
+  bioRecent?: number;
   bioBodies: number;
   signals: number;
   dss: number;
@@ -64,8 +71,8 @@ export interface ExpeditionBoxel {
   distanceLy: number;
 }
 
-/** A region cell needs this many known systems before its own rates are used over the mass code's. */
-export const MIN_KNOWN = 2000;
+/** A region cell needs this many recently updated known systems before its own rates are used over the mass code's. */
+export const MIN_KNOWN = 1000;
 /** And this many boxels with a size estimate before its systems-per-boxel is. */
 export const MIN_BOXELS_ESTIMATED = 20;
 export const FIRST_FOOTFALL_FACTOR = 5;
@@ -221,10 +228,19 @@ export function countRecorded(points: Iterable<Xyz>, center: Xyz, radiusLy: numb
   return c;
 }
 
+/** The denominator and numerator P(bio) is read from: the recently updated systems where the table has them. */
+function knownOf(c: EvCell): number {
+  return c.knownRecent ?? c.known;
+}
+export function pBioOf(c: EvCell): number {
+  const k = knownOf(c);
+  return k > 0 ? (c.knownRecent != null ? (c.bioRecent ?? 0) : c.bio) / k : 0;
+}
+
 /** The table cell a boxel scores from: its region's when it has enough known systems, else its mass code's. */
 export function evCellFor(table: EvTable, region: string | null, code: MassCode): { cell: EvCell; regional: boolean } {
   const c = region ? table.cells[`${region}|${code}`] : undefined;
-  return c && c.known >= MIN_KNOWN && c.dss > 0 ? { cell: c, regional: true } : { cell: table.byMass[code]!, regional: false };
+  return c && knownOf(c) >= MIN_KNOWN && c.dss > 0 ? { cell: c, regional: true } : { cell: table.byMass[code]!, regional: false };
 }
 
 /** One genus's key across sources: "Bark Mounds" / "Bark Mound", "Amphora Plant" / "Amphora", any case. */
@@ -276,8 +292,15 @@ export function boxelEV(
   const base = ctx.table.byMass[b.code]!;
   const spb =
     regional && cell.sysPerBoxel && (cell.boxelsEstimated ?? 0) >= MIN_BOXELS_ESTIMATED ? cell.sysPerBoxel : (base.sysPerBoxel ?? 0);
-  const pBio = cell.known > 0 ? cell.bio / cell.known : 0;
-  const bodies = cell.bio > 0 ? cell.bioBodies / cell.bio : 0;
+  /*
+    How often a system has biology, and how many bodies then, from the mass code over the whole galaxy; the
+    region decides only which genera (2.8, his 153 boxels with 3+ systems visited): the regional P(bio) still
+    carries how much of the region's signal data was uploaded — 15 % for his Inner Scutum-Centaurus Arm d boxels,
+    which held 36 %, and 22 % for his Inner Orion Spur ones, which held 14 % — and ranked his boxels 0.27 against
+    what they held, the mass code's 0.38, with the genus mix kept regional (value 0.27 against 0.25).
+  */
+  const pBio = pBioOf(base);
+  const bodies = base.bio > 0 ? base.bioBodies / base.bio : 0;
   const parts = cell.genera.map((n, i) => (cell.dss > 0 ? (n / cell.dss) * (ctx.genusValue[i] ?? 0) : 0));
   const perBody = parts.reduce((a, x) => a + x, 0);
   const remaining = Math.max(0, spb - (ctx.visited ?? 0));

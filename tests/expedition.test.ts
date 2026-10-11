@@ -82,26 +82,32 @@ describe("expedition: the boxels around a point", () => {
 
 describe("expedition: what a boxel is worth", () => {
   const genusValue = [1_000_000, 4_000_000, 20_000_000];
-  it("scores from the region's cell: systems x P(bio) x bodies x value per body x 5", () => {
+  it("scores systems x P(bio) x bodies x value per body x 5: P(bio) and bodies from the mass code, genera from the region", () => {
     const s = boxelEV(box(), { table, region: "Inner Orion Spur", genusValue });
     expect(s.regional).toBe(true);
     expect(s.systems).toBe(200);
-    expect(s.pBio).toBeCloseTo(0.1, 6);
-    expect(s.bioBodiesPerSystem).toBe(3);
-    // per DSS'd bio body: 0.5 x 1 M + 0.5 x 4 M + 0.01 x 20 M = 2.7 M
-    expect(s.ev).toBeCloseTo(200 * 0.1 * 3 * 2_700_000 * 5, -2);
+    // The mass code's 20,000 of 400,000 (2.8: the region's own rate carries its upload coverage).
+    expect(s.pBio).toBeCloseTo(0.05, 6);
+    expect(s.bioBodiesPerSystem).toBe(2);
+    // per DSS'd bio body, the region's genus mix: 0.5 x 1 M + 0.5 x 4 M + 0.01 x 20 M = 2.7 M
+    expect(s.ev).toBeCloseTo(200 * 0.05 * 2 * 2_700_000 * 5, -2);
     expect(s.topGenera[0]!.genus).toBe("Stratum");
   });
 
   it("takes recorded systems off, and falls back to the mass code where the region is thin", () => {
     const full = boxelEV(box(), { table, region: "Inner Orion Spur", genusValue });
-    const half = boxelEV(box(), { table, region: "Inner Orion Spur", genusValue, recorded: 10 });
+    const half = boxelEV(box(), { table, region: "Inner Orion Spur", genusValue, recorded: 5 });
     expect(half.ev).toBeCloseTo(full.ev / 2, -2);
     expect(boxelEV(box(), { table, region: "Inner Orion Spur", genusValue, recorded: 1e6 }).ev).toBe(0);
     const thin = boxelEV(box(), { table, region: "Tiny Region", genusValue });
     expect(thin.regional).toBe(false);
     expect(thin.systems).toBe(100);
     expect(thin.pBio).toBeCloseTo(0.05, 6);
+  });
+
+  it("reads P(bio) from the recently updated systems where the table has them", () => {
+    const recent: EvTable = { ...table, byMass: { d: { ...table.byMass.d!, knownRecent: 100_000, bioRecent: 20_000 } } };
+    expect(boxelEV(box(), { table: recent, region: "Inner Orion Spur", genusValue }).pBio).toBeCloseTo(0.2, 6);
   });
 
   it("takes the commander's own visited systems off the systems left, biology or not", () => {
@@ -149,8 +155,8 @@ describe("expedition: target species", () => {
     const r = boxelEVForSpecies(box(), {
       table, region: "Inner Orion Spur", genus: "Stratum", speciesId: "stratum_stratum_paleas", shareInGenus: 0.25, catalogue: cat,
     });
-    // 200 x 0.1 bio systems x 3 bodies x 0.5 Stratum x 0.25
-    expect(r.bodies).toBeCloseTo(7.5, 6);
+    // 200 x 0.05 bio systems x 2 bodies x 0.5 Stratum x 0.25
+    expect(r.bodies).toBeCloseTo(2.5, 6);
     const none = boxelEVForSpecies(box({ code: "b", cubeLy: 20 }), {
       table, region: "Inner Orion Spur", genus: "Electricae", speciesId: "electricae_electricae_radialem", shareInGenus: 1, catalogue: cat,
     });
