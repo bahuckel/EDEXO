@@ -14,6 +14,7 @@ import { useRowContext, type LiveRun, type RowContextValue } from "./rowContext"
 import { speciesPhotoVariant } from "./speciesPhotoVariant";
 import { heroPhotoUrlFor, predictedColourCause, titleCaseSpeciesWords } from "./speciesMatchHelpers";
 import { RarityGem } from "./RarityGem";
+import { chanceWhyText } from "./ChanceWhyList";
 
 type Match = BodyComputed["matches"][number];
 
@@ -218,6 +219,11 @@ export function SpeciesRow({
           ) : null}
           {m.lowChanceWhy ? (
             <span className="srow-tag srow-tag--why" title={m.lowChanceWhy} aria-label={m.lowChanceWhy}>
+              [?]
+            </span>
+          ) : m.chanceWhy?.length ? (
+            // Why this chance (plan 1.7): the facts behind the number, on hover; the unfolded card lists them.
+            <span className="srow-tag srow-tag--chance-why" title={chanceWhyText(m)} aria-label={chanceWhyText(m)}>
               [?]
             </span>
           ) : null}

@@ -227,3 +227,14 @@ export function applyGenusPrior(
     }
   }
 }
+
+/**
+ * The coarsest cell's genus shares, bodies with this many signals of any kind ("L5|n"), for the
+ * candidate row's "why this chance" (plan 1.7): how much more or less often the genus grows on a body
+ * like this one than on any body with the same signal count.
+ */
+export function genusPriorBaseline(root: string, signals: number): Record<string, number> | null {
+  const file = load(root);
+  const c = file?.cells[`L5|${Math.min(Math.trunc(signals), 5)}`];
+  return c ? c.p : null;
+}

@@ -134,3 +134,28 @@ export function applyMeasuredOdds(shown: SpeciesMatch[], scan: PlanetScan): void
     m.genusSharePercent = round((100 - fixedSum) * w);
   }
 }
+
+/**
+ * What the measured odds say about one row, in words, for the candidate row's "why this chance"
+ * (plan 1.7, 2026-10-11): null where no measured table applies to it.
+ */
+export function measuredOddsNote(m: SpeciesMatch, scan: PlanetScan): string | null {
+  const atmo = atmosphereTypeKeyOf(scan);
+  if (m.entry.genusDataDir === "recepta" && (atmo === "carbondioxide" || atmo === "oxygen")) {
+    const so2 = gasSharePercent(scan, "SulphurDioxide") ?? 0;
+    const rate = receptaRate(so2);
+    if (rate != null) return `Recepta grows on ${rate} % of such bodies with ${so2.toFixed(2)} % sulphur dioxide (a year of EDDN finds)`;
+  }
+  const t = Number(scan.SurfaceTemperature);
+  const volc = String(scan.Volcanism ?? "").toLowerCase();
+  const nmagma = /nitrogen magma|ammonia magma/.test(volc);
+  const branch = Number.isFinite(t) && t >= 300 ? "hot" : hasVolcanism(scan) ? (nmagma ? "cold-nmagma" : "cold") : null;
+  if (m.entry.id === "bacterium_bacterium_tela" && branch) {
+    const share = TELA_SHARE[`${atmo}|${branch}`] ?? (branch === "cold-nmagma" ? TELA_SHARE[`${atmo}|cold`] : undefined);
+    if (share !== undefined) return `tela is ${share} % of the Bacterium on ${branch === "hot" ? "hot" : "cold volcanic"} bodies of this atmosphere (a year of EDDN finds)`;
+  }
+  if (m.entry.id === "bacterium_bacterium_omentum" && nmagma && OMENTUM_SHARE[atmo] !== undefined) {
+    return `omentum is ${OMENTUM_SHARE[atmo]} % of the Bacterium on nitrogen or ammonia magma bodies of this atmosphere (a year of EDDN finds)`;
+  }
+  return null;
+}

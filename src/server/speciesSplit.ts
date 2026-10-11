@@ -318,3 +318,106 @@ export function splitStarsFrom(byId: ReadonlyMap<number, ExplorationScanRecord>)
   }
   return out;
 }
+
+/**
+ * For the candidate row's "why this chance" (plan 1.7): each species' table entries that this body
+ * switches on, as column → weight. A species on its fallback share (too few bodies to fit) has none.
+ */
+export function splitContributions(
+  root: string,
+  genus: string,
+  facts: ReturnType<typeof splitFacts>,
+): Map<string, Map<string, number>> | null {
+  const f = load(root);
+  const g = f?.genera[genus];
+  if (!f || !g) return null;
+  const cols = splitColumns(root, facts)!;
+  const out = new Map<string, Map<string, number>>();
+  for (const [id, t] of Object.entries(g)) {
+    const m = new Map<string, number>();
+    if (t.w) for (const c of cols) if (t.w[c] !== undefined) m.set(c, t.w[c]!);
+    out.set(id, m);
+  }
+  return out;
+}
+
+const NUM_LABELS: Record<string, [string, string, number]> = {
+  // fact: [words, unit, digits]
+  temp: ["temperature", "K", 0],
+  grav_g: ["gravity", "g", 2],
+  press_atm: ["pressure", "atm", 3],
+  mass: ["mass", "EM", 3],
+  radius_km: ["radius", "km", 0],
+  sma_ls: ["orbit", "Ls", 1],
+  dist_ls: ["distance from arrival", "Ls", 0],
+  ecc: ["eccentricity", "", 2],
+  orb_d: ["orbital period", "d", 1],
+  rot_d: ["rotation", "d", 1],
+  c_ice: ["ice", "", 2],
+  c_metal: ["metal", "", 2],
+  c_rock: ["rock", "", 2],
+  core_ly: ["distance from the core", "ly", 0],
+  y_abs: ["height off the galactic plane", "ly", 0],
+  neb_ly: ["nearest nebula", "ly", 0],
+  gua_ly: ["nearest Guardian site", "ly", 0],
+};
+const CAT_LABELS: Record<string, string> = {
+  cls: "planet class",
+  atmo: "atmosphere",
+  dens: "atmosphere density",
+  volc: "volcanism",
+  volclvl: "volcanism strength",
+  host: "host star",
+  hostlum: "host star luminosity",
+  hostsub_c: "host star subclass",
+  main: "main star",
+  parent: "orbits a",
+  region: "region",
+  tidal: "tidally locked",
+  bioc: "biological signals",
+  nstars_c: "stars in the system",
+};
+
+const GAS_WORDS: Record<string, string> = {
+  carbondioxide: "carbon dioxide",
+  sulphurdioxide: "sulphur dioxide",
+  silicatevapour: "silicate vapour",
+};
+/** "carbondioxide" → "carbon dioxide", "neonrich" → "neon-rich". */
+function gasWords(key: string): string {
+  const rich = key.endsWith("rich");
+  const base = rich ? key.slice(0, -4) : key;
+  return (GAS_WORDS[base] ?? base) + (rich ? "-rich" : "");
+}
+
+/** A table column in words: "temperature 169–177 K", "atmosphere: neon", "iron 18–19 %". */
+export function splitColumnLabel(root: string, col: string): string {
+  const f = load(root);
+  const cat = /^([a-z_]+)=(.*)$/.exec(col);
+  if (cat) {
+    const [, fact, value] = cat as unknown as [string, string, string];
+    const name = CAT_LABELS[fact] ?? NUM_LABELS[fact]?.[0] ?? fact;
+    if (value === "nan") return `${name}: not known`;
+    if (value === "other") return `${name}: other`;
+    if (fact === "tidal") return value === "1" ? "tidally locked" : "not tidally locked";
+    if (fact === "atmo") return `${name}: ${gasWords(value)}`;
+    if (fact === "bioc") return `${value} biological signal${value === "1" ? "" : "s"}`;
+    return `${name}: ${value}`;
+  }
+  const num = /^([a-z_]+)\[(\d+)\]$/.exec(col);
+  if (!num || !f) return col;
+  const [, fact, k] = num as unknown as [string, string, string];
+  const edges = f.edges[fact] ?? [];
+  const log = f.log10.includes(fact);
+  const i = Number(k);
+  const show = (v: number) => (log ? 10 ** v : v);
+  const gas = /^gas_(.+)$/.exec(fact);
+  const mat = /^mat_(.+)$/.exec(fact);
+  const [words, unit, digits] = gas ? [`${gas[1]} share`, "%", 1] : mat ? [mat[1]!, "%", 1] : (NUM_LABELS[fact] ?? [fact, "", 2]);
+  const fmt = (v: number) => show(v).toFixed(digits as number);
+  const u = unit ? ` ${unit}` : "";
+  if (edges.length === 0) return words as string;
+  if (i === 0) return `${words} under ${fmt(edges[0]!)}${u}`;
+  if (i >= edges.length) return `${words} over ${fmt(edges[edges.length - 1]!)}${u}`;
+  return `${words} ${fmt(edges[i - 1]!)}–${fmt(edges[i]!)}${u}`;
+}

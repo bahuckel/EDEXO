@@ -41,7 +41,8 @@ import { regionForSystem, regionIndexForSystem } from "./regionMapData.js";
 import type { GameStateStore } from "./gameState.js";
 import { shownSpeciesMatches, speciesMatchesCriteria } from "./matchSpecies.js";
 import { buildSpeciesMatchContext } from "./speciesMatchContext.js";
-import { candidateInputs, matchCandidates, rankCandidates } from "./candidatePipeline.js";
+import { candidateInputs, matchCandidates, rankCandidates, splitInputsFor } from "./candidatePipeline.js";
+import { explainChances } from "./chanceWhy.js";
 import { bumpMatchCacheEpoch } from "./matchCacheEpoch.js";
 import { achievementAdvanceFor, trackedAchievementSummary, trackedSet } from "./achievements.js";
 import { clearStarlightRangesCache, starlightRangeFor } from "./starlightRanges.js";
@@ -1098,7 +1099,12 @@ function computeBodyUncached(
     matches = markExomasteryZeroHabitatMatches(matches);
   }
   // Ranking, genus split, floors, genus prior, veto, measured odds, Concha order (candidatePipeline.ts).
-  rankCandidates(matches, b, inputs, store, db, root);
+  const splitGenera = rankCandidates(matches, b, inputs, store, db, root);
+  // The facts behind each shown row's number, for its [?] (plan 1.7): read only, body tab only.
+  explainChances(matches, b, inputs, root, {
+    splitGenera,
+    splitInputs: splitGenera.size ? splitInputsFor(b, { ...inputs, scan: mergedScan }, store, root) : null,
+  });
   /*
     The collection marker: species where both the corpus and this commander are short of bodies.
 

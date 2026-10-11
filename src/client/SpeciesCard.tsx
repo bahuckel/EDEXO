@@ -12,6 +12,7 @@ import { PhotoCredit, isPlaceholderPhoto, photoCreditTitle } from "./photoCredit
 import { PhotoGallery } from "./PhotoGallery";
 import { matchHasDetail, matchOtherCardCount, useMatchDetail } from "./useMatchDetail";
 import { WhyChanceStrip } from "./WhyChanceStrip";
+import { ChanceWhyList } from "./ChanceWhyList";
 import { useToast } from "./ui/feedback";
 import { memo, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -576,7 +577,7 @@ export const SpeciesCard = memo(function SpeciesCard({
           <p className="species-similarity-index-codex-hint-text">{EXO_CODEX_VS_EXO_PROFILE_HELP}</p>
         </div>
       )}
-      {m.exomasteryProfilePresent && matchHasDetail(m) ? (
+      {(m.exomasteryProfilePresent && matchHasDetail(m)) || m.chanceWhy?.length ? (
         <button
           type="button"
           className="why-chance__toggle"
@@ -587,7 +588,11 @@ export const SpeciesCard = memo(function SpeciesCard({
           {whyOpen ? "▾" : "▸"} Why this chance
         </button>
       ) : null}
-      {whyOpen ? <WhyChanceStrip detail={lazyDetail.data?.detail ?? null} loading={!lazyDetail.error} /> : null}
+      {/* The facts behind the number first (plan 1.7), then where the species has been found. */}
+      {whyOpen ? <ChanceWhyList m={m} /> : null}
+      {whyOpen && m.exomasteryProfilePresent && matchHasDetail(m) ? (
+        <WhyChanceStrip detail={lazyDetail.data?.detail ?? null} loading={!lazyDetail.error} />
+      ) : null}
       {genusOdds ? <GenusSpeciesOdds items={genusOdds.items} confirmed={genusOdds.confirmed} inCard /> : null}
     </div>
   );

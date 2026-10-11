@@ -24,7 +24,7 @@ import type { GameStateStore } from "./gameState.js";
 import { bodyKey } from "../shared/bodyKey.js";
 import { mergeScanForExomastery } from "./footScannedCatalog.js";
 import { buildSpeciesMatchContext, systemExplorationScanIndex } from "./speciesMatchContext.js";
-import { applySpeciesSplit, splitStarsFrom } from "./speciesSplit.js";
+import { applySpeciesSplit, splitStarsFrom, type SplitInputs } from "./speciesSplit.js";
 import { journalHostObservationFromSpeciesContext } from "./journalHostObservation.js";
 import { matchDatabaseToScan, type MatchDatabaseRun } from "./matchSpecies.js";
 import { loadSpatialCatalogue } from "./spatialCatalogue.js";
@@ -85,6 +85,25 @@ export function matchCandidates(
  * Everything after the matcher that decides which rows are shown and at what chance, in order.
  * Mutates `matches` (flags and percentages) as each pass always has.
  */
+/** The fitted tables' inputs for a body (speciesSplit.ts): its scan and record, the system's stars, where it is. */
+export function splitInputsFor(
+  b: BodyExoState,
+  inputs: CandidateInputs & { scan: PlanetScan },
+  store: GameStateStore,
+  root: string,
+): SplitInputs {
+  return {
+    scan: inputs.scan,
+    rec: inputs.rec,
+    stars: splitStarsFrom(systemExplorationScanIndex(store, b.systemAddress)),
+    coords: store.systemPositions.get(b.systemAddress) ?? store.remoteSystems.get(b.systemAddress)?.coords ?? null,
+    signals: b.biologicalSignals ?? null,
+    catalogue: loadSpatialCatalogue(root),
+    root,
+  };
+}
+
+/** Returns the genera the fitted tables re-split (for the rows' "why this chance"). */
 export function rankCandidates(
   matches: SpeciesMatch[],
   b: BodyExoState,
@@ -92,7 +111,7 @@ export function rankCandidates(
   store: GameStateStore,
   db: SpeciesDatabase,
   root: string,
-): void {
+): Set<string> {
   const { scan, rec, ctx, journalHost } = inputs;
   const locked = () => new Set(collectResolvedOrganicLockSpeciesIds(b.organicGenusLocks, db));
   attachPresenceProbability(matches, b, scan, rec, journalHost, root, store);
@@ -117,20 +136,13 @@ export function rankCandidates(
     than the model (speciesSplit.ts; owner, 2026-10-10). The genus keeps its chance.
   */
   const split = scan
-    ? applySpeciesSplit(matches, {
-        scan,
-        rec,
-        stars: splitStarsFrom(systemExplorationScanIndex(store, b.systemAddress)),
-        coords: store.systemPositions.get(b.systemAddress) ?? store.remoteSystems.get(b.systemAddress)?.coords ?? null,
-        signals: b.biologicalSignals ?? null,
-        catalogue: loadSpatialCatalogue(root),
-        root,
-      })
+    ? applySpeciesSplit(matches, splitInputsFor(b, { ...inputs, scan }, store, root))
     : new Set<string>();
   // Order only, after every floor: Concha labiata or renibus leads by gravity (conchaOrder.ts), unless
   // the tables have ordered Concha already.
   if (!split.has("Concha")) orderConchaPair(matches, scan);
   markSampledDespiteUnlikely(matches, b, db);
+  return split;
 }
 
 export interface CandidateRun {

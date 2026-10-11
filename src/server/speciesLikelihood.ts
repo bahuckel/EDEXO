@@ -257,6 +257,12 @@ export function speciesLogScore(
     minSamples?: number;
     /** Probe seam: sweep {@link VOLCANISM_TERM_WEIGHT}. Zero drops the term entirely. */
     volcanismWeight?: number;
+    /**
+     * Each term as it is added (path, its weighted log-probability), for the candidate row's "why this
+     * chance" (plan 1.7, 2026-10-11): the gases come as one pooled `body.atmosphereComposition`. Read
+     * only; the score is the same with or without it.
+     */
+    onTerm?: (path: string, weightedLogP: number) => void;
     /** Probe seam: sweep {@link ATMOSPHERE_TERM_WEIGHT}. Zero drops the pooled gas term. */
     atmosphereWeight?: number;
     /**
@@ -415,12 +421,14 @@ export function speciesLogScore(
       }
       logLik += weight * lp;
       terms += weight;
+      opts?.onTerm?.(path, weight * lp);
     }
   }
   const atmoWeight = opts?.atmosphereWeight ?? ATMOSPHERE_TERM_WEIGHT;
   if (atmoTerms > 0 && atmoWeight > 0) {
     logLik += (atmoWeight * atmoLog) / atmoTerms;
     terms += atmoWeight;
+    opts?.onTerm?.("body.atmosphereComposition", (atmoWeight * atmoLog) / atmoTerms);
   }
 
   /*
@@ -476,10 +484,12 @@ export function speciesLogScore(
       if (w <= 0) continue;
       logLik += w * lp;
       terms += w;
+      opts?.onTerm?.(path, w * lp);
       continue;
     }
     logLik += lp;
     terms++;
+    opts?.onTerm?.(path, lp);
   }
 
   if (terms === 0) return null;

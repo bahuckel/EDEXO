@@ -659,6 +659,12 @@ export interface SpeciesMatch {
    * the row's red tint and [?] (owner, 2026-10-09). Absent otherwise.
    */
   lowChanceWhy?: string;
+  /**
+   * Why this chance (plan 1.7, 2026-10-11; `server/chanceWhy.ts`): the facts behind the row's number,
+   * strongest first. `weight` is a log-odds nudge (+ for, − against) where there is one, null for a
+   * plain measured fact. Body tab only; absent on the other surfaces.
+   */
+  chanceWhy?: { label: string; weight: number | null; kind: "genus" | "field" | "measured" | "region" }[];
   /** This plant, here, would advance the tracked achievement (`server/achievements.ts`). */
   achievementAdvance?: import("./achievements.js").AchievementAdvanceDTO;
   /** This species' rarity in the body's region (`shared/speciesRarity.ts`); the DNA badge shows it. */
