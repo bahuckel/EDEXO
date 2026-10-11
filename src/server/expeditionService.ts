@@ -245,6 +245,7 @@ export async function expeditionField(
   const key = [
     Math.round(q.from.x / 10), Math.round(q.from.y / 10), Math.round(q.from.z / 10),
     radiusLy, Math.round(jumpRangeLy), entry?.id ?? "", codes.join(""), q.minEv ?? 0, limit, q.visitedPoints?.length ?? 0,
+    deps.index ? 1 : 0,
   ].join("|");
   const hit = fieldCache.get(key);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.value;

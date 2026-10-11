@@ -900,6 +900,25 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
 .jump__copied-run {
   color: var(--bio);
 }
+/* "Next boxel" (plan 2.7): the expedition planner's pick, off unless chosen in the launcher. */
+.jump__boxel {
+  margin-top: 0.3rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--hud-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jump__boxel-k {
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hud);
+}
+.jump__boxel-v {
+  color: var(--bio);
+}
 .jump--none .jump__tri {
   opacity: 0.35;
 }

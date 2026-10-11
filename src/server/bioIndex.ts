@@ -287,6 +287,14 @@ export function loadBioIndex(file = bioIndexPath()): BioIndex | null {
   return cached;
 }
 
+/**
+ * The index if this process has already read it, else null — never a read (the header's "Next boxel", plan
+ * 2.7: a line on every jump must not pull 1.7 M systems into memory the map would otherwise let go).
+ */
+export function peekBioIndex(): BioIndex | null {
+  return cached ?? null;
+}
+
 let pending: Promise<BioIndex | null> | null = null;
 
 /**

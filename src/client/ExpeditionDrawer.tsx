@@ -19,6 +19,22 @@ import { CopySystemButton } from "./CopySystemButton";
 
 type Xyz = { x: number; y: number; z: number };
 
+/**
+ * Open the map on a boxel from elsewhere (the header's "Next boxel", plan 2.7): kept until the map takes it,
+ * since the map may not be mounted yet, and announced for a map that already is.
+ */
+export const EXPEDITION_FOCUS_EVENT = "edexo:expedition-focus";
+let pendingFocus: { key: string; center: Xyz; cubeLy: number } | null = null;
+export function requestExpeditionFocus(b: Pick<ExpeditionBoxelDTO, "key" | "center" | "cubeLy">): void {
+  pendingFocus = { key: b.key, center: b.center, cubeLy: b.cubeLy };
+  window.dispatchEvent(new CustomEvent(EXPEDITION_FOCUS_EVENT));
+}
+export function takeExpeditionFocus(): { key: string; center: Xyz; cubeLy: number } | null {
+  const f = pendingFocus;
+  pendingFocus = null;
+  return f;
+}
+
 const RADII = [250, 500, 1000, 2000, 3000];
 const MIN_PER_JUMP = [0, 1, 3, 5, 10];
 const LIST_ROWS = 12;
@@ -97,7 +113,8 @@ export function ExpeditionDrawer({
   setPlan: (p: ExpeditionPlanDTO | null) => void;
   onFocus: (b: ExpeditionBoxelDTO) => void;
 }) {
-  const [radius, setRadius] = useState(1000);
+  // 500 ly, as the header's "Next boxel" scores: c boxels count up to here, so its pick is in this list.
+  const [radius, setRadius] = useState(500);
   const [fromSelected, setFromSelected] = useState(false);
   const [species, setSpecies] = useState("");
   const [minM, setMinM] = useState(0);

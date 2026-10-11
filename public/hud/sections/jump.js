@@ -1,4 +1,5 @@
-import { esc, head, q } from "../core.js";
+import { api, esc, head, q } from "../core.js";
+import { pref } from "../theme.js";
 
 /* ============================================================== Next jump ==================== */
 /*
@@ -34,7 +35,8 @@ export var jump = {
       '<div class="jump__disc" data-f="disc" hidden></div>' +
       "</div></div>" +
       '<div class="jump__route" data-f="route" hidden></div>' +
-      '<div class="jump__copied" data-f="copied" hidden></div>'
+      '<div class="jump__copied" data-f="copied" hidden></div>' +
+      '<div class="jump__boxel" data-f="boxel" hidden></div>'
     );
   },
   render: function (d, root) {
@@ -43,6 +45,7 @@ export var jump = {
     var box = q(root, "jump");
     renderRouteStrip(d, q(root, "route"));
     renderBoxelCopied(d, q(root, "copied"));
+    renderNextBoxel(d, q(root, "boxel"));
     if (!jt || !jt.starSystem) {
       renderDiscovered(null, q(root, "disc"));
       status.textContent = "No jump";
@@ -96,6 +99,45 @@ export function renderDiscovered(jt, el) {
   el.hidden = !label;
   el.className = "jump__disc" + (kind ? " jump__disc--" + kind : "");
   el.textContent = label || "";
+}
+
+/*
+  "Next boxel" (plan 2.7, 2026-10-11): the expedition planner's best boxel within 500 ly by first-footfall
+  credits per jump, one line under the jump. Off unless chosen in the launcher (edexoHudNextBoxel), like the
+  credit line. Asked once per system the ship is in, with light=1: it never makes the server load the galaxy
+  index for a HUD line.
+*/
+var nextBoxel = { key: null, text: null };
+function millions(v) {
+  return v >= 1e9 ? (v / 1e9).toFixed(1) + " B" : v >= 1e6 ? (v / 1e6).toFixed(1) + " M" : Math.round(v / 1e3) + " k";
+}
+export function renderNextBoxel(d, el) {
+  if (!el) return;
+  if (pref("edexoHudNextBoxel", "0") !== "1") {
+    el.hidden = true;
+    return;
+  }
+  var key = d.currentSystemAddress != null ? String(d.currentSystemAddress) : "";
+  if (key && key !== nextBoxel.key) {
+    nextBoxel.key = key;
+    fetch(api("/api/expedition/field?radius=500&limit=1&light=1"), { cache: "no-store" })
+      .then(function (r) {
+        return r.ok ? r.json() : null;
+      })
+      .then(function (j) {
+        var b = j && j.boxels && j.boxels[0];
+        nextBoxel.text = b
+          ? '<span class="jump__boxel-k">Next boxel</span> ' +
+            esc(b.name || b.code + " boxel") +
+            ' <span class="jump__boxel-v">' + Math.round(b.distanceLy) + " ly · " + millions(b.evPerJump) + "/jump</span>"
+          : null;
+        el.hidden = !nextBoxel.text;
+        el.innerHTML = nextBoxel.text || "";
+      })
+      .catch(function () {});
+  }
+  el.hidden = !nextBoxel.text;
+  el.innerHTML = nextBoxel.text || "";
 }
 
 /*

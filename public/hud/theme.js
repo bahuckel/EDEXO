@@ -63,6 +63,7 @@ export function serverPref(key) {
   if (key === "edexoHudRelevant") return typeof p.relevant === "boolean" ? (p.relevant ? "1" : "0") : null;
   if (key === "edexoHudType") return p.hudType || null;
   if (key === "edexoHudCredit") return p.credit || null;
+  if (key === "edexoHudNextBoxel") return typeof p.nextBoxel === "boolean" ? (p.nextBoxel ? "1" : "0") : null;
   if (key === "edexoHudTilt") return typeof p.tilt === "number" ? String(p.tilt) : null;
   if (key === "edexoHudTiltMode") return p.tiltMode || null;
   if (key === "edexoHudSlant") return typeof p.slant === "number" ? String(p.slant) : null;

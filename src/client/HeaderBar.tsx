@@ -5,6 +5,7 @@ import { useLastStateAt } from "./useLiveSnapshot";
 import { HeaderArt } from "./HeaderArt";
 import { useConfirm, useToast } from "./ui/feedback";
 import { InfoPopover, Tooltip } from "./ui/Tooltip";
+import { NextBoxelCard } from "./NextBoxelCard";
 import {
   IconAchievements,
   IconChevronDown,
@@ -853,6 +854,7 @@ export const HeaderBar = memo(function HeaderBar({
                   );
                 })()
               : null}
+            <NextBoxelCard systemAddress={snap.currentSystemAddress} />
           </div>
         </div>
       ) : null}

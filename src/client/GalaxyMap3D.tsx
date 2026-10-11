@@ -35,7 +35,15 @@ import {
 } from "./GalaxyFilterPanel";
 import { SystemBookmarkButton } from "./BookmarkButton";
 import { CopySystemButton } from "./CopySystemButton";
-import { ExpeditionBoxelCard, ExpeditionDrawer, expeditionColours, expeditionSize, expeditionTip } from "./ExpeditionDrawer";
+import {
+  EXPEDITION_FOCUS_EVENT,
+  ExpeditionBoxelCard,
+  ExpeditionDrawer,
+  expeditionColours,
+  expeditionSize,
+  expeditionTip,
+  takeExpeditionFocus,
+} from "./ExpeditionDrawer";
 import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
 import { drawnGalaxyFrame, drawnGalaxySprites, galaxyImageRect, REGION_MAP_SIZE, xForRegionPx, zForRegionPz } from "./regionBackdrop";
 import { CLOUD_SPRITE_STRIDE } from "@shared/galaxyClouds";
@@ -549,6 +557,33 @@ export function GalaxyMap3D() {
     );
     e.setMarkerLayerVisible("expedition", drawer === "expedition");
   }, [expField, drawer, stats?.phase]);
+  // Opened from the header's "Next boxel" (plan 2.7): the Expedition drawer, the camera on it, selected once scored.
+  const [expFocus, setExpFocus] = useState<{ key: string; center: { x: number; y: number; z: number }; cubeLy: number } | null>(null);
+  useEffect(() => {
+    const take = () => {
+      const f = takeExpeditionFocus();
+      if (f) setExpFocus(f);
+    };
+    take();
+    window.addEventListener(EXPEDITION_FOCUS_EVENT, take);
+    return () => window.removeEventListener(EXPEDITION_FOCUS_EVENT, take);
+  }, []);
+  const expFlown = useRef<string | null>(null);
+  useEffect(() => {
+    const phase = stats?.phase;
+    if (!expFocus || !engine.current || !phase || phase === "loading") return;
+    if (expFlown.current !== expFocus.key) {
+      expFlown.current = expFocus.key;
+      setDrawer("expedition");
+      engine.current.flyTo(expFocus.center, Math.max(300, expFocus.cubeLy * 6));
+    }
+    if (expByKey.has(expFocus.key)) {
+      engine.current.select({ kind: "marker", layer: "expedition", id: expFocus.key, ...expFocus.center });
+      expFlown.current = null;
+      setExpFocus(null);
+    }
+  }, [expFocus, expByKey, stats?.phase]);
+
   // A picked species' position rule: a ring round every point it is measured from, while the drawer is open.
   useEffect(() => {
     const e = engine.current;

@@ -24,4 +24,10 @@ describe("HUD settings on the server", () => {
     expect(s.setHudPrefs({ credit: "bottom" })).toEqual({ credit: "bottom" });
     expect(s.setHudPrefs({ credit: "side" })).toEqual({});
   });
+
+  it("keeps the Next boxel line on or off (plan 2.7)", () => {
+    const s = new GameStateStore();
+    expect(s.setHudPrefs({ nextBoxel: true })).toEqual({ nextBoxel: true });
+    expect(s.setHudPrefs({ nextBoxel: "1" })).toEqual({});
+  });
 });

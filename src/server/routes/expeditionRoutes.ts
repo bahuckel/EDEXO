@@ -5,11 +5,12 @@
  * `field`: `?x&y&z` (default the ship), `radius` (ly, at most 3,000), `species` (a species id: target-species
  * mode), `minEv`, `limit`, `codes` (mass codes, default c–h). `plan`: `?stops=<key>;<key>…` (at most 20; a
  * key holds commas, so the stops are split on semicolons).
- * `boxel`: `?key=<key>`: the score and the system names nobody has recorded.
+ * `boxel`: `?key=<key>`: the score and the system names nobody has recorded. `light=1` on `field` (the header's
+ * "Next boxel", plan 2.7) uses the galaxy index only when it is already in memory, and never reads it.
  */
 import type express from "express";
 import { getProjectRoot } from "../paths.js";
-import { loadBioIndexAsync } from "../bioIndex.js";
+import { loadBioIndexAsync, peekBioIndex } from "../bioIndex.js";
 import { loadPriceList, type PriceIndex } from "../priceList.js";
 import { loadRegionMap } from "../regionMapData.js";
 import { loadSpatialCatalogue } from "../spatialCatalogue.js";
@@ -43,11 +44,11 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
     const z = Number(q.z);
     return [x, y, z].every(Number.isFinite) && q.x !== undefined ? { x, y, z } : fallback;
   };
-  const deps = async (withIndex: boolean): Promise<ExpeditionDeps> => {
+  const deps = async (withIndex: boolean | "peek"): Promise<ExpeditionDeps> => {
     const root = getProjectRoot();
     return {
       root,
-      index: withIndex ? await loadBioIndexAsync() : null,
+      index: withIndex === "peek" ? peekBioIndex() : withIndex ? await loadBioIndexAsync() : null,
       prices: priceIndex(root),
       species: getCachedSpeciesDatabase().species,
       regionMap: loadRegionMap(root),
@@ -74,7 +75,7 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
             codes: parseCodes(req.query.codes),
             visitedPoints: opts.getMySystems?.().systems ?? [],
           },
-          await deps(true),
+          await deps(req.query.light === "1" ? "peek" : true),
         ),
       );
     } catch (e) {

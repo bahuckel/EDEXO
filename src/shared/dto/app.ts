@@ -238,6 +238,8 @@ export interface HudPrefsDTO {
   hudType?: "original" | "title" | "elite";
   /** "HUD Overlay by EDEXO-Compare" above or below each HUD (owner, 2026-10-09); off by default. */
   credit?: "off" | "top" | "bottom";
+  /** "Next boxel" line under the Next jump HUD (plan 2.7). */
+  nextBoxel?: boolean;
   /** Elite Style's tilt, degrees, -35..35 (positive: the right edge goes into the screen). */
   tilt?: number;
   /** Elite Style's angle as a turn (3D, "swinging door") or a slant (flat, same width). */
