@@ -166,9 +166,15 @@ export interface LiveShipFuelNavRouteDTO {
    * cannot finish the plot, the refuel mark. Empty when off plot or at the destination.
    */
   ahead: RouteAheadHopDTO[];
-  /** Hops to that nearest scoopable star (may exceed `ahead.length`); null when none is needed. */
+  /**
+   * Hops to the last scoopable star the tank reaches (may exceed `ahead.length`); 0 = the star the
+   * ship is at; null when no mark is needed, or when no scoopable star is in reach (then `red`).
+   */
   refuelInHops: number | null;
-  /** `yellow` = plan to scoop there; `red` = you must (last reachable scoop, or none reachable). */
+  /**
+   * `yellow` = scoop there; `red` (blinking) = the last chance: a fuel desert follows it, or it is
+   * the star the ship is at, or none is in reach.
+   */
   refuelLevel: "none" | "yellow" | "red";
 }
 

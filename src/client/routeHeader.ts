@@ -46,7 +46,7 @@ export function routeNavCardTitle(snap: AppSnapshot): string {
       }
       if (nav.routeRefuelAlert === "red") {
         parts.push(
-          `Refuel warning (pulsing red): treat as urgent — e.g. no main-sequence scoopable (KGBFOAM-style O–M) star in the next 10 NavRoute systems, only scoop in the near window is here, and/or final plotted hop (station fuel not guaranteed). Uses the same star-class rules as the system map (data/system-map/star-roles.json).`,
+          `Refuel warning (pulsing red): treat as urgent — e.g. no main-sequence scoopable (KGBFOAM-style O–M) star in the next 10 NavRoute systems, only scoop in the near window is here, the last scoop the tank reaches comes before three or more non-scoopable systems in a row, and/or final plotted hop (station fuel not guaranteed). Uses the same star-class rules as the system map (data/system-map/star-roles.json).`,
         );
       } else if (nav.routeRefuelAlert === "yellow") {
         parts.push(
