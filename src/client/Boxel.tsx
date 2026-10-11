@@ -10,6 +10,7 @@
  * anyone knows) and ticks it. Skip and the cut (×) on a row correct a saved boxel, as before; the table
  * and the side menu re-read the journals after every jump, so the ticks follow you.
  */
+import { tabListKeyDown } from "./ui/Tabs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BoxelTableDTO, BoxelTableRowDTO, PreviousBoxelDTO, SavedBoxelDTO } from "@shared/boxel";
 import type { BoxelLookupStatus } from "@shared/boxel";
@@ -856,7 +857,7 @@ export function BoxelScreen({
                 loadPrevious(false);
             }}
           >
-            <div className="boxel-side__tabs" role="tablist" aria-label="Which boxels">
+            <div className="boxel-side__tabs" role="tablist" aria-label="Which boxels" onKeyDown={(ev) => tabListKeyDown(ev, { follow: true })}>
               {(
                 [
                   ["saved", "Saved", saved ? saved.length - exploredCount : null],
@@ -869,6 +870,7 @@ export function BoxelScreen({
                   type="button"
                   role="tab"
                   aria-selected={sideTab === k}
+                  tabIndex={sideTab === k ? 0 : -1}
                   className={`disc-tab${sideTab === k ? " disc-tab--on" : ""}`}
                   onClick={() => setSideTab(k)}
                 >

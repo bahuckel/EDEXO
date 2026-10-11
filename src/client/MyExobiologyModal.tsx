@@ -1,6 +1,7 @@
 /**
  * My exobiology: the finds table and the discoveries views. Split out of AppModals.tsx (code review D, 2026-09-27).
  */
+import { tabListKeyDown } from "./ui/Tabs";
 import { usePersistedState } from "./usePersistedState";
 import { footConfirmationLabel } from "@shared/footConfirmationLabel";
 import { CopySystemButton } from "./CopySystemButton";
@@ -236,7 +237,7 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
       >
         <div className="modal-head">
           <h3 id="my-exo-title">My discoveries</h3>
-          <div className="disc-tabs" role="tablist" aria-label="What to show">
+          <div className="disc-tabs" role="tablist" aria-label="What to show" onKeyDown={(ev) => tabListKeyDown(ev, { follow: true })}>
             {(
               [
                 ["species", "Exobiology"],
@@ -250,6 +251,7 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
                 type="button"
                 role="tab"
                 aria-selected={view === k}
+                tabIndex={view === k ? 0 : -1}
                 className={`disc-tab${view === k ? " disc-tab--on" : ""}`}
                 onClick={() => setView(k)}
               >
