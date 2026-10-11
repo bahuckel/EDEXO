@@ -48,7 +48,8 @@ function unlockPageScroll(): void {
   if (scrollLockDepth === 0) document.body.style.overflow = scrollLockPrevious;
 }
 
-const isVisible = (el: HTMLElement) => el.offsetWidth > 0 || el.offsetHeight > 0 || el === document.activeElement;
+const isVisible = (el: HTMLElement) =>
+  el.offsetWidth > 0 || el.offsetHeight > 0 || el === document.activeElement;
 
 /*
   The first and last focusable element that is visible, scanning in from each end (2026-09-30).
@@ -71,7 +72,12 @@ function focusEnds(root: HTMLElement | null): { first: HTMLElement | null; last:
 export function useModal<T extends HTMLElement = HTMLDivElement>(
   open: boolean,
   onClose: () => void,
-  opts?: { lockScroll?: boolean; autoFocus?: boolean },
+  opts?: {
+    lockScroll?: boolean;
+    autoFocus?: boolean;
+    /** A real dialog, modal inside a tab's screen too (ui/Dialog.tsx); a screen itself leaves it off. */
+    modalInTab?: boolean;
+  },
 ) {
   const ref = useRef<T | null>(null);
   const onCloseRef = useRef(onClose);
@@ -80,7 +86,8 @@ export function useModal<T extends HTMLElement = HTMLDivElement>(
   const lockScroll = opts?.lockScroll !== false;
   const autoFocus = opts?.autoFocus !== false;
   // In a tab (Tab view, tabs/TabHost.tsx) the screen is a page, not a dialog: no trap, no Escape, no lock.
-  const inTab = useInTab() != null;
+  // A dialog opened over a screen in a tab is still a dialog (modalInTab).
+  const inTab = useInTab() != null && opts?.modalInTab !== true;
 
   useEffect(() => {
     if (!open || inTab) return;
