@@ -1,0 +1,68 @@
+/*
+ * Tailwind's theme, mapped onto the app's own tokens (plan 3.2, 2026-10-12).
+ *
+ * Every class is prefixed `tw:` (`tw:bg-accent`, `tw:p-4`, `tw:text-sm`), so an existing class name
+ * such as `hidden`, `border` or `table` never picks up a utility, and a new-style class is plain to
+ * see beside the old ones. Tailwind's own palette, sizes and breakpoints are cleared (`--*: initial`):
+ * only what tokens.css already names exists, at its value there. `inline`, so a utility writes the
+ * token itself (`background-color: rgb(var(--accent-rgb))`) and follows a colour scheme, or a token
+ * set on one element, live.
+ *
+ * Utilities sit in the layer `utilities`, after `app` (styles.css), so `tw:p-4` beats any old rule on
+ * the same element whatever its specificity. No preflight: the app's own resets stay as they are.
+ */
+@source "../";
+
+@theme inline {
+  --*: initial;
+
+  /* Colours: the accent family follows Options → Colour scheme. Opacity: `tw:bg-accent/20`. */
+  --color-accent: rgb(var(--accent-rgb));
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-deep: var(--accent-deep);
+  --color-ink: var(--ink);
+  --color-page: var(--bg);
+  --color-panel: var(--panel);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
+  --color-muted: var(--muted);
+  --color-ok: var(--ok);
+  --color-info: var(--info);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-live: var(--live);
+  --color-bio: var(--bio);
+  --color-unknown: var(--unknown);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* Space: the app's eight steps, so `tw:p-4` is --s-4 (0.45rem), not Tailwind's 1rem. */
+  --spacing-0: 0px;
+  --spacing-px: 1px;
+  --spacing-1: var(--s-1);
+  --spacing-2: var(--s-2);
+  --spacing-3: var(--s-3);
+  --spacing-4: var(--s-4);
+  --spacing-5: var(--s-5);
+  --spacing-6: var(--s-6);
+  --spacing-7: var(--s-7);
+  --spacing-8: var(--s-8);
+
+  /* Type: the nine steps and the cockpit face. */
+  --text-2xs: var(--fs-2xs);
+  --text-xs: var(--fs-xs);
+  --text-sm: var(--fs-sm);
+  --text-md: var(--fs-md);
+  --text-lg: var(--fs-lg);
+  --text-xl: var(--fs-xl);
+  --text-2xl: var(--fs-2xl);
+  --text-3xl: var(--fs-3xl);
+  --text-4xl: var(--fs-4xl);
+  --font-hud: var(--hud-font);
+
+  /* Corners are square in the cockpit; only the pill is round. */
+  --radius-none: 0px;
+  --radius-pill: var(--r-pill);
+}
