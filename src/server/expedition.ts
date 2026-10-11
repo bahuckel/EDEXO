@@ -9,13 +9,13 @@
  * region x mass code, docs/perf/boxel_ev.py), and where it is (the species' position rules).
  *
  * ```
- * EV(boxel) = (systems x P(bio) - recorded bio systems) x bio bodies per bio system
+ * EV(boxel) = ((systems - yours) x P(bio) - recorded bio systems) x bio bodies per bio system
  *             x value per bio body x 5 (first footfall)
  * value per bio body = sum_g (DSS'd bio bodies carrying g / DSS'd bio bodies) x value_g
  * ```
  * `value_g` is the genus's mean species value weighted by how often each species is logged (EDAstro's codex
  * counts, `boxelBioRates`). Recorded systems are the ones in the bio index inside the boxel: someone has
- * been, so the bonus is gone. Cells with too few known systems fall back to the mass code over all regions.
+ * been, so the bonus is gone; yours are the commander's own visited systems there, biology or not. Cells with too few known systems fall back to the mass code over all regions.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -257,6 +257,8 @@ export interface BoxelScore {
   /** Expected first-footfall credits in the boxel's unrecorded systems. */
   ev: number;
   systems: number;
+  /** Systems left to fly: the estimate less the commander's own visits there. */
+  remaining: number;
   pBio: number;
   bioBodiesPerSystem: number;
   /** Expected bio systems already in the bio index (recorded), capped at the expected total. */
@@ -268,7 +270,7 @@ export interface BoxelScore {
 
 export function boxelEV(
   b: ExpeditionBoxel,
-  ctx: { table: EvTable; region: string | null; genusValue: readonly number[]; recorded?: number },
+  ctx: { table: EvTable; region: string | null; genusValue: readonly number[]; recorded?: number; visited?: number },
 ): BoxelScore {
   const { cell, regional } = evCellFor(ctx.table, ctx.region, b.code);
   const base = ctx.table.byMass[b.code]!;
@@ -278,7 +280,8 @@ export function boxelEV(
   const bodies = cell.bio > 0 ? cell.bioBodies / cell.bio : 0;
   const parts = cell.genera.map((n, i) => (cell.dss > 0 ? (n / cell.dss) * (ctx.genusValue[i] ?? 0) : 0));
   const perBody = parts.reduce((a, x) => a + x, 0);
-  const expectedBio = spb * pBio;
+  const remaining = Math.max(0, spb - (ctx.visited ?? 0));
+  const expectedBio = remaining * pBio;
   const recorded = Math.min(expectedBio, ctx.recorded ?? 0);
   const ev = (expectedBio - recorded) * bodies * perBody * FIRST_FOOTFALL_FACTOR;
   const topGenera = parts
@@ -286,15 +289,19 @@ export function boxelEV(
     .filter((g) => g.share > 0)
     .sort((a, c) => c.share - a.share)
     .slice(0, 3);
-  return { ev, systems: spb, pBio, bioBodiesPerSystem: bodies, recorded, topGenera, regional };
+  return { ev, systems: spb, remaining, pBio, bioBodiesPerSystem: bodies, recorded, topGenera, regional };
 }
 
 /**
  * Credits per jump if the boxel is flown whole: the jumps to reach its centre plus one per system in it.
  * A huge boxel's total is large, and so is the flying it takes to collect it.
  */
-export function evPerJump(score: Pick<BoxelScore, "ev" | "systems">, distanceLy: number, jumpRangeLy: number): { jumps: number; evPerJump: number } {
-  const jumps = Math.max(1, Math.ceil(distanceLy / Math.max(1, jumpRangeLy))) + Math.max(1, Math.round(score.systems));
+export function evPerJump(
+  score: Pick<BoxelScore, "ev" | "systems"> & { remaining?: number },
+  distanceLy: number,
+  jumpRangeLy: number,
+): { jumps: number; evPerJump: number } {
+  const jumps = Math.max(1, Math.ceil(distanceLy / Math.max(1, jumpRangeLy))) + Math.max(1, Math.round(score.remaining ?? score.systems));
   return { jumps, evPerJump: score.ev / jumps };
 }
 

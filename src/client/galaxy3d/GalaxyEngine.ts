@@ -982,6 +982,34 @@ export class GalaxyEngine {
     this.invalidate();
   }
 
+  private pathLines = new Map<string, THREE.Line>();
+
+  /**
+   * A named polyline in game coordinates (the expedition plan, plan 2.5): drawn like the plan line, in its
+   * own colour, beside it rather than instead of it. Fewer than two points removes it.
+   */
+  setPathLine(name: string, pts: { x: number; y: number; z: number }[], colour: number): void {
+    const old = this.pathLines.get(name);
+    if (old) {
+      this.overlay.remove(old);
+      old.geometry.dispose();
+      (old.material as THREE.Material).dispose();
+      this.pathLines.delete(name);
+    }
+    if (pts.length > 1) {
+      const pos = new Float32Array(pts.length * 3);
+      pts.forEach((p, i) => pos.set([p.x, p.y, -p.z], i * 3));
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.9, depthTest: false }));
+      line.frustumCulled = false;
+      line.renderOrder = 4;
+      this.overlay.add(line);
+      this.pathLines.set(name, line);
+    }
+    this.invalidate();
+  }
+
   getShip(): { x: number; y: number; z: number } | null {
     return this.shipPos;
   }

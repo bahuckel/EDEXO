@@ -72,6 +72,7 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
             minEv: Math.max(0, Number(req.query.minEv) || 0),
             limit: Number(req.query.limit) || undefined,
             codes: parseCodes(req.query.codes),
+            visitedPoints: opts.getMySystems?.().systems ?? [],
           },
           await deps(true),
         ),

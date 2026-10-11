@@ -104,6 +104,14 @@ describe("expedition: what a boxel is worth", () => {
     expect(thin.pBio).toBeCloseTo(0.05, 6);
   });
 
+  it("takes the commander's own visited systems off the systems left, biology or not", () => {
+    const full = boxelEV(box(), { table, region: "Inner Orion Spur", genusValue });
+    const half = boxelEV(box(), { table, region: "Inner Orion Spur", genusValue, visited: 100 });
+    expect(half.remaining).toBe(100);
+    expect(half.ev).toBeCloseTo(full.ev / 2, -2);
+    expect(evPerJump(half, 100, 50).jumps).toBe(2 + 100);
+  });
+
   it("per jump: the jumps to reach it plus one per system in it", () => {
     expect(evPerJump({ ev: 1000, systems: 9 }, 100, 50)).toEqual({ jumps: 11, evPerJump: 1000 / 11 });
   });

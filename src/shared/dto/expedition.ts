@@ -21,6 +21,8 @@ export interface ExpeditionBoxelDTO {
   pBio: number;
   /** Systems of the galaxy index (someone recorded biology) inside the boxel. */
   recorded: number;
+  /** The commander's own visited systems inside the boxel. */
+  visited: number;
   /** Expected first-footfall credits in its unrecorded systems. */
   ev: number;
   /** Jumps to reach it plus one per system in it. */

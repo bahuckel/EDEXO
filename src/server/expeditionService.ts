@@ -120,6 +120,7 @@ function dtoOf(
   s: ReturnType<typeof boxelEV>,
   recorded: number,
   jumpRangeLy: number,
+  visited = 0,
 ): ExpeditionBoxelDTO {
   const per = evPerJump(s, b.distanceLy, jumpRangeLy);
   const r1 = (v: number) => Math.round(v * 10) / 10;
@@ -135,6 +136,7 @@ function dtoOf(
     systems: Math.round(s.systems),
     pBio: Math.round(s.pBio * 10000) / 10000,
     recorded,
+    visited,
     ev: Math.round(s.ev),
     jumps: per.jumps,
     evPerJump: Math.round(per.evPerJump),
@@ -184,7 +186,17 @@ export function parseCodes(raw: unknown): MassCode[] {
 
 /** The value field: every boxel within the radius, scored and ranked by credits per jump (or species bodies). */
 export async function expeditionField(
-  q: { from: Xyz; radiusLy: number; jumpRangeLy: number | null; speciesId?: string | null; minEv?: number; limit?: number; codes?: MassCode[] },
+  q: {
+    from: Xyz;
+    radiusLy: number;
+    jumpRangeLy: number | null;
+    speciesId?: string | null;
+    minEv?: number;
+    limit?: number;
+    codes?: MassCode[];
+    /** The commander's own visited systems: no first footfall left for him there. */
+    visitedPoints?: readonly Xyz[];
+  },
   deps: ExpeditionDeps,
 ): Promise<ExpeditionFieldDTO> {
   const radiusLy = Math.max(10, Math.min(MAX_RADIUS_LY, q.radiusLy || DEFAULT_RADIUS_LY));
@@ -194,7 +206,7 @@ export async function expeditionField(
   const limit = Math.max(1, Math.min(MAX_FIELD_BOXELS, q.limit ?? MAX_FIELD_BOXELS));
   const key = [
     Math.round(q.from.x / 10), Math.round(q.from.y / 10), Math.round(q.from.z / 10),
-    radiusLy, Math.round(jumpRangeLy), entry?.id ?? "", codes.join(""), q.minEv ?? 0, limit,
+    radiusLy, Math.round(jumpRangeLy), entry?.id ?? "", codes.join(""), q.minEv ?? 0, limit, q.visitedPoints?.length ?? 0,
   ].join("|");
   const hit = fieldCache.get(key);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.value;
@@ -204,6 +216,8 @@ export async function expeditionField(
   const genusValue = genusValueTable(table, deps);
   const { boxels, skipped } = boxelsWithin(q.from, radiusLy, codes, names);
   const recorded = await recordedNear(deps.index, q.from, radiusLy, codes.filter((c) => !skipped.includes(c)));
+  const mine = new RecordedCounter(q.from, radiusLy, codes.filter((c) => !skipped.includes(c)));
+  for (const p of q.visitedPoints ?? []) mine.add(p.x, p.y, p.z);
   const share = entry ? shareInGenus(entry, deps.species) : 0;
   const gate = entry ? gateForSpeciesId(entry.id) : null;
   const catalogue = gate
@@ -213,8 +227,9 @@ export async function expeditionField(
   for (const b of boxels) {
     const region = deps.regionMap ? regionForCoords(deps.regionMap, b.center.x, b.center.y, b.center.z) : null;
     const rec = recorded.countIn(b);
-    const s = boxelEV(b, { table, region, genusValue, recorded: rec });
-    const dto = dtoOf(b, region, s, rec, jumpRangeLy);
+    const vis = mine.countIn(b);
+    const s = boxelEV(b, { table, region, genusValue, recorded: rec, visited: vis });
+    const dto = dtoOf(b, region, s, rec, jumpRangeLy, vis);
     if (entry) {
       const sp = boxelEVForSpecies(b, {
         table, region, genus: entry.genus ?? "", speciesId: entry.id, shareInGenus: share, catalogue, recorded: rec,

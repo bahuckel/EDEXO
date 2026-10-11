@@ -35,6 +35,8 @@ import {
 } from "./GalaxyFilterPanel";
 import { SystemBookmarkButton } from "./BookmarkButton";
 import { CopySystemButton } from "./CopySystemButton";
+import { ExpeditionBoxelCard, ExpeditionDrawer, expeditionColours, expeditionSize, expeditionTip } from "./ExpeditionDrawer";
+import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
 import { drawnGalaxyFrame, drawnGalaxySprites, galaxyImageRect, REGION_MAP_SIZE, xForRegionPx, zForRegionPz } from "./regionBackdrop";
 import { CLOUD_SPRITE_STRIDE } from "@shared/galaxyClouds";
 import { regionOutlines, type RegionOutlines } from "@shared/regionBorders.js";
@@ -62,7 +64,7 @@ const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number;
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 type Colour = 0 | 1 | 2;
-type Drawer = "none" | "view" | "layers" | "search" | "filter" | "navroute" | "codex" | "targets";
+type Drawer = "none" | "view" | "layers" | "search" | "filter" | "navroute" | "codex" | "targets" | "expedition";
 /** A Spansh name hit with its coordinates (`/api/system/spansh-search`). */
 type SpanshFindHit = { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number };
 type MineRow = GalaxyMineDTO["systems"][number];
@@ -118,6 +120,11 @@ export function GalaxyMap3D() {
   const [layers, setLayers] = useState({ photo: true, borders: true, labels: true, groups: true, you: true });
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
+  // The expedition planner (plan 2.5): its scored boxels, the plan's stops and the ordered plan.
+  const [expField, setExpField] = useState<ExpeditionFieldDTO | null>(null);
+  const [expPlanKeys, setExpPlanKeys] = useState<string[]>([]);
+  const [expPlan, setExpPlan] = useState<ExpeditionPlanDTO | null>(null);
+  const expByKey = useMemo(() => new Map((expField?.boxels ?? []).map((b) => [b.key, b])), [expField]);
   const [mine, setMine] = useState<Map<string, MineRow>>(new Map());
   const [route, setRoute] = useState<GalaxyRouteDTO | null>(null);
   const [drawer, setDrawer] = useState<Drawer>("none");
@@ -525,6 +532,29 @@ export function GalaxyMap3D() {
       </ul>
     ) : null;
   };
+
+  // The expedition field and plan: drawn while the Expedition drawer has scored something.
+  useEffect(() => {
+    const e = engine.current;
+    if (!e) return;
+    if (!expField) {
+      e.setMarkers("expedition", []);
+      return;
+    }
+    const colour = expeditionColours(expField);
+    e.setMarkers(
+      "expedition",
+      expField.boxels.map((b) => ({ id: b.key, x: b.center.x, y: b.center.y, z: b.center.z, color: colour.get(b.key)!, size: expeditionSize(b) })),
+      2,
+    );
+    e.setMarkerLayerVisible("expedition", drawer === "expedition");
+  }, [expField, drawer, stats?.phase]);
+  useEffect(() => {
+    const e = engine.current;
+    if (!e) return;
+    const ship = route?.position ?? null;
+    e.setPathLine("expedition-plan", expPlan && ship ? [ship, ...expPlan.stops.map((s) => s.center)] : [], 0xffc23a);
+  }, [expPlan, route?.position, stats?.phase]);
 
   // The commander's layer, with the "waiting at least" threshold: below it a waiting system is grey.
   const waitMinCr = waitMinM * 1_000_000;
@@ -1030,6 +1060,18 @@ export function GalaxyMap3D() {
         </>
       ) : null;
     }
+    if (hover.layer === "expedition") {
+      const b = expByKey.get(hover.id);
+      if (!b) return null;
+      const t = expeditionTip(b, !!expField?.species);
+      return (
+        <>
+          <strong>{t.title}</strong>
+          <span>{t.line}</span>
+          <em>{t.note}</em>
+        </>
+      );
+    }
     const xp = extraPoint(hover.layer, hover.id);
     if (xp) {
       return (
@@ -1117,6 +1159,20 @@ export function GalaxyMap3D() {
     }
     if (selection.layer === "you") return <MySystemRecord addr={selection.id} />;
     if (selection.layer === "plan") return <IndexRecord ordinal={Number(selection.id)} heading />;
+    if (selection.layer === "expedition") {
+      const b = expByKey.get(selection.id);
+      return b ? (
+        <ExpeditionBoxelCard
+          b={b}
+          species={!!expField?.species}
+          ship={route?.position ?? null}
+          inPlan={expPlanKeys.includes(b.key)}
+          onTogglePlan={() =>
+            setExpPlanKeys((k) => (k.includes(b.key) ? k.filter((x) => x !== b.key) : [...k, b.key].slice(0, 20)))
+          }
+        />
+      ) : null;
+    }
     const xs = extraPoint(selection.layer, selection.id);
     if (xs) {
       return (
@@ -1590,6 +1646,20 @@ export function GalaxyMap3D() {
             </div>
           ) : null}
         </aside>
+      ) : null}
+
+      {drawer === "expedition" ? (
+        <ExpeditionDrawer
+          ship={route?.position ?? null}
+          selected={selection ? { x: selection.x, y: selection.y, z: selection.z } : null}
+          field={expField}
+          setField={setExpField}
+          planKeys={expPlanKeys}
+          setPlanKeys={setExpPlanKeys}
+          plan={expPlan}
+          setPlan={setExpPlan}
+          onFocus={(b) => go(b.center, Math.max(300, b.cubeLy * 6), { kind: "marker", layer: "expedition", id: b.key, ...b.center })}
+        />
       ) : null}
 
       {drawer === "navroute" ? (

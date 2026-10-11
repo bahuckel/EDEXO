@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 import { InfoPopover, Tooltip } from "../ui/Tooltip";
 
-export type G3dTabKey = "view" | "layers" | "filter" | "search" | "navroute" | "codex" | "targets";
+export type G3dTabKey = "view" | "layers" | "filter" | "search" | "navroute" | "codex" | "targets" | "expedition";
 
 export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
   { key: "view", label: "View", hint: "View: camera, follow your ship, colours, brightness" },
@@ -17,6 +17,11 @@ export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
   { key: "navroute", label: "NavRoute", hint: "NavRoute: the route plotted now (Next) and the systems you have been to (Previous)" },
   { key: "codex", label: "Codex", hint: "Codex: what you have logged, region by region" },
   { key: "targets", label: "Targets", hint: "Biology targets: the nearest system worth flying to, and a plan of several" },
+  {
+    key: "expedition",
+    label: "Expedition",
+    hint: "Expedition: where nobody has been yet — boxels ranked by the first-footfall credits they are likely to hold per jump",
+  },
 ];
 
 export const G3D_HELP: Record<G3dTabKey, string[]> = {
@@ -46,6 +51,11 @@ export const G3D_HELP: Record<G3dTabKey, string[]> = {
   ],
   codex: [
     "Your codex, region by region: how many of a region's entries you have logged. Click a region on the map or in the list to see its systems.",
+  ],
+  expedition: [
+    "Where to go for first footfalls in space nobody has recorded. Every boxel around you is scored from the Spansh dump: how many systems a boxel of its size holds in this region, how often one has biology, how many biological bodies, and what the genera seen there are worth at five times for a first footfall. Systems already in the galaxy index count against it: someone has been.",
+    "Ranked by credits per jump — the jumps to reach the boxel plus one per system in it, so a huge boxel has to earn its flying. Pick a species to light only the boxels where it can grow (its nebula, Guardian or core rule) and rank them by how many of its bodies they should hold.",
+    "These are averages over many boxels like it, not a promise about one. Click a boxel for the system names nobody has recorded yet, copy one into the game's galaxy map, and add boxels to a plan to see the order and the jumps.",
   ],
   targets: [
     "For exobiology runs. Set a floor and Next target finds the nearest system worth at least that much that you have not mapped or sampled, flies there and copies its name for the game's galaxy map.",
@@ -128,6 +138,11 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
         <>
           <path {...p} d="M4 4.5h6.5A2.5 2.5 0 0 1 13 7v13a2 2 0 0 0-2-2H4V4.5z" />
           <path {...p} d="M20 4.5h-4.5A2.5 2.5 0 0 0 13 7v13a2 2 0 0 1 2-2h5V4.5z" />
+        </>
+      ) : name === "expedition" ? (
+        <>
+          <circle {...p} cx="12" cy="12" r="9" />
+          <path {...p} d="m15.5 8.5-2 5-5 2 2-5 5-2z" />
         </>
       ) : (
         <>
