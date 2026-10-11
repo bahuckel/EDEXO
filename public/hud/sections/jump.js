@@ -180,7 +180,23 @@ export function renderRouteStrip(d, el) {
     el.innerHTML = "";
     return;
   }
+  /*
+    The red pump that is not on a hop ahead goes first (owner, 2026-10-12: at the end of the line it
+    "does not really show you where you should refuel"): on the star the ship is at when that is the
+    last one the tank reaches, or "!" when no scoopable star is in reach at all.
+  */
   var html = "";
+  if (nav.refuelInHops === 0 && nav.refuelLevel !== "none") {
+    html +=
+      '<span class="hop hop--beyond hop--dry hop--here" title="Scoop here: the last scoopable star this tank reaches">' +
+      fuelPump(nav.refuelLevel) +
+      'here</span><span class="hop__sep" aria-hidden="true">››</span>';
+  } else if (nav.refuelInHops == null && nav.refuelLevel === "red") {
+    html +=
+      '<span class="hop hop--beyond hop--dry" title="No scoopable star within reach on this tank">' +
+      fuelPump("red") +
+      '!</span><span class="hop__sep" aria-hidden="true">››</span>';
+  }
   for (var i = 0; i < hops.length; i++) {
     var h = hops[i];
     var k = starKind(h.starClass);
@@ -219,12 +235,6 @@ export function renderRouteStrip(d, el) {
       "+" +
       (nav.refuelInHops - hops.length) +
       "</span>";
-  } else if (nav.refuelInHops == null && nav.refuelLevel === "red") {
-    // the tank cannot finish the plot and no scoopable star is within reach: say so at the end
-    html +=
-      '<span class="hop__sep" aria-hidden="true">››</span><span class="hop hop--beyond hop--dry" title="No scoopable star within reach on this tank">' +
-      fuelPump("red") +
-      "!</span>";
   }
   el.innerHTML = html;
   el.hidden = false;

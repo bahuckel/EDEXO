@@ -11,7 +11,9 @@ const roles: StarRolesConfig = {
 
 /** Seven systems 10 ly apart in a line: A(K) B(T) C(M) D(K) E(T) F(N) G(K). */
 function route(): NavRouteWaypointDTO[] {
-  const classes = ["K", "T", "M", "K", "T", "N", "K"];
+  return routeOf(["K", "T", "M", "K", "T", "N", "K"]);
+}
+function routeOf(classes: string[]): NavRouteWaypointDTO[] {
   return classes.map((c, i) => ({
     systemAddress: i + 1,
     starSystem: String.fromCharCode(65 + i),
@@ -21,9 +23,9 @@ function route(): NavRouteWaypointDTO[] {
 }
 
 /** The last jump burned 1 t over 10 ly, so every leg here costs 1 t. */
-function analyse(fuelTotalT: number | null, currentSystemAddress = 1) {
+function analyse(fuelTotalT: number | null, currentSystemAddress = 1, classes?: string[]) {
   return analyzeNavRouteFuel({
-    route: route(),
+    route: classes ? routeOf(classes) : route(),
     currentSystemAddress,
     fuelTotalT,
     lastFsdFuelT: 1,
@@ -62,12 +64,36 @@ describe("route strip: the hops ahead and the refuel mark", () => {
     expect(a?.ahead[1]?.refuel).toBe("yellow");
   });
 
-  it("goes red with no scoop within reach", () => {
-    // budget 1 t → only B (a brown dwarf) is reachable: nothing to scoop before running dry
+  it("goes red on the star the ship is at when it is the last scoop the tank reaches", () => {
+    // At A (K) with 1 t: B (a brown dwarf) is the only hop in reach, so A is the last scoop. It used
+    // to read "no scoopable star within reach", drawn at the end of the strip (owner, 2026-10-12).
     const a = analyse(1.06);
+    expect(a?.refuelInHops).toBe(0);
+    expect(a?.refuelLevel).toBe("red");
+    expect(a?.routeRefuelAlert).toBe("red");
+    expect(a?.ahead.every((h) => h.refuel === "none")).toBe(true);
+  });
+
+  it("goes red with no scoop within reach, here included", () => {
+    // At B (T) with 0.5 t: not even C is in reach, and B cannot be scooped.
+    const a = analyse(0.56, 2);
     expect(a?.refuelInHops).toBeNull();
     expect(a?.refuelLevel).toBe("red");
     expect(a?.ahead.every((h) => h.refuel === "none")).toBe(true);
+  });
+
+  it("goes red, on that star, when a fuel desert follows the last scoop the tank reaches", () => {
+    // A(T) B(K) C(T) D(T) E(T) F(K): with 2 t the tank reaches B and C; B is the last scoop, and
+    // three systems in a row without one follow it.
+    const a = analyse(2.06, 1, ["T", "K", "T", "T", "T", "K"]);
+    expect(a?.refuelInHops).toBe(1);
+    expect(a?.refuelLevel).toBe("red");
+    expect(a?.ahead[0]).toMatchObject({ starClass: "K", refuel: "red" });
+    expect(a?.routeRefuelAlert).toBe("red");
+    // Two in a row is not a desert: yellow, as before.
+    const b = analyse(2.06, 1, ["T", "K", "T", "T", "K", "K"]);
+    expect(b?.refuelLevel).toBe("yellow");
+    expect(b?.ahead[0]?.refuel).toBe("yellow");
   });
 
   it("is empty off the plot", () => {

@@ -456,6 +456,34 @@ describe("HUD next jump", () => {
     expect((document.querySelector('[data-f="route"]') as HTMLElement).hidden).toBe(true);
   });
 
+  it("puts a red pump that is not on a hop ahead first: here, or none in reach", async () => {
+    // Owner, 2026-10-12: at the end of the line it did not show where to refuel.
+    const HUD = await loadHud();
+    HUD.mount(["jump"], { noTimers: true });
+    const ahead = [
+      { starSystem: "B", starClass: "T", scoopable: false, refuel: "none" },
+      { starSystem: "C", starClass: "T", scoopable: false, refuel: "none" },
+    ];
+    const strip = () => document.querySelector('[data-f="route"]') as HTMLElement;
+    HUD.render({
+      jumpTarget: { starSystem: "B", starClass: "T", arrived: false, source: "route" },
+      liveShipFuelRange: { navRoute: { ahead, refuelInHops: 0, refuelLevel: "red" } },
+    });
+    let first = strip().firstElementChild as HTMLElement;
+    expect(first.className).toContain("hop--here");
+    expect(first.textContent).toBe("here");
+    expect(first.querySelector(".hop__fuel--red")).not.toBeNull();
+    expect(strip().querySelectorAll(".hop__fuel")).toHaveLength(1);
+    HUD.render({
+      jumpTarget: { starSystem: "B", starClass: "T", arrived: false, source: "route" },
+      liveShipFuelRange: { navRoute: { ahead, refuelInHops: null, refuelLevel: "red" } },
+    });
+    first = strip().firstElementChild as HTMLElement;
+    expect(first.className).toContain("hop--dry");
+    expect(first.textContent).toBe("!");
+    expect(strip().lastElementChild?.textContent).toBe("T");
+  });
+
   it("colours each arrow by what EDSM knows: orange visited, blue unvisited, grey no answer", async () => {
     // Owner, 2026-09-24: grey while EDSM has not answered, and when it could not be reached.
     const HUD = await loadHud();

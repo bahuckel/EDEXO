@@ -168,6 +168,19 @@ function furthestReachableScoopIndex(params: {
 
 /** Next N systems on the route starting at `idx` (for scoopable corridor checks). */
 const SCOOP_LOOKAHEAD_SYSTEMS = 10;
+/**
+ * A run of this many non-scoopable systems in a row after the last scoop the tank reaches makes that
+ * scoop the red "last chance" (owner, 2026-10-12: "the last place where you can refuel before a bunch
+ * of stars that are not refuel type").
+ */
+export const FUEL_DESERT_MIN_SYSTEMS = 3;
+
+/** Non-scoopable systems in a row after `k`, to the next scoopable one or the end of the plot. */
+function dryRunAfter(scoop: boolean[], k: number): number {
+  let n = 0;
+  for (let j = k + 1; j < scoop.length && !scoop[j]; j++) n++;
+  return n;
+}
 
 function scoopableAtWaypoint(wp: NavRouteWaypointDTO, cfg: StarRolesConfig): boolean {
   return roleForStarType(wp.starClass, cfg) === "fuel";
@@ -350,7 +363,7 @@ export function analyzeNavRouteFuel(opts: {
     fuelJumpsReachableOnPlottedRoute = done;
   }
 
-  const routeRefuelAlert = computeRouteRefuelAlert({
+  const routeAlert = computeRouteRefuelAlert({
     idx,
     scoop,
     canFinish: fuelCanFinishPlottedRoute,
@@ -383,23 +396,30 @@ export function analyzeNavRouteFuel(opts: {
   /*
     The route strip (owner, 2026-09-14: same logic as the web UI). The refuel mark sits on the
     LAST scoopable star the tank can still reach — `jumpsToLastScoopableOnRoute` — and only when
-    the tank cannot finish the plot. Its colour is the web UI's alert: yellow = plan to scoop,
-    red = scoop now / critical. No reachable scoop at all: red, no hop to point at.
+    the tank cannot finish the plot.
+
+    Its colour (owner, 2026-10-12): yellow = the place to scoop; red, blinking = the last chance, on
+    that star — when a fuel desert follows it (FUEL_DESERT_MIN_SYSTEMS non-scoopable systems in a
+    row) or the web UI's alert is red. That star can be the one the ship is at (`refuelInHops` 0,
+    always red: leave without scooping and the tank does not reach another). It used to fall through
+    to "no scoop reachable", drawn at the end of the strip, pointing at no star. No reachable scoop
+    at all, here included: red with no star (`refuelInHops` null).
   */
   let refuelIdx = -1;
-  if (
-    fuelCanFinishPlottedRoute === false &&
-    jumpsToLastScoopableOnRoute != null &&
-    jumpsToLastScoopableOnRoute > 0
-  ) {
+  if (fuelCanFinishPlottedRoute === false && jumpsToLastScoopableOnRoute != null) {
     refuelIdx = idx + jumpsToLastScoopableOnRoute;
   }
   let refuelLevel: RouteRefuelAlertDTO = "none";
-  if (refuelIdx > idx) {
-    refuelLevel = routeRefuelAlert === "red" ? "red" : "yellow";
+  if (refuelIdx === idx) {
+    refuelLevel = "red";
+  } else if (refuelIdx > idx) {
+    refuelLevel =
+      routeAlert === "red" || dryRunAfter(scoop, refuelIdx) >= FUEL_DESERT_MIN_SYSTEMS ? "red" : "yellow";
   } else if (fuelCanFinishPlottedRoute === false && routeJumpsRemaining > 0) {
     refuelLevel = "red"; // no scoop reachable on this tank
   }
+  // The web UI's Route card follows the strip's red.
+  const routeRefuelAlert: RouteRefuelAlertDTO = refuelLevel === "red" ? "red" : routeAlert;
   const ahead: RouteAheadHop[] = [];
   for (let j = idx + 1; j < route.length && ahead.length < ROUTE_AHEAD_HOPS; j++) {
     const w = route[j]!;
@@ -425,7 +445,7 @@ export function analyzeNavRouteFuel(opts: {
     routeRefuelAlert,
     jumpsToLastScoopableOnRoute,
     ahead,
-    refuelInHops: refuelIdx > idx ? refuelIdx - idx : null,
+    refuelInHops: refuelIdx >= idx ? refuelIdx - idx : null,
     refuelLevel,
   };
 }
