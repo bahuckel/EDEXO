@@ -223,7 +223,9 @@ export function SpeciesRow({
             </span>
           ) : m.chanceWhy?.length ? (
             // Why this chance (plan 1.7): the facts behind the number, on hover; the unfolded card lists them.
-            <span className="srow-tag srow-tag--chance-why" title={chanceWhyText(m)} aria-label={chanceWhyText(m)}>
+            // A title, not an aria-label: inside the row's button an aria-label became part of the button's
+            // name, so a screen reader read the whole list as the row's name.
+            <span className="srow-tag srow-tag--chance-why" title={chanceWhyText(m)}>
               [?]
             </span>
           ) : null}
