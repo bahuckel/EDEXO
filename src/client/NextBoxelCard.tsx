@@ -10,13 +10,16 @@ import { fmtLy } from "@shared/format";
 import { tabStore } from "./tabs/tabStore";
 import { Tooltip } from "./ui/Tooltip";
 import { crShort, requestExpeditionFocus } from "./ExpeditionDrawer";
+import { useNextBoxelInHeader } from "./nextBoxelSetting";
 
 export const NEXT_BOXEL_RADIUS_LY = 500;
 
 export function NextBoxelCard({ systemAddress }: { systemAddress: number | null }) {
+  // Switched on or off in the Boxels screen; off asks the server nothing.
+  const [on] = useNextBoxelInHeader();
   const [b, setB] = useState<ExpeditionBoxelDTO | null>(null);
   useEffect(() => {
-    if (systemAddress == null) return;
+    if (systemAddress == null || !on) return;
     const ac = new AbortController();
     void fetch(`/api/expedition/field?radius=${NEXT_BOXEL_RADIUS_LY}&limit=1&light=1`, { signal: ac.signal })
       .then((r) => (r.ok ? r.json() : null))
@@ -25,8 +28,8 @@ export function NextBoxelCard({ systemAddress }: { systemAddress: number | null 
       })
       .catch(() => undefined);
     return () => ac.abort();
-  }, [systemAddress]);
-  if (!b) return null;
+  }, [systemAddress, on]);
+  if (!b || !on) return null;
   const name = b.name ?? `${b.code} boxel`;
   return (
     <Tooltip

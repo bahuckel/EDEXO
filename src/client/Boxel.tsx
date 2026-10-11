@@ -19,6 +19,7 @@ import { CopySystemButton } from "./CopySystemButton";
 import { useToast } from "./ui/feedback";
 import { isBool, isNum, isStrArr, oneOf, usePersistedState } from "./usePersistedState";
 import { Table, type Column } from "./DiscoveriesTables";
+import { useNextBoxelInHeader } from "./nextBoxelSetting";
 import { fuzzyRankAny } from "./fuzzyMatch";
 import { NOTABLE_KINDS, type NotableKind } from "@shared/notices";
 import { Select } from "./ui/Select";
@@ -145,6 +146,7 @@ export function BoxelScreen({
   const [sideOpen, setSideOpen] = usePersistedState("boxel.sideOpen", true, isBool);
   // The [?] beside the close button: the mass code tables (owner, 2026-10-05).
   const [helpOpen, setHelpOpen] = usePersistedState("boxel.helpOpen", false, isBool);
+  const [nextInHeader, setNextInHeader] = useNextBoxelInHeader();
   const [prevDays, setPrevDays] = usePersistedState("boxel.previousDays", 30, isNum);
   const [previous, setPrevious] = useState<PreviousBoxelDTO[] | null>(null);
   /** History's total for the range and search, and whether a page is on its way. */
@@ -828,6 +830,13 @@ export function BoxelScreen({
           </button>
         </header>
         {helpOpen ? <BoxelMassCodeHelp /> : null}
+        <label
+          className="boxel-header-option dim tiny"
+          title="The boxel within 500 ly likely to pay most in first footfalls per jump, as a line in the main screen's header (from the galaxy map's Expedition planner)"
+        >
+          <input type="checkbox" checked={nextInHeader} onChange={(ev) => setNextInHeader(ev.target.checked)} /> Show
+          Next boxel in the main screen
+        </label>
         <BoxelLookingFor here={here} onSave={addBoxel} />
 
         <div className={`boxel-screen__body${sideOpen ? "" : " boxel-screen__body--folded"}`}>

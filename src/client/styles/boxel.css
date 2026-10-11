@@ -576,3 +576,12 @@
     animation-duration: 2.4s;
   }
 }
+
+/* "Show Next boxel in the main screen" (owner, 2026-10-11). */
+.boxel-header-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.2rem 0 0.4rem;
+  cursor: pointer;
+}
