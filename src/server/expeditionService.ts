@@ -14,7 +14,7 @@ import { regionForCoords, type RegionMapData } from "../shared/regionMap.js";
 import { gateForSpeciesId, type SpatialCatalogue, type SpatialGate, type SpatialPoint } from "../shared/spatialGates.js";
 import type { SpeciesEntry } from "../shared/types.js";
 import { BOXEL_BIO_RATES } from "../shared/boxelBioRates.js";
-import { MASS_CODE_LETTERS, type MassCode } from "../shared/boxelAdvice.js";
+import { boxelCubeLy, MASS_CODE_LETTERS, type MassCode } from "../shared/boxelAdvice.js";
 import { twoOptOrder } from "./tourOrder.js";
 import {
   boxelsAlong,
@@ -286,15 +286,22 @@ export async function expeditionField(
   const along = to ? boxelsAlong(q.from, to, widthLy, codes, names) : null;
   const { boxels, skipped } = along ?? boxelsWithin(q.from, radiusLy, codes, names);
   const mid = to ? { x: (q.from.x + to.x) / 2, y: (q.from.y + to.y) / 2, z: (q.from.z + to.z) / 2 } : q.from;
-  const reach = to ? Math.hypot(to.x - q.from.x, to.y - q.from.y, to.z - q.from.z) / 2 + widthLy : radiusLy;
+  /*
+    A route keeps boxels whose centre is up to the width plus a half-diagonal past either end (boxelsAlong), so their
+    systems reach one more half-diagonal: the counters (which add one half-diagonal themselves) are given the other.
+  */
+  const halfDiag = Math.max(0, ...codes.map((c) => (boxelCubeLy(c) * Math.sqrt(3)) / 2));
+  const reach = to ? Math.hypot(to.x - q.from.x, to.y - q.from.y, to.z - q.from.z) / 2 + widthLy + halfDiag : radiusLy;
   const recorded = await recordedNear(deps.index, mid, reach, codes.filter((c) => !skipped.includes(c)));
   const mine = new RecordedCounter(mid, reach, codes.filter((c) => !skipped.includes(c)));
   const features = target.kind === "exobio" ? null : loadFeatureTable(deps.root);
   for (const p of q.visitedPoints ?? []) mine.add(p.x, p.y, p.z);
   const share = entry ? shareInGenus(entry, deps.species) : 0;
   const gate = entry ? gateForSpeciesId(entry.id) : null;
+  // Cut round the field that is scored: the sphere, or the whole route's tube (it was the ship's sphere, so a boxel
+  // by a nebula 3 kly down the route failed its rule against points near the ship).
   const catalogue = gate
-    ? catalogueNear(deps.catalogue, q.from, radiusLy + gate.thresholdLy + (gate.records?.withinLy ?? 0) + 1280 * Math.sqrt(3) / 2)
+    ? catalogueNear(deps.catalogue, mid, reach + gate.thresholdLy + (gate.records?.withinLy ?? 0) + 1280 * Math.sqrt(3) / 2)
     : deps.catalogue;
   const scored: ExpeditionBoxelDTO[] = [];
   let passing = 0;
@@ -355,7 +362,7 @@ export async function expeditionField(
     to: to ? { x: to.x, y: to.y, z: to.z } : null,
     widthLy: to ? widthLy : null,
     rule: gate
-      ? { text: ruleText(gate), ...rulePoints(gate, deps.catalogue, q.from, radiusLy), boxelsChecked: boxels.length, boxelsPassing: passing }
+      ? { text: ruleText(gate), ...rulePoints(gate, deps.catalogue, mid, reach), boxelsChecked: boxels.length, boxelsPassing: passing }
       : null,
     boxels: scored.slice(0, limit),
     builtAt: table.builtAt,

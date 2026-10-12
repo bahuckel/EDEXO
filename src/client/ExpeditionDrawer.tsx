@@ -227,7 +227,8 @@ export function ExpeditionDrawer({
         );
     void Promise.all([at(2000), at(5000)])
       .then(([a, b]) => {
-        if (!ac.signal.aborted) setSuggested([...a, ...b]);
+        // In a sparse direction 2,000 and 5,000 ly can find the same system: once.
+        if (!ac.signal.aborted) setSuggested([...a, ...b].filter((e, i, all) => all.findIndex((o) => o.name === e.name) === i));
       })
       .catch(() => undefined);
     return () => ac.abort();

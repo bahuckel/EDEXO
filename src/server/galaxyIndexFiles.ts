@@ -79,10 +79,17 @@ function localSystemCount(): number | null {
   }
 }
 
+/** The size and count probes give up after this: a stalled network must not hold the status request for minutes. */
+const PROBE_TIMEOUT_MS = 10_000;
+
 /** The release's count: its first 20 bytes (a range request; a server that sends it all is cut off there). */
 async function remoteSystemCount(fetchImpl: typeof fetch): Promise<number | null> {
   try {
-    const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/bio-index.bin`, { headers: { Range: "bytes=0-19" }, redirect: "follow" });
+    const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/bio-index.bin`, {
+      headers: { Range: "bytes=0-19" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
     if (!r.ok || !r.body) return null;
     const reader = r.body.getReader();
     const parts: Uint8Array[] = [];
@@ -143,7 +150,7 @@ export async function probeGalaxyIndexSize(fetchImpl: typeof fetch = fetch): Pro
     let total = 0;
     const sizes = new Map<string, number>();
     for (const name of GALAXY_INDEX_FILES) {
-      const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${name}`, { method: "HEAD", redirect: "follow" });
+      const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${name}`, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
       const n = Number(r.headers.get("content-length"));
       if (!r.ok || !Number.isFinite(n) || n <= 0) return null;
       sizes.set(name, n);

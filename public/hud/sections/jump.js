@@ -107,7 +107,7 @@ export function renderDiscovered(jt, el) {
   credit line. Asked once per system the ship is in, with light=1: it never makes the server load the galaxy
   index for a HUD line.
 */
-var nextBoxel = { key: null, text: null };
+var nextBoxel = { key: null, text: null, failedAt: 0 };
 function millions(v) {
   return v >= 1e9 ? (v / 1e9).toFixed(1) + " B" : v >= 1e6 ? (v / 1e6).toFixed(1) + " M" : Math.round(v / 1e3) + " k";
 }
@@ -118,10 +118,14 @@ export function renderNextBoxel(d, el) {
     return;
   }
   var key = d.currentSystemAddress != null ? String(d.currentSystemAddress) : "";
-  if (key && key !== nextBoxel.key) {
+  // A failed ask (no position yet, a server error) is asked again after half a minute, not only on the next jump.
+  var retry = nextBoxel.failedAt && Date.now() - nextBoxel.failedAt > 30000;
+  if (key && (key !== nextBoxel.key || retry)) {
     nextBoxel.key = key;
+    nextBoxel.failedAt = 0;
     fetch(api("/api/expedition/field?radius=500&limit=1&light=1"), { cache: "no-store" })
       .then(function (r) {
+        if (!r.ok) nextBoxel.failedAt = Date.now();
         return r.ok ? r.json() : null;
       })
       .then(function (j) {
@@ -134,7 +138,9 @@ export function renderNextBoxel(d, el) {
         el.hidden = !nextBoxel.text;
         el.innerHTML = nextBoxel.text || "";
       })
-      .catch(function () {});
+      .catch(function () {
+        nextBoxel.failedAt = Date.now();
+      });
   }
   el.hidden = !nextBoxel.text;
   el.innerHTML = nextBoxel.text || "";

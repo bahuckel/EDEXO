@@ -101,6 +101,23 @@ describe("expedition service", () => {
     }
   });
 
+  it("measures a species' rule along the whole route, not only round the ship", async () => {
+    // A nebula 3 to 6 kly from Swoilz: the route ends beside it.
+    const cat = loadSpatialCatalogue(root)!;
+    const neb = cat.nebulae.find((p) => {
+      const d = Math.hypot(p.x - SWOILZ.x, p.y - SWOILZ.y, p.z - SWOILZ.z);
+      return d > 3000 && d < 6000;
+    })!;
+    expect(neb).toBeDefined();
+    const f = await expeditionField(
+      { from: SWOILZ, to: neb, widthLy: 100, radiusLy: 500, jumpRangeLy: 60, codes: ["d"], speciesId: "bark_mounds_bark_mounds", limit: 500 },
+      deps(),
+    );
+    // The rule's points reach the far end, and boxels there meet it.
+    expect(f.rule!.points.some((p) => Math.hypot(p.x - neb.x, p.y - neb.y, p.z - neb.z) < 1)).toBe(true);
+    expect(f.boxels.some((b) => (b.along ?? 0) > 0.9 && b.passesGate)).toBe(true);
+  });
+
   it("says each position rule in words, and has none to give for a species without one", async () => {
     expect(ruleText(gateForSpeciesId("bark_mounds_bark_mounds")!)).toBe("within 150 ly of a nebula, at 50 % of the chance out to 300 ly");
     expect(ruleText(gateForSpeciesId("brain_trees_brain_tree_aureum")!)).toBe("within 1.25 kly of a Guardian site");
