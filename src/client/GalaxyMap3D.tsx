@@ -80,6 +80,8 @@ type MineRow = GalaxyMineDTO["systems"][number];
 
 /** The commander's systems: waiting for them amber, done (DSS or plants on foot) green, visited grey. */
 const MINE_UNFINISHED = 16;
+/** Visited by the game's own list (VisitedStarsCache.dat), not in the journals (plan 6.1). */
+const MINE_IMPORTED = 128;
 const mineColour = (f: number, waitingShown: boolean): [number, number, number] =>
   f & MINE_UNFINISHED && waitingShown ? [1, 0.62, 0.16] : f & (4 | 8) ? [0.36, 0.9, 0.46] : [0.62, 0.68, 0.8];
 const mineStatus = (r: MineRow) =>
@@ -87,7 +89,9 @@ const mineStatus = (r: MineRow) =>
     ? `Still waiting: at least ${crShort(r.unfinishedFloorCr)}`
     : r.flags & (4 | 8)
       ? `Done${r.speciesScanned ? ` · ${r.speciesScanned} species scanned` : " · mapped"}`
-      : "Visited";
+      : r.flags & MINE_IMPORTED
+        ? "Visited (the game's own list; not in your journals)"
+        : "Visited";
 
 const codexColour: Record<CodexMapSystemDTO["status"], [number, number, number]> = {
   todo: [1, 0.36, 0.3],
@@ -1092,9 +1096,9 @@ export function GalaxyMap3D() {
       const r = mine.get(hover.id);
       return r ? (
         <>
-          <strong>{r.name || "Your system"}</strong>
+          <strong>{r.name || (r.flags & MINE_IMPORTED ? "A system you visited (name not known)" : "Your system")}</strong>
           <span>{mineStatus(r)}</span>
-          <em>Your journals · click for details</em>
+          <em>{r.flags & MINE_IMPORTED ? "Placed at its boxel's centre unless the galaxy index has it" : "Your journals · click for details"}</em>
         </>
       ) : null;
     }

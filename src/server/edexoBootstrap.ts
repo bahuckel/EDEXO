@@ -145,7 +145,8 @@ import {
 } from "./firstDiscoveryBacklog.js";
 import { galaxySpeciesCatalogue, galaxyValueSearch } from "./galaxyValueSearch.js";
 import { galaxyBodyScan, galaxyRegions } from "./galaxyBodyScan.js";
-import { loadBioIndex } from "./bioIndex.js";
+import { loadBioIndex, peekBioIndex } from "./bioIndex.js";
+import { importedSystems, loadVisitedImport } from "./visitedCache.js";
 import { mySystemDetail, mySystemsDto, sessionRouteDto, visitedSystemsDto } from "./galaxyMine.js";
 import { commanderSectorsDto } from "./galaxySectorTiers.js";
 import { runEdsmCatchUp, type EdsmCatchUpScope } from "./edsmCatchUp.js";
@@ -1634,7 +1635,13 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     scanGalaxyBodies: (query, limit) => galaxyBodyScan({ ...query, from: store.commanderPos, limit }),
     getCommanderSectors: () => commanderSectorsDto(store),
     // The last finished backlog, never a wait: the map asks for these at start (firstDiscoveryBacklog.ts).
-    getMySystems: () => mySystemsDto(store, backlogMap(store, firstDiscoveryBacklogNow(store))),
+    getMySystems: () =>
+      mySystemsDto(
+        store,
+        backlogMap(store, firstDiscoveryBacklogNow(store)),
+        // The game's own visited list (plan 6.1): placed by the galaxy index only if it is already loaded.
+        importedSystems(loadVisitedImport(), new Set([...store.visitedSystems.keys(), ...store.systemPositions.keys()]), peekBioIndex()),
+      ),
     getMySystem: (addr) => mySystemDetail(store, addr, backlogMap(store, firstDiscoveryBacklogNow(store)), loadBioIndex()),
     getSessionRoute: () => sessionRouteDto(store, sessionLog.toDto().systems),
     getVisitedSystems: (days) => visitedSystemsDto(store, days),

@@ -1706,7 +1706,7 @@
     else if (act === "export-exomastery") exomasteryDownload("exomastery");
     else if (act === "export-codex") exomasteryDownload("codex");
     else if (act === "open-shared") openSharedFolder();
-    // "import-dump" opens its panel from its own listener (the import section below).
+    // "import-dump" and "import-visited" open their panels from their own listeners (below).
   });
   document.addEventListener("click", function (ev) {
     if (!exomasteryMenu.hidden && !exomasterySplit.contains(ev.target)) closeExomasteryMenu();
@@ -3057,6 +3057,97 @@
       pollImport();
     });
   }
+  /* ------------------------------------------------------------------ import visited systems (plan 6.1) */
+  var visitedModal = document.getElementById("visitedModal");
+  var btnImportVisited = document.getElementById("btnImportVisited");
+  var visitedList = document.getElementById("visitedList");
+  var visitedImported = document.getElementById("visitedImported");
+  var visitedStatus = document.getElementById("visitedStatus");
+  var visitedRemove = document.getElementById("visitedRemove");
+  var visitedClose = document.getElementById("visitedClose");
+  function visitedSay(text, kind) {
+    if (!visitedStatus) return;
+    visitedStatus.hidden = !text;
+    visitedStatus.className = "import-status" + (kind ? " " + kind : "");
+    visitedStatus.textContent = text || "";
+  }
+  function visitedDate(iso) {
+    return iso ? new Date(iso).toLocaleString() : "";
+  }
+  function visitedRender(j) {
+    var imp = j && j.imported;
+    visitedImported.hidden = !imp;
+    visitedImported.className = "import-status ok";
+    visitedImported.textContent = imp
+      ? "Imported: " + imp.systems.toLocaleString() + " systems from account " + imp.account + " (the game's list of " +
+        visitedDate(imp.fileModifiedAt) + "), on " + visitedDate(imp.importedAt) + "."
+      : "";
+    visitedRemove.hidden = !imp;
+    visitedList.textContent = "";
+    var files = (j && j.files) || [];
+    if (!files.length) {
+      visitedSay("No VisitedStarsCache.dat found. The game writes it in its local folder (on Windows " +
+        "%LOCALAPPDATA%\\Frontier Developments\\Elite Dangerous\\<account>) once you have played on this PC.", "err");
+      return;
+    }
+    files.forEach(function (f) {
+      var li = document.createElement("li");
+      var text = document.createElement("span");
+      text.textContent = "Account " + f.account + ": " + f.systems.toLocaleString() + " systems in the game's list, " +
+        f.notInJournals.toLocaleString() + " not in your journals (list of " + visitedDate(f.modifiedAt) + ")";
+      var go = document.createElement("button");
+      go.type = "button";
+      go.className = "btn-mini";
+      go.textContent = imp && imp.account === f.account ? "Import again" : "Import them";
+      go.disabled = f.notInJournals === 0 && !(imp && imp.account === f.account);
+      go.addEventListener("click", function () { visitedImport(f.account); });
+      li.appendChild(text);
+      li.appendChild(go);
+      visitedList.appendChild(li);
+    });
+  }
+  function visitedLoad() {
+    visitedSay("", "");
+    return fetch(apiUrl("/api/visited-cache"), { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(visitedRender)
+      .catch(function (e) { visitedSay("Could not read the game's list: " + String(e && e.message ? e.message : e), "err"); });
+  }
+  function visitedImport(account) {
+    visitedSay("Importing…", "");
+    fetch(apiUrl("/api/visited-cache/import"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ account: account }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok) throw new Error((j && j.error) || "import failed");
+        return visitedLoad().then(function () {
+          visitedSay("Imported " + j.systems.toLocaleString() + " systems; " + j.notInJournals.toLocaleString() +
+            " of them are new to the galaxy map and the planner.", "ok");
+        });
+      })
+      .catch(function (e) { visitedSay("Could not import: " + String(e && e.message ? e.message : e), "err"); });
+  }
+  if (btnImportVisited && visitedModal) {
+    btnImportVisited.addEventListener("click", function () {
+      visitedModal.classList.add("on");
+      visitedLoad();
+    });
+  }
+  if (visitedRemove) {
+    visitedRemove.addEventListener("click", function () {
+      fetch(apiUrl("/api/visited-cache/remove"), { method: "POST" })
+        .then(function (r) { return r.json(); })
+        .then(function () { return visitedLoad(); })
+        .then(function () { visitedSay("The import is removed; only your journals count as visited now.", "ok"); })
+        .catch(function (e) { visitedSay("Could not remove: " + String(e && e.message ? e.message : e), "err"); });
+    });
+  }
+  if (visitedClose && visitedModal) visitedClose.addEventListener("click", function () { visitedModal.classList.remove("on"); });
+  if (visitedModal) visitedModal.addEventListener("click", function (e) { if (e.target === visitedModal) visitedModal.classList.remove("on"); });
+
   if (importClose && importModal) importClose.addEventListener("click", function () { importModal.classList.remove("on"); });
   if (importModal) importModal.addEventListener("click", function (e) { if (e.target === importModal) importModal.classList.remove("on"); });
   if (importStart) {
