@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import path from "node:path";
-import { barrenIn, loadBarrenTable, parseBarrenTable } from "../src/server/boxelBarren.js";
+import { barrenIn, barrenNumbersIn, loadBarrenTable, parseBarrenTable } from "../src/server/boxelBarren.js";
 import { gridIdAt } from "../src/server/expedition.js";
 import { SECTOR_ORIGIN } from "../src/shared/sectorName.js";
 import { boxelCubeLy, type MassCode } from "../src/shared/boxelAdvice.js";
@@ -19,12 +19,16 @@ function varint(n: number, out: number[]): void {
   out.push(n);
 }
 
-/** The builder's layout, from rows per code (grid ids sorted). */
-function encode(codes: Record<string, [number, number][]>, meta: object = { builtAt: "test" }): Buffer {
+/** The builder's layout, from rows per code (grid ids sorted); version 2 writes each row's system numbers. */
+function encode(
+  codes: Record<string, [number, number, number[]?][]>,
+  meta: object = { builtAt: "test" },
+  version = 2,
+): Buffer {
   const m = Buffer.from(JSON.stringify(meta));
   const head = Buffer.alloc(16);
   head.write("EDEXOBRN", 0, "latin1");
-  head.writeUInt32LE(1, 8);
+  head.writeUInt32LE(version, 8);
   head.writeUInt32LE(m.length, 12);
   const parts: Buffer[] = [head, m];
   const n = Buffer.alloc(4);
@@ -41,6 +45,15 @@ function encode(codes: Record<string, [number, number][]>, meta: object = { buil
       prev = g;
     }
     for (const [, c] of rows) varint(c, body);
+    if (version >= 2)
+      for (const [, c, nums = []] of rows) {
+        expect(nums.length).toBe(c);
+        let last = 0;
+        for (const v of nums) {
+          varint(v - last, body);
+          last = v;
+        }
+      }
     parts.push(h, Buffer.from(body));
   }
   return Buffer.concat(parts);
@@ -49,17 +62,16 @@ function encode(codes: Record<string, [number, number][]>, meta: object = { buil
 describe("boxel-barren: the file", () => {
   // A grid id past 2^32 (gz × 2^28), so the varint must not use 32-bit shifts.
   const big = 600 + 500 * 16384 + 300 * 268435456;
-  const buf = encode(
-    {
-      c: [
-        [5, 2],
-        [7, 3],
-        [big, 40],
-      ],
-      h: [[1, 9]],
-    },
-    { builtAt: "2026-10-12", recentFrom: "2025" },
-  );
+  const forty = Array.from({ length: 40 }, (_, i) => i * 3);
+  const rows = {
+    c: [
+      [5, 2, [0, 300]],
+      [7, 3, [1, 2, 16_000]],
+      [big, 40, forty],
+    ] as [number, number, number[]][],
+    h: [[1, 9, [0, 1, 2, 3, 4, 5, 6, 7, 8]]] as [number, number, number[]][],
+  };
+  const buf = encode(rows, { builtAt: "2026-10-12", recentFrom: "2025" });
 
   it("reads back every boxel and count, and 0 where it has none", () => {
     const t = parseBarrenTable(buf);
@@ -73,13 +85,25 @@ describe("boxel-barren: the file", () => {
     expect(barrenIn(null, "c", 5)).toBe(0);
   });
 
+  it("gives each boxel's system numbers (version 2), and none from a version 1 file", () => {
+    const t = parseBarrenTable(buf);
+    expect(barrenNumbersIn(t, "c", 5)).toEqual([0, 300]);
+    expect(barrenNumbersIn(t, "c", 7)).toEqual([1, 2, 16_000]);
+    expect(barrenNumbersIn(t, "c", big)).toEqual(forty);
+    expect(barrenNumbersIn(t, "h", 1)).toHaveLength(9);
+    expect(barrenNumbersIn(t, "c", 6)).toEqual([]);
+    const v1 = parseBarrenTable(encode({ c: [[5, 2]] }, { builtAt: "old" }, 1));
+    expect(barrenIn(v1, "c", 5)).toBe(2);
+    expect(barrenNumbersIn(v1, "c", 5)).toEqual([]);
+  });
+
   it("refuses a wrong magic, another version, a truncated file and a count past the end", () => {
     const wrong = Buffer.from(buf);
     wrong.write("NOTBARRN", 0, "latin1");
     expect(() => parseBarrenTable(wrong)).toThrow(/not a boxel-barren file/);
-    const v2 = Buffer.from(buf);
-    v2.writeUInt32LE(2, 8);
-    expect(() => parseBarrenTable(v2)).toThrow(/version 2/);
+    const v3 = Buffer.from(buf);
+    v3.writeUInt32LE(3, 8);
+    expect(() => parseBarrenTable(v3)).toThrow(/version 3/);
     expect(() => parseBarrenTable(buf.subarray(0, buf.length - 3))).toThrow(/truncated|past the end/);
     const over = Buffer.from(buf);
     const metaLen = over.readUInt32LE(12);
@@ -104,7 +128,9 @@ describe("boxel-barren: the shipped table", () => {
     }
   });
 
-  it("finds the bubble flown: hundreds of d boxels within 300 ly of Sol hold barren systems", () => {
+  it("finds the bubble flown: over a hundred d boxels within 300 ly of Swoilz hold barren systems", () => {
+    // Not Sol: the space round it is hand-named sectors, whose boxels are not the planner's and are left out.
+    const swoilz = { x: 137, y: -89, z: 298 };
     const e = t.byCode.get("d")!;
     const size = boxelCubeLy("d");
     let near = 0;
@@ -117,9 +143,9 @@ describe("boxel-barren: the shipped table", () => {
         y: SECTOR_ORIGIN.y + (gy + 0.5) * size,
         z: SECTOR_ORIGIN.z + (gz + 0.5) * size,
       };
-      if (Math.hypot(c.x, c.y, c.z) < 300) near++;
+      if (Math.hypot(c.x - swoilz.x, c.y - swoilz.y, c.z - swoilz.z) < 300) near++;
     }
-    expect(near).toBeGreaterThan(200);
+    expect(near).toBeGreaterThan(100);
     // And a look-up by position lands on the same key the builder wrote.
     const id = e.ids[Math.floor(e.ids.length / 2)]!;
     const gz = Math.floor(id / 268435456);
@@ -132,5 +158,9 @@ describe("boxel-barren: the shipped table", () => {
     };
     expect(gridIdAt("d", p)).toBe(id);
     expect(barrenIn(t, "d", gridIdAt("d", p))).toBeGreaterThan(0);
+    // Its systems' numbers, one per barren system, ascending.
+    const nums = barrenNumbersIn(t, "d", id);
+    expect(nums).toHaveLength(barrenIn(t, "d", id));
+    expect([...nums].sort((x, y) => x - y)).toEqual(nums);
   });
 });

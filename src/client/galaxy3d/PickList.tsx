@@ -69,12 +69,9 @@ export function PickList({
   useEffect(() => {
     if (!open) return;
     setQuery("");
-    setActive(
-      Math.max(
-        0,
-        options.findIndex((o) => o.value === value),
-      ),
-    );
+    // The chosen one when it is among the rows shown (only the first maxShown are), else the first row.
+    const at = options.findIndex((o) => o.value === value);
+    setActive(at >= 0 && at < maxShown ? at : 0);
     searchRef.current?.focus({ preventScroll: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);

@@ -16,8 +16,8 @@ Windows; everything the app saves lives in `%LOCALAPPDATA%\ED Exo Compare\`.
 
 |                                                                                                                |                                                                       |
 | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **[Portable — one file](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.14/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
-| **[Program folder — .zip](https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.2.14-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
+| **[Portable — one file](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.15/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
+| **[Program folder — .zip](https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.2.15-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
 
 Both are the same version and the same code — [all releases](https://github.com/bahuckel/EDEXO-Compare/releases).
 
@@ -36,10 +36,10 @@ distro, desktop, X11 or Wayland — is the most useful thing you can send.
 
 |                                                                                                                                         |                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.14-zip/EDExoCompare-1.2.14-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
-| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.14-zip/EDExoCompare-1.2.14-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
+| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.15-zip/EDExoCompare-1.2.15-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
+| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.15-zip/EDExoCompare-1.2.15-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
 
-**AppImage:** `chmod +x EDExoCompare-1.2.14-x86_64.AppImage`, then run it. It needs FUSE 2:
+**AppImage:** `chmod +x EDExoCompare-1.2.15-x86_64.AppImage`, then run it. It needs FUSE 2:
 
 | Distro                                            | Command                                   |
 | ------------------------------------------------- | ----------------------------------------- |
@@ -50,13 +50,13 @@ distro, desktop, X11 or Wayland — is the most useful thing you can send.
 | openSUSE                                          | `sudo zypper install libfuse2`            |
 | Arch, CachyOS, Manjaro                            | `sudo pacman -S --needed fuse2`           |
 
-Without FUSE, `./EDExoCompare-1.2.14-x86_64.AppImage --appimage-extract-and-run` works too.
+Without FUSE, `./EDExoCompare-1.2.15-x86_64.AppImage --appimage-extract-and-run` works too.
 
 On start the launcher checks your desktop and lists anything the HUD needs that is missing, with the
 install command for your distro: XWayland on a Wayland session, a compositor on a bare window
 manager (the HUD is see-through only with one), the AppIndicator extension for the tray on GNOME.
 
-**Browser build:** `tar xzf EDExoCompare-1.2.14-linux-x64.tar.gz`, then `./edexo-client.sh` in the
+**Browser build:** `tar xzf EDExoCompare-1.2.15-linux-x64.tar.gz`, then `./edexo-client.sh` in the
 folder it makes. Its `README.txt` has the rest.
 
 **Both:** the journals are found inside the game's Proton or Wine prefix — every Steam library
@@ -116,6 +116,108 @@ in red when the folder shares a partition with your journals, and in yellow when
 drive. A restore never overwrites: app data goes back at the next start with the replaced files set
 aside, and journals go into a folder you pick.
 
+## Everything in it
+
+A map of the app, screen by screen. Most of it is on by default; anything that sends data anywhere is
+off until you turn it on.
+
+### The main screen
+
+- **Header**: the system you are in and its region, whether you honked, whether you are the first
+  to visit, its star types, what your unsold exploration and exobiology data is worth (as Universal
+  Cartographics pays it: the honk, +30 % for mapped bodies, the gas giant classes, an optional fleet
+  carrier sale at -25 % or -15 % on your own, and the Pranav Antal bonus), and whether every body is
+  FSS'd.
+- **Route line**: jumps before you must refuel and the light years left on the plot, with fuel
+  costed by your drive's own law (learned from your jumps) and a bar for how long the tank lasts.
+  The route strip puts a yellow pump on the star to refuel at and a blinking red one on the last
+  scoopable star the tank reaches.
+- **Next boxel**: the best unflown boxel within 500 ly by first-footfall credits per jump, asked
+  again on every jump; a click opens it in the galaxy map.
+- **Body tabs**: every body with biological signals, switched when you target one in the game, plus
+  AutoScanned bodies that still want an FSS. Marks for a species missing from your codex (CX) and a
+  first codex entry for the region (FCX).
+- **Body facts**: class, atmosphere and pressure, gravity, temperature, distance from arrival,
+  volcanism and its geological signal count.
+- **Payout**: the least and most the body should pay, the x5 first-footfall bonus, and what you have
+  already confirmed on foot or by composition scan.
+- **Candidates**: each species with its chance, payout, rarity and codex marks; _Why this chance_
+  says what the percentage is made of; an _Unknown plant_ row when a signal is left unfilled; Thargoid
+  sites with their Vista prices; `[CODEX FIRST]` for a colour nobody has logged in the region; a
+  _worth sampling_ marker where the data needs more finds.
+
+### Screens
+
+They open as tabs (Ctrl+Tab, Ctrl+W, drag a tab out into its own window, Shift+F1 / Shift+F2 from the
+game) or as pop-ups if Tab view is off.
+
+- **My discoveries**: every species, body, system and star in your journals, sortable and filterable
+  (body features such as small bodies, fast orbits, shepherd moons), as a list or cards, with CSV
+  export.
+- **Unfinished business**: the biology you left behind and what it was worth.
+- **System map**: every body by class with orbits, rings and moons, terraformables, the biology worth
+  chasing, and a _GGG ladder_ drawer for where a gas giant stands on the cloud ladder.
+- **Encyclopedia**: every species' conditions checked against the body you are at, each card coloured
+  by the same check the body tab runs; gravity, temperature and pressure bands per atmosphere, measured
+  on a year of finds. Also online as the
+  [species guide](https://bahuckel.com/projects/edexo-compare/species).
+- **Boxels**: every system in your saved boxels, flown or not, with stars, notable bodies and biology;
+  a Spansh look-up; what each mass code holds across the galaxy; golden boxels where a genus is many
+  times more common; a boxel run that copies the next system after every jump (F6 copy, F7 start or
+  stop, F8 / F9 previous and next); your boxel history.
+- **Statistics**: how you made your credits, a forecast for your next exobiologist and explorer rank,
+  your records against the galactic ones, your carrier's upkeep, and _How good are my predictions_:
+  every species you confirmed against what the app had listed.
+- **Achievements**: quest-style goals by colour variant, region and rarity, with Bronze, Silver and
+  Gold steps and a notice when you reach one; track one on the HUD.
+- **Carriers** and **Points of interest**: EDAstro's lists, downloaded when you ask, searchable by
+  distance and service.
+- **Bookmarks** with tags, notes and distances; **Green gas giants** by CMDR Arcanic's cloud ladder;
+  **Data feeder** for your own Spansh Exomastery dumps; a **Session log**.
+
+### Galaxy map
+
+- All 5.3 million systems with recorded biology in 3D, by region, sector and neighbourhood, with your
+  own route on top; game-style controls (W A S D, Q E, R F) or a mouse; it runs on a phone.
+- **Find** and filters by species, genus, star or planet type; layers for points of interest,
+  Notable Stellar Phenomena, carriers, bookmarks, green gas giants and the 18 helium gas giants on
+  record; your codex by region.
+- **Next target** and **Plan**: the nearest system above a value you set, and up to 20 more in the
+  shortest order. **NavRoute** keeps every route you plot with each system's star class.
+- **Expedition**: every boxel round you, or along a route to any system you name (or one of eight
+  suggestions round you), ranked by the first-footfall credits its unflown systems should pay per
+  jump, or by the bodies, star type or system worth you are looking for. Systems you visited, systems
+  in the galaxy index and the 4.2 million flown since 2025 without biology are taken off. A boxel's
+  card lists the system names nobody has recorded, ready to copy; a plan puts up to 20 boxels in
+  flying order; a species lights only the boxels its position rule allows.
+- The galaxy index is a separate download from inside the map; its update button says how many systems
+  it adds.
+
+### Overlay (HUD)
+
+Click-through panels over the game, each on or off: the exo-distance tracker (a radar with each sample
+ringed at its genus's distance, and the payout), discovery scan count, candidates for the targeted
+body, unsold data value, the next jumps with their star class and whether EDSM knows them, the Next
+boxel line, notable bodies, notices (F5 clears them) and a tracked achievement. Stacked or merged into
+one panel, in the original look, a title bar or an Elite-style frame; any colour, 50–200 % scale,
+10–100 % background, hidden when the game is not in front.
+
+### Launcher and options
+
+- **Open exobiology UI** in the app window or your browser; a **Triage** view for a phone or tablet;
+  a **Streamer view** for OBS.
+- **Network settings**: this PC, your LAN (with an access key in the link) and your public address,
+  each one can be hidden or turned off.
+- **Backups** of your journals and the app's data, with warnings when the folder shares a drive with
+  them.
+- **Notify me**: notices for notable bodies, Notable Stellar Phenomena, nearby carriers with the
+  services you pick, achievements, with or without sound.
+- **Colour scheme** for the app and the HUD; **key binds** in one place, live only while Elite or the
+  app is in front; **snapshot images** that render what you see without taking a screenshot of your
+  screen; **About this install** for a bug report with paths masked.
+- **Opt-ins**, each off by default: EDSM look-ups and journal upload (your own API key), Canonn, EDDN.
+- **Close to tray**, and **What's new** once after each update.
+
 ## Where the predictions come from
 
 Two sources, and the app tells them apart.
@@ -137,7 +239,7 @@ and the 0-10 % band at 8.9 %.
 
 Candidates below **1 %** are moved behind _show unlikely_ rather than listed. The rule is no misses
 first: a list of three where one is right beats a list of one that is wrong. The floor was 5 % until
-1.2.14; measured over 2,960 bodies of every genus, 5 % hid the right species on 25 of them, 1 % on 4,
+1.2.11; measured over 2,960 bodies of every genus, 5 % hid the right species on 25 of them, 1 % on 4,
 for one wrong row more on 2.5 % of the bodies.
 
 The floor never empties a panel — if nothing clears it, the single best candidate stays — never
@@ -164,7 +266,8 @@ it and switches auto-fetch off.
 ## Canonn
 
 The app can send your discoveries to [Canonn Research](https://canonn.science/), the community
-science archive most of the exobiology knowledge in this project came from.
+science archive. The project is not affiliated with Canonn and its data does not come from there; the
+switch is there for commanders who want to help their research.
 
 This is **off by default**. Turning it on sends organic scans, the sales that date them, codex
 entries and whatever else Canonn is currently asking for — **with your CMDR name attached**, because
@@ -301,7 +404,7 @@ Three parts, three licences:
   folder and the data tables generated into the code: credit the sources, no commercial use, share
   alike. Part of it is derived from [EDAstro](https://edastro.com)'s content, which carries this
   licence, so the data carries it too. Details, and the EDAstro-derived files, in
-  [`data/LICENSE-DATA.txt`](data/LICENSE-DATA.txt). Releases 1.1.0–1.2.14 shipped those files under
+  [`data/LICENSE-DATA.txt`](data/LICENSE-DATA.txt). Releases 1.1.0–1.2.7 shipped those files under
   the MIT notice by mistake; the notice applies to them as well.
 - **Photographs — Frontier's.** They are screenshots of Elite Dangerous; the game and its artwork
   belong to Frontier Developments and are under Frontier's terms, not either licence here.

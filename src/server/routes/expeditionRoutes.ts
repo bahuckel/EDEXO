@@ -22,7 +22,8 @@ import { loadSpatialCatalogue } from "../spatialCatalogue.js";
 import { getCachedSpeciesDatabase } from "../snapshot.js";
 import { fullJumpRange } from "../../shared/jumpRange.js";
 import { boxelSystems } from "../boxel.js";
-import { tileIndex } from "../galaxyTiles.js";
+import { tileIndexAsync } from "../galaxyTiles.js";
+import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { systemPrefixOf } from "../expedition.js";
 import { expeditionCandidates, expeditionField, expeditionPlan, parseCodes, type ExpeditionDeps } from "../expeditionService.js";
 import { BODY_KINDS, circleSuggestions, loadFeatureTable, parseTarget, starTypes } from "../expeditionTargets.js";
@@ -37,6 +38,19 @@ function priceIndex(root: string): PriceIndex {
 }
 
 export function registerExpeditionRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
+  // The planner reads the galaxy map's caches (bio index, tiles, the barren table): keep their idle clock running.
+  app.use("/api/expedition", (_req, _res, next) => {
+    touchGalaxyMemory();
+    next();
+  });
+  /** An async handler's throw answered as a 500, never an unhandled rejection (which ends the server process). */
+  const safe =
+    (h: (req: express.Request, res: express.Response) => Promise<void>) =>
+    (req: express.Request, res: express.Response): void => {
+      h(req, res).catch((e: unknown) => {
+        if (!res.headersSent) res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      });
+    };
   const ship = (): { from: Xyz | null; jumpRangeLy: number | null } => {
     const store = opts.getJournalStore?.() ?? null;
     return {
@@ -101,7 +115,7 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
     }
   });
 
-  app.get("/api/expedition/ends", async (req, res) => {
+  app.get("/api/expedition/ends", safe(async (req, res) => {
     const s = ship();
     const from = pointOf(req.query, s.from);
     if (!from) return void res.status(400).json({ error: "No position: give x, y, z, or fly a jump so the journals have one." });
@@ -129,28 +143,30 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
       return { name: index.nameOf(b.i), x, y, z };
     };
     res.json({ from, distanceLy: distance, ends: circleSuggestions(from, distance, near) });
-  });
+  }));
 
-  app.get("/api/expedition/plan", async (req, res) => {
+  app.get("/api/expedition/plan", safe(async (req, res) => {
     const s = ship();
     const from = pointOf(req.query, s.from);
     if (!from) return void res.status(400).json({ error: "No position: give x, y, z, or fly a jump so the journals have one." });
     const keys = String(req.query.stops ?? "").split(";").map((k) => k.trim()).filter(Boolean);
     if (!keys.length) return void res.status(400).json({ error: "stops is required: boxel keys, separated by semicolons." });
     res.json(expeditionPlan(keys, { from, jumpRangeLy: s.jumpRangeLy }, await deps(false)));
-  });
+  }));
 
-  app.get("/api/expedition/boxel", async (req, res) => {
+  app.get("/api/expedition/boxel", safe(async (req, res) => {
     const s = ship();
     const from = pointOf(req.query, s.from) ?? { x: 0, y: 0, z: 0 };
     const key = String(req.query.key ?? "");
     const store = opts.getJournalStore?.() ?? null;
+    // Built off the request's thread: the header's Next boxel card asks for this before the map has built it.
+    const tiles = await tileIndexAsync();
     // The names the journals or the galaxy index already know, as the Boxels screen lists them.
     const knownNames = (boxelName: string) => {
       const dto = boxelSystems({
         query: `${systemPrefixOf(boxelName)}0`,
         end: null,
-        index: tileIndex(),
+        index: tiles,
         visited: store ? store.visitedSystems.entries() : [],
         speciesName: (id) => id,
       });
@@ -159,5 +175,5 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
     const out = expeditionCandidates(key, { from, jumpRangeLy: s.jumpRangeLy, knownNames }, await deps(false));
     if (!out) return void res.status(400).json({ error: "Not a boxel key: <code>:<cx,cy,cz>:<position>." });
     res.json(out);
-  });
+  }));
 }
