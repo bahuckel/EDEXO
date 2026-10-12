@@ -104,6 +104,9 @@ export function useModal<T extends HTMLElement = HTMLDivElement>(
 
     const onKeyDown = (ev: KeyboardEvent) => {
       if (!isTopmost()) return;
+      // A panel opened from inside the dialog (ui/Popover) handles its own keys: Escape closes it, not
+      // the dialog, and Tab moves within it. It is drawn outside the dialog, at the end of <body>.
+      if ((ev.target as Element | null)?.closest?.("[data-radix-popper-content-wrapper]")) return;
       if (ev.key === "Escape") {
         ev.stopPropagation();
         onCloseRef.current();

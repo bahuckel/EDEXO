@@ -11,6 +11,8 @@
  *
  * `portal` draws it at the end of <body> (a panel that already lived there, as the bookmark editor
  * did); otherwise it stays where it is in the page, inside the same clip and stacking as before.
+ * `contained`: a click in the panel stops there (React passes a portal's clicks up to the row or card
+ * the button sits in). Inside a dialog (useModal), Escape closes the panel first, not the dialog.
  */
 import * as RP from "@radix-ui/react-popover";
 import type { ReactElement, ReactNode } from "react";
@@ -22,8 +24,10 @@ export function Popover({
   label,
   className,
   portal = false,
+  side = "bottom",
   align = "start",
   sideOffset = 6,
+  contained = false,
   children,
 }: {
   open: boolean;
@@ -34,19 +38,23 @@ export function Popover({
   label: string;
   className?: string;
   portal?: boolean;
+  /** Below or above the button first; it flips when there is no room. */
+  side?: "top" | "bottom";
   /** Which edge of the button it lines up with first (`start` = grows to the right). */
   align?: "start" | "center" | "end";
   sideOffset?: number;
+  contained?: boolean;
   children: ReactNode;
 }) {
   const content = (
     <RP.Content
       className={className ? `${className} tw:static` : "tw:static"}
       aria-label={label}
-      side="bottom"
+      side={side}
       align={align}
       sideOffset={sideOffset}
       collisionPadding={8}
+      onClick={contained ? (ev) => ev.stopPropagation() : undefined}
     >
       {children}
     </RP.Content>

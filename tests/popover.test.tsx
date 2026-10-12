@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, createElement, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Popover } from "../src/client/ui/Popover";
+import { Dialog } from "../src/client/ui/Dialog";
 
 let root: Root | null = null;
 let host: HTMLDivElement;
@@ -77,5 +78,33 @@ describe("Popover", () => {
     await act(async () => host.querySelector<HTMLButtonElement>("#bell")!.click());
     await act(async () => document.querySelector<HTMLButtonElement>("#pick")!.click());
     expect(panel()).toBeNull();
+  });
+
+  it("inside a dialog, Escape closes the panel first and the dialog second", async () => {
+    let dialogOpen = true;
+    function Options() {
+      const [open, setOpen] = useState(true);
+      dialogOpen = open;
+      return open
+        ? createElement(Dialog, {
+            title: "Options",
+            onClose: () => setOpen(false),
+            children: createElement(Bell),
+          })
+        : null;
+    }
+    act(() => root!.render(createElement(Options)));
+    await act(async () => host.querySelector<HTMLButtonElement>("#bell")!.click());
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2);
+    const esc = () =>
+      act(async () => {
+        document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+    await esc();
+    expect(dialogOpen).toBe(true);
+    expect(document.querySelector('[aria-label="Notices"]')).toBeNull();
+    expect(document.activeElement?.id).toBe("bell");
+    await esc();
+    expect(dialogOpen).toBe(false);
   });
 });
