@@ -7,6 +7,11 @@
  * key holds commas, so the stops are split on semicolons).
  * `boxel`: `?key=<key>`: the score and the system names nobody has recorded. `light=1` on `field` (the header's
  * "Next boxel", plan 2.7) uses the galaxy index only when it is already in memory, and never reads it.
+ *
+ * Plan 5.2 (owner, 2026-10-12): `field` also takes `target` (`exobio` | `body:<elw|ww|aw|hrgg|gg>` |
+ * `star:<type>` | `value:<millions>`) and a route, `toX&toY&toZ` with `width` (ly, the corridor, at most
+ * 1,000). `targets`: the body kinds and every main star type. `ends?distance=`: end systems to offer, eight
+ * directions round the ship, each the nearest system of the galaxy index.
  */
 import type express from "express";
 import { getProjectRoot } from "../paths.js";
@@ -20,6 +25,7 @@ import { boxelSystems } from "../boxel.js";
 import { tileIndex } from "../galaxyTiles.js";
 import { systemPrefixOf } from "../expedition.js";
 import { expeditionCandidates, expeditionField, expeditionPlan, parseCodes, type ExpeditionDeps } from "../expeditionService.js";
+import { BODY_KINDS, circleSuggestions, loadFeatureTable, parseTarget, starTypes } from "../expeditionTargets.js";
 import type { HttpServerOptions, RouteContext } from "../httpServer.js";
 
 type Xyz = { x: number; y: number; z: number };
@@ -74,6 +80,9 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
             limit: Number(req.query.limit) || undefined,
             codes: parseCodes(req.query.codes),
             visitedPoints: opts.getMySystems?.().systems ?? [],
+            target: parseTarget(req.query.target),
+            to: pointOf({ x: req.query.toX, y: req.query.toY, z: req.query.toZ }, null),
+            widthLy: Number(req.query.width) || undefined,
           },
           await deps(req.query.light === "1" ? "peek" : true),
         ),
@@ -81,6 +90,45 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }
+  });
+
+  app.get("/api/expedition/targets", (_req, res) => {
+    try {
+      const t = loadFeatureTable(getProjectRoot());
+      res.json({ bodies: BODY_KINDS, stars: starTypes(t), valueEdgesM: t.valueEdgesM, builtAt: t.builtAt });
+    } catch (e) {
+      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+
+  app.get("/api/expedition/ends", async (req, res) => {
+    const s = ship();
+    const from = pointOf(req.query, s.from);
+    if (!from) return void res.status(400).json({ error: "No position: give x, y, z, or fly a jump so the journals have one." });
+    const distance = Math.max(200, Math.min(20_000, Number(req.query.distance) || 2000));
+    const index = await loadBioIndexAsync();
+    if (!index) return void res.json({ from, distanceLy: distance, ends: [] });
+    // The nearest galaxy-index system to each of the eight points, in one pass.
+    const pts = Array.from({ length: 8 }, (_, i) => {
+      const a = (i * Math.PI) / 4;
+      return { x: from.x - Math.sin(a) * distance, y: from.y, z: from.z + Math.cos(a) * distance };
+    });
+    const best = pts.map(() => ({ i: -1, d: Infinity }));
+    index.forEachPoint((i, x, y, z) => {
+      for (let k = 0; k < 8; k++) {
+        const p = pts[k]!;
+        const d = (x - p.x) ** 2 + (y - p.y) ** 2 + (z - p.z) ** 2;
+        if (d < best[k]!.d) best[k] = { i, d };
+      }
+    });
+    const near = (p: Xyz) => {
+      const k = pts.findIndex((q) => q.x === p.x && q.z === p.z);
+      const b = best[k];
+      if (!b || b.i < 0) return null;
+      const [x, y, z] = index.pointAt(b.i);
+      return { name: index.nameOf(b.i), x, y, z };
+    };
+    res.json({ from, distanceLy: distance, ends: circleSuggestions(from, distance, near) });
   });
 
   app.get("/api/expedition/plan", async (req, res) => {

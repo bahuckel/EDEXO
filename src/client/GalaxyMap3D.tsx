@@ -42,6 +42,7 @@ import {
   expeditionColours,
   expeditionSize,
   expeditionTip,
+  targetLabelOf,
   takeExpeditionFocus,
 } from "./ExpeditionDrawer";
 import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
@@ -597,6 +598,13 @@ export function GalaxyMap3D() {
     const ship = route?.position ?? null;
     e.setPathLine("expedition-plan", expPlan && ship ? [ship, ...expPlan.stops.map((s) => s.center)] : [], 0xffc23a);
   }, [expPlan, route?.position, stats?.phase]);
+  // An expedition route (plan 5.2): the line from where it was scored to its end, blue beside the amber plan.
+  useEffect(() => {
+    const e = engine.current;
+    if (!e) return;
+    const to = drawer === "expedition" ? expField?.to : null;
+    e.setPathLine("expedition-route", to && expField ? [expField.from, to] : [], 0x4fd0ff);
+  }, [expField, drawer, stats?.phase]);
 
   // The commander's layer, with the "waiting at least" threshold: below it a waiting system is grey.
   const waitMinCr = waitMinM * 1_000_000;
@@ -1105,7 +1113,7 @@ export function GalaxyMap3D() {
     if (hover.layer === "expedition") {
       const b = expByKey.get(hover.id);
       if (!b) return null;
-      const t = expeditionTip(b, !!expField?.species);
+      const t = expeditionTip(b, !!expField?.species, targetLabelOf(expField?.target));
       return (
         <>
           <strong>{t.title}</strong>
@@ -1207,6 +1215,7 @@ export function GalaxyMap3D() {
         <ExpeditionBoxelCard
           b={b}
           species={!!expField?.species}
+          targetLabel={targetLabelOf(expField?.target)}
           ship={route?.position ?? null}
           inPlan={expPlanKeys.includes(b.key)}
           onTogglePlan={() =>

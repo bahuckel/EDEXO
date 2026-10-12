@@ -16,6 +16,13 @@ import type { SpeciesEntry } from "../shared/types.js";
 import { BOXEL_BIO_RATES } from "../shared/boxelBioRates.js";
 import { MASS_CODE_LETTERS, type MassCode } from "../shared/boxelAdvice.js";
 import { twoOptOrder } from "./tourOrder.js";
+import {
+  boxelsAlong,
+  expectedMatches,
+  featureCellFor,
+  loadFeatureTable,
+  type ExpeditionTarget,
+} from "./expeditionTargets.js";
 import type {
   ExpeditionBoxelDTO,
   ExpeditionCandidatesDTO,
@@ -48,6 +55,9 @@ export const DEFAULT_RADIUS_LY = 1000;
 export const MAX_FIELD_BOXELS = 500;
 /** Used when the journals have not shown a jump range yet. */
 export const DEFAULT_JUMP_RANGE_LY = 50;
+/** A route's corridor: boxels within this of the line from A to B. */
+export const DEFAULT_ROUTE_WIDTH_LY = 250;
+export const MAX_ROUTE_WIDTH_LY = 1000;
 const CACHE_MS = 10 * 60_000;
 
 export interface ExpeditionDeps {
@@ -122,8 +132,10 @@ function dtoOf(
   recorded: number,
   jumpRangeLy: number,
   visited = 0,
+  /** On a route: the extra distance of going by the boxel, which is what the jumps to reach it cost. */
+  detourLy?: number,
 ): ExpeditionBoxelDTO {
-  const per = evPerJump(s, b.distanceLy, jumpRangeLy);
+  const per = evPerJump(s, detourLy ?? b.distanceLy, jumpRangeLy);
   const r1 = (v: number) => Math.round(v * 10) / 10;
   return {
     key: boxelKey(b),
@@ -234,6 +246,11 @@ export async function expeditionField(
     codes?: MassCode[];
     /** The commander's own visited systems: no first footfall left for him there. */
     visitedPoints?: readonly Xyz[];
+    /** What to look for (plan 5.2); exobiology when absent. */
+    target?: ExpeditionTarget;
+    /** A route to this point instead of a sphere round `from`: boxels within `widthLy` of the line. */
+    to?: Xyz | null;
+    widthLy?: number;
   },
   deps: ExpeditionDeps,
 ): Promise<ExpeditionFieldDTO> {
@@ -242,7 +259,13 @@ export async function expeditionField(
   const codes = q.codes?.length ? q.codes : [...EXPEDITION_CODES];
   const entry = q.speciesId ? (deps.species.find((e) => e.id === q.speciesId) ?? null) : null;
   const limit = Math.max(1, Math.min(MAX_FIELD_BOXELS, q.limit ?? MAX_FIELD_BOXELS));
+  const target: ExpeditionTarget = q.target ?? { kind: "exobio" };
+  const targetKey = target.kind === "body" ? `body:${target.body}` : target.kind === "star" ? `star:${target.star}` : target.kind === "value" ? `value:${target.minM}` : "exobio";
+  const to = q.to ?? null;
+  const widthLy = Math.max(50, Math.min(MAX_ROUTE_WIDTH_LY, q.widthLy || DEFAULT_ROUTE_WIDTH_LY));
   const key = [
+    targetKey,
+    to ? `${Math.round(to.x / 10)},${Math.round(to.y / 10)},${Math.round(to.z / 10)},${widthLy}` : "",
     Math.round(q.from.x / 10), Math.round(q.from.y / 10), Math.round(q.from.z / 10),
     radiusLy, Math.round(jumpRangeLy), entry?.id ?? "", codes.join(""), q.minEv ?? 0, limit, q.visitedPoints?.length ?? 0,
     deps.index ? 1 : 0,
@@ -253,9 +276,15 @@ export async function expeditionField(
   const table = loadEvTable(deps.root);
   const names = loadSectorNames(deps.root);
   const genusValue = genusValueTable(table, deps);
-  const { boxels, skipped } = boxelsWithin(q.from, radiusLy, codes, names);
-  const recorded = await recordedNear(deps.index, q.from, radiusLy, codes.filter((c) => !skipped.includes(c)));
-  const mine = new RecordedCounter(q.from, radiusLy, codes.filter((c) => !skipped.includes(c)));
+  // A sphere round the ship, or a tube along the route (plan 5.2); the recorded systems are counted in a
+  // sphere that holds either.
+  const along = to ? boxelsAlong(q.from, to, widthLy, codes, names) : null;
+  const { boxels, skipped } = along ?? boxelsWithin(q.from, radiusLy, codes, names);
+  const mid = to ? { x: (q.from.x + to.x) / 2, y: (q.from.y + to.y) / 2, z: (q.from.z + to.z) / 2 } : q.from;
+  const reach = to ? Math.hypot(to.x - q.from.x, to.y - q.from.y, to.z - q.from.z) / 2 + widthLy : radiusLy;
+  const recorded = await recordedNear(deps.index, mid, reach, codes.filter((c) => !skipped.includes(c)));
+  const mine = new RecordedCounter(mid, reach, codes.filter((c) => !skipped.includes(c)));
+  const features = target.kind === "exobio" ? null : loadFeatureTable(deps.root);
   for (const p of q.visitedPoints ?? []) mine.add(p.x, p.y, p.z);
   const share = entry ? shareInGenus(entry, deps.species) : 0;
   const gate = entry ? gateForSpeciesId(entry.id) : null;
@@ -269,7 +298,27 @@ export async function expeditionField(
     const rec = recorded.countIn(b);
     const vis = mine.countIn(b);
     const s = boxelEV(b, { table, region, genusValue, recorded: rec, visited: vis });
-    const dto = dtoOf(b, region, s, rec, jumpRangeLy, vis);
+    const routed = b as typeof b & { detourLy?: number; offLy?: number; t?: number };
+    const dto = dtoOf(b, region, s, rec, jumpRangeLy, vis, routed.detourLy);
+    if (routed.detourLy != null) {
+      dto.detourLy = Math.round(routed.detourLy);
+      dto.offLy = Math.round(routed.offLy ?? 0);
+      dto.along = Math.round((routed.t ?? 0) * 1000) / 1000;
+    }
+    if (features) {
+      const cell = featureCellFor(features, region, b.code);
+      // A bio system carries the boxel's exobiology: its EV over the bio systems expected in it.
+      const bioSystems = Math.max(0, s.remaining * s.pBio - s.recorded);
+      const m = expectedMatches(target, cell, features, s.remaining, {
+        p: s.remaining > 0 ? bioSystems / s.remaining : 0,
+        perBioSystem: bioSystems > 0 ? s.ev / bioSystems : 0,
+      });
+      if (!(m > 0)) continue;
+      dto.matches = Math.round(m * 1000) / 1000;
+      dto.matchesPerJump = Math.round((m / dto.jumps) * 10000) / 10000;
+      scored.push(dto);
+      continue;
+    }
     if (entry) {
       const sp = boxelEVForSpecies(b, {
         table, region, genus: entry.genus ?? "", speciesId: entry.id, shareInGenus: share, catalogue, recorded: rec,
@@ -281,7 +330,13 @@ export async function expeditionField(
     } else if (dto.ev < (q.minEv ?? 0)) continue;
     scored.push(dto);
   }
-  scored.sort(entry ? (a, b) => (b.speciesBodies ?? 0) / b.jumps - (a.speciesBodies ?? 0) / a.jumps : (a, b) => b.evPerJump - a.evPerJump);
+  scored.sort(
+    features
+      ? (a, b) => (b.matchesPerJump ?? 0) - (a.matchesPerJump ?? 0)
+      : entry
+        ? (a, b) => (b.speciesBodies ?? 0) / b.jumps - (a.speciesBodies ?? 0) / a.jumps
+        : (a, b) => b.evPerJump - a.evPerJump,
+  );
   const value: ExpeditionFieldDTO = {
     from: q.from,
     radiusLy,
@@ -289,6 +344,9 @@ export async function expeditionField(
     scored: scored.length,
     skipped,
     species: entry?.id ?? null,
+    target: targetKey,
+    to: to ? { x: to.x, y: to.y, z: to.z } : null,
+    widthLy: to ? widthLy : null,
     rule: gate
       ? { text: ruleText(gate), ...rulePoints(gate, deps.catalogue, q.from, radiusLy), boxelsChecked: boxels.length, boxelsPassing: passing }
       : null,

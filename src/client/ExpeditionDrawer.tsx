@@ -13,8 +13,10 @@ import type {
   ExpeditionPlanDTO,
 } from "@shared/dto/expedition";
 import { fmtLy } from "@shared/format";
+import type { GalaxyFindDTO } from "@shared/dto/galaxy";
 import { formatValue } from "./galaxy3d/clusters";
 import { G3D_HELP, MenuHead, MenuRow } from "./galaxy3d/G3dMenu";
+import { PickList, type PickOption } from "./galaxy3d/PickList";
 import { CopySystemButton } from "./CopySystemButton";
 
 type Xyz = { x: number; y: number; z: number };
@@ -36,8 +38,24 @@ export function takeExpeditionFocus(): { key: string; center: Xyz; cubeLy: numbe
 }
 
 const RADII = [250, 500, 1000, 2000, 3000];
-const MIN_PER_JUMP = [0, 1, 3, 5, 10];
+// Owner, 2026-10-12: "10 M a jump is nothing"; commanders look from 50 M and 100 M.
+const MIN_PER_JUMP = [0, 5, 10, 25, 50, 100];
 const LIST_ROWS = 12;
+const ROUTE_WIDTHS = [100, 250, 500, 1000];
+
+type LookFor = "exobio" | "bodies" | "stars" | "systems";
+interface EndPoint {
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  note?: string;
+}
+interface TargetsDTO {
+  bodies: { key: string; label: string; unit: string }[];
+  stars: { name: string; systems: number }[];
+}
+const fmtCount = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n));
 const CANDIDATES_SHOWN = 12;
 /** The server lists at most this many names (expedition.ts `candidateSystems`). */
 const CANDIDATE_CAP = 200;
@@ -52,7 +70,34 @@ export function crShort(v: number): string {
 
 /** What a boxel is ranked by: credits per jump, or the species' bodies per jump in target-species mode. */
 export function expeditionScore(b: ExpeditionBoxelDTO, species: boolean): number {
+  if (b.matchesPerJump != null) return b.matchesPerJump;
   return species ? (b.speciesBodies ?? 0) / Math.max(1, b.jumps) : b.evPerJump;
+}
+
+/** Worth thresholds for "Systems" (millions): what a system pays a first discoverer, exobiology included. */
+export const WORTH_M = [5, 10, 20, 50];
+
+const BODY_WORDS: Record<string, string> = {
+  elw: "systems with an Earth-like world",
+  ww: "systems with a water world",
+  aw: "systems with an ammonia world",
+  hrgg: "systems with a helium-rich gas giant",
+  gg: "gas giants",
+};
+
+/**
+ * What a field looked for, in words, for its rows and the map's hover card (plan 5.2): "systems with an
+ * Earth-like world", "systems with a Neutron Star", "systems worth 10 M or more"; null for exobiology.
+ */
+export function targetLabelOf(target: string | undefined): string | null {
+  if (!target || target === "exobio") return null;
+  const at = target.indexOf(":");
+  const kind = target.slice(0, at);
+  const rest = target.slice(at + 1);
+  if (kind === "body") return BODY_WORDS[rest] ?? rest;
+  if (kind === "star") return `systems with a ${rest}`;
+  if (kind === "value") return `systems worth ${rest} M or more`;
+  return null;
 }
 
 const LOW: [number, number, number] = [0.36, 0.27, 0.62];
@@ -75,18 +120,29 @@ export function expeditionSize(b: ExpeditionBoxelDTO): number {
   return Math.round(5 + Math.min(8, Math.log10(Math.max(1, b.systems)) * 2.4));
 }
 
-function boxelLine(b: ExpeditionBoxelDTO, species: boolean): string {
+function boxelLine(b: ExpeditionBoxelDTO, species: boolean, targetLabel: string | null = null): string {
   const genera = b.topGenera.map((g) => g.genus).join(", ");
+  if (b.matches != null)
+    return `≈${b.matches < 10 ? b.matches.toFixed(2) : Math.round(b.matches)} ${targetLabel ?? "matches"} · ${b.jumps} jumps`;
   return species
     ? `${(b.speciesBodies ?? 0).toFixed(2)} bodies expected · ${b.jumps} jumps`
     : `${crShort(b.evPerJump)} CR per jump · ${b.systems} systems${genera ? ` · ${genera}` : ""}`;
 }
 
+/** Where a boxel is: its distance from the ship, or on a route the detour of going by it. */
+function whereOf(b: ExpeditionBoxelDTO): string {
+  return b.detourLy != null ? `${fmtLy(b.detourLy)} off the route` : fmtLy(b.distanceLy);
+}
+
 /** The hover card's lines for one boxel. */
-export function expeditionTip(b: ExpeditionBoxelDTO, species: boolean): { title: string; line: string; note: string } {
+export function expeditionTip(
+  b: ExpeditionBoxelDTO,
+  species: boolean,
+  targetLabel: string | null = null,
+): { title: string; line: string; note: string } {
   return {
     title: b.name ?? `${b.code} boxel (unnamed sector)`,
-    line: `${fmtLy(b.distanceLy)} · ${boxelLine(b, species)}`,
+    line: `${whereOf(b)} · ${boxelLine(b, species, targetLabel)}`,
     note: `${Math.round(b.pBio * 1000) / 10} % of systems with biology · ${b.recorded} recorded${b.visited ? ` · ${b.visited} yours` : ""} · click for its systems`,
   };
 }
@@ -120,24 +176,110 @@ export function ExpeditionDrawer({
   const [minM, setMinM] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [speciesList, setSpeciesList] = useState<{ id: string; name: string }[]>([]);
+  const [speciesList, setSpeciesList] = useState<{ id: string; name: string; genus: string }[]>([]);
+  // Plan 5.2 (owner, 2026-10-12): a sphere or a route to a system, and what to look for.
+  const [mode, setMode] = useState<"sphere" | "route">("sphere");
+  const [end, setEnd] = useState<EndPoint | null>(null);
+  const [widthLy, setWidthLy] = useState(250);
+  const [lookFor, setLookFor] = useState<LookFor>("exobio");
+  const [bodyKind, setBodyKind] = useState("elw");
+  const [starType, setStarType] = useState("Neutron Star");
+  const [worthM, setWorthM] = useState(10);
+  const [targets, setTargets] = useState<TargetsDTO | null>(null);
+  const [suggested, setSuggested] = useState<EndPoint[]>([]);
+  const [found, setFound] = useState<EndPoint[]>([]);
+  const [endQuery, setEndQuery] = useState("");
   const from = fromSelected && selected ? selected : ship;
+  const speciesOptions = useMemo<PickOption[]>(
+    () => [{ value: "", label: "Any (credits)" }, ...speciesList.map((s) => ({ value: s.id, label: s.name, note: s.genus }))],
+    [speciesList],
+  );
 
   useEffect(() => {
     void fetch("/api/species-encyclopedia")
       .then((r) => (r.ok ? r.json() : null))
-      .then((j: { species?: { entry: { id: string; displayName: string } }[] } | null) =>
+      .then((j: { species?: { entry: { id: string; displayName: string; genus?: string } }[] } | null) =>
         setSpeciesList(
-          (j?.species ?? []).map((s) => ({ id: s.entry.id, name: s.entry.displayName })).sort((a, b) => a.name.localeCompare(b.name)),
+          (j?.species ?? [])
+            .map((s) => ({ id: s.entry.id, name: s.entry.displayName, genus: s.entry.genus ?? "" }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
         ),
       )
       .catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    void fetch("/api/expedition/targets")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: TargetsDTO | null) => j && setTargets(j))
+      .catch(() => undefined);
+  }, []);
+  // End systems to offer: eight directions round the ship, 2,000 and 5,000 ly out (real systems).
+  const shipKey = ship ? `${Math.round(ship.x / 50)},${Math.round(ship.y / 50)},${Math.round(ship.z / 50)}` : "";
+  useEffect(() => {
+    if (mode !== "route" || !ship) return;
+    const ac = new AbortController();
+    const at = (d: number) =>
+      fetch(`/api/expedition/ends?distance=${d}&x=${ship.x}&y=${ship.y}&z=${ship.z}`, { signal: ac.signal })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { ends?: (EndPoint & { direction: string; distanceLy: number })[] } | null) =>
+          (j?.ends ?? []).map((e) => ({ name: e.name, x: e.x, y: e.y, z: e.z, note: `${e.direction} · ${fmtLy(e.distanceLy)}` })),
+        );
+    void Promise.all([at(2000), at(5000)])
+      .then(([a, b]) => {
+        if (!ac.signal.aborted) setSuggested([...a, ...b]);
+      })
+      .catch(() => undefined);
+    return () => ac.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, shipKey]);
+  // A typed end system: the galaxy map's own search.
+  useEffect(() => {
+    const q = endQuery.trim();
+    if (q.length < 2) {
+      setFound([]);
+      return;
+    }
+    const ac = new AbortController();
+    const t = window.setTimeout(() => {
+      void fetch(`/api/galaxy/find?q=${encodeURIComponent(q)}`, { signal: ac.signal })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: GalaxyFindDTO | null) => {
+          if (ac.signal.aborted) return;
+          setFound(
+            (j?.systems ?? []).slice(0, 30).map((x) => ({
+              name: x.name,
+              x: x.x,
+              y: x.y,
+              z: x.z,
+              note: ship ? fmtLy(Math.hypot(x.x - ship.x, x.y - ship.y, x.z - ship.z)) : undefined,
+            })),
+          );
+        })
+        .catch(() => undefined);
+    }, 250);
+    return () => {
+      ac.abort();
+      window.clearTimeout(t);
+    };
+  }, [endQuery, ship]);
+  const endOptions = useMemo<PickOption[]>(() => {
+    const list = endQuery.trim().length >= 2 ? found : suggested;
+    return list.map((e) => ({ value: e.name, label: e.name, note: e.note }));
+  }, [endQuery, found, suggested]);
+  const target =
+    lookFor === "bodies" ? `body:${bodyKind}` : lookFor === "stars" ? `star:${starType}` : lookFor === "systems" ? `value:${worthM}` : "";
+  const route = mode === "route" && end ? end : null;
+
   // Scored again when an input changes; the server caches a field for ten minutes.
   const fromKey = from ? `${Math.round(from.x)},${Math.round(from.y)},${Math.round(from.z)}` : "";
   useEffect(() => {
     if (!from) return;
+    // A route waits for its end.
+    if (mode === "route" && !end) {
+      setField(null);
+      return;
+    }
     const ac = new AbortController();
     setBusy(true);
     setError(null);
@@ -147,7 +289,9 @@ export function ExpeditionDrawer({
       z: String(from.z),
       radius: String(radius),
       limit: "500",
-      ...(species ? { species } : {}),
+      ...(lookFor === "exobio" && species ? { species } : {}),
+      ...(target ? { target } : {}),
+      ...(route ? { toX: String(route.x), toY: String(route.y), toZ: String(route.z), width: String(widthLy) } : {}),
     });
     void fetch(`/api/expedition/field?${q}`, { signal: ac.signal })
       .then(async (r) => {
@@ -163,7 +307,7 @@ export function ExpeditionDrawer({
       });
     return () => ac.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromKey, radius, species]);
+  }, [fromKey, radius, species, lookFor, target, route?.name, widthLy, mode]);
 
   useEffect(() => {
     if (!planKeys.length || !ship) {
@@ -183,9 +327,11 @@ export function ExpeditionDrawer({
   }, [planKeys.join(";"), ship ? `${Math.round(ship.x)},${Math.round(ship.y)},${Math.round(ship.z)}` : ""]);
 
   const isSpecies = !!field?.species;
+  const isTarget = !!field?.target && field.target !== "exobio";
+  const label = targetLabelOf(field?.target);
   const rows = useMemo(
-    () => (field?.boxels ?? []).filter((b) => isSpecies || b.evPerJump >= minM * 1e6).slice(0, LIST_ROWS),
-    [field, minM, isSpecies],
+    () => (field?.boxels ?? []).filter((b) => isSpecies || isTarget || b.evPerJump >= minM * 1e6).slice(0, LIST_ROWS),
+    [field, minM, isSpecies, isTarget],
   );
   const toggle = (key: string) => setPlanKeys((keys) => (keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key].slice(0, 20)));
 
@@ -193,60 +339,136 @@ export function ExpeditionDrawer({
     <aside className="g3d-drawer g3d-menu g3d-plan" aria-label="Expedition" data-testid="g3d-expedition">
       <MenuHead title="Expedition" help={G3D_HELP.expedition} />
       <div className="g3d-menu__section g3d-menu__section--first">
-        <MenuRow label="From" hint="Score the boxels around your ship, or around the point selected on the map">
-          <select
-            className="g3d-select g3d-row__val"
-            value={fromSelected ? "selected" : "ship"}
-            onChange={(e) => setFromSelected(e.target.value === "selected")}
-            aria-label="From"
-          >
-            <option value="ship">Your ship</option>
-            <option value="selected" disabled={!selected}>
-              Selected point
-            </option>
+        <MenuRow label="Type" hint="A sphere round your ship (or the selected point), or a route to a system: the boxels along the way">
+          <select className="g3d-select g3d-row__val" value={mode} onChange={(e) => setMode(e.target.value as "sphere" | "route")} aria-label="Type">
+            <option value="sphere">Sphere</option>
+            <option value="route">To a system</option>
           </select>
         </MenuRow>
-        <MenuRow label="Radius" hint="How far out to score boxels (the smallest boxels drop out past their limit)">
-          <select className="g3d-select g3d-row__val" value={radius} onChange={(e) => setRadius(Number(e.target.value))} aria-label="Radius">
-            {RADII.map((r) => (
-              <option key={r} value={r}>
-                {r.toLocaleString("en-US")} ly
-              </option>
-            ))}
-          </select>
-        </MenuRow>
-        <MenuRow label="Species" hint="Light only the boxels where this species can grow, ranked by how many of its bodies they should hold">
-          <select className="g3d-select g3d-row__val" value={species} onChange={(e) => setSpecies(e.target.value)} aria-label="Species">
-            <option value="">Any (credits)</option>
-            {speciesList.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </MenuRow>
-        {!isSpecies ? (
-          <MenuRow label="At least" hint="Hide boxels worth less than this per jump">
-            <select className="g3d-select g3d-row__val" value={minM} onChange={(e) => setMinM(Number(e.target.value))} aria-label="At least per jump">
-              {MIN_PER_JUMP.map((m) => (
-                <option key={m} value={m}>
-                  {m ? `${m} M CR / jump` : "Any"}
+        {mode === "sphere" ? (
+          <>
+            <MenuRow label="From" hint="Score the boxels around your ship, or around the point selected on the map">
+              <select
+                className="g3d-select g3d-row__val"
+                value={fromSelected ? "selected" : "ship"}
+                onChange={(e) => setFromSelected(e.target.value === "selected")}
+                aria-label="From"
+              >
+                <option value="ship">Your ship</option>
+                <option value="selected" disabled={!selected}>
+                  Selected point
                 </option>
-              ))}
-            </select>
-          </MenuRow>
-        ) : null}
+              </select>
+            </MenuRow>
+            <MenuRow label="Radius" hint="How far out to score boxels (the smallest boxels drop out past their limit)">
+              <select className="g3d-select g3d-row__val" value={radius} onChange={(e) => setRadius(Number(e.target.value))} aria-label="Radius">
+                {RADII.map((r) => (
+                  <option key={r} value={r}>
+                    {r.toLocaleString("en-US")} ly
+                  </option>
+                ))}
+              </select>
+            </MenuRow>
+          </>
+        ) : (
+          <>
+            <PickList
+              label="To"
+              hint="The end of the route: a system from the galaxy map's search, or one of the suggestions in eight directions round you"
+              value={end?.name ?? ""}
+              valueLabel={end?.name ?? "Choose a system"}
+              options={endOptions}
+              onQuery={setEndQuery}
+              onChange={(name) => {
+                const e = [...found, ...suggested].find((x) => x.name === name);
+                if (e) setEnd(e);
+              }}
+              placeholder="Search a system, or pick a suggestion"
+            />
+            <MenuRow label="Corridor" hint="How far either side of the line from you to the end a boxel may lie">
+              <select className="g3d-select g3d-row__val" value={widthLy} onChange={(e) => setWidthLy(Number(e.target.value))} aria-label="Corridor">
+                {ROUTE_WIDTHS.map((w) => (
+                  <option key={w} value={w}>
+                    {w.toLocaleString("en-US")} ly
+                  </option>
+                ))}
+              </select>
+            </MenuRow>
+          </>
+        )}
+        <MenuRow label="Looking for" hint="Exobiology (first footfalls), bodies, stars, or systems worth a sum">
+          <select className="g3d-select g3d-row__val" value={lookFor} onChange={(e) => setLookFor(e.target.value as LookFor)} aria-label="Looking for">
+            <option value="exobio">Exobio</option>
+            <option value="bodies">Bodies</option>
+            <option value="stars">Stars</option>
+            <option value="systems">Systems</option>
+          </select>
+        </MenuRow>
+        {lookFor === "exobio" ? (
+          <>
+            <PickList
+              label="Species"
+              hint="Light only the boxels where this species can grow, ranked by how many of its bodies they should hold"
+              value={species}
+              options={speciesOptions}
+              onChange={setSpecies}
+              placeholder="Search, e.g. stratum or tussock"
+            />
+            {!species ? (
+              <MenuRow label="At least" hint="Hide boxels worth less than this per jump">
+                <select className="g3d-select g3d-row__val" value={minM} onChange={(e) => setMinM(Number(e.target.value))} aria-label="At least per jump">
+                  {MIN_PER_JUMP.map((m) => (
+                    <option key={m} value={m}>
+                      {m ? `${m} M CR / jump` : "Any"}
+                    </option>
+                  ))}
+                </select>
+              </MenuRow>
+            ) : null}
+          </>
+        ) : lookFor === "bodies" ? (
+          <PickList
+            label="Bodies"
+            hint="Boxels whose unflown systems should hold this, by the systems Spansh holds whole in the same region and mass code"
+            value={bodyKind}
+            options={(targets?.bodies ?? []).map((b) => ({ value: b.key, label: b.label }))}
+            onChange={setBodyKind}
+            placeholder="Search, e.g. earth or water"
+          />
+        ) : lookFor === "stars" ? (
+          <PickList
+            label="Stars"
+            hint="Boxels whose unflown systems should have this main star, by the systems Spansh holds whole in the same region and mass code"
+            value={starType}
+            options={(targets?.stars ?? []).map((t) => ({ value: t.name, label: t.name, note: `${fmtCount(t.systems)} known` }))}
+            onChange={setStarType}
+            placeholder="Search, e.g. neutron or wolf"
+          />
+        ) : (
+          <PickList
+            label="Worth"
+            hint="Systems that should pay at least this to a first discoverer who scans and maps every body and samples its biology"
+            value={String(worthM)}
+            options={WORTH_M.map((m) => ({ value: String(m), label: `${m} M CR or more` }))}
+            onChange={(v) => setWorthM(Number(v))}
+          />
+        )}
       </div>
       <div className="g3d-menu__section">
         {!from ? (
           <p className="dim g3d-panel__note">No position yet: fly a jump, or select a point and score from it.</p>
+        ) : mode === "route" && !end ? (
+          <p className="dim g3d-panel__note">Choose where the route goes: search a system, or pick one of the suggestions.</p>
         ) : busy ? (
           <p className="dim g3d-panel__note">Scoring the boxels…</p>
         ) : error ? (
           <p className="options-error">{error}</p>
         ) : field ? (
           <p className="dim g3d-panel__note" data-testid="g3d-expedition-status">
-            {field.scored.toLocaleString("en-US")} boxels scored within {field.radiusLy.toLocaleString("en-US")} ly
+            {field.scored.toLocaleString("en-US")} boxels scored{" "}
+            {field.to
+              ? `along ${fmtLy(Math.hypot(field.to.x - field.from.x, field.to.y - field.from.y, field.to.z - field.from.z))} to ${end?.name ?? "the end"}, ${(field.widthLy ?? 0).toLocaleString("en-US")} ly either side`
+              : `within ${field.radiusLy.toLocaleString("en-US")} ly`}
             {field.skipped.length ? ` (${field.skipped.join(", ")} boxels left out: too many at this radius)` : ""} · jump range{" "}
             {Math.round(field.jumpRangeLy)} ly
           </p>
@@ -270,7 +492,7 @@ export function ExpeditionDrawer({
               <button type="button" className="g3d-exp-row__go" onClick={() => onFocus(b)} title="Show it on the map">
                 <strong>{b.name ?? `${b.code} boxel`}</strong>
                 <span>
-                  {fmtLy(b.distanceLy)} · {boxelLine(b, isSpecies)}
+                  {whereOf(b)} · {boxelLine(b, isSpecies, label)}
                 </span>
               </button>
               <button
@@ -309,7 +531,7 @@ export function ExpeditionDrawer({
         </div>
       ) : null}
       <p className="g3d-exp-legend dim" aria-hidden="true">
-        <i className="g3d-exp-legend__bar" /> lower → higher {isSpecies ? "bodies" : "credits"} per jump · size = systems
+        <i className="g3d-exp-legend__bar" /> lower → higher {isTarget ? (label ?? "matches") : isSpecies ? "bodies" : "credits"} per jump · size = systems
       </p>
       {field ? <p className="dim tiny">Tables {field.builtAt} · averages over boxels like these, not a promise about one.</p> : null}
     </aside>
@@ -320,12 +542,15 @@ export function ExpeditionDrawer({
 export function ExpeditionBoxelCard({
   b,
   species,
+  targetLabel = null,
   inPlan,
   onTogglePlan,
   ship,
 }: {
   b: ExpeditionBoxelDTO;
   species: boolean;
+  /** Looking for bodies, stars or worth (plan 5.2): what the matches are, in words. */
+  targetLabel?: string | null;
   inPlan: boolean;
   onTogglePlan: () => void;
   ship: Xyz | null;
@@ -356,6 +581,23 @@ export function ExpeditionBoxelCard({
         <p className="g3d-panel__note">A hand-named sector shares this sector: near it, the systems may carry that sector&apos;s name instead.</p>
       ) : null}
       <dl className="g3d-exp-facts">
+        {b.matches != null ? (
+          <>
+            <dt>Expected</dt>
+            <dd>
+              ≈{b.matches < 10 ? b.matches.toFixed(2) : Math.round(b.matches)} {targetLabel ?? "matches"} in its unflown systems (from the
+              systems Spansh holds whole like it)
+            </dd>
+          </>
+        ) : null}
+        {b.detourLy != null ? (
+          <>
+            <dt>Route</dt>
+            <dd>
+              {fmtLy(b.detourLy)} detour · {fmtLy(b.offLy ?? 0)} off the line · {Math.round((b.along ?? 0) * 100)} % of the way
+            </dd>
+          </>
+        ) : null}
         <dt>Worth</dt>
         <dd>
           {species ? `${(b.speciesBodies ?? 0).toFixed(2)} bodies of the species expected` : `${formatValue(b.ev / 100_000)} in first footfalls expected`}

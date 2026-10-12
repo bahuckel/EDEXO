@@ -55,6 +55,8 @@ export const G3D_HELP: Record<G3dTabKey, string[]> = {
   expedition: [
     "Where to go for first footfalls in space nobody has recorded. Every boxel around you is scored from the Spansh dump: how many systems a boxel of its size holds in this region, how often one has biology, how many biological bodies, and what the genera seen there are worth at five times for a first footfall. Systems already in the galaxy index count against it: someone has been.",
     "Ranked by credits per jump — the jumps to reach the boxel plus one per system in it, so a huge boxel has to earn its flying. Pick a species to light only the boxels where it can grow (its nebula, Guardian or core rule) and rank them by how many of its bodies they should hold.",
+    "Type: a sphere round you, or a route to a system — search one, or pick a suggestion in eight directions round you — with the boxels within the corridor of the line, ranked by the detour of going by them.",
+    "Looking for: exobiology, or bodies (Earth-likes, water and ammonia worlds, helium-rich gas giants, boxels dense with gas giants), a main star type, or systems worth a sum to a first discoverer who scans and maps it all and samples its biology. Those come from the systems Spansh holds whole in the same region and mass code; a boxel's unflown systems are expected to be like them.",
     "These are averages over many boxels like it, not a promise about one. Click a boxel for the system names nobody has recorded yet, copy one into the game's galaxy map, and add boxels to a plan to see the order and the jumps.",
   ],
   targets: [
