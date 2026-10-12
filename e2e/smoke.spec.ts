@@ -862,6 +862,47 @@ test("launcher: Backups backs up into the chosen folder and lists it for restore
   }
 });
 
+test("launcher: a save's late answer does not put the suggested folder back over a typed one", async ({ page, request }) => {
+  // 2026-10-12: the Backups test above failed now and then. Each save writes the saved settings back
+  // into the fields when its answer comes; one that came after a folder was typed put the suggested
+  // folder (the commander's Documents) back, and "Use this folder" confirmed that. Held here on purpose.
+  const errors = watchErrors(page);
+  const folder = mkdtempSync(path.join(tmpdir(), "edexo-e2e-backups-"));
+  try {
+    await page.addInitScript(() => localStorage.setItem("edexo.launcher.wizardDone", "1"));
+    await page.goto("/launcher.html");
+    await page.locator("#btnBackups").click();
+    await expect(page.locator("#backupModal")).toHaveClass(/on/);
+    await page.locator("#backupKeys").check();
+    await page.waitForTimeout(500);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    let held = false;
+    await page.route("**/api/backup/status", async (route) => {
+      if (!held) {
+        held = true;
+        await gate;
+      }
+      await route.continue();
+    });
+    await page.locator("#backupKeys").uncheck();
+    await expect.poll(() => held).toBe(true);
+    await page.locator("#backupFolder").fill(folder);
+    release();
+    await page.waitForTimeout(500);
+    await expect(page.locator("#backupFolder")).toHaveValue(folder);
+    await page.locator("#backupUseFolder").click();
+    const status = async () => (await (await request.get("/api/backup/status")).json()) as { folderChosen: boolean; folder: string };
+    await expect.poll(async () => (await status()).folderChosen).toBe(true);
+    expect((await status()).folder).toBe(folder);
+    expect(errors).toEqual([]);
+  } finally {
+    // No folder chosen again, as the profile started (the test above starts from that).
+    await request.post("/api/backup/settings", { data: { folder: null, keep: 10 } });
+    if (existsSync(folder)) rmSync(folder, { recursive: true, force: true });
+  }
+});
+
 test("phone hud: chips and the portrait layout", async ({ page }) => {
   const errors = watchErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
