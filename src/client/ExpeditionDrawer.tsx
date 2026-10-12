@@ -143,7 +143,7 @@ export function expeditionTip(
   return {
     title: b.name ?? `${b.code} boxel (unnamed sector)`,
     line: `${whereOf(b)} · ${boxelLine(b, species, targetLabel)}`,
-    note: `${Math.round(b.pBio * 1000) / 10} % of systems with biology · ${b.recorded} recorded${b.visited ? ` · ${b.visited} yours` : ""} · click for its systems`,
+    note: `${Math.round(b.pBio * 1000) / 10} % of systems with biology · ${b.recorded} recorded${b.barren ? ` · ${b.barren} flown without biology` : ""}${b.visited ? ` · ${b.visited} yours` : ""} · click for its systems`,
   };
 }
 
@@ -609,6 +609,7 @@ export function ExpeditionBoxelCard({
         <dt>Systems</dt>
         <dd>
           about {b.systems} · {Math.round(b.pBio * 1000) / 10} % with biology here · {b.recorded} already recorded
+          {b.barren ? ` · ${b.barren} flown since 2025 without biology` : ""}
           {b.visited ? ` · ${b.visited} visited by you` : ""}
         </dd>
         {b.topGenera.length ? (

@@ -23,6 +23,8 @@ export interface ExpeditionBoxelDTO {
   recorded: number;
   /** The commander's own visited systems inside the boxel. */
   visited: number;
+  /** Systems somebody flew since 2025 and found without biology (Spansh), no longer counted as unflown. */
+  barren?: number;
   /** Expected first-footfall credits in its unrecorded systems. */
   ev: number;
   /** Jumps to reach it plus one per system in it. */

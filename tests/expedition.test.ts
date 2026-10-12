@@ -118,6 +118,19 @@ describe("expedition: what a boxel is worth", () => {
     expect(evPerJump(half, 100, 50).jumps).toBe(2 + 100);
   });
 
+  it("takes off the systems flown since 2025 without biology, or his own visits, whichever is more", () => {
+    const full = boxelEV(box(), { table, region: "Inner Orion Spur", genusValue });
+    const barren = boxelEV(box(), { table, region: "Inner Orion Spur", genusValue, barren: 100 });
+    expect(barren.barren).toBe(100);
+    expect(barren.remaining).toBe(100);
+    expect(barren.ev).toBeCloseTo(full.ev / 2, -2);
+    // His uploads are among Spansh's: 60 of his and 100 barren is 100 flown, not 160.
+    expect(boxelEV(box(), { table, region: "Inner Orion Spur", genusValue, barren: 100, visited: 60 }).remaining).toBe(100);
+    expect(boxelEV(box(), { table, region: "Inner Orion Spur", genusValue, barren: 40, visited: 150 }).remaining).toBe(50);
+    expect(boxelEV(box(), { table, region: "Inner Orion Spur", genusValue, barren: 0 }).ev).toBe(full.ev);
+    expect(boxelEV(box(), { table, region: "Inner Orion Spur", genusValue, barren: 1e6 }).ev).toBe(0);
+  });
+
   it("per jump: the jumps to reach it plus one per system in it", () => {
     expect(evPerJump({ ev: 1000, systems: 9 }, 100, 50)).toEqual({ jumps: 11, evPerJump: 1000 / 11 });
   });

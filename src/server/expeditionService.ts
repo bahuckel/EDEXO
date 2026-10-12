@@ -43,10 +43,12 @@ import {
   genusValues,
   loadEvTable,
   loadSectorNames,
+  gridIdOf,
   RecordedCounter,
   type EvTable,
   type ExpeditionBoxel,
 } from "./expedition.js";
+import { barrenIn, loadBarrenTable } from "./boxelBarren.js";
 
 type Xyz = { x: number; y: number; z: number };
 
@@ -150,6 +152,7 @@ function dtoOf(
     pBio: Math.round(s.pBio * 10000) / 10000,
     recorded,
     visited,
+    ...(s.barren > 0 ? { barren: s.barren } : {}),
     ev: Math.round(s.ev),
     jumps: per.jumps,
     evPerJump: Math.round(per.evPerJump),
@@ -274,6 +277,7 @@ export async function expeditionField(
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.value;
 
   const table = loadEvTable(deps.root);
+  const barrenTable = loadBarrenTable(deps.root);
   const names = loadSectorNames(deps.root);
   const genusValue = genusValueTable(table, deps);
   // A sphere round the ship, or a tube along the route (plan 5.2); the recorded systems are counted in a
@@ -297,7 +301,8 @@ export async function expeditionField(
     const region = deps.regionMap ? regionForCoords(deps.regionMap, b.center.x, b.center.y, b.center.z) : null;
     const rec = recorded.countIn(b);
     const vis = mine.countIn(b);
-    const s = boxelEV(b, { table, region, genusValue, recorded: rec, visited: vis });
+    const barren = barrenIn(barrenTable, b.code, gridIdOf(b));
+    const s = boxelEV(b, { table, region, genusValue, recorded: rec, visited: vis, barren });
     const routed = b as typeof b & { detourLy?: number; offLy?: number; t?: number };
     const dto = dtoOf(b, region, s, rec, jumpRangeLy, vis, routed.detourLy);
     if (routed.detourLy != null) {
@@ -321,12 +326,13 @@ export async function expeditionField(
     }
     if (entry) {
       const sp = boxelEVForSpecies(b, {
-        table, region, genus: entry.genus ?? "", speciesId: entry.id, shareInGenus: share, catalogue, recorded: rec,
+        table, region, genus: entry.genus ?? "", speciesId: entry.id, shareInGenus: share, catalogue, recorded: rec, barren,
       });
       dto.speciesBodies = Math.round(sp.bodies * 1000) / 1000;
       dto.passesGate = sp.passesGate;
       if (sp.passesGate) passing++;
-      if (!(sp.bodies > 0)) continue;
+      // Under half a thousandth of a body reads 0.000 in the list: not worth a row.
+      if (!(dto.speciesBodies > 0)) continue;
     } else if (dto.ev < (q.minEv ?? 0)) continue;
     scored.push(dto);
   }
@@ -396,7 +402,7 @@ export function expeditionCandidates(
   if (!b) return null;
   const region = deps.regionMap ? regionForCoords(deps.regionMap, b.center.x, b.center.y, b.center.z) : null;
   const known = b.name ? q.knownNames(b.name) : new Set<string>();
-  const s = boxelEV(b, { table, region, genusValue: genusValueTable(table, deps) });
+  const s = boxelEV(b, { table, region, genusValue: genusValueTable(table, deps), barren: barrenIn(loadBarrenTable(deps.root), b.code, gridIdOf(b)) });
   const jumpRangeLy = q.jumpRangeLy && q.jumpRangeLy > 0 ? q.jumpRangeLy : DEFAULT_JUMP_RANGE_LY;
   return {
     boxel: dtoOf(b, region, s, 0, jumpRangeLy),
