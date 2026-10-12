@@ -45,23 +45,25 @@ describe("route strip: the hops ahead and the refuel mark", () => {
     expect(a?.refuelLevel).toBe("none");
   });
 
-  it("puts the pump on the last scoop the tank still reaches (the web UI's rule)", () => {
-    // budget 3 t → three legs reachable (B, C, D); scoops at C and D → the pump sits on D
+  it("puts the red pump on the last scoop the tank reaches and a yellow one on the nearest before it", () => {
+    // budget 3 t → B, C, D reachable; scoops at C and D: D is the last chance (red), C the stop (yellow).
     const a = analyse(3.06);
     expect(a?.fuelCanFinishPlottedRoute).toBe(false);
     expect(a?.jumpsToLastScoopableOnRoute).toBe(3);
     expect(a?.refuelInHops).toBe(3);
-    expect(a?.refuelLevel).toBe("yellow");
-    expect(a?.ahead[2]).toMatchObject({ starClass: "K", refuel: "yellow" });
-    expect(a?.ahead.filter((h) => h.refuel !== "none")).toHaveLength(1);
+    expect(a?.refuelLevel).toBe("red");
+    expect(a?.ahead[2]).toMatchObject({ starClass: "K", refuel: "red" });
+    expect(a?.ahead[1]).toMatchObject({ starClass: "M", refuel: "yellow" });
+    expect(a?.ahead.filter((h) => h.refuel !== "none")).toHaveLength(2);
   });
 
-  it("keeps the web UI's colour: two jumps of margin is still yellow", () => {
-    // budget 2 t → B (no scoop) and C (scoop) reachable; the pump sits on C, the alert says yellow
+  it("no threshold: red on the last reachable scoop even when another follows right after", () => {
+    // budget 2 t → B (no scoop) and C (scoop) reachable; D (K) right after is out of reach: C is red.
     const a = analyse(2.06);
     expect(a?.refuelInHops).toBe(2);
-    expect(a?.refuelLevel).toBe("yellow");
-    expect(a?.ahead[1]?.refuel).toBe("yellow");
+    expect(a?.refuelLevel).toBe("red");
+    expect(a?.ahead[1]?.refuel).toBe("red");
+    expect(a?.ahead.filter((h) => h.refuel === "yellow")).toHaveLength(0);
   });
 
   it("goes red on the star the ship is at when it is the last scoop the tank reaches", () => {
@@ -80,20 +82,6 @@ describe("route strip: the hops ahead and the refuel mark", () => {
     expect(a?.refuelInHops).toBeNull();
     expect(a?.refuelLevel).toBe("red");
     expect(a?.ahead.every((h) => h.refuel === "none")).toBe(true);
-  });
-
-  it("goes red, on that star, when a fuel desert follows the last scoop the tank reaches", () => {
-    // A(T) B(K) C(T) D(T) E(T) F(K): with 2 t the tank reaches B and C; B is the last scoop, and
-    // three systems in a row without one follow it.
-    const a = analyse(2.06, 1, ["T", "K", "T", "T", "T", "K"]);
-    expect(a?.refuelInHops).toBe(1);
-    expect(a?.refuelLevel).toBe("red");
-    expect(a?.ahead[0]).toMatchObject({ starClass: "K", refuel: "red" });
-    expect(a?.routeRefuelAlert).toBe("red");
-    // Two in a row is not a desert: yellow, as before.
-    const b = analyse(2.06, 1, ["T", "K", "T", "T", "K", "K"]);
-    expect(b?.refuelLevel).toBe("yellow");
-    expect(b?.ahead[0]?.refuel).toBe("yellow");
   });
 
   it("is empty off the plot", () => {
