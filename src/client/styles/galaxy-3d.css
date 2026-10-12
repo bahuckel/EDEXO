@@ -279,6 +279,58 @@
   outline: none;
   border-color: var(--accent);
 }
+/* A row's value with a search (galaxy3d/PickList.tsx, 2026-10-12): the value never covers the label. */
+.g3d-pick__ctl {
+  min-width: 0;
+  max-width: 62%;
+}
+.g3d-pick__value {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  text-align: left;
+}
+.g3d-pick__panel {
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(5, 4, 10, 0.6);
+  border: 1px solid var(--accent-a25);
+  border-top: 0;
+}
+.g3d-pick__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+.g3d-pick__opt {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 8px;
+  color: var(--text);
+  cursor: pointer;
+}
+.g3d-pick__opt.is-selected {
+  color: var(--accent-bright);
+}
+.g3d-pick__opt.is-active {
+  background: var(--accent-a25);
+}
+.g3d-pick__note {
+  color: var(--muted);
+  font-size: var(--fs-2xs);
+  white-space: nowrap;
+}
+.g3d-pick__none {
+  padding: 3px 8px;
+  color: var(--muted);
+}
 .g3d-row--pick {
   width: 100%;
   font: inherit;

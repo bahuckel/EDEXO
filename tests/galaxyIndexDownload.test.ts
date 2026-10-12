@@ -10,6 +10,7 @@ import {
   downloadGalaxyIndex,
   galaxyIndexFilePath,
   galaxyIndexStatus,
+  bioIndexSystemCount,
   probeGalaxyIndexSize,
 } from "../src/server/galaxyIndexFiles.js";
 
@@ -70,5 +71,47 @@ describe("the galaxy index download", () => {
     }) as unknown as typeof fetch;
     await probeGalaxyIndexSize(same);
     expect(galaxyIndexStatus().updateAvailable).toBe(false);
+  });
+});
+
+/** A bio index header: magic, version, species, systems, json length (the 20 bytes the probe reads). */
+function header(systems: number): Uint8Array<ArrayBuffer> {
+  const b = Buffer.alloc(64);
+  b.write("EDEXOBIO", 0, "ascii");
+  b.writeUInt16LE(3, 8);
+  b.writeUInt16LE(120, 10);
+  b.writeUInt32LE(systems, 12);
+  b.writeUInt32LE(10, 16);
+  const out = new Uint8Array(new ArrayBuffer(64));
+  out.set(b);
+  return out;
+}
+
+describe("the galaxy index in systems, not megabytes (owner, 2026-10-12)", () => {
+  it("reads the count from a header, and nothing from anything else", () => {
+    expect(bioIndexSystemCount(header(5_337_927))).toBe(5_337_927);
+    expect(bioIndexSystemCount(new TextEncoder().encode("index:bio-index.bin and more bytes"))).toBeNull();
+    expect(bioIndexSystemCount(new Uint8Array(4))).toBeNull();
+  });
+
+  it("asks the release for its first bytes only, and counts both sides", async () => {
+    const ranges: (string | null)[] = [];
+    const release = (async (url: string, init?: RequestInit) => {
+      const name = String(url).split("/").pop()!;
+      ranges.push(new Headers(init?.headers).get("range"));
+      // A server that ignores the range and sends everything: the probe stops reading after 20 bytes.
+      const body = name === "bio-index.bin" ? header(5_348_227) : new TextEncoder().encode(`index:${name}`);
+      return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
+    }) as unknown as typeof fetch;
+    await downloadGalaxyIndex(() => undefined, (async (url: string) => {
+      const name = String(url).split("/").pop()!;
+      const body = name === "bio-index.bin" ? header(5_337_927) : new TextEncoder().encode(`index:${name}`);
+      return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
+    }) as unknown as typeof fetch);
+    await probeGalaxyIndexSize(release);
+    const st = galaxyIndexStatus();
+    expect(st.systemsHere).toBe(5_337_927);
+    expect(st.systemsOnRelease).toBe(5_348_227);
+    expect(ranges).toContain("bytes=0-19");
   });
 });

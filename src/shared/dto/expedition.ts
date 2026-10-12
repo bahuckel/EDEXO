@@ -32,6 +32,16 @@ export interface ExpeditionBoxelDTO {
   /** Target-species mode: expected bodies of the species, and whether its position rule can be met. */
   speciesBodies?: number;
   passesGate?: boolean;
+  /**
+   * Looking for bodies, stars or worth (plan 5.2): what its unflown systems should hold of it (systems with
+   * one, or gas giants for the dense kind) and that per jump.
+   */
+  matches?: number;
+  matchesPerJump?: number;
+  /** On a route (plan 5.2): the detour of going by it, its distance from the line, and how far along (0-1). */
+  detourLy?: number;
+  offLy?: number;
+  along?: number;
 }
 
 /**
@@ -56,6 +66,11 @@ export interface ExpeditionFieldDTO {
   /** Mass codes left out because the radius holds too many of their boxels. */
   skipped: string[];
   species: string | null;
+  /** What it looked for: "exobio", "body:elw", "star:Neutron Star", "value:20" (millions). */
+  target?: string;
+  /** A route's end and corridor, or null for a sphere. */
+  to?: { x: number; y: number; z: number } | null;
+  widthLy?: number | null;
   /** The species' position rule, or null when it has none (or no species is picked). */
   rule: ExpeditionRuleDTO | null;
   boxels: ExpeditionBoxelDTO[];
