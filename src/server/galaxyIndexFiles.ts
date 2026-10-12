@@ -8,7 +8,7 @@
  * map offers them from a fixed GitHub release and they land beside the user's settings, where an
  * update leaves them alone. A developer tree keeps reading its own `data/galaxy/` copies.
  */
-import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
+import { closeSync, createWriteStream, existsSync, mkdirSync, openSync, readSync, renameSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -45,6 +45,65 @@ export interface GalaxyIndexStatus {
    * way to download the index" once one was there). Null until the release has been asked.
    */
   updateAvailable: boolean | null;
+  /**
+   * Systems in the bio index here and on the release (its header, `EDEXOBIO` … u32 at byte 12), so the
+   * button says "+10.3k systems" rather than a size (owner, 2026-10-12: "a megabyte can be thousands of
+   * systems"). Null when unknown.
+   */
+  systemsHere: number | null;
+  systemsOnRelease: number | null;
+}
+
+const BIO_MAGIC = "EDEXOBIO";
+/** The system count from a bio index header (20 bytes or more), or null when it is not one. */
+export function bioIndexSystemCount(head: Uint8Array): number | null {
+  if (head.length < 16) return null;
+  const b = Buffer.from(head.buffer, head.byteOffset, head.byteLength);
+  if (b.toString("ascii", 0, 8) !== BIO_MAGIC) return null;
+  return b.readUInt32LE(12);
+}
+
+function localSystemCount(): number | null {
+  const p = galaxyIndexFilePath("bio-index.bin");
+  if (!existsSync(p)) return null;
+  let fd: number | null = null;
+  try {
+    fd = openSync(p, "r");
+    const head = Buffer.alloc(20);
+    readSync(fd, head, 0, 20, 0);
+    return bioIndexSystemCount(head);
+  } catch {
+    return null;
+  } finally {
+    if (fd != null) closeSync(fd);
+  }
+}
+
+/** The release's count: its first 20 bytes (a range request; a server that sends it all is cut off there). */
+async function remoteSystemCount(fetchImpl: typeof fetch): Promise<number | null> {
+  try {
+    const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/bio-index.bin`, { headers: { Range: "bytes=0-19" }, redirect: "follow" });
+    if (!r.ok || !r.body) return null;
+    const reader = r.body.getReader();
+    const parts: Uint8Array[] = [];
+    let got = 0;
+    while (got < 20) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      parts.push(value);
+      got += value.length;
+    }
+    await reader.cancel().catch(() => undefined);
+    const head = new Uint8Array(got);
+    let at = 0;
+    for (const p of parts) {
+      head.set(p, at);
+      at += p.length;
+    }
+    return bioIndexSystemCount(head);
+  } catch {
+    return null;
+  }
 }
 
 let downloading: GalaxyIndexStatus["downloading"] = null;
@@ -52,6 +111,7 @@ let lastError: string | null = null;
 let downloadBytes: number | null = null;
 /** Each file's size on the release, from the last probe. */
 let remoteSizes: Map<string, number> | null = null;
+let systemsOnRelease: number | null = null;
 
 export function galaxyIndexStatus(): GalaxyIndexStatus {
   const files = GALAXY_INDEX_FILES.map((name) => {
@@ -65,7 +125,16 @@ export function galaxyIndexStatus(): GalaxyIndexStatus {
     return { name, bytes };
   });
   const updateAvailable = remoteSizes ? files.some((f) => f.bytes != null && f.bytes !== remoteSizes!.get(f.name)) : null;
-  return { present: files[0]!.bytes != null, files, downloading, error: lastError, downloadBytes, updateAvailable };
+  return {
+    present: files[0]!.bytes != null,
+    files,
+    downloading,
+    error: lastError,
+    downloadBytes,
+    updateAvailable,
+    systemsHere: localSystemCount(),
+    systemsOnRelease,
+  };
 }
 
 /** Ask the release how big the files are (HEAD requests), for the button's label. Quiet on failure. */
@@ -82,6 +151,7 @@ export async function probeGalaxyIndexSize(fetchImpl: typeof fetch = fetch): Pro
     }
     downloadBytes = total;
     remoteSizes = sizes;
+    systemsOnRelease = await remoteSystemCount(fetchImpl);
     return total;
   } catch {
     return null;

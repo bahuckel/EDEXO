@@ -15,9 +15,30 @@ interface IndexStatus {
   downloadBytes: number | null;
   /** The release holds newer files (galaxyIndexFiles.ts); null until it has been asked. */
   updateAvailable?: boolean | null;
+  /** Systems in the bio index here and on the release (owner, 2026-10-12: systems, not megabytes). */
+  systemsHere?: number | null;
+  systemsOnRelease?: number | null;
 }
 
 const mb = (n: number) => `${Math.round(n / 1e6).toLocaleString()} MB`;
+
+/** 5.3 million, 10.3k, 870. */
+export function fmtSystems(n: number): string {
+  const a = Math.abs(n);
+  if (a >= 1e6) return `${(n / 1e6).toFixed(a >= 1e7 ? 0 : 1)} million`;
+  if (a >= 1e3) return `${(n / 1e3).toFixed(a >= 1e5 ? 0 : 1)}k`;
+  return String(n);
+}
+
+/** What an update brings, in systems: "+10.3k systems", or the stars and planets when the count is the same. */
+export function updateGain(st: Pick<IndexStatus, "systemsHere" | "systemsOnRelease">): string {
+  const here = st.systemsHere;
+  const there = st.systemsOnRelease;
+  if (here == null || there == null) return "newer data";
+  const d = there - here;
+  if (d > 0) return `+${fmtSystems(d)} system${d === 1 ? "" : "s"}`;
+  return "new star and planet data";
+}
 
 export function GalaxyIndexDownload() {
   const [st, setSt] = useState<IndexStatus | null>(null);
@@ -75,9 +96,10 @@ export function GalaxyIndexDownload() {
             sessionStorage.setItem("galaxyIndexDownloading", "1");
             void fetch("/api/galaxy/index/download", { method: "POST" }).then(() => load());
           }}
-          title="Download the galaxy index (EDAstro data) from the app's GitHub release"
+          title={`Download the galaxy index (EDAstro data) from the app's GitHub release${st.downloadBytes ? ` · ${mb(st.downloadBytes)}` : ""}`}
         >
-          Download from EDAstro data{st.downloadBytes ? ` · ${mb(st.downloadBytes)}` : ""}
+          Download from EDAstro data
+          {st.systemsOnRelease ? ` · ${fmtSystems(st.systemsOnRelease)} systems` : st.downloadBytes ? ` · ${mb(st.downloadBytes)}` : ""}
         </button>
       )}
       {st.error ? <p className="g3d-error">The download stopped: {st.error}. Try again.</p> : null}
@@ -131,10 +153,18 @@ export function GalaxyIndexRow() {
         <button
           type="button"
           className={`g3d-btn${update ? " g3d-btn--primary-small" : ""}`}
-          title={`${mb(here)} here${st.downloadBytes ? `, ${mb(st.downloadBytes)} on the release` : ""}`}
+          title={
+            `${st.systemsHere != null ? `${st.systemsHere.toLocaleString("en-US")} systems` : mb(here)} here` +
+            (st.systemsOnRelease != null
+              ? `, ${st.systemsOnRelease.toLocaleString("en-US")} on the release`
+              : st.downloadBytes
+                ? `, ${mb(st.downloadBytes)} on the release`
+                : "") +
+            (st.downloadBytes ? ` (a ${mb(st.downloadBytes)} download)` : "")
+          }
           onClick={() => void fetch("/api/galaxy/index/download", { method: "POST" }).then(() => load())}
         >
-          {update ? `Update · ${st.downloadBytes ? mb(st.downloadBytes) : ""}` : "Download again"}
+          {update ? `Update · ${updateGain(st)} if you download now` : "Download again"}
         </button>
       )}
       {st.error ? <span className="g3d-error"> {st.error}</span> : null}
