@@ -1533,6 +1533,10 @@ export function buildSnapshot(
     currentSystem: store.currentSystem,
     currentSystemAddress: store.currentSystemAddress,
     currentRegion: regionForFocusedSystem(store, focusAddr, projectRoot),
+    shipRegion:
+      store.currentSystemAddress === focusAddr
+        ? regionForFocusedSystem(store, focusAddr, projectRoot)
+        : regionForFocusedSystem(store, store.currentSystemAddress, projectRoot),
     currentSystemKind: focusAddr != null ? store.systemKind(focusAddr) : null,
     viewingSystemAddress: store.viewingSystemAddress,
     viewingSystemName,

@@ -943,7 +943,8 @@ export const HeaderBar = memo(function HeaderBar({
           <EncyclopediaModal
             footScannedEntries={snap.footScannedEntries ?? NO_FOOT_ENTRIES}
             spawnCompare={encyclopediaSpawnCompare}
-            currentRegion={snap.currentRegion?.name ?? null}
+            // "Where you are now": the ship's region, not the viewed system's (2026-10-12).
+            currentRegion={(snap.shipRegion !== undefined ? snap.shipRegion : snap.currentRegion)?.name ?? null}
             onClose={closeEncyclopedia}
           />
         </Suspense>
