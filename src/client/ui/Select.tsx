@@ -14,7 +14,15 @@ import { createPortal } from "react-dom";
  * inside can clip it. It flips upwards when there is no room below, closes on scroll or resize
  * rather than drifting away from its control, and takes Escape before the modal does — a menu open
  * inside the encyclopedia used to close the whole encyclopedia.
+ *
+ * Type to jump (plan 3.3, 2026-10-12), as a native list does: a letter moves to the next option
+ * starting with it (the same letter again to the one after), letters typed together find "bac…".
+ * Closed, typing opens it there. Not Radix Select: it throws on an empty value ("Any genus" is one)
+ * and locks the page's scrolling and pointer while open; the rest of what it does this already does.
  */
+/** Letters typed further apart than this start a new search. */
+const TYPEAHEAD_RESET_MS = 700;
+
 export type SelectOption<V extends string = string> = {
   value: V;
   label: string;
@@ -49,6 +57,7 @@ export function Select<V extends string = string>({
   const menuRef = useRef<HTMLUListElement>(null);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const typed = useRef<{ text: string; at: number }>({ text: "", at: 0 });
   const [pos, setPos] = useState<{
     left: number;
     top: number;
@@ -145,8 +154,39 @@ export function Select<V extends string = string>({
     return from;
   };
 
+  /** The option the letters typed so far point at, from `from` on; -1 when none. */
+  const typeahead = (key: string, from: number): number => {
+    const now = Date.now();
+    const t = typed.current;
+    t.text = now - t.at > TYPEAHEAD_RESET_MS ? key : t.text + key;
+    t.at = now;
+    const q = t.text.toLowerCase();
+    // One letter pressed again and again steps through the options that start with it.
+    const repeat = q.length > 1 && [...q].every((c) => c === q[0]);
+    const needle = repeat ? q[0]! : q;
+    const start = repeat || q.length === 1 ? from + 1 : from;
+    for (let i = 0; i < options.length; i++) {
+      const j = (start + i + options.length) % options.length;
+      const o = options[j]!;
+      if (!o.disabled && o.label.toLowerCase().startsWith(needle)) return j;
+    }
+    return -1;
+  };
+  const isTypeKey = (e: React.KeyboardEvent) =>
+    e.key.length === 1 && e.key !== " " && !e.ctrlKey && !e.metaKey && !e.altKey;
+
   const onControlKey = (e: React.KeyboardEvent) => {
     if (disabled) return;
+    if (isTypeKey(e)) {
+      e.preventDefault();
+      const j = typeahead(e.key, open ? active : selectedIndex);
+      if (!open) {
+        setActive(j >= 0 ? j : selectedIndex >= 0 ? selectedIndex : 0);
+        place();
+        setOpen(true);
+      } else if (j >= 0) setActive(j);
+      return;
+    }
     if (!open) {
       if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
         e.preventDefault();
