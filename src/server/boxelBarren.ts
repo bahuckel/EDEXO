@@ -5,16 +5,25 @@
  * Spansh dump: systems with known bodies, last updated in 2025 or later, without a biological body (older records
  * without biology say nothing: signals were seldom uploaded before Odyssey). Keyed by `gridIdAt`.
  *
- * About 1.2 M boxels, 2.5 MB on disk; decoded into one sorted Float64Array of ids and one Uint16Array of counts
- * per mass code (about 11 MB), read on first use and let go with the galaxy map's other caches.
+ * About 1.2 M boxels, 7.8 MB on disk; decoded into one sorted Float64Array of ids and one Uint16Array of counts
+ * per mass code (about 11 MB), plus where each boxel's system numbers start in the file (version 2: the copy list
+ * leaves those names out), read on first use and let go with the galaxy map's other caches.
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { MassCode } from "../shared/boxelAdvice.js";
 
+interface CodeTable {
+  ids: Float64Array;
+  counts: Uint16Array;
+  /** Version 2: where each boxel's system numbers start in `buf`. */
+  numsAt?: Uint32Array;
+}
+
 export interface BarrenTable {
   meta: { builtAt?: string; dump?: string; recentFrom?: string };
-  byCode: Map<MassCode, { ids: Float64Array; counts: Uint16Array }>;
+  byCode: Map<MassCode, CodeTable>;
+  buf: Buffer;
 }
 
 const MAGIC = "EDEXOBRN";
@@ -23,7 +32,7 @@ const MAGIC = "EDEXOBRN";
 export function parseBarrenTable(buf: Buffer): BarrenTable {
   if (buf.length < 20 || buf.toString("latin1", 0, 8) !== MAGIC) throw new Error("not a boxel-barren file");
   const version = buf.readUInt32LE(8);
-  if (version !== 1) throw new Error(`boxel-barren version ${version} is not supported`);
+  if (version !== 1 && version !== 2) throw new Error(`boxel-barren version ${version} is not supported`);
   const metaLen = buf.readUInt32LE(12);
   let at = 16 + metaLen;
   if (at + 4 > buf.length) throw new Error("boxel-barren file is truncated");
@@ -41,7 +50,7 @@ export function parseBarrenTable(buf: Buffer): BarrenTable {
       mul *= 128;
     }
   };
-  const byCode = new Map<MassCode, { ids: Float64Array; counts: Uint16Array }>();
+  const byCode = new Map<MassCode, CodeTable>();
   for (let c = 0; c < codes; c++) {
     if (at + 8 > buf.length) throw new Error("boxel-barren file is truncated");
     const code = String.fromCharCode(buf[at]!) as MassCode;
@@ -53,25 +62,63 @@ export function parseBarrenTable(buf: Buffer): BarrenTable {
     let prev = 0;
     for (let i = 0; i < n; i++) ids[i] = prev += varint();
     for (let i = 0; i < n; i++) counts[i] = varint();
-    byCode.set(code, { ids, counts });
+    let numsAt: Uint32Array | undefined;
+    if (version >= 2) {
+      numsAt = new Uint32Array(n);
+      for (let i = 0; i < n; i++) {
+        numsAt[i] = at;
+        for (let k = counts[i]!; k > 0; k--) varint();
+      }
+    }
+    byCode.set(code, numsAt ? { ids, counts, numsAt } : { ids, counts });
   }
-  return { meta, byCode };
+  return { meta, byCode, buf };
+}
+
+function indexOf(t: CodeTable, gridId: number): number {
+  let lo = 0;
+  let hi = t.ids.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const v = t.ids[mid]!;
+    if (v === gridId) return mid;
+    if (v < gridId) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return -1;
 }
 
 /** Barren systems in one boxel (its `gridIdAt` id), 0 when the table has none there. */
 export function barrenIn(table: BarrenTable | null, code: MassCode, gridId: number): number {
   const t = table?.byCode.get(code);
   if (!t) return 0;
-  let lo = 0;
-  let hi = t.ids.length - 1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const v = t.ids[mid]!;
-    if (v === gridId) return t.counts[mid]!;
-    if (v < gridId) lo = mid + 1;
-    else hi = mid - 1;
+  const i = indexOf(t, gridId);
+  return i < 0 ? 0 : t.counts[i]!;
+}
+
+/** The barren systems' numbers in one boxel (`<boxel>-<n>`), ascending; empty without them (or in a version 1 file). */
+export function barrenNumbersIn(table: BarrenTable | null, code: MassCode, gridId: number): number[] {
+  const t = table?.byCode.get(code);
+  if (!t?.numsAt) return [];
+  const i = indexOf(t, gridId);
+  if (i < 0) return [];
+  const buf = table!.buf;
+  let at = t.numsAt[i]!;
+  const out: number[] = [];
+  let v = 0;
+  for (let k = t.counts[i]!; k > 0; k--) {
+    let n = 0;
+    let mul = 1;
+    for (;;) {
+      const b = buf[at++]!;
+      n += (b & 0x7f) * mul;
+      if (b < 0x80) break;
+      mul *= 128;
+    }
+    v += n;
+    out.push(v);
   }
-  return 0;
+  return out;
 }
 
 let cache: { root: string; table: BarrenTable | null } | null = null;

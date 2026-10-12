@@ -5,7 +5,8 @@
  */
 import { describe, expect, it } from "vitest";
 import path from "node:path";
-import { boxelPassesSpatialGate, boxelsWithin, boxelKey, loadSectorNames } from "../src/server/expedition.js";
+import { boxelPassesSpatialGate, boxelsWithin, boxelKey, gridIdOf, loadSectorNames, systemPrefixOf } from "../src/server/expedition.js";
+import { barrenIn, barrenNumbersIn, loadBarrenTable } from "../src/server/boxelBarren.js";
 import {
   catalogueNear,
   expeditionCandidates,
@@ -132,5 +133,19 @@ describe("expedition service", () => {
     expect(out.candidates).not.toContain("Swoilz KI-E b4-9");
     expect(out.candidates[0]).toBe("Swoilz KI-E b4-0");
     expect(expeditionCandidates("bad", { from: SWOILZ, jumpRangeLy: 50, knownNames: () => new Set() }, deps())).toBeNull();
+  });
+
+  it("leaves the systems flown since 2025 without biology out of the names, and says how many it left out", () => {
+    const barren = loadBarrenTable(root)!;
+    const b = boxelsWithin(SWOILZ, 200, ["d"], loadSectorNames(root)).boxels.find(
+      (x) => x.name && barrenIn(barren, "d", gridIdOf(x)) >= 3,
+    )!;
+    expect(b).toBeDefined();
+    const nums = barrenNumbersIn(barren, "d", gridIdOf(b));
+    const out = expeditionCandidates(boxelKey(b), { from: SWOILZ, jumpRangeLy: 50, knownNames: () => new Set() }, deps())!;
+    expect(out.boxel.barren).toBe(nums.length);
+    expect(out.knownSystems).toBe(new Set(nums).size);
+    const names = new Set(out.candidates);
+    for (const n of nums) expect(names.has(`${systemPrefixOf(b.name!)}${n}`)).toBe(false);
   });
 });

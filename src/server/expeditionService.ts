@@ -45,10 +45,11 @@ import {
   loadSectorNames,
   gridIdOf,
   RecordedCounter,
+  systemPrefixOf,
   type EvTable,
   type ExpeditionBoxel,
 } from "./expedition.js";
-import { barrenIn, loadBarrenTable } from "./boxelBarren.js";
+import { barrenIn, barrenNumbersIn, loadBarrenTable } from "./boxelBarren.js";
 
 type Xyz = { x: number; y: number; z: number };
 
@@ -402,7 +403,10 @@ export function expeditionCandidates(
   if (!b) return null;
   const region = deps.regionMap ? regionForCoords(deps.regionMap, b.center.x, b.center.y, b.center.z) : null;
   const known = b.name ? q.knownNames(b.name) : new Set<string>();
-  const s = boxelEV(b, { table, region, genusValue: genusValueTable(table, deps), barren: barrenIn(loadBarrenTable(deps.root), b.code, gridIdOf(b)) });
+  const barrenTable = loadBarrenTable(deps.root);
+  // The ones flown since 2025 without biology are known too: no name of theirs in the copy list.
+  if (b.name) for (const n of barrenNumbersIn(barrenTable, b.code, gridIdOf(b))) known.add(`${systemPrefixOf(b.name)}${n}`.toLowerCase());
+  const s = boxelEV(b, { table, region, genusValue: genusValueTable(table, deps), barren: barrenIn(barrenTable, b.code, gridIdOf(b)) });
   const jumpRangeLy = q.jumpRangeLy && q.jumpRangeLy > 0 ? q.jumpRangeLy : DEFAULT_JUMP_RANGE_LY;
   return {
     boxel: dtoOf(b, region, s, 0, jumpRangeLy),
