@@ -80,7 +80,12 @@ const results = new Map<string, { dss: Tier; fss: Tier }>();
 
 beforeAll(async () => {
   loadSpeciesDatabase();
-  for (const s of doc.samples) results.set(keyOf(s), { dss: await tierOn(s, "dss"), fss: await tierOn(s, "fss") });
+  for (const s of doc.samples) {
+    results.set(keyOf(s), { dss: await tierOn(s, "dss"), fss: await tierOn(s, "fss") });
+    // The fake fetch resolves through microtasks only, so without a macrotask turn the worker's event loop is
+    // shut for the whole ~70 s loop and Vitest's own RPC ("Timeout calling onTaskUpdate", 60 s) fails the run.
+    await new Promise((r) => setImmediate(r));
+  }
   if (process.env.UPDATE_SPAWN_BASELINE === "1") {
     const out = Object.fromEntries([...results].sort(([a], [b]) => a.localeCompare(b)));
     writeFileSync(BASELINE, `${JSON.stringify(out, null, 1)}\n`, "utf8");
