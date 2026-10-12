@@ -316,7 +316,6 @@
 .tab,
 .btn-top-neutral,
 .modal-close,
-.encyclopedia-thumb-btn,
 .species-thumb-btn {
   transition:
     background-color var(--motion-fast) var(--motion-ease),
@@ -510,7 +509,6 @@
   .tab,
   .btn-top-neutral,
   .modal-close,
-  .encyclopedia-thumb-btn,
   .species-thumb-btn {
     transition: none;
   }

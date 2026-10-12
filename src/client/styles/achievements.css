@@ -71,15 +71,6 @@
   letter-spacing: 0.08em;
   font-size: var(--fs-xs);
 }
-.ach-region {
-  background: var(--surface-3);
-  color: var(--text);
-  border: var(--border);
-  padding: 0.15rem 0.35rem;
-  font: inherit;
-  text-transform: none;
-  letter-spacing: normal;
-}
 .ach-list {
   list-style: none;
   margin: 0;

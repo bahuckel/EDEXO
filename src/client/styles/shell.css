@@ -643,9 +643,6 @@ button.data-value-pill.data-value-pill--clickable:active {
   background: #b7791f;
   box-shadow: 0 0 8px rgba(245, 184, 61, 0.55);
 }
-.notices-group {
-  margin-bottom: 0.6rem;
-}
 .notices-group__head {
   display: flex;
   align-items: center;
@@ -659,10 +656,6 @@ button.data-value-pill.data-value-pill--clickable:active {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #f5b83d;
-}
-.notices-group__title--codex {
-  color: var(--muted);
-  margin: 0.2rem 0 0.35rem;
 }
 /* The bell's read notices (2026-09-30): kept, dimmed, under their own heading. */
 .notices-group__head--read {

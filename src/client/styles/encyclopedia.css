@@ -198,21 +198,6 @@
   border: 1px solid rgba(80, 140, 200, 0.2);
 }
 
-.encyclopedia-species-card--row {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-}
-
-.encyclopedia-species-card-main {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--s-7);
-}
-
 .encyclopedia-exomastery-drawer {
   flex: 1 1 100%;
   width: 100%;
@@ -252,25 +237,6 @@
   background: var(--shadow-a35);
 }
 
-.encyclopedia-thumb-btn {
-  flex-shrink: 0;
-  width: 104px;
-  padding: 0;
-  margin: 0;
-  border: 1px solid var(--accent-a25);
-  border-radius: var(--r-md);
-  background: var(--surface-3);
-  cursor: zoom-in;
-  overflow: hidden;
-  line-height: 0;
-  align-self: flex-start;
-}
-
-.encyclopedia-thumb-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 .encyclopedia-species-col {
   flex: 1;
   min-width: 0;
@@ -295,10 +261,6 @@
   margin: 0.35rem 0 0;
 }
 
-.encyclopedia-species-head {
-  margin-bottom: 0.35rem;
-}
-
 .encyclopedia-species-title {
   margin: 0;
   font-size: var(--fs-lg);
@@ -310,14 +272,6 @@
   line-height: 1.45;
   margin: 0.35rem 0;
   color: #d6d2cb;
-}
-
-.encyclopedia-criteria-label {
-  display: block;
-  font-weight: 600;
-  font-size: var(--fs-sm);
-  color: var(--muted);
-  margin-bottom: 0.2rem;
 }
 
 .encyclopedia-criteria ul {

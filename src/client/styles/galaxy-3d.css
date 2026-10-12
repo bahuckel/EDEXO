@@ -358,12 +358,6 @@
   color: var(--accent);
 }
 
-.g3d-group {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
 .g3d-btn {
   padding: 3px 10px;
   border: 1px solid var(--accent-a35);
@@ -391,18 +385,6 @@
 .g3d-classic {
   text-align: left;
 }
-
-.g3d-slider,
-.g3d-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-dim);
-}
-.g3d-slider input {
-  width: 110px;
-  accent-color: var(--accent);
-}
 /* The slider's value: a fixed width and tabular digits, so dragging moves nothing else. */
 .g3d-slider-val {
   display: inline-block;
@@ -412,9 +394,6 @@
 }
 .g3d-slider-val--short {
   min-width: 4.5ch;
-}
-.g3d-check input {
-  accent-color: var(--accent);
 }
 
 .g3d-badge {
@@ -883,25 +862,6 @@
   color: var(--text-faint);
   font-size: var(--fs-xs);
 }
-.g3d-banner {
-  position: absolute;
-  top: var(--g3d-top, 60px);
-  left: 50%;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: calc(100vw - 40px);
-  padding: 5px 10px;
-  transform: translateX(-50%);
-  font-size: var(--fs-xs);
-  color: var(--text-dim);
-  background: rgba(10, 8, 12, 0.9);
-  border: 1px solid rgba(var(--tint-255-158-41), 0.55);
-}
-.g3d-banner strong {
-  color: #ffd29e;
-}
 .g3d-species--pick tr {
   cursor: pointer;
 }
@@ -960,27 +920,8 @@
   color: var(--text);
   font: inherit;
 }
-.g3d-pop {
-  position: relative;
-}
-.g3d-pop__menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 6;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 200px;
-  padding: 8px 10px;
-  background: rgba(10, 8, 12, 0.96);
-  border: 1px solid var(--accent-a45);
-}
 .g3d-find__input {
   width: 210px;
-}
-.g3d-bar .g3d-slider input {
-  width: 90px;
 }
 
 /* ---- G5: Next target ----------------------------------------------------------------------------- */
@@ -988,18 +929,6 @@
   border-color: var(--accent);
   color: var(--accent-bright);
   font-weight: 700;
-}
-.g3d-banner--target {
-  border-color: rgba(179, 128, 255, 0.7);
-  padding-right: 30px;
-}
-.g3d-banner--target strong {
-  color: #e2d2ff;
-}
-.g3d-banner__close {
-  top: 3px;
-  right: 6px;
-  font-size: var(--fs-sm);
 }
 
 /* ---- G5.3: the plan -------------------------------------------------------------------------------- */
@@ -1177,9 +1106,6 @@
   flex: 1;
   font-size: var(--fs-xs);
   color: var(--accent-bright);
-}
-.g3d-navroute__clear {
-  margin-left: auto;
 }
 .g3d-navroute__list {
   flex: 1;
