@@ -13,39 +13,65 @@
  * did); otherwise it stays where it is in the page, inside the same clip and stacking as before.
  * `contained`: a click in the panel stops there (React passes a portal's clicks up to the row or card
  * the button sits in). Inside a dialog (useModal), Escape closes the panel first, not the dialog.
+ *
+ * `at` instead of `trigger`: a panel opened at a point (a click on a map or a strip), not by a button
+ * of its own. It hangs off that point, and on closing focus goes back to what had it when it opened.
  */
 import * as RP from "@radix-ui/react-popover";
-import type { ReactElement, ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, type ReactElement, type ReactNode } from "react";
 
 export function Popover({
   open,
   onOpenChange,
   trigger,
+  at,
   label,
   className,
   portal = false,
   side = "bottom",
   align = "start",
   sideOffset = 6,
+  alignOffset = 0,
   contained = false,
   children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** The button that opens it; one element. */
-  trigger: ReactElement;
+  trigger?: ReactElement;
+  /** Or the point it opens at (viewport pixels), with no button of its own. */
+  at?: { left: number; top: number };
   /** The panel's accessible name. */
   label: string;
   className?: string;
   portal?: boolean;
-  /** Below or above the button first; it flips when there is no room. */
-  side?: "top" | "bottom";
+  /** Which side of the button (or point) first; it flips when there is no room. */
+  side?: "top" | "bottom" | "left" | "right";
   /** Which edge of the button it lines up with first (`start` = grows to the right). */
   align?: "start" | "center" | "end";
   sideOffset?: number;
+  /** Along the edge, from where `align` puts it. */
+  alignOffset?: number;
   contained?: boolean;
   children: ReactNode;
 }) {
+  // A point as Radix's anchor: a rectangle of no size there.
+  const point = useMemo(
+    () =>
+      at
+        ? {
+            current: {
+              getBoundingClientRect: () => DOMRect.fromRect({ x: at.left, y: at.top, width: 0, height: 0 }),
+            },
+          }
+        : null,
+    [at?.left, at?.top], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  // No trigger to give focus back to: what had it when the panel opened.
+  const opener = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (open && at) opener.current = document.activeElement as HTMLElement | null;
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const content = (
     <RP.Content
       className={className ? `${className} tw:static` : "tw:static"}
@@ -53,15 +79,24 @@ export function Popover({
       side={side}
       align={align}
       sideOffset={sideOffset}
+      alignOffset={alignOffset}
       collisionPadding={8}
       onClick={contained ? (ev) => ev.stopPropagation() : undefined}
+      onCloseAutoFocus={
+        at
+          ? (ev) => {
+              ev.preventDefault();
+              opener.current?.focus({ preventScroll: true });
+            }
+          : undefined
+      }
     >
       {children}
     </RP.Content>
   );
   return (
     <RP.Root open={open} onOpenChange={onOpenChange}>
-      <RP.Trigger asChild>{trigger}</RP.Trigger>
+      {point ? <RP.Anchor virtualRef={point} /> : <RP.Trigger asChild>{trigger}</RP.Trigger>}
       {portal ? <RP.Portal>{content}</RP.Portal> : content}
     </RP.Root>
   );

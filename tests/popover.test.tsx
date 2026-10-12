@@ -50,6 +50,8 @@ function Bell() {
 }
 
 const panel = () => document.querySelector<HTMLElement>('[role="dialog"]');
+/** Radix gives focus back from a timeout after the panel unmounts: let it run. */
+const settle = () => act(() => new Promise<void>((r) => setTimeout(r, 10)));
 
 describe("Popover", () => {
   it("opens from its button, names itself, takes focus, and Escape gives it back", async () => {
@@ -70,6 +72,7 @@ describe("Popover", () => {
       document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
     expect(panel()).toBeNull();
+    await settle();
     expect(document.activeElement).toBe(bell);
   });
 
@@ -103,8 +106,40 @@ describe("Popover", () => {
     await esc();
     expect(dialogOpen).toBe(true);
     expect(document.querySelector('[aria-label="Notices"]')).toBeNull();
+    await settle();
     expect(document.activeElement?.id).toBe("bell");
     await esc();
     expect(dialogOpen).toBe(false);
+  });
+
+  it("at a point: no button, focus goes back to what had it", async () => {
+    let shown = true;
+    function AtPoint() {
+      const [open, setOpen] = useState(true);
+      shown = open;
+      return open
+        ? createElement(Popover, {
+            open,
+            onOpenChange: setOpen,
+            at: { left: 100, top: 100 },
+            label: "Quick facts: Smoke Test 1",
+            portal: true,
+            children: createElement("button", { type: "button", id: "inside" }, "Go"),
+          })
+        : null;
+    }
+    const before = document.createElement("button");
+    before.id = "strip";
+    document.body.appendChild(before);
+    before.focus();
+    await act(async () => root!.render(createElement(AtPoint)));
+    expect(panel()?.getAttribute("aria-label")).toBe("Quick facts: Smoke Test 1");
+    expect(panel()!.contains(document.activeElement)).toBe(true);
+    await act(async () => {
+      document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(shown).toBe(false);
+    await settle();
+    expect(document.activeElement).toBe(before);
   });
 });
