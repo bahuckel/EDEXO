@@ -2634,6 +2634,15 @@
     includeBioBodies: document.getElementById("backupBio"),
   };
   var backupPoll = null;
+  /** What each field holds now (checkbox: checked, else its text), to tell later whether it was edited. */
+  function backupFieldValues() {
+    var out = {};
+    Object.keys(backupFields).forEach(function (k) {
+      var f = backupFields[k];
+      out[k] = f.type === "checkbox" ? f.checked : f.value;
+    });
+    return out;
+  }
   /** The last folder check ({level, against, …}), for the tile's line. */
   var backupRiskLast = null;
   /** From the last status: a folder was chosen (then saving keeps it). */
@@ -2675,7 +2684,13 @@
   }
 
   /** The tile's line and, when the panel is open, its state and fields. */
-  function backupRefresh(fillFields) {
+  /**
+   * `fillFields`: write the saved settings back into the fields. `sent`: the field values a save sent;
+   * then only fields still holding them are written, so what was typed meanwhile stays (2026-10-12: a
+   * save's late answer put the suggested folder back over a folder typed after it, and "Use this
+   * folder" then confirmed the suggestion).
+   */
+  function backupRefresh(fillFields, sent) {
     return backupJson("/api/backup/status")
       .then(function (s) {
         var line;
@@ -2714,13 +2729,15 @@
         var nowBtn = document.getElementById("backupNow");
         if (nowBtn) nowBtn.disabled = !!s.running;
         if (fillFields) {
-          backupFields.onLeaveGame.checked = !!s.settings.onLeaveGame;
-          backupFields.everyHours.value = String(s.settings.everyHours);
-          backupFields.folder.value = s.folder;
-          backupFields.keep.value = String(s.settings.keep);
-          backupFields.includeKeys.checked = !!s.settings.includeKeys;
-          backupFields.includeBioBodies.checked = !!s.settings.includeBioBodies;
-          backupCheckFolder(s.folder);
+          var now = backupFieldValues();
+          var mine = function (k) { return !sent || now[k] === sent[k]; };
+          if (mine("onLeaveGame")) backupFields.onLeaveGame.checked = !!s.settings.onLeaveGame;
+          if (mine("everyHours")) backupFields.everyHours.value = String(s.settings.everyHours);
+          if (mine("folder")) backupFields.folder.value = s.folder;
+          if (mine("keep")) backupFields.keep.value = String(s.settings.keep);
+          if (mine("includeKeys")) backupFields.includeKeys.checked = !!s.settings.includeKeys;
+          if (mine("includeBioBodies")) backupFields.includeBioBodies.checked = !!s.settings.includeBioBodies;
+          backupCheckFolder(backupFields.folder.value.trim() || s.folder);
         }
         return s;
       })
@@ -2828,6 +2845,7 @@
    */
   function backupSave(confirmFolder) {
     backupShowErr("");
+    var sent = backupFieldValues();
     var typed = backupFields.folder.value.trim();
     return backupJson("/api/backup/settings", {
       onLeaveGame: backupFields.onLeaveGame.checked,
@@ -2837,7 +2855,7 @@
       includeKeys: backupFields.includeKeys.checked,
       includeBioBodies: backupFields.includeBioBodies.checked,
     })
-      .then(function () { return backupRefresh(true); })
+      .then(function () { return backupRefresh(true, sent); })
       .then(backupLoadList)
       .catch(function (e) { backupShowErr("Could not save: " + (e && e.message ? e.message : e)); });
   }
