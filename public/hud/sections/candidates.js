@@ -103,7 +103,9 @@ export var candidates = {
     var ul = q(root, "list");
     var showRegion = pref("edexoHudRegion", "1") !== "0";
     var regionEl = q(root, "region");
-    var regionName = d.currentRegion && d.currentRegion.name ? d.currentRegion.name : null;
+    // Where the ship is (shipRegion), not the system the app is showing; currentRegion for an older server.
+    var here = d.shipRegion !== undefined ? d.shipRegion : d.currentRegion;
+    var regionName = here && here.name ? here.name : null;
     regionEl.style.display = showRegion && regionName ? "" : "none";
     if (regionName) q(root, "regionV").textContent = regionName;
     function facts(body, sig, dss, target) {

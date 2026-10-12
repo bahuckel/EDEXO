@@ -165,6 +165,7 @@ export function GalaxyMap3D() {
   const [carriersOn, setCarriersOn] = usePersistedState("galaxy.layer.carriers", false, isBool);
   const [bookmarksOn, setBookmarksOn] = usePersistedState("galaxy.layer.bookmarks", false, isBool);
   const [gggOn, setGggOn] = usePersistedState("galaxy.layer.ggg", false, isBool);
+  const [heliumOn, setHeliumOn] = usePersistedState("galaxy.layer.helium", false, isBool);
   // The plotted route's systems you have not been to (owner, 2026-10-04): placed from NavRoute.json.
   const [navUnvisitedOn, setNavUnvisitedOn] = usePersistedState("galaxy.layer.navUnvisited", true, isBool);
   /* The status bar's legend folds away (owner, 2026-10-04, plan 3.7), remembered. */
@@ -198,6 +199,7 @@ export function GalaxyMap3D() {
     carriers: carriersOn,
     bookmarks: bookmarksOn,
     ggg: gggOn,
+    helium: heliumOn,
   };
   const extraSet: Record<GalaxyLayerKind, (v: boolean) => void> = {
     poi: setPoiOn,
@@ -205,6 +207,7 @@ export function GalaxyMap3D() {
     carriers: setCarriersOn,
     bookmarks: setBookmarksOn,
     ggg: setGggOn,
+    helium: setHeliumOn,
   };
   const [extraData, setExtraData] = useState<Partial<Record<GalaxyLayerKind, GalaxyLayerDTO>>>({});
   const [worthStep, setWorthStep] = useState(0);
@@ -461,7 +464,7 @@ export function GalaxyMap3D() {
       ).finally(() => layerAsked.current.delete(l.kind));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poiOn, nspOn, carriersOn, bookmarksOn, gggOn, extraData]);
+  }, [poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, extraData]);
   useEffect(() => {
     const e = engine.current;
     if (!e) return;
@@ -484,7 +487,7 @@ export function GalaxyMap3D() {
       e.setMarkerLayerVisible(name, extraOn[l.kind]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraData, poiOn, nspOn, carriersOn, bookmarksOn, gggOn, stats?.phase]);
+  }, [extraData, poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stats?.phase]);
   const extraPoint = (layer: string, id: string) => {
     if (!layer.startsWith("x-")) return null;
     const kind = layer.slice(2) as GalaxyLayerKind;
@@ -937,7 +940,7 @@ export function GalaxyMap3D() {
   */
   useEffect(() => {
     if (findText.trim().length < 2) return;
-    for (const kind of ["ggg", "bookmarks"] as const) {
+    for (const kind of ["ggg", "helium", "bookmarks"] as const) {
       if (extraData[kind]) continue;
       void fetch(`/api/galaxy/layers?kind=${kind}`)
         .then((r) => (r.ok ? r.json() : null))
@@ -1969,6 +1972,11 @@ export function GalaxyMap3D() {
           <span className="g3d-legend">
             <i className="g3d-dot g3d-dot--ggg" /> green gas giant <i className="g3d-dot g3d-dot--unconfirmed" />{" "}
             candidate, unconfirmed
+          </span>
+        ) : null}
+        {legendOn && heliumOn ? (
+          <span className="g3d-legend">
+            <i className="g3d-dot g3d-dot--helium" /> helium gas giant system
           </span>
         ) : null}
         {legendOn && search ? (

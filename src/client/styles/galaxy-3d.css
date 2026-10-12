@@ -927,6 +927,10 @@
 .g3d-dot--ggg {
   background: rgb(158, 255, 46);
 }
+/* Helium gas giants (2026-10-12), the layer's lilac. */
+.g3d-dot--helium {
+  background: rgb(219, 184, 255);
+}
 .g3d-dot--unconfirmed {
   background: rgb(199, 199, 199);
 }

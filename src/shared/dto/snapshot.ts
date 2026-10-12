@@ -71,6 +71,12 @@ export interface AppSnapshot {
    */
   currentRegion: { name: string; index: number } | null;
   /**
+   * The region of the system the **ship** is in, whatever system is on show (owner, 2026-10-12: the
+   * Encyclopedia said "in Arcadian Stream, where you are now" in Empyrean Straits — it was reading the
+   * viewed system's region). For "where you are" wording: the Encyclopedia's region filter, the HUD.
+   */
+  shipRegion?: { name: string; index: number } | null;
+  /**
    * What kind of system is on show: `bubble` (Frontier populated it), `colony`, `colonising` (a
    * claim under construction), `empty`, or null when unknown. See `GameStateStore.systemKind`.
    */

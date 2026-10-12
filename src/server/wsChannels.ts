@@ -22,6 +22,8 @@ const HUD_KEYS = [
   "port",
   "journalBoot",
   "currentRegion",
+  // The candidates section's region line is where the ship is, not the system on show (2026-10-12).
+  "shipRegion",
   "exoOverlayFocusBodyKey",
   "exoOverlayFocusBody",
   "exoOrganicOverlay",
