@@ -452,6 +452,19 @@ function scaleFor(id: string, bands: GuideBand[]): Scale | null {
 }
 
 /** One parameter of one atmosphere: the 5-95 % bar, the 25-75 % bar inside it, the median, the body. */
+/*
+  The bands and within-genus blocks (plan 1.8) in tw: utilities (plan 3.4, 2026-10-12): no rules of their
+  own in encyclopedia.css. The class names stay as hooks; fg-h, fg-sub and the body marks are shared
+  with the other blocks and keep theirs. Hover / focus as [&:hover], not hover:, which only applies with
+  a mouse.
+*/
+const BLOCK = "tw:flex tw:flex-col tw:gap-3 tw:pt-4 tw:[border-top:1px_solid_var(--accent-a15)]";
+const BAND_BODY = "fg-band-body tw:font-[600]";
+const WITHIN_CELL = "tw:p-[0.05rem_0.3rem_0.05rem_0]";
+const WITHIN_SHARE = "tw:text-right tw:w-[45%]";
+const WITHIN_TH = "tw:font-[400] tw:text-muted tw:p-[0_0.3rem_0.15rem_0]";
+const TITLE_B = "tw:text-accent-bright tw:font-[600]";
+
 function BandRow({ id, band, scale, bodyValue }: { id: string; band: GuideBand; scale: Scale; bodyValue: number | null }) {
   const def = guideParam(id) ?? { id, label: id, unit: "" };
   const x = (v: number) => Math.min(Math.max(scale.at(v), 0), 1) * BW;
@@ -470,18 +483,33 @@ function BandRow({ id, band, scale, bodyValue }: { id: string; band: GuideBand; 
   }
   const aria = `${def.label}: 90 % of bodies ${guideRange(p5, p95, def.unit)}, half ${guideRange(p25, p75, def.unit)}, median ${withUnit(p50, def.unit)}`;
   return (
-    <div className="fg-band">
-      <span className="fg-band-k">{def.label}</span>
-      <svg viewBox={`0 0 ${BW} ${BH}`} preserveAspectRatio="none" role="img" aria-label={aria}>
-        <rect className="fg-band-outer" x={x(p5)} y="3" width={Math.max(x(p95) - x(p5), 1)} height={BH - 6} />
-        <rect className="fg-band-inner" x={x(p25)} y="2" width={Math.max(x(p75) - x(p25), 1.5)} height={BH - 4} />
-        <line className="fg-band-mid" x1={x(p50)} x2={x(p50)} y1="0" y2={BH} />
+    <div className="fg-band tw:grid tw:grid-cols-[auto_minmax(0,1fr)] tw:[grid-template-areas:'k_v'_'bar_bar'] tw:gap-[0.1rem_0.6rem] tw:items-baseline tw:text-2xs">
+      <span className="fg-band-k tw:[grid-area:k] tw:text-muted tw:whitespace-nowrap">{def.label}</span>
+      <svg
+        className="tw:[grid-area:bar] tw:block tw:w-full tw:h-[12px] tw:bg-[rgba(255,255,255,0.04)]"
+        viewBox={`0 0 ${BW} ${BH}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={aria}
+      >
+        <rect className="fg-band-outer tw:fill-[var(--accent-a30)]" x={x(p5)} y="3" width={Math.max(x(p95) - x(p5), 1)} height={BH - 6} />
+        <rect className="fg-band-inner tw:fill-accent" x={x(p25)} y="2" width={Math.max(x(p75) - x(p25), 1.5)} height={BH - 4} />
+        <line
+          className="fg-band-mid tw:stroke-accent-bright tw:stroke-2 tw:[vector-effect:non-scaling-stroke]"
+          x1={x(p50)}
+          x2={x(p50)}
+          y1="0"
+          y2={BH}
+        />
         {body}
       </svg>
-      <span className="fg-band-v">
+      <span className="fg-band-v tw:[grid-area:v] tw:text-right tw:text-text-dim tw:tabular-nums tw:min-w-0">
         {guideRange(p5, p95, def.unit)} · most {guideRange(p25, p75, def.unit)}
         {bodyValue != null ? (
-          <b className={`fg-band-body fg-band-body--${where}`} title="The body you are looking at">
+          <b
+            className={`${BAND_BODY} fg-band-body--${where} ${where === "in" ? "tw:[color:var(--ok-bright)]" : "tw:[color:var(--warn-soft)]"}`}
+            title="The body you are looking at"
+          >
             {" "}
             · this body {withUnit(bodyValue, def.unit)}
           </b>
@@ -507,30 +535,33 @@ export function GuideBandsBlock({ b, body }: { b: GuideBands; body: GuideBody | 
   const temp = "body.surfaceTemperature";
   const more = cells.length - VISIBLE_ATMOS;
   return (
-    <div className="fg-bands">
+    <div className={`fg-bands ${BLOCK}`}>
       <span className="fg-h">Where most of them grow</span>
       <p className="fg-sub">
         On <b>{GROUPED.format(b.n)}</b> bodies logged to EDDN, by atmosphere: the light bar holds 90 % of them, the
         dark bar half, the tick the middle one.
       </p>
       {body?.atmoKey && !mine ? (
-        <p className="fg-band-none">
+        <p className="fg-band-none tw:m-0 tw:text-xs tw:[color:var(--warn-soft)]">
           Not logged on {body.atmosphere ?? "this atmosphere"} often enough for a band (20 bodies).
         </p>
       ) : null}
       {shown.map((a) => {
         const t = a.bands[temp];
         return (
-          <section key={a.key} className={`fg-band-atmo${a === mine ? " fg-band-atmo--mine" : ""}`}>
-            <p className="fg-band-title">
+          <section
+            key={a.key}
+            className={`fg-band-atmo${a === mine ? " fg-band-atmo--mine" : ""} tw:flex tw:flex-col tw:gap-[0.15rem] tw:p-[0.3rem_0_0.2rem_0.5rem] ${a === mine ? "tw:[border-left:2px_solid_var(--ok)]" : "tw:[border-left:2px_solid_var(--accent-a15)]"}`}
+          >
+            <p className="fg-band-title tw:m-[0_0_0.1rem] tw:text-xs tw:text-text-dim">
               {t ? (
                 <>
-                  <b>{guideRange(t[0], t[4], "K")}</b> on {a.label}, most at <b>{guideRange(t[1], t[3], "K")}</b>
+                  <b className={TITLE_B}>{guideRange(t[0], t[4], "K")}</b> on {a.label}, most at <b className={TITLE_B}>{guideRange(t[1], t[3], "K")}</b>
                 </>
               ) : (
-                <b>{a.label}</b>
+                <b className={TITLE_B}>{a.label}</b>
               )}
-              <small>
+              <small className={`tw:text-2xs ${a === mine ? "tw:[color:var(--ok-bright)]" : "tw:text-muted"}`}>
                 {" "}
                 · {GROUPED.format(a.n)} bodies{a === mine ? " · this body's atmosphere" : ""}
               </small>
@@ -546,7 +577,12 @@ export function GuideBandsBlock({ b, body }: { b: GuideBands; body: GuideBody | 
         );
       })}
       {more > 0 ? (
-        <button type="button" className="fg-band-more" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        <button
+          type="button"
+          className="fg-band-more tw:self-start tw:[background:none] tw:[border:none] tw:p-0 tw:cursor-pointer tw:text-xs tw:text-accent tw:[&:hover]:text-accent-bright tw:[&:hover]:underline tw:[&:focus-visible]:text-accent-bright tw:[&:focus-visible]:underline"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+        >
           {open ? "Fewer atmospheres" : `${more} more atmosphere${more === 1 ? "" : "s"}`}
         </button>
       ) : null}
@@ -562,11 +598,13 @@ function WithinTable({ title, rows, mine }: { title: string; rows: GuideWithinRo
   const own = mine != null ? rows.find((r) => r.key === mine) : undefined;
   if (own && !top.includes(own)) top.push(own);
   return (
-    <table className="fg-within-t">
+    <table className="fg-within-t tw:border-collapse tw:text-2xs tw:w-full">
       <thead>
         <tr>
-          <th scope="col">{title}</th>
-          <th scope="col" title="Of the bodies its genus was on">
+          <th scope="col" className={`${WITHIN_TH} tw:text-left`}>
+            {title}
+          </th>
+          <th scope="col" className={`${WITHIN_TH} ${WITHIN_SHARE}`} title="Of the bodies its genus was on">
             share
           </th>
         </tr>
@@ -580,10 +618,17 @@ function WithinTable({ title, rows, mine }: { title: string; rows: GuideWithinRo
               className={r === own ? "fg-within--mine" : undefined}
               title={`${GROUPED.format(r.n)} of ${GROUPED.format(r.genusN)} bodies`}
             >
-              <td>{r.label}</td>
-              <td>
-                <i className="fg-within-bar" style={{ width: `${Math.round(rate * 100)}%` }} />
-                <b>{fmtPct(rate * 100)}</b>
+              <td
+                className={`${WITHIN_CELL} ${r === own ? "tw:[color:var(--ok-bright)] tw:before:content-['▸_']" : "tw:text-text-dim"}`}
+              >
+                {r.label}
+              </td>
+              <td className={`${WITHIN_CELL} ${WITHIN_SHARE} tw:relative ${r === own ? "tw:[color:var(--ok-bright)]" : "tw:text-text-dim"}`}>
+                <i
+                  className="fg-within-bar tw:absolute tw:left-0 tw:top-1/4 tw:h-1/2 tw:[background:var(--accent-a22)]"
+                  style={{ width: `${Math.round(rate * 100)}%` }}
+                />
+                <b className="tw:relative tw:text-text tw:font-[600]">{fmtPct(rate * 100)}</b>
               </td>
             </tr>
           );
@@ -598,13 +643,13 @@ export function GuideWithinBlock({ b, name, body }: { b: GuideBands; name: strin
   const w = b.within;
   if (!w || !(w.atmosphere.length || w.volcanism.length || w.host.length)) return null;
   return (
-    <div className="fg-within">
+    <div className={`fg-within ${BLOCK}`}>
       <span className="fg-h">Within {w.genus}</span>
       <p className="fg-sub">
         When {w.genus} grows on a body, how often it is {name} ({GROUPED.format(w.genusN)} {w.genus} bodies)
         {body ? "; the body's own kind is marked" : ""}.
       </p>
-      <div className="fg-within-grid">
+      <div className="fg-within-grid tw:grid tw:grid-cols-[repeat(auto-fill,minmax(170px,1fr))] tw:gap-[0.4rem_0.9rem]">
         <WithinTable title="Atmosphere" rows={w.atmosphere} mine={body?.atmoKey ?? null} />
         <WithinTable title="Volcanism" rows={w.volcanism} mine={body?.volcFamily ?? null} />
         <WithinTable title="Host star" rows={w.host} mine={body?.star ?? null} />

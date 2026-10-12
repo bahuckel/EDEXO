@@ -6,6 +6,13 @@
  */
 import type { SpeciesMatch } from "@shared/types";
 
+/*
+  Styled with tw: utilities (plan 3.4, 2026-10-12); no stylesheet of its own. The class names stay as
+  hooks for tests and the inspector. --good is not defined anywhere: its fallback is the colour shown.
+*/
+const LIST = "chance-why__list tw:m-0 tw:p-0 tw:list-none tw:grid tw:gap-[2px]";
+const W = "tw:tabular-nums tw:text-right";
+
 type Line = NonNullable<SpeciesMatch["chanceWhy"]>[number];
 
 const sign = (w: number) => (w > 0 ? `+${w.toFixed(1)}` : w.toFixed(1));
@@ -24,10 +31,15 @@ export function chanceWhyText(m: Pick<SpeciesMatch, "chanceWhy" | "entry">): str
 }
 
 function Row({ l }: { l: Line }) {
-  const cls = l.weight == null ? "" : l.weight > 0 ? " chance-why__w--up" : " chance-why__w--down";
+  const tone =
+    l.weight == null
+      ? "tw:text-text-dim"
+      : l.weight > 0
+        ? "chance-why__w--up tw:[color:var(--good,#6fd08c)]"
+        : "chance-why__w--down tw:[color:var(--bad,#e07a6a)]";
   return (
-    <li className="chance-why__line">
-      <span className={`chance-why__w${cls}`}>{l.weight == null ? "·" : sign(l.weight)}</span>
+    <li className="chance-why__line tw:grid tw:grid-cols-[2.6em_1fr] tw:gap-[6px] tw:text-text">
+      <span className={`chance-why__w ${W} ${tone}`}>{l.weight == null ? "·" : sign(l.weight)}</span>
       <span>{l.label}</span>
     </li>
   );
@@ -39,9 +51,9 @@ export function ChanceWhyList({ m }: { m: Pick<SpeciesMatch, "chanceWhy" | "entr
   const facts = lines.filter((x) => x.kind !== "field");
   const fields = lines.filter((x) => x.kind === "field");
   return (
-    <div className="chance-why">
+    <div className="chance-why tw:m-[4px_0_2px] tw:text-xs tw:text-left">
       {facts.length ? (
-        <ul className="chance-why__list">
+        <ul className={LIST}>
           {facts.map((l, i) => (
             <Row key={i} l={l} />
           ))}
@@ -49,8 +61,8 @@ export function ChanceWhyList({ m }: { m: Pick<SpeciesMatch, "chanceWhy" | "entr
       ) : null}
       {fields.length ? (
         <>
-          <p className="chance-why__head">Against the other {m.entry.genus} here</p>
-          <ul className="chance-why__list">
+          <p className="chance-why__head tw:m-[6px_0_2px] tw:text-text-dim tw:tracking-[0.04em]">Against the other {m.entry.genus} here</p>
+          <ul className={LIST}>
             {fields.map((l, i) => (
               <Row key={i} l={l} />
             ))}

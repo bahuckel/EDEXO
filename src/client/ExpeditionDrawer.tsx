@@ -35,6 +35,15 @@ export function takeExpeditionFocus(): { key: string; center: Xyz; cubeLy: numbe
   return f;
 }
 
+/*
+  The drawer's own look in tw: utilities (plan 3.4, 2026-10-12): no rules of its own in galaxy-3d.css.
+  The g3d-menu / g3d-panel frame is shared with the other drawers and keeps its rules; the g3d-exp-*
+  names stay as hooks. Hover / focus as [&:hover], not hover:, which only applies with a mouse.
+*/
+const EXP_LIST = "tw:list-none tw:m-[4px_0_0] tw:p-0 tw:grid tw:gap-[3px]";
+const EXP_GO =
+  "g3d-exp-row__go tw:grid tw:gap-[1px] tw:text-left tw:p-[4px_6px] tw:[background:var(--accent-a06)] tw:[border:1px_solid_var(--accent-a15)] tw:text-text tw:[font:inherit] tw:cursor-pointer tw:min-w-0 tw:[&:hover]:[border-color:var(--accent)] tw:[&:hover]:[background:var(--accent-a15)] tw:[&:focus-visible]:[border-color:var(--accent)] tw:[&:focus-visible]:[background:var(--accent-a15)]";
+
 const RADII = [250, 500, 1000, 2000, 3000];
 const MIN_PER_JUMP = [0, 1, 3, 5, 10];
 const LIST_ROWS = 12;
@@ -264,18 +273,20 @@ export function ExpeditionDrawer({
             )}
           </p>
         ) : null}
-        <ol className="g3d-exp-list" data-testid="g3d-expedition-list">
+        <ol className={`g3d-exp-list ${EXP_LIST}`} data-testid="g3d-expedition-list">
           {rows.map((b) => (
-            <li key={b.key} className="g3d-exp-row">
-              <button type="button" className="g3d-exp-row__go" onClick={() => onFocus(b)} title="Show it on the map">
-                <strong>{b.name ?? `${b.code} boxel`}</strong>
-                <span>
+            <li key={b.key} className="g3d-exp-row tw:grid tw:grid-cols-[minmax(0,1fr)_auto] tw:gap-[4px] tw:items-stretch">
+              <button type="button" className={EXP_GO} onClick={() => onFocus(b)} title="Show it on the map">
+                <strong className="tw:text-accent-bright tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis">
+                  {b.name ?? `${b.code} boxel`}
+                </strong>
+                <span className="tw:text-2xs tw:text-text-dim">
                   {fmtLy(b.distanceLy)} · {boxelLine(b, isSpecies)}
                 </span>
               </button>
               <button
                 type="button"
-                className="btn-top-toggle g3d-exp-row__plan"
+                className="btn-top-toggle g3d-exp-row__plan tw:min-w-[28px]"
                 aria-pressed={planKeys.includes(b.key)}
                 onClick={() => toggle(b.key)}
                 title={planKeys.includes(b.key) ? "Take it out of the plan" : "Add it to the plan"}
@@ -293,7 +304,7 @@ export function ExpeditionDrawer({
             Plan · {plan.stops.length} boxel{plan.stops.length === 1 ? "" : "s"} · {fmtLy(plan.totalLy)} · about {plan.totalJumps} jump
             {plan.totalJumps === 1 ? "" : "s"} to reach {plan.stops.length === 1 ? "it" : "them"}
           </span>
-          <ol className="g3d-exp-plan">
+          <ol className={`g3d-exp-plan ${EXP_LIST} tw:[&_li]:text-xs`}>
             {plan.stops.map((s, i) => (
               <li key={s.key}>
                 {i + 1}. {s.name ?? s.key}{" "}
@@ -308,8 +319,8 @@ export function ExpeditionDrawer({
           </button>
         </div>
       ) : null}
-      <p className="g3d-exp-legend dim" aria-hidden="true">
-        <i className="g3d-exp-legend__bar" /> lower → higher {isSpecies ? "bodies" : "credits"} per jump · size = systems
+      <p className="g3d-exp-legend dim tw:flex tw:items-center tw:gap-[6px] tw:m-[6px_0_2px] tw:text-2xs" aria-hidden="true">
+        <i className="g3d-exp-legend__bar tw:inline-block tw:w-[64px] tw:h-[7px] tw:[background:linear-gradient(90deg,rgb(92,69,158),rgb(255,199,56))]" /> lower → higher {isSpecies ? "bodies" : "credits"} per jump · size = systems
       </p>
       {field ? <p className="dim tiny">Tables {field.builtAt} · averages over boxels like these, not a promise about one.</p> : null}
     </aside>
@@ -355,7 +366,7 @@ export function ExpeditionBoxelCard({
       {b.mixed ? (
         <p className="g3d-panel__note">A hand-named sector shares this sector: near it, the systems may carry that sector&apos;s name instead.</p>
       ) : null}
-      <dl className="g3d-exp-facts">
+      <dl className="g3d-exp-facts tw:grid tw:grid-cols-[auto_minmax(0,1fr)] tw:gap-[2px_10px] tw:m-[6px_0] tw:text-xs tw:[&_dt]:text-muted tw:[&_dd]:m-0">
         <dt>Worth</dt>
         <dd>
           {species ? `${(b.speciesBodies ?? 0).toFixed(2)} bodies of the species expected` : `${formatValue(b.ev / 100_000)} in first footfalls expected`}
@@ -393,7 +404,10 @@ export function ExpeditionBoxelCard({
                   : `these ${c.candidates.length}`}
               {c.knownSystems ? ` (${c.knownSystems} known left out)` : ""}:
             </p>
-            <ul className="g3d-exp-names" data-testid="g3d-expedition-names">
+            <ul
+              className={`g3d-exp-names ${EXP_LIST} tw:[&_li]:text-xs tw:[&_li]:flex tw:[&_li]:items-center tw:[&_li]:gap-[6px]`}
+              data-testid="g3d-expedition-names"
+            >
               {names.map((n) => (
                 <li key={n}>
                   {n} <CopySystemButton system={n} />

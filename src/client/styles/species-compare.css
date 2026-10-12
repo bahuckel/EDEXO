@@ -677,41 +677,7 @@
 }
 
 /* "Why this chance" (owner, 2026-10-04): mini charts of where the species was found, this body marked. */
-/* The facts behind the number (plan 1.7, 2026-10-11; ChanceWhyList.tsx), above the mini charts. */
-.chance-why {
-  margin: 4px 0 2px;
-  font-size: var(--fs-xs);
-  text-align: left;
-}
-.chance-why__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 2px;
-}
-.chance-why__line {
-  display: grid;
-  grid-template-columns: 2.6em 1fr;
-  gap: 6px;
-  color: var(--text);
-}
-.chance-why__w {
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  color: var(--text-dim);
-}
-.chance-why__w--up {
-  color: var(--good, #6fd08c);
-}
-.chance-why__w--down {
-  color: var(--bad, #e07a6a);
-}
-.chance-why__head {
-  margin: 6px 0 2px;
-  color: var(--text-dim);
-  letter-spacing: 0.04em;
-}
+/* The facts behind the number (plan 1.7): ChanceWhyList.tsx, in tw: utilities since plan 3.4. */
 .why-chance__toggle {
   align-self: flex-start;
   margin: 2px 0 0;
