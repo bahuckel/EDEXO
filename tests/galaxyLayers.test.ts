@@ -62,3 +62,21 @@ describe("galaxy map layers", () => {
   });
 });
 
+
+describe("the helium gas giant layer (owner, 2026-10-12)", () => {
+  it("is every known helium gas giant, one point per system with its bodies, never a helium-rich one", () => {
+    const d = galaxyLayer("helium", undefined);
+    expect(d.available).toBe(true);
+    const systems = d.points.map((p) => p[3]);
+    expect(new Set(systems).size).toBe(systems.length);
+    expect(systems).toContain("52 Herculis");
+    const herculis = d.points.find((p) => p[3] === "52 Herculis")!;
+    const { detail } = layerPointText(d, herculis);
+    expect(detail).toMatch(/^11 helium gas giants: 1, 3, 4, 5, 6, 7, 7 a, 8, 9, 10, 11 · /);
+    expect(detail).toContain("7 a");
+    expect(detail).toContain("EDAstro");
+    const one = d.points.find((p) => p[3] === "Gludge EB-C c27-0")!;
+    expect(layerPointText(d, one).detail).toMatch(/^1 helium gas giant: 7 · /);
+    expect(d.details.join(" ")).not.toMatch(/helium-rich/i);
+  });
+});

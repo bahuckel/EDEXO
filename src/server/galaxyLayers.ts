@@ -12,6 +12,7 @@ import { edastroGreenReports, nspBySystem, readNspStatus } from "./edastroNsp.js
 import type { BookmarksService } from "./bookmarks.js";
 import { GGG_CATALOGUE } from "../shared/gggCatalogue.js";
 import { GGG_CANDIDATES } from "../shared/gggCandidates.js";
+import { HELIUM_GIANTS } from "../shared/heliumGiants.js";
 import { classifyGreenGiant, greenCodexClassLabel, greenGiantScoreText, shortClass } from "../shared/greenGasGiant.js";
 import type { GalaxyLayerDTO, GalaxyLayerKind } from "../shared/galaxyLayers.js";
 
@@ -91,6 +92,24 @@ export function galaxyLayer(
     for (const c of ranked) {
       const detail = `Cloud ladder ${greenGiantScoreText(c.score)} · ${shortClass(c.cls)} · ${c.v.why}`;
       out.addUnconfirmed(c.x, c.y, c.z, c.body, detail, c.system);
+    }
+    return out.done(kind);
+  }
+  if (kind === "helium") {
+    // Every helium gas giant known (shipped, shared/heliumGiants.ts): one point per system, its bodies listed.
+    const bySystem = new Map<string, { x: number; y: number; z: number; bodies: string[]; sources: Set<string> }>();
+    for (const [body, system, x, y, z, , , sources] of HELIUM_GIANTS) {
+      const s = bySystem.get(system) ?? { x, y, z, bodies: [], sources: new Set<string>() };
+      s.bodies.push(body.startsWith(system) ? body.slice(system.length).trim() || body : body);
+      for (const src of sources) s.sources.add(src);
+      bySystem.set(system, s);
+    }
+    const NAMES: Record<string, string> = { spansh: "Spansh", eddn: "EDDN", edastro: "EDAstro" };
+    for (const [system, s] of bySystem) {
+      const n = s.bodies.length;
+      s.bodies.sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+      const detail = `${n} helium gas giant${n === 1 ? "" : "s"}: ${s.bodies.join(", ")} · ${[...s.sources].map((x) => NAMES[x] ?? x).join(", ")}`;
+      out.add(s.x, s.y, s.z, system, detail, system);
     }
     return out.done(kind);
   }
