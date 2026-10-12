@@ -887,10 +887,8 @@ test("session log: opens from the cockpit menu and offers the Markdown copy", as
   const errors = watchErrors(page);
   await page.goto("/");
   await expect(page.locator(".body-pane")).toBeVisible({ timeout: 60_000 });
-  // Below 1700 px the cockpit buttons live behind the menu; open it first when the button is hidden.
-  const sessionLog = page.getByRole("button", { name: "Session log" });
-  if (!(await sessionLog.isVisible())) await page.getByRole("button", { name: "Menu" }).click();
-  await sessionLog.click();
+  // Below 1700 px the cockpit buttons live behind the menu, as menu items.
+  await openFromMenu(page, "Session log");
   await expect(page.locator(".modal-panel--session")).toBeVisible();
   await expect(page.getByRole("button", { name: /Copy as Markdown|Copied/ })).toBeVisible();
   await page.waitForTimeout(500); // the modal fades in
@@ -900,10 +898,12 @@ test("session log: opens from the cockpit menu and offers the Markdown copy", as
 
 /* ---- added 2026-10-02 (review F-6.5): the screens and today's features without e2e cover ---- */
 
+/** A screen from the cockpit menu: a button on a wide bar, a menu item behind "Menu" below 1,700 px. */
 async function openFromMenu(page: import("@playwright/test").Page, name: string) {
   const btn = page.getByRole("button", { name, exact: true });
-  if (!(await btn.isVisible())) await page.getByRole("button", { name: "Menu" }).click();
-  await btn.click();
+  if (await btn.isVisible()) return btn.click();
+  await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("menuitem", { name, exact: true }).click();
 }
 
 test("options: opens on the settings, the install facts folded at the bottom with Copy diagnostics", async ({

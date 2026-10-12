@@ -32,6 +32,10 @@ import { useFeederStatus } from "./FeederStatusPanel";
 import { ExoDataAlertsHeaderHub } from "./ExoDataAlertsHub";
 import { NoticesBell } from "./NoticesBell";
 import { measurePopoverSide, type PopoverSide } from "./ui/popoverSide";
+import { MENU_ITEM, useMediaQuery, useMenuButton } from "./ui/Menu";
+
+/** An entry on the wide app bar, where the menu is the bar itself: an ordinary button. */
+const NOT_MENU_ITEM = {} as const;
 import {
   AchievementsModal,
   MapOptionsModal,
@@ -132,10 +136,14 @@ type MenuOpeners = Record<
 const AppMenuEntries = memo(function AppMenuEntries({
   feederAvailable,
   open,
+  asMenu,
 }: {
   feederAvailable: boolean;
   open: MenuOpeners;
+  /** The dropdown (below 1,700 px): entries are menu items, moved between by the arrows (ui/Menu.tsx). */
+  asMenu: boolean;
 }) {
+  const item = asMenu ? MENU_ITEM : NOT_MENU_ITEM;
   return (
     <>
       {/*
@@ -147,6 +155,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="My discoveries — every system, body and star you have scanned, plus the species you confirmed on foot.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setMyExoOpen(true)}
           aria-label="My discoveries"
@@ -157,6 +166,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="Unfinished business — biology you found first and never collected, still worth 5x.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setBacklogOpen(true)}
           aria-label="Unfinished business"
@@ -173,6 +183,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="Carriers — fleet carriers near you, from EDAstro. Downloads on request; positions are last sightings.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setCarriersOpen(true)}
           aria-label="Carriers"
@@ -183,6 +194,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="Points of interest — the Galactic Exploration Catalog near you, from EDAstro. Downloads on request.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setPoiOpen(true)}
           aria-label="Points of interest"
@@ -193,6 +205,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="Boxels — your saved boxels in one table: which systems you have flown, what is recorded there, and the next one to fly.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setBoxelOpen(true)}
           aria-label="Boxel"
@@ -203,6 +216,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="Bookmarks — systems you marked with the ☆ beside a system's name, with tags and notes.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setBookmarksOpen(true)}
           aria-label="Bookmarks"
@@ -214,6 +228,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="Statistics — income by source, activity and balances, over 24 h to all time.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setStatsOpen(true)}
           aria-label="Statistics"
@@ -225,6 +240,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
         <Tooltip text="Data feeder — the corpus behind the rankings, and whether any profile is behind it.">
           <button
             type="button"
+            {...item}
             className="appbar-icon-btn"
             onClick={() => open.setFeederOpen(true)}
             aria-label="Data feeder"
@@ -236,6 +252,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <span className="appbar-menu-sep" aria-hidden="true" />
       <Tooltip text="Galaxy map — 5.3 million systems with recorded biology, your own travels, search and codex, in 3D. Opens in its own window.">
         <a
+          {...item}
           className="appbar-icon-btn"
           href="?screen=galaxy"
           target="_blank"
@@ -254,6 +271,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="Encyclopedia — every species, its requirements, and what you have found.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setEncyclopediaOpen(true)}
           aria-label="Encyclopedia"
@@ -265,6 +283,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="Achievements — every plant variant by galaxy, genus, rarity and region, Bronze / Silver / Gold; track one to mark its plants.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setAchievementsOpen(true)}
           aria-label="Achievements"
@@ -275,6 +294,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="Session log — tonight's systems, landings, species analysed and sales; copy as Markdown.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setSessionOpen(true)}
           aria-label="Session log"
@@ -286,6 +306,7 @@ const AppMenuEntries = memo(function AppMenuEntries({
       <Tooltip text="Options — journal service info, map tier thresholds, reset.">
         <button
           type="button"
+          {...item}
           className="appbar-icon-btn"
           onClick={() => open.setOptionsOpen(true)}
           aria-label="Options"
@@ -441,6 +462,9 @@ export const HeaderBar = memo(function HeaderBar({
   */
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  // From 1,700 px the entries sit in the bar (cockpit.css); below, they are the dropdown.
+  const menuInBar = useMediaQuery("(min-width: 1700px)");
+  const menu = useMenuButton<HTMLButtonElement, HTMLDivElement>(menuOpen, setMenuOpen);
   useEffect(() => prefetchMenuModals(), []);
   /** Which way the menu opens; the rule is shared with the alerts popover. */
   const [menuSide, setMenuSide] = useState<PopoverSide>("left");
@@ -640,9 +664,8 @@ export const HeaderBar = memo(function HeaderBar({
               <button
                 type="button"
                 className={`appbar-icon-btn appbar-menu-btn${menuOpen ? " appbar-menu-btn--open" : ""}`}
-                onClick={() => setMenuOpen((v) => !v)}
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
+                {...menu.buttonProps}
+                onClick={menu.toggle}
                 aria-label="Menu"
                 // Same names and order as the entries (UI review F2).
                 title="Menu: My discoveries, Unfinished business, Carriers, Points of interest, Statistics, Data feeder, Galaxy map, Encyclopedia, Achievements, Session log, Options"
@@ -651,10 +674,10 @@ export const HeaderBar = memo(function HeaderBar({
               </button>
               <div
                 className={`appbar-menu appbar-menu--${menuSide}${menuOpen ? " appbar-menu--open" : ""}`}
-                role="menu"
+                {...(menuInBar ? { role: "group", "aria-label": "Screens" } : menu.menuProps)}
                 onClick={() => setMenuOpen(false)}
               >
-                <AppMenuEntries feederAvailable={feeder.available} open={menuOpeners} />
+                <AppMenuEntries feederAvailable={feeder.available} open={menuOpeners} asMenu={!menuInBar} />
               </div>
             </div>
             <Tooltip

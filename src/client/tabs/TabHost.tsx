@@ -20,6 +20,7 @@ import {
 } from "./tabStore";
 import { UI_COMMAND_EVENT } from "../useLiveSnapshot";
 import { tabListKeyDown } from "../ui/Tabs";
+import { MENU_ITEM, useMenuButton } from "../ui/Menu";
 import type { UiCommand } from "@shared/types";
 
 const DRAG_TYPE = "application/x-edexo-tab";
@@ -183,10 +184,11 @@ function TabButton({
   );
 }
 
-/** The "+" menu: every screen, the open ones marked. */
+/** The "+" menu: every screen, the open ones marked; the menu-button keys from ui/Menu.tsx. */
 function AddMenu() {
   const st = useTabState();
   const [open, setOpen] = useState(false);
+  const menu = useMenuButton<HTMLButtonElement, HTMLUListElement>(open, setOpen);
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!open) return;
@@ -202,19 +204,19 @@ function AddMenu() {
         type="button"
         className="tab-strip__plus"
         aria-label="Open a screen in a tab"
-        aria-expanded={open}
         title="Open a screen in a tab"
-        onClick={() => setOpen(!open)}
+        {...menu.buttonProps}
+        onClick={menu.toggle}
       >
         +
       </button>
       {open ? (
-        <ul className="tab-strip__menu" role="menu">
+        <ul className="tab-strip__menu" {...menu.menuProps}>
           {TAB_SCREENS.map((s) => (
-            <li key={s.kind}>
+            <li key={s.kind} role="none">
               <button
                 type="button"
-                role="menuitem"
+                {...MENU_ITEM}
                 onClick={() => {
                   tabStore.open(s.kind);
                   setOpen(false);
