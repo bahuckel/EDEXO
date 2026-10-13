@@ -540,7 +540,7 @@
   background: none;
   box-shadow: none;
 }
-.options-notify-section:first-of-type {
+.options-notify-section.fold.panel:first-of-type {
   border-top: 0;
 }
 .options-notify-section .fold-title {

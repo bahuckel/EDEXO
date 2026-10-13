@@ -48,6 +48,8 @@ export function parseJumpFilter(q: Record<string, unknown>): JumpFilter {
   };
 }
 
+let ownMemo: { store: object; key: string; bodies: JumpBody[] } | null = null;
+
 export function registerJumponiumRoutes(app: express.Express, opts: HttpServerOptions): void {
   app.get("/api/jumponium/near", (req, res) => {
     touchGalaxyMemory();
@@ -68,11 +70,21 @@ export function registerJumponiumRoutes(app: express.Express, opts: HttpServerOp
       Math.hypot(b.x - from.x, b.y - from.y, b.z - from.z);
 
     const store = opts.getJournalStore?.() ?? null;
-    const own = store
-      ? ownJumpBodies([...store.explorationScans.values(), ...store.soldExplorationScans.values()], (a) =>
-          store.systemPositions.get(a),
-        )
-      : [];
+    let own: JumpBody[] = [];
+    if (store) {
+      // Every scan is read once per change of the scans, not per request (review 1.2.16: 100+ ms at 200 k scans).
+      const key = `${store.explorationScansRevision}:${store.explorationScans.size}:${store.soldExplorationScans.size}:${store.systemPositions.size}`;
+      if (ownMemo?.store !== store || ownMemo.key !== key)
+        ownMemo = {
+          store,
+          key,
+          bodies: ownJumpBodies(
+            [...store.explorationScans.values(), ...store.soldExplorationScans.values()],
+            (a) => store.systemPositions.get(a),
+          ),
+        };
+      own = ownMemo.bodies;
+    }
     const seen = new Set<string>();
     const out: (JumpBody & { distLy: number })[] = [];
     for (const b of own) {
@@ -83,10 +95,11 @@ export function registerJumponiumRoutes(app: express.Express, opts: HttpServerOp
       if (dl <= maxLy && keep(b)) out.push({ ...b, distLy: dl });
     }
     let galaxyFile = false;
+    const ownOnly = q.own === "1";
     try {
       const index = loadJumponiumIndex();
-      if (index) {
-        galaxyFile = true;
+      if (index) galaxyFile = true;
+      if (index && !ownOnly) {
         for (const b of index.near(from, maxLy, keep, limit)) {
           const k = b.body.toLowerCase();
           if (seen.has(k)) continue;

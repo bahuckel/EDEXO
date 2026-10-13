@@ -18,11 +18,16 @@ const rgb = (s: string) => s.split(",").map((v) => Number(v.trim())) as [number,
 describe("readable accent", () => {
   it("leaves a colour that already reads, and every preset, as it is", () => {
     expect(readableAccent([255, 138, 31])).toEqual({ rgb: [255, 138, 31], lifted: false });
-    for (const p of APP_THEME_PRESETS) expect(contrastRatio(rgb(p.rgb), PAGE)).toBeGreaterThanOrEqual(MIN_ACCENT_CONTRAST);
+    for (const p of APP_THEME_PRESETS)
+      expect(contrastRatio(rgb(p.rgb), PAGE)).toBeGreaterThanOrEqual(MIN_ACCENT_CONTRAST);
   });
 
   it("lifts a dark navy, a dark red and black just until they read, keeping the hue", () => {
-    for (const c of [[20, 24, 70], [90, 10, 10], [0, 0, 0]] as [number, number, number][]) {
+    for (const c of [
+      [20, 24, 70],
+      [90, 10, 10],
+      [0, 0, 0],
+    ] as [number, number, number][]) {
       const r = readableAccent(c);
       expect(r.lifted).toBe(true);
       expect(contrastRatio(r.rgb, PAGE)).toBeGreaterThanOrEqual(MIN_ACCENT_CONTRAST);
@@ -35,7 +40,10 @@ describe("readable accent", () => {
 
   it("a custom scheme is drawn lifted unless asked not to", () => {
     expect(resolveAppTheme({ custom: "#141846" })).toMatchObject({ key: "custom", lifted: true });
-    expect(resolveAppTheme({ custom: "#141846" }, { readable: false })).toMatchObject({ rgb: "20, 24, 70", lifted: false });
+    expect(resolveAppTheme({ custom: "#141846" }, { readable: false })).toMatchObject({
+      rgb: "20, 24, 70",
+      lifted: false,
+    });
   });
 
   it("a text colour of one's own gives the dimmer shades too", () => {

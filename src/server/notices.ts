@@ -29,7 +29,7 @@ import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
 import { greenCodexId, greenGiantLabel, isK10CodexName, type GreenGiantVerdict } from "../shared/greenGasGiant.js";
 import { carrierServiceLabel } from "../shared/carrierServices.js";
 import { bodyKey as toBodyKey } from "../shared/bodyKey.js";
-import { INJECTIONS, bodyJumponium, hitLabel, jumpElement } from "../shared/jumponium.js";
+import { INJECTIONS, RAW_CAP, bodyJumponium, hitLabel, jumpElement, type JumpElement } from "../shared/jumponium.js";
 import {
   CARRIER_NOTICE_MIN_FROM_SOL_LY,
   DEFAULT_NOTIFY_PREFS,
@@ -470,10 +470,11 @@ export function createNoticesService(opts: {
       const stock = ctx.rawStock?.() ?? null;
       // The elements of the injections he gathers for (owner: "custom for basic/standard/premium").
       const tiers = INJECTIONS.filter((i) => jp.tiers[i.tier]);
-      const wanted = new Set(tiers.flatMap((i) => Object.keys(i.recipe)));
-      const rich = (bj?.hits ?? []).filter(
-        (h) => h.good && wanted.has(h.key) && (!jp.onlyShort || stock == null || (stock[h.key] ?? 0) < jp.target),
-      );
+      // Carbon is on 97 % of landable bodies: never a reason to fly anywhere (review 1.2.16).
+      const wanted = new Set(tiers.flatMap((i) => Object.keys(i.recipe)).filter((k) => k !== "carbon"));
+      // Short of: under the number set, and never at the grade's cap — a full hold takes no more (review 1.2.16).
+      const short = (k: JumpElement) => (stock?.[k] ?? 0) < Math.min(jp.target, RAW_CAP[jumpElement(k).grade]);
+      const rich = (bj?.hits ?? []).filter((h) => h.good && wanted.has(h.key) && (!jp.onlyShort || stock == null || short(h.key)));
       if (rich.length) {
         const serves = tiers.filter((i) => rich.some((h) => h.key in i.recipe)).map((i) => i.name);
         const g = num(line.SurfaceGravity);

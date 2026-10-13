@@ -334,6 +334,56 @@ export function CollectionFocusPanel() {
  * personal records and notable stellar phenomena. Stored on the server, so the phone and this window
  * follow the same switches. No system notifications and no sound, apart from the opt-in record chime.
  */
+/**
+ * A number typed in full before it is saved (review 1.2.16): saved on Enter or when the field is left, only when it is
+ * a number, so "50" is not saved as "5" and an emptied field does not jump to the minimum mid-edit.
+ */
+function DraftNumber({
+  value,
+  min,
+  max,
+  onCommit,
+  disabled,
+  id,
+  className,
+  ariaLabel,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  onCommit: (v: number) => void;
+  disabled?: boolean;
+  id?: string;
+  className?: string;
+  ariaLabel?: string;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft == null) return;
+    const n = Number(draft);
+    setDraft(null);
+    if (draft.trim() !== "" && Number.isFinite(n) && n !== value) onCommit(Math.min(max, Math.max(min, Math.round(n))));
+  };
+  return (
+    <input
+      id={id}
+      type="number"
+      className={className}
+      min={min}
+      max={max}
+      value={draft ?? String(value)}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      onChange={(ev) => setDraft(ev.target.value)}
+      onBlur={commit}
+      onKeyDown={(ev) => {
+        if (ev.key === "Enter") commit();
+        if (ev.key === "Escape") setDraft(null);
+      }}
+    />
+  );
+}
+
 /*
   One fold per kind of notice (owner, 2026-10-13: "a bit text heavy … make everything collapsable per title"): each says
   what is on while folded and keeps its own explanation behind its [?].
@@ -556,15 +606,14 @@ export function NotifyPanel() {
             />
             <span>
               Only what I am short of: under{" "}
-              <input
-                type="number"
+              <DraftNumber
                 className="options-inline-num"
                 min={1}
                 max={JUMPONIUM_TARGET_MAX}
                 value={jp.target}
-                disabled={busy || !jp.on || !jp.onlyShort}
-                onChange={(ev) => saveJump({ target: Number(ev.target.value) })}
-                aria-label="Short of: under this many aboard"
+                disabled={!jp.on || !jp.onlyShort}
+                onCommit={(target) => saveJump({ target })}
+                ariaLabel="Short of: under this many aboard"
               />{" "}
               aboard
             </span>
@@ -639,14 +688,12 @@ export function NotifyPanel() {
         <div className="options-focus-grid">
           <label htmlFor="notify-jumps">Within</label>
           <span>
-            <input
+            <DraftNumber
               id="notify-jumps"
-              type="number"
               min={NEARBY_JUMPS_MIN}
               max={NEARBY_JUMPS_MAX}
               value={nb.jumps}
-              disabled={busy}
-              onChange={(ev) => save({ nearby: { jumps: Number(ev.target.value) } })}
+              onCommit={(jumps) => save({ nearby: { jumps } })}
             />{" "}
             <span className="dim">
               jumps{radiusLy != null ? ` ≈ ${radiusLy.toLocaleString()} ly` : " (range known after your first jump)"}
