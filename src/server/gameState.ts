@@ -889,7 +889,7 @@ export class GameStateStore {
    * The boxel system last put on the clipboard (server/boxelRun.ts), for the HUD's next-jump card:
    * "Copied … · boxel run". Not journal state; this session only.
    */
-  boxelCopied: { name: string; at: string; run: boolean } | null = null;
+  boxelCopied: { name: string; at: string; run: boolean; source?: "boxel" | "neutron" } | null = null;
   /**
    * Bumped whenever something the Boxels screen shows changes without a jump: a route plotted, a
    * system targeted, a run started or finished, a system copied. The screen re-reads on a change.

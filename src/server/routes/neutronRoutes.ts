@@ -10,6 +10,7 @@ import { fsdFuelModel } from "../../shared/fsdFuel.js";
 import { fsdWearEstimate, FSD_WARN } from "../../shared/fsdWear.js";
 import { downloadNeutrons, loadNeutronIndex, neutronsStatus, probeNeutronsRelease } from "../neutronIndex.js";
 import { optimiseOrder, planNeutronRoute } from "../neutronRoute.js";
+import { parseLiveHops } from "../neutronLive.js";
 import type { HttpServerOptions, RouteContext } from "../httpServer.js";
 
 type Waypoint = { name: string; x: number; y: number; z: number };
@@ -53,6 +54,30 @@ export function registerNeutronRoutes(
   app.post("/api/neutron/download", localOnly, (_req, res) => {
     void downloadNeutrons(() => opts.scheduleBroadcast?.());
     res.json({ ok: true, status: neutronsStatus() });
+  });
+
+  /*
+    The route being flown (plan 8.5): `GET` what it is, `POST { hops }` starts it (the plan's hops; its next stop goes
+    to the clipboard, the boxel run ends), `POST { stop: true }` ends it.
+  */
+  const liveState = () => {
+    const live = opts.neutronLive;
+    const here = opts.shipHere?.() ?? { name: null, pos: null };
+    return { active: !!live?.active(), view: live?.view(here) ?? null, hops: live?.hops() ?? null };
+  };
+  app.get("/api/neutron/live", (_req, res) => res.json(liveState()));
+  app.post("/api/neutron/live", (req, res) => {
+    const live = opts.neutronLive;
+    if (!live) return void res.status(501).json({ error: "Not available in this build." });
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    if (body.stop === true) live.stop();
+    else {
+      const hops = parseLiveHops(body.hops);
+      if (!hops) return void res.status(400).json({ error: "Not a route: plan one first." });
+      live.start(hops, opts.shipHere?.() ?? { name: null, pos: null });
+    }
+    opts.scheduleBroadcast?.();
+    res.json(liveState());
   });
 
   app.post("/api/neutron/plan", async (req, res) => {

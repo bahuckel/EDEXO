@@ -2,6 +2,7 @@ import type { SpanshSystemHit } from "./spanshSystemHydration.js";
 import type { GreenGiantVerdict } from "../shared/greenGasGiant.js";
 import type { OwnGreenGiant } from "./galaxyLayers.js";
 import type { SavedBoxelsService } from "./savedBoxels.js";
+import type { Here, NeutronLive } from "./neutronLive.js";
 import type { FieldGuideDTO } from "../shared/fieldGuide.js";
 import type { RegionalRarity } from "../shared/speciesRarity.js";
 import type { EstimatedSurfaceTempBand, PlanetScan, SpeciesMatchContext } from "../shared/types.js";
@@ -255,6 +256,9 @@ export interface HttpServerOptions {
   setGreenGiantMark?: (systemAddress: number, bodyId: number, mark: "yes" | "no" | null) => GreenGiantVerdict | null | false;
   /** Boxels the commander is scanning (`/api/boxels`, server/savedBoxels.ts). */
   savedBoxels?: SavedBoxelsService;
+  /** The neutron route being flown (`/api/neutron/live`, server/neutronLive.ts), and where the ship is. */
+  neutronLive?: NeutronLive;
+  shipHere?: () => Here;
   /** Green gas giants the commander confirmed that edGGG does not list, for the galaxy map's layer. */
   ownGreenGiants?: () => readonly OwnGreenGiant[];
   /** Where a system is, from the journals' StarPos, for a new bookmark. */

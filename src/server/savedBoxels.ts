@@ -67,7 +67,12 @@ export interface SavedBoxelsService {
   ): { prefix: string; todo: number[]; end: number; endKnown: boolean; anchor: number } | null;
 }
 
-export function createSavedBoxels(opts: { filePath: string | null; now?: () => number }): SavedBoxelsService {
+export function createSavedBoxels(opts: {
+  filePath: string | null;
+  now?: () => number;
+  /** A run starts (id) or ends (null): a neutron route being flown stops, the clipboard has one owner. */
+  onRun?: (id: string | null) => void;
+}): SavedBoxelsService {
   const now = opts.now ?? Date.now;
   let { items, autoCopy, run } = load(opts.filePath);
 
@@ -227,6 +232,7 @@ export function createSavedBoxels(opts: { filePath: string | null; now?: () => n
       if (id != null && !items.some((s) => s.id === id)) return false;
       run = id;
       persist();
+      opts.onRun?.(id);
       return true;
     },
     remaining(id, visited, routed, current) {

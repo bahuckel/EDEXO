@@ -34,6 +34,9 @@ const HUD_KEYS = [
   "currentSystemAddress",
   // What a boxel run or key put on the clipboard: the Next jump section's "Copied" line (2026-10-06).
   "boxelCopied",
+  // The neutron route being flown and the FSD's health: the Next jump section's lines (plan 8.5).
+  "neutronLive",
+  "fsdHealth",
   "dScanBodies",
   "liveShipFuelRange",
   "organicDataValueCredits",
