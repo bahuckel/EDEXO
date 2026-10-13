@@ -170,10 +170,10 @@ import { createSavedBoxels } from "./savedBoxels.js";
 import { createNeutronLive, parseLiveHops } from "./neutronLive.js";
 import { neutronShip } from "./neutronShip.js";
 import { loadNeutronIndex } from "./neutronIndex.js";
-import { planNeutronRoute } from "./neutronRoute.js";
+import { applyJumponium, planNeutronRoute } from "./neutronRoute.js";
 import { touchGalaxyMemory } from "./galaxyMemory.js";
 import { fsdWearEstimate, FSD_WARN } from "../shared/fsdWear.js";
-import { jumponiumView } from "../shared/jumponium.js";
+import { jumponiumView, recipeFor } from "../shared/jumponium.js";
 import { createGreenGiantMarks, greenGiantForRecord, type GreenGiantSources } from "./greenGiants.js";
 import { setNotableOptionsProvider } from "./notableOptions.js";
 import { BODY_FEATURES } from "../shared/bodyFeatures.js";
@@ -511,7 +511,11 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
           wearPerBoost: s.wearPerBoost,
         },
       );
-      const hops = parseLiveHops(route.hops);
+      // Planned with FSD injections: the re-plot keeps them (shared/jumponium.ts).
+      const planned = left.useJumponium
+        ? applyJumponium(route, left.rangeLy ?? s.rangeLy ?? 50, s.boostFactor ?? 4, (t) => recipeFor(store.jumponium, t)).route
+        : route;
+      const hops = parseLiveHops(planned.hops);
       if (hops && neutronLive.active() && neutronLive.version() === version) neutronLive.replace(hops, left.targets);
     } catch (e) {
       console.warn("[edexo-compare] neutron re-plot failed:", e);

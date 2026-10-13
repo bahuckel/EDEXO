@@ -10,6 +10,7 @@ import { isTerraformableState } from "./terraformState.js";
 import { BODY_FEATURES, defaultFeaturePrefs, type BodyFeatureKey } from "./bodyFeatures.js";
 import { POI_GROUP_OPTIONS, type PoiGroup } from "./gecCategories.js";
 import { CARRIER_SERVICE_OPTIONS } from "./carrierServices.js";
+import type { InjectionTier } from "./jumponium.js";
 
 /** `achievement`: a bronze, silver or gold reached since the app started (owner, 2026-10-05). */
 export type NoticeKind = "notable" | "record" | "nsp" | "poi" | "carrier" | "codex" | "achievement" | "jumponium";
@@ -68,11 +69,15 @@ export interface NotifyPrefsDTO {
 }
 
 /**
- * `short`: only for materials the commander holds fewer than `target` of (all of them while the stock is unknown);
- * `always`: every rich body; `off`: none. "Rich" is the top tenth of landable bodies for that element.
+ * Off until chosen (owner, 2026-10-13: "should be disabled by default … custom for basic/standard/premium"). The
+ * elements watched are those of the ticked injections' recipes; with `onlyShort`, only those the commander holds
+ * fewer than `target` of (all of them while the stock is unknown). "Rich" is the top tenth of landable bodies for
+ * that element.
  */
 export interface JumponiumNotifyPrefsDTO {
-  mode: "off" | "short" | "always";
+  on: boolean;
+  tiers: Record<InjectionTier, boolean>;
+  onlyShort: boolean;
   target: number;
 }
 
@@ -115,7 +120,7 @@ export const DEFAULT_NOTIFY_PREFS: NotifyPrefsDTO = {
     nsp: false,
   },
   features: defaultFeaturePrefs(),
-  jumponium: { mode: "short", target: 30 },
+  jumponium: { on: false, tiers: { basic: true, standard: true, premium: true }, onlyShort: true, target: 30 },
 };
 
 /** Only known keys and booleans get through; anything else keeps its current value. */
@@ -156,11 +161,24 @@ export function mergeNotifyPrefs(prev: NotifyPrefsDTO, raw: unknown): NotifyPref
   };
 }
 
-function mergeJumponiumPrefs(prev: JumponiumNotifyPrefsDTO, raw: unknown): JumponiumNotifyPrefsDTO {
+function mergeJumponiumPrefs(prevRaw: JumponiumNotifyPrefsDTO, raw: unknown): JumponiumNotifyPrefsDTO {
+  // A shape from before (1.2.16 test builds: `mode`) is not carried over: off by default means off.
+  const d = DEFAULT_NOTIFY_PREFS.jumponium;
+  const prev = typeof prevRaw?.on === "boolean" && prevRaw.tiers ? prevRaw : d;
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-  const mode = r.mode === "off" || r.mode === "short" || r.mode === "always" ? r.mode : prev.mode;
+  const bool = (v: unknown, cur: boolean) => (typeof v === "boolean" ? v : cur);
+  const tr = r.tiers && typeof r.tiers === "object" ? (r.tiers as Record<string, unknown>) : {};
   const t = typeof r.target === "number" && Number.isFinite(r.target) ? Math.round(r.target) : prev.target;
-  return { mode, target: Math.min(JUMPONIUM_TARGET_MAX, Math.max(1, t)) };
+  return {
+    on: bool(r.on, prev.on),
+    tiers: {
+      basic: bool(tr.basic, prev.tiers.basic),
+      standard: bool(tr.standard, prev.tiers.standard),
+      premium: bool(tr.premium, prev.tiers.premium),
+    },
+    onlyShort: bool(r.onlyShort, prev.onlyShort),
+    target: Math.min(JUMPONIUM_TARGET_MAX, Math.max(1, t)),
+  };
 }
 
 /**
