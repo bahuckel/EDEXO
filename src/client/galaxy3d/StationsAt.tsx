@@ -19,6 +19,10 @@ export interface StationAtRow {
 }
 
 const cache = new Map<string, StationAtRow[]>();
+/** New station data: every list is asked again. */
+export function clearStationsAtCache(): void {
+  cache.clear();
+}
 
 function useStationsAt(p: { x: number; y: number; z: number }): StationAtRow[] | null {
   const key = `${p.x},${p.y},${p.z}`;
@@ -34,7 +38,8 @@ function useStationsAt(p: { x: number; y: number; z: number }): StationAtRow[] |
         .then((r) => (r.ok ? r.json() : null))
         .then((j: { stations?: StationAtRow[] } | null) => {
           const list = j?.stations ?? [];
-          cache.set(key, list);
+          // Only an answer is kept: "no data yet" (404) or an error is asked again next time (review 1.2.16).
+          if (j) cache.set(key, list);
           if (!ac.signal.aborted) setRows(list);
         })
         .catch(() => undefined);

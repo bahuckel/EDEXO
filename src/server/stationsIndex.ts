@@ -202,7 +202,7 @@ export class StationsIndex {
     // A landing pad at least (owner, 2026-10-13: installations, with none, are of no interest).
     const minPad = q.minPad === "L" ? 3 : q.minPad === "M" ? 2 : 1;
     const maxLs = q.maxDistanceLs != null && q.maxDistanceLs > 0 ? q.maxDistanceLs : Infinity;
-    const limit = Math.max(1, Math.min(200, q.limit ?? 30));
+    const limit = Math.max(1, Math.min(200, Math.floor(q.limit ?? 30) || 30));
     const settlementTypes = new Set(
       ["Settlement", "Surface Settlement"].map((t) => this.meta.types.indexOf(t)),
     );
@@ -277,7 +277,12 @@ export class StationsIndex {
    * another station somewhere has the same name (every one of them matches too, so the count is complete).
    * `sys` is the system's place in {@link forEachSystem}, which is the Stations layer's point for it.
    */
-  search(query: string, limit = 12): (StationRow & { dup: boolean })[] {
+  search(
+    query: string,
+    limit = 12,
+    /** Nearest to this first, over every match (review 1.2.16: it took the alphabetically first, then sorted). */
+    from?: { x: number; y: number; z: number } | null,
+  ): (StationRow & { dup: boolean })[] {
     const q = query.trim().toLowerCase();
     if (q.length < 3) return [];
     const withSystem = q.includes(" ");
@@ -298,20 +303,31 @@ export class StationsIndex {
         }
         if (!ok) continue;
         seen.set(name, (seen.get(name) ?? 0) + 1);
-        if (hits.length < 2000) {
+        if (hits.length < 50_000) {
           sysName ??= this.str(this.buf.readUInt32LE(so + 12)).toLowerCase();
           hits.push({ i, sys: s, starts: name.startsWith(q), name, system: sysName });
         }
       }
     }
-    hits.sort(
-      (a, b) =>
-        Number(b.starts) - Number(a.starts) ||
-        a.name.localeCompare(b.name) ||
-        a.system.localeCompare(b.system),
+    const distOf = (sys: number) => {
+      if (!from) return 0;
+      const so = this.sysAt + sys * SYS;
+      return Math.hypot(
+        this.buf.readFloatLE(so) - from.x,
+        this.buf.readFloatLE(so + 4) - from.y,
+        this.buf.readFloatLE(so + 8) - from.z,
+      );
+    };
+    const d = from ? new Map(hits.map((h) => [h, distOf(h.sys)])) : null;
+    hits.sort((a, b) =>
+      d
+        ? d.get(a)! - d.get(b)!
+        : Number(b.starts) - Number(a.starts) ||
+          a.name.localeCompare(b.name) ||
+          a.system.localeCompare(b.system),
     );
     return hits.slice(0, limit).map((h) => ({
-      ...this.row(h.i, h.sys, 0),
+      ...this.row(h.i, h.sys, d ? d.get(h)! : 0),
       dup: (seen.get(h.name) ?? 0) > 1,
     }));
   }
@@ -443,9 +459,9 @@ export async function downloadStations(onDone: () => void, fetchImpl: typeof fet
   if (downloading) return;
   lastError = null;
   const dir = userGalaxyDir();
-  mkdirSync(dir, { recursive: true });
   const part = path.join(dir, `${STATIONS_FILE}.part`);
   try {
+    mkdirSync(dir, { recursive: true });
     downloading = { done: 0, total: null };
     const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${STATIONS_REMOTE}`, { redirect: "follow" });
     if (!r.ok || !r.body) throw new Error(`${STATIONS_REMOTE}: HTTP ${r.status}`);

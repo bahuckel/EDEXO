@@ -30,6 +30,9 @@ interface StationRow {
 
 export type { StationRow as StationPick };
 
+/** Fired when new station data is in place (StationsPanel), for the galaxy map's layer and lists. */
+export const STATIONS_CHANGED_EVENT = "edexo-stations-changed";
+
 interface StationsStatus {
   present: boolean;
   stations: number | null;
@@ -120,6 +123,18 @@ export function StationsPanel({
   useEffect(() => {
     void loadStatus();
   }, [loadStatus]);
+  /*
+    A download that just finished: the galaxy map reads its Stations layer and station lists again (review 1.2.16: a
+    layer fetched before the download stayed empty all session).
+  */
+  const wasDownloading = useRef(false);
+  useEffect(() => {
+    if (status?.downloading) wasDownloading.current = true;
+    else if (wasDownloading.current && status?.present) {
+      wasDownloading.current = false;
+      window.dispatchEvent(new Event(STATIONS_CHANGED_EVENT));
+    }
+  }, [status]);
   // While a download runs, its progress every second.
   useEffect(() => {
     if (!status?.downloading) return;

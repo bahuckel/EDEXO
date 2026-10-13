@@ -43,6 +43,62 @@ describe("own carrier and colonies", () => {
     expect(ownCarrierNow(st, Date.parse("2026-10-13T02:00:00Z"))?.name).toBe("Col 285 Sector DR-C c13-20");
   });
 
+  it("keeps a jump that landed when the next is scheduled or cancelled, and a relog before departure (review 1.2.16)", () => {
+    const st = newOwnAssets();
+    const at = (t: string, o: Record<string, unknown>) => ({ ...o, timestamp: t });
+    ownAssetsLine(
+      st,
+      at("2026-10-13T00:00:00Z", {
+        event: "CarrierLocation",
+        CarrierType: "FleetCarrier",
+        StarSystem: "A",
+        SystemAddress: 1,
+      }),
+    );
+    ownAssetsLine(
+      st,
+      at("2026-10-13T00:10:00Z", {
+        event: "CarrierJumpRequest",
+        SystemName: "B",
+        SystemAddress: 2,
+        DepartureTime: "2026-10-13T00:30:00Z",
+      }),
+    );
+    // B landed (00:30 + 20 min); now C is scheduled, then cancelled: the carrier is at B.
+    ownAssetsLine(
+      st,
+      at("2026-10-13T02:00:00Z", {
+        event: "CarrierJumpRequest",
+        SystemName: "C",
+        SystemAddress: 3,
+        DepartureTime: "2026-10-13T02:20:00Z",
+      }),
+    );
+    expect(ownCarrierNow(st, Date.parse("2026-10-13T02:05:00Z"))?.name).toBe("B");
+    ownAssetsLine(st, at("2026-10-13T02:06:00Z", { event: "CarrierJumpCancelled" }));
+    expect(ownCarrierNow(st, Date.parse("2026-10-13T03:00:00Z"))?.name).toBe("B");
+    // A relog during a countdown: the jump stays scheduled and happens.
+    ownAssetsLine(
+      st,
+      at("2026-10-13T04:00:00Z", {
+        event: "CarrierJumpRequest",
+        SystemName: "D",
+        SystemAddress: 4,
+        DepartureTime: "2026-10-13T04:20:00Z",
+      }),
+    );
+    ownAssetsLine(
+      st,
+      at("2026-10-13T04:05:00Z", {
+        event: "CarrierLocation",
+        CarrierType: "FleetCarrier",
+        StarSystem: "B",
+        SystemAddress: 2,
+      }),
+    );
+    expect(ownCarrierNow(st, Date.parse("2026-10-13T05:00:00Z"))?.name).toBe("D");
+  });
+
   it("keeps the systems he claimed, once each, until he releases one", () => {
     const st = newOwnAssets();
     ownAssetsLine(st, ev("ColonisationSystemClaim", { StarSystem: "Swoilz KI-E b4-9", SystemAddress: 2 }));

@@ -240,6 +240,11 @@ export function analyzeNavRouteFuel(opts: {
   fuelModel?: FsdFuelModel | null;
   /** Cargo aboard (t), part of the ship's mass. */
   cargoT?: number | null;
+  /**
+   * The FSD is supercharged (`JetConeBoost` since the last jump: 4 at a neutron star, 1.5 at a white dwarf; 6 for
+   * the Caspian's Mk II SCO): the next jump reaches that many times as far on the fuel of an ordinary one.
+   */
+  firstLegBoost?: number | null;
   starRoles: StarRolesConfig;
   /**
    * Whether the commander would probably be first in a system, or null when unknown.
@@ -299,10 +304,26 @@ export function analyzeNavRouteFuel(opts: {
     };
   }
 
-  const remainingLegs = legLy.slice(idx);
-  const routeRemainingLy = remainingLegs.length === 0 ? 0 : remainingLegs.reduce((s, d) => s + d, 0);
+  const routeRemainingLy = legLy.slice(idx).reduce((s, d) => s + d, 0);
+  /*
+    For fuel and range, a supercharged next jump counts as the ordinary jump it costs (review 1.2.16: plotting on from
+    a neutron star with the FSD supercharged showed a red "!" — the first leg looked out of reach).
+  */
+  const boost = opts.firstLegBoost != null && opts.firstLegBoost > 1 ? opts.firstLegBoost : 1;
+  const fuelLegLy = boost > 1 && idx < legLy.length ? legLy.map((d, i) => (i === idx ? d / boost : d)) : legLy;
+  const remainingLegs = fuelLegLy.slice(idx);
   const routeJumpsRemaining = Math.max(0, route.length - 1 - idx);
   const maxRemainingLegLy = remainingLegs.length === 0 ? null : Math.max(...remainingLegs);
+  /*
+    One range rule for both halves of the pump (review 1.2.16): the fuel law's longest jump with this tank when it
+    knows the drive's most fuel per jump, else the Loadout's range. The "tank reaches" count and the "furthest scoop"
+    search used different ones, so a scoop could fall before the last system reached and turn red for nothing.
+  */
+  const fuelModelForRange = opts.fuelModel ?? null;
+  const rangeAt =
+    fuelModelForRange && fuelModelForRange.maxFuelPerJumpT != null
+      ? (t: number) => maxJumpLy(fuelModelForRange, t, Math.max(0, opts.cargoT ?? 0))
+      : loadoutMaxJumpLy;
 
   let anyRemainingLegOverMaxRange = false;
   if (loadoutMaxJumpLy != null && loadoutMaxJumpLy > 0 && maxRemainingLegLy != null) {
@@ -336,7 +357,7 @@ export function analyzeNavRouteFuel(opts: {
     let short = false;
     for (const d of remainingLegs) {
       const need = estFuelForLeg(d, tank);
-      const reach = model ? maxJumpLy(model, tank, cargo) : null;
+      const reach = typeof rangeAt === "function" ? rangeAt(tank) : rangeAt;
       if (spent + need > fuelBudget + 1e-6 || (reach != null && d > reach + RANGE_EPS_LY)) {
         short = true;
         break;
@@ -367,11 +388,10 @@ export function analyzeNavRouteFuel(opts: {
       idx,
       lastScoopIdx,
       scoop,
-      legLy,
+      legLy: fuelLegLy,
       budget: fuelBudget,
       estFuelForLeg,
-      maxJumpLy:
-        model && model.maxFuelPerJumpT != null ? (t: number) => maxJumpLy(model, t, cargo) : loadoutMaxJumpLy,
+      maxJumpLy: rangeAt,
       tankT: fuelTotalT,
     });
     if (furthest != null) {

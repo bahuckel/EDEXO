@@ -61,6 +61,32 @@ describe("neutron route", () => {
     for (const h of r.hops.filter((x) => x.refuel)) expect(h.scoopLs).toBe(500);
   });
 
+  it("supercharges at the start when the ship sits at a neutron star (review 1.2.16)", async () => {
+    // The start is the first neutron star itself: its first jump reaches 200 ly, not 50.
+    const idx = line(0, 1800, 200);
+    const r = await planNeutronRoute(idx, [A, { name: "B", x: 2000, y: 0, z: 0 }], {
+      rangeLy: 50,
+      jumpsPerTank: 100,
+      jumpsNow: 100,
+    });
+    expect(r.hops[1]!.boosted).toBe(1);
+    expect(r.boosted).toBe(10);
+    expect(r.jumps).toBe(10);
+  });
+
+  it("never plans to scoop on the way with an empty tank (review 1.2.16)", async () => {
+    // Nothing aboard and no neutron star near: the only way is the plain plot, flagged unsafe.
+    const idx = line(100_000, 100_000, 1);
+    const r = await planNeutronRoute(idx, [A, { name: "B", x: 1000, y: 0, z: 0 }], {
+      rangeLy: 50,
+      jumpsPerTank: 5,
+      jumpsNow: 0,
+    });
+    expect(r.unsafeLegs).toEqual([1]);
+    // 20 jumps on a tank of 5: scooped on the way, so about full after (not 0).
+    expect(r.hops[1]).toMatchObject({ scoopOnWay: true, jumpsLeft: 4 });
+  });
+
   it("takes the plain plot where no neutron star helps", async () => {
     const idx = line(100_000, 100_000, 1);
     const r = await planNeutronRoute(idx, [A, { name: "B", x: 1000, y: 0, z: 0 }], {

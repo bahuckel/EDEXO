@@ -129,8 +129,9 @@ export function NeutronDrawer({
           onRoute(j.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
           // A re-plot replaced the plan in the table: the map shows the one being flown.
           if (!first) setRoute(null);
-        } else if (!first) {
-          setRoute(null);
+        } else {
+          // Ended (arrived, stopped, a boxel run) — also while the drawer was closed: no line stays (review 1.2.16).
+          if (!first) setRoute(null);
           onRoute([]);
         }
       })

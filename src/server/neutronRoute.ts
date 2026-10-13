@@ -239,7 +239,8 @@ async function searchLeg(
     */
     const afterHop = (j: { jumps: number; boosted: number }): { fuel: number; onWay: boolean } | null => {
       if (j.jumps <= u.fuel) return { fuel: u.fuel - j.jumps, onWay: false };
-      if (j.jumps - j.boosted >= 2 && u.fuel >= j.boosted) return { fuel: tank - 1, onWay: true };
+      // Reaching a scoopable star on the way takes a jump of fuel itself, on top of the supercharge (review 1.2.16).
+      if (j.jumps - j.boosted >= 2 && u.fuel >= j.boosted + 1) return { fuel: tank - 1, onWay: true };
       return null;
     };
     const toEnd = jumpsFrom(isNeutron, left, r, boost);
@@ -336,7 +337,17 @@ export async function planNeutronRoute(
     fsdHealth: health,
   });
   let fuel = Math.max(0, Math.floor(ship.jumpsNow));
-  let from: { pos: Pt; star: NeutronStar | null } = { pos: first, star: null };
+  /*
+    A leg that starts at a neutron star (the ship sits at one, or a stop is one) supercharges there: without it the
+    first hop was planned as normal jumps (review 1.2.16).
+  */
+  const neutronAt = (p: Pt): NeutronStar | null => {
+    let best: NeutronStar | null = null;
+    for (const n of index.within(p, 0.25)) if (!best || dist(n, p) < dist(best, p)) best = n;
+    return best;
+  };
+  const tank = Math.max(1, Math.floor(ship.jumpsPerTank));
+  let from: { pos: Pt; star: NeutronStar | null } = { pos: first, star: neutronAt(first) };
   const unsafeLegs: number[] = [];
   let plainJumps = 0;
   for (let w = 1; w < waypoints.length; w++) {
@@ -348,7 +359,9 @@ export async function planNeutronRoute(
       unsafeLegs.push(w);
       const j = jumpsFrom(from.star != null, dist(from.pos, to), r, ship.boost ?? 4);
       if (j.boosted && health != null && wear != null) health -= wear;
-      fuel = Math.max(0, fuel - j.jumps);
+      // More jumps than the fuel aboard: scooped on the way, so the tank is about full after (not empty).
+      const onWay = j.jumps > fuel;
+      fuel = onWay ? Math.max(0, tank - 1) : fuel - j.jumps;
       hops.push({
         name: to.name,
         x: to.x,
@@ -359,12 +372,12 @@ export async function planNeutronRoute(
         boosted: j.boosted,
         distanceLy: Math.round(dist(from.pos, to)),
         refuel: false,
-        scoopOnWay: j.jumps > fuel,
+        scoopOnWay: onWay,
         scoopLs: null,
         jumpsLeft: fuel,
         fsdHealth: health,
       });
-      from = { pos: to, star: null };
+      from = { pos: to, star: neutronAt(to) };
       continue;
     }
     let prevPos = from.pos;
@@ -389,7 +402,7 @@ export async function planNeutronRoute(
       prevPos = n.pos;
     }
     fuel = leg.fuel;
-    from = { pos: to, star: null };
+    from = { pos: to, star: neutronAt(to) };
   }
   const repairBefore = hops.findIndex((h) => h.fsdHealth != null && h.fsdHealth < FSD_WARN);
   return {

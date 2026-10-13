@@ -171,6 +171,7 @@ import { createNeutronLive, parseLiveHops } from "./neutronLive.js";
 import { neutronShip } from "./neutronShip.js";
 import { loadNeutronIndex } from "./neutronIndex.js";
 import { planNeutronRoute } from "./neutronRoute.js";
+import { touchGalaxyMemory } from "./galaxyMemory.js";
 import { fsdWearEstimate, FSD_WARN } from "../shared/fsdWear.js";
 import { createGreenGiantMarks, greenGiantForRecord, type GreenGiantSources } from "./greenGiants.js";
 import { setNotableOptionsProvider } from "./notableOptions.js";
@@ -456,6 +457,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     onStart: () => {
       if (savedBoxels.runId()) savedBoxels.setRun(null);
     },
+    onDone: () => neutronStopped(),
   });
   const shipHere = () => ({ name: store.currentSystem ?? null, pos: store.commanderPos ?? null });
   /** Stopped: the HUD's "Copied … · neutron route" line goes with it (owner, 2026-10-13: it stayed). */
@@ -469,10 +471,20 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     where the ship is to the stops not reached yet, with the ship as the journals know it now. One at a time; the
     HUD says "re-plotting" meanwhile, and the new next stop goes to the clipboard.
   */
+  /*
+    One re-plot at a time, whatever the route does meanwhile (review 1.2.16): Stop cleared the route's own flag while
+    a search still ran, so a second one could start; and one that finished after a new route was started replaced
+    the new route — it lands only if the route is still the one it was asked for (its version).
+  */
+  let replanBusy = false;
   const replanNeutron = async (): Promise<void> => {
+    if (replanBusy) return;
     const here = shipHere();
     const left = neutronLive.remaining();
     if (!here.pos || !left) return;
+    replanBusy = true;
+    const version = neutronLive.version();
+    touchGalaxyMemory();
     let index;
     try {
       index = loadNeutronIndex();
@@ -489,7 +501,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         index,
         [{ name: here.name ?? "Your ship", ...here.pos }, ...left.targets],
         {
-          rangeLy: s.rangeLy ?? left.rangeLy,
+          // The range the route was planned with (he may have typed one for another ship), else the journals'.
+          rangeLy: left.rangeLy ?? s.rangeLy,
           boost: s.boostFactor,
           jumpsPerTank,
           jumpsNow: Math.min(jumpsPerTank, Math.max(0, s.jumpsNow ?? jumpsPerTank)),
@@ -498,11 +511,13 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         },
       );
       const hops = parseLiveHops(route.hops);
-      if (hops && neutronLive.active()) neutronLive.replace(hops, left.targets);
+      if (hops && neutronLive.active() && neutronLive.version() === version) neutronLive.replace(hops, left.targets);
     } catch (e) {
       console.warn("[edexo-compare] neutron re-plot failed:", e);
     } finally {
-      neutronLive.setReplanning(false);
+      replanBusy = false;
+      if (neutronLive.version() === version) neutronLive.setReplanning(false);
+      touchGalaxyMemory();
       push();
     }
   };
@@ -1713,6 +1728,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     bindHost,
     lanKey,
     getSnapshot,
+    getJournalDir: () => journalDir,
     getStatus,
     getCommanderPosition: () => store.commanderPos,
     getFirstDiscoveryBacklog: () => firstDiscoveryBacklogWithDistance(store),
@@ -1731,6 +1747,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         // The game's own visited list (plan 6.1): placed by the galaxy index only if it is already loaded.
         importedSystems(loadVisitedImport(), new Set([...store.visitedSystems.keys(), ...store.systemPositions.keys()]), peekBioIndex()),
       ),
+    getImportedSystems: () =>
+      importedSystems(loadVisitedImport(), new Set([...store.visitedSystems.keys(), ...store.systemPositions.keys()]), peekBioIndex()),
     getMySystem: (addr) => mySystemDetail(store, addr, backlogMap(store, firstDiscoveryBacklogNow(store)), loadBioIndex()),
     getSessionRoute: () => sessionRouteDto(store, sessionLog.toDto().systems),
     getVisitedSystems: (days) => visitedSystemsDto(store, days),

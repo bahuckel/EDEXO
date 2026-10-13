@@ -142,6 +142,8 @@ function createBrowserTabs(o) {
   let cleared = false;
   /** Hosts whose https upgrade failed and that the commander chose to open over plain HTTP, this run. */
   const plainHttpOk = new Set();
+  /** Hosts this run asked for over HTTPS instead of the HTTP a link named: only these may fall back to HTTP. */
+  const upgradedHosts = new Set();
   const downloads = [];
 
   const domainOf = (url) => o.blocker.hostOf(url).domain;
@@ -169,6 +171,7 @@ function createBrowserTabs(o) {
           const u = new URL(details.url);
           if (!isLocalHost(u.hostname) && !plainHttpOk.has(u.host)) {
             u.protocol = "https:";
+            upgradedHosts.add(u.host);
             return cb({ redirectURL: u.href });
           }
         }
@@ -177,7 +180,7 @@ function createBrowserTabs(o) {
         // A page about to load in a tab: its scriptlets are in place before the request goes (see injectFor).
         if (details.resourceType === "mainFrame") {
           if (!tab) {
-            if (wc) o.log?.(`browser: a page request without its tab (${new URL(details.url).hostname})`);
+            if (wc) o.log?.("browser: a page request without its tab");
             return cb({});
           }
           // At most a moment: a page never waits on its scriptlets for long.
@@ -238,7 +241,12 @@ function createBrowserTabs(o) {
     from site to site, and each runs only in the top frame of the hostname it was made for. Most sites have none:
     then nothing is attached at all.
   */
-  async function injectFor(t, url) {
+  function injectFor(t, url) {
+    // One at a time per tab (review 1.2.16: two at once could register a script twice and lose one of them).
+    t.injecting = (t.injecting ?? Promise.resolve()).then(() => injectNow(t, url));
+    return t.injecting;
+  }
+  async function injectNow(t, url) {
     const wc = t.view?.webContents;
     if (!wc || wc.isDestroyed()) return;
     const host = o.blocker.hostOf(url).hostname;
@@ -267,10 +275,11 @@ function createBrowserTabs(o) {
       const source = `(function(){if(window.top!==window||location.hostname!==${JSON.stringify(host)})return;\n${body}\n})();`;
       const r = await dbg.sendCommand("Page.addScriptToEvaluateOnNewDocument", { source });
       t.injected = { key, id: r && typeof r.identifier === "string" ? r.identifier : null };
-      o.log?.(`browser: ${scripts.length} scriptlets registered for ${host}`);
+      // No host name: the log is kept on disk, and the browser keeps no history (privacy policy).
+      o.log?.(`browser: ${scripts.length} scriptlets registered`);
     } catch (e) {
       // Not attached (DevTools on the tab, a closed page): the page loads without its scriptlets.
-      o.log?.(`browser: scriptlets for ${host} not set: ${e && e.message ? e.message : e}`);
+      o.log?.(`browser: scriptlets not set: ${e && e.message ? e.message : e}`);
       t.injected = { key: "", id: null };
     }
   }
@@ -299,7 +308,8 @@ function createBrowserTabs(o) {
   }
 
   function tabView(t) {
-    const wc = t.view?.webContents;
+    const live = t.view?.webContents;
+    const wc = live && !live.isDestroyed() ? live : null;
     const dom = t.url ? domainOf(t.url) : null;
     const site = dom ? o.prefs.site(dom) : null;
     return {
@@ -354,9 +364,25 @@ function createBrowserTabs(o) {
     view.setBackgroundColor("#ffffff");
     const wc = view.webContents;
     o.enableZoom?.(view);
+    /*
+      A new window becomes a tab: in front when he just clicked or typed in the page, else behind, and at most three
+      of those a page (review 1.2.16: a page could push ad tabs to the front without a click; there is no pop-up
+      blocker in Electron).
+    */
+    wc.on("input-event", (_e, input) => {
+      if (input && (input.type === "mouseDown" || input.type === "keyDown" || input.type === "touchStart"))
+        t.lastGesture = Date.now();
+    });
     wc.setWindowOpenHandler(({ url }) => {
-      if (httpUrl(url)) openTab(url, t.id);
+      if (!httpUrl(url)) return { action: "deny" };
+      const asked = Date.now() - (t.lastGesture ?? 0) < 1500;
+      if (asked) openTab(url, t.id);
+      else if ((t.popups = (t.popups ?? 0) + 1) <= 3) openTab(url, t.id, { background: true });
       return { action: "deny" };
+    });
+    // A page that closes itself (window.close): its tab goes, cleanly (review 1.2.16: it crashed the main process).
+    wc.once("destroyed", () => {
+      if (tabs.get(t.id)?.view === view) closeTab(t.id);
     });
     const onlyHttp = (e, url) => {
       if (!httpUrl(url)) e.preventDefault();
@@ -382,6 +408,7 @@ function createBrowserTabs(o) {
     });
     wc.on("did-start-navigation", (d) => {
       if (d.isMainFrame && !d.isSameDocument) {
+        t.popups = 0;
         t.blocked = 0;
         t.error = null;
         t.collapse.clear();
@@ -405,10 +432,15 @@ function createBrowserTabs(o) {
     });
     wc.on("did-fail-load", (_e, code, desc, url, isMain) => {
       if (!isMain || code === -3) return; // -3: aborted (a new navigation, a download)
+      /*
+        "Open it over plain HTTP" only where the link itself said HTTP and this run tried HTTPS for it — never for a
+        certificate error (-200 to -299): that is the attack the refusal is for (review 1.2.16).
+      */
       let httpFallback = null;
       try {
         const u = new URL(url);
-        if (u.protocol === "https:" && !isLocalHost(u.hostname)) {
+        const certError = code <= -200 && code > -300;
+        if (u.protocol === "https:" && upgradedHosts.has(u.host) && !certError && !isLocalHost(u.hostname)) {
           u.protocol = "http:";
           httpFallback = u.href;
         }
@@ -576,6 +608,8 @@ function createBrowserTabs(o) {
     }
   }
 
+  /** The host window's listeners, taken off when the pages move to another window (review 1.2.16: they piled up). */
+  let hostListeners = null;
   function adopt(win) {
     if (host === win) return;
     for (const t of tabs.values()) {
@@ -583,22 +617,37 @@ function createBrowserTabs(o) {
       if (host && !host.isDestroyed()) host.contentView.removeChildView(t.view);
       win.contentView.addChildView(t.view);
     }
+    if (hostListeners && !hostListeners.win.isDestroyed()) {
+      hostListeners.win.removeListener("resize", hostListeners.resize);
+      hostListeners.win.removeListener("closed", hostListeners.closed);
+    }
     host = win;
     // The window's size changes as it goes in and out of fullscreen: the fullscreen page follows it.
-    host.on("resize", () => {
+    const resize = () => {
       if (fullscreen && host === win) placeViews();
-    });
-    host.once("closed", () => {
+    };
+    const closed = () => {
       if (host === win) {
         host = null;
         armDetach();
       }
-    });
+    };
+    win.on("resize", resize);
+    win.once("closed", closed);
+    hostListeners = { win, resize, closed };
+  }
+
+  /** Out of a page's fullscreen, the window as it was before it. */
+  function leaveFullscreen() {
+    if (!fullscreen) return;
+    if (host && !host.isDestroyed() && !fullscreen.wasFull) host.setFullScreen(false);
+    fullscreen = null;
   }
 
   function load(t, url) {
     t.startPage = false;
     t.error = null;
+    t.view?.webContents.setAudioMuted(false);
     if (!t.view) {
       t.view = makeView(t);
       if (host && !host.isDestroyed()) host.contentView.addChildView(t.view);
@@ -609,8 +658,8 @@ function createBrowserTabs(o) {
     changed();
   }
 
-  /** A new tab after `after` (or at the end), on `url`, or on the start page when url is null. */
-  function openTab(url, after) {
+  /** A new tab after `after` (or at the end), on `url`, or on the start page when url is null; behind if asked. */
+  function openTab(url, after, how = {}) {
     if (tabs.size >= MAX_TABS) return null;
     const t = {
       id: nextId++,
@@ -631,7 +680,7 @@ function createBrowserTabs(o) {
     const i = after != null ? order.indexOf(after) : -1;
     if (i >= 0) order.splice(i + 1, 0, t.id);
     else order.push(t.id);
-    active = t.id;
+    if (!how.background || active == null) active = t.id;
     if (url) load(t, url);
     placeViews();
     changed();
@@ -642,15 +691,12 @@ function createBrowserTabs(o) {
     const t = tabs.get(id);
     if (!t) return;
     for (const x of t.passTimers.splice(0)) clearTimeout(x);
-    if (fullscreen?.id === id) {
-      if (host && !host.isDestroyed() && !fullscreen.wasFull) host.setFullScreen(false);
-      fullscreen = null;
-    }
+    if (fullscreen?.id === id) leaveFullscreen();
+    tabs.delete(id);
     if (t.view) {
       if (host && !host.isDestroyed()) host.contentView.removeChildView(t.view);
-      t.view.webContents.close();
+      if (!t.view.webContents.isDestroyed()) t.view.webContents.close();
     }
-    tabs.delete(id);
     const i = order.indexOf(id);
     order = order.filter((x) => x !== id);
     if (active === id) active = order[Math.min(i, order.length - 1)] ?? null;
@@ -670,6 +716,7 @@ function createBrowserTabs(o) {
 
   /** Every page closed and the engine let go (the Browser tab closed). */
   function closeAll() {
+    leaveFullscreen();
     for (const t of tabs.values()) {
       for (const x of t.passTimers.splice(0)) clearTimeout(x);
       if (!t.view) continue;
@@ -722,7 +769,10 @@ function createBrowserTabs(o) {
         return state();
       }
       case "stop":
-        // Unmounted: closed, or moving to another window (which sends "start" within the grace).
+        // Unmounted: closed, or moving to another window (which sends "start" within the grace). A window that no
+        // longer holds the pages (the tab was moved on) has nothing to stop (review 1.2.16: it closed them all).
+        if (win !== host) return { ok: true };
+        leaveFullscreen();
         bounds = null;
         placeViews();
         armDetach();
@@ -763,10 +813,18 @@ function createBrowserTabs(o) {
         return { ok: true };
       }
       case "back":
-        if (t?.view) t.view.webContents.navigationHistory.goBack();
-        return { ok: true };
       case "forward":
-        if (t?.view) t.view.webContents.navigationHistory.goForward();
+        // From the start page too: the page comes back into view (review 1.2.16: it moved on hidden).
+        if (t?.view && !t.view.webContents.isDestroyed()) {
+          if (op === "back") t.view.webContents.navigationHistory.goBack();
+          else t.view.webContents.navigationHistory.goForward();
+          if (t.startPage) {
+            t.startPage = false;
+            t.view.webContents.setAudioMuted(false);
+            placeViews();
+            changed();
+          }
+        }
         return { ok: true };
       case "reload":
         if (t?.view) t.view.webContents.reloadIgnoringCache();
@@ -778,6 +836,8 @@ function createBrowserTabs(o) {
         if (t) {
           t.startPage = true;
           t.title = "";
+          // The page stays (Back brings it back) but is heard no more (review 1.2.16: a video played on unseen).
+          if (t.view && !t.view.webContents.isDestroyed()) t.view.webContents.setAudioMuted(true);
           placeViews();
           changed();
         }

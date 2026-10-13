@@ -968,7 +968,22 @@ if (!separateCopy) {
 app.on("child-process-gone", (_e, d) => {
   huds.log(`process gone: ${d && d.type} (${d && d.reason}${d && d.exitCode != null ? `, exit ${d.exitCode}` : ""})`);
 });
+/*
+  A browsed page asking for a client certificate gets none (review 1.2.16: Electron's default sends the first one
+  in the Windows store, which can carry a name or an e-mail address).
+*/
+app.on("select-client-certificate", (e, wc, _url, _list, callback) => {
+  if (browserTabs?.isBrowserContents(wc)) {
+    e.preventDefault();
+    callback();
+  }
+});
 app.on("render-process-gone", (_e, wc, d) => {
+  // A browsed page's address is not written down: the browser keeps no history (review 1.2.16).
+  if (browserTabs?.isBrowserContents(wc)) {
+    huds.log(`page gone: a browser page (${d && d.reason})`);
+    return;
+  }
   huds.log(`page gone: ${wc && !wc.isDestroyed() ? wc.getURL().replace(/^https?:\/\/[^/]+/, "") : "?"} (${d && d.reason})`);
 });
 

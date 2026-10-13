@@ -38,24 +38,40 @@ function systemOf(line: Record<string, unknown>, key: "StarSystem" | "SystemName
   return name && addr != null ? { name, addr, at: String(line.timestamp ?? "") } : null;
 }
 
+/** A scheduled jump that had time to happen by `at` becomes where the carrier is (review 1.2.16). */
+function landJump(st: OwnAssetsState, at: unknown): void {
+  const p = st.pendingJump;
+  const t = typeof at === "string" ? Date.parse(at) : NaN;
+  if (!p || !Number.isFinite(t) || t < Date.parse(p.departure) + JUMP_MS) return;
+  st.carrier = { name: p.name, addr: p.addr, at: p.departure };
+  st.pendingJump = null;
+}
+
 export function ownAssetsLine(st: OwnAssetsState, line: Record<string, unknown>): void {
   switch (line.event) {
     case "CarrierLocation": {
       const s = own(line) ? systemOf(line, "StarSystem") : null;
       if (s) {
         st.carrier = s;
-        st.pendingJump = null;
+        // Written at every game load: a jump still counting down (a relog before it departs) stays scheduled.
+        const t = typeof line.timestamp === "string" ? Date.parse(line.timestamp) : NaN;
+        if (!st.pendingJump || !(t < Date.parse(st.pendingJump.departure))) st.pendingJump = null;
       }
       return;
     }
     case "CarrierJumpRequest": {
       const s = own(line) ? systemOf(line, "SystemName") : null;
       const departure = typeof line.DepartureTime === "string" ? line.DepartureTime : null;
+      // The jump before may have landed: it is where the carrier is now, before the new one is scheduled.
+      landJump(st, line.timestamp);
       if (s && departure) st.pendingJump = { ...s, departure };
       return;
     }
     case "CarrierJumpCancelled":
-      if (own(line)) st.pendingJump = null;
+      if (own(line)) {
+        landJump(st, line.timestamp);
+        st.pendingJump = null;
+      }
       return;
     case "ColonisationSystemClaim": {
       const s = systemOf(line, "StarSystem");

@@ -150,6 +150,8 @@ export function createNeutronLive(opts: {
   deliver: (name: string) => void;
   /** Called when a route starts: the boxel run ends (one owner of the clipboard). */
   onStart?: () => void;
+  /** The last stop reached: what the route put on the HUD goes, as with Stop. */
+  onDone?: () => void;
   now?: () => string;
 }): NeutronLive {
   const now = opts.now ?? (() => new Date().toISOString());
@@ -192,6 +194,8 @@ export function createNeutronLive(opts: {
           break;
         }
       st = { hops, at, startedAt: now(), plan: plan ?? null };
+      // A re-plot of the route before is not this route's: it neither shows nor lands here (version below).
+      replanning = false;
       version++;
       persist();
       return copyNext();
@@ -246,7 +250,10 @@ export function createNeutronLive(opts: {
       if (hit === st.hops.length - 1) {
         done = { destination: st.hops[hit]!.name };
         st = null;
+        // A new version: the galaxy map clears the line (review 1.2.16: it stayed after arrival).
+        version++;
         persist();
+        opts.onDone?.();
         return null;
       }
       st.at = hit;

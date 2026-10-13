@@ -32,7 +32,8 @@ if (!wt.isMainThread && wt.workerData && typeof wt.workerData.lists === "string"
 
 /** A URL's hostname and registrable domain ("www.edsm.net" → "edsm.net"), or nulls. */
 function hostOf(url) {
-  const r = parseHost(url);
+  // A site on a shared host is its own site ("ed-ggg.github.io", not all of github.io; review 1.2.16).
+  const r = parseHost(url, { allowPrivateDomains: true });
   return { hostname: r.hostname ?? null, domain: r.domain ?? r.hostname ?? null };
 }
 

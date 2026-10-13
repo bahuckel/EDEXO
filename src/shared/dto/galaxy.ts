@@ -432,6 +432,8 @@ export interface GalaxyMineDTO {
     speciesScanned: number;
     /** Set when bio bodies here still wait for them (the backlog), with its floor value. */
     unfinishedFloorCr: number | null;
+    /** The mass code letter, when known exactly (an imported system: from its full address). */
+    code?: string;
   }[];
   /** Systems in the journals with no StarPos, so nothing can place them. */
   unplaceable: number;

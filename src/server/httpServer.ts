@@ -111,6 +111,10 @@ export interface HttpServerOptions {
    */
   lanKey?: string | null;
   getSnapshot: () => AppSnapshot;
+  /** The journal folder in use, without building a snapshot for it. */
+  getJournalDir?: () => string;
+  /** The game's visited list beyond the journals (visitedCache.ts), placed; light — for Find. */
+  getImportedSystems?: () => readonly { addr: number; name: string; x: number; y: number; z: number }[];
   /** GET /api/status — launcher-sized status; must not rebuild the snapshot. */
   getStatus: () => AppStatusDTO;
   /** §10.3 — the commander's own coordinates, or null before the first jump this session. */
