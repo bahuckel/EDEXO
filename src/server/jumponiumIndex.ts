@@ -54,6 +54,13 @@ const FILE_ELS: readonly [JumpElement, number][] = [
 ];
 const TYPES = ["Rocky body", "High metal content world", "Metal-rich body", "Icy body", "Rocky Ice world"];
 
+/** The journal's planet classes in Spansh's words, so a list says one name for one type (review 1.2.16). */
+const JOURNAL_TYPE: Record<string, string> = {
+  "High metal content body": "High metal content world",
+  "Metal rich body": "Metal-rich body",
+  "Rocky ice body": "Rocky Ice world",
+};
+
 /** The top 1 % of landable bodies, per element (the file's cut; Ryker's Hope, 2026-10-13). */
 export const JUMP_TOP1: Partial<Record<JumpElement, number>> = {
   vanadium: 9.09,
@@ -326,7 +333,7 @@ export function ownJumpBodies(
       system: s.starSystem,
       body: s.bodyName,
       ...p,
-      type: s.planetClass ?? null,
+      type: s.planetClass ? (JOURNAL_TYPE[s.planetClass] ?? s.planetClass) : null,
       gravityG: typeof s.surfaceGravity === "number" ? s.surfaceGravity / 9.80665 : null,
       distLs: typeof s.distanceFromArrivalLs === "number" ? s.distanceFromArrivalLs : null,
       pct,

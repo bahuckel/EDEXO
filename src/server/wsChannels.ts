@@ -37,6 +37,8 @@ const HUD_KEYS = [
   // The neutron route being flown and the FSD's health: the Next jump section's lines (plan 8.5).
   "neutronLive",
   "fsdHealth",
+  // What the hold makes, for "⚗ 3 Basic (you can make 1)" on that line (review 1.2.16).
+  "jumponium",
   "dScanBodies",
   "liveShipFuelRange",
   "organicDataValueCredits",

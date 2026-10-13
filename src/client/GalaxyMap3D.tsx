@@ -158,6 +158,8 @@ export function GalaxyMap3D() {
   const [neutronLine, setNeutronLine] = useState<{ x: number; y: number; z: number }[]>([]);
   // The Jumponium tab's results (1.2.16), drawn while it is open.
   const [jumpRows, setJumpRows] = useState<JumpRow[]>([]);
+  // The picked one is kept apart, so its card stays when the list changes or the tab closes (review 1.2.16).
+  const [jumpPicked, setJumpPicked] = useState<JumpRow | null>(null);
   const jumpById = useMemo(() => new Map(jumpRows.map((r) => [r.id, r])), [jumpRows]);
   const expByKey = useMemo(() => new Map((expField?.boxels ?? []).map((b) => [b.key, b])), [expField]);
   const [mine, setMine] = useState<Map<string, MineRow>>(new Map());
@@ -1321,7 +1323,7 @@ export function GalaxyMap3D() {
     if (selection.layer === "you") return <MySystemRecord addr={selection.id} />;
     if (selection.layer === "plan") return <IndexRecord ordinal={Number(selection.id)} heading />;
     if (selection.layer === "jumponium") {
-      const r = jumpById.get(selection.id);
+      const r = jumpById.get(selection.id) ?? (jumpPicked?.id === selection.id ? jumpPicked : null);
       return r ? (
         <div>
           <h2 className="g3d-panel__name">{r.body}</h2>
@@ -1870,7 +1872,9 @@ export function GalaxyMap3D() {
       {drawer === "jumponium" ? (
         <JumponiumDrawer
           onRows={setJumpRows}
+          shipKey={route?.position ? `${Math.round(route.position.x)},${Math.round(route.position.y)},${Math.round(route.position.z)}` : ""}
           onPick={(r) => {
+            setJumpPicked(r);
             const at = { x: r.x, y: r.y, z: r.z };
             engine.current?.flyTo(at, 300);
             engine.current?.select({ kind: "marker", layer: "jumponium", id: r.id, ...at });

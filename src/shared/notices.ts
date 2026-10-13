@@ -165,7 +165,9 @@ function mergeJumponiumPrefs(prevRaw: JumponiumNotifyPrefsDTO, raw: unknown): Ju
   // A shape from before (1.2.16 test builds: `mode`) is not carried over: off by default means off.
   const d = DEFAULT_NOTIFY_PREFS.jumponium;
   const prev = typeof prevRaw?.on === "boolean" && prevRaw.tiers ? prevRaw : d;
-  const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const r0 = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  // The old shape (`mode`) as a whole is dropped, its target too (review 1.2.16).
+  const r = "mode" in r0 && !("on" in r0) && !("tiers" in r0) ? {} : r0;
   const bool = (v: unknown, cur: boolean) => (typeof v === "boolean" ? v : cur);
   const tr = r.tiers && typeof r.tiers === "object" ? (r.tiers as Record<string, unknown>) : {};
   const t = typeof r.target === "number" && Number.isFinite(r.target) ? Math.round(r.target) : prev.target;

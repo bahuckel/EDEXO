@@ -4,7 +4,7 @@
  * nearest bodies rich in the elements picked — the commander's own scans first-hand, the rest from the galaxy file
  * (the top 1 % of landable bodies for an element, from Spansh's dump) — drawn on the map while the tab is open.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { JUMP_ELEMENTS, jumpElement, type JumpElement, type JumponiumDTO } from "@shared/jumponium";
 import { fmtLyAway } from "@shared/format";
 import { isBool, isNum, isStrArr, usePersistedState } from "../usePersistedState";
@@ -51,9 +51,12 @@ const pctLabel = (v: number) => (v >= 10 ? v.toFixed(1) : v.toFixed(2));
 export function JumponiumDrawer({
   onRows,
   onPick,
+  shipKey,
 }: {
   onRows: (rows: JumpRow[]) => void;
   onPick: (r: JumpRow) => void;
+  /** Changes when the ship jumps, so the list is asked again from where it is (review 1.2.16). */
+  shipKey: string;
 }) {
   const [els, setEls] = usePersistedState<string[]>("galaxy.jump.els", [], isStrArr);
   const [all, setAll] = usePersistedState("galaxy.jump.all", false, isBool);
@@ -72,15 +75,29 @@ export function JumponiumDrawer({
     if (all) p.set("all", "1");
     if (maxG > 0) p.set("maxG", String(maxG));
     if (maxLs > 0) p.set("maxLs", String(maxLs));
+    // Own scans only on the server: filtered here, 150 nearer galaxy bodies could crowd them out (review 1.2.16).
+    if (ownOnly) p.set("own", "1");
     return p.toString();
-  }, [els, all, level, maxG, maxLs, range]);
+  }, [els, all, level, maxG, maxLs, range, ownOnly]);
 
   useEffect(() => {
     let alive = true;
     setBusy(true);
     const t = window.setTimeout(() => {
       void fetch(`/api/jumponium/near?${query}`)
-        .then(async (r) => (await r.json()) as NearReply)
+        .then(async (r) => {
+          const j = (await r.json()) as Partial<NearReply> & { error?: string };
+          // An error answer (no position yet, an unreadable file) is said in the drawer (review 1.2.16: it crashed).
+          return r.ok && Array.isArray(j.bodies)
+            ? (j as NearReply)
+            : {
+                bodies: [],
+                galaxyFile: true,
+                ownScanned: 0,
+                stock: null,
+                error: j.error ?? `Failed (${r.status})`,
+              };
+        })
         .then((j) => {
           if (alive) setReply(j);
         })
@@ -96,9 +113,9 @@ export function JumponiumDrawer({
       alive = false;
       window.clearTimeout(t);
     };
-  }, [query, downloading]);
+  }, [query, downloading, shipKey]);
 
-  const rows = useMemo(() => (reply?.bodies ?? []).filter((b) => !ownOnly || b.own), [reply, ownOnly]);
+  const rows = useMemo(() => reply?.bodies ?? [], [reply]);
   useEffect(() => onRows(rows), [rows, onRows]);
   useEffect(() => () => onRows([]), [onRows]);
 
@@ -108,24 +125,43 @@ export function JumponiumDrawer({
   const stock = reply?.stock ?? null;
   const short = new Set(stock?.known ? stock.tiers.flatMap((t) => t.short.map((s) => s.key)) : []);
 
+  const mounted = useRef(true);
+  useEffect(
+    () => () => {
+      mounted.current = false;
+    },
+    [],
+  );
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const download = async () => {
     setDownloading(true);
+    setDownloadError(null);
     try {
-      await fetch("/api/galaxy/index/download", {
+      const r = await fetch("/api/galaxy/index/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ extrasOnly: true }),
       });
-      // The combined download runs on the server; ask again until the file answers.
-      for (let i = 0; i < 120; i++) {
-        await new Promise((r) => setTimeout(r, 2000));
+      if (!r.ok) throw new Error(`Download failed (${r.status})`);
+      // The combined download runs on the server (stations and neutron stars first when they are due): follow it
+      // while it is busy, and stop on its error or when the tab closes (review 1.2.16).
+      for (;;) {
+        await new Promise((res) => setTimeout(res, 2000));
+        if (!mounted.current) return;
         const st = (await (await fetch("/api/galaxy/index")).json()) as {
-          extras?: { jumponium?: { present: boolean; downloading: unknown } };
+          busy?: boolean;
+          extras?: { jumponium?: { present: boolean; downloading: unknown; error: string | null } };
         };
-        if (st.extras?.jumponium?.present && !st.extras.jumponium.downloading) break;
+        const jp = st.extras?.jumponium;
+        if (jp?.error) throw new Error(jp.error);
+        if (jp?.present && !jp.downloading && !st.busy) break;
+        if (!st.busy && !jp?.downloading)
+          throw new Error("The download stopped before the jumponium file came.");
       }
+    } catch (e) {
+      if (mounted.current) setDownloadError(e instanceof Error ? e.message : String(e));
     } finally {
-      setDownloading(false);
+      if (mounted.current) setDownloading(false);
     }
   };
 
@@ -257,7 +293,8 @@ export function JumponiumDrawer({
           </div>
         </div>
 
-        {reply && !reply.galaxyFile ? (
+        {downloadError ? <p className="fdb-empty">{downloadError}</p> : null}
+        {reply && !reply.galaxyFile && !reply.error ? (
           <div className="carriers-fetch">
             <button
               type="button"

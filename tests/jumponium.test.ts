@@ -175,7 +175,11 @@ describe("jumponium notices (1.2.16)", () => {
     currentSystem: () => ({ name: SYS, address: ADDR }),
     rawStock: () => stock,
   });
-  const scan = (bodyId: number, materials: { Name: string; Percent: number }[], extra: Record<string, unknown> = {}) => ({
+  const scan = (
+    bodyId: number,
+    materials: { Name: string; Percent: number }[],
+    extra: Record<string, unknown> = {},
+  ) => ({
     timestamp: "2026-10-13T12:00:00Z",
     event: "Scan",
     ScanType: "Detailed",
@@ -202,7 +206,15 @@ describe("jumponium notices (1.2.16)", () => {
   it("announces a rich element he is short of, with gravity, distance and what is aboard", () => {
     const n = createNoticesService({ filePath: null });
     on(n);
-    expect(n.observe(scan(3, [{ Name: "polonium", Percent: 1.12 }, { Name: "germanium", Percent: 4.0 }]), ctx({ polonium: 4 }))).toBe(true);
+    expect(
+      n.observe(
+        scan(3, [
+          { Name: "polonium", Percent: 1.12 },
+          { Name: "germanium", Percent: 4.0 },
+        ]),
+        ctx({ polonium: 4 }),
+      ),
+    ).toBe(true);
     const [item] = n.list();
     expect(item).toMatchObject({ kind: "jumponium", title: "Jumponium (Premium): Po 1.12 %", body: "3" });
     expect(item!.text).toBe(`3 in ${SYS} — 0.21 g, 1,120 ls · aboard Po 4`);
@@ -227,12 +239,30 @@ describe("jumponium notices (1.2.16)", () => {
     expect(n.observe(scan(10, rich), ctx(null))).toBe(true);
   });
 
+  it("never for carbon, and never for an element whose hold is full whatever the number set (review 1.2.16)", () => {
+    const n = createNoticesService({ filePath: null });
+    on(n, { target: 300 });
+    expect(n.observe(scan(11, [{ Name: "carbon", Percent: 28 }]), ctx({}))).toBe(false);
+    // Polonium caps at 150: a full hold is not short of it, even under a target of 300.
+    expect(n.observe(scan(12, [{ Name: "polonium", Percent: 1.12 }]), ctx({ polonium: 150 }))).toBe(false);
+    expect(n.observe(scan(13, [{ Name: "polonium", Percent: 1.12 }]), ctx({ polonium: 149 }))).toBe(true);
+  });
+
   it("keeps the prefs in range, and does not carry a test build's shape over", () => {
     const d = DEFAULT_NOTIFY_PREFS.jumponium;
     expect(d.on).toBe(false);
-    expect(mergeNotifyPrefs(DEFAULT_NOTIFY_PREFS, { jumponium: { on: "yes", target: 9999 } }).jumponium).toEqual({ ...d, target: 300 });
-    const old = { ...DEFAULT_NOTIFY_PREFS, jumponium: { mode: "short", target: 30 } } as unknown as typeof DEFAULT_NOTIFY_PREFS;
+    expect(
+      mergeNotifyPrefs(DEFAULT_NOTIFY_PREFS, { jumponium: { on: "yes", target: 9999 } }).jumponium,
+    ).toEqual({ ...d, target: 300 });
+    const old = {
+      ...DEFAULT_NOTIFY_PREFS,
+      jumponium: { mode: "short", target: 30 },
+    } as unknown as typeof DEFAULT_NOTIFY_PREFS;
     expect(mergeNotifyPrefs(old, {}).jumponium).toEqual(d);
+    // An old shape sent as an update keeps nothing either, not even its target.
+    expect(
+      mergeNotifyPrefs(DEFAULT_NOTIFY_PREFS, { jumponium: { mode: "always", target: 99 } }).jumponium,
+    ).toEqual(d);
   });
 });
 
@@ -268,7 +298,15 @@ describe("the galaxy file", () => {
       off += 1 + b.length;
       return at;
     };
-    const rec = (rel: [number, number, number], bodyId: number, g: number, ls: number, el: number[], name: number, id64: bigint) => {
+    const rec = (
+      rel: [number, number, number],
+      bodyId: number,
+      g: number,
+      ls: number,
+      el: number[],
+      name: number,
+      id64: bigint,
+    ) => {
       const r = Buffer.alloc(32);
       r.writeUInt16LE(rel[0], 0);
       r.writeUInt16LE(rel[1], 2);
@@ -290,8 +328,24 @@ describe("the galaxy file", () => {
     const cx = -49985 + 39 * 1280,
       cy = -40985 + 32 * 1280,
       cz = -24105 + 18 * 1280;
-    const r1 = rec([(10 - cx) * 32, (0 - cy) * 32, (0 - cz) * 32], 5, 210, 112, [0, 0, 0, 0, 0, 60, 56], nA, 1n);
-    const r2 = rec([(50 - cx) * 32, (0 - cy) * 32, (0 - cz) * 32], 7, 900, 5, [200, 0, 0, 0, 0, 0, 0], nB, 2n);
+    const r1 = rec(
+      [(10 - cx) * 32, (0 - cy) * 32, (0 - cz) * 32],
+      5,
+      210,
+      112,
+      [0, 0, 0, 0, 0, 60, 56],
+      nA,
+      1n,
+    );
+    const r2 = rec(
+      [(50 - cx) * 32, (0 - cy) * 32, (0 - cz) * 32],
+      7,
+      900,
+      5,
+      [200, 0, 0, 0, 0, 0, 0],
+      nB,
+      2n,
+    );
     const cells = Buffer.alloc(4 + 14);
     cells.writeUInt32LE(1, 0);
     cells.writeUInt16LE(39, 4);
@@ -344,7 +398,21 @@ describe("the neutron planner's gap hint", () => {
 
   it("on a route: after a supercharge only the normal jumps count", () => {
     const hop = (x: number, jumps: number, boosted: number) =>
-      ({ name: "n", x, y: 0, z: 0, kind: "neutron", jumps, boosted, distanceLy: 0, refuel: false, scoopOnWay: false, scoopLs: null, jumpsLeft: 5, fsdHealth: null }) as const;
+      ({
+        name: "n",
+        x,
+        y: 0,
+        z: 0,
+        kind: "neutron",
+        jumps,
+        boosted,
+        distanceLy: 0,
+        refuel: false,
+        scoopOnWay: false,
+        scoopLs: null,
+        jumpsLeft: 5,
+        fsdHealth: null,
+      }) as const;
     // R 50, boost 4: 200 supercharged + 110 normal (3 jumps, one fewer with a Basic) = 4 jumps for 310 ly.
     const out = routeInjections([hop(0, 0, 0), hop(310, 4, 1), hop(350, 1, 1)], 50, 4);
     expect(out[0]).toEqual([]);
@@ -355,7 +423,21 @@ describe("the neutron planner's gap hint", () => {
 
 describe("Use Jumponium on a neutron route", () => {
   const hop = (x: number, jumps: number, boosted: number) =>
-    ({ name: `h${x}`, x, y: 0, z: 0, kind: "neutron", jumps, boosted, distanceLy: 0, refuel: false, scoopOnWay: false, scoopLs: null, jumpsLeft: 5, fsdHealth: null }) as const;
+    ({
+      name: `h${x}`,
+      x,
+      y: 0,
+      z: 0,
+      kind: "neutron",
+      jumps,
+      boosted,
+      distanceLy: 0,
+      refuel: false,
+      scoopOnWay: false,
+      scoopLs: null,
+      jumpsLeft: 5,
+      fsdHealth: null,
+    }) as const;
   const route = (hops: ReturnType<typeof hop>[]) => ({
     hops: [...hops],
     jumps: hops.reduce((a, h) => a + h.jumps, 0),
@@ -371,7 +453,12 @@ describe("Use Jumponium on a neutron route", () => {
     const r = route([hop(0, 0, 0), hop(110, 3, 0), hop(255, 3, 0), hop(275, 1, 0)]);
     const { route: out, plan } = applyJumponium(r, 50, 4);
     expect(out.jumps).toBe(r.jumps - 2);
-    expect(out.hops.map((h) => h.inject)).toEqual([null, { tier: "basic", count: 1 }, { tier: "premium", count: 1 }, null]);
+    expect(out.hops.map((h) => h.inject)).toEqual([
+      null,
+      { tier: "basic", count: 1 },
+      { tier: "premium", count: 1 },
+      null,
+    ]);
     expect(out.hops[1]!.jumps).toBe(2);
     expect(plan).toEqual({
       saved: 2,
@@ -388,7 +475,11 @@ describe("Use Jumponium on a neutron route", () => {
     ])!;
     expect(hops.map((h) => h.inject)).toEqual([null, { tier: "basic", count: 1 }, null]);
     const live = createNeutronLive({ filePath: null, deliver: () => undefined });
-    live.start(hops, { name: "A", pos: null }, { targets: [{ name: "C", x: 120, y: 0, z: 0 }], rangeLy: 50, useJumponium: true });
+    live.start(
+      hops,
+      { name: "A", pos: null },
+      { targets: [{ name: "C", x: 120, y: 0, z: 0 }], rangeLy: 50, useJumponium: true },
+    );
     expect(live.view({ name: "A", pos: null })?.nextInject).toEqual({ tier: "basic", count: 1 });
     expect(live.remaining()?.useJumponium).toBe(true);
   });

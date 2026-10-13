@@ -181,6 +181,16 @@ export function renderBoxelCopied(d, el) {
 /* "Use Jumponium" (1.2.16): the FSD injections planned for the stretch to the next stop, one per normal jump. */
 var INJECT_NAME = { basic: "Basic", standard: "Standard", premium: "Premium" };
 
+/* Planned whatever is aboard: when the hold makes fewer, say how many it makes (review 1.2.16). */
+function injectStock(d, inj) {
+  var j = d.jumponium;
+  if (!j || !j.known || !j.tiers) return "";
+  var t = j.tiers.filter(function (x) {
+    return x.tier === inj.tier;
+  })[0];
+  return t && t.count < inj.count ? " (you can make " + t.count + ")" : "";
+}
+
 export function renderNeutronLive(d, el) {
   if (!el) return;
   var n = d.neutronLive;
@@ -215,7 +225,7 @@ export function renderNeutronLive(d, el) {
       esc(n.next) +
       (n.nextJumps > 1 ? " · " + n.nextJumps + " jumps" : "") +
       (n.scoopOnWay ? " · scoop on the way" : "") +
-      (n.nextInject ? " · ⚗ " + n.nextInject.count + " " + INJECT_NAME[n.nextInject.tier] : "") +
+      (n.nextInject ? " · ⚗ " + n.nextInject.count + " " + INJECT_NAME[n.nextInject.tier] + injectStock(d, n.nextInject) : "") +
       "</span>"
     : "";
   el.className = "jump__neutron" + (todo.length ? " jump__neutron--act" : "");

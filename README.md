@@ -235,7 +235,8 @@ one panel, in the original look, a title bar or an Elite-style frame; any colour
 - **Notify me**: notices for notable bodies, Notable Stellar Phenomena, nearby carriers with the
   services you pick, achievements, a scanned body rich in a jumponium material you are short of, with or
   without sound.
-- **Colour scheme** for the app and the HUD; **key binds** in one place, live only while Elite or the
+- **Colour scheme** for the app and the HUD (a dark colour is lightened until it reads, and the text can take
+  a colour of its own); **key binds** in one place, live only while Elite or the
   app is in front; **snapshot images** that render what you see without taking a screenshot of your
   screen; **About this install** for a bug report with paths masked.
 - **Opt-ins**, each off by default: EDSM look-ups and journal upload (your own API key), Canonn, EDDN.

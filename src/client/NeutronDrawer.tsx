@@ -249,7 +249,9 @@ export function NeutronDrawer({
       return next;
     });
 
+  const planSeq = useRef(0);
   const plan = async (): Promise<RouteDTO | null> => {
+    const seq = ++planSeq.current;
     setBusy(true);
     setError(null);
     try {
@@ -265,16 +267,18 @@ export function NeutronDrawer({
         }),
       });
       const j = (await r.json()) as RouteDTO & { error?: string };
+      // A newer plan was asked for meanwhile (Use Jumponium flipped twice): this answer is stale (review 1.2.16).
+      if (seq !== planSeq.current) return null;
       if (!r.ok) throw new Error(j.error ?? `Plan failed (${r.status})`);
       setRoute(j);
       if (optimise) setStops(from ? j.waypoints.slice(1) : j.waypoints);
       onRoute(j.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
       return j;
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (seq === planSeq.current) setError(e instanceof Error ? e.message : String(e));
       return null;
     } finally {
-      setBusy(false);
+      if (seq === planSeq.current) setBusy(false);
     }
   };
   // Use Jumponium flipped with a route on screen: plan it again with (or without) the injections.
@@ -473,6 +477,7 @@ export function NeutronDrawer({
                 type="checkbox"
                 className="g3d-row__box"
                 checked={useJump}
+                disabled={busy}
                 onChange={(e) => setUseJump(e.target.checked)}
               />
               <span className="g3d-row__label">

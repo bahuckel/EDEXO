@@ -133,7 +133,7 @@ export function setAppTheme(choice: AppThemeChoice): void {
 
 /** The accent for the backdrop, or null for the default (the backdrop keeps its own warmer orange). */
 export function backdropAccentRgb(): string | null {
-  const t = resolveAppTheme(readAppTheme());
+  const t = resolveAppTheme(readAppTheme(), { readable: readAppContrast().readable });
   return t.key === DEFAULT_APP_THEME.key ? null : t.rgb;
 }
 
