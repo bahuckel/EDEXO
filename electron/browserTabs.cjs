@@ -25,6 +25,51 @@ const PARTITION = "persist:edexo-browser";
 const MAX_TABS = 30;
 /** A Browser tab unmounted (closed, or being moved to another window): pages close unless it comes back by then. */
 const DETACH_GRACE_MS = 4000;
+/**
+ * The script world the page's class names are read in: its own JavaScript world, which the page cannot see or
+ * reach (the DOM is shared, the scripts are not), so browsed pages still get no preload.
+ */
+const COSMETIC_WORLD = 1077;
+/** Looked again after the page loaded, for what it adds later (lazy ad slots). */
+const COSMETIC_PASSES_MS = [1500, 4000, 10000];
+/*
+  Every reload here skips the cache (owner, 2026-10-13: blocking switched on or off showed only in a new tab). A
+  normal reload takes the page's scripts and images from the page process's own memory cache, which never reaches
+  webRequest, so the blocker was not asked again; a new tab has a new process and an empty cache.
+*/
+/** Requests of these kinds, once blocked, leave a box on the page: it is collapsed. */
+const COLLAPSE_TYPES = new Set(["subFrame", "image", "object", "media"]);
+
+/**
+ * Reads the page's class names, ids and links (for the lists' general hiding rules, which match on them), and
+ * collapses the frames and images whose request was blocked, as uBlock does: the element goes, not only its
+ * content (owner, 2026-10-13: "it only removes its contents").
+ */
+function cosmeticScript(blocked) {
+  return `(() => {
+  const blocked = new Set(${JSON.stringify(blocked)});
+  let collapsed = 0;
+  for (const el of document.querySelectorAll("iframe[src], img[src], embed[src], object[data], video[src]")) {
+    const src = el.src || el.data;
+    if (src && blocked.has(src)) {
+      el.style.setProperty("display", "none", "important");
+      collapsed++;
+    }
+  }
+  const classes = new Set(), ids = new Set(), hrefs = new Set();
+  const all = document.querySelectorAll("[class], [id], a[href]");
+  for (let k = 0; k < all.length && k < 30000; k++) {
+    const el = all[k];
+    if (el.id) ids.add(el.id);
+    if (el.classList) for (const c of el.classList) classes.add(c);
+    if (el.tagName === "A") {
+      const h = el.getAttribute("href");
+      if (h) hrefs.add(h);
+    }
+  }
+  return { classes: [...classes].slice(0, 8000), ids: [...ids].slice(0, 4000), hrefs: [...hrefs].slice(0, 4000), collapsed };
+})()`;
+}
 
 /** Hosts plain HTTP is never upgraded for: this machine and the home network. */
 function isLocalHost(host) {
@@ -103,7 +148,13 @@ function createBrowserTabs(o) {
   function getSession() {
     if (ses) return ses;
     ses = session.fromPartition(PARTITION);
-    ses.setUserAgent(chromeUserAgent());
+    /*
+      A plain Chrome user agent, as Electron's default for every page rather than an override on this session: an
+      override leaves the page's client hints (navigator.userAgentData) without brands, which Cloudflare's "verify
+      you are human" takes for a bot (owner, 2026-10-13: EDSM would not let him in past it). The app's own windows
+      get it too, which changes nothing for them.
+    */
+    app.userAgentFallback = chromeUserAgent();
     ses.setSpellCheckerEnabled(false);
     ses.setPermissionRequestHandler((_wc, permission, cb) => cb(permission === "fullscreen"));
     ses.setPermissionCheckHandler((_wc, permission) => permission === "fullscreen");
@@ -126,6 +177,8 @@ function createBrowserTabs(o) {
         const d = o.blocker.decide(details, page);
         if (d) {
           tab.blocked++;
+          if (d.cancel && COLLAPSE_TYPES.has(details.resourceType) && tab.collapse.size < 1000)
+            tab.collapse.add(details.url);
           changed();
           return cb(d);
         }
@@ -268,11 +321,15 @@ function createBrowserTabs(o) {
     wc.on("did-stop-loading", () => {
       t.loading = false;
       changed();
+      cosmeticPasses(t);
     });
     wc.on("did-start-navigation", (d) => {
       if (d.isMainFrame && !d.isSameDocument) {
         t.blocked = 0;
         t.error = null;
+        t.collapse.clear();
+        t.seen = { classes: new Set(), ids: new Set(), hrefs: new Set() };
+        for (const x of t.passTimers.splice(0)) clearTimeout(x);
       }
     });
     wc.on("did-navigate", (_e, url) => {
@@ -310,6 +367,7 @@ function createBrowserTabs(o) {
       if (!o.prefs.site(domainOf(url) ?? "").blocking) return;
       const css = o.blocker.cosmetics(url);
       if (css) void wc.insertCSS(css, { cssOrigin: "user" }).catch(() => {});
+      void cosmeticPass(t);
     });
     wc.on("render-process-gone", (_e, d) => {
       t.error = { code: 0, text: `The page stopped (${d.reason}).`, url: t.url, httpFallback: null };
@@ -324,7 +382,7 @@ function createBrowserTabs(o) {
       if (ctrl && k === "t") openTab(null);
       else if (ctrl && k === "w") closeTab(t.id);
       else if (ctrl && k === "l") send("focusAddress");
-      else if (k === "f5" || (ctrl && k === "r")) wc.reload();
+      else if (k === "f5" || (ctrl && k === "r")) wc.reloadIgnoringCache();
       else if (input.alt && k === "arrowleft") wc.navigationHistory.goBack();
       else if (input.alt && k === "arrowright") wc.navigationHistory.goForward();
       else if (ctrl && k === "tab") stepTab(input.shift ? -1 : 1);
@@ -357,11 +415,48 @@ function createBrowserTabs(o) {
           enabled: wc.navigationHistory.canGoForward(),
           click: () => wc.navigationHistory.goForward(),
         },
-        { label: "Reload", click: () => wc.reload() },
+        { label: "Reload", click: () => wc.reloadIgnoringCache() },
       );
       Menu.buildFromTemplate(items).popup({ window: host && !host.isDestroyed() ? host : undefined });
     });
     return view;
+  }
+
+  /*
+    The lists' general hiding rules (`##.ad-slot`, `###div-gpt-ad`, …) match on the page's own class names and ids,
+    so they are asked for with those, a few times as the page fills; each new set of rules goes in as a user
+    stylesheet (`display: none !important`, above the page's own styles), so the element leaves the layout.
+  */
+  async function cosmeticPass(t) {
+    const wc = t.view?.webContents;
+    if (!wc || wc.isDestroyed()) return;
+    const url = wc.getURL();
+    if (!httpUrl(url) || !o.prefs.site(domainOf(url) ?? "").blocking) return;
+    let r;
+    try {
+      r = await wc.executeJavaScriptInIsolatedWorld(COSMETIC_WORLD, [
+        { code: cosmeticScript([...t.collapse]) },
+      ]);
+    } catch {
+      return;
+    }
+    if (!r || wc.isDestroyed() || wc.getURL() !== url) return;
+    const fresh = (list, seen) =>
+      (Array.isArray(list) ? list : []).filter((v) => typeof v === "string" && !seen.has(v));
+    const classes = fresh(r.classes, t.seen.classes);
+    const ids = fresh(r.ids, t.seen.ids);
+    const hrefs = fresh(r.hrefs, t.seen.hrefs);
+    for (const v of classes) t.seen.classes.add(v);
+    for (const v of ids) t.seen.ids.add(v);
+    for (const v of hrefs) t.seen.hrefs.add(v);
+    if (!classes.length && !ids.length && !hrefs.length) return;
+    const css = o.blocker.domCosmetics(url, { classes, ids, hrefs });
+    if (css) await wc.insertCSS(css, { cssOrigin: "user" }).catch(() => {});
+  }
+  function cosmeticPasses(t) {
+    for (const x of t.passTimers.splice(0)) clearTimeout(x);
+    void cosmeticPass(t);
+    for (const ms of COSMETIC_PASSES_MS) t.passTimers.push(setTimeout(() => void cosmeticPass(t), ms));
   }
 
   function send(type) {
@@ -420,6 +515,9 @@ function createBrowserTabs(o) {
     if (tabs.size >= MAX_TABS) return null;
     const t = {
       id: nextId++,
+      collapse: new Set(),
+      seen: { classes: new Set(), ids: new Set(), hrefs: new Set() },
+      passTimers: [],
       view: null,
       title: "",
       url: "",
@@ -442,6 +540,7 @@ function createBrowserTabs(o) {
   function closeTab(id) {
     const t = tabs.get(id);
     if (!t) return;
+    for (const x of t.passTimers.splice(0)) clearTimeout(x);
     if (t.view) {
       if (host && !host.isDestroyed()) host.contentView.removeChildView(t.view);
       t.view.webContents.close();
@@ -467,6 +566,7 @@ function createBrowserTabs(o) {
   /** Every page closed and the engine let go (the Browser tab closed). */
   function closeAll() {
     for (const t of tabs.values()) {
+      for (const x of t.passTimers.splice(0)) clearTimeout(x);
       if (!t.view) continue;
       if (host && !host.isDestroyed()) host.contentView.removeChildView(t.view);
       if (!t.view.webContents.isDestroyed()) t.view.webContents.close();
@@ -564,7 +664,7 @@ function createBrowserTabs(o) {
         if (t?.view) t.view.webContents.navigationHistory.goForward();
         return { ok: true };
       case "reload":
-        if (t?.view) t.view.webContents.reload();
+        if (t?.view) t.view.webContents.reloadIgnoringCache();
         return { ok: true };
       case "halt":
         if (t?.view) t.view.webContents.stop();
@@ -588,7 +688,7 @@ function createBrowserTabs(o) {
         const dom = t?.url ? domainOf(t.url) : null;
         if (!dom) return { error: "No site." };
         o.prefs.setBlocking(dom, a?.on !== false);
-        t.view?.webContents.reload();
+        t.view?.webContents.reloadIgnoringCache();
         changed();
         return { ok: true };
       }
@@ -614,7 +714,7 @@ function createBrowserTabs(o) {
         await getSession()
           .clearData({ origins: [`https://${dom}`, `https://www.${dom}`, ...before] })
           .catch(() => {});
-        t.view?.webContents.reload();
+        t.view?.webContents.reloadIgnoringCache();
         changed();
         return { ok: true };
       }
@@ -623,7 +723,7 @@ function createBrowserTabs(o) {
         await getSession()
           .clearData()
           .catch(() => {});
-        for (const x of tabs.values()) x.view?.webContents.reload();
+        for (const x of tabs.values()) x.view?.webContents.reloadIgnoringCache();
         changed();
         return { ok: true };
       case "addLink":
@@ -649,4 +749,4 @@ function createBrowserTabs(o) {
   };
 }
 
-module.exports = { createBrowserTabs, resolveTyped, isLocalHost, chromeUserAgent, PARTITION };
+module.exports = { createBrowserTabs, resolveTyped, isLocalHost, chromeUserAgent, cosmeticScript, PARTITION };

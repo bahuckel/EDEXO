@@ -10,14 +10,16 @@ import { createRequire } from "node:module";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { createBrowserTabs, resolveTyped, isLocalHost } = require("../electron/browserTabs.cjs") as {
-  createBrowserTabs: (o: unknown) => {
-    handle: (e: { sender: FakeContents }, a: unknown) => Promise<Record<string, unknown>>;
-    isBrowserContents: (wc: unknown) => boolean;
+const { createBrowserTabs, resolveTyped, isLocalHost, cosmeticScript } =
+  require("../electron/browserTabs.cjs") as {
+    cosmeticScript: (blocked: string[]) => string;
+    createBrowserTabs: (o: unknown) => {
+      handle: (e: { sender: FakeContents }, a: unknown) => Promise<Record<string, unknown>>;
+      isBrowserContents: (wc: unknown) => boolean;
+    };
+    resolveTyped: (t: string, s: (q: string) => string) => string | null;
+    isLocalHost: (h: string) => boolean;
   };
-  resolveTyped: (t: string, s: (q: string) => string) => string | null;
-  isLocalHost: (h: string) => boolean;
-};
 const { createBrowserPrefs } = require("../electron/browserPrefs.cjs") as {
   createBrowserPrefs: (o: { dir: string }) => {
     site(d: string): { remember: boolean; blocking: boolean; origins: string[] };
@@ -71,10 +73,24 @@ class FakeContents {
   isDestroyed() {
     return this.closed;
   }
-  insertCSS() {
+  css: string[] = [];
+  isolated: { world: number; code: string }[] = [];
+  dom = { classes: ["ad-slot", "article"], ids: ["main"], hrefs: [], collapsed: 0 };
+  insertCSS(css: string) {
+    this.css.push(css);
     return Promise.resolve("");
   }
-  reload() {}
+  executeJavaScriptInIsolatedWorld(world: number, scripts: { code: string }[]) {
+    this.isolated.push({ world, code: scripts[0]!.code });
+    return Promise.resolve(this.dom);
+  }
+  reloads = 0;
+  reload() {
+    throw new Error("a plain reload keeps the page process's memory cache, which the blocker never sees");
+  }
+  reloadIgnoringCache() {
+    this.reloads++;
+  }
   stop() {}
 }
 class FakeView {
@@ -169,6 +185,10 @@ afterEach(() => {
 
 function setup() {
   const ses = fakeSession();
+  const fakeApp = {
+    getPath: () => dir,
+    userAgentFallback: "Mozilla/5.0 edexo-compare/1.2.16 Electron/42.0.0",
+  };
   const appWin = new FakeWindow();
   const prefs = createBrowserPrefs({ dir });
   const decided: string[] = [];
@@ -188,6 +208,8 @@ function setup() {
       /ads\.example/.test(d.url) ? { cancel: true } : null
     ),
     cosmetics: () => "",
+    domCosmetics: (_u: string, d: { classes: string[] }) =>
+      d.classes.includes("ad-slot") ? ".ad-slot { display: none !important; }" : "",
     release: vi.fn(),
   };
   const tabs = createBrowserTabs({
@@ -197,14 +219,14 @@ function setup() {
       Menu: { buildFromTemplate: () => ({ popup() {} }) },
       clipboard: { writeText() {} },
       session: { fromPartition: () => ses },
-      app: { getPath: () => dir },
+      app: fakeApp,
     },
     prefs,
     blocker,
     isAppWindow: (wc: unknown) => wc === appWin.webContents,
   });
   const call = (a: Record<string, unknown>) => tabs.handle({ sender: appWin.webContents }, a);
-  return { ses, appWin, prefs, blocker, decided, tabs, call };
+  return { ses, appWin, prefs, blocker, decided, tabs, call, fakeApp };
 }
 
 describe("the address bar", () => {
@@ -250,8 +272,10 @@ describe("a browsed page", () => {
     });
     expect(p.preload).toBeUndefined();
     expect(t.appWin.children).toHaveLength(1);
-    expect(t.ses.ua).toMatch(/^Mozilla\/5\.0 .* Chrome\/\d+\.0\.0\.0 Safari\/537\.36$/);
-    expect(t.ses.ua).not.toMatch(/Electron|edexo/i);
+    // The default user agent, not a session override (an override leaves the client hints without brands).
+    expect(t.ses.ua).toBe("");
+    expect(t.fakeApp.userAgentFallback).toMatch(/^Mozilla\/5\.0 .* Chrome\/\d+\.0\.0\.0 Safari\/537\.36$/);
+    expect(t.fakeApp.userAgentFallback).not.toMatch(/Electron|edexo/i);
   });
 
   it("opens a new window as a tab, and goes nowhere but http(s)", async () => {
@@ -316,7 +340,11 @@ describe("the browser's session", () => {
       { startPage: true },
       { blocked: 1, blocking: true },
     ]);
-    t.prefs.setBlocking("edsm.net", false);
+    // Switched off from the toolbar: the page loads again past every cache, so the change shows at once.
+    await t.call({ op: "siteBlocking", id: 2, on: false });
+    expect(wc.reloads).toBe(1);
+    await t.call({ op: "reload", id: 2 });
+    expect(wc.reloads).toBe(2);
     t.decided.length = 0;
     expect(ask((cb) => t.ses.before!(req, cb))).toEqual({});
     expect(t.decided).toEqual([]);
@@ -386,7 +414,7 @@ describe("the toolbar's calls", () => {
 describe("the browser's settings", () => {
   it("keep start-page links that are http(s) only, and the search engine", () => {
     const p = createBrowserPrefs({ dir });
-    expect(p.addLink("Inara", "https://inara.cz")).toBe(true);
+    expect(p.addLink("Canonn", "https://canonn.science")).toBe(true);
     expect(p.addLink("Bad", "javascript:alert(1)")).toBe(false);
     expect(p.addLink("", "https://x.y")).toBe(false);
     expect(
@@ -394,10 +422,74 @@ describe("the browser's settings", () => {
         .links()
         .filter((l) => !l.builtIn)
         .map((l) => l.url),
-    ).toEqual(["https://inara.cz/"]);
+    ).toEqual(["https://canonn.science/"]);
     expect(p.searchUrl("a b")).toBe("https://duckduckgo.com/?q=a%20b");
     expect(p.setEngine("custom", "file:///%s")).toBe(false);
     expect(p.setEngine("custom", "https://search.example/?q=%s")).toBe(true);
     expect(createBrowserPrefs({ dir }).searchUrl("x")).toBe("https://search.example/?q=x");
+  });
+});
+
+describe("hiding what was blocked", () => {
+  it("collapses the frames and images whose request was blocked, and reads the page's class names and ids", async () => {
+    // jsdom has no type declarations here; only the page's document is needed.
+    const { JSDOM } = require("jsdom") as {
+      JSDOM: new (
+        html: string,
+        o: { url: string; runScripts: string },
+      ) => { window: Window & { eval: (code: string) => unknown } };
+    };
+    const dom = new JSDOM(
+      `<div class="ad-slot top"><iframe src="https://ads.example/f.html"></iframe></div>
+       <img src="https://ads.example/b.png"><img id="logo" src="https://site.example/logo.png">
+       <a href="https://shop.example/x">x</a>`,
+      { url: "https://site.example/", runScripts: "outside-only" },
+    );
+    const r = dom.window.eval(
+      cosmeticScript(["https://ads.example/f.html", "https://ads.example/b.png"]),
+    ) as {
+      classes: string[];
+      ids: string[];
+      hrefs: string[];
+      collapsed: number;
+    };
+    expect(r.collapsed).toBe(2);
+    expect(dom.window.document.querySelector("iframe")!.style.getPropertyValue("display")).toBe("none");
+    expect(dom.window.document.querySelector("#logo")!.getAttribute("style")).toBeNull();
+    expect(r.classes).toEqual(expect.arrayContaining(["ad-slot", "top"]));
+    expect(r.ids).toEqual(["logo"]);
+    expect(r.hrefs).toEqual(["https://shop.example/x"]);
+  });
+
+  it("asks for the general rules with the page's names, in its own world, and inserts them as a user stylesheet", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://news.example/" });
+    const wc = FakeView.made[0]!.webContents;
+    // A blocked ad frame: collapsed by the next look at the page.
+    const req = { resourceType: "subFrame", url: "https://ads.example/f.html", webContents: wc };
+    expect(ask((cb) => t.ses.before!(req, cb))).toEqual({ cancel: true });
+    wc.emit("dom-ready");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(wc.isolated[0]!.world).toBeGreaterThan(0);
+    expect(wc.isolated[0]!.code).toContain("https://ads.example/f.html");
+    expect(wc.css).toContain(".ad-slot { display: none !important; }");
+    // Names seen once are not asked for again on the same page.
+    const before = wc.css.length;
+    wc.emit("did-stop-loading");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(wc.css.length).toBe(before);
+  });
+
+  it("leaves a site with blocking off alone", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://news.example/" });
+    t.prefs.setBlocking("news.example", false);
+    const wc = FakeView.made[0]!.webContents;
+    wc.emit("dom-ready");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(wc.isolated).toEqual([]);
+    expect(wc.css).toEqual([]);
   });
 });

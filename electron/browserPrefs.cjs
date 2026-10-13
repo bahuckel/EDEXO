@@ -25,8 +25,9 @@ const DEFAULT_LINKS = [
   { name: "EDSM", url: "https://www.edsm.net" },
   { name: "EDAstro", url: "https://edastro.com" },
   { name: "Spansh", url: "https://spansh.co.uk" },
-  { name: "ED GGG", url: "https://ed-ggg.github.io" },
+  { name: "ED GGG", url: "https://ed-ggg.github.io/edggg/" },
   { name: "ED-DSN", url: "https://ed-dsn.net" },
+  { name: "Inara", url: "https://inara.cz" },
 ];
 
 const MAX_LINKS = 40;

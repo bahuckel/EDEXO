@@ -1,11 +1,17 @@
 /* The EDEXO browser's tab (plan 9, BrowserScreen.tsx): toolbar, start page, gate. The pages are native views laid
    over .ebr-box by the main process. */
+/* The start page shows the app's own backdrop (owner, 2026-10-13: "same as the Main screen, hexagons, animated
+   and all, if enabled there"): the static grid and the animated canvas sit behind every pane (shell.css
+   body::before, .hex-signals); this pane is the one that lets them through. Pages cover it anyway. */
+.tab-pane--screen.tab-pane--browser {
+  background: transparent;
+}
 .ebr {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
 }
 .ebr--gate {
@@ -300,7 +306,9 @@
   flex-direction: column;
   border: 1px solid var(--accent-a25);
   border-radius: var(--r-md);
-  background: var(--accent-a06);
+  /* Over the moving backdrop: dark enough to read, like the app's own panels. */
+  background: rgba(10, 8, 12, 0.78);
+  backdrop-filter: blur(2px);
 }
 .ebr-card:hover {
   border-color: var(--accent-a45);
