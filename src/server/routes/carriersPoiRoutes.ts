@@ -16,6 +16,13 @@ import { summariseStatistics } from "../statistics.js";
 import { statisticsScanProgress } from "../statisticsScan.js";
 
 import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import {
+  downloadStations,
+  loadStationsIndex,
+  probeStationsRelease,
+  stationsStatus,
+} from "../stationsIndex.js";
+import { touchGalaxyMemory } from "../galaxyMemory.js";
 
 export function registerCarriersPoiRoutes(
   app: express.Express,
@@ -24,6 +31,63 @@ export function registerCarriersPoiRoutes(
 ): void {
   app.get("/api/carriers/status", (_req, res) => {
     res.json(readCarrierStatus());
+  });
+
+  /*
+    Stations (plan 7, 1.2.16): an optional download beside the galaxy index (Spansh's station dump, built by
+    docs/perf/build_stations.py), then every question answered locally.
+  */
+  app.get("/api/stations/status", async (_req, res) => {
+    await probeStationsRelease();
+    res.json(stationsStatus());
+  });
+  app.post("/api/stations/download", localOnly, (_req, res) => {
+    void downloadStations(() => opts.scheduleBroadcast?.());
+    res.json({ ok: true, status: stationsStatus() });
+  });
+  app.get("/api/stations/nearest", (req, res) => {
+    touchGalaxyMemory();
+    let index;
+    try {
+      index = loadStationsIndex();
+    } catch (e) {
+      return void res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+    }
+    if (!index) return void res.status(404).json({ error: "No station data yet: download it first." });
+    const q = req.query;
+    const x = Number(q.x);
+    const y = Number(q.y);
+    const z = Number(q.z);
+    const from =
+      q.x !== undefined && [x, y, z].every(Number.isFinite)
+        ? { x, y, z }
+        : (opts.getCommanderPosition?.() ?? null);
+    if (!from)
+      return void res
+        .status(400)
+        .json({ error: "No position: give x, y, z, or fly a jump so the journals have one." });
+    const services = String(q.services ?? "")
+      .split("|")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 32);
+    const pad = String(q.pad ?? "").toUpperCase();
+    const maxLs = Number(q.maxLs);
+    res.json({
+      from,
+      stations: index.nearest({
+        from,
+        services,
+        mode: q.mode === "any" ? "any" : "all",
+        minPad: pad === "L" || pad === "M" || pad === "S" ? pad : "",
+        maxDistanceLs: Number.isFinite(maxLs) && maxLs > 0 ? maxLs : null,
+        settlements: q.settlements === "1",
+        construction: q.construction === "1",
+        limit: Number(q.limit) || 30,
+      }),
+      services: index.meta.services,
+      dump: index.meta.dump ?? null,
+    });
   });
 
   app.post("/api/carriers/fetch", localOnly, async (req, res) => {

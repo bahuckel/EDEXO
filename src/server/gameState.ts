@@ -76,6 +76,7 @@ import { GEOLOGY_KEY, isLegacyPlantKey } from "../shared/achievements.js";
 import { regionForSystem } from "./regionMapData.js";
 import { parseBoxel } from "../shared/boxel.js";
 import { emptyFsdFuel, fsdFuelJump, fsdFuelLoadout, type FsdFuelState } from "../shared/fsdFuel.js";
+import { fsdWearJump, fsdWearLoadout, fsdWearRepair, newFsdWear, type FsdWearState } from "../shared/fsdWear.js";
 import { emptyJumpRange, jumpRangeJump, jumpRangeLoadout, type JumpRangeState } from "../shared/jumpRange.js";
 import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
 import { JOURNAL_MERGE_CACHE_FORMAT } from "./journalMergePayload.js";
@@ -841,6 +842,8 @@ export class GameStateStore {
   jumpRange: JumpRangeState = emptyJumpRange();
   /** The drive's fuel per jump, fitted on the commander's jumps (shared/fsdFuel.ts). */
   fsdFuel: FsdFuelState = emptyFsdFuel();
+  /** The FSD's health from Loadout and its wear per neutron supercharge (shared/fsdWear.ts, plan 8.4). */
+  fsdWear: FsdWearState = newFsdWear();
   /** Live `Status.json` cargo (tonnes), part of the ship's mass for the fuel model. */
   liveStatusCargoT: number | null = null;
 
@@ -1787,6 +1790,7 @@ export class GameStateStore {
     this.lastFsdJumpDistLy = null;
     this.jumpRange = emptyJumpRange();
     this.fsdFuel = emptyFsdFuel();
+    this.fsdWear = newFsdWear();
     this.liveStatusFuelMainT = null;
     this.liveStatusFuelReserveT = null;
     this.lastLiveShipFuelPushKey = null;
@@ -2273,6 +2277,7 @@ export class GameStateStore {
       if (event === "LoadGame") return this.onLoadGame(line);
 
       if (event === "Loadout") return this.onLoadout(line);
+      if (event === "Repair" || event === "RepairAll") fsdWearRepair(this.fsdWear, line as Record<string, unknown>);
 
       /*
         Which body the ship is at: the arrival body on a jump or a load, then whatever it approaches,
@@ -2300,6 +2305,7 @@ export class GameStateStore {
         const jd = (line as Record<string, unknown>).JumpDist;
         if (typeof jd === "number") jumpRangeJump(this.jumpRange, jd, (line as Record<string, unknown>).BoostUsed);
         fsdFuelJump(this.fsdFuel, line as Record<string, unknown>, this.liveStatusCargoT ?? 0);
+        fsdWearJump(this.fsdWear, line as Record<string, unknown>);
         if (
           typeof fu === "number" &&
           Number.isFinite(fu) &&
@@ -2405,6 +2411,7 @@ export class GameStateStore {
     const mjr = (line as Record<string, unknown>).MaxJumpRange;
     const shipId = (line as Record<string, unknown>).ShipID;
     fsdFuelLoadout(this.fsdFuel, line as Record<string, unknown>);
+    fsdWearLoadout(this.fsdWear, line as Record<string, unknown>);
     jumpRangeLoadout(
       this.jumpRange,
       typeof shipId === "number" ? shipId : null,
@@ -3816,6 +3823,7 @@ export class GameStateStore {
       lastFsdJumpDistLy: this.lastFsdJumpDistLy,
       jumpRange: structuredClone(this.jumpRange),
       fsdFuel: structuredClone(this.fsdFuel),
+      fsdWear: structuredClone(this.fsdWear),
     };
   }
 
@@ -3991,6 +3999,17 @@ export class GameStateStore {
         unladenT: typeof ff.unladenT === "number" ? ff.unladenT : null,
         maxFuelPerJumpT: typeof ff.maxFuelPerJumpT === "number" ? ff.maxFuelPerJumpT : null,
         samples: ff.samples.filter((s) => s && s.ly > 0 && s.fuelT > 0 && s.massT > 0),
+      };
+    }
+    const fw = data.fsdWear;
+    if (fw && typeof fw.boostsSince === "number") {
+      this.fsdWear = {
+        shipId: typeof fw.shipId === "number" ? fw.shipId : null,
+        health: typeof fw.health === "number" ? fw.health : null,
+        boostsSince: Math.max(0, fw.boostsSince),
+        repairedSince: fw.repairedSince === true,
+        boosts: typeof fw.boosts === "number" ? fw.boosts : 0,
+        lost: typeof fw.lost === "number" ? fw.lost : 0,
       };
     }
     const ljd = data.lastFsdJumpDistLy;

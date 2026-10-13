@@ -32,6 +32,7 @@ import { LoadingNote, RefreshBar } from "./ui/Loading";
 import type { CarrierLiveFixDTO, CarrierQueryResultDTO, CarrierRowDTO } from "@shared/types";
 import { CopySystemButton } from "./CopySystemButton";
 import { fmtLyAway } from "@shared/format";
+import { StationsPanel } from "./StationsPanel";
 
 const ly = fmtLyAway;
 
@@ -202,6 +203,8 @@ export function CarriersModal({ onClose }: { onClose: () => void }) {
   const [maxSeen, setMaxSeen] = usePersistedState<number>("carriers.maxSeen", 0, isNum);
   const [dssaOnly, setDssaOnly] = usePersistedState("carriers.dssaOnly", false, isBool);
   const [networkKey, setNetworkKey] = usePersistedState("carriers.network", "", isStr);
+  // Carriers or stations (plan 7, 1.2.16): the nearest station with a service is the same question.
+  const [tab, setTab] = usePersistedState<string>("carriers.tab", "carriers", isStr);
   /*
     Per-row Spansh answers, keyed by callsign.
 
@@ -314,13 +317,27 @@ export function CarriersModal({ onClose }: { onClose: () => void }) {
         className="modal-panel fdb-panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Carriers"
+        aria-label={tab === "stations" ? "Stations" : "Carriers"}
         onClick={(ev) => ev.stopPropagation()}
       >
         <header className="fdb-head">
           <div>
-            <h2 className="fdb-title">Carriers</h2>
-            <p className="dim fdb-sub">
+            <h2 className="fdb-title">{tab === "stations" ? "Stations" : "Carriers"}</h2>
+            <div className="fdb-filters" role="tablist" aria-label="Carriers or stations">
+              {(["carriers", "stations"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t}
+                  className={`fdb-chip${tab === t ? " fdb-chip--on" : ""}`}
+                  onClick={() => setTab(t)}
+                >
+                  {t === "carriers" ? "Carriers" : "Stations"}
+                </button>
+              ))}
+            </div>
+            <p className="dim fdb-sub" hidden={tab === "stations"}>
               Fleet carriers near you, from{" "}
               <a className="carriers-source-link" href="https://edastro.com" target="_blank" rel="noreferrer">
                 EDAstro
@@ -334,273 +351,280 @@ export function CarriersModal({ onClose }: { onClose: () => void }) {
           </button>
         </header>
 
-        <div className="carriers-fetch">
-          <button
-            type="button"
-            className="fdb-chip fdb-chip--on"
-            onClick={() => void fetchFromEdastro()}
-            disabled={busy || cooling}
-          >
-            {busy ? "Fetching…" : haveData ? "Refresh from EDAstro" : "Fetch from EDAstro"}
-          </button>
-          <span className="dim">
-            {busy
-              ? "Downloading ~21 MB from edastro.com."
-              : haveData
-                ? `${status?.rowCount.toLocaleString("en-US")} carriers · data from ${
-                    status?.sourceLastModified ?? "an unknown date"
-                  }`
-                : "Downloads a ~21 MB file from edastro.com to this machine. Nothing is sent anywhere."}
-          </span>
-          {cooling ? (
-            <span className="dim">
-              Rebuilt about once a day upstream — next fetch in{" "}
-              {Math.ceil((status?.cooldownMsRemaining ?? 0) / 60000)} min.
-            </span>
-          ) : null}
-        </div>
-
-        {error ? <p className="fdb-empty">{error}</p> : null}
-
-        {!data && querying ? (
-          <LoadingNote className="fdb-empty" label="Searching the carrier list…" />
-        ) : !haveData && !busy ? (
-          <p className="fdb-empty">
-            No data. Click <strong>Fetch from EDAstro</strong> above to download the carrier list.
-          </p>
-        ) : null}
-
-        {haveData ? (
+        {tab === "stations" ? <StationsPanel /> : null}
+        {tab === "stations" ? null : (
           <>
-            <div className="carriers-search">
-              <input
-                type="search"
-                className="carriers-search__input"
-                value={searchInput}
-                onChange={(ev) => setSearchInput(ev.target.value)}
-                placeholder="Search callsign, name, system, region, CMDR"
-                aria-label="Search carriers"
-              />
-              {/*
+            <div className="carriers-fetch">
+              <button
+                type="button"
+                className="fdb-chip fdb-chip--on"
+                onClick={() => void fetchFromEdastro()}
+                disabled={busy || cooling}
+              >
+                {busy ? "Fetching…" : haveData ? "Refresh from EDAstro" : "Fetch from EDAstro"}
+              </button>
+              <span className="dim">
+                {busy
+                  ? "Downloading ~21 MB from edastro.com."
+                  : haveData
+                    ? `${status?.rowCount.toLocaleString("en-US")} carriers · data from ${
+                        status?.sourceLastModified ?? "an unknown date"
+                      }`
+                    : "Downloads a ~21 MB file from edastro.com to this machine. Nothing is sent anywhere."}
+              </span>
+              {cooling ? (
+                <span className="dim">
+                  Rebuilt about once a day upstream — next fetch in{" "}
+                  {Math.ceil((status?.cooldownMsRemaining ?? 0) / 60000)} min.
+                </span>
+              ) : null}
+            </div>
+
+            {error ? <p className="fdb-empty">{error}</p> : null}
+
+            {!data && querying ? (
+              <LoadingNote className="fdb-empty" label="Searching the carrier list…" />
+            ) : !haveData && !busy ? (
+              <p className="fdb-empty">
+                No data. Click <strong>Fetch from EDAstro</strong> above to download the carrier list.
+              </p>
+            ) : null}
+
+            {haveData ? (
+              <>
+                <div className="carriers-search">
+                  <input
+                    type="search"
+                    className="carriers-search__input"
+                    value={searchInput}
+                    onChange={(ev) => setSearchInput(ev.target.value)}
+                    placeholder="Search callsign, name, system, region, CMDR"
+                    aria-label="Search carriers"
+                  />
+                  {/*
                 Says what it searches rather than leaving the commander to guess. 98.1% of carriers
                 carry a name and every one carries a region, so all five fields are worth offering;
                 the alternative is a box that silently does nothing for four of them.
               */}
-              <span className="dim carriers-search__hint">
-                All words must match, in any field. <code>T9JL2N</code> finds <code>T9J-L2N</code>.
-              </span>
-            </div>
+                  <span className="dim carriers-search__hint">
+                    All words must match, in any field. <code>T9JL2N</code> finds <code>T9J-L2N</code>.
+                  </span>
+                </div>
 
-            <div className="fdb-filters">
-              {/*
+                <div className="fdb-filters">
+                  {/*
                 DSSA sits first and apart because it answers a different question from the service
                 chips. Those narrow by what a carrier sells; this one narrows by who put it there and
                 why. The network is 101 carriers deliberately parked as a galaxy-wide service array,
                 and its sightings run a median 6 days old against 35 for deep-space carriers at
                 large -- people visit them, so people report them.
               */}
-              <Tooltip text="Deep Space Support Array — 101 carriers deliberately parked as a service network. Curated, and far better reported than carriers at large.">
-                <button
-                  type="button"
-                  className={`fdb-chip${dssaOnly ? " fdb-chip--on" : ""}`}
-                  onClick={() => setDssaOnly((v) => !v)}
-                  aria-pressed={dssaOnly}
-                  disabled={(status?.dssaCount ?? 0) === 0}
-                >
-                  DSSA only
-                </button>
-              </Tooltip>
-              {/*
+                  <Tooltip text="Deep Space Support Array — 101 carriers deliberately parked as a service network. Curated, and far better reported than carriers at large.">
+                    <button
+                      type="button"
+                      className={`fdb-chip${dssaOnly ? " fdb-chip--on" : ""}`}
+                      onClick={() => setDssaOnly((v) => !v)}
+                      aria-pressed={dssaOnly}
+                      disabled={(status?.dssaCount ?? 0) === 0}
+                    >
+                      DSSA only
+                    </button>
+                  </Tooltip>
+                  {/*
                 Networks this app carries a roster for rather than downloads. A stated membership
                 list, which is why it sits beside DSSA and not among the service chips: those say
                 what a carrier sells, these say who runs it.
               */}
-              {CARRIER_NETWORKS.map((net) => (
-                <Tooltip key={net.key} text={net.hint}>
-                  <button
-                    type="button"
-                    className={`fdb-chip${networkKey === net.key ? " fdb-chip--on" : ""}`}
-                    onClick={() => setNetworkKey((v) => (v === net.key ? "" : net.key))}
-                    aria-pressed={networkKey === net.key}
-                  >
-                    {net.label} only
-                  </button>
-                </Tooltip>
-              ))}
-              <span className="fdb-filters__gap" />
-              {CARRIER_SERVICE_OPTIONS.map((opt) => (
-                <Tooltip key={opt.key} text={opt.hint}>
-                  <button
-                    type="button"
-                    className={`fdb-chip${services.includes(opt.key) ? " fdb-chip--on" : ""}`}
-                    onClick={() => toggleService(opt.key)}
-                    aria-pressed={services.includes(opt.key)}
-                  >
-                    {opt.label}
-                  </button>
-                </Tooltip>
-              ))}
-              <span className="fdb-filters__gap" />
-              {SEEN_FILTERS.map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`fdb-chip${maxSeen === n ? " fdb-chip--on" : ""}`}
-                  onClick={() => setMaxSeen(n)}
-                  aria-pressed={maxSeen === n}
-                >
-                  {seenLabel(n)}
-                </button>
-              ))}
-            </div>
+                  {CARRIER_NETWORKS.map((net) => (
+                    <Tooltip key={net.key} text={net.hint}>
+                      <button
+                        type="button"
+                        className={`fdb-chip${networkKey === net.key ? " fdb-chip--on" : ""}`}
+                        onClick={() => setNetworkKey((v) => (v === net.key ? "" : net.key))}
+                        aria-pressed={networkKey === net.key}
+                      >
+                        {net.label} only
+                      </button>
+                    </Tooltip>
+                  ))}
+                  <span className="fdb-filters__gap" />
+                  {CARRIER_SERVICE_OPTIONS.map((opt) => (
+                    <Tooltip key={opt.key} text={opt.hint}>
+                      <button
+                        type="button"
+                        className={`fdb-chip${services.includes(opt.key) ? " fdb-chip--on" : ""}`}
+                        onClick={() => toggleService(opt.key)}
+                        aria-pressed={services.includes(opt.key)}
+                      >
+                        {opt.label}
+                      </button>
+                    </Tooltip>
+                  ))}
+                  <span className="fdb-filters__gap" />
+                  {SEEN_FILTERS.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={`fdb-chip${maxSeen === n ? " fdb-chip--on" : ""}`}
+                      onClick={() => setMaxSeen(n)}
+                      aria-pressed={maxSeen === n}
+                    >
+                      {seenLabel(n)}
+                    </button>
+                  ))}
+                </div>
 
-            <div className="fdb-summary">
-              <span>
-                <strong>{rows.length}</strong> shown
-              </span>
-              {data && data.matchCount > rows.length ? (
-                <span className="dim">of {data.matchCount.toLocaleString("en-US")} matching</span>
-              ) : null}
-              {!data?.origin ? (
-                <span className="dim">No position yet — jump once and distances appear.</span>
-              ) : null}
-            </div>
+                <div className="fdb-summary">
+                  <span>
+                    <strong>{rows.length}</strong> shown
+                  </span>
+                  {data && data.matchCount > rows.length ? (
+                    <span className="dim">of {data.matchCount.toLocaleString("en-US")} matching</span>
+                  ) : null}
+                  {!data?.origin ? (
+                    <span className="dim">No position yet — jump once and distances appear.</span>
+                  ) : null}
+                </div>
 
-            {/*
+                {/*
               The scroller the backlog panel has and this one did not.
 
               `.fdb-panel` is a flex column capped at 86vh, so a table placed straight into it is
               simply cut off at the bottom -- no scrollbar, no hint that rows exist below. The owner
               hit it on an eleven-row filter and could see nine.
             */}
-            <RefreshBar active={querying} />
-            <div className={`fdb-scroll${querying ? " is-refreshing" : ""}`} aria-busy={querying}>
-              <table className="fdb-table carriers-table">
-                <thead>
-                  <tr>
-                    <th>Distance</th>
-                    <th>Carrier</th>
-                    <th>System</th>
-                    <th>Last seen</th>
-                    <th>Stability</th>
-                    <th>Services</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => {
-                    const verdict = dwellVerdict(r);
-                    // Non-null only once Spansh has answered AND named a different system: that is the
-                    // single case where the row itself should stop showing the cached location.
-                    const fix = liveFix(live[r.callsign]);
-                    const moved = fix?.differs ? fix : null;
-                    return (
-                      <tr key={r.callsign}>
-                        <td>
-                          {moved ? (
-                            <>
-                              {/*
+                <RefreshBar active={querying} />
+                <div className={`fdb-scroll${querying ? " is-refreshing" : ""}`} aria-busy={querying}>
+                  <table className="fdb-table carriers-table">
+                    <thead>
+                      <tr>
+                        <th>Distance</th>
+                        <th>Carrier</th>
+                        <th>System</th>
+                        <th>Last seen</th>
+                        <th>Stability</th>
+                        <th>Services</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => {
+                        const verdict = dwellVerdict(r);
+                        // Non-null only once Spansh has answered AND named a different system: that is the
+                        // single case where the row itself should stop showing the cached location.
+                        const fix = liveFix(live[r.callsign]);
+                        const moved = fix?.differs ? fix : null;
+                        return (
+                          <tr key={r.callsign}>
+                            <td>
+                              {moved ? (
+                                <>
+                                  {/*
                                 A cluster pin on the map is not the carrier's position, so there is
                                 no distance to give — only the fact that the cached one is wrong.
                               */}
-                              <strong className="carriers-live--differs">
-                                {moved.positionUnknown ? "—" : ly(moved.distanceLy)}
-                              </strong>
-                              <div className="dim carriers-was">was {ly(r.distanceLy)}</div>
-                            </>
-                          ) : (
-                            ly(r.distanceLy)
-                          )}
-                        </td>
-                        <td>
-                          <strong>{r.callsign}</strong>
-                          {r.name ? <span className="dim"> {r.name}</span> : null}
-                          {r.network && !networkKey ? (
-                            <span className="carriers-network-badge">{r.network.label}</span>
-                          ) : null}
-                          {r.dssa ? (
-                            <>
-                              {/*
+                                  <strong className="carriers-live--differs">
+                                    {moved.positionUnknown ? "—" : ly(moved.distanceLy)}
+                                  </strong>
+                                  <div className="dim carriers-was">was {ly(r.distanceLy)}</div>
+                                </>
+                              ) : (
+                                ly(r.distanceLy)
+                              )}
+                            </td>
+                            <td>
+                              <strong>{r.callsign}</strong>
+                              {r.name ? <span className="dim"> {r.name}</span> : null}
+                              {r.network && !networkKey ? (
+                                <span className="carriers-network-badge">{r.network.label}</span>
+                              ) : null}
+                              {r.dssa ? (
+                                <>
+                                  {/*
                               The badge marks a network carrier in a list of ninety thousand. It is
                               dropped once the list is already filtered to the network, where every
                               row would carry it and it says nothing, and dropped again when the
                               carrier's own name opens with "DSSA" -- which most of theirs do, so
                               the badge would sit next to the word it repeats.
                             */}
-                              {!dssaOnly && !/^DSSA\b/i.test(r.name) ? (
-                                <span
-                                  className="carriers-dssa-badge"
-                                  title={`Deep Space Support Array — ${r.dssa.status}`}
-                                >
-                                  DSSA
-                                </span>
+                                  {!dssaOnly && !/^DSSA\b/i.test(r.name) ? (
+                                    <span
+                                      className="carriers-dssa-badge"
+                                      title={`Deep Space Support Array — ${r.dssa.status}`}
+                                    >
+                                      DSSA
+                                    </span>
+                                  ) : null}
+                                  {r.dssa.commander ? (
+                                    <span className="dim"> CMDR {r.dssa.commander}</span>
+                                  ) : null}
+                                </>
                               ) : null}
-                              {r.dssa.commander ? (
-                                <span className="dim"> CMDR {r.dssa.commander}</span>
-                              ) : null}
-                            </>
-                          ) : null}
-                        </td>
-                        <td>
-                          {/*
+                            </td>
+                            <td>
+                              {/*
                           When Spansh names a different system the row shows Spansh's, because "the
                           location did not update" was the first thing the owner said about this
                           feature. The cached answer stays underneath rather than disappearing: the
                           two sources disagree in both directions and neither is authoritative.
                         */}
-                          {moved ? (
-                            <>
-                              <strong className="carriers-live--differs">{moved.system || "unknown"}</strong>
-                              <CopySystemButton system={moved.system} />
-                              <div className="dim carriers-was">
-                                EDAstro had {r.system || "—"}
-                                {r.region ? ` · ${r.region}` : ""}
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              {r.system || "—"}
-                              <CopySystemButton system={r.system} />
-                              {r.region ? <span className="dim"> · {r.region}</span> : null}
-                            </>
-                          )}
-                        </td>
-                        <td>{lastSeenPhrase(r.lastSeenDays)}</td>
-                        <td className={`carriers-dwell carriers-dwell--${verdict.tone}`}>
-                          {verdict.text}
-                          <CarrierLive
-                            state={live[r.callsign]}
-                            rowSeenDays={r.lastSeenDays}
-                            onCheck={() => void checkSpansh(r)}
-                          />
-                        </td>
-                        <td className="dim">
-                          {r.services
-                            .filter((s) => CARRIER_SERVICE_OPTIONS.some((o) => o.key === s))
-                            .map(carrierServiceLabel)
-                            .join(", ") || "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              {moved ? (
+                                <>
+                                  <strong className="carriers-live--differs">
+                                    {moved.system || "unknown"}
+                                  </strong>
+                                  <CopySystemButton system={moved.system} />
+                                  <div className="dim carriers-was">
+                                    EDAstro had {r.system || "—"}
+                                    {r.region ? ` · ${r.region}` : ""}
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  {r.system || "—"}
+                                  <CopySystemButton system={r.system} />
+                                  {r.region ? <span className="dim"> · {r.region}</span> : null}
+                                </>
+                              )}
+                            </td>
+                            <td>{lastSeenPhrase(r.lastSeenDays)}</td>
+                            <td className={`carriers-dwell carriers-dwell--${verdict.tone}`}>
+                              {verdict.text}
+                              <CarrierLive
+                                state={live[r.callsign]}
+                                rowSeenDays={r.lastSeenDays}
+                                onCheck={() => void checkSpansh(r)}
+                              />
+                            </td>
+                            <td className="dim">
+                              {r.services
+                                .filter((s) => CARRIER_SERVICE_OPTIONS.some((o) => o.key === s))
+                                .map(carrierServiceLabel)
+                                .join(", ") || "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-            {rows.length === 0 ? (
-              <p className="fdb-empty">
-                Nothing matches{search.trim() ? <> “{search.trim()}”</> : " those filters"}. Out in the black
-                the sighting ages are long — try <strong>Any age</strong>
-                {dssaOnly ? (
-                  <>
-                    , or turn <strong>DSSA only</strong> off: the network is 101 carriers across the whole
-                    galaxy, so the nearest can be a long way out.
-                  </>
+                {rows.length === 0 ? (
+                  <p className="fdb-empty">
+                    Nothing matches{search.trim() ? <> “{search.trim()}”</> : " those filters"}. Out in the
+                    black the sighting ages are long — try <strong>Any age</strong>
+                    {dssaOnly ? (
+                      <>
+                        , or turn <strong>DSSA only</strong> off: the network is 101 carriers across the whole
+                        galaxy, so the nearest can be a long way out.
+                      </>
+                    ) : null}
+                    .
+                  </p>
                 ) : null}
-                .
-              </p>
+              </>
             ) : null}
           </>
-        ) : null}
+        )}
       </div>
     </div>
   );

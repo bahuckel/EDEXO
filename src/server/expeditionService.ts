@@ -113,7 +113,8 @@ async function recordedNear(index: BioIndex | null, from: Xyz, radiusLy: number,
   const counter = new RecordedCounter(from, radiusLy, codes);
   if (!index || !codes.length) return counter;
   const n = index.systemCount;
-  const each = (_i: number, x: number, y: number, z: number) => counter.add(x, y, z);
+  const codeAt = index.massCodeAt?.bind(index);
+  const each = (i: number, x: number, y: number, z: number) => counter.add(x, y, z, codeAt ? MASS_CODE_LETTERS[codeAt(i)] : null);
   function* pass(): Generator<void, void> {
     if (!index!.forEachPointIn) {
       index!.forEachPoint(each);
@@ -248,8 +249,8 @@ export async function expeditionField(
     minEv?: number;
     limit?: number;
     codes?: MassCode[];
-    /** The commander's own visited systems: no first footfall left for him there. */
-    visitedPoints?: readonly Xyz[];
+    /** The commander's own visited systems: no first footfall left for him there (each in its own mass code's boxel). */
+    visitedPoints?: readonly (Xyz & { code?: MassCode | null })[];
     /** What to look for (plan 5.2); exobiology when absent. */
     target?: ExpeditionTarget;
     /** A route to this point instead of a sphere round `from`: boxels within `widthLy` of the line. */
@@ -295,7 +296,7 @@ export async function expeditionField(
   const recorded = await recordedNear(deps.index, mid, reach, codes.filter((c) => !skipped.includes(c)));
   const mine = new RecordedCounter(mid, reach, codes.filter((c) => !skipped.includes(c)));
   const features = target.kind === "exobio" ? null : loadFeatureTable(deps.root);
-  for (const p of q.visitedPoints ?? []) mine.add(p.x, p.y, p.z);
+  for (const p of q.visitedPoints ?? []) mine.add(p.x, p.y, p.z, p.code);
   const share = entry ? shareInGenus(entry, deps.species) : 0;
   const gate = entry ? gateForSpeciesId(entry.id) : null;
   // Cut round the field that is scored: the sphere, or the whole route's tube (it was the ship's sphere, so a boxel

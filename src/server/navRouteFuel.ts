@@ -380,31 +380,31 @@ export function analyzeNavRouteFuel(opts: {
   }
 
   /*
-    The route strip (owner, 2026-09-14: same logic as the web UI), marks only when the tank cannot
-    finish the plot (owner, 2026-10-12, no threshold: someone almost out of fuel can be one jump from
-    dry, and the warning has to come in the system before it):
-    - red, blinking: the LAST scoopable star the tank still reaches (`jumpsToLastScoopableOnRoute`) —
-      skip it and the tank reaches no other. The star the ship is at when that is it (`refuelInHops`
-      0, drawn first as "here"). No scoopable star in reach at all, here included: red, no star.
-    - yellow: the nearest scoopable star ahead of the red one, the recommended stop.
+    The route strip's pump (owner, 2026-10-13, after 1.2.15 showed two pumps and a red one on routes with no
+    trap): one mark, only when the tank cannot finish the plot.
+    - Walk the plot on the fuel aboard, no scooping: the last system the tank reaches (`lastReachIdx`).
+    - It is scoopable: yellow there, the furthest star to scoop at (as in 1.2.14).
+    - It is not: past the last scoopable star before it the tank runs dry with nowhere to scoop, a trap. Red,
+      blinking, on that last scoopable star ("here" when it is this one), and no yellow; even one scoopable
+      star and ten that are not is a trap when the tank cannot cross them.
+    - No scoopable star in reach at all, this one included: red, no star ("!").
+    Without a fuel estimate the last reachable system is not known: yellow on the furthest scoopable star.
   */
   let refuelIdx = -1;
   if (fuelCanFinishPlottedRoute === false && jumpsToLastScoopableOnRoute != null) {
     refuelIdx = idx + jumpsToLastScoopableOnRoute;
   }
+  const lastReachIdx =
+    fuelCanFinishPlottedRoute === false && fuelJumpsReachableOnPlottedRoute != null
+      ? idx + fuelJumpsReachableOnPlottedRoute
+      : null;
   let refuelLevel: RouteRefuelAlertDTO = "none";
-  if (refuelIdx >= idx) refuelLevel = "red";
+  if (refuelIdx >= idx) refuelLevel = lastReachIdx != null && refuelIdx < lastReachIdx ? "red" : "yellow";
   else if (fuelCanFinishPlottedRoute === false && routeJumpsRemaining > 0) refuelLevel = "red";
-  let recommendIdx = -1;
-  for (let j = idx + 1; j < refuelIdx; j++) {
-    if (scoop[j]) {
-      recommendIdx = j;
-      break;
-    }
-  }
-  // The web UI's Route card keeps its own urgency; red too when the last chance is here.
+  // The web UI's Route card: red only for a trap whose last chance is here (or no scoop in reach), never
+  // for the old heuristics alone.
   const routeRefuelAlert: RouteRefuelAlertDTO =
-    refuelIdx === idx || (refuelLevel === "red" && refuelIdx < idx) ? "red" : routeAlert;
+    refuelLevel === "red" && refuelIdx <= idx ? "red" : routeAlert === "red" ? "yellow" : routeAlert;
   const ahead: RouteAheadHop[] = [];
   for (let j = idx + 1; j < route.length && ahead.length < ROUTE_AHEAD_HOPS; j++) {
     const w = route[j]!;
@@ -412,7 +412,7 @@ export function analyzeNavRouteFuel(opts: {
       starSystem: w.starSystem,
       starClass: w.starClass ?? "",
       scoopable: scoop[j]!,
-      refuel: j === refuelIdx ? refuelLevel : j === recommendIdx ? "yellow" : "none",
+      refuel: j === refuelIdx ? refuelLevel : "none",
       likelyFirstFootfall: opts.firstFootfallVerdict?.(w.starSystem) ?? null,
       firstFootfallNote: opts.firstFootfallNote?.(w.starSystem) ?? null,
     });

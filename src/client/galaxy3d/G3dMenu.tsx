@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 import { InfoPopover, Tooltip } from "../ui/Tooltip";
 
-export type G3dTabKey = "view" | "layers" | "filter" | "search" | "navroute" | "codex" | "targets" | "expedition";
+export type G3dTabKey = "view" | "layers" | "filter" | "search" | "navroute" | "codex" | "targets" | "expedition" | "neutron";
 
 export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
   { key: "view", label: "View", hint: "View: camera, follow your ship, colours, brightness" },
@@ -22,6 +22,7 @@ export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
     label: "Expedition",
     hint: "Expedition: where nobody has been yet — boxels ranked by the first-footfall credits they are likely to hold per jump",
   },
+  { key: "neutron", label: "Neutron", hint: "Neutron route: through two or more systems by supercharged jumps, with refuel stops and the FSD's wear" },
 ];
 
 export const G3D_HELP: Record<G3dTabKey, string[]> = {
@@ -51,6 +52,13 @@ export const G3D_HELP: Record<G3dTabKey, string[]> = {
   ],
   codex: [
     "Your codex, region by region: how many of a region's entries you have logged. Click a region on the map or in the list to see its systems.",
+  ],
+  neutron: [
+    "A route through two or more systems, jumping from neutron star to neutron star: at one the FSD supercharges and the next jump reaches four times your range.",
+    "Your jump range, how many full-range jumps a tank does and the fuel aboard come from your journals; change them for another ship.",
+    "Refuel stops are neutron stars with a scoopable star of their own (four in ten): scoop it, then supercharge. Where only normal jumps cross a gap longer than the tank lasts, the route says to scoop on the way.",
+    "Every supercharge wears the FSD (about 1 % each, learned from your Loadouts once there are ten). The plan marks where it is expected under 80 %: repair before going on — Carriers → Stations → Repair finds the nearest.",
+    "The neutron stars are a separate download beside the galaxy index; a plan reads only the part of the galaxy it crosses.",
   ],
   expedition: [
     "Where to go for first footfalls in space nobody has recorded. Every boxel around you is scored from the Spansh dump: how many systems a boxel of its size holds in this region, how often one has biology, how many biological bodies, and what the genera seen there are worth at five times for a first footfall. Systems already in the galaxy index count against it: someone has been. So do the ones somebody flew since 2025 and found without biology, and the ones you have visited.",
@@ -140,6 +148,11 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
         <>
           <path {...p} d="M4 4.5h6.5A2.5 2.5 0 0 1 13 7v13a2 2 0 0 0-2-2H4V4.5z" />
           <path {...p} d="M20 4.5h-4.5A2.5 2.5 0 0 0 13 7v13a2 2 0 0 1 2-2h5V4.5z" />
+        </>
+      ) : name === "neutron" ? (
+        <>
+          <circle {...p} cx="12" cy="12" r="2.5" />
+          <path {...p} d="M12 2v6M12 16v6M4.5 7.5l4 2M15.5 14.5l4 2M4.5 16.5l4-2M15.5 9.5l4-2" />
         </>
       ) : name === "expedition" ? (
         <>

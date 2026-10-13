@@ -2,9 +2,9 @@
  * The 3D galaxy map's extra layers (server/galaxyLayers.ts builds them; D10, guild tester report
  * 2026-09-30). Each is a list the commander already has on this PC.
  */
-export type GalaxyLayerKind = "poi" | "nsp" | "carriers" | "bookmarks" | "ggg" | "helium";
+export type GalaxyLayerKind = "poi" | "nsp" | "carriers" | "bookmarks" | "ggg" | "helium" | "stations";
 
-export const GALAXY_LAYER_KINDS: readonly GalaxyLayerKind[] = ["poi", "nsp", "carriers", "bookmarks", "ggg", "helium"];
+export const GALAXY_LAYER_KINDS: readonly GalaxyLayerKind[] = ["poi", "nsp", "carriers", "bookmarks", "ggg", "helium", "stations"];
 
 /**
  * [x, y, z, label, detail, system]: label is the name; detail indexes {@link GalaxyLayerDTO.details},
@@ -57,4 +57,6 @@ export const GALAXY_LAYERS: readonly {
     handful of systems. Not the common helium-rich gas giant. One point per system.
   */
   { kind: "helium", label: "Helium gas giants", needs: "", colour: [0.86, 0.72, 1], size: 12 },
+  /* Stations (plan 7, 1.2.16): one point per system with a station, settlements included; carriers apart. */
+  { kind: "stations", label: "Stations", needs: "Download them in Carriers → Stations", colour: [0.45, 0.86, 0.78], size: 5 },
 ];

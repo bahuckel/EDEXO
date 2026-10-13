@@ -1329,3 +1329,64 @@
 }
 
 /* Expedition planner (plan 2.5): ExpeditionDrawer.tsx, in tw: utilities since plan 3.4. */
+
+/* Neutron route (plan 8, 1.2.16): the stops in order, the route's table, a warning tone. */
+.g3d-neutron-stops {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+.g3d-neutron-stops li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.g3d-neutron-stops__btns button {
+  padding: 0 5px;
+  border: 1px solid var(--accent-a35);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.g3d-neutron-stops__btns button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.g3d-linkbtn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.g3d-linkbtn:hover {
+  color: var(--accent);
+}
+.g3d-input {
+  width: 6em;
+  padding: 2px 4px;
+  border: 1px solid var(--accent-a35);
+  background: rgba(5, 4, 10, 0.8);
+  color: var(--text);
+  font: inherit;
+}
+.g3d-panel__note--warn {
+  color: #ffb36b;
+}
+.g3d-neutron-table {
+  width: 100%;
+  font-size: var(--fs-xs);
+}
+.g3d-neutron-table tr.is-waypoint td {
+  color: var(--accent);
+}
+.g3d-neutron-table td.is-warn {
+  color: #ff8a6b;
+}
+.g3d-neutron-fuel {
+  color: #ffd35a;
+}

@@ -194,7 +194,11 @@ export function renderRouteStrip(d, el) {
   var html = "";
   if (nav.refuelInHops === 0 && nav.refuelLevel !== "none") {
     html +=
-      '<span class="hop hop--beyond hop--dry hop--here" title="Scoop here: the last scoopable star this tank reaches">' +
+      '<span class="hop hop--beyond hop--dry hop--here" title="' +
+      (nav.refuelLevel === "red"
+        ? "Scoop here: past this star the tank runs dry with no star to scoop"
+        : "Scoop here: the furthest scoopable star this tank reaches") +
+      '">' +
       fuelPump(nav.refuelLevel) +
       'here</span><span class="hop__sep" aria-hidden="true">››</span>';
   } else if (nav.refuelInHops == null && nav.refuelLevel === "red") {

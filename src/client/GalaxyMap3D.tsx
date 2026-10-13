@@ -45,6 +45,7 @@ import {
   targetLabelOf,
   takeExpeditionFocus,
 } from "./ExpeditionDrawer";
+import { NeutronDrawer } from "./NeutronDrawer";
 import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
 import { drawnGalaxyFrame, drawnGalaxySprites, galaxyImageRect, REGION_MAP_SIZE, xForRegionPx, zForRegionPz } from "./regionBackdrop";
 import { CLOUD_SPRITE_STRIDE } from "@shared/galaxyClouds";
@@ -73,13 +74,15 @@ const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number;
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 type Colour = 0 | 1 | 2;
-type Drawer = "none" | "view" | "layers" | "search" | "filter" | "navroute" | "codex" | "targets" | "expedition";
+type Drawer = "none" | "view" | "layers" | "search" | "filter" | "navroute" | "codex" | "targets" | "expedition" | "neutron";
 /** A Spansh name hit with its coordinates (`/api/system/spansh-search`). */
 type SpanshFindHit = { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number };
 type MineRow = GalaxyMineDTO["systems"][number];
 
 /** The commander's systems: waiting for them amber, done (DSS or plants on foot) green, visited grey. */
 const MINE_UNFINISHED = 16;
+/** Visited by the game's own list (VisitedStarsCache.dat), not in the journals (plan 6.1). */
+const MINE_IMPORTED = 128;
 const mineColour = (f: number, waitingShown: boolean): [number, number, number] =>
   f & MINE_UNFINISHED && waitingShown ? [1, 0.62, 0.16] : f & (4 | 8) ? [0.36, 0.9, 0.46] : [0.62, 0.68, 0.8];
 const mineStatus = (r: MineRow) =>
@@ -87,7 +90,9 @@ const mineStatus = (r: MineRow) =>
     ? `Still waiting: at least ${crShort(r.unfinishedFloorCr)}`
     : r.flags & (4 | 8)
       ? `Done${r.speciesScanned ? ` · ${r.speciesScanned} species scanned` : " · mapped"}`
-      : "Visited";
+      : r.flags & MINE_IMPORTED
+        ? "Visited (the game's own list; not in your journals)"
+        : "Visited";
 
 const codexColour: Record<CodexMapSystemDTO["status"], [number, number, number]> = {
   todo: [1, 0.36, 0.3],
@@ -133,6 +138,8 @@ export function GalaxyMap3D() {
   const [expField, setExpField] = useState<ExpeditionFieldDTO | null>(null);
   const [expPlanKeys, setExpPlanKeys] = useState<string[]>([]);
   const [expPlan, setExpPlan] = useState<ExpeditionPlanDTO | null>(null);
+  // The neutron route's line (plan 8), drawn while the drawer has one.
+  const [neutronLine, setNeutronLine] = useState<{ x: number; y: number; z: number }[]>([]);
   const expByKey = useMemo(() => new Map((expField?.boxels ?? []).map((b) => [b.key, b])), [expField]);
   const [mine, setMine] = useState<Map<string, MineRow>>(new Map());
   const [route, setRoute] = useState<GalaxyRouteDTO | null>(null);
@@ -166,6 +173,7 @@ export function GalaxyMap3D() {
   const [bookmarksOn, setBookmarksOn] = usePersistedState("galaxy.layer.bookmarks", false, isBool);
   const [gggOn, setGggOn] = usePersistedState("galaxy.layer.ggg", false, isBool);
   const [heliumOn, setHeliumOn] = usePersistedState("galaxy.layer.helium", false, isBool);
+  const [stationsOn, setStationsOn] = usePersistedState("galaxy.layer.stations", false, isBool);
   // The plotted route's systems you have not been to (owner, 2026-10-04): placed from NavRoute.json.
   const [navUnvisitedOn, setNavUnvisitedOn] = usePersistedState("galaxy.layer.navUnvisited", true, isBool);
   /* The status bar's legend folds away (owner, 2026-10-04, plan 3.7), remembered. */
@@ -200,6 +208,7 @@ export function GalaxyMap3D() {
     bookmarks: bookmarksOn,
     ggg: gggOn,
     helium: heliumOn,
+    stations: stationsOn,
   };
   const extraSet: Record<GalaxyLayerKind, (v: boolean) => void> = {
     poi: setPoiOn,
@@ -208,6 +217,7 @@ export function GalaxyMap3D() {
     bookmarks: setBookmarksOn,
     ggg: setGggOn,
     helium: setHeliumOn,
+    stations: setStationsOn,
   };
   const [extraData, setExtraData] = useState<Partial<Record<GalaxyLayerKind, GalaxyLayerDTO>>>({});
   const [worthStep, setWorthStep] = useState(0);
@@ -464,7 +474,7 @@ export function GalaxyMap3D() {
       ).finally(() => layerAsked.current.delete(l.kind));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, extraData]);
+  }, [poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stationsOn, extraData]);
   useEffect(() => {
     const e = engine.current;
     if (!e) return;
@@ -487,7 +497,7 @@ export function GalaxyMap3D() {
       e.setMarkerLayerVisible(name, extraOn[l.kind]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraData, poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stats?.phase]);
+  }, [extraData, poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stationsOn, stats?.phase]);
   const extraPoint = (layer: string, id: string) => {
     if (!layer.startsWith("x-")) return null;
     const kind = layer.slice(2) as GalaxyLayerKind;
@@ -607,7 +617,8 @@ export function GalaxyMap3D() {
     if (!e) return;
     const to = drawer === "expedition" ? expField?.to : null;
     e.setPathLine("expedition-route", to && expField ? [expField.from, to] : [], 0x4fd0ff);
-  }, [expField, drawer, stats?.phase]);
+    e.setPathLine("neutron-route", drawer === "neutron" ? neutronLine : [], 0x9a7bff);
+  }, [expField, drawer, neutronLine, stats?.phase]);
 
   // The commander's layer, with the "waiting at least" threshold: below it a waiting system is grey.
   const waitMinCr = waitMinM * 1_000_000;
@@ -1092,9 +1103,9 @@ export function GalaxyMap3D() {
       const r = mine.get(hover.id);
       return r ? (
         <>
-          <strong>{r.name || "Your system"}</strong>
+          <strong>{r.name || (r.flags & MINE_IMPORTED ? "A system you visited (name not known)" : "Your system")}</strong>
           <span>{mineStatus(r)}</span>
-          <em>Your journals · click for details</em>
+          <em>{r.flags & MINE_IMPORTED ? "Placed at its boxel's centre unless the galaxy index has it" : "Your journals · click for details"}</em>
         </>
       ) : null;
     }
@@ -1713,6 +1724,13 @@ export function GalaxyMap3D() {
           plan={expPlan}
           setPlan={setExpPlan}
           onFocus={(b) => go(b.center, Math.max(300, b.cubeLy * 6), { kind: "marker", layer: "expedition", id: b.key, ...b.center })}
+        />
+      ) : null}
+
+      {drawer === "neutron" ? (
+        <NeutronDrawer
+          onRoute={setNeutronLine}
+          onFocus={(p) => engine.current?.flyTo({ x: p.x, y: p.y, z: p.z }, 400)}
         />
       ) : null}
 

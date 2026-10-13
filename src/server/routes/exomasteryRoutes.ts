@@ -8,6 +8,13 @@ import { isLoopbackAddress } from "../lanAuth.js";
 
 import type { HttpServerOptions, RouteContext } from "../httpServer.js";
 import { CONTENT_SECURITY_POLICY } from "../csp.js";
+import {
+  eliteAccountsRoot,
+  findVisitedCacheFiles,
+  importVisitedCache,
+  loadVisitedImport,
+  removeVisitedImport,
+} from "../visitedCache.js";
 
 export function registerExomasteryRoutes(
   app: express.Express,
@@ -15,6 +22,58 @@ export function registerExomasteryRoutes(
   ctx: RouteContext,
 ): void {
   const { webRoot } = ctx;
+
+  /*
+    The game's own visited list (plan 6.1, owner 2026-10-13: under the Spansh import in the launcher's Exomastery
+    menu). Status from anywhere; import and remove only on the PC running the app, and the import names an account
+    folder the server found itself, never a path.
+  */
+  const knownSystems = (): Set<number> => {
+    const store = opts.getJournalStore?.() ?? null;
+    return new Set(store ? [...store.visitedSystems.keys(), ...store.systemPositions.keys()] : []);
+  };
+  const accountsRoot = () => eliteAccountsRoot(opts.getSnapshot().journalDir);
+  app.get("/api/visited-cache", (_req, res) => {
+    const imp = loadVisitedImport();
+    res.json({
+      imported: imp
+        ? {
+            account: imp.account,
+            importedAt: imp.importedAt,
+            fileModifiedAt: imp.fileModifiedAt,
+            systems: imp.ids.length,
+          }
+        : null,
+      files: findVisitedCacheFiles(accountsRoot(), knownSystems()).map(({ path: _p, ...f }) => f),
+    });
+  });
+  app.post("/api/visited-cache/import", (req, res) => {
+    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+      res.status(403).json({ ok: false, error: "Only on the PC running the app." });
+      return;
+    }
+    const account = String((req.body as { account?: unknown } | undefined)?.account ?? "");
+    try {
+      const imp = importVisitedCache(accountsRoot(), account);
+      const known = knownSystems();
+      res.json({
+        ok: true,
+        systems: imp.ids.length,
+        notInJournals: imp.ids.filter((s) => !known.has(Number(s))).length,
+      });
+      opts.scheduleBroadcast?.();
+    } catch (e) {
+      res.status(400).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+  app.post("/api/visited-cache/remove", (req, res) => {
+    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+      res.status(403).json({ ok: false, error: "Only on the PC running the app." });
+      return;
+    }
+    res.json({ ok: true, removed: removeVisitedImport() });
+    opts.scheduleBroadcast?.();
+  });
   /** Download your exomastery or your codex as a file (§S). */
   app.get("/api/exomastery/export", (req, res) => {
     const kind = req.query.kind === "codex" ? "codex" : req.query.kind === "exomastery" ? "exomastery" : null;

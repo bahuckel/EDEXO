@@ -1707,6 +1707,21 @@
         border-left-color: var(--ed-bad);
         color: #ffc9bc;
       }
+      .visited-list {
+        list-style: none;
+        margin: 8px 0;
+        padding: 0;
+      }
+      .visited-list li {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 0.78rem;
+        color: var(--hud-hi);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
       .wizard-steps {
         list-style: none;
         margin: 8px 0 12px;
@@ -2044,6 +2059,11 @@
               <button type="button" role="menuitem" data-exo-action="import-dump" id="btnImportDump">
                 <strong>Import Spansh export</strong>
                 <span>Feed a galaxy_bio.jsonl.gz into the corpus — validate first, then apply</span>
+              </button>
+              <!-- The game's own visited list (plan 6.1, owner 2026-10-13): for journals you no longer have. -->
+              <button type="button" role="menuitem" data-exo-action="import-visited" id="btnImportVisited">
+                <strong>Import visited systems</strong>
+                <span>The game's own list of every system you visited, for journals you no longer have</span>
               </button>
             </div>
           </div>
@@ -2596,6 +2616,28 @@
           <div class="row">
             <button type="button" class="btn secondary" id="importClose"><span class="btn-lines"><strong>Close</strong></span></button>
             <button type="button" class="btn" id="importStart"><span class="btn-lines"><strong>Start</strong></span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import visited systems (plan 6.1): the game's VisitedStarsCache.dat, per account. -->
+    <div class="modal-bg" id="visitedModal">
+      <div class="modal">
+        <div class="modal-in">
+          <h3>Import visited systems</h3>
+          <p class="hint" style="margin-top: 0">
+            The game keeps a list of every system your account has visited, even ones your journals no longer have
+            (a reinstall, a new PC). Imported, those systems count as visited on the galaxy map, in Find and in the
+            expedition planner. The list has no bodies or biology, so your statistics and discoveries do not change.
+            Nothing leaves this PC.
+          </p>
+          <div class="import-status" id="visitedImported" hidden></div>
+          <ul class="visited-list" id="visitedList"></ul>
+          <div class="import-status" id="visitedStatus" hidden></div>
+          <div class="row">
+            <button type="button" class="btn secondary" id="visitedRemove" hidden><span class="btn-lines"><strong>Remove the import</strong></span></button>
+            <button type="button" class="btn" id="visitedClose"><span class="btn-lines"><strong>Close</strong></span></button>
           </div>
         </div>
       </div>

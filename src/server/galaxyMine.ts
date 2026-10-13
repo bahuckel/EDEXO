@@ -10,6 +10,7 @@ import type { GameStateStore } from "./gameState.js";
 import { backlogPassesFinished } from "./firstDiscoveryBacklog.js";
 import { footOrganicLocks } from "./organicLocks.js";
 import type { BioIndex } from "./bioIndex.js";
+import type { ImportedSystem } from "./visitedCache.js";
 import type {
   BacklogMapDTO,
   GalaxyMineDTO,
@@ -27,6 +28,8 @@ export const MINE_ORGANIC = 8;
 export const MINE_UNFINISHED = 16;
 export const MINE_FIRST_DISCOVERY = 32;
 export const MINE_FIRST_FOOTFALL = 64;
+/** Visited by the game's own list (VisitedStarsCache.dat, plan 6.1), not by a journal: no bodies, no biology. */
+export const MINE_IMPORTED = 128;
 
 interface PerSystem {
   bioBodies: number;
@@ -56,7 +59,12 @@ function perSystem(store: GameStateStore): Map<number, PerSystem> {
   return out;
 }
 
-export function mySystemsDto(store: GameStateStore, backlog: BacklogMapDTO): GalaxyMineDTO {
+export function mySystemsDto(
+  store: GameStateStore,
+  backlog: BacklogMapDTO,
+  /** The game's visited list, less what the journals have (visitedCache.ts `importedSystems`). */
+  imported: readonly ImportedSystem[] = [],
+): GalaxyMineDTO {
   const per = perSystem(store);
   const unfinished = new Map(backlog.systems.map((s) => [s.systemAddress, s.floorCr]));
   const addrs = new Set<number>([...store.visitedSystems.keys(), ...store.systemPositions.keys()]);
@@ -86,6 +94,20 @@ export function mySystemsDto(store: GameStateStore, backlog: BacklogMapDTO): Gal
       bioBodies: p?.bioBodies ?? 0,
       speciesScanned: p?.species ?? 0,
       unfinishedFloorCr: unfinished.get(addr) ?? null,
+    });
+  }
+  for (const s of imported) {
+    if (addrs.has(s.addr)) continue;
+    systems.push({
+      addr: s.addr,
+      name: s.name,
+      x: s.x,
+      y: s.y,
+      z: s.z,
+      flags: MINE_VISITED | MINE_IMPORTED,
+      bioBodies: 0,
+      speciesScanned: 0,
+      unfinishedFloorCr: null,
     });
   }
   return { available: true, systems, unplaceable };
