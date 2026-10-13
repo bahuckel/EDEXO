@@ -46,6 +46,7 @@ import {
   takeExpeditionFocus,
 } from "./ExpeditionDrawer";
 import { NeutronDrawer } from "./NeutronDrawer";
+import { JumponiumDrawer, jumpLine, type JumpRow } from "./galaxy3d/JumponiumDrawer";
 import { StationNames, StationsList } from "./galaxy3d/StationsAt";
 import { STATIONS_CHANGED_EVENT, StationsPanel } from "./StationsPanel";
 import { clearStationsAtCache } from "./galaxy3d/StationsAt";
@@ -88,7 +89,8 @@ type Drawer =
   | "targets"
   | "expedition"
   | "neutron"
-  | "stations";
+  | "stations"
+  | "jumponium";
 /** A Spansh name hit with its coordinates (`/api/system/spansh-search`). */
 type SpanshFindHit = { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number };
 type MineRow = GalaxyMineDTO["systems"][number];
@@ -154,6 +156,9 @@ export function GalaxyMap3D() {
   const [expPlan, setExpPlan] = useState<ExpeditionPlanDTO | null>(null);
   // The neutron route's line (plan 8), drawn while the drawer has one.
   const [neutronLine, setNeutronLine] = useState<{ x: number; y: number; z: number }[]>([]);
+  // The Jumponium tab's results (1.2.16), drawn while it is open.
+  const [jumpRows, setJumpRows] = useState<JumpRow[]>([]);
+  const jumpById = useMemo(() => new Map(jumpRows.map((r) => [r.id, r])), [jumpRows]);
   const expByKey = useMemo(() => new Map((expField?.boxels ?? []).map((b) => [b.key, b])), [expField]);
   const [mine, setMine] = useState<Map<string, MineRow>>(new Map());
   const [route, setRoute] = useState<GalaxyRouteDTO | null>(null);
@@ -687,6 +692,20 @@ export function GalaxyMap3D() {
     e.setPathLine("neutron-route", drawer === "neutron" ? neutronLine : [], 0x9a7bff);
   }, [expField, drawer, neutronLine, stats?.phase]);
 
+  // Jumponium bodies (1.2.16): violet-pink, the commander's own scans brighter, while the tab is open.
+  useEffect(() => {
+    const e = engine.current;
+    if (!e) return;
+    e.setMarkers(
+      "jumponium",
+      drawer === "jumponium"
+        ? jumpRows.map((r) => ({ id: r.id, x: r.x, y: r.y, z: r.z, color: r.own ? [1, 0.55, 0.95] : [0.85, 0.4, 0.8], size: r.own ? 8 : 6 }))
+        : [],
+      2,
+    );
+    e.setMarkerLayerVisible("jumponium", drawer === "jumponium");
+  }, [jumpRows, drawer, stats?.phase]);
+
   // The commander's layer, with the "waiting at least" threshold: below it a waiting system is grey.
   const waitMinCr = waitMinM * 1_000_000;
   useEffect(() => {
@@ -1191,6 +1210,16 @@ export function GalaxyMap3D() {
         </>
       ) : null;
     }
+    if (hover.layer === "jumponium") {
+      const r = jumpById.get(hover.id);
+      return r ? (
+        <>
+          <strong>{r.body}</strong>
+          <span>{jumpLine(r)}</span>
+          <em>{r.own ? "You scanned it" : "From Spansh's dump"} · click for details</em>
+        </>
+      ) : null;
+    }
     if (hover.layer === "expedition") {
       const b = expByKey.get(hover.id);
       if (!b) return null;
@@ -1291,6 +1320,25 @@ export function GalaxyMap3D() {
     }
     if (selection.layer === "you") return <MySystemRecord addr={selection.id} />;
     if (selection.layer === "plan") return <IndexRecord ordinal={Number(selection.id)} heading />;
+    if (selection.layer === "jumponium") {
+      const r = jumpById.get(selection.id);
+      return r ? (
+        <div>
+          <h2 className="g3d-panel__name">{r.body}</h2>
+          <p className="g3d-panel__meta">
+            {r.system} <CopySystemButton system={r.system} />
+          </p>
+          <p>{jumpLine(r)}</p>
+          <p className="dim">
+            {[r.type, r.gravityG != null ? `${r.gravityG.toFixed(2)} g` : null, r.distLs != null ? `${Math.round(r.distLs).toLocaleString("en-US")} ls from arrival` : null]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          {route?.position ? <p className="dim">{fmtLy(dist(route.position, r))} from your ship</p> : null}
+          <p className="dim">{r.own ? "You scanned it." : "From Spansh's dump: the top 1 % of landable bodies for an element."}</p>
+        </div>
+      ) : null;
+    }
     if (selection.layer === "expedition") {
       const b = expByKey.get(selection.id);
       return b ? (
@@ -1817,6 +1865,17 @@ export function GalaxyMap3D() {
             />
           </div>
         </aside>
+      ) : null}
+
+      {drawer === "jumponium" ? (
+        <JumponiumDrawer
+          onRows={setJumpRows}
+          onPick={(r) => {
+            const at = { x: r.x, y: r.y, z: r.z };
+            engine.current?.flyTo(at, 300);
+            engine.current?.select({ kind: "marker", layer: "jumponium", id: r.id, ...at });
+          }}
+        />
       ) : null}
 
       {drawer === "neutron" ? (

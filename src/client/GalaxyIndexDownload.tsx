@@ -155,7 +155,7 @@ export function GalaxyIndexRow() {
   return (
     <MenuRow
       label="Galaxy index"
-      hint="EDAstro's codex data with Spansh's stars and planets, the stations and the neutron stars, downloaded from the app's GitHub release and kept beside your settings. Update fetches the newer files when the release has them."
+      hint="EDAstro's codex data with Spansh's stars and planets, the stations, the neutron stars and the jumponium bodies, downloaded from the app's GitHub release and kept beside your settings. Update fetches the newer files when the release has them."
     >
       {d ? (
         <span className="g3d-row__val" aria-live="polite">
@@ -185,7 +185,7 @@ export function GalaxyIndexRow() {
           {update
             ? `Update · ${updateGain(st)} if you download now`
             : extrasOnly
-              ? `Download stations and neutron stars${st.extraBytes ? ` · ${mb(st.extraBytes)}` : ""}`
+              ? `Download stations, neutron stars and jumponium${st.extraBytes ? ` · ${mb(st.extraBytes)}` : ""}`
               : "Download again"}
         </button>
       )}

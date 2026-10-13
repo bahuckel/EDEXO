@@ -7,7 +7,8 @@ import { localOnly } from "../lanAuth.js";
 import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { neutronShip } from "../neutronShip.js";
 import { downloadNeutrons, loadNeutronIndex, neutronsStatus, probeNeutronsRelease } from "../neutronIndex.js";
-import { optimiseOrder, planNeutronRoute } from "../neutronRoute.js";
+import { optimiseOrder, planNeutronRoute, routeInjections } from "../neutronRoute.js";
+import { jumponiumView } from "../../shared/jumponium.js";
 import { parseLiveHops, parseLivePlan } from "../neutronLive.js";
 import type { HttpServerOptions, RouteContext } from "../httpServer.js";
 
@@ -109,8 +110,15 @@ export function registerNeutronRoutes(
         fsdHealth: finite(body.fsdHealth) ?? s?.fsdHealth ?? null,
         wearPerBoost: finite(body.wearPerBoost) ?? s?.wearPerBoost ?? null,
       });
+      const injections = routeInjections(route.hops, rangeLy, s?.boostFactor ?? 4);
+      const store = opts.getJournalStore?.() ?? null;
       res.json({
         ...route,
+        hops: route.hops.map((h, i) => ({ ...h, inject: injections[i] ?? [] })),
+        injections: {
+          hops: injections.filter((x) => x.length).length,
+          stock: store?.jumponium.raw ? jumponiumView(store.jumponium).tiers.map((t) => ({ tier: t.tier, name: t.name, count: t.count })) : null,
+        },
         waypoints: ordered,
         ship: { rangeLy, jumpsPerTank, jumpsNow },
         ms: Date.now() - t0,

@@ -69,6 +69,7 @@ import { registerGalaxyRoutes } from "./routes/galaxyRoutes.js";
 import { registerExpeditionRoutes } from "./routes/expeditionRoutes.js";
 import { registerNeutronRoutes } from "./routes/neutronRoutes.js";
 import { registerCarriersPoiRoutes } from "./routes/carriersPoiRoutes.js";
+import { registerJumponiumRoutes } from "./routes/jumponiumRoutes.js";
 import { registerServerStatusRoutes } from "./routes/serverStatusRoutes.js";
 import { registerSettingsRoutes } from "./routes/settingsRoutes.js";
 import { registerHudRoutes } from "./routes/hudRoutes.js";
@@ -535,6 +536,7 @@ export function createHttpServer(opts: HttpServerOptions): {
     the commander's machine and must never be proxied through here.
   */
   registerCarriersPoiRoutes(app, opts, routeCtx);
+  registerJumponiumRoutes(app, opts);
 
   /**
    * Whether Elite is in a display mode the HUDs can be drawn over.

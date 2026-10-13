@@ -8,6 +8,7 @@ import type { SurfaceMark } from "./surfaceMarksFile.js";
 import type { FsdFuelState } from "../shared/fsdFuel.js";
 import type { FsdWearState } from "../shared/fsdWear.js";
 import type { OwnAssetsState } from "../shared/ownAssets.js";
+import type { JumponiumState } from "../shared/jumponium.js";
 import type { JumpRangeState } from "../shared/jumpRange.js";
 
 export type PendingOrganicSample = {
@@ -109,8 +110,10 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
       2026-10-13: the Caspian takes less damage).
   35: `ownAssets` — the commander's own carrier (CarrierLocation, CarrierJumpRequest) and colonised systems
       (ColonisationSystemClaim), for the galaxy map's badges (shared/ownAssets.ts).
+  36: `jumponium` — raw materials aboard (Materials at login, then the material events), FSD injections made
+      and their recipes as used (shared/jumponium.ts).
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 35;
+export const JOURNAL_MERGE_CACHE_FORMAT = 36;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {
@@ -224,4 +227,6 @@ export type JournalMergeCachePayload = {
   fsdWear?: FsdWearState;
   /** The commander's own fleet carrier and colonised systems (shared/ownAssets.ts). */
   ownAssets?: OwnAssetsState;
+  /** Raw materials aboard and FSD injections made (shared/jumponium.ts). */
+  jumponium?: JumponiumState;
 };

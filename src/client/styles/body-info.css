@@ -305,7 +305,7 @@
   font: inherit;
   font-weight: 700;
   font-size: var(--fs-lg);
-  color: var(--accent);
+  color: var(--accent-bright);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -411,4 +411,10 @@
   margin: 0;
   font-size: var(--fs-xs);
   color: var(--text-dim);
+}
+
+/* Jumponium field (1.2.16): a rich element (top tenth of landable bodies) in the hover list. */
+.jump-pop__row--rich {
+  color: var(--accent-bright);
+  font-weight: 600;
 }

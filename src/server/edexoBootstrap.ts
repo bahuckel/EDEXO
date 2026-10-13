@@ -173,6 +173,7 @@ import { loadNeutronIndex } from "./neutronIndex.js";
 import { planNeutronRoute } from "./neutronRoute.js";
 import { touchGalaxyMemory } from "./galaxyMemory.js";
 import { fsdWearEstimate, FSD_WARN } from "../shared/fsdWear.js";
+import { jumponiumView } from "../shared/jumponium.js";
 import { createGreenGiantMarks, greenGiantForRecord, type GreenGiantSources } from "./greenGiants.js";
 import { setNotableOptionsProvider } from "./notableOptions.js";
 import { BODY_FEATURES } from "../shared/bodyFeatures.js";
@@ -580,6 +581,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     galacticRecord: (key) => galacticRecords().get(key) ?? null,
     greenGiant: (rec) => greenGiantForRecord(rec, greenSources()),
     scanOf,
+    rawStock: () => store.jumponium.raw,
   };
   const notifySettings = (): NotifySettingsDTO => ({
     prefs: notices.prefs(),
@@ -634,6 +636,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
                 estimate: w.boostsSince > 0 && w.wearIsDefault,
               };
       }
+      snap.jumponium = snap.journalBoot ? null : jumponiumView(store.jumponium);
       snap.bookmarksHere = bookmarks.forSystem(
         store.viewingSystemAddress ?? store.currentSystemAddress ?? null,
         snap.viewingSystemName ?? store.currentSystem ?? null,
