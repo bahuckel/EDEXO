@@ -167,12 +167,16 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
           <path {...p} d="M20 4.5h-4.5A2.5 2.5 0 0 0 13 7v13a2 2 0 0 1 2-2h5V4.5z" />
         </>
       ) : name === "stations" ? (
-        /* A Coriolis starport (owner, 2026-10-13: like EDEXO Colonize's hero): the square front with its docking slot,
-           the triangle over it, the faces turning away on either side. */
+        /*
+          A Coriolis starport face on (owner, 2026-10-13): a cuboctahedron — six squares meeting at their corners, a
+          triangle in each gap. From the front its outline is a square; the front square stands on a corner inside
+          it, touching each side in the middle, the four corner gaps are triangles, and the docking slot lies level
+          across the middle, from the left corner towards the right.
+        */
         <>
-          <path {...p} d="M7.5 11h9l.5 9h-10z" />
-          <path {...p} d="M7.5 11 12 3.5l4.5 7.5M7.5 11 3 12l4 8M16.5 11 21 12l-4 8M7.5 11 5 5.5 12 3.5l7 2-2.5 5.5" />
-          <path {...p} d="M10 15.5h4" strokeWidth={2.2} />
+          <path {...p} d="M3.5 3.5h17v17h-17z" />
+          <path {...p} d="M12 3.5 20.5 12 12 20.5 3.5 12z" />
+          <path {...p} d="M8.6 11.3h6.8v1.4H8.6z" strokeWidth={1.3} />
         </>
       ) : name === "neutron" ? (
         <>

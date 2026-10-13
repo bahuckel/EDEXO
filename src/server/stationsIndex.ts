@@ -40,6 +40,21 @@ export const STATIONS_FILE = "stations.bin";
 export const STATIONS_REMOTE = "stations.bin.gz";
 export const STATIONS_META_REMOTE = "stations.meta.json";
 
+/** The pad a station type always has at least (see {@link StationsIndex.padAt}); docs/perf/build_stations.py too. */
+export const PAD_FLOOR: Readonly<Record<string, number>> = {
+  "Space Construction Depot": 3,
+  "Planetary Construction Depot": 3,
+  "Coriolis Starport": 3,
+  "Orbis Starport": 3,
+  "Ocellus Starport": 3,
+  "Dodec Starport": 3,
+  "Asteroid base": 3,
+  "Planetary Port": 3,
+  "Mega ship": 3,
+  Outpost: 2,
+  "Planetary Outpost": 2,
+};
+
 export interface StationsMeta {
   builtAt?: string;
   dump?: string;
@@ -90,6 +105,7 @@ export class StationsIndex {
     this.stAt = at + this.systemCount * SYS;
     this.strAt = this.stAt + this.stationCount * ST;
     if (this.strAt > buf.length) throw new Error("stations index is truncated");
+    this.padFloor = new Uint8Array(this.meta.types.map((t) => PAD_FLOOR[t] ?? 0));
   }
 
   private str(off: number): string {
@@ -97,6 +113,20 @@ export class StationsIndex {
     if (at >= this.buf.length) return "";
     const n = this.buf[at]!;
     return this.buf.toString("utf8", at + 1, at + 1 + n);
+  }
+
+  private readonly padFloor: Uint8Array;
+
+  /**
+   * A station's largest pad (0 none, 1 S, 2 M, 3 L): the dump's, raised to what its type always has. The game itself
+   * reports an Orbital Construction Site as medium pads only, and Spansh with it — 46,213 of them — though large
+   * ships dock there (owner, 2026-10-13; his Panther Clipper Mk II, 258 times, each Docked line saying "Large": 0),
+   * and some starports, outposts and depots come with no pads recorded at all, which would leave them out as
+   * installations. Settlements keep their own record: theirs really differ.
+   */
+  padAt(i: number): number {
+    const o = this.stAt + i * ST;
+    return Math.max(this.buf[o + 9]!, this.padFloor[this.buf[o + 8]!] ?? 0);
   }
 
   private points: Int32Array | null = null;
@@ -113,7 +143,7 @@ export class StationsIndex {
         const first = this.buf.readUInt32LE(so + 16);
         const count = this.buf.readUInt16LE(so + 20);
         let padded = false;
-        for (let i = first; i < first + count && !padded; i++) padded = this.buf[this.stAt + i * ST + 9]! > 0;
+        for (let i = first; i < first + count && !padded; i++) padded = this.padAt(i) > 0;
         pts[s] = padded ? n++ : -1;
       }
       this.points = pts;
@@ -135,7 +165,7 @@ export class StationsIndex {
     const o = this.stAt + i * ST;
     const so = this.sysAt + sys * SYS;
     const mask = this.buf.readUInt32LE(o + 4);
-    const pad = this.buf[o + 9]!;
+    const pad = this.padAt(i);
     const day = this.buf.readUInt16LE(o + 14);
     return {
       name: this.str(this.buf.readUInt32LE(o + 16)),
@@ -194,7 +224,7 @@ export class StationsIndex {
         const o = this.stAt + i * ST;
         const mask = this.buf.readUInt32LE(o + 4);
         if (want && (any ? (mask & want) === 0 : (mask & want) >>> 0 !== want)) continue;
-        if (this.buf[o + 9]! < minPad) continue;
+        if (this.padAt(i) < minPad) continue;
         const t = this.buf[o + 8]!;
         if (!q.settlements && settlementTypes.has(t)) continue;
         if (!q.construction && constructionTypes.has(t)) continue;
@@ -225,7 +255,7 @@ export class StationsIndex {
       let pad = 0;
       let padded = 0;
       for (let i = first; i < first + count; i++) {
-        const p = this.buf[this.stAt + i * ST + 9]!;
+        const p = this.padAt(i);
         pad = Math.max(pad, p);
         if (p > 0) padded++;
       }
@@ -259,7 +289,7 @@ export class StationsIndex {
       const count = this.buf.readUInt16LE(so + 20);
       let sysName: string | null = null;
       for (let i = first; i < first + count; i++) {
-        if (this.buf[this.stAt + i * ST + 9] === 0) continue; // an installation: no pad, of no interest
+        if (this.padAt(i) === 0) continue; // an installation: no pad, of no interest
         const name = this.str(this.buf.readUInt32LE(this.stAt + i * ST + 16)).toLowerCase();
         let ok = name.includes(q);
         if (!ok && withSystem) {
@@ -307,8 +337,7 @@ export class StationsIndex {
     const first = this.buf.readUInt32LE(so + 16);
     const count = this.buf.readUInt16LE(so + 20);
     const out: StationRow[] = [];
-    for (let i = first; i < first + count; i++)
-      if (this.buf[this.stAt + i * ST + 9]! > 0) out.push(this.row(i, bestS, bestD));
+    for (let i = first; i < first + count; i++) if (this.padAt(i) > 0) out.push(this.row(i, bestS, bestD));
     return out;
   }
 }

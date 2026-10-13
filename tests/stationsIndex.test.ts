@@ -236,10 +236,11 @@ describe("the station index", () => {
   });
 
   it("leaves out installations (no landing pad) everywhere, and numbers the map's dots without them", () => {
+    // An installation has no type name in the dump (and no pad); a pad means Outpost here.
     const st = (name: string, pad: 0 | 1 | 2 | 3): St => ({
       name,
       services: ["Refuel"],
-      type: "Outpost",
+      type: pad ? "Outpost" : "",
       pad,
       ls: 10,
     });
@@ -267,6 +268,39 @@ describe("the station index", () => {
     // The layer draws "Mixed" and "Port" only: their dots are 0 and 1.
     expect([idx2.pointOf(0), idx2.pointOf(1), idx2.pointOf(2)]).toEqual([-1, 0, 1]);
     expect(idx2.search("relay port")[0]!.sys).toBe(1);
+  });
+
+  it("gives a station type at least the pad it always has: depots and starports L, outposts M", () => {
+    const st = (name: string, type: string, pad: 0 | 1 | 2 | 3): St => ({
+      name,
+      services: ["Refuel"],
+      type,
+      pad,
+      ls: 10,
+    });
+    const idx3 = new StationsIndex(
+      encode([
+        {
+          name: "Colony",
+          x: 0,
+          y: 0,
+          z: 0,
+          stations: [
+            // The game reports an Orbital Construction Site as medium pads only; large ships dock there.
+            st("Orbital Construction Site: Lunan Depot", "Planetary Construction Depot", 2),
+            st("Hub", "Coriolis Starport", 0),
+            st("Dock", "Outpost", 0),
+            st("Camp", "Settlement", 1),
+          ],
+        },
+      ]),
+    );
+    expect(idx3.stationsNear({ x: 0, y: 0, z: 0 }).map((r) => [r.name, r.pad])).toEqual([
+      ["Orbital Construction Site: Lunan Depot", "L"],
+      ["Hub", "L"],
+      ["Dock", "M"],
+      ["Camp", "S"],
+    ]);
   });
 
   it("refuses what is not one", () => {
