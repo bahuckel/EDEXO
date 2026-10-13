@@ -249,6 +249,30 @@ function createBrowserBlocker(o) {
         return "";
       }
     },
+    /** The general hiding rules that match these class names, ids and links of the page, as a stylesheet. */
+    domCosmetics(url, dom) {
+      if (!engine) return "";
+      const h = this.hostOf(url);
+      if (!h.hostname) return "";
+      try {
+        const r = engine.getCosmeticsFilters({
+          url,
+          hostname: h.hostname,
+          domain: h.domain,
+          classes: dom.classes,
+          ids: dom.ids,
+          hrefs: dom.hrefs,
+          getBaseRules: false,
+          getInjectionRules: false,
+          getExtendedRules: false,
+          getRulesFromDOM: true,
+          getRulesFromHostname: false,
+        });
+        return r && r.active && typeof r.styles === "string" ? r.styles : "";
+      } catch {
+        return "";
+      }
+    },
     /** The last tab closed: the engine (tens of MB) goes; the file stays for the next open. */
     release() {
       engine = null;
