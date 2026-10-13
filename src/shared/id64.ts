@@ -7,7 +7,7 @@
  * boxel x / sector x (7 - mc, 7), then the system's number in the boxel.
  */
 import { SECTOR_ORIGIN, SECTOR_SIZE_LY } from "./sectorName.js";
-import { MASS_CODE_LETTERS, type MassCode } from "./boxelAdvice.js";
+import { boxelNameAt, MASS_CODE_LETTERS, type MassCode } from "./boxelAdvice.js";
 import { parseBoxel } from "./boxel.js";
 
 export interface Id64Boxel {
@@ -16,6 +16,9 @@ export interface Id64Boxel {
   grid: [number, number, number];
   /** The system's number in its boxel (`<boxel>-<n>`). */
   n: number;
+  /** The sector on the 1,280 ly grid, and the boxel inside it (bx + 128 by + 16384 bz: the name's letters). */
+  sector: [number, number, number];
+  position: number;
   cubeLy: number;
   /** The boxel's centre, ly: within half a cube's diagonal of the system. */
   center: { x: number; y: number; z: number };
@@ -52,6 +55,8 @@ export function id64Boxel(id64: bigint | number | string): Id64Boxel | null {
     code: MASS_CODE_LETTERS[mc]!,
     grid,
     n,
+    sector: [sx, sy, sz],
+    position: bx + 128 * by + 16384 * bz,
     cubeLy: size,
     center: {
       x: SECTOR_ORIGIN.x + (grid[0] + 0.5) * size,
@@ -76,4 +81,21 @@ export function massCodeOfSystem(
   if (addr == null) return null;
   if (typeof addr === "number" && !Number.isSafeInteger(addr)) return null;
   return id64Boxel(addr)?.code ?? null;
+}
+
+/**
+ * The procedural name an address stands for — `<sector> <boxel>-<n>`, or `<sector> <boxel><n>` for a sector's boxel 0
+ * ("Swoilz AA-A d23") — given the sector's name. Hand-named and catalogue systems have another name in the game: the
+ * caller keeps those apart (the neutron index stores them, 1,826 of 3.5 M; plan 8.1).
+ */
+export function proceduralSystemName(
+  id64: bigint | number | string,
+  sectorName: (sx: number, sy: number, sz: number) => string | null,
+): string | null {
+  const b = id64Boxel(id64);
+  if (!b) return null;
+  const sector = sectorName(b.sector[0], b.sector[1], b.sector[2]);
+  if (!sector) return null;
+  const boxel = boxelNameAt(b.code, b.position);
+  return /\d$/.test(boxel) ? `${sector} ${boxel}-${b.n}` : `${sector} ${boxel}${b.n}`;
 }

@@ -6,6 +6,7 @@ import type { BodyExoState, ExplorationScanRecord, JournalLine, SystemLife } fro
 import type { SurfaceMark } from "./surfaceMarksFile.js";
 
 import type { FsdFuelState } from "../shared/fsdFuel.js";
+import type { FsdWearState } from "../shared/fsdWear.js";
 import type { JumpRangeState } from "../shared/jumpRange.js";
 
 export type PendingOrganicSample = {
@@ -102,8 +103,9 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
   32: `jumpRange` — the full jump range as flown, boosts and economical-route hops left out
       (shared/jumpRange.ts); `fsdFuel` — fuel per jump fitted on the commander's jumps
       (shared/fsdFuel.ts).
+  33: `fsdWear` — the FSD's health from Loadout and its wear per neutron supercharge (shared/fsdWear.ts, plan 8.4).
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 32;
+export const JOURNAL_MERGE_CACHE_FORMAT = 33;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {
@@ -213,4 +215,6 @@ export type JournalMergeCachePayload = {
   lastFsdJumpDistLy?: number | null;
   jumpRange?: JumpRangeState;
   fsdFuel?: FsdFuelState;
+  /** The FSD's health and wear per supercharge (shared/fsdWear.ts, plan 8.4). */
+  fsdWear?: FsdWearState;
 };

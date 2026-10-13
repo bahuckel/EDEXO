@@ -54,6 +54,7 @@ import { galaxyLayer, type GalaxyLayerKind } from "../galaxyLayers.js";
 import { GALAXY_LAYER_KINDS } from "../../shared/galaxyLayers.js";
 import { clearBarrenTable } from "../boxelBarren.js";
 import { clearStationsIndex } from "../stationsIndex.js";
+import { clearNeutronIndex } from "../neutronIndex.js";
 
 export function registerGalaxyRoutes(
   app: express.Express,
@@ -104,6 +105,7 @@ export function registerGalaxyRoutes(
   registerGalaxyCache("system-values", clearGalaxySystemValues);
   registerGalaxyCache("boxel-barren", clearBarrenTable);
   registerGalaxyCache("stations", clearStationsIndex);
+  registerGalaxyCache("neutrons", clearNeutronIndex);
   registerGalaxyCache("system-traits", clearSystemTraits);
   // The galaxy body file (683 MB since version 2) was the one dataset never let go: a single "possible"
   // search kept it for the rest of the session (plan 4.1, 2026-10-10).
