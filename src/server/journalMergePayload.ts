@@ -104,8 +104,10 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
       (shared/jumpRange.ts); `fsdFuel` — fuel per jump fitted on the commander's jumps
       (shared/fsdFuel.ts).
   33: `fsdWear` — the FSD's health from Loadout and its wear per neutron supercharge (shared/fsdWear.ts, plan 8.4).
+  34: `fsdWear` per ship (`{ current, ships }`): wear learned per ShipID, the drive's supercharge factor (owner,
+      2026-10-13: the Caspian takes less damage).
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 33;
+export const JOURNAL_MERGE_CACHE_FORMAT = 34;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {

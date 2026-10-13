@@ -21,6 +21,11 @@ interface Ship {
   fsdHealth: number | null;
   wearPerBoost: number;
   wearIsDefault: boolean;
+  /** This ship's own supercharges, other ships with the same drive, or the default (shared/fsdWear.ts). */
+  wearFrom: "ship" | "drive" | "default";
+  /** A supercharge multiplies the range by this: 6 for the Caspian's Mk II SCO drive, else 4. */
+  boostFactor: number;
+  shipType: string | null;
   fsdWarn: number;
   position: Pt | null;
   system: string | null;
@@ -300,7 +305,7 @@ export function NeutronDrawer({
           <div className="g3d-menu__section">
             <MenuRow
               label="Jump range"
-              hint="Laden, unboosted, as your jumps show it (change it for another ship); a supercharge reaches four times this"
+              hint={`Laden, unboosted, as your jumps show it (change it for another ship); a supercharge reaches ${ship?.boostFactor === 6 ? "six times this (the Caspian's Mk II SCO drive)" : "four times this"}`}
             >
               <input
                 className="g3d-input g3d-row__val"
@@ -326,13 +331,20 @@ export function NeutronDrawer({
               label="FSD health"
               hint="The last Loadout's, less the supercharges since; under 80 % the plan says to repair"
             >
-              <span className="g3d-row__val">
-                {pct(ship?.fsdHealth ?? null)}
-                {ship
-                  ? ` · ${(ship.wearPerBoost * 100).toFixed(2)} % a supercharge${ship.wearIsDefault ? " (estimate)" : ""}`
-                  : ""}
-              </span>
+              <span className="g3d-row__val">{pct(ship?.fsdHealth ?? null)}</span>
             </MenuRow>
+            {/* The wear on its own line: in the value box it pushed the label out of the row (owner, 2026-10-13). */}
+            {ship ? (
+              <p className="g3d-panel__note">
+                {(ship.wearPerBoost * 100).toFixed(2)} % wear a supercharge
+                {ship.wearFrom === "ship"
+                  ? " (this ship's, from its Loadouts)"
+                  : ship.wearFrom === "drive"
+                    ? " (from other ships with this drive, until this one has three supercharges between two Loadouts)"
+                    : " (estimate, until this ship has three supercharges between two Loadouts)"}{" "}
+                · supercharge ×{ship.boostFactor}
+              </p>
+            ) : null}
             <label className="g3d-row g3d-row--check">
               <input
                 type="checkbox"
