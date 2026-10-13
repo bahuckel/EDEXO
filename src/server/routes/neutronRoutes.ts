@@ -126,6 +126,8 @@ export function registerNeutronRoutes(
           plan: applied?.plan ?? null,
           held: view ? Object.fromEntries(view.stock.map((e) => [e.key, e.count])) : null,
           makes: view ? view.tiers.map((t) => ({ tier: t.tier, name: t.name, count: t.count })) : null,
+          // The FSD-under-80 % note says what an AFMU could do (the Laboratory, 1.2.16).
+          afmu: view?.afmu?.length ? view.afmTiers.map((t) => ({ tier: t.tier, name: t.name, count: t.count })) : null,
         },
         waypoints: ordered,
         ship: { rangeLy, jumpsPerTank, jumpsNow },

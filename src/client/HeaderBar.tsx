@@ -300,6 +300,16 @@ const AppMenuEntries = memo(function AppMenuEntries({
   );
 });
 
+/*
+  An AFMU repairs the FSD in flight (owner, 2026-10-13, the Laboratory): when one is fitted, the FSD warning says so and
+  how many refills the hold makes. Its ammunition is not in the journals, so not how full it is.
+*/
+function afmuNote(j: AppSnapshot["jumponium"]): string {
+  if (!j?.afmu?.length) return "";
+  const made = j.known ? (j.afmTiers ?? []).map((t) => `${t.count} ${t.name}`).join(", ") : null;
+  return ` An AFMU is fitted: it repairs the FSD in flight.${made ? ` AFM refills you can make: ${made}.` : ""}`;
+}
+
 export const HeaderBar = memo(function HeaderBar({
   snap,
   connected,
@@ -782,7 +792,7 @@ export const HeaderBar = memo(function HeaderBar({
             {snap.fsdHealth?.warn ? (
               <div
                 className="d-scan-card d-scan-card--header-row header-route-mini d-scan-card--label-only header-fsd-warn"
-                title={`The FSD is at ${snap.fsdHealth.estimate ? "about " : ""}${Math.round(snap.fsdHealth.health * 100)} % (the last Loadout, less ${snap.fsdHealth.boostsSince} supercharge${snap.fsdHealth.boostsSince === 1 ? "" : "s"} since): further jumps before a repair are not recommended. Carriers → Stations → Repair finds the nearest.`}
+                title={`The FSD is at ${snap.fsdHealth.estimate ? "about " : ""}${Math.round(snap.fsdHealth.health * 100)} % (the last Loadout, less ${snap.fsdHealth.boostsSince} supercharge${snap.fsdHealth.boostsSince === 1 ? "" : "s"} since): further jumps before a repair are not recommended. Carriers → Stations → Repair finds the nearest.${afmuNote(snap.jumponium)}`}
               >
                 <span className="d-scan-card__label header-metric-card-label">
                   ⚠ FSD {snap.fsdHealth.estimate ? "~" : ""}

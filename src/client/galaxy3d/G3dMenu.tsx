@@ -65,16 +65,16 @@ export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
   },
   {
     key: "jumponium",
-    label: "Jumponium",
-    hint: "Jumponium: the FSD injection materials you hold, and the nearest bodies rich in the ones you pick, shown on the map",
+    label: "Laboratory",
+    hint: "Laboratory: the jumponium and AFM refill materials you hold, what they make, and the nearest bodies rich in the ones you pick, shown on the map",
   },
 ];
 
 export const G3D_HELP: Record<G3dTabKey, string[]> = {
   jumponium: [
-    "What you hold of the eight FSD injection materials (from your journals: the game writes the list at every login, the app follows each pick-up, trade and synthesis after it) and how many of each injection that makes: Basic +25 %, Standard +50 %, Premium +100 % jump range for one jump.",
-    "Below, the nearest landable bodies with the elements you pick. Rich is the top tenth of landable bodies for an element, Top 1 % the best hundredth. No body carries all five premium elements (germanium, arsenic, niobium, yttrium, polonium): premium always takes two or more bodies.",
-    "Your own scanned bodies are always searched. The rest of the galaxy comes from a file downloaded with the galaxy index: the top 1 % of landable bodies for vanadium, germanium, arsenic, cadmium, niobium, yttrium or polonium, from Spansh's dump.",
+    "Two tabs: Jumponium, the FSD injection materials (Basic +25 %, Standard +50 %, Premium +100 % jump range for one jump), and AFM Refill, the materials that refill an AFMU (Standard and Premium repair faster). Each shows what you hold (from your journals: the game writes the list at every login, the app follows each pick-up, trade and synthesis after it) and how many of each tier that makes.",
+    "Below, the nearest landable bodies with the elements you pick. Rich is the top tenth of landable bodies for an element, Top 1 % the best hundredth. Carbon, nickel, chromium and manganese are on most bodies and are not listed. No body carries all five premium jumponium elements: premium always takes two or more bodies.",
+    "Your own scanned bodies are always searched. The rest of the galaxy comes from a file downloaded with the galaxy index: the top 1 % of landable bodies for each of thirteen elements, from Spansh's dump. An AFMU's ammunition is not in the journals: the app knows whether one is fitted, not how full it is.",
   ],
   stations: [
     "The nearest stations to your ship with every service you pick (or any of them), a pad big enough and not too far from the arrival star. Settlements and colony construction sites only if you ask for them.",

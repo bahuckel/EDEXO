@@ -24,7 +24,7 @@ Both are the same version and the same code — [all releases](https://github.co
 The galaxy map's data is a separate download, offered by the map the first time you open it and left
 in place by updates: the index (every system with recorded biology, from EDAstro's codex data, about
 250 MB), the stations (15.6 MB), the neutron stars for the route planner (40 MB) and the galaxy's
-richest jumponium bodies, with one button that fetches whatever is missing or newer.
+richest Laboratory bodies (jumponium and AFM refill materials), with one button that fetches whatever is missing or newer.
 
 Windows will say the publisher is unrecognised: the executable is signed, but with a self-signed
 certificate that SmartScreen does not trust. "More info" → "Run anyway".
@@ -142,7 +142,7 @@ off until you turn it on.
   AutoScanned bodies that still want an FSS. Marks for a species missing from your codex (CX) and a
   first codex entry for the region (FCX).
 - **Body facts**: class, atmosphere and pressure, gravity, temperature, distance from arrival,
-  volcanism and its geological signal count, and the jumponium in its crust.
+  volcanism and its geological signal count, and the jumponium and AFM refill materials in its crust.
 - **Payout**: the least and most the body should pay, the x5 first-footfall bonus, and what you have
   already confirmed on foot or by composition scan.
 - **Candidates**: each species with its chance, payout, rarity and codex marks; _Why this chance_
@@ -195,10 +195,11 @@ game) or as pop-ups if Tab view is off.
   18 helium gas giants on record and 800,709 **stations** (names on hover, pads by type); your own
   carrier and colonies marked, your stations in gold; your codex by region.
 - **Stations** tab: the nearest station with a service, from your ship or any system.
-- **Jumponium** tab: the FSD injection materials you hold (from your journals) and how many basic,
-  standard and premium injections they make, then the nearest landable bodies rich in the elements you
-  pick — any or all of them, rich or the top 1 %, by gravity and distance from arrival — from your own
-  scans and the galaxy's top 1 % of landable bodies for each element.
+- **Laboratory** tab, with a Jumponium and an AFM Refill tab inside: the materials you hold (from your
+  journals) and how many FSD injections or AFM refills of each tier they make, whether an AFMU is fitted, then
+  the nearest landable bodies rich in the elements you pick — any or all of them, rich or the top 1 %, by
+  gravity and distance from arrival — from your own scans and the galaxy's top 1 % of landable bodies for each
+  of thirteen elements.
 - **Neutron** tab: a route through two or more stops by supercharged jumps from neutron star to
   neutron star, with refuel stops at a scoopable star near one, the order optimised if you want, and
   FSD wear per hop learned for each ship. **Fly this route** puts the next stop on the clipboard after
@@ -233,7 +234,7 @@ one panel, in the original look, a title bar or an Elite-style frame; any colour
 - **Backups** of your journals and the app's data, with warnings when the folder shares a drive with
   them.
 - **Notify me**: notices for notable bodies, Notable Stellar Phenomena, nearby carriers with the
-  services you pick, achievements, a scanned body rich in a jumponium material you are short of, with or
+  services you pick, achievements, a scanned body rich in a Laboratory material you are short of, with or
   without sound.
 - **Colour scheme** for the app and the HUD (a dark colour is lightened until it reads, and the text can take
   a colour of its own); **key binds** in one place, live only while Elite or the

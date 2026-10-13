@@ -77,6 +77,8 @@ interface RouteDTO {
     plan: { saved: number; used: Record<string, number>; needs: Record<string, number> } | null;
     held: Record<string, number> | null;
     makes: { tier: string; name: string; count: number }[] | null;
+    /** An AFMU is fitted: the AFM refills the hold makes; null without one. */
+    afmu?: { tier: string; name: string; count: number }[] | null;
   };
 }
 
@@ -517,7 +519,11 @@ export function NeutronDrawer({
                 <p className="g3d-panel__note g3d-panel__note--warn">
                   The FSD is expected under 80 % after stop {route.repairBefore} (
                   {route.hops[route.repairBefore]?.name}): repair before going on (Carriers → Stations →
-                  Repair finds the nearest).
+                  Repair finds the nearest)
+                  {route.jumponium?.afmu
+                    ? `, or with your AFMU in flight (refills you can make: ${route.jumponium.afmu.map((t) => `${t.count} ${t.name}`).join(", ")})`
+                    : ""}
+                  .
                 </p>
               ) : null}
               {route.jumponium?.on && route.jumponium.plan ? (

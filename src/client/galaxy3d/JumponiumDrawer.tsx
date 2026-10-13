@@ -1,11 +1,19 @@
 /**
- * The galaxy map's Jumponium tab (1.2.16, owner: "material gathering for an FSD booster … trackable on galmap with
- * filters"; "injection/jumponium, all tiers of it"): what is aboard and what each FSD injection makes, then the
+ * The galaxy map's Laboratory tab (1.2.16, owner: "material gathering for an FSD booster … trackable on galmap with
+ * filters"; 2026-10-13: "rename it to Laboratory and place both in different tabs in it"): two inner tabs, Jumponium
+ * (the FSD injections) and AFM Refill. Each shows what is aboard of its elements and what each tier makes, then the
  * nearest bodies rich in the elements picked — the commander's own scans first-hand, the rest from the galaxy file
  * (the top 1 % of landable bodies for an element, from Spansh's dump) — drawn on the map while the tab is open.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { JUMP_ELEMENTS, jumpElement, type JumpElement, type JumponiumDTO } from "@shared/jumponium";
+import {
+  LAB_KIND_NAME,
+  elementsOf,
+  jumpElement,
+  type JumpElement,
+  type JumponiumDTO,
+  type LabKind,
+} from "@shared/jumponium";
 import { fmtLyAway } from "@shared/format";
 import { isBool, isNum, isStrArr, usePersistedState } from "../usePersistedState";
 import { CopySystemButton } from "../CopySystemButton";
@@ -35,7 +43,12 @@ interface NearReply {
   error?: string;
 }
 
-const PICKABLE = JUMP_ELEMENTS.filter((e) => e.key !== "carbon");
+/** What can be picked: the kind's elements that are not everywhere (carbon, nickel, chromium, manganese are). */
+const pickable = (kind: LabKind) =>
+  elementsOf(kind)
+    .filter((k) => !jumpElement(k).common)
+    .map(jumpElement);
+const isKind = (v: unknown): v is LabKind => v === "fsd" || v === "afm";
 const LEVELS = [
   { key: "any", label: "Any amount" },
   { key: "rich", label: "Rich" },
@@ -58,7 +71,12 @@ export function JumponiumDrawer({
   /** Changes when the ship jumps, so the list is asked again from where it is (review 1.2.16). */
   shipKey: string;
 }) {
-  const [els, setEls] = usePersistedState<string[]>("galaxy.jump.els", [], isStrArr);
+  const [kind, setKind] = usePersistedState<LabKind>("galaxy.lab.kind", "fsd", isKind);
+  // The elements picked, kept per inner tab.
+  const [fsdEls, setFsdEls] = usePersistedState<string[]>("galaxy.jump.els", [], isStrArr);
+  const [afmEls, setAfmEls] = usePersistedState<string[]>("galaxy.lab.afm.els", [], isStrArr);
+  const els = kind === "fsd" ? fsdEls : afmEls;
+  const setEls = kind === "fsd" ? setFsdEls : setAfmEls;
   const [all, setAll] = usePersistedState("galaxy.jump.all", false, isBool);
   const [level, setLevel] = usePersistedState<"any" | "rich" | "top">("galaxy.jump.level", "rich", isLevel);
   const [maxG, setMaxG] = usePersistedState("galaxy.jump.maxG", 0.5, isNum);
@@ -70,7 +88,7 @@ export function JumponiumDrawer({
   const [downloading, setDownloading] = useState(false);
 
   const query = useMemo(() => {
-    const p = new URLSearchParams({ level, maxLy: String(range), limit: "150" });
+    const p = new URLSearchParams({ kind, level, maxLy: String(range), limit: "150" });
     if (els.length) p.set("els", els.join("|"));
     if (all) p.set("all", "1");
     if (maxG > 0) p.set("maxG", String(maxG));
@@ -78,7 +96,7 @@ export function JumponiumDrawer({
     // Own scans only on the server: filtered here, 150 nearer galaxy bodies could crowd them out (review 1.2.16).
     if (ownOnly) p.set("own", "1");
     return p.toString();
-  }, [els, all, level, maxG, maxLs, range, ownOnly]);
+  }, [kind, els, all, level, maxG, maxLs, range, ownOnly]);
 
   useEffect(() => {
     let alive = true;
@@ -123,7 +141,9 @@ export function JumponiumDrawer({
     setEls((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
   };
   const stock = reply?.stock ?? null;
-  const short = new Set(stock?.known ? stock.tiers.flatMap((t) => t.short.map((s) => s.key)) : []);
+  const kindEls = useMemo(() => new Set(elementsOf(kind)), [kind]);
+  const tiers = stock ? (kind === "fsd" ? stock.tiers : (stock.afmTiers ?? [])) : [];
+  const short = new Set(stock?.known ? tiers.flatMap((t) => t.short.map((s) => s.key)) : []);
 
   const mounted = useRef(true);
   useEffect(
@@ -156,7 +176,7 @@ export function JumponiumDrawer({
         if (jp?.error) throw new Error(jp.error);
         if (jp?.present && !jp.downloading && !st.busy) break;
         if (!st.busy && !jp?.downloading)
-          throw new Error("The download stopped before the jumponium file came.");
+          throw new Error("The download stopped before the Laboratory file came.");
       }
     } catch (e) {
       if (mounted.current) setDownloadError(e instanceof Error ? e.message : String(e));
@@ -168,29 +188,45 @@ export function JumponiumDrawer({
   return (
     <aside
       className="g3d-drawer g3d-menu g3d-plan g3d-stations-drawer g3d-jump-drawer"
-      aria-label="Jumponium"
+      aria-label="Laboratory"
       data-testid="g3d-jumponium"
     >
-      <MenuHead title="Jumponium" help={G3D_HELP.jumponium} />
+      <MenuHead title="Laboratory" help={G3D_HELP.jumponium} />
+      <div className="lab-tabs" role="tablist" aria-label="What to make">
+        {(["fsd", "afm"] as const).map((k) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={kind === k}
+            className={`lab-tab${kind === k ? " lab-tab--on" : ""}`}
+            onClick={() => setKind(k)}
+          >
+            {k === "fsd" ? "Jumponium" : LAB_KIND_NAME.afm}
+          </button>
+        ))}
+      </div>
       <div className="g3d-menu__section g3d-menu__section--first">
         {stock?.known ? (
           <>
             <div className="jump-stock">
-              {stock.stock.map((s) => (
-                <span
-                  key={s.key}
-                  className={`jump-stock__el${short.has(s.key) ? " is-short" : ""}`}
-                  title={`${s.label}: ${s.count} of ${s.cap}`}
-                >
-                  <b>{s.symbol}</b> {s.count}
-                </span>
-              ))}
+              {stock.stock
+                .filter((s) => kindEls.has(s.key))
+                .map((s) => (
+                  <span
+                    key={s.key}
+                    className={`jump-stock__el${short.has(s.key) ? " is-short" : ""}`}
+                    title={`${s.label}: ${s.count} of ${s.cap}`}
+                  >
+                    <b>{s.symbol}</b> {s.count}
+                  </span>
+                ))}
             </div>
             <ul className="jump-tiers">
-              {stock.tiers.map((t) => (
+              {tiers.map((t) => (
                 <li key={t.tier}>
                   <span className="jump-tiers__name">
-                    {t.name} <span className="dim">+{t.bonusPct} %</span>
+                    {t.name} {t.bonus ? <span className="dim">{t.bonus}</span> : null}
                   </span>
                   <span className={t.count ? "jump-tiers__n" : "jump-tiers__n is-zero"}>{t.count}</span>
                   <span className="dim">
@@ -199,6 +235,15 @@ export function JumponiumDrawer({
                 </li>
               ))}
             </ul>
+            {kind === "afm" ? (
+              <p className="dim tiny">
+                {stock.afmu == null
+                  ? "Fitted AFMUs show after your next loadout."
+                  : stock.afmu.length
+                    ? `AFMU fitted: ${stock.afmu.map((a) => (a.size != null && a.cls != null ? `${a.size}${"EDCBA"[a.cls - 1] ?? ""}` : "?")).join(", ")}. Its ammunition is not in the journals: the game shows it in the module panel.`
+                    : "No AFMU fitted on this ship."}
+              </p>
+            ) : null}
           </>
         ) : (
           <p className="fdb-empty">
@@ -209,7 +254,7 @@ export function JumponiumDrawer({
         <div className="stations-filters">
           <div className="stations-filters__group">
             <span className="stations-filters__label">Elements</span>
-            {PICKABLE.map((e) => (
+            {pickable(kind).map((e) => (
               <button
                 key={e.key}
                 type="button"
@@ -225,7 +270,7 @@ export function JumponiumDrawer({
               type="button"
               className="fdb-chip stations-filters__mode"
               onClick={() => setAll(!all)}
-              title="Every picked element on one body, or any one of them (none picked: any of the seven)"
+              title="Every picked element on one body, or any one of them (none picked: any of them)"
             >
               {all ? "All of them" : "Any of them"}
             </button>
@@ -302,7 +347,7 @@ export function JumponiumDrawer({
               onClick={() => void download()}
               disabled={downloading}
             >
-              {downloading ? "Downloading…" : "Download the galaxy's jumponium bodies"}
+              {downloading ? "Downloading…" : "Download the galaxy's Laboratory bodies"}
             </button>
             <span className="dim">
               Searching your own {reply.ownScanned.toLocaleString("en-US")} scanned landable bodies only. The
@@ -345,7 +390,7 @@ export function JumponiumDrawer({
                     <td>{fmtLyAway(r.distLy)}</td>
                     <td className="jump-els">
                       {(Object.entries(r.pct) as [JumpElement, number][])
-                        .filter(([k]) => k !== "carbon")
+                        .filter(([k]) => kindEls.has(k) && !jumpElement(k).common)
                         .map(([k, v]) => (
                           <span key={k} className={els.includes(k) ? "is-on" : undefined}>
                             {jumpElement(k).symbol} {pctLabel(v)}
@@ -368,7 +413,7 @@ export function JumponiumDrawer({
 /** "Po 1.12 % · Y 2.30 %": a body's elements, carbon left out, for the map's hover and card. */
 export function jumpLine(r: Pick<JumpRow, "pct">): string {
   return (Object.entries(r.pct) as [JumpElement, number][])
-    .filter(([k]) => k !== "carbon")
+    .filter(([k]) => !jumpElement(k).common)
     .map(([k, v]) => `${jumpElement(k).symbol} ${pctLabel(v)} %`)
     .join(" · ");
 }

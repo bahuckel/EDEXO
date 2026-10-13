@@ -42,6 +42,18 @@ import { JumponiumFact } from "./JumponiumFact";
 import type { JumponiumDTO } from "@shared/jumponium";
 export { GlanceGenera } from "./BodyGlance";
 
+/*
+  The game's DSS names some genera by one of their species: every Sinuous Tubers body comes back "Roseum Sinuous
+  Tubers" and every Anemone "Luteolum Anemone" — the genus's codex name, not what grows there (owner, 2026-10-14:
+  Laso GI-J d9-93 A 4 said Roseum after the DSS and was Prasinum on foot; Spansh's Blatteum bodies carry the same
+  token). Said on hover, so the label is not taken for the species.
+*/
+function dssLabelNote(label: string | null | undefined, genus: string): string | undefined {
+  const l = (label ?? "").trim();
+  if (!l || l.toLowerCase() === genus.trim().toLowerCase() || !l.toLowerCase().includes(genus.trim().toLowerCase().split(" ")[0]!)) return undefined;
+  return `The game's scan calls this genus "${l}" on every body: that is its name for the genus, not the species. The species is known once you scan one on foot.`;
+}
+
 export const BodyPane = memo(function BodyPane({
   body,
   liveRun,
@@ -525,7 +537,11 @@ export const BodyPane = memo(function BodyPane({
                         className={`genus-progress-row genus-progress-row--${r.status}`}
                         role="row"
                       >
-                        <span className="genus-progress-genus" role="cell">
+                        <span
+                          className="genus-progress-genus"
+                          role="cell"
+                          title={dssLabelNote(r.hint?.Genus_Localised, r.genus)}
+                        >
                           {r.genus}
                           {r.hint && genusHintIsDssOrphan(r.hint, body.dssGenusOrphanHints) ? (
                             <span

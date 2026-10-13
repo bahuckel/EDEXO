@@ -299,7 +299,7 @@ export function registerGalaxyRoutes(
       st.downloading ??
       (ex.stations.downloading ? { name: "stations.bin.gz", ...ex.stations.downloading } : null) ??
       (ex.neutrons.downloading ? { name: "neutrons.bin.gz", ...ex.neutrons.downloading } : null) ??
-      (ex.jumponium.downloading ? { name: "jumponium.bin.gz", ...ex.jumponium.downloading } : null);
+      (ex.jumponium.downloading ? { name: "laboratory.bin.gz", ...ex.jumponium.downloading } : null);
     return {
       ...st,
       downloading,

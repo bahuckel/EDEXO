@@ -993,7 +993,31 @@
   font-weight: 600;
 }
 /* Why a system dot is lit: the filter it matches, the layers on it */
-/* Jumponium tab (1.2.16): the stock as element chips, the three injections, a body's elements in the list. */
+/* Laboratory tab (1.2.16): Jumponium / AFM Refill, the stock as element chips, the tiers, a body's elements. */
+.lab-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 6px;
+  border-bottom: 1px solid var(--accent-a22);
+}
+.lab-tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  padding: 4px 10px;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.lab-tab:hover {
+  color: var(--text);
+}
+.lab-tab--on {
+  color: var(--accent-bright);
+  border-bottom-color: var(--accent);
+}
 .jump-stock {
   display: flex;
   flex-wrap: wrap;

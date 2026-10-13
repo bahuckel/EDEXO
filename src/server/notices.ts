@@ -29,7 +29,7 @@ import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
 import { greenCodexId, greenGiantLabel, isK10CodexName, type GreenGiantVerdict } from "../shared/greenGasGiant.js";
 import { carrierServiceLabel } from "../shared/carrierServices.js";
 import { bodyKey as toBodyKey } from "../shared/bodyKey.js";
-import { INJECTIONS, RAW_CAP, bodyJumponium, hitLabel, jumpElement, type JumpElement } from "../shared/jumponium.js";
+import { RECIPES, RAW_CAP, bodyJumponium, hitLabel, jumpElement, type JumpElement } from "../shared/jumponium.js";
 import {
   CARRIER_NOTICE_MIN_FROM_SOL_LY,
   DEFAULT_NOTIFY_PREFS,
@@ -468,15 +468,23 @@ export function createNoticesService(opts: {
     if (jp.on && line.Landable === true) {
       const bj = bodyJumponium(line.Materials);
       const stock = ctx.rawStock?.() ?? null;
-      // The elements of the injections he gathers for (owner: "custom for basic/standard/premium").
-      const tiers = INJECTIONS.filter((i) => jp.tiers[i.tier]);
-      // Carbon is on 97 % of landable bodies: never a reason to fly anywhere (review 1.2.16).
-      const wanted = new Set(tiers.flatMap((i) => Object.keys(i.recipe)).filter((k) => k !== "carbon"));
+      // The elements of the injections and refills he gathers for (owner: "custom for basic/standard/premium").
+      const afmOn = jp.afm ?? { basic: false, standard: false, premium: false };
+      const tiers = RECIPES.filter((i) => (i.kind === "fsd" ? jp.tiers[i.tier] : afmOn[i.tier]));
+      // Common elements (carbon, nickel, chromium, manganese) are never a reason to fly anywhere (review 1.2.16).
+      const wanted = new Set(
+        tiers.flatMap((i) => Object.keys(i.recipe) as JumpElement[]).filter((k) => !jumpElement(k).common),
+      );
       // Short of: under the number set, and never at the grade's cap — a full hold takes no more (review 1.2.16).
       const short = (k: JumpElement) => (stock?.[k] ?? 0) < Math.min(jp.target, RAW_CAP[jumpElement(k).grade]);
       const rich = (bj?.hits ?? []).filter((h) => h.good && wanted.has(h.key) && (!jp.onlyShort || stock == null || short(h.key)));
       if (rich.length) {
-        const serves = tiers.filter((i) => rich.some((h) => h.key in i.recipe)).map((i) => i.name);
+        const served = tiers.filter((i) => rich.some((h) => h.key in i.recipe));
+        const kinds = new Set(served.map((i) => i.kind));
+        const head =
+          kinds.size > 1
+            ? `Laboratory (${served.map((i) => `${i.kind === "fsd" ? "FSD" : "AFM"} ${i.name}`).join(", ")})`
+            : `${kinds.has("afm") ? "AFM refill" : "Jumponium"} (${served.map((i) => i.name).join(", ")})`;
         const g = num(line.SurfaceGravity);
         const ls = num(line.DistanceFromArrivalLS);
         const facts = [g != null ? `${(g / 9.80665).toFixed(2)} g` : "", ls != null ? `${Math.round(ls).toLocaleString("en-US")} ls` : ""]
@@ -488,7 +496,7 @@ export function createNoticesService(opts: {
             ...base,
             id: `jumponium:${bodyKey}`,
             kind: "jumponium",
-            title: `Jumponium (${serves.join(", ")}): ${rich.map(hitLabel).join(", ")}`,
+            title: `${head}: ${rich.map(hitLabel).join(", ")}`,
             text: `${body} in ${system}${facts ? ` — ${facts}` : ""}${have}`,
           }) || added;
       }

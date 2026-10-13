@@ -14,18 +14,47 @@
  *   that element, measured on Spansh's dump (Ryker's Hope region, 4,189,719 landable bodies, 2026-10-13).
  */
 
+/*
+  The Laboratory (owner, 2026-10-13: "add … AFM Refill materials collection as well, same tab as jumponium, rename it
+  to Laboratory"; 2026-10-14: "Laboratory goes in 1.2.16"): the same machinery for the AFM refill synthesis. Its
+  recipes, as he gave them and as Inara and EDEngineer's blueprints have them: Basic nickel 2, zinc 2, chromium 2,
+  vanadium 3; Standard (+50 % repair speed) tin 1, manganese 2, vanadium 6, molybdenum 1, zirconium 1; Premium (+100 %)
+  zinc 2, chromium 4, vanadium 6, zirconium 2, tellurium 1, ruthenium 1. Elements on most landable bodies (carbon
+  97 %, nickel 100 %, chromium 59 %, manganese 55 %) are marked common: tracked aboard, never a reason to fly.
+*/
 export type JumpElement =
-  "carbon" | "vanadium" | "germanium" | "cadmium" | "niobium" | "arsenic" | "yttrium" | "polonium";
+  | "carbon"
+  | "vanadium"
+  | "germanium"
+  | "cadmium"
+  | "niobium"
+  | "arsenic"
+  | "yttrium"
+  | "polonium"
+  | "nickel"
+  | "zinc"
+  | "chromium"
+  | "tin"
+  | "manganese"
+  | "molybdenum"
+  | "zirconium"
+  | "tellurium"
+  | "ruthenium";
 export type InjectionTier = "basic" | "standard" | "premium";
+/** What a recipe makes: an FSD injection or an AFM refill. */
+export type LabKind = "fsd" | "afm";
 
 export const JUMP_ELEMENTS: readonly {
   key: JumpElement;
   label: string;
   symbol: string;
   grade: 1 | 2 | 3 | 4;
+  /** The top tenth of landable bodies (Ryker's Hope, 4,189,719 landable bodies). */
   good: number;
+  /** On most landable bodies: no reason to fly for it (no notices, not in the galaxy file). */
+  common?: boolean;
 }[] = [
-  { key: "carbon", label: "Carbon", symbol: "C", grade: 1, good: 23.1 },
+  { key: "carbon", label: "Carbon", symbol: "C", grade: 1, good: 23.1, common: true },
   { key: "vanadium", label: "Vanadium", symbol: "V", grade: 2, good: 5.58 },
   { key: "germanium", label: "Germanium", symbol: "Ge", grade: 2, good: 5.68 },
   { key: "arsenic", label: "Arsenic", symbol: "As", grade: 2, good: 2.61 },
@@ -33,6 +62,15 @@ export const JUMP_ELEMENTS: readonly {
   { key: "niobium", label: "Niobium", symbol: "Nb", grade: 3, good: 1.54 },
   { key: "yttrium", label: "Yttrium", symbol: "Y", grade: 4, good: 1.35 },
   { key: "polonium", label: "Polonium", symbol: "Po", grade: 4, good: 0.64 },
+  { key: "nickel", label: "Nickel", symbol: "Ni", grade: 1, good: 17.07, common: true },
+  { key: "zinc", label: "Zinc", symbol: "Zn", grade: 2, good: 6.14 },
+  { key: "chromium", label: "Chromium", symbol: "Cr", grade: 2, good: 9.96, common: true },
+  { key: "manganese", label: "Manganese", symbol: "Mn", grade: 2, good: 9.19, common: true },
+  { key: "zirconium", label: "Zirconium", symbol: "Zr", grade: 2, good: 2.72 },
+  { key: "tin", label: "Tin", symbol: "Sn", grade: 3, good: 1.47 },
+  { key: "molybdenum", label: "Molybdenum", symbol: "Mo", grade: 3, good: 1.47 },
+  { key: "tellurium", label: "Tellurium", symbol: "Te", grade: 4, good: 1.47 },
+  { key: "ruthenium", label: "Ruthenium", symbol: "Ru", grade: 4, good: 1.4 },
 ];
 
 const BY_KEY = new Map(JUMP_ELEMENTS.map((e) => [e.key, e]));
@@ -44,49 +82,105 @@ export const RAW_CAP: Record<1 | 2 | 3 | 4, number> = { 1: 300, 2: 250, 3: 200, 
 
 export type Recipe = Partial<Record<JumpElement, number>>;
 
-export const INJECTIONS: readonly {
+export interface LabRecipe {
+  kind: LabKind;
   tier: InjectionTier;
   name: string;
+  /** The journal's `Synthesis.Name` (FSD: "FSD Basic"; AFM matched loosely, see {@link recipeOfSynthesis}). */
   synthesis: string;
   bonusPct: number;
+  /** "+25 % jump range", "+50 % repair speed", or "" for the AFM's basic. */
+  bonus: string;
   recipe: Recipe;
-}[] = [
+}
+
+export const RECIPES: readonly LabRecipe[] = [
   {
+    kind: "fsd",
     tier: "basic",
     name: "Basic",
     synthesis: "FSD Basic",
     bonusPct: 25,
+    bonus: "+25 % jump range",
     recipe: { carbon: 1, vanadium: 1, germanium: 1 },
   },
   {
+    kind: "fsd",
     tier: "standard",
     name: "Standard",
     synthesis: "FSD Standard",
     bonusPct: 50,
+    bonus: "+50 % jump range",
     recipe: { carbon: 1, vanadium: 1, germanium: 1, cadmium: 1, niobium: 1 },
   },
   {
+    kind: "fsd",
     tier: "premium",
     name: "Premium",
     synthesis: "FSD Premium",
     bonusPct: 100,
+    bonus: "+100 % jump range",
     recipe: { carbon: 1, germanium: 1, arsenic: 1, niobium: 1, yttrium: 1, polonium: 1 },
   },
+  {
+    kind: "afm",
+    tier: "basic",
+    name: "Basic",
+    synthesis: "AFM Basic",
+    bonusPct: 0,
+    bonus: "",
+    recipe: { nickel: 2, zinc: 2, chromium: 2, vanadium: 3 },
+  },
+  {
+    kind: "afm",
+    tier: "standard",
+    name: "Standard",
+    synthesis: "AFM Standard",
+    bonusPct: 50,
+    bonus: "+50 % repair speed",
+    recipe: { tin: 1, manganese: 2, vanadium: 6, molybdenum: 1, zirconium: 1 },
+  },
+  {
+    kind: "afm",
+    tier: "premium",
+    name: "Premium",
+    synthesis: "AFM Premium",
+    bonusPct: 100,
+    bonus: "+100 % repair speed",
+    recipe: { zinc: 2, chromium: 4, vanadium: 6, zirconium: 2, tellurium: 1, ruthenium: 1 },
+  },
 ];
+
+/** The FSD injections (the jumponium tiers). */
+export const INJECTIONS: readonly LabRecipe[] = RECIPES.filter((r) => r.kind === "fsd");
+export const AFM_REFILLS: readonly LabRecipe[] = RECIPES.filter((r) => r.kind === "afm");
+export const recipesOf = (kind: LabKind): readonly LabRecipe[] => (kind === "fsd" ? INJECTIONS : AFM_REFILLS);
+export const LAB_KIND_NAME: Record<LabKind, string> = { fsd: "FSD Injection", afm: "AFM Refill" };
+
+/** The elements a kind's recipes use, in the table's order. */
+export function elementsOf(kind: LabKind): JumpElement[] {
+  const used = new Set(recipesOf(kind).flatMap((r) => Object.keys(r.recipe)));
+  return JUMP_ELEMENTS.filter((e) => used.has(e.key)).map((e) => e.key);
+}
+
+/** Learned recipes and counts made are kept under the tier for FSD (as before) and "afm:<tier>" for AFM. */
+const recipeKey = (kind: LabKind, tier: InjectionTier) => (kind === "fsd" ? tier : `afm:${tier}`);
 
 export interface JumponiumState {
   /** Raw counts by lower-case name, every raw element (not only jumponium); null until a `Materials` line. */
   raw: Record<string, number> | null;
   /** ISO time of the last `Materials` line. */
   loginAt: string | null;
-  /** Recipes as the game used them, from the commander's own `Synthesis` lines (tier → counts). */
-  learned: Partial<Record<InjectionTier, Recipe>>;
-  /** FSD injections synthesised, by tier. */
-  made: Partial<Record<InjectionTier, number>>;
+  /** Recipes as the game used them, from the commander's own `Synthesis` lines (FSD: tier; AFM: "afm:<tier>"). */
+  learned: Partial<Record<string, Recipe>>;
+  /** Injections and refills synthesised, by the same keys. */
+  made: Partial<Record<string, number>>;
+  /** The AFMUs fitted, from the last `Loadout` (its ammo is not in the journals); null before one. */
+  afmu: { item: string; size: number | null; cls: number | null; health: number | null }[] | null;
 }
 
 export function newJumponium(): JumponiumState {
-  return { raw: null, loginAt: null, learned: {}, made: {} };
+  return { raw: null, loginAt: null, learned: {}, made: {}, afmu: null };
 }
 
 const lc = (v: unknown) => (typeof v === "string" ? v.trim().toLowerCase() : "");
@@ -147,7 +241,14 @@ function eachIngredient(v: unknown, fn: (name: string, count: number, category: 
   }
 }
 
-const tierOfSynthesis = (name: unknown) => INJECTIONS.find((i) => lc(i.synthesis) === lc(name))?.tier ?? null;
+/** The recipe a `Synthesis.Name` is: "FSD Premium" exactly; an AFM refill by "afm" and its tier word. */
+export function recipeOfSynthesis(name: unknown): LabRecipe | null {
+  const n = lc(name);
+  const exact = RECIPES.find((r) => lc(r.synthesis) === n);
+  if (exact) return exact;
+  if (!n.includes("afm")) return null;
+  return AFM_REFILLS.find((r) => n.includes(r.tier)) ?? null;
+}
 
 /** The journal events {@link jumponiumLine} reads (the store skips the rest). */
 export const JUMPONIUM_EVENTS: ReadonlySet<string> = new Set([
@@ -161,6 +262,7 @@ export const JUMPONIUM_EVENTS: ReadonlySet<string> = new Set([
   "EngineerContribution",
   "ScientificResearch",
   "MissionCompleted",
+  "Loadout",
 ]);
 
 export function jumponiumLine(st: JumponiumState, line: Record<string, unknown>): void {
@@ -192,11 +294,27 @@ export function jumponiumLine(st: JumponiumState, line: Record<string, unknown>)
     }
     case "Synthesis": {
       eachIngredient(line.Materials, (n, c) => add(st, n, -c));
-      const tier = tierOfSynthesis(line.Name);
-      if (tier) {
-        st.made[tier] = (st.made[tier] ?? 0) + 1;
-        learnRecipe(st, tier, line.Materials);
+      const r = recipeOfSynthesis(line.Name);
+      if (r) {
+        const k = recipeKey(r.kind, r.tier);
+        st.made[k] = (st.made[k] ?? 0) + 1;
+        learnRecipe(st, r.tier, line.Materials, r.kind);
       }
+      return;
+    }
+    case "Loadout": {
+      const mods = Array.isArray(line.Modules) ? (line.Modules as Record<string, unknown>[]) : [];
+      st.afmu = mods
+        .filter((m) => lc(m?.Item).startsWith("int_repairer"))
+        .map((m) => {
+          const mt = /size(\d+)_class(\d+)/.exec(lc(m.Item));
+          return {
+            item: lc(m.Item),
+            size: mt ? Number(mt[1]) : null,
+            cls: mt ? Number(mt[2]) : null,
+            health: typeof m.Health === "number" ? m.Health : null,
+          };
+        });
       return;
     }
     case "EngineerCraft":
@@ -218,27 +336,33 @@ export function jumponiumLine(st: JumponiumState, line: Record<string, unknown>)
   }
 }
 
-/** What a `Synthesis` line used for a tier, when every material in it is jumponium. */
-export function learnRecipe(st: JumponiumState, tier: InjectionTier, materials: unknown): void {
+/** What a `Synthesis` line used for a recipe, when every material in it is one the table knows. */
+export function learnRecipe(
+  st: JumponiumState,
+  tier: InjectionTier,
+  materials: unknown,
+  kind: LabKind = "fsd",
+): void {
   const r: Recipe = {};
   let ok = true;
   eachIngredient(materials, (n, c) => {
     if (isJumpElement(n) && c > 0) r[n] = c;
     else ok = false;
   });
-  if (ok && Object.keys(r).length) st.learned[tier] = r;
+  if (ok && Object.keys(r).length) st.learned[recipeKey(kind, tier)] = r;
 }
 
-export function recipeFor(st: JumponiumState | null, tier: InjectionTier): Recipe {
-  return st?.learned[tier] ?? INJECTIONS.find((i) => i.tier === tier)!.recipe;
+export function recipeFor(st: JumponiumState | null, tier: InjectionTier, kind: LabKind = "fsd"): Recipe {
+  return st?.learned[recipeKey(kind, tier)] ?? recipesOf(kind).find((i) => i.tier === tier)!.recipe;
 }
 
 /** How many of a tier the stock makes, and what one more would need. */
 export function craftable(
   st: JumponiumState,
   tier: InjectionTier,
+  kind: LabKind = "fsd",
 ): { count: number; short: Partial<Record<JumpElement, number>> } {
-  const rec = recipeFor(st, tier);
+  const rec = recipeFor(st, tier, kind);
   let count = Number.POSITIVE_INFINITY;
   for (const [k, q] of Object.entries(rec) as [JumpElement, number][])
     count = Math.min(count, Math.floor((st.raw?.[k] ?? 0) / q));
@@ -261,17 +385,30 @@ export function hydrateJumponium(raw: unknown): JumponiumState {
       if (typeof v === "number" && Number.isFinite(v)) st.raw[k] = v;
   }
   st.loginAt = typeof r.loginAt === "string" ? r.loginAt : null;
-  for (const i of INJECTIONS) {
-    const l = (r.learned as Record<string, unknown> | undefined)?.[i.tier];
+  for (const i of RECIPES) {
+    const key = recipeKey(i.kind, i.tier);
+    const l = (r.learned as Record<string, unknown> | undefined)?.[key];
     if (l && typeof l === "object") {
       const rec: Recipe = {};
       for (const [k, v] of Object.entries(l))
         if (isJumpElement(k) && typeof v === "number" && v > 0) rec[k] = v;
-      if (Object.keys(rec).length) st.learned[i.tier] = rec;
+      if (Object.keys(rec).length) st.learned[key] = rec;
     }
-    const m = (r.made as Record<string, unknown> | undefined)?.[i.tier];
-    if (typeof m === "number" && m > 0) st.made[i.tier] = m;
+    const m = (r.made as Record<string, unknown> | undefined)?.[key];
+    if (typeof m === "number" && m > 0) st.made[key] = m;
   }
+  if (Array.isArray(r.afmu))
+    st.afmu = (r.afmu as unknown[])
+      .filter(
+        (a): a is Record<string, unknown> =>
+          !!a && typeof a === "object" && typeof (a as { item?: unknown }).item === "string",
+      )
+      .map((a) => ({
+        item: a.item as string,
+        size: typeof a.size === "number" ? a.size : null,
+        cls: typeof a.cls === "number" ? a.cls : null,
+        health: typeof a.health === "number" ? a.health : null,
+      }));
   return st;
 }
 
@@ -286,8 +423,10 @@ export interface JumpHit {
 
 export interface BodyJumponium {
   hits: JumpHit[];
-  /** The tiers whose every material the body has. */
+  /** The FSD injection tiers whose every material the body has. */
   tiers: InjectionTier[];
+  /** The same for the AFM refills. */
+  afmTiers: InjectionTier[];
 }
 
 /** A body's jumponium from its `Scan` materials (`Name` / `name`, `Percent` / `percent`, any case). */
@@ -305,10 +444,9 @@ export function bodyJumponium(materials: unknown): BodyJumponium | null {
     percent: pct.get(e.key)!,
     good: pct.get(e.key)! >= e.good,
   }));
-  const tiers = INJECTIONS.filter((i) => Object.keys(i.recipe).every((k) => pct.has(k as JumpElement))).map(
-    (i) => i.tier,
-  );
-  return { hits, tiers };
+  const all = (rs: readonly LabRecipe[]) =>
+    rs.filter((i) => Object.keys(i.recipe).every((k) => pct.has(k as JumpElement))).map((i) => i.tier);
+  return { hits, tiers: all(INJECTIONS), afmTiers: all(AFM_REFILLS) };
 }
 
 /** "Po 1.12 %", the way the app writes a hit. */
@@ -323,16 +461,24 @@ export interface JumponiumDTO {
   known: boolean;
   loginAt: string | null;
   stock: { key: JumpElement; symbol: string; label: string; count: number; cap: number }[];
-  tiers: {
-    tier: InjectionTier;
-    name: string;
-    bonusPct: number;
-    /** Injections the stock makes now. */
-    count: number;
-    /** What one more needs: element and how many short. */
-    short: { key: JumpElement; symbol: string; need: number }[];
-    made: number;
-  }[];
+  /** The FSD injections. */
+  tiers: LabTierDTO[];
+  /** The AFM refills. */
+  afmTiers: LabTierDTO[];
+  /** The AFMUs fitted (from the last Loadout); empty when none, null before a Loadout. */
+  afmu: { size: number | null; cls: number | null; health: number | null }[] | null;
+}
+
+export interface LabTierDTO {
+  tier: InjectionTier;
+  name: string;
+  bonusPct: number;
+  bonus: string;
+  /** What the stock makes now. */
+  count: number;
+  /** What one more needs: element and how many short. */
+  short: { key: JumpElement; symbol: string; need: number }[];
+  made: number;
 }
 
 export function jumponiumView(st: JumponiumState): JumponiumDTO {
@@ -346,21 +492,26 @@ export function jumponiumView(st: JumponiumState): JumponiumDTO {
       count: st.raw?.[e.key] ?? 0,
       cap: RAW_CAP[e.grade],
     })),
-    tiers: INJECTIONS.map((i) => {
-      const c = craftable(st, i.tier);
-      return {
-        tier: i.tier,
-        name: i.name,
-        bonusPct: i.bonusPct,
-        count: c.count,
-        short: (Object.entries(c.short) as [JumpElement, number][]).map(([key, need]) => ({
-          key,
-          symbol: jumpElement(key).symbol,
-          need,
-        })),
-        made: st.made[i.tier] ?? 0,
-      };
-    }),
+    tiers: INJECTIONS.map((i) => tierView(st, i)),
+    afmTiers: AFM_REFILLS.map((i) => tierView(st, i)),
+    afmu: st.afmu ? st.afmu.map((a) => ({ size: a.size, cls: a.cls, health: a.health })) : null,
+  };
+}
+
+function tierView(st: JumponiumState, i: LabRecipe): LabTierDTO {
+  const c = craftable(st, i.tier, i.kind);
+  return {
+    tier: i.tier,
+    name: i.name,
+    bonusPct: i.bonusPct,
+    bonus: i.bonus,
+    count: c.count,
+    short: (Object.entries(c.short) as [JumpElement, number][]).map(([key, need]) => ({
+      key,
+      symbol: jumpElement(key).symbol,
+      need,
+    })),
+    made: st.made[recipeKey(i.kind, i.tier)] ?? 0,
   };
 }
 

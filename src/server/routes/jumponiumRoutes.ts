@@ -14,7 +14,13 @@ import {
   type JumpFilter,
   type JumpLevel,
 } from "../jumponiumIndex.js";
-import { isJumpElement, jumponiumView, type JumpElement, type JumponiumDTO } from "../../shared/jumponium.js";
+import {
+  isJumpElement,
+  jumpElement,
+  jumponiumView,
+  type JumpElement,
+  type JumponiumDTO,
+} from "../../shared/jumponium.js";
 
 export interface JumponiumNearDTO {
   from: { x: number; y: number; z: number };
@@ -35,11 +41,12 @@ export function parseJumpFilter(q: Record<string, unknown>): JumpFilter {
   const els = String(q.els ?? "")
     .split(/[|,]/)
     .map((s) => s.trim().toLowerCase())
-    .filter((s): s is JumpElement => isJumpElement(s) && s !== "carbon");
+    .filter((s): s is JumpElement => isJumpElement(s) && !jumpElement(s).common);
   const level: JumpLevel = q.level === "any" || q.level === "top" ? q.level : "rich";
   const maxG = num(q.maxG);
   const maxLs = num(q.maxLs);
   return {
+    kind: q.kind === "afm" ? "afm" : "fsd",
     els: [...new Set(els)],
     all: q.all === "1",
     level,

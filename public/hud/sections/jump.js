@@ -252,7 +252,18 @@ export function renderFsdHealth(d, el) {
     (f.estimate ? "~" : "") +
     Math.round(f.health * 100) +
     " %" +
-    (f.warn ? " · repair before more supercharges" : "");
+    (f.warn ? " · repair before more supercharges" + afmuHint(d) : "");
+}
+
+/* An AFMU fitted (the Laboratory, 1.2.16): it repairs the FSD in flight; how many refills the hold makes. */
+function afmuHint(d) {
+  var j = d.jumponium;
+  if (!j || !j.afmu || !j.afmu.length) return "";
+  var refills = 0;
+  (j.afmTiers || []).forEach(function (t) {
+    refills += t.count || 0;
+  });
+  return " (AFMU fitted" + (j.known ? " · " + refills + " refill" + (refills === 1 ? "" : "s") + " makeable" : "") + ")";
 }
 
 /*

@@ -132,6 +132,7 @@ describe("jumponium inventory", () => {
       loginAt: null,
       learned: {},
       made: {},
+      afmu: null,
     });
     expect(hydrateJumponium(null)).toEqual(newJumponium());
   });
@@ -284,7 +285,7 @@ describe("the galaxy map's filter", () => {
 });
 
 describe("the galaxy file", () => {
-  it("reads back what docs/perf/build_jumponium.py writes: position, elements, names, nearest first", () => {
+  it("reads back what docs/perf/build_laboratory.py writes: position, elements, names, nearest first", () => {
     const dir = mkdtempSync(join(tmpdir(), "jmp-"));
     const file = join(dir, "jumponium.bin");
     // One cell, two bodies; names stored (the addresses are not procedural ones in a known sector).
@@ -307,7 +308,7 @@ describe("the galaxy file", () => {
       name: number,
       id64: bigint,
     ) => {
-      const r = Buffer.alloc(32);
+      const r = Buffer.alloc(40);
       r.writeUInt16LE(rel[0], 0);
       r.writeUInt16LE(rel[1], 2);
       r.writeUInt16LE(rel[2], 4);
@@ -316,8 +317,8 @@ describe("the galaxy file", () => {
       r.writeUInt16LE(g, 8);
       r.writeUInt16LE(ls, 10);
       el.forEach((v, j) => (r[12 + j] = v));
-      r.writeUInt32LE(name, 20);
-      r.writeBigUInt64LE(id64, 24);
+      r.writeUInt32LE(name, 28);
+      r.writeBigUInt64LE(id64, 32);
       return r;
     };
     const nA = str("A 1"),
@@ -328,12 +329,13 @@ describe("the galaxy file", () => {
     const cx = -49985 + 39 * 1280,
       cy = -40985 + 32 * 1280,
       cz = -24105 + 18 * 1280;
+    // V Ge As Cd Nb Y Po Zn Sn Mo Zr Te Ru.
     const r1 = rec(
       [(10 - cx) * 32, (0 - cy) * 32, (0 - cz) * 32],
       5,
       210,
       112,
-      [0, 0, 0, 0, 0, 60, 56],
+      [0, 0, 0, 0, 0, 60, 56, 0, 0, 0, 0, 80, 0],
       nA,
       1n,
     );
@@ -342,7 +344,7 @@ describe("the galaxy file", () => {
       7,
       900,
       5,
-      [200, 0, 0, 0, 0, 0, 0],
+      [200, 0, 0, 0, 0, 0, 0, 160, 0, 0, 0, 0, 0],
       nB,
       2n,
     );
@@ -360,7 +362,7 @@ describe("the galaxy file", () => {
     named.writeUInt32LE(1, 12);
     named.writeUInt32LE(sB, 16);
     const head = Buffer.alloc(16);
-    head.write("EDEXOJMP", 0, "latin1");
+    head.write("EDEXOLAB", 0, "latin1");
     head.writeUInt32LE(1, 8);
     head.writeUInt32LE(meta.length, 12);
     writeFileSync(file, Buffer.concat([head, meta, cells, r1, r2, named, ...strs]));
@@ -371,8 +373,12 @@ describe("the galaxy file", () => {
       ["Alpha", "Alpha A 1", 10],
       ["Beta", "Odd Body", 50],
     ]);
-    expect(got[0]).toMatchObject({ gravityG: 0.21, distLs: 1120, pct: { yttrium: 1.2, polonium: 1.12 } });
-    expect(got[1]!.pct).toEqual({ vanadium: 10 });
+    expect(got[0]).toMatchObject({
+      gravityG: 0.21,
+      distLs: 1120,
+      pct: { yttrium: 1.2, polonium: 1.12, tellurium: 1.6 },
+    });
+    expect(got[1]!.pct).toEqual({ vanadium: 10, zinc: 8 });
     expect(ix.near({ x: 0, y: 0, z: 0 }, 20, () => true, 10)).toHaveLength(1);
     ix.close();
   });
@@ -482,5 +488,129 @@ describe("Use Jumponium on a neutron route", () => {
     );
     expect(live.view({ name: "A", pos: null })?.nextInject).toEqual({ tier: "basic", count: 1 });
     expect(live.remaining()?.useJumponium).toBe(true);
+  });
+});
+
+describe("the Laboratory's AFM refills (owner, 2026-10-14)", () => {
+  it("counts refills by his recipes, learns a synthesis, and keeps the AFMU from the Loadout", () => {
+    const st = newJumponium();
+    jumponiumLine(
+      st,
+      login({
+        nickel: 10,
+        zinc: 5,
+        chromium: 9,
+        vanadium: 13,
+        zirconium: 4,
+        tellurium: 1,
+        ruthenium: 2,
+        tin: 1,
+        manganese: 2,
+        molybdenum: 1,
+      }),
+    );
+    // Basic 2 Ni 2 Zn 2 Cr 3 V: zinc 5 → 2. Premium 2 Zn 4 Cr 6 V 2 Zr 1 Te 1 Ru: 1. Standard 1 Sn 2 Mn 6 V 1 Mo 1 Zr: 1.
+    expect(craftable(st, "basic", "afm").count).toBe(2);
+    expect(craftable(st, "standard", "afm").count).toBe(1);
+    expect(craftable(st, "premium", "afm")).toEqual({ count: 1, short: { tellurium: 1 } });
+    jumponiumLine(
+      st,
+      at("2026-10-14T10:00:00Z", {
+        event: "Synthesis",
+        Name: "AFM Refill Basic",
+        Materials: [
+          { Name: "nickel", Count: 2 },
+          { Name: "zinc", Count: 2 },
+          { Name: "chromium", Count: 2 },
+          { Name: "vanadium", Count: 3 },
+        ],
+      }),
+    );
+    expect(st.raw).toMatchObject({ nickel: 8, zinc: 3, chromium: 7, vanadium: 10 });
+    expect(st.made["afm:basic"]).toBe(1);
+    expect(recipeFor(st, "basic", "afm")).toEqual({ nickel: 2, zinc: 2, chromium: 2, vanadium: 3 });
+    // An FSD injection of the same tier is a different recipe.
+    expect(recipeFor(st, "basic")).toEqual({ carbon: 1, vanadium: 1, germanium: 1 });
+    jumponiumLine(
+      st,
+      at("2026-10-14T10:05:00Z", {
+        event: "Loadout",
+        Modules: [
+          { Slot: "Slot04_Size1", Item: "int_repairer_size1_class4", Health: 0.99 },
+          { Slot: "FrameShiftDrive", Item: "int_hyperdrive_overcharge_size5_class5", Health: 0.95 },
+        ],
+      }),
+    );
+    expect(st.afmu).toEqual([{ item: "int_repairer_size1_class4", size: 1, cls: 4, health: 0.99 }]);
+    expect(hydrateJumponium(JSON.parse(JSON.stringify(st)))).toEqual(st);
+  });
+
+  it("a body's AFM refill tiers, and notices for AFM only when ticked (off for a setting from before them)", () => {
+    expect(
+      bodyJumponium([
+        { Name: "tin", Percent: 1.6 },
+        { Name: "manganese", Percent: 9 },
+        { Name: "vanadium", Percent: 4 },
+        { Name: "molybdenum", Percent: 1.2 },
+        { Name: "zirconium", Percent: 2 },
+      ])!.afmTiers,
+    ).toEqual(["standard"]);
+    const prior = {
+      ...DEFAULT_NOTIFY_PREFS,
+      jumponium: {
+        on: true,
+        tiers: { basic: true, standard: true, premium: true },
+        onlyShort: true,
+        target: 30,
+      },
+    } as unknown as typeof DEFAULT_NOTIFY_PREFS;
+    expect(mergeNotifyPrefs(prior, {}).jumponium.afm).toEqual({
+      basic: false,
+      standard: false,
+      premium: false,
+    });
+    expect(DEFAULT_NOTIFY_PREFS.jumponium.afm).toEqual({ basic: true, standard: true, premium: true });
+
+    const n = createNoticesService({ filePath: null });
+    const ctx = (stock: Record<string, number> | null): NoticesContext => ({
+      isKnownBody: () => false,
+      allScans: function* () {},
+      currentSystem: () => ({ name: "Sys", address: 1 }),
+      rawStock: () => stock,
+    });
+    const scan = (id: number, mats: { Name: string; Percent: number }[]) => ({
+      timestamp: "2026-10-14T12:00:00Z",
+      event: "Scan",
+      ScanType: "Detailed",
+      StarSystem: "Sys",
+      SystemAddress: 1,
+      BodyID: id,
+      BodyName: `Sys ${id}`,
+      PlanetClass: "Rocky body",
+      Landable: true,
+      Materials: mats,
+    });
+    n.setPrefs({
+      jumponium: {
+        on: true,
+        tiers: { basic: false, standard: false, premium: false },
+        afm: { basic: false, standard: false, premium: true },
+      },
+    });
+    // Tellurium is the AFM premium's alone; chromium is common and never announced.
+    expect(n.observe(scan(2, [{ Name: "chromium", Percent: 16 }]), ctx({}))).toBe(false);
+    expect(n.observe(scan(3, [{ Name: "tellurium", Percent: 1.6 }]), ctx({}))).toBe(true);
+    expect(n.list()[0]!.title).toBe("AFM refill (Premium): Te 1.60 %");
+    n.setPrefs({ jumponium: { tiers: { premium: true } } });
+    expect(
+      n.observe(
+        scan(4, [
+          { Name: "zirconium", Percent: 3 },
+          { Name: "polonium", Percent: 1 },
+        ]),
+        ctx({}),
+      ),
+    ).toBe(true);
+    expect(n.list()[0]!.title).toBe("Laboratory (FSD Premium, AFM Premium): Po 1.00 %, Zr 3.00 %");
   });
 });
