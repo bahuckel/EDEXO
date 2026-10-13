@@ -18,6 +18,11 @@ interface IndexStatus {
   /** Systems in the bio index here and on the release (owner, 2026-10-12: systems, not megabytes). */
   systemsHere?: number | null;
   systemsOnRelease?: number | null;
+  /** The stations and neutron stars come in the same download (owner, 2026-10-13: "combined index"). */
+  /** The combined download is running (a part may be between files). */
+  busy?: boolean;
+  extrasMissing?: number;
+  extraBytes?: number;
 }
 
 const mb = (n: number) => `${Math.round(n / 1e6).toLocaleString()} MB`;
@@ -73,9 +78,10 @@ export function GalaxyIndexDownload() {
     <div className="g3d-index-download" role="dialog" aria-label="Download the galaxy index">
       <h3>The galaxy map needs its index</h3>
       <p>
-        Every system with recorded biology — 5.3 million — built from <strong>EDAstro</strong>&apos;s codex data, with
-        the stars and planets from Spansh&apos;s galaxy dump. It is a separate download, kept beside your settings so
-        updates leave it alone.
+        Every system with recorded biology — 5.3 million — built from <strong>EDAstro</strong>&apos;s codex
+        data, with the stars and planets from Spansh&apos;s galaxy dump; the stations (for Stations and
+        nearest services) and the neutron stars (for the neutron route) come with it. It is a separate
+        download, kept beside your settings so updates leave it alone.
       </p>
       {d ? (
         <div className="g3d-index-download__progress" aria-live="polite">
@@ -99,7 +105,11 @@ export function GalaxyIndexDownload() {
           title={`Download the galaxy index (EDAstro data) from the app's GitHub release${st.downloadBytes ? ` · ${mb(st.downloadBytes)}` : ""}`}
         >
           Download from EDAstro data
-          {st.systemsOnRelease ? ` · ${fmtSystems(st.systemsOnRelease)} systems` : st.downloadBytes ? ` · ${mb(st.downloadBytes)}` : ""}
+          {st.systemsOnRelease
+            ? ` · ${fmtSystems(st.systemsOnRelease)} systems`
+            : st.downloadBytes
+              ? ` · ${mb(st.downloadBytes)}`
+              : ""}
         </button>
       )}
       {st.error ? <p className="g3d-error">The download stopped: {st.error}. Try again.</p> : null}
@@ -127,7 +137,7 @@ export function GalaxyIndexRow() {
     void load();
   }, [load]);
   useEffect(() => {
-    if (st?.downloading) {
+    if (st?.downloading || st?.busy) {
       wasDownloading.current = true;
       const t = window.setInterval(() => void load(), 1000);
       return () => window.clearInterval(t);
@@ -140,10 +150,12 @@ export function GalaxyIndexRow() {
   const d = st.downloading;
   const pct = d && d.total ? Math.round((d.done / d.total) * 100) : null;
   const update = st.updateAvailable === true;
+  // The index is current but the stations or neutron stars are not here: those alone.
+  const extrasOnly = !update && (st.extrasMissing ?? 0) > 0;
   return (
     <MenuRow
       label="Galaxy index"
-      hint="EDAstro's codex data with Spansh's stars and planets, downloaded from the app's GitHub release and kept beside your settings. Update fetches the newer files when the release has them."
+      hint="EDAstro's codex data with Spansh's stars and planets, the stations and the neutron stars, downloaded from the app's GitHub release and kept beside your settings. Update fetches the newer files when the release has them."
     >
       {d ? (
         <span className="g3d-row__val" aria-live="polite">
@@ -152,7 +164,7 @@ export function GalaxyIndexRow() {
       ) : (
         <button
           type="button"
-          className={`g3d-btn${update ? " g3d-btn--primary-small" : ""}`}
+          className={`g3d-btn${update || extrasOnly ? " g3d-btn--primary-small" : ""}`}
           title={
             `${st.systemsHere != null ? `${st.systemsHere.toLocaleString("en-US")} systems` : mb(here)} here` +
             (st.systemsOnRelease != null
@@ -162,9 +174,19 @@ export function GalaxyIndexRow() {
                 : "") +
             (st.downloadBytes ? ` (a ${mb(st.downloadBytes)} download)` : "")
           }
-          onClick={() => void fetch("/api/galaxy/index/download", { method: "POST" }).then(() => load())}
+          onClick={() =>
+            void fetch("/api/galaxy/index/download", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ extrasOnly }),
+            }).then(() => load())
+          }
         >
-          {update ? `Update · ${updateGain(st)} if you download now` : "Download again"}
+          {update
+            ? `Update · ${updateGain(st)} if you download now`
+            : extrasOnly
+              ? `Download stations and neutron stars${st.extraBytes ? ` · ${mb(st.extraBytes)}` : ""}`
+              : "Download again"}
         </button>
       )}
       {st.error ? <span className="g3d-error"> {st.error}</span> : null}

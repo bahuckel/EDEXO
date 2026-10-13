@@ -19,7 +19,14 @@ interface StationRow {
   services: string[];
   updated: string | null;
   distanceLy: number;
+  x?: number;
+  y?: number;
+  z?: number;
+  /** Its point on the galaxy map's Stations layer. */
+  sys?: number;
 }
+
+export type { StationRow as StationPick };
 
 interface StationsStatus {
   present: boolean;
@@ -57,7 +64,14 @@ const MAX_LS = [0, 1000, 5000, 20000];
 const mb = (b: number | null) => (b == null ? "" : `${Math.round(b / 1e6)} MB`);
 const short = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}k` : String(n));
 
-export function StationsPanel() {
+/**
+ * `compact`: the galaxy map's side drawer (owner, 2026-10-13: nearest with a service on the map too) — fewer
+ * columns; `onPick`: a row clicked (the map flies there and picks the station's system).
+ */
+export function StationsPanel({
+  compact = false,
+  onPick,
+}: { compact?: boolean; onPick?: (r: StationRow) => void } = {}) {
   const [status, setStatus] = useState<StationsStatus | null>(null);
   const [rows, setRows] = useState<StationRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -241,23 +255,36 @@ export function StationsPanel() {
                     <th>System</th>
                     <th>Distance</th>
                     <th>Pad</th>
-                    <th>From arrival</th>
-                    <th>Type</th>
-                    <th>Updated</th>
+                    {compact ? null : (
+                      <>
+                        <th>From arrival</th>
+                        <th>Type</th>
+                        <th>Updated</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={`${r.system}|${r.name}`} title={r.services.join(" · ")}>
+                    <tr
+                      key={`${r.system}|${r.name}`}
+                      title={`${r.services.join(" · ")}${onPick ? "\n\nClick to show it on the map" : ""}`}
+                      className={onPick ? "is-pickable" : undefined}
+                      onClick={onPick ? () => onPick(r) : undefined}
+                    >
                       <td>{r.name}</td>
                       <td>
                         {r.system} <CopySystemButton system={r.system} />
                       </td>
                       <td>{fmtLyAway(r.distanceLy)}</td>
                       <td>{r.pad || "—"}</td>
-                      <td>{r.distanceLs.toLocaleString("en-US")} ls</td>
-                      <td>{r.type || "—"}</td>
-                      <td className="dim">{r.updated ?? "—"}</td>
+                      {compact ? null : (
+                        <>
+                          <td>{r.distanceLs.toLocaleString("en-US")} ls</td>
+                          <td>{r.type || "—"}</td>
+                          <td className="dim">{r.updated ?? "—"}</td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>

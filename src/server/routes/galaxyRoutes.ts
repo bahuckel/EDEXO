@@ -7,7 +7,10 @@ import type { GameStateStore } from "../gameState.js";
 
 /** Bodies scanned and notable bodies per visited system, for the boxel lists (owner, 2026-09-30). */
 function boxelStats(store: GameStateStore): SystemStats {
-  return (addr) => ({ bodies: systemBodyTally(store, addr), notable: notableBodiesForSystem(store, addr, null).length });
+  return (addr) => ({
+    bodies: systemBodyTally(store, addr),
+    notable: notableBodiesForSystem(store, addr, null).length,
+  });
 }
 import { getCachedSpeciesDatabase } from "../snapshot.js";
 import path from "node:path";
@@ -17,7 +20,15 @@ import { getProjectRoot } from "../paths.js";
 import { perfCount } from "../perf.js";
 import { codexMapRegion, codexMapRegions } from "../codexMap.js";
 import { clearGalaxyPoints, galaxyPointsAsync } from "../galaxyPoints.js";
-import { clearTileIndex, encodeCells, encodeTile, parseCellParam, sectorNames, tileIndex, tileIndexAsync } from "../galaxyTiles.js";
+import {
+  clearTileIndex,
+  encodeCells,
+  encodeTile,
+  parseCellParam,
+  sectorNames,
+  tileIndex,
+  tileIndexAsync,
+} from "../galaxyTiles.js";
 import { registerGalaxyCache, touchGalaxyMemory } from "../galaxyMemory.js";
 import { clearBioBodiesCache } from "../bioBodies.js";
 import {
@@ -47,14 +58,27 @@ import { BODY_TRAIT_GROUP, BODY_TRAITS, STAR_CLASSES } from "../../shared/galaxy
 import { loadRegionMap } from "../regionMapData.js";
 import { galaxyFind, galaxySector } from "../galaxyFind.js";
 import { doneAddresses, MAX_PLAN_STOPS, nextTarget, ordinalsOf } from "../galaxyNext.js";
-import type { GalaxySystemDTO } from "../../shared/dto/galaxy.js";
+import type { GalaxyFindDTO, GalaxySystemDTO } from "../../shared/dto/galaxy.js";
+import { ownCarrierNow } from "../../shared/ownAssets.js";
+import { id64Boxel } from "../../shared/id64.js";
 
 import type { HttpServerOptions, RouteContext } from "../httpServer.js";
 import { galaxyLayer, type GalaxyLayerKind } from "../galaxyLayers.js";
 import { GALAXY_LAYER_KINDS } from "../../shared/galaxyLayers.js";
 import { clearBarrenTable } from "../boxelBarren.js";
-import { clearStationsIndex } from "../stationsIndex.js";
-import { clearNeutronIndex } from "../neutronIndex.js";
+import {
+  clearStationsIndex,
+  downloadStations,
+  loadStationsIndex,
+  probeStationsRelease,
+  stationsStatus,
+} from "../stationsIndex.js";
+import {
+  clearNeutronIndex,
+  downloadNeutrons,
+  neutronsStatus,
+  probeNeutronsRelease,
+} from "../neutronIndex.js";
 
 export function registerGalaxyRoutes(
   app: express.Express,
@@ -115,7 +139,17 @@ export function registerGalaxyRoutes(
     app went "Not responding" for a moment as the map loaded — the server shares Electron's main
     process, as Boxels found). The requests that only read the journal or the index's status go on.
   */
-  const NO_INDEX = new Set(["/index", "/index/download", "/route", "/visited", "/mine", "/mine/system", "/my-sectors", "/layers"]);
+  const NO_INDEX = new Set([
+    "/index",
+    "/index/download",
+    "/route",
+    "/visited",
+    "/mine",
+    "/mine/system",
+    "/my-sectors",
+    "/layers",
+    "/own",
+  ]);
   app.use("/api/galaxy", (req, _res, next) => {
     touchGalaxyMemory();
     if (NO_INDEX.has(req.path)) return next();
@@ -214,25 +248,85 @@ export function registerGalaxyRoutes(
    * The galaxy index as a separate download (plan 4.2, 2026-10-04): whether it is here, how big the
    * download is, and its progress; POST starts it. Builds leave the files out.
    */
+  /*
+    One download for the map's data (owner, 2026-10-13: "combined index"): the galaxy index, then the stations and
+    the neutron stars, each from the same release. Their own tabs still offer them alone; the status says what
+    is missing and what the whole download weighs.
+  */
+  const extrasStatus = () => {
+    const st = stationsStatus();
+    const nt = neutronsStatus();
+    return {
+      stations: {
+        present: st.present,
+        downloading: st.downloading,
+        error: st.error,
+        bytes: st.release?.bytes ?? null,
+      },
+      neutrons: {
+        present: nt.present,
+        downloading: nt.downloading,
+        error: nt.error,
+        bytes: nt.release?.bytes ?? null,
+      },
+    };
+  };
+  const combinedStatus = () => {
+    const st = galaxyIndexStatus();
+    const ex = extrasStatus();
+    const missing = [ex.stations, ex.neutrons].filter((x) => !x.present);
+    const extraBytes = missing.reduce((a, x) => a + (x.bytes ?? 0), 0);
+    // Progress of whichever part is coming down.
+    const downloading =
+      st.downloading ??
+      (ex.stations.downloading ? { name: "stations.bin.gz", ...ex.stations.downloading } : null) ??
+      (ex.neutrons.downloading ? { name: "neutrons.bin.gz", ...ex.neutrons.downloading } : null);
+    return {
+      ...st,
+      downloading,
+      error: st.error ?? ex.stations.error ?? ex.neutrons.error,
+      extras: ex,
+      // The whole download is under way (between two parts nothing is coming down for a moment).
+      busy: combinedRunning,
+      extrasMissing: missing.length,
+      extraBytes,
+      downloadBytes: st.downloadBytes != null ? st.downloadBytes + extraBytes : null,
+    };
+  };
   let indexProbedAt = 0;
   app.get("/api/galaxy/index", async (_req, res) => {
     const st = galaxyIndexStatus();
-    // The release's sizes (two HEAD requests), at most every ten minutes: the download and the update check.
+    // The release's sizes (HEAD requests), at most every ten minutes: the download and the update check.
     if ((st.downloadBytes == null || st.updateAvailable == null) && Date.now() - indexProbedAt > 600_000) {
       indexProbedAt = Date.now();
-      await probeGalaxyIndexSize();
+      await Promise.all([probeGalaxyIndexSize(), probeStationsRelease(), probeNeutronsRelease()]);
     }
-    res.json(galaxyIndexStatus());
+    res.json(combinedStatus());
   });
-  app.post("/api/galaxy/index/download", (_req, res) => {
-    void downloadGalaxyIndex(() => {
-      clearBioIndexCache();
-      clearSystemTraits();
-      clearGalaxyPoints();
-      clearTileIndex();
-      clearGalaxyCatalogueCache();
-      clearGalaxySystemValues();
-    });
+  let combinedRunning = false;
+  app.post("/api/galaxy/index/download", (req, res) => {
+    // `{ extrasOnly: true }`: the index is current, only the stations and neutron stars are missing.
+    const extrasOnly = (req.body as { extrasOnly?: unknown } | undefined)?.extrasOnly === true;
+    if (!combinedRunning) {
+      combinedRunning = true;
+      void (async () => {
+        try {
+          if (!extrasOnly)
+            await downloadGalaxyIndex(() => {
+              clearBioIndexCache();
+              clearSystemTraits();
+              clearGalaxyPoints();
+              clearTileIndex();
+              clearGalaxyCatalogueCache();
+              clearGalaxySystemValues();
+            });
+          await downloadStations(() => opts.scheduleBroadcast?.());
+          await downloadNeutrons(() => opts.scheduleBroadcast?.());
+        } finally {
+          combinedRunning = false;
+        }
+      })();
+    }
     res.json({ ok: true });
   });
 
@@ -247,7 +341,9 @@ export function registerGalaxyRoutes(
   /** `{ addresses: number[] }` — ask EDSM about these (at most 2,000), in the background. */
   app.post("/api/navroutes/edsm-check", (req, res) => {
     const raw = (req.body as { addresses?: unknown } | undefined)?.addresses;
-    const addresses = Array.isArray(raw) ? raw.filter((a): a is number => typeof a === "number" && Number.isFinite(a)).slice(0, 2000) : [];
+    const addresses = Array.isArray(raw)
+      ? raw.filter((a): a is number => typeof a === "number" && Number.isFinite(a)).slice(0, 2000)
+      : [];
     if (!addresses.length) {
       res.status(400).json({ ok: false, error: "addresses: a list of system addresses" });
       return;
@@ -355,7 +451,9 @@ export function registerGalaxyRoutes(
     const min = Math.max(0, Math.min(65535, Number(req.query.min) || 0));
     const plan = Math.max(0, Math.min(MAX_PLAN_STOPS, Math.floor(Number(req.query.plan) || 0)));
     const from = store?.commanderPos ?? opts.getCommanderPosition?.() ?? null;
-    res.json(nextTarget(index, galaxySystemValues(index), from, min, exclude, 6, plan, req.query.loop === "1"));
+    res.json(
+      nextTarget(index, galaxySystemValues(index), from, min, exclude, 6, plan, req.query.loop === "1"),
+    );
   });
 
   /*
@@ -384,7 +482,8 @@ export function registerGalaxyRoutes(
   app.get("/api/boxel", (req, res) => {
     const name = String(req.query.name ?? "").slice(0, 80);
     const endRaw = Number(req.query.end);
-    const end = String(req.query.end ?? "").trim() !== "" && Number.isFinite(endRaw) ? Math.floor(endRaw) : null;
+    const end =
+      String(req.query.end ?? "").trim() !== "" && Number.isFinite(endRaw) ? Math.floor(endRaw) : null;
     const store = opts.getJournalStore?.() ?? null;
     const byId = new Map(getCachedSpeciesDatabase().species.map((s) => [s.id, s.displayName]));
     const dto = boxelSystems({
@@ -396,7 +495,9 @@ export function registerGalaxyRoutes(
       stats: store ? boxelStats(store) : undefined,
     });
     if (!dto) {
-      res.status(400).json({ ok: false, error: "Not a boxel name: type a system such as Eol Prou AB-C d1-23." });
+      res
+        .status(400)
+        .json({ ok: false, error: "Not a boxel name: type a system such as Eol Prou AB-C d1-23." });
       return;
     }
     res.json(dto);
@@ -408,7 +509,9 @@ export function registerGalaxyRoutes(
   */
   // Spansh look-ups of whole boxels (server/boxelLookup.ts), kept 30 days beside the saved boxels.
   const lookups = createBoxelLookups({
-    filePath: opts.savedBoxels ? path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-boxel-lookups.json") : null,
+    filePath: opts.savedBoxels
+      ? path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-boxel-lookups.json")
+      : null,
     isPlant: (genus) => {
       const g = genus.trim().toLowerCase();
       return getCachedSpeciesDatabase().species.some((s) => {
@@ -450,7 +553,8 @@ export function registerGalaxyRoutes(
     };
   };
   app.get("/api/boxels", (_req, res) => {
-    if (!opts.savedBoxels) return void res.status(501).json({ ok: false, error: "Not available in this build." });
+    if (!opts.savedBoxels)
+      return void res.status(501).json({ ok: false, error: "Not available in this build." });
     res.json(savedList());
   });
   /*
@@ -459,16 +563,20 @@ export function registerGalaxyRoutes(
     galaxy index know (at least the one named), and a boxel already saved keeps its own end.
   */
   app.post("/api/boxels", (req, res) => {
-    if (!opts.savedBoxels) return void res.status(501).json({ ok: false, error: "Not available in this build." });
+    if (!opts.savedBoxels)
+      return void res.status(501).json({ ok: false, error: "Not available in this build." });
     let last = typeof req.body?.lastSystem === "string" ? req.body.lastSystem : "";
     if (typeof req.body?.system === "string") {
       const b = parseBoxel(req.body.system.slice(0, 80));
       if (!b) {
-        res.status(400).json({ ok: false, error: "Not a boxel name: type a system such as Eol Prou AB-C d1-23." });
+        res
+          .status(400)
+          .json({ ok: false, error: "Not a boxel name: type a system such as Eol Prou AB-C d1-23." });
         return;
       }
       const endRaw = Number(req.body.end);
-      const asked = req.body.end != null && req.body.end !== "" && Number.isFinite(endRaw) ? Math.floor(endRaw) : null;
+      const asked =
+        req.body.end != null && req.body.end !== "" && Number.isFinite(endRaw) ? Math.floor(endRaw) : null;
       const have = savedList().items.find((x) => x.prefix.toLowerCase() === b.prefix.toLowerCase());
       if (have && asked == null) return void res.json({ ...savedList(), id: have.id });
       const store = opts.getJournalStore?.() ?? null;
@@ -483,7 +591,9 @@ export function registerGalaxyRoutes(
     }
     const added = opts.savedBoxels.add(last);
     if (!added) {
-      res.status(400).json({ ok: false, error: "Type the boxel's last system in full, such as Eol Prou AB-C d1-57." });
+      res
+        .status(400)
+        .json({ ok: false, error: "Type the boxel's last system in full, such as Eol Prou AB-C d1-57." });
       return;
     }
     res.json({ ...savedList(), id: added.id });
@@ -493,8 +603,13 @@ export function registerGalaxyRoutes(
     with what the journals and the galaxy index say.
   */
   app.get("/api/boxels/table", (req, res) => {
-    if (!opts.savedBoxels) return void res.status(501).json({ ok: false, error: "Not available in this build." });
-    const want = new Set(String(req.query.ids ?? "").split(",").filter(Boolean));
+    if (!opts.savedBoxels)
+      return void res.status(501).json({ ok: false, error: "Not available in this build." });
+    const want = new Set(
+      String(req.query.ids ?? "")
+        .split(",")
+        .filter(Boolean),
+    );
     const store = opts.getJournalStore?.() ?? null;
     const byId = new Map(getCachedSpeciesDatabase().species.map((s) => [s.id, s.displayName]));
     res.json({
@@ -517,7 +632,8 @@ export function registerGalaxyRoutes(
     pages five seconds apart), `GET /api/boxels/lookup` says how far it is, `DELETE` stops it.
   */
   app.post("/api/boxels/:id/lookup", (req, res) => {
-    if (!opts.savedBoxels) return void res.status(501).json({ ok: false, error: "Not available in this build." });
+    if (!opts.savedBoxels)
+      return void res.status(501).json({ ok: false, error: "Not available in this build." });
     const b = savedList().items.find((x) => x.id === String(req.params.id ?? ""));
     if (!b) return void res.status(404).json({ ok: false, error: "No such saved boxel." });
     const started = lookups.start(b.prefix);
@@ -558,18 +674,21 @@ export function registerGalaxyRoutes(
   });
   // Copy the next system to fly after each jump into a saved boxel: `{ autoCopyNext: boolean }`.
   app.post("/api/boxels/options", (req, res) => {
-    if (!opts.savedBoxels) return void res.status(501).json({ ok: false, error: "Not available in this build." });
+    if (!opts.savedBoxels)
+      return void res.status(501).json({ ok: false, error: "Not available in this build." });
     if (typeof req.body?.autoCopyNext === "boolean") opts.savedBoxels.setAutoCopyNext(req.body.autoCopyNext);
     res.json(savedList());
   });
   // A correction on one system: `{ cutFrom: n }` drops n and everything after; `{ skip: n, on }`.
   app.patch("/api/boxels/:id", (req, res) => {
-    if (!opts.savedBoxels) return void res.status(501).json({ ok: false, error: "Not available in this build." });
+    if (!opts.savedBoxels)
+      return void res.status(501).json({ ok: false, error: "Not available in this build." });
     const id = String(req.params.id ?? "");
     const body = (req.body ?? {}) as Record<string, unknown>;
     let done = false;
     if (typeof body.cutFrom === "number") done = opts.savedBoxels.cutFrom(id, body.cutFrom);
-    else if (typeof body.skip === "number") done = opts.savedBoxels.setSkipped(id, body.skip, body.on !== false);
+    else if (typeof body.skip === "number")
+      done = opts.savedBoxels.setSkipped(id, body.skip, body.on !== false);
     // The galaxy-map probe: `{ lastIs: n }` — he checked that n + 1 is not there, so n is the last.
     else if (typeof body.lastIs === "number") done = opts.savedBoxels.confirmEnd(id, body.lastIs);
     // The boxel run (server/boxelRun.ts): `{ run: true }` makes this boxel the run, `{ run: false }` ends it.
@@ -581,7 +700,8 @@ export function registerGalaxyRoutes(
     res.json(savedList());
   });
   app.delete("/api/boxels/:id", (req, res) => {
-    if (!opts.savedBoxels) return void res.status(501).json({ ok: false, error: "Not available in this build." });
+    if (!opts.savedBoxels)
+      return void res.status(501).json({ ok: false, error: "Not available in this build." });
     const gone = opts.savedBoxels.remove(String(req.params.id ?? ""));
     res.status(gone ? 200 : 404).json({ ...savedList(), ok: gone });
   });
@@ -590,7 +710,28 @@ export function registerGalaxyRoutes(
   app.get("/api/galaxy/find", (req, res) => {
     const t = tileIndex();
     if (!t) return void noIndex(res);
-    res.json(galaxyFind(t, opts.getJournalStore?.() ?? null, String(req.query.q ?? "").slice(0, 80)));
+    const q = String(req.query.q ?? "").slice(0, 80);
+    const found = galaxyFind(t, opts.getJournalStore?.() ?? null, q);
+    // Stations by name, when they are downloaded (owner, 2026-10-13); a duplicated name says its system.
+    let stations: NonNullable<GalaxyFindDTO["stations"]> = [];
+    if (stationsStatus().present) {
+      try {
+        stations = (loadStationsIndex()?.search(q) ?? []).map((r) => ({
+          name: r.name,
+          system: r.system,
+          label: r.dup ? `${r.name} (${r.system})` : r.name,
+          type: r.type,
+          pad: r.pad,
+          x: r.x,
+          y: r.y,
+          z: r.z,
+          layerId: r.sys,
+        }));
+      } catch {
+        stations = [];
+      }
+    }
+    res.json({ ...found, stations });
   });
 
   /** A sector column's panel: `?c=cx:cz` (every height together, as the map's rings are). */
@@ -616,6 +757,26 @@ export function registerGalaxyRoutes(
   });
 
   /** The commander's own systems with what they did there (G3; flags in galaxyMine.ts). */
+  /*
+    The commander's own carrier and colonised systems, for the map's badges (owner, 2026-10-13; shared/ownAssets.ts):
+    where each is from the journals' StarPos, else the boxel's centre from its address (within a boxel of it).
+  */
+  app.get("/api/galaxy/own", (_req, res) => {
+    const store = opts.getJournalStore?.() ?? null;
+    if (!store) return void res.json({ carrier: null, colonies: [] });
+    const place = (s: { name: string; addr: number } | null) => {
+      if (!s) return null;
+      const p = store.systemPositions.get(s.addr);
+      if (p) return { name: s.name, x: p.x, y: p.y, z: p.z, exact: true };
+      const b = id64Boxel(s.addr);
+      return b ? { name: s.name, ...b.center, exact: false } : null;
+    };
+    res.json({
+      carrier: place(ownCarrierNow(store.ownAssets)),
+      colonies: store.ownAssets.colonies.map(place).filter((c) => c != null),
+    });
+  });
+
   app.get("/api/galaxy/mine", (_req, res) => {
     if (!opts.getMySystems) return void res.status(404).json({ error: "no journal store behind this build" });
     res.json(opts.getMySystems());
@@ -632,14 +793,16 @@ export function registerGalaxyRoutes(
 
   /** The systems you have been to, newest first: `?days=1|7|30|90|365`, or 0 / absent for all. */
   app.get("/api/galaxy/visited", (req, res) => {
-    if (!opts.getVisitedSystems) return void res.status(404).json({ error: "no journal store behind this build" });
+    if (!opts.getVisitedSystems)
+      return void res.status(404).json({ error: "no journal store behind this build" });
     const days = Math.max(0, Math.min(100_000, Math.floor(Number(req.query.days) || 0)));
     res.json(opts.getVisitedSystems(days));
   });
 
   /** Where the ship is and this session's jumps with positions. */
   app.get("/api/galaxy/route", (_req, res) => {
-    if (!opts.getSessionRoute) return void res.status(404).json({ error: "no journal store behind this build" });
+    if (!opts.getSessionRoute)
+      return void res.status(404).json({ error: "no journal store behind this build" });
     res.json(opts.getSessionRoute());
   });
 

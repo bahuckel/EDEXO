@@ -211,6 +211,30 @@ describe("the station index", () => {
     expect(idx.stationsNear({ x: 120, y: 0, z: 0 })).toEqual([]);
   });
 
+  it("finds stations by name, a name used twice with its system, and a station by its system's name too", () => {
+    const st = (name: string): St => ({ name, services: ["Refuel"], type: "Outpost", pad: 2, ls: 10 });
+    const two = new StationsIndex(
+      encode([
+        { name: "Wolf 73", x: 0, y: 0, z: 0, stations: [st("Hubble Gateway"), st("Ross Dock")] },
+        { name: "10 Kappa Pegasi", x: 9, y: 0, z: 0, stations: [st("Hubble Gateway")] },
+        { name: "Sol", x: 20, y: 0, z: 0, stations: [st("Abraham Lincoln"), st("The Hub")] },
+      ]),
+    );
+    const hub = two.search("hub");
+    // Names starting with the words first; the twice-used name knows it is not alone.
+    expect(hub.map((r) => [r.name, r.system, r.dup])).toEqual([
+      ["Hubble Gateway", "10 Kappa Pegasi", true],
+      ["Hubble Gateway", "Wolf 73", true],
+      ["The Hub", "Sol", false],
+    ]);
+    // Station and system together, and each row points at its system's dot on the Stations layer.
+    expect(two.search("hubble gateway wolf").map((r) => [r.system, r.sys])).toEqual([["Wolf 73", 0]]);
+    expect(two.search("lincoln")[0]).toMatchObject({ name: "Abraham Lincoln", sys: 2, dup: false });
+    // A system's name alone does not list its stations, and two letters are not a search.
+    expect(two.search("kappa")).toEqual([]);
+    expect(two.search("hu")).toEqual([]);
+  });
+
   it("refuses what is not one", () => {
     const buf = encode(SYSTEMS);
     const wrong = Buffer.from(buf);
