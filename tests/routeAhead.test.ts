@@ -45,25 +45,53 @@ describe("route strip: the hops ahead and the refuel mark", () => {
     expect(a?.refuelLevel).toBe("none");
   });
 
-  it("puts the red pump on the last scoop the tank reaches and a yellow one on the nearest before it", () => {
-    // budget 3 t → B, C, D reachable; scoops at C and D: D is the last chance (red), C the stop (yellow).
+  /*
+    The rule (owner, 2026-10-13, after 1.2.15 drew two pumps and a red one on routes with no trap): one pump.
+    Yellow on the last system the tank reaches when it is scoopable (1.2.14's mark); red, blinking, on the last
+    scoopable star before it when it is not, since past that star the tank runs dry with nowhere to scoop.
+  */
+  it("yellow only, on the last system the tank reaches, when that one is scoopable", () => {
+    // 3 t: B, C, D in reach; D (K) is the last and scoopable.
     const a = analyse(3.06);
     expect(a?.fuelCanFinishPlottedRoute).toBe(false);
-    expect(a?.jumpsToLastScoopableOnRoute).toBe(3);
+    expect(a?.refuelInHops).toBe(3);
+    expect(a?.refuelLevel).toBe("yellow");
+    expect(a?.ahead[2]).toMatchObject({ starClass: "K", refuel: "yellow" });
+    expect(a?.ahead.filter((h) => h.refuel !== "none")).toHaveLength(1);
+    expect(a?.routeRefuelAlert).not.toBe("red");
+  });
+
+  it("yellow only when the last reachable system is scoopable, even with another scoop right after", () => {
+    // 2 t: B (T) and C (M) in reach; C is the last and scoopable.
+    const a = analyse(2.06);
+    expect(a?.refuelInHops).toBe(2);
+    expect(a?.refuelLevel).toBe("yellow");
+    expect(a?.ahead.filter((h) => h.refuel !== "none").map((h) => h.refuel)).toEqual(["yellow"]);
+  });
+
+  it("red on the last scoopable star when the tank runs out on one that is not: a trap", () => {
+    // 4 t: B, C, D, E in reach; E (T) is the last and cannot be scooped, so D (K) is the last chance.
+    const a = analyse(4.06);
     expect(a?.refuelInHops).toBe(3);
     expect(a?.refuelLevel).toBe("red");
     expect(a?.ahead[2]).toMatchObject({ starClass: "K", refuel: "red" });
-    expect(a?.ahead[1]).toMatchObject({ starClass: "M", refuel: "yellow" });
-    expect(a?.ahead.filter((h) => h.refuel !== "none")).toHaveLength(2);
+    expect(a?.ahead.filter((h) => h.refuel !== "none")).toHaveLength(1);
   });
 
-  it("no threshold: red on the last reachable scoop even when another follows right after", () => {
-    // budget 2 t → B (no scoop) and C (scoop) reachable; D (K) right after is out of reach: C is red.
-    const a = analyse(2.06);
-    expect(a?.refuelInHops).toBe(2);
+  it("never red on a route where every star can be scooped", () => {
+    const a = analyse(3.06, 1, ["K", "G", "F", "K", "M", "A", "K", "G"]);
+    expect(a?.fuelCanFinishPlottedRoute).toBe(false);
+    expect(a?.refuelLevel).toBe("yellow");
+    expect(a?.ahead.some((h) => h.refuel === "red")).toBe(false);
+    expect(a?.routeRefuelAlert).not.toBe("red");
+  });
+
+  it("red on the one scoopable star before ten that are not", () => {
+    // At A (K) with 4 t, then ten T dwarfs: past A the tank runs dry among them.
+    const a = analyse(4.06, 1, ["K", ...Array(10).fill("T"), "K"]);
+    expect(a?.refuelInHops).toBe(0);
     expect(a?.refuelLevel).toBe("red");
-    expect(a?.ahead[1]?.refuel).toBe("red");
-    expect(a?.ahead.filter((h) => h.refuel === "yellow")).toHaveLength(0);
+    expect(a?.routeRefuelAlert).toBe("red");
   });
 
   it("goes red on the star the ship is at when it is the last scoop the tank reaches", () => {
