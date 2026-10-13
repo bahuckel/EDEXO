@@ -170,6 +170,7 @@ export function GalaxyMap3D() {
   const [bookmarksOn, setBookmarksOn] = usePersistedState("galaxy.layer.bookmarks", false, isBool);
   const [gggOn, setGggOn] = usePersistedState("galaxy.layer.ggg", false, isBool);
   const [heliumOn, setHeliumOn] = usePersistedState("galaxy.layer.helium", false, isBool);
+  const [stationsOn, setStationsOn] = usePersistedState("galaxy.layer.stations", false, isBool);
   // The plotted route's systems you have not been to (owner, 2026-10-04): placed from NavRoute.json.
   const [navUnvisitedOn, setNavUnvisitedOn] = usePersistedState("galaxy.layer.navUnvisited", true, isBool);
   /* The status bar's legend folds away (owner, 2026-10-04, plan 3.7), remembered. */
@@ -204,6 +205,7 @@ export function GalaxyMap3D() {
     bookmarks: bookmarksOn,
     ggg: gggOn,
     helium: heliumOn,
+    stations: stationsOn,
   };
   const extraSet: Record<GalaxyLayerKind, (v: boolean) => void> = {
     poi: setPoiOn,
@@ -212,6 +214,7 @@ export function GalaxyMap3D() {
     bookmarks: setBookmarksOn,
     ggg: setGggOn,
     helium: setHeliumOn,
+    stations: setStationsOn,
   };
   const [extraData, setExtraData] = useState<Partial<Record<GalaxyLayerKind, GalaxyLayerDTO>>>({});
   const [worthStep, setWorthStep] = useState(0);
@@ -468,7 +471,7 @@ export function GalaxyMap3D() {
       ).finally(() => layerAsked.current.delete(l.kind));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, extraData]);
+  }, [poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stationsOn, extraData]);
   useEffect(() => {
     const e = engine.current;
     if (!e) return;
@@ -491,7 +494,7 @@ export function GalaxyMap3D() {
       e.setMarkerLayerVisible(name, extraOn[l.kind]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraData, poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stats?.phase]);
+  }, [extraData, poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stationsOn, stats?.phase]);
   const extraPoint = (layer: string, id: string) => {
     if (!layer.startsWith("x-")) return null;
     const kind = layer.slice(2) as GalaxyLayerKind;

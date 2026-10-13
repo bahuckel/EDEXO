@@ -13,6 +13,7 @@ import type { BookmarksService } from "./bookmarks.js";
 import { GGG_CATALOGUE } from "../shared/gggCatalogue.js";
 import { GGG_CANDIDATES } from "../shared/gggCandidates.js";
 import { HELIUM_GIANTS } from "../shared/heliumGiants.js";
+import { loadStationsIndex } from "./stationsIndex.js";
 import { classifyGreenGiant, greenCodexClassLabel, greenGiantScoreText, shortClass } from "../shared/greenGasGiant.js";
 import type { GalaxyLayerDTO, GalaxyLayerKind } from "../shared/galaxyLayers.js";
 
@@ -93,6 +94,21 @@ export function galaxyLayer(
       const detail = `Cloud ladder ${greenGiantScoreText(c.score)} · ${shortClass(c.cls)} · ${c.v.why}`;
       out.addUnconfirmed(c.x, c.y, c.z, c.body, detail, c.system);
     }
+    return out.done(kind);
+  }
+  if (kind === "stations") {
+    // The downloaded station index (plan 7): one point per system, its stations and largest pad on hover.
+    let idx = null;
+    try {
+      idx = loadStationsIndex();
+    } catch {
+      idx = null;
+    }
+    if (!idx) return out.done(kind, false);
+    const pads = ["no pad", "S pad", "M pad", "L pad"];
+    idx.forEachSystem((x, y, z, pad, n, name) => {
+      out.add(x, y, z, name(), `${n} station${n === 1 ? "" : "s"} · largest ${pads[pad] ?? "no pad"}`, "");
+    });
     return out.done(kind);
   }
   if (kind === "helium") {
