@@ -953,6 +953,35 @@
   font-weight: 600;
 }
 /* Why a system dot is lit: the filter it matches, the layers on it */
+/* Nearest station on the map (StationsPanel compact): rows fly the map there. */
+.g3d-stations-drawer .fdb-scroll {
+  max-height: 55vh;
+}
+.g3d-stations-drawer .carriers-table tr.is-pickable {
+  cursor: pointer;
+}
+.g3d-stations-drawer .carriers-table tr.is-pickable:hover td {
+  background: var(--accent-a12);
+}
+/* A Stations dot's station names (galaxy3d/StationsAt.tsx): a line in the hover card, a list in the side card. */
+.g3d-stations-at {
+  display: block;
+  max-width: 22rem;
+  white-space: normal;
+  color: var(--text-dim);
+}
+.g3d-stations-list {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  max-height: 22rem;
+  overflow: auto;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.g3d-stations-list li + li {
+  margin-top: 3px;
+}
 .g3d-why {
   list-style: none;
   margin: 0.5rem 0 0;
@@ -988,6 +1017,18 @@
 }
 
 /* ---- G5.3: the plan -------------------------------------------------------------------------------- */
+/* His own carrier's system and colonies (GalaxyEngine setBadges). */
+.g3d-label--badge {
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 200, 90, 0.7);
+  border-radius: 999px;
+  background: rgba(30, 20, 6, 0.82);
+  color: #ffd27a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 6px rgba(255, 190, 70, 0.5);
+}
 .g3d-label--plan {
   padding: 0 5px;
   color: #1a1024;

@@ -7,7 +7,17 @@
 import type { ReactNode } from "react";
 import { InfoPopover, Tooltip } from "../ui/Tooltip";
 
-export type G3dTabKey = "view" | "layers" | "filter" | "search" | "navroute" | "codex" | "targets" | "expedition" | "neutron";
+export type G3dTabKey =
+  | "view"
+  | "layers"
+  | "filter"
+  | "search"
+  | "navroute"
+  | "codex"
+  | "targets"
+  | "expedition"
+  | "neutron"
+  | "stations";
 
 export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
   { key: "view", label: "View", hint: "View: camera, follow your ship, colours, brightness" },
@@ -23,9 +33,15 @@ export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
     hint: "Expedition: where nobody has been yet — boxels ranked by the first-footfall credits they are likely to hold per jump",
   },
   { key: "neutron", label: "Neutron", hint: "Neutron route: through two or more systems by supercharged jumps, with refuel stops and the FSD's wear" },
+  { key: "stations", label: "Stations", hint: "Stations: the nearest station with the services you pick (repair, refuel, Vista Genomics…), shown on the map" },
 ];
 
 export const G3D_HELP: Record<G3dTabKey, string[]> = {
+  stations: [
+    "The nearest stations to your ship with every service you pick (or any of them), a pad big enough and not too far from the arrival star. Settlements and colony construction sites only if you ask for them.",
+    "Click a row to fly the map there; Layers → Stations shows every system with a station, and pointing at one names its stations.",
+    "From Spansh's station dump, downloaded with the galaxy index (or alone here). Fleet carriers are in Carriers.",
+  ],
   view: [
     "Top looks straight down on the galaxy, Tilt across it at an angle. Core flies to Sagittarius A*, Sol home, Me to your ship.",
     "Follow my ship keeps the camera on you: each jump moves it with you, at the distance you were looking from.",
@@ -149,6 +165,11 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
         <>
           <path {...p} d="M4 4.5h6.5A2.5 2.5 0 0 1 13 7v13a2 2 0 0 0-2-2H4V4.5z" />
           <path {...p} d="M20 4.5h-4.5A2.5 2.5 0 0 0 13 7v13a2 2 0 0 1 2-2h5V4.5z" />
+        </>
+      ) : name === "stations" ? (
+        <>
+          <circle {...p} cx="12" cy="12" r="3" />
+          <path {...p} d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
         </>
       ) : name === "neutron" ? (
         <>

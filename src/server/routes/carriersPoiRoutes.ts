@@ -45,6 +45,21 @@ export function registerCarriersPoiRoutes(
     void downloadStations(() => opts.scheduleBroadcast?.());
     res.json({ ok: true, status: stationsStatus() });
   });
+  /** The stations of the system at a point (the galaxy map's Stations dot): `?x&y&z`. */
+  app.get("/api/stations/at", (req, res) => {
+    touchGalaxyMemory();
+    const p = { x: Number(req.query.x), y: Number(req.query.y), z: Number(req.query.z) };
+    if (![p.x, p.y, p.z].every(Number.isFinite)) return void res.status(400).json({ error: "x, y, z" });
+    let index;
+    try {
+      index = loadStationsIndex();
+    } catch {
+      index = null;
+    }
+    if (!index) return void res.status(404).json({ error: "No station data yet." });
+    // Layer points are rounded to 0.1 ly; a system's own position is exact.
+    res.json({ stations: index.stationsNear(p, 0.5) });
+  });
   app.get("/api/stations/nearest", (req, res) => {
     touchGalaxyMemory();
     let index;

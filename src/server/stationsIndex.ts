@@ -63,6 +63,8 @@ export interface StationRow {
   /** YYYY-MM-DD of the station's last record. */
   updated: string | null;
   distanceLy: number;
+  /** The system's place in {@link StationsIndex.forEachSystem}: its point on the map's Stations layer. */
+  sys: number;
 }
 
 export class StationsIndex {
@@ -125,6 +127,7 @@ export class StationsIndex {
       services: this.meta.services.filter((_s, b) => (mask >>> b) & 1),
       updated: day > 0 ? new Date(EPOCH_MS + day * 86_400_000).toISOString().slice(0, 10) : null,
       distanceLy: Math.round(d * 10) / 10,
+      sys,
     };
   }
 
@@ -204,6 +207,51 @@ export class StationsIndex {
         () => this.str(this.buf.readUInt32LE(so + 12)),
       );
     }
+  }
+
+  /**
+   * Stations by name (the galaxy map's Find; owner, 2026-10-13: station names searchable, "Station_Name +
+   * System_Name if a name for a station is duplicated somewhere else"). A station matches when its name holds the
+   * words; with a space in them, "station system" matches too. Names starting with the words come first. `dup`:
+   * another station somewhere has the same name (every one of them matches too, so the count is complete).
+   * `sys` is the system's place in {@link forEachSystem}, which is the Stations layer's point for it.
+   */
+  search(query: string, limit = 12): (StationRow & { dup: boolean })[] {
+    const q = query.trim().toLowerCase();
+    if (q.length < 3) return [];
+    const withSystem = q.includes(" ");
+    const hits: { i: number; sys: number; starts: boolean; name: string; system: string }[] = [];
+    const seen = new Map<string, number>();
+    for (let s = 0; s < this.systemCount; s++) {
+      const so = this.sysAt + s * SYS;
+      const first = this.buf.readUInt32LE(so + 16);
+      const count = this.buf.readUInt16LE(so + 20);
+      let sysName: string | null = null;
+      for (let i = first; i < first + count; i++) {
+        const name = this.str(this.buf.readUInt32LE(this.stAt + i * ST + 16)).toLowerCase();
+        let ok = name.includes(q);
+        if (!ok && withSystem) {
+          sysName ??= this.str(this.buf.readUInt32LE(so + 12)).toLowerCase();
+          ok = `${name} ${sysName}`.includes(q);
+        }
+        if (!ok) continue;
+        seen.set(name, (seen.get(name) ?? 0) + 1);
+        if (hits.length < 2000) {
+          sysName ??= this.str(this.buf.readUInt32LE(so + 12)).toLowerCase();
+          hits.push({ i, sys: s, starts: name.startsWith(q), name, system: sysName });
+        }
+      }
+    }
+    hits.sort(
+      (a, b) =>
+        Number(b.starts) - Number(a.starts) ||
+        a.name.localeCompare(b.name) ||
+        a.system.localeCompare(b.system),
+    );
+    return hits.slice(0, limit).map((h) => ({
+      ...this.row(h.i, h.sys, 0),
+      dup: (seen.get(h.name) ?? 0) > 1,
+    }));
   }
 
   /** The stations of the system at a point (the map's hover), nearest system within `withinLy`. */

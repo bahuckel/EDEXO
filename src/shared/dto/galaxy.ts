@@ -492,6 +492,21 @@ export interface GalaxyFindDTO {
   systems: { name: string; x: number; y: number; z: number; ordinal: number | null; addr: string | null; mine: boolean }[];
   /** The index scan stopped at its time budget: there may be more. */
   partial: boolean;
+  /**
+   * Stations whose name matches (when the stations are downloaded): `label` adds the system when the name is
+   * not unique; `layerId` is the system's point in the Stations layer.
+   */
+  stations?: {
+    name: string;
+    system: string;
+    label: string;
+    type: string;
+    pad: string;
+    x: number;
+    y: number;
+    z: number;
+    layerId: number;
+  }[];
 }
 
 /** One sector column's panel (`/api/galaxy/sector?c=cx:cz`): its size and most valuable systems. */

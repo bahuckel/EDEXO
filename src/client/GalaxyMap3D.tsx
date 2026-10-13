@@ -46,6 +46,8 @@ import {
   takeExpeditionFocus,
 } from "./ExpeditionDrawer";
 import { NeutronDrawer } from "./NeutronDrawer";
+import { StationNames, StationsList } from "./galaxy3d/StationsAt";
+import { StationsPanel } from "./StationsPanel";
 import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
 import { drawnGalaxyFrame, drawnGalaxySprites, galaxyImageRect, REGION_MAP_SIZE, xForRegionPx, zForRegionPz } from "./regionBackdrop";
 import { CLOUD_SPRITE_STRIDE } from "@shared/galaxyClouds";
@@ -74,7 +76,18 @@ const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number;
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 type Colour = 0 | 1 | 2;
-type Drawer = "none" | "view" | "layers" | "search" | "filter" | "navroute" | "codex" | "targets" | "expedition" | "neutron";
+type Drawer =
+  | "none"
+  | "view"
+  | "layers"
+  | "search"
+  | "filter"
+  | "navroute"
+  | "codex"
+  | "targets"
+  | "expedition"
+  | "neutron"
+  | "stations";
 /** A Spansh name hit with its coordinates (`/api/system/spansh-search`). */
 type SpanshFindHit = { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number };
 type MineRow = GalaxyMineDTO["systems"][number];
@@ -554,6 +567,41 @@ export function GalaxyMap3D() {
       </ul>
     ) : null;
   };
+
+  /*
+    His own carrier's system and his colonies (owner, 2026-10-13: "a little icon"; server/routes/galaxyRoutes.ts
+    /api/galaxy/own): an anchor and a house beside them, both on one label when they share a system. Asked again
+    every minute, so a carrier jump shows without reopening the map.
+  */
+  useEffect(() => {
+    const e = engine.current;
+    if (!e || stats?.phase !== "ready") return;
+    type Own = { name: string; x: number; y: number; z: number };
+    const read = () =>
+      void fetch("/api/galaxy/own")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { carrier: Own | null; colonies: Own[] } | null) => {
+          if (!j || engine.current !== e) return;
+          const by = new Map<string, Own & { carrier: boolean; colony: boolean }>();
+          for (const c of j.colonies) by.set(c.name.toLowerCase(), { ...c, carrier: false, colony: true });
+          if (j.carrier) {
+            const k = j.carrier.name.toLowerCase();
+            by.set(k, { ...(by.get(k) ?? { ...j.carrier, colony: false }), carrier: true });
+          }
+          e.setBadges(
+            [...by.values()].map((b) => ({
+              x: b.x,
+              y: b.y,
+              z: b.z,
+              text: `${b.carrier ? "⚓" : ""}${b.colony ? "⌂" : ""} ${b.carrier && b.colony ? "Your carrier · colony" : b.carrier ? "Your carrier" : "Your colony"}`,
+            })),
+          );
+        })
+        .catch(() => undefined);
+    read();
+    const t = window.setInterval(read, 60_000);
+    return () => clearInterval(t);
+  }, [stats?.phase]);
 
   // The expedition field and plan: drawn while the Expedition drawer has scored something.
   useEffect(() => {
@@ -1143,6 +1191,7 @@ export function GalaxyMap3D() {
           <strong>{xp.p[3]}</strong>
           {xp.unconfirmed ? <span className="g3d-unconfirmed">Unconfirmed candidate</span> : null}
           {xp.detail ? <span>{xp.detail}</span> : null}
+          {xp.meta.kind === "stations" ? <StationNames x={xp.p[0]} y={xp.p[1]} z={xp.p[2]} /> : null}
           <em>{xp.meta.label} · click for details</em>
         </>
       );
@@ -1251,6 +1300,7 @@ export function GalaxyMap3D() {
             </p>
           ) : null}
           {xs.detail ? <p className="g3d-panel__note">{xs.detail}</p> : null}
+          {xs.meta.kind === "stations" ? <StationsList x={xs.p[0]} y={xs.p[1]} z={xs.p[2]} /> : null}
           {xs.system ? (
             <>
               <p>
@@ -1342,7 +1392,7 @@ export function GalaxyMap3D() {
       findLayerHits.length > 0 ||
       spanshShown.length > 0 ||
       spanshFind.busy ||
-      (find && (find.sectors.length || find.systems.length)));
+      (find && (find.sectors.length || find.systems.length || (find.stations?.length ?? 0) > 0)));
 
   return (
     <div className="g3d-screen" ref={screenRef}>
@@ -1727,6 +1777,24 @@ export function GalaxyMap3D() {
         />
       ) : null}
 
+      {drawer === "stations" ? (
+        <aside className="g3d-drawer g3d-menu g3d-plan g3d-stations-drawer" aria-label="Stations" data-testid="g3d-stations">
+          <MenuHead title="Nearest station" help={G3D_HELP.stations} />
+          <div className="g3d-menu__section g3d-menu__section--first">
+            <StationsPanel
+              compact
+              onPick={(r) => {
+                if (r.x == null || r.y == null || r.z == null) return;
+                extraSet.stations(true);
+                const at = { x: r.x, y: r.y, z: r.z };
+                engine.current?.flyTo(at, 400);
+                if (r.sys != null) engine.current?.select({ kind: "marker", layer: "x-stations", id: String(r.sys), ...at });
+              }}
+            />
+          </div>
+        </aside>
+      ) : null}
+
       {drawer === "neutron" ? (
         <NeutronDrawer
           onRoute={setNeutronLine}
@@ -1880,6 +1948,23 @@ export function GalaxyMap3D() {
                   >
                     <span>{s.name}</span>
                     <em>{s.mine ? "yours" : "system"}</em>
+                  </button>
+                </li>
+              ))}
+              {find?.stations?.map((h) => (
+                <li key={`st${h.layerId}-${h.label}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      extraSet.stations(true);
+                      go(h, 400, { kind: "marker", layer: "x-stations", id: String(h.layerId), x: h.x, y: h.y, z: h.z });
+                    }}
+                  >
+                    <span>{h.label}</span>
+                    <em>
+                      station{h.pad ? ` · ${h.pad} pad` : ""}
+                      {h.label === h.name ? ` · ${h.system}` : ""}
+                    </em>
                   </button>
                 </li>
               ))}

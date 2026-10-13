@@ -127,6 +127,17 @@ class FakeView {
 class FakeWindow {
   webContents = new FakeContents();
   children: FakeView[] = [];
+  full = false;
+  isFullScreen() {
+    return this.full;
+  }
+  setFullScreen(on: boolean) {
+    this.full = on;
+  }
+  getContentSize() {
+    return [1920, 1080];
+  }
+  on() {}
   contentView = {
     addChildView: (v: FakeView) => this.children.push(v),
     removeChildView: (v: FakeView) => (this.children = this.children.filter((c) => c !== v)),
@@ -555,5 +566,33 @@ describe("scriptlets (YouTube)", () => {
       "Page.addScriptToEvaluateOnNewDocument",
       "Page.removeScriptToEvaluateOnNewDocument",
     ]);
+  });
+});
+
+describe("a page in fullscreen", () => {
+  it("takes the whole screen, then gives the window back as it was", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://www.youtube.com/watch?v=x" });
+    await t.call({ op: "bounds", rect: { x: 0, y: 100, width: 800, height: 600 } });
+    const v = FakeView.made[0]!;
+    v.webContents.emit("enter-html-full-screen");
+    expect(t.appWin.full).toBe(true);
+    expect(v.bounds).toEqual({ x: 0, y: 0, width: 1920, height: 1080 });
+    expect(v.visible).toBe(true);
+    v.webContents.emit("leave-html-full-screen");
+    expect(t.appWin.full).toBe(false);
+    expect(v.bounds).toEqual({ x: 0, y: 100, width: 800, height: 600 });
+  });
+
+  it("leaves a window that was fullscreen already as it was", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://www.youtube.com/watch?v=x" });
+    t.appWin.full = true;
+    const v = FakeView.made[0]!;
+    v.webContents.emit("enter-html-full-screen");
+    v.webContents.emit("leave-html-full-screen");
+    expect(t.appWin.full).toBe(true);
   });
 });

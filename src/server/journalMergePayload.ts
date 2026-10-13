@@ -7,6 +7,7 @@ import type { SurfaceMark } from "./surfaceMarksFile.js";
 
 import type { FsdFuelState } from "../shared/fsdFuel.js";
 import type { FsdWearState } from "../shared/fsdWear.js";
+import type { OwnAssetsState } from "../shared/ownAssets.js";
 import type { JumpRangeState } from "../shared/jumpRange.js";
 
 export type PendingOrganicSample = {
@@ -106,8 +107,10 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
   33: `fsdWear` — the FSD's health from Loadout and its wear per neutron supercharge (shared/fsdWear.ts, plan 8.4).
   34: `fsdWear` per ship (`{ current, ships }`): wear learned per ShipID, the drive's supercharge factor (owner,
       2026-10-13: the Caspian takes less damage).
+  35: `ownAssets` — the commander's own carrier (CarrierLocation, CarrierJumpRequest) and colonised systems
+      (ColonisationSystemClaim), for the galaxy map's badges (shared/ownAssets.ts).
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 34;
+export const JOURNAL_MERGE_CACHE_FORMAT = 35;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {
@@ -219,4 +222,6 @@ export type JournalMergeCachePayload = {
   fsdFuel?: FsdFuelState;
   /** The FSD's health and wear per supercharge (shared/fsdWear.ts, plan 8.4). */
   fsdWear?: FsdWearState;
+  /** The commander's own fleet carrier and colonised systems (shared/ownAssets.ts). */
+  ownAssets?: OwnAssetsState;
 };

@@ -90,7 +90,7 @@ export interface EngineStats {
   groups: number;
 }
 
-export type LabelKind = "region" | "sector" | "count" | "system" | "plan";
+export type LabelKind = "region" | "sector" | "count" | "system" | "plan" | "badge";
 export interface EngineLabel {
   id: string;
   kind: LabelKind;
@@ -950,6 +950,16 @@ export class GalaxyEngine {
 
   private planLine: THREE.Line | null = null;
   private planStops: { x: number; y: number; z: number; label: string }[] = [];
+  private badges: { x: number; y: number; z: number; text: string }[] = [];
+
+  /**
+   * Small badges beside systems that are the commander's own (owner, 2026-10-13: his carrier's system and his
+   * colonies "get a little icon"): shown like the plan's stop numbers, whatever the Names toggle says.
+   */
+  setBadges(items: { x: number; y: number; z: number; text: string }[]): void {
+    this.badges = items;
+    this.invalidate();
+  }
 
   /** G5.3: the planned chain — a line from the ship through each stop, and each stop's number. */
   setPlan(
@@ -2052,6 +2062,13 @@ export class GalaxyEngine {
       const sx = ((v.x + 1) / 2) * w;
       const sy = ((1 - v.y) / 2) * h;
       if (onScreen(sx, sy)) out.push({ id: `p${i}`, kind: "plan", text: p.label, x: sx + 7, y: sy - 12, priority: 2e9 - i });
+    });
+    this.badges.forEach((b, i) => {
+      v.set(b.x, b.y, -b.z).project(this.camera);
+      if (v.z > 1 || v.z < -1) return;
+      const sx = ((v.x + 1) / 2) * w;
+      const sy = ((1 - v.y) / 2) * h;
+      if (onScreen(sx, sy)) out.push({ id: `b${i}`, kind: "badge", text: b.text, x: sx + 7, y: sy + 4, priority: 1.9e9 - i });
     });
     if (!this.labelsOn) {
       this.opts.onLabels(out);

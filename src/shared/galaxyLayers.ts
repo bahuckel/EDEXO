@@ -57,6 +57,10 @@ export const GALAXY_LAYERS: readonly {
     handful of systems. Not the common helium-rich gas giant. One point per system.
   */
   { kind: "helium", label: "Helium gas giants", needs: "", colour: [0.86, 0.72, 1], size: 12 },
-  /* Stations (plan 7, 1.2.16): one point per system with a station, settlements included; carriers apart. */
-  { kind: "stations", label: "Stations", needs: "Download them in Carriers → Stations", colour: [0.45, 0.86, 0.78], size: 5 },
+  /*
+    Stations (plan 7, 1.2.16): one point per system with a station, settlements included; carriers apart. A faded
+    red, a little larger than a system (owner, 2026-10-13: lone stations were hard to spot in cyan, beside the
+    blue-white systems and the POI cyan).
+  */
+  { kind: "stations", label: "Stations", needs: "Download them in Carriers → Stations", colour: [0.9, 0.42, 0.4], size: 6 },
 ];

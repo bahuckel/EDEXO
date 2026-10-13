@@ -426,6 +426,21 @@ function createBrowserTabs(o) {
       if (css) void wc.insertCSS(css, { cssOrigin: "user" }).catch(() => {});
       void cosmeticPass(t);
     });
+    wc.on("enter-html-full-screen", () => {
+      if (!host || host.isDestroyed()) return;
+      fullscreen = { id: t.id, wasFull: host.isFullScreen() };
+      active = t.id;
+      if (!fullscreen.wasFull) host.setFullScreen(true);
+      placeViews();
+      changed();
+    });
+    wc.on("leave-html-full-screen", () => {
+      if (fullscreen?.id !== t.id) return;
+      const was = fullscreen.wasFull;
+      fullscreen = null;
+      if (host && !host.isDestroyed() && !was) host.setFullScreen(false);
+      placeViews();
+    });
     wc.on("render-process-gone", (_e, d) => {
       t.error = { code: 0, text: `The page stopped (${d.reason}).`, url: t.url, httpFallback: null };
       t.loading = false;
@@ -443,6 +458,13 @@ function createBrowserTabs(o) {
       else if (input.alt && k === "arrowleft") wc.navigationHistory.goBack();
       else if (input.alt && k === "arrowright") wc.navigationHistory.goForward();
       else if (ctrl && k === "tab") stepTab(input.shift ? -1 : 1);
+      // Esc leaves a page's fullscreen (asked in the script world the page cannot see).
+      else if (k === "escape" && fullscreen?.id === t.id)
+        void wc
+          .executeJavaScriptInIsolatedWorld(COSMETIC_WORLD, [
+            { code: "document.fullscreenElement && document.exitFullscreen()" },
+          ])
+          .catch(() => {});
       else done = false;
       if (done) e.preventDefault();
     });
@@ -520,9 +542,25 @@ function createBrowserTabs(o) {
     if (host && !host.isDestroyed()) host.webContents.send("edexo:browser-event", { type });
   }
 
+  /*
+    A page in fullscreen (a video's fullscreen button; owner, 2026-10-13: it filled the app's window, not the
+    screen): the window goes fullscreen and that page covers all of it, over the app's toolbar and tabs, until the
+    page leaves fullscreen (its button, or Esc). A window already fullscreen stays so afterwards.
+  */
+  let fullscreen = null;
   function placeViews() {
     if (!host || host.isDestroyed()) return;
     const zoom = host.webContents.getZoomFactor();
+    if (fullscreen && tabs.get(fullscreen.id)?.view) {
+      const [width, height] = host.getContentSize();
+      for (const t of tabs.values()) {
+        if (!t.view) continue;
+        const on = t.id === fullscreen.id;
+        if (on) t.view.setBounds({ x: 0, y: 0, width, height });
+        t.view.setVisible(on);
+      }
+      return;
+    }
     for (const t of tabs.values()) {
       if (!t.view) continue;
       const show = t.id === active && bounds && !t.startPage;
@@ -546,6 +584,10 @@ function createBrowserTabs(o) {
       win.contentView.addChildView(t.view);
     }
     host = win;
+    // The window's size changes as it goes in and out of fullscreen: the fullscreen page follows it.
+    host.on("resize", () => {
+      if (fullscreen && host === win) placeViews();
+    });
     host.once("closed", () => {
       if (host === win) {
         host = null;
@@ -600,6 +642,10 @@ function createBrowserTabs(o) {
     const t = tabs.get(id);
     if (!t) return;
     for (const x of t.passTimers.splice(0)) clearTimeout(x);
+    if (fullscreen?.id === id) {
+      if (host && !host.isDestroyed() && !fullscreen.wasFull) host.setFullScreen(false);
+      fullscreen = null;
+    }
     if (t.view) {
       if (host && !host.isDestroyed()) host.contentView.removeChildView(t.view);
       t.view.webContents.close();
