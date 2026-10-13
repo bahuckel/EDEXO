@@ -37,8 +37,6 @@ const COSMETIC_PASSES_MS = [1500, 4000, 10000];
   normal reload takes the page's scripts and images from the page process's own memory cache, which never reaches
   webRequest, so the blocker was not asked again; a new tab has a new process and an empty cache.
 */
-/** Marks the scriptlets' own console line, so the log can say they ran (random per run: a page cannot fake it). */
-const RAN_TOKEN = `edexo-scriptlets-${Math.random().toString(36).slice(2, 10)}`;
 /** How long a page's request waits for its scriptlets to be registered (they take a few ms). */
 const INJECT_WAIT_MS = 1500;
 /** Requests of these kinds, once blocked, leave a box on the page: it is collapsed. */
@@ -266,9 +264,7 @@ function createBrowserTabs(o) {
         t.pageDomain = true;
       }
       const body = scripts.map((x) => `(function(){try{${x}\n}catch(e){}})();`).join("\n");
-      // A line in hud-events.log says they ran in the page (console-message below): the proof a test needs.
-      const ran = `try{console.debug(${JSON.stringify(`${RAN_TOKEN} ${scripts.length}`)})}catch(e){}`;
-      const source = `(function(){if(window.top!==window||location.hostname!==${JSON.stringify(host)})return;${ran}\n${body}\n})();`;
+      const source = `(function(){if(window.top!==window||location.hostname!==${JSON.stringify(host)})return;\n${body}\n})();`;
       const r = await dbg.sendCommand("Page.addScriptToEvaluateOnNewDocument", { source });
       t.injected = { key, id: r && typeof r.identifier === "string" ? r.identifier : null };
       o.log?.(`browser: ${scripts.length} scriptlets registered for ${host}`);
@@ -429,13 +425,6 @@ function createBrowserTabs(o) {
       const css = o.blocker.cosmetics(url);
       if (css) void wc.insertCSS(css, { cssOrigin: "user" }).catch(() => {});
       void cosmeticPass(t);
-    });
-    wc.on("console-message", (e, _level, message) => {
-      const m = typeof message === "string" ? message : e && typeof e.message === "string" ? e.message : "";
-      if (m.startsWith(RAN_TOKEN))
-        o.log?.(
-          `browser: ${m.slice(RAN_TOKEN.length + 1)} scriptlets ran on ${wc.getURL().split("/")[2] ?? "?"}`,
-        );
     });
     wc.on("render-process-gone", (_e, d) => {
       t.error = { code: 0, text: `The page stopped (${d.reason}).`, url: t.url, httpFallback: null };

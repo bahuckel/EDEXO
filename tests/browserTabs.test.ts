@@ -531,6 +531,8 @@ describe("scriptlets (YouTube)", () => {
     expect(src).toContain("window.__noAds = 1;");
     expect(src).toContain('location.hostname!=="www.youtube.com"');
     expect(src).toContain("window.top!==window");
+    // Nothing of ours a page could notice: no console line, no global of our own.
+    expect(src).not.toMatch(/console\.|edexo/i);
     // Never the Runtime domain (pages can notice it).
     expect(wc.commands.some(([m]) => m.startsWith("Runtime."))).toBe(false);
   });
