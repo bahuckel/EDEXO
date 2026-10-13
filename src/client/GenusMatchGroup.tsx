@@ -6,6 +6,7 @@ import { GenusSpeciesOdds } from "./SpeciesCardBits";
 import { SpeciesRow, orderRows } from "./SpeciesRows";
 import { useRowContext } from "./rowContext";
 import { safeGenusHeadId } from "./speciesMatchHelpers";
+import { Dialog } from "./ui/Dialog";
 import type { BodyComputed, EstimatedSurfaceTempBand, PlanetScan } from "@shared/types";
 import { memo, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 
@@ -182,26 +183,14 @@ export const GenusMatchGroup = memo(function GenusMatchGroup({
       </div>
 
       {notesOpen ? (
-        <div className="modal-backdrop" role="presentation" onClick={() => setNotesOpen(false)}>
-          <div className="modal-panel" role="dialog" aria-modal="true" onClick={(ev) => ev.stopPropagation()}>
-            <div className="modal-head">
-              <h3>{genusTitle} — notes</h3>
-              <button
-                type="button"
-                className="modal-close"
-                onClick={() => setNotesOpen(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              {notesLoading ? <p className="dim">Loading…</p> : null}
-              {notesErr ? <p className="warn">{notesErr}</p> : null}
-              {notesText != null && !notesLoading ? <pre className="notes-pre">{notesText}</pre> : null}
-            </div>
+        // Review F11: it had no focus trap, no Escape and no focus return.
+        <Dialog title={<>{genusTitle} — notes</>} onClose={() => setNotesOpen(false)}>
+          <div className="modal-body">
+            {notesLoading ? <p className="dim">Loading…</p> : null}
+            {notesErr ? <p className="warn">{notesErr}</p> : null}
+            {notesText != null && !notesLoading ? <pre className="notes-pre">{notesText}</pre> : null}
           </div>
-        </div>
+        </Dialog>
       ) : null}
     </section>
   );

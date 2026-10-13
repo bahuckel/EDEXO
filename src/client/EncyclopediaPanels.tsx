@@ -8,6 +8,7 @@ import { ExomasteryDistributionPanel } from "./exomasteryDistributionPanel";
 import { ExomasteryHabitatDetailInner } from "./exomasteryHabitatDetailInner";
 import { formatPressurePill } from "./planetDisplayUtils";
 import { TemperatureLabel } from "./TemperatureLabel";
+import { Dialog } from "./ui/Dialog";
 import type { EncyclopediaExomasteryPlanetsResponseDTO, FootScannedEntry, SpeciesEntry } from "@shared/types";
 import { useState } from "react";
 
@@ -163,94 +164,71 @@ export function FoundSpeciesPopup({
   onClose: () => void;
 }) {
   return (
-    // Sits inside the Encyclopedia's backdrop: its closing click must not bubble on and close that too.
-    <div
-      className="modal-backdrop encyclopedia-found-backdrop"
-      role="presentation"
-      onClick={(ev) => {
-        ev.stopPropagation();
-        onClose();
-      }}
+    // Sits inside the Encyclopedia: Dialog keeps its clicks from reaching the Encyclopedia's backdrop, and
+    // stays modal when the Encyclopedia is a tab (it had no focus trap and no Escape).
+    <Dialog
+      title={<>Found — {entry.displayName}</>}
+      onClose={onClose}
+      className="encyclopedia-found-panel"
+      backdropClassName="encyclopedia-found-backdrop"
+      closeTitle="Close found list"
     >
-      <div
-        className="modal-panel encyclopedia-found-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ency-found-title"
-        onClick={(ev) => ev.stopPropagation()}
-      >
-        <div className="modal-head">
-          <h3 id="ency-found-title">Found — {entry.displayName}</h3>
-          <button
-            type="button"
-            className="modal-close"
-            onClick={(ev) => {
-              ev.stopPropagation();
-              onClose();
-            }}
-            aria-label="Close"
-            title="Close found list"
-          >
-            ×
-          </button>
-        </div>
-        <div className="modal-body encyclopedia-found-body">
-          {hits.length === 0 ? (
-            <p className="dim">No matching rows in your foot catalog yet.</p>
-          ) : (
-            <ul className="encyclopedia-found-list">
-              {hits.map((f) => (
-                <li key={f.id} className="encyclopedia-found-card">
-                  <time className="encyclopedia-found-date" dateTime={f.recordedAt}>
-                    {f.recordedAt.slice(0, 19).replace("T", " ")}
-                  </time>
-                  <div className="encyclopedia-found-planet">
-                    <strong>{f.bodyName}</strong>
-                    <span className="dim"> · {f.starSystem}</span>
-                    <CopySystemButton system={f.starSystem} />
+      <div className="modal-body encyclopedia-found-body">
+        {hits.length === 0 ? (
+          <p className="dim">No matching rows in your foot catalog yet.</p>
+        ) : (
+          <ul className="encyclopedia-found-list">
+            {hits.map((f) => (
+              <li key={f.id} className="encyclopedia-found-card">
+                <time className="encyclopedia-found-date" dateTime={f.recordedAt}>
+                  {f.recordedAt.slice(0, 19).replace("T", " ")}
+                </time>
+                <div className="encyclopedia-found-planet">
+                  <strong>{f.bodyName}</strong>
+                  <span className="dim"> · {f.starSystem}</span>
+                  <CopySystemButton system={f.starSystem} />
+                </div>
+                <dl className="encyclopedia-found-facts">
+                  <div>
+                    <dt>Planet class</dt>
+                    <dd>{f.planetClass}</dd>
                   </div>
-                  <dl className="encyclopedia-found-facts">
-                    <div>
-                      <dt>Planet class</dt>
-                      <dd>{f.planetClass}</dd>
-                    </div>
-                    <div>
-                      <dt>Atmosphere</dt>
-                      <dd>{readableAtmosphereType(f.atmosphereNorm) || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt>Temperature</dt>
-                      <dd title="The journal's surface temperature when recorded, the catalogue's estimated band dimmed beside it. Same as the body tab (Kelvin here).">
-                        <TemperatureLabel
-                          journalK={f.surfaceTemperatureK != null ? f.surfaceTemperatureK : null}
-                          est={{ minK: f.tempBandMinK, maxK: f.tempBandMaxK, midK: f.tempMidK }}
-                          unit="K"
-                        />
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Pressure</dt>
-                      <dd
-                        title={
-                          f.surfacePressure != null
-                            ? "Journal SurfacePressure from foot catalog: large values treated as pascals when showing atm (same rule as main UI)."
-                            : undefined
-                        }
-                      >
-                        {f.surfacePressure != null ? formatPressurePill(f.surfacePressure, "atm") : "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Source</dt>
-                      <dd>{footConfirmationLabel(f.confirmationSource)}</dd>
-                    </div>
-                  </dl>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                  <div>
+                    <dt>Atmosphere</dt>
+                    <dd>{readableAtmosphereType(f.atmosphereNorm) || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Temperature</dt>
+                    <dd title="The journal's surface temperature when recorded, the catalogue's estimated band dimmed beside it. Same as the body tab (Kelvin here).">
+                      <TemperatureLabel
+                        journalK={f.surfaceTemperatureK != null ? f.surfaceTemperatureK : null}
+                        est={{ minK: f.tempBandMinK, maxK: f.tempBandMaxK, midK: f.tempMidK }}
+                        unit="K"
+                      />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Pressure</dt>
+                    <dd
+                      title={
+                        f.surfacePressure != null
+                          ? "Journal SurfacePressure from foot catalog: large values treated as pascals when showing atm (same rule as main UI)."
+                          : undefined
+                      }
+                    >
+                      {f.surfacePressure != null ? formatPressurePill(f.surfacePressure, "atm") : "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>{footConfirmationLabel(f.confirmationSource)}</dd>
+                  </div>
+                </dl>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-    </div>
+    </Dialog>
   );
 }

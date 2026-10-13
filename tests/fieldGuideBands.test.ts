@@ -98,7 +98,8 @@ describe("encyclopedia bands", () => {
     const html = renderToStaticMarkup(createElement(GuideBandsBlock, { b, body }));
     expect(html.indexOf("thin carbon dioxide")).toBeLessThan(html.indexOf("thin ammonia"));
     expect(html).toContain("this body&#x27;s atmosphere");
-    expect(html).toContain("175–180 K</b> on thin carbon dioxide, most at <b>176–178 K");
+    // The words, not the classes on them (the block is in tw: utilities since plan 3.4).
+    expect(html.replace(/ class="[^"]*"/g, "")).toContain("175–180 K</b> on thin carbon dioxide, most at <b>176–178 K");
     expect(html).toContain("this body 177 K");
 
     const within = renderToStaticMarkup(createElement(GuideWithinBlock, { b, name: "Aleoida arcus", body }));

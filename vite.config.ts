@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
 /*
@@ -10,7 +11,9 @@ const API = `127.0.0.1:${process.env.EDEXO_DEV_API_PORT || "7111"}`;
 const DEV_PORT = Number(process.env.EDEXO_DEV_PORT || 5173);
 
 export default defineConfig({
-  plugins: [react()],
+  // Tailwind compiles the utilities only; minifying stays with Vite (esbuild) as before 3.2, so the
+  // app's own rules are not rewritten by a second optimiser.
+  plugins: [react(), tailwindcss({ optimize: false })],
   root: "src/client",
   publicDir: "../../public",
   resolve: {

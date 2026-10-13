@@ -410,12 +410,6 @@
   color: var(--accent);
 }
 
-.g3d-group {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
 .g3d-btn {
   padding: 3px 10px;
   border: 1px solid var(--accent-a35);
@@ -443,18 +437,6 @@
 .g3d-classic {
   text-align: left;
 }
-
-.g3d-slider,
-.g3d-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-dim);
-}
-.g3d-slider input {
-  width: 110px;
-  accent-color: var(--accent);
-}
 /* The slider's value: a fixed width and tabular digits, so dragging moves nothing else. */
 .g3d-slider-val {
   display: inline-block;
@@ -464,9 +446,6 @@
 }
 .g3d-slider-val--short {
   min-width: 4.5ch;
-}
-.g3d-check input {
-  accent-color: var(--accent);
 }
 
 .g3d-badge {
@@ -935,25 +914,6 @@
   color: var(--text-faint);
   font-size: var(--fs-xs);
 }
-.g3d-banner {
-  position: absolute;
-  top: var(--g3d-top, 60px);
-  left: 50%;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: calc(100vw - 40px);
-  padding: 5px 10px;
-  transform: translateX(-50%);
-  font-size: var(--fs-xs);
-  color: var(--text-dim);
-  background: rgba(10, 8, 12, 0.9);
-  border: 1px solid rgba(var(--tint-255-158-41), 0.55);
-}
-.g3d-banner strong {
-  color: #ffd29e;
-}
 .g3d-species--pick tr {
   cursor: pointer;
 }
@@ -1122,27 +1082,8 @@
   color: var(--text);
   font: inherit;
 }
-.g3d-pop {
-  position: relative;
-}
-.g3d-pop__menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 6;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 200px;
-  padding: 8px 10px;
-  background: rgba(10, 8, 12, 0.96);
-  border: 1px solid var(--accent-a45);
-}
 .g3d-find__input {
   width: 210px;
-}
-.g3d-bar .g3d-slider input {
-  width: 90px;
 }
 
 /* ---- G5: Next target ----------------------------------------------------------------------------- */
@@ -1150,18 +1091,6 @@
   border-color: var(--accent);
   color: var(--accent-bright);
   font-weight: 700;
-}
-.g3d-banner--target {
-  border-color: rgba(179, 128, 255, 0.7);
-  padding-right: 30px;
-}
-.g3d-banner--target strong {
-  color: #e2d2ff;
-}
-.g3d-banner__close {
-  top: 3px;
-  right: 6px;
-  font-size: var(--fs-sm);
 }
 
 /* ---- G5.3: the plan -------------------------------------------------------------------------------- */
@@ -1377,9 +1306,6 @@
   font-size: var(--fs-xs);
   color: var(--accent-bright);
 }
-.g3d-navroute__clear {
-  margin-left: auto;
-}
 .g3d-navroute__list {
   flex: 1;
   min-height: 0;
@@ -1545,87 +1471,7 @@
   }
 }
 
-/* ---- Expedition planner (plan 2.5, 2026-10-11) ---- */
-.g3d-exp-list,
-.g3d-exp-plan,
-.g3d-exp-names {
-  list-style: none;
-  margin: 4px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 3px;
-}
-.g3d-exp-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px;
-  align-items: stretch;
-}
-.g3d-exp-row__go {
-  display: grid;
-  gap: 1px;
-  text-align: left;
-  padding: 4px 6px;
-  background: var(--accent-a06);
-  border: 1px solid var(--accent-a15);
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-  min-width: 0;
-}
-.g3d-exp-row__go:hover,
-.g3d-exp-row__go:focus-visible {
-  border-color: var(--accent);
-  background: var(--accent-a15);
-}
-.g3d-exp-row__go strong {
-  color: var(--accent-bright);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.g3d-exp-row__go span {
-  font-size: 11px;
-  color: var(--text-dim);
-}
-.g3d-exp-row__plan {
-  min-width: 28px;
-}
-.g3d-exp-plan li {
-  font-size: 12px;
-}
-.g3d-exp-legend {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 6px 0 2px;
-  font-size: 11px;
-}
-.g3d-exp-legend__bar {
-  display: inline-block;
-  width: 64px;
-  height: 7px;
-  background: linear-gradient(90deg, rgb(92, 69, 158), rgb(255, 199, 56));
-}
-.g3d-exp-facts {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 2px 10px;
-  margin: 6px 0;
-  font-size: 12px;
-}
-.g3d-exp-facts dt {
-  color: var(--muted);
-}
-.g3d-exp-facts dd {
-  margin: 0;
-}
-.g3d-exp-names li {
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+/* Expedition planner (plan 2.5): ExpeditionDrawer.tsx, in tw: utilities since plan 3.4. */
 
 /* Neutron route (plan 8, 1.2.16): the stops in order, the route's table, a warning tone. */
 .g3d-neutron-stops {

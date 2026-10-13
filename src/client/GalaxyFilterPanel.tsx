@@ -8,6 +8,7 @@
  * them). Inside one group any tick will do, across groups every group with a tick must hold — a shop's
  * facets. The answer comes from the server as bits over the map's own ordinals (galaxyTraits.ts).
  */
+import { tabListKeyDown } from "./ui/Tabs";
 import { useEffect, useMemo, useState } from "react";
 import type { GalaxySpeciesCatalogueDTO } from "@shared/types";
 import { MenuToggle } from "./galaxy3d/G3dMenu";
@@ -214,7 +215,7 @@ export function GalaxyFilterPanel({
 
   return (
     <div className="g3d-filter">
-      <div className="g3d-row g3d-row--buttons g3d-filter__tabs" role="tablist" aria-label="Filter by">
+      <div className="g3d-row g3d-row--buttons g3d-filter__tabs" role="tablist" aria-label="Filter by" onKeyDown={(ev) => tabListKeyDown(ev, { follow: true })}>
         {(
           [
             ["exobio", "Exobio"],
@@ -226,6 +227,7 @@ export function GalaxyFilterPanel({
             type="button"
             role="tab"
             aria-selected={value.tab === k}
+            tabIndex={value.tab === k ? 0 : -1}
             className={value.tab === k ? "g3d-btn g3d-btn--on" : "g3d-btn"}
             onClick={() => onChange({ ...value, tab: k })}
           >

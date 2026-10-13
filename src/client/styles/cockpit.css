@@ -194,20 +194,7 @@ input[type="text"]:focus {
   right: 0;
 }
 
-/*
-  The alerts popover flips the same way, and needs it more: its button sits further right than the
-  menu on every layout. It used to be pinned `left: 0` here, overriding the `right: 0` in shell.css,
-  so near the right edge it grew off the window and the alerts at the bottom could not be reached.
-  `ExoDataAlertsHub` measures the button on open and picks the class; these two rules are the flip.
-*/
-.exo-data-alerts-popover--left {
-  left: 0;
-  right: auto;
-}
-.exo-data-alerts-popover--right {
-  left: auto;
-  right: 0;
-}
+/* The alerts and notices popovers are placed by ui/Popover (Radix) since 2026-10-12. */
 
 /* ---- the six secondary buttons sit inline only on a wide bar; below 1700 px they are the menu --- */
 @media (min-width: 1700px) {
@@ -1017,7 +1004,6 @@ input[type="text"]:focus {
 /* modal tables and cards: tracked heads, hairline rows, warm tiles */
 .fdb-table thead th,
 .exo-payout-detail-table th,
-.encyclopedia-criteria-label,
 .my-exo-card-fact > small,
 .data-value-breakdown-list > .data-value-breakdown-row:first-child {
   font-size: var(--fs-2xs);

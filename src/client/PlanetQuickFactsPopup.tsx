@@ -1,7 +1,6 @@
 import type { SystemMapBodyDetailDTO } from "@shared/types";
 import type { ReactNode } from "react";
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { createPortal } from "react-dom";
+import { Popover } from "./ui/Popover";
 import { recordText, type RecordMarkDTO } from "@shared/notices";
 import { RecordMedal } from "./noticesClient";
 import { BodyFeatureLines, GreenGiantBlock } from "./GreenGiantBlock";
@@ -571,54 +570,29 @@ export function PlanetQuickFactsPopup({
   onGoToBioBody?: (bodyKey: string) => void;
   pos: { left: number; top: number };
 }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const pad = 8;
-    const r = el.getBoundingClientRect();
-    let left = pos.left + 12;
-    let top = pos.top + 12;
-    if (left + r.width > window.innerWidth - pad) left = window.innerWidth - r.width - pad;
-    if (top + r.height > window.innerHeight - pad) top = window.innerHeight - r.height - pad;
-    if (left < pad) left = pad;
-    if (top < pad) top = pad;
-    el.style.left = `${left}px`;
-    el.style.top = `${top}px`;
-  }, [pos, bodyId, detail?.bodyId]);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const onDoc = (ev: MouseEvent) => {
-      if (ev.target instanceof Node && el.contains(ev.target)) return;
-      onClose();
-    };
-    // Escape closes the popup alone, not a window it was opened over.
-    const onKey = (ev: KeyboardEvent) => {
-      if (ev.key !== "Escape") return;
-      ev.stopPropagation();
-      onClose();
-    };
-    const t = window.setTimeout(() => document.addEventListener("mousedown", onDoc), 80);
-    document.addEventListener("keydown", onKey, true);
-    return () => {
-      window.clearTimeout(t);
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey, true);
-    };
-  }, [onClose, bodyId]);
-
   const aria = detail?.bodyName ?? fallbackTitle;
 
-  return createPortal(
-    <div
-      ref={ref}
+  /*
+    Opened at the click by ui/Popover (plan 3.3, 2026-10-12), 12 px right of and below it as before.
+    Beside the point (side right), so a popup taller than the room below slides up to stay in the
+    window, and near the right edge it goes to the click's left rather than over it. Focus goes in and
+    back to the strip entry that opened it; Escape, a click outside or focus leaving closes it (Escape
+    the popup alone, not a window it was opened over).
+  */
+  return (
+    <Popover
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+      at={pos}
+      label={`Quick facts: ${aria}`}
       className="system-map-popup card-neon planet-quick-popup"
-      role="dialog"
-      aria-label={`Quick facts: ${aria}`}
-      onClick={(ev) => ev.stopPropagation()}
+      portal
+      contained
+      side="right"
+      sideOffset={12}
+      alignOffset={12}
     >
       <button
         type="button"
@@ -650,7 +624,6 @@ export function PlanetQuickFactsPopup({
           </DetailCard>
         </div>
       )}
-    </div>,
-    document.body,
+    </Popover>
   );
 }

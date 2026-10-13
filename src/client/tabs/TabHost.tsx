@@ -19,6 +19,8 @@ import {
   type TabKind,
 } from "./tabStore";
 import { UI_COMMAND_EVENT } from "../useLiveSnapshot";
+import { tabListKeyDown } from "../ui/Tabs";
+import { MENU_ITEM, useMenuButton } from "../ui/Menu";
 import type { UiCommand } from "@shared/types";
 
 const DRAG_TYPE = "application/x-edexo-tab";
@@ -39,6 +41,14 @@ export const InTabContext = createContext<TabKind | null>(null);
 export const useInTab = (): TabKind | null => useContext(InTabContext);
 
 const labelOf = (k: TabKind) => TAB_SCREENS.find((s) => s.kind === k)?.label ?? k;
+/** The tab and its pane name each other (aria-controls / aria-labelledby). */
+const tabId = (f: TabFront) => `edexo-tab-${f}`;
+const paneId = (f: TabFront) => `edexo-tabpane-${f}`;
+
+/** After a tab closes from the keyboard, focus goes to the tab now in front, as after a click. */
+function focusActiveTab(): void {
+  requestAnimationFrame(() => document.getElementById(tabId(tabStore.get().active))?.focus());
+}
 
 /** One ref callback per tab for the app's life: a new one each render would unset and set the pane. */
 const paneRefs = new Map<TabKind, (el: HTMLDivElement | null) => void>();
@@ -108,7 +118,10 @@ function TabButton({
   return (
     <div
       role="tab"
+      id={tabId(front)}
+      aria-controls={paneId(front)}
       aria-selected={active}
+      data-front={front}
       tabIndex={active ? 0 : -1}
       className={`tab-strip__tab${active ? " tab-strip__tab--on" : ""}${front === "main" ? " tab-strip__tab--main" : ""}`}
       draggable={front !== "main"}
@@ -157,6 +170,8 @@ function TabButton({
           type="button"
           className="tab-strip__close"
           aria-label={`Close ${label}`}
+          // Out of the Tab order: the strip is one stop, and Delete or Ctrl+W closes from the keyboard.
+          tabIndex={-1}
           onClick={(ev) => {
             ev.stopPropagation();
             tabStore.close(front);
@@ -169,10 +184,11 @@ function TabButton({
   );
 }
 
-/** The "+" menu: every screen, the open ones marked. */
+/** The "+" menu: every screen, the open ones marked; the menu-button keys from ui/Menu.tsx. */
 function AddMenu() {
   const st = useTabState();
   const [open, setOpen] = useState(false);
+  const menu = useMenuButton<HTMLButtonElement, HTMLUListElement>(open, setOpen);
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!open) return;
@@ -188,19 +204,19 @@ function AddMenu() {
         type="button"
         className="tab-strip__plus"
         aria-label="Open a screen in a tab"
-        aria-expanded={open}
         title="Open a screen in a tab"
-        onClick={() => setOpen(!open)}
+        {...menu.buttonProps}
+        onClick={menu.toggle}
       >
         +
       </button>
       {open ? (
-        <ul className="tab-strip__menu" role="menu">
+        <ul className="tab-strip__menu" {...menu.menuProps}>
           {TAB_SCREENS.map((s) => (
-            <li key={s.kind}>
+            <li key={s.kind} role="none">
               <button
                 type="button"
-                role="menuitem"
+                {...MENU_ITEM}
                 onClick={() => {
                   tabStore.open(s.kind);
                   setOpen(false);
@@ -240,6 +256,17 @@ export function TabStrip() {
       className="tab-strip"
       role="tablist"
       aria-label="Screens"
+      // Arrows move between the tabs, Enter or Space opens one, Delete closes a screen tab (ui/Tabs.tsx).
+      onKeyDown={(ev) =>
+        tabListKeyDown(ev, {
+          onDelete: (tab) => {
+            const f = tab.dataset.front as TabFront | undefined;
+            if (!f || f === "main") return;
+            tabStore.close(f);
+            focusActiveTab();
+          },
+        })
+      }
       // A tab from another window dropped anywhere on the strip moves here, at the end.
       onDragOver={(ev) => {
         if (ev.dataTransfer.types.includes(DRAG_TYPE)) ev.preventDefault();
@@ -332,13 +359,22 @@ export function TabHost({ children }: { children: ReactNode }) {
     <>
       <TabStrip />
       {/* A detached window keeps Main mounted (it owns the screens) but never shows it. */}
-      <div className="tab-pane tab-pane--main" hidden={IS_DETACHED || st.active !== "main"}>
+      <div
+        className="tab-pane tab-pane--main"
+        role="tabpanel"
+        id={paneId("main")}
+        aria-labelledby={IS_DETACHED ? undefined : tabId("main")}
+        hidden={IS_DETACHED || st.active !== "main"}
+      >
         {children}
       </div>
       {st.tabs.map((k) => (
         <div
           key={k}
           className={`tab-pane tab-pane--screen tab-pane--${k}`}
+          role="tabpanel"
+          id={paneId(k)}
+          aria-labelledby={tabId(k)}
           hidden={st.active !== k}
           ref={paneRef(k)}
         />

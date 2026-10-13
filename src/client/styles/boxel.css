@@ -367,20 +367,6 @@
 .boxel-side__tabs .disc-tab {
   flex: 1 1 auto;
 }
-.boxel-prev__toggle {
-  justify-self: start;
-  padding: 0.1rem 0;
-  font: inherit;
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  color: var(--text-dim);
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-.boxel-prev__toggle:hover {
-  color: var(--accent-bright);
-}
 .boxel-prev__range {
   display: flex;
   flex-wrap: wrap;

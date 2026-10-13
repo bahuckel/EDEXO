@@ -3,8 +3,8 @@
  * (shared/bookmarks.ts). Apart from the list window (Bookmarks.tsx), so the system card — always on
  * screen — does not pull the window into the main bundle (plan 2.6, Fable 9.2).
  */
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
+import { Popover } from "./ui/Popover";
 import type { AppSnapshot } from "@shared/types";
 import {
   MAX_NOTE_LENGTH,
@@ -200,83 +200,48 @@ export function BookmarkButton({
   variant?: "star" | "button";
 }) {
   const [open, setOpen] = useState(false);
-  const wrap = useRef<HTMLSpanElement>(null);
-  const pop = useRef<HTMLDivElement>(null);
-  const [at, setAt] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (ev: MouseEvent) => {
-      if (!(ev.target instanceof Node)) return;
-      if (wrap.current?.contains(ev.target) || pop.current?.contains(ev.target)) return;
-      setOpen(false);
-    };
-    const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
   const title = existing
     ? `Bookmarked: ${[existing.body, existing.tags.join(", "), existing.note].filter(Boolean).join(" · ") || "no tags"} — click to edit`
     : "Bookmark this system: tags and a note";
-  const onClick = (ev: ReactMouseEvent<HTMLButtonElement>) => {
-    const r = ev.currentTarget.getBoundingClientRect();
-    const width = Math.min(416, window.innerWidth - 32);
-    const top = r.bottom + 6 + 360 > window.innerHeight ? Math.max(16, r.top - 366) : r.bottom + 6;
-    setAt({ left: Math.max(16, Math.min(r.left, window.innerWidth - width - 16)), top });
-    setOpen((v) => !v);
-  };
   return (
-    <span className="bm-star-wrap" ref={wrap}>
-      {variant === "star" ? (
-        <button
-          type="button"
-          className={`bm-star${existing ? " bm-star--on" : ""}`}
-          onClick={onClick}
-          title={title}
-          aria-label={title}
-          aria-expanded={open}
-        >
-          {/* The glyph is drawn by CSS, so the system name's text stays just the name. */}
-        </button>
-      ) : (
-        <button
-          type="button"
-          className={`g3d-btn bm-btn${existing ? " bm-btn--on" : ""}`}
-          onClick={onClick}
-          title={title}
-          aria-expanded={open}
-        >
-          {existing ? "★ Bookmarked" : "☆ Bookmark"}
-        </button>
-      )}
-      {open
-        ? createPortal(
-            <div ref={pop} className="bm-popover" role="dialog" aria-label="Bookmark" style={{ left: at.left, top: at.top }}>
-              <BookmarkEditor
-                initial={existing ?? { system, systemAddress }}
-                bodies={bodies}
-                pos={pos ?? null}
-                onSaved={() => setOpen(false)}
-                onCancel={() => setOpen(false)}
-              />
-              {existing ? (
-                <button
-                  type="button"
-                  className="bm-remove"
-                  onClick={() => void removeBookmark(existing.id).then(() => setOpen(false))}
-                >
-                  Remove bookmark
-                </button>
-              ) : null}
-            </div>,
-            document.body,
+    <span className="bm-star-wrap">
+      {/* Opened, placed and closed by ui/Popover (Radix): below the button, or above it when there is no
+          room, inside the window; focus in and back, Escape, outside click. At the end of <body>, as before. */}
+      <Popover
+        open={open}
+        onOpenChange={setOpen}
+        label="Bookmark"
+        className="bm-popover"
+        portal
+        trigger={
+          variant === "star" ? (
+            <button type="button" className={`bm-star${existing ? " bm-star--on" : ""}`} title={title} aria-label={title}>
+              {/* The glyph is drawn by CSS, so the system name's text stays just the name. */}
+            </button>
+          ) : (
+            <button type="button" className={`g3d-btn bm-btn${existing ? " bm-btn--on" : ""}`} title={title}>
+              {existing ? "★ Bookmarked" : "☆ Bookmark"}
+            </button>
           )
-        : null}
+        }
+      >
+        <BookmarkEditor
+          initial={existing ?? { system, systemAddress }}
+          bodies={bodies}
+          pos={pos ?? null}
+          onSaved={() => setOpen(false)}
+          onCancel={() => setOpen(false)}
+        />
+        {existing ? (
+          <button
+            type="button"
+            className="bm-remove"
+            onClick={() => void removeBookmark(existing.id).then(() => setOpen(false))}
+          >
+            Remove bookmark
+          </button>
+        ) : null}
+      </Popover>
     </span>
   );
 }
