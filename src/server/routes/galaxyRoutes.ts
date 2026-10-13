@@ -256,15 +256,18 @@ export function registerGalaxyRoutes(
   const extrasStatus = () => {
     const st = stationsStatus();
     const nt = neutronsStatus();
+    // Due: not here, or the release has another build (its count differs) — what the download fetches.
     return {
       stations: {
         present: st.present,
+        due: !st.present || (st.release != null && st.release.stations !== st.stations),
         downloading: st.downloading,
         error: st.error,
         bytes: st.release?.bytes ?? null,
       },
       neutrons: {
         present: nt.present,
+        due: !nt.present || (nt.release != null && nt.release.neutrons !== nt.neutrons),
         downloading: nt.downloading,
         error: nt.error,
         bytes: nt.release?.bytes ?? null,
@@ -274,7 +277,7 @@ export function registerGalaxyRoutes(
   const combinedStatus = () => {
     const st = galaxyIndexStatus();
     const ex = extrasStatus();
-    const missing = [ex.stations, ex.neutrons].filter((x) => !x.present);
+    const missing = [ex.stations, ex.neutrons].filter((x) => x.due);
     const extraBytes = missing.reduce((a, x) => a + (x.bytes ?? 0), 0);
     // Progress of whichever part is coming down.
     const downloading =
@@ -320,8 +323,10 @@ export function registerGalaxyRoutes(
               clearGalaxyCatalogueCache();
               clearGalaxySystemValues();
             });
-          await downloadStations(() => opts.scheduleBroadcast?.());
-          await downloadNeutrons(() => opts.scheduleBroadcast?.());
+          // Each only when not here or newer on the release (review 1.2.16: both came down again every time).
+          const ex = extrasStatus();
+          if (ex.stations.due) await downloadStations(() => opts.scheduleBroadcast?.());
+          if (ex.neutrons.due) await downloadNeutrons(() => opts.scheduleBroadcast?.());
         } finally {
           combinedRunning = false;
         }
@@ -711,7 +716,7 @@ export function registerGalaxyRoutes(
     const t = tileIndex();
     if (!t) return void noIndex(res);
     const q = String(req.query.q ?? "").slice(0, 80);
-    const found = galaxyFind(t, opts.getJournalStore?.() ?? null, q);
+    const found = galaxyFind(t, opts.getJournalStore?.() ?? null, q, opts.getImportedSystems?.() ?? []);
     // Stations by name, when they are downloaded (owner, 2026-10-13); a duplicated name says its system.
     let stations: NonNullable<GalaxyFindDTO["stations"]> = [];
     if (stationsStatus().present) {
@@ -770,7 +775,8 @@ export function registerGalaxyRoutes(
       if (!s) return null;
       const p = store.systemPositions.get(s.addr);
       if (p) return { name: s.name, x: p.x, y: p.y, z: p.z, exact: true };
-      const b = id64Boxel(s.addr);
+      // Above 2^53 the journal's number has lost the low bits the mass code is in: no guess (review 1.2.16).
+      const b = Number.isSafeInteger(s.addr) ? id64Boxel(s.addr) : null;
       return b ? { name: s.name, ...b.center, exact: false } : null;
     };
     res.json({

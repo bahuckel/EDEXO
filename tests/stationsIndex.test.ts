@@ -230,6 +230,12 @@ describe("the station index", () => {
     // Station and system together, and each row points at its system's dot on the Stations layer.
     expect(two.search("hubble gateway wolf").map((r) => [r.system, r.sys])).toEqual([["Wolf 73", 0]]);
     expect(two.search("lincoln")[0]).toMatchObject({ name: "Abraham Lincoln", sys: 2, dup: false });
+    // From a position: nearest first, over every match.
+    expect(two.search("hub", 12, { x: 20, y: 0, z: 0 }).map((r) => r.system)).toEqual([
+      "Sol",
+      "10 Kappa Pegasi",
+      "Wolf 73",
+    ]);
     // A system's name alone does not list its stations, and two letters are not a search.
     expect(two.search("kappa")).toEqual([]);
     expect(two.search("hu")).toEqual([]);

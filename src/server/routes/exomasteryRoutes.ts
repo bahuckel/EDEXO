@@ -32,7 +32,8 @@ export function registerExomasteryRoutes(
     const store = opts.getJournalStore?.() ?? null;
     return new Set(store ? [...store.visitedSystems.keys(), ...store.systemPositions.keys()] : []);
   };
-  const accountsRoot = () => eliteAccountsRoot(opts.getSnapshot().journalDir);
+  // The folder alone (review 1.2.16: this built the whole snapshot, every body and match, to read it).
+  const accountsRoot = () => eliteAccountsRoot(opts.getJournalDir?.() ?? opts.getSnapshot().journalDir);
   app.get("/api/visited-cache", (_req, res) => {
     const imp = loadVisitedImport();
     res.json({

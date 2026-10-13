@@ -67,12 +67,7 @@ export function registerCarriersPoiRoutes(
     }
     if (!index) return void res.status(404).json({ error: "No station data yet." });
     const from = opts.getCommanderPosition?.() ?? null;
-    const rows = index.search(String(req.query.q ?? "").slice(0, 80), 50).map((r) => ({
-      ...r,
-      distanceLy: from ? Math.round(Math.hypot(r.x - from.x, r.y - from.y, r.z - from.z) * 10) / 10 : 0,
-    }));
-    if (from) rows.sort((a, b) => a.distanceLy - b.distanceLy);
-    res.json({ from, stations: markOwn(rows) });
+    res.json({ from, stations: markOwn(index.search(String(req.query.q ?? "").slice(0, 80), 50, from)) });
   });
   /** The stations of the system at a point (the galaxy map's Stations dot): `?x&y&z`. */
   app.get("/api/stations/at", (req, res) => {

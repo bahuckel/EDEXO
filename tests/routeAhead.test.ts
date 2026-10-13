@@ -112,6 +112,30 @@ describe("route strip: the hops ahead and the refuel mark", () => {
     expect(a?.ahead.every((h) => h.refuel === "none")).toBe(true);
   });
 
+  it("costs a supercharged first jump as the ordinary jump it is, not a red ! (review 1.2.16)", () => {
+    // From a neutron star: 120 ly to a K star, then 10 ly on. Unboosted that is out of range (50 ly) and 144 t.
+    const legs: NavRouteWaypointDTO[] = [
+      { systemAddress: 1, starSystem: "PSR", starPos: [0, 0, 0], starClass: "N" },
+      { systemAddress: 2, starSystem: "Far K", starPos: [120, 0, 0], starClass: "K" },
+      { systemAddress: 3, starSystem: "Next T", starPos: [130, 0, 0], starClass: "T" },
+    ];
+    const run = (boost: number | null) =>
+      analyzeNavRouteFuel({
+        route: legs,
+        currentSystemAddress: 1,
+        fuelTotalT: 20,
+        lastFsdFuelT: 1,
+        lastFsdDistLy: 10,
+        loadoutMaxJumpLy: 50,
+        firstLegBoost: boost,
+        starRoles: roles,
+      });
+    expect(run(null)?.refuelLevel).toBe("red");
+    const boosted = run(4);
+    expect(boosted?.fuelCanFinishPlottedRoute).toBe(true);
+    expect(boosted?.refuelLevel).not.toBe("red");
+  });
+
   it("is empty off the plot", () => {
     const a = analyse(20, 999);
     expect(a?.onPlot).toBe(false);

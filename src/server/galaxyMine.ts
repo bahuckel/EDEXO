@@ -108,6 +108,7 @@ export function mySystemsDto(
       bioBodies: 0,
       speciesScanned: 0,
       unfinishedFloorCr: null,
+      ...(s.code != null ? { code: s.code } : {}),
     });
   }
   return { available: true, systems, unplaceable };

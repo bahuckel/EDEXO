@@ -846,6 +846,8 @@ export class GameStateStore {
   /** Latest `FSDJump` sample for fuel-per-ly calibration. */
   lastFsdJumpFuelUsedT: number | null = null;
   lastFsdJumpDistLy: number | null = null;
+  /** The FSD is supercharged (`JetConeBoost`'s BoostValue) until the next jump; null when it is not. */
+  jetConeBoost: number | null = null;
   /** The full jump range as flown: boosted jumps and economical-route hops left out (shared/jumpRange.ts). */
   jumpRange: JumpRangeState = emptyJumpRange();
   /** The drive's fuel per jump, fitted on the commander's jumps (shared/fsdFuel.ts). */
@@ -1798,6 +1800,7 @@ export class GameStateStore {
     this.loadoutFuelReserveCapacityT = null;
     this.lastFsdJumpFuelUsedT = null;
     this.lastFsdJumpDistLy = null;
+    this.jetConeBoost = null;
     this.jumpRange = emptyJumpRange();
     this.fsdFuel = emptyFsdFuel();
     this.fsdWear = newFsdWear();
@@ -2289,6 +2292,12 @@ export class GameStateStore {
 
       if (event === "Loadout") return this.onLoadout(line);
       if (event === "Repair" || event === "RepairAll") fsdWearRepair(this.fsdWear, line as Record<string, unknown>);
+      // Supercharged at a neutron star or white dwarf: the next jump only (the fuel pump costs it as such).
+      if (event === "JetConeBoost") {
+        const b = (line as Record<string, unknown>).BoostValue;
+        this.jetConeBoost = typeof b === "number" && b > 1 ? b : null;
+      } else if (event === "FSDJump" || event === "CarrierJump" || event === "LoadGame" || event === "Died")
+        this.jetConeBoost = null;
       if (typeof event === "string" && (event.startsWith("Carrier") || event.startsWith("ColonisationSystemClaim")))
         ownAssetsLine(this.ownAssets, line as Record<string, unknown>);
 

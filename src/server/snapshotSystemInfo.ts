@@ -255,6 +255,7 @@ export function buildLiveShipFuelRangeDTO(
     loadoutMaxJumpLy: store.loadoutMaxJumpRangeLy,
     fuelModel,
     cargoT: store.liveStatusCargoT,
+    firstLegBoost: store.jetConeBoost,
     starRoles,
     firstFootfallVerdict: (name) => lookup.verdict(name),
     firstFootfallNote: (name) => lookup.note(name),

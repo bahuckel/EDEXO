@@ -271,9 +271,9 @@ export async function downloadNeutrons(onDone: () => void, fetchImpl: typeof fet
   if (downloading) return;
   lastError = null;
   const dir = userGalaxyDir();
-  mkdirSync(dir, { recursive: true });
   const part = path.join(dir, `${NEUTRONS_FILE}.part`);
   try {
+    mkdirSync(dir, { recursive: true });
     downloading = { done: 0, total: null };
     const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${NEUTRONS_REMOTE}`, { redirect: "follow" });
     if (!r.ok || !r.body) throw new Error(`${NEUTRONS_REMOTE}: HTTP ${r.status}`);

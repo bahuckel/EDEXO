@@ -174,6 +174,24 @@ describe("flying a neutron route", () => {
     expect(t.live.offRoute({ name: "Far", pos: { x: 600, y: 500, z: 0 } })).toBe(false);
   });
 
+  it("arriving at the last stop moves the version on (the map clears) and says so (review 1.2.16)", () => {
+    let doneCalls = 0;
+    const live = createNeutronLive({ filePath: null, deliver: () => undefined, onDone: () => doneCalls++ });
+    live.start(ROUTE, { name: "PSR B", pos: null });
+    const v = live.version();
+    live.onJump({ name: "Colonia", pos: null });
+    expect(live.version()).toBeGreaterThan(v);
+    expect(doneCalls).toBe(1);
+  });
+
+  it("a new route clears the re-plotting mark of the one before", () => {
+    const t = setup();
+    t.live.start(ROUTE, t.at("Sol", 0));
+    t.live.setReplanning(true);
+    t.live.start(ROUTE, t.at("Sol", 0));
+    expect(t.live.view(t.at("Sol", 0))?.replanning).toBe(false);
+  });
+
   it("stops completely: nothing left to show, a new version for the map to clear", () => {
     const t = setup();
     t.live.start(ROUTE, t.at("Sol", 0));

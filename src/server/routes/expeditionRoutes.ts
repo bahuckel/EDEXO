@@ -25,6 +25,7 @@ import { boxelSystems } from "../boxel.js";
 import { tileIndexAsync } from "../galaxyTiles.js";
 import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { massCodeOfSystem } from "../../shared/id64.js";
+import type { MassCode } from "../../shared/boxelAdvice.js";
 import { systemPrefixOf } from "../expedition.js";
 import { expeditionCandidates, expeditionField, expeditionPlan, parseCodes, type ExpeditionDeps } from "../expeditionService.js";
 import { BODY_KINDS, circleSuggestions, loadFeatureTable, parseTarget, starTypes } from "../expeditionTargets.js";
@@ -95,7 +96,12 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
             limit: Number(req.query.limit) || undefined,
             codes: parseCodes(req.query.codes),
             // Each in its own mass code's boxel (the name's letter, or the address when it is exact).
-            visitedPoints: (opts.getMySystems?.().systems ?? []).map((v) => ({ x: v.x, y: v.y, z: v.z, code: massCodeOfSystem(v.addr, v.name) })),
+            visitedPoints: (opts.getMySystems?.().systems ?? []).map((v) => ({
+              x: v.x,
+              y: v.y,
+              z: v.z,
+              code: (v.code as MassCode | undefined) ?? massCodeOfSystem(v.addr, v.name),
+            })),
             target: parseTarget(req.query.target),
             to: pointOf({ x: req.query.toX, y: req.query.toY, z: req.query.toZ }, null),
             widthLy: Number(req.query.width) || undefined,

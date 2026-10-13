@@ -48,6 +48,13 @@ class FakeContents {
   on(ev: string, cb: Listener) {
     this.handlers.set(ev, [...(this.handlers.get(ev) ?? []), cb]);
   }
+  once(ev: string, cb: Listener) {
+    this.on(ev, cb);
+  }
+  muted = false;
+  setAudioMuted(on: boolean) {
+    this.muted = on;
+  }
   emit(ev: string, ...a: unknown[]) {
     for (const cb of this.handlers.get(ev) ?? []) (cb as (...x: unknown[]) => unknown)(...a);
   }
@@ -69,6 +76,7 @@ class FakeContents {
   }
   close() {
     this.closed = true;
+    this.emit("destroyed");
   }
   isDestroyed() {
     return this.closed;
@@ -137,12 +145,20 @@ class FakeWindow {
   getContentSize() {
     return [1920, 1080];
   }
-  on() {}
+  listeners = 0;
+  on() {
+    this.listeners++;
+  }
+  removeListener() {
+    this.listeners--;
+  }
   contentView = {
     addChildView: (v: FakeView) => this.children.push(v),
     removeChildView: (v: FakeView) => (this.children = this.children.filter((c) => c !== v)),
   };
-  once() {}
+  once() {
+    this.listeners++;
+  }
   isDestroyed() {
     return false;
   }
@@ -215,6 +231,8 @@ function setup() {
     userAgentFallback: "Mozilla/5.0 edexo-compare/1.2.16 Electron/42.0.0",
   };
   const appWin = new FakeWindow();
+  // A window a tab was dragged into: an app window too.
+  const appWin2 = new FakeWindow();
   const prefs = createBrowserPrefs({ dir });
   const decided: string[] = [];
   const blocker = {
@@ -240,7 +258,10 @@ function setup() {
   };
   const tabs = createBrowserTabs({
     electron: {
-      BrowserWindow: { fromWebContents: (wc: unknown) => (wc === appWin.webContents ? appWin : null) },
+      BrowserWindow: {
+        fromWebContents: (wc: unknown) =>
+          wc === appWin.webContents ? appWin : wc === appWin2.webContents ? appWin2 : null,
+      },
       WebContentsView: FakeView,
       Menu: { buildFromTemplate: () => ({ popup() {} }) },
       clipboard: { writeText() {} },
@@ -249,10 +270,10 @@ function setup() {
     },
     prefs,
     blocker,
-    isAppWindow: (wc: unknown) => wc === appWin.webContents,
+    isAppWindow: (wc: unknown) => wc === appWin.webContents || wc === appWin2.webContents,
   });
   const call = (a: Record<string, unknown>) => tabs.handle({ sender: appWin.webContents }, a);
-  return { ses, appWin, prefs, blocker, decided, tabs, call, fakeApp };
+  return { ses, appWin, appWin2, prefs, blocker, decided, tabs, call, fakeApp };
 }
 
 describe("the address bar", () => {
@@ -594,5 +615,97 @@ describe("a page in fullscreen", () => {
     v.webContents.emit("enter-html-full-screen");
     v.webContents.emit("leave-html-full-screen");
     expect(t.appWin.full).toBe(true);
+  });
+});
+
+describe("review 1.2.16", () => {
+  it("drops the tab of a page that closes itself, and the toolbar's state reads fine after", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    const { id } = (await t.call({ op: "open", text: "https://pay.example/" })) as { id: number };
+    // window.close(): Electron destroys the page's contents.
+    FakeView.made[0]!.webContents.close();
+    const st = (await t.call({ op: "state" })) as { tabs: { id: number }[] };
+    expect(st.tabs.map((x) => x.id)).not.toContain(id);
+    await t.call({ op: "close", id });
+  });
+
+  it("opens a window a page asks for without a click behind the current tab, three a page at most", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://ads.example/" });
+    const page = FakeView.made[0]!.webContents;
+    const before = ((await t.call({ op: "state" })) as { active: number }).active;
+    for (let i = 0; i < 5; i++) page.openHandler!({ url: `https://pop${i}.example/` });
+    const st = (await t.call({ op: "state" })) as { active: number; tabs: unknown[] };
+    expect(st.active).toBe(before);
+    // The start page, the page, and three pop-ups.
+    expect(st.tabs).toHaveLength(5);
+    // A click first: in front.
+    page.emit("input-event", {}, { type: "mouseDown" });
+    page.openHandler!({ url: "https://wanted.example/" });
+    expect(((await t.call({ op: "state" })) as { active: number }).active).not.toBe(before);
+  });
+
+  it("offers plain HTTP only for a link that said HTTP, never after a certificate error", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://bad-cert.example/" });
+    const wc = FakeView.made[0]!.webContents;
+    wc.emit("did-fail-load", {}, -202, "ERR_CERT_AUTHORITY_INVALID", "https://bad-cert.example/", true);
+    let tab = (
+      (await t.call({ op: "state" })) as { tabs: { error: { httpFallback: string | null } | null }[] }
+    ).tabs[1]!;
+    expect(tab.error?.httpFallback).toBeNull();
+    // A link to http://old.example, asked for over HTTPS by this run, failing to connect: the choice is offered.
+    ask((cb) =>
+      t.ses.before!({ resourceType: "mainFrame", url: "http://old.example/", webContents: wc }, cb),
+    );
+    wc.emit("did-fail-load", {}, -102, "ERR_CONNECTION_REFUSED", "https://old.example/", true);
+    tab = ((await t.call({ op: "state" })) as { tabs: { error: { httpFallback: string | null } | null }[] })
+      .tabs[1]!;
+    expect(tab.error?.httpFallback).toBe("http://old.example/");
+  });
+
+  it("ignores a stop from a window that no longer holds the pages", async () => {
+    vi.useFakeTimers();
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://edsm.net/" });
+    // The Browser tab dragged onto the second window: it starts there and takes the pages …
+    await t.tabs.handle({ sender: t.appWin2.webContents }, { op: "start" });
+    await t.tabs.handle(
+      { sender: t.appWin2.webContents },
+      { op: "bounds", rect: { x: 0, y: 90, width: 900, height: 600 } },
+    );
+    expect(t.appWin2.children).toHaveLength(1);
+    // … and the first window's late "stop" as its tab unmounts changes nothing.
+    await t.call({ op: "stop" });
+    vi.advanceTimersByTime(5000);
+    expect(FakeView.made[0]!.webContents.closed).toBe(false);
+    expect(FakeView.made[0]!.visible).toBe(true);
+  });
+
+  it("keeps the remembered sites' origins valid, an address site too", () => {
+    const p = createBrowserPrefs({ dir });
+    p.setRemember("192.168.1.20", true);
+    p.setRemember("edsm.net", true);
+    expect(p.keptOrigins()).toEqual(["https://192.168.1.20", "https://edsm.net", "https://www.edsm.net"]);
+  });
+
+  it("mutes a page left for the start page, and shows it again with Back", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    const { id } = (await t.call({ op: "open", text: "https://www.youtube.com/" })) as { id: number };
+    const wc = FakeView.made[0]!.webContents;
+    await t.call({ op: "home", id });
+    expect(wc.muted).toBe(true);
+    await t.call({ op: "back", id });
+    expect(wc.muted).toBe(false);
+    expect(
+      ((await t.call({ op: "state" })) as { tabs: { id: number; startPage: boolean }[] }).tabs.find(
+        (x) => x.id === id,
+      )?.startPage,
+    ).toBe(false);
   });
 });

@@ -103,6 +103,8 @@ function createBrowserBlocker(o) {
   let error = null;
   let progress = null;
   let meta = readMeta();
+  /** The Browser tab closed (release): a refresh still running does not bring the engine back. */
+  let released = false;
 
   /** When each download was fetched (`fetched[key]`), and the first time any was (consent: they are wanted). */
   function readMeta() {
@@ -172,8 +174,10 @@ function createBrowserBlocker(o) {
       /* no scriptlets yet: everything else still blocks */
     }
     const bytes = await parseInWorker(parts.join("\n"), resources);
+    const next = loadLib().FiltersEngine.deserialize(bytes);
     writeFileAtomic(enginePath, Buffer.from(bytes), null);
-    engine = loadLib().FiltersEngine.deserialize(bytes);
+    // The Browser tab closed meanwhile: the file is new, the engine is not kept (its RAM goes).
+    engine = released ? null : next;
   }
 
   /** The engine from disk, else from the lists on disk; false when neither is there. */
@@ -227,12 +231,11 @@ function createBrowserBlocker(o) {
     }
     meta = { fetchedAt: meta.fetchedAt ?? now, fetched: meta.fetched, bytes: total };
     writeFileAtomic(metaPath, `${JSON.stringify(meta)}\n`);
-    engine = null;
-    try {
-      fs.rmSync(enginePath, { force: true });
-    } catch {
-      /* rebuilt below either way */
-    }
+    /*
+      The engine in use stays until the new one is built, then is swapped (review 1.2.16: the daily refresh set it
+      aside first, and for the seconds of the parse nothing was blocked and the browser showed its gate). A failed
+      build keeps the old engine and its file.
+    */
     await buildFromLists();
   }
 
@@ -264,6 +267,7 @@ function createBrowserBlocker(o) {
      * scriptlets and quick fixes daily, the rest weekly, and any list a newer version added.
      */
     async ensure() {
+      released = false;
       const ok = await run("load", load);
       const due = meta.fetchedAt ? stale() : [];
       if (ok && due.length) void run("refresh", () => download(due));
@@ -363,6 +367,7 @@ function createBrowserBlocker(o) {
     },
     /** The last tab closed: the engine (tens of MB) goes; the file stays for the next open. */
     release() {
+      released = true;
       engine = null;
       lib = null;
     },

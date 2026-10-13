@@ -124,9 +124,11 @@ function createBrowserPrefs(o) {
       const out = [];
       for (const [d, s] of Object.entries(data.sites)) {
         if (!s.remember) continue;
-        out.push(`https://${d}`, `https://www.${d}`, ...s.origins);
+        // No "www." before an address (192.168.1.20): an origin Chromium rejects fails every clear (review 1.2.16).
+        const ip = /^\d{1,3}(\.\d{1,3}){3}$/.test(d) || d.includes(":");
+        out.push(`https://${d}`, ...(ip ? [] : [`https://www.${d}`]), ...s.origins);
       }
-      return [...new Set(out)];
+      return [...new Set(out)].filter((o) => httpUrl(o) != null);
     },
     rememberedDomains: () => Object.keys(data.sites).filter((d) => data.sites[d].remember),
     links: () => [

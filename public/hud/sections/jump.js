@@ -270,7 +270,10 @@ export function renderRouteStrip(d, el) {
   var html = "";
   if (nav.refuelInHops === 0 && nav.refuelLevel !== "none") {
     html +=
-      '<span class="hop hop--beyond hop--dry hop--here" title="' +
+      '<span class="hop hop--beyond hop--here' +
+      // Red text only with the red pump (review 1.2.16: a yellow pump sat beside a red "here").
+      (nav.refuelLevel === "red" ? " hop--dry" : "") +
+      '" title="' +
       (nav.refuelLevel === "red"
         ? "Scoop here: past this star the tank runs dry with no star to scoop"
         : "Scoop here: the furthest scoopable star this tank reaches") +

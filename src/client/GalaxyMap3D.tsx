@@ -47,7 +47,8 @@ import {
 } from "./ExpeditionDrawer";
 import { NeutronDrawer } from "./NeutronDrawer";
 import { StationNames, StationsList } from "./galaxy3d/StationsAt";
-import { StationsPanel } from "./StationsPanel";
+import { STATIONS_CHANGED_EVENT, StationsPanel } from "./StationsPanel";
+import { clearStationsAtCache } from "./galaxy3d/StationsAt";
 import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
 import { drawnGalaxyFrame, drawnGalaxySprites, galaxyImageRect, REGION_MAP_SIZE, xForRegionPx, zForRegionPz } from "./regionBackdrop";
 import { CLOUD_SPRITE_STRIDE } from "@shared/galaxyClouds";
@@ -311,7 +312,7 @@ export function GalaxyMap3D() {
           if (div.textContent !== l.text) div.textContent = l.text;
           const cls = `g3d-label g3d-label--${l.kind}`;
           if (div.className !== cls) div.className = cls;
-          // A badge hangs above its dot by its own width (CSS), so its tail points at the dot.
+          // A badge is centred on its anchor by its own width (CSS), so its tail points at the dot below it.
           const left = l.kind === "badge" ? l.x : p.left;
           const top = l.kind === "badge" ? l.y : p.top;
           div.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
@@ -473,6 +474,21 @@ export function GalaxyMap3D() {
   useEffect(() => {
     engine.current?.setEliteControls(elite);
   }, [elite, stats?.phase]);
+
+  // New station data (downloaded in the Stations drawer): the layer and the station lists are read again.
+  useEffect(() => {
+    const onChanged = () => {
+      clearStationsAtCache();
+      engine.current?.setMarkers("x-stations", []);
+      setExtraData((prev) => {
+        const next = { ...prev };
+        delete next.stations;
+        return next;
+      });
+    };
+    window.addEventListener(STATIONS_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(STATIONS_CHANGED_EVENT, onChanged);
+  }, []);
 
   // The extra layers: fetched the first time each is switched on, then only shown or hidden.
   useEffect(() => {

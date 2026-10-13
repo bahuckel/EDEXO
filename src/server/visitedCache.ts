@@ -20,6 +20,7 @@ import { resolveUserSettingsJsonPath } from "./paths.js";
 import { optionsDirForJournalDir } from "./protonJournals.js";
 import type { BioIndex } from "./bioIndex.js";
 import { id64Boxel } from "../shared/id64.js";
+import type { MassCode } from "../shared/boxelAdvice.js";
 
 const MAGIC = "VisitedStars";
 const HEADER = 0x30;
@@ -148,6 +149,11 @@ export function removeVisitedImport(file = visitedImportPath()): boolean {
 export interface ImportedSystem {
   addr: number;
   name: string;
+  /**
+   * Its mass code from the exact address (review 1.2.16): `addr` is a Number and above 2^53 loses the low bits the
+   * code is in, so the planner would count the system in every code's boxel.
+   */
+  code?: MassCode;
   x: number;
   y: number;
   z: number;
@@ -173,13 +179,21 @@ export function importedSystems(
     if (known.has(addr)) continue;
     const id = BigInt(s);
     const hit = index?.lookup(id) ?? null;
+    const b = id64Boxel(id);
     if (hit) {
-      out.push({ addr, name: hit.name, x: hit.x, y: hit.y, z: hit.z, exact: true });
+      out.push({
+        addr,
+        name: hit.name,
+        x: hit.x,
+        y: hit.y,
+        z: hit.z,
+        exact: true,
+        ...(b ? { code: b.code } : {}),
+      });
       continue;
     }
-    const b = id64Boxel(id);
     if (!b) continue;
-    out.push({ addr, name: "", ...b.center, exact: false });
+    out.push({ addr, name: "", ...b.center, exact: false, code: b.code });
   }
   return out;
 }
