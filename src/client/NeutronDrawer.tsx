@@ -1,10 +1,11 @@
 /**
- * Galaxy map → Neutron route (plan 8, owner 2026-10-13): a route through two or more systems by supercharged jumps
+ * Galaxy map → Neutron route (plan 8, owner 2026-10-13): a route from where the ship is through one or more stops
+ * ("always taking into consideration your current location"), by supercharged jumps
  * from neutron star to neutron star, with refuel stops at neutron stars that have a scoopable star of their own and
  * a warning where the FSD's health is expected under 80 %. The ship's range, tank and fuel come from the journals and
  * can be changed; the neutron stars are an optional download beside the galaxy index.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fmtLy } from "@shared/format";
 import type { GalaxyFindDTO } from "@shared/dto/galaxy";
 import { G3D_HELP, MenuHead, MenuRow } from "./galaxy3d/G3dMenu";
@@ -70,8 +71,17 @@ interface RouteDTO {
 /** The route being flown (`/api/neutron/live`, plan 8.5). */
 interface LiveDTO {
   active: boolean;
-  view: { at: number; total: number; next: string | null; destination: string; done: boolean } | null;
+  view: {
+    at: number;
+    total: number;
+    next: string | null;
+    destination: string;
+    done: boolean;
+    replanning: boolean;
+  } | null;
   hops: (Stop & { kind: NeutronHopDTO["kind"] })[] | null;
+  /** Bumped with every new route, a re-plot from where the ship went included. */
+  version: number;
 }
 
 const pct = (v: number | null) => (v == null ? "?" : `${Math.round(v * 100)} %`);
@@ -101,17 +111,37 @@ export function NeutronDrawer({
       .then((j: Status) => setStatus(j))
       .catch((e) => setError(String(e)));
   useEffect(load, []);
-  // A route being flown: shown, and drawn on the map until another is planned.
-  useEffect(() => {
+  /*
+    A route being flown: shown and drawn on the map. Asked again every few seconds while one is flown, so a re-plot
+    from where the ship went (server/neutronLive.ts) is drawn, and the end of the route clears the map.
+  */
+  const liveVersion = useRef(-1);
+  const readLive = useCallback(() => {
     void fetch("/api/neutron/live")
       .then((r) => (r.ok ? r.json() : null))
       .then((j: LiveDTO | null) => {
+        if (!j) return;
         setLive(j);
-        if (j?.hops) onRoute(j.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
+        if (j.version === liveVersion.current) return;
+        const first = liveVersion.current < 0;
+        liveVersion.current = j.version;
+        if (j.active && j.hops) {
+          onRoute(j.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
+          // A re-plot replaced the plan in the table: the map shows the one being flown.
+          if (!first) setRoute(null);
+        } else if (!first) {
+          setRoute(null);
+          onRoute([]);
+        }
       })
       .catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onRoute]);
+  useEffect(readLive, [readLive]);
+  useEffect(() => {
+    if (!live?.active) return;
+    const t = window.setInterval(readLive, 4000);
+    return () => clearInterval(t);
+  }, [live?.active, readLive]);
   const setFlying = async (body: object) => {
     setError(null);
     try {
@@ -122,9 +152,20 @@ export function NeutronDrawer({
       });
       const j = (await r.json()) as LiveDTO & { error?: string };
       if (!r.ok) throw new Error(j.error ?? `Failed (${r.status})`);
+      liveVersion.current = j.version;
       setLive(j);
+      return j;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      return null;
+    }
+  };
+  /** Stop: nothing of the route stays, on the map, the HUD or the clipboard line (owner, 2026-10-13). */
+  const stopFlying = async () => {
+    const j = await setFlying({ stop: true });
+    if (j && !j.active) {
+      setRoute(null);
+      onRoute([]);
     }
   };
   useEffect(() => {
@@ -133,15 +174,25 @@ export function NeutronDrawer({
     return () => clearTimeout(t);
   }, [status]);
 
-  // The journal's ship as the first stop and the defaults, once known.
+  /*
+    The route always starts where the ship is (owner, 2026-10-13: "always taking into consideration your current
+    location and trying to plot from it to your designated stops"): the stops are the destinations, and where the
+    ship is comes from the journals, read again every few seconds while the drawer is open.
+  */
   const ship = status?.ship ?? null;
   useEffect(() => {
     if (!ship) return;
-    if (!stops.length && ship.position) setStops([{ name: ship.system ?? "Your ship", ...ship.position }]);
     if (!range && ship.rangeLy) setRange(ship.rangeLy.toFixed(1));
     if (!tank && ship.jumpsPerTank) setTank(String(ship.jumpsPerTank));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ship]);
+  useEffect(() => {
+    const t = window.setInterval(load, 5000);
+    return () => clearInterval(t);
+  }, []);
+  const from: Stop | null = ship?.position ? { name: ship.system ?? "Your ship", ...ship.position } : null;
+  // Without a position from the journals (no jump yet), the first stop is where the route starts.
+  const waypoints = from ? [from, ...stops] : stops;
 
   useEffect(() => {
     const q = query.trim();
@@ -172,7 +223,7 @@ export function NeutronDrawer({
       return next;
     });
 
-  const plan = async () => {
+  const plan = async (): Promise<RouteDTO | null> => {
     setBusy(true);
     setError(null);
     try {
@@ -180,7 +231,7 @@ export function NeutronDrawer({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          waypoints: stops,
+          waypoints,
           rangeLy: Number(range) || undefined,
           jumpsPerTank: Number(tank) || undefined,
           optimise,
@@ -189,13 +240,30 @@ export function NeutronDrawer({
       const j = (await r.json()) as RouteDTO & { error?: string };
       if (!r.ok) throw new Error(j.error ?? `Plan failed (${r.status})`);
       setRoute(j);
-      if (optimise) setStops(j.waypoints);
+      if (optimise) setStops(from ? j.waypoints.slice(1) : j.waypoints);
       onRoute(j.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
+      return j;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      return null;
     } finally {
       setBusy(false);
     }
+  };
+  /*
+    Fly: from where the ship is now. A plan made somewhere else is made again from here first; the destinations go
+    with it, so the server can plot again from wherever the ship goes off the route.
+  */
+  const fly = async () => {
+    let r = route;
+    const start = r?.hops[0];
+    const moved = !!from && !!start && Math.hypot(start.x - from.x, start.y - from.y, start.z - from.z) > 0.1;
+    if (!r || moved) r = await plan();
+    if (!r) return;
+    await setFlying({
+      hops: r.hops,
+      plan: { targets: r.waypoints.slice(1), rangeLy: Number(range) || ship?.rangeLy || undefined },
+    });
   };
 
   const download = () => void fetch("/api/neutron/download", { method: "POST" }).then(load);
@@ -238,13 +306,31 @@ export function NeutronDrawer({
                 ) : null}
                 .
               </p>
-              <button type="button" className="g3d-linkbtn" onClick={() => void setFlying({ stop: true })}>
-                Stop flying it
+              {live.view.replanning ? (
+                <p className="g3d-panel__note">Off the route: re-plotting from where you are…</p>
+              ) : null}
+              <button
+                type="button"
+                className="btn-top-toggle g3d-neutron-stop"
+                title="Ends the route: the HUD, the clipboard line and the line on the map clear"
+                onClick={() => void stopFlying()}
+              >
+                ■ Stop flying this route
               </button>
             </div>
           ) : null}
           <div className={`g3d-menu__section${live?.active ? "" : " g3d-menu__section--first"}`}>
-            <p className="g3d-menu__sub">Stops, in order</p>
+            <p className="g3d-menu__sub">From</p>
+            <p className="g3d-panel__note">
+              {from ? (
+                <>
+                  Your ship · <strong>{from.name}</strong> (follows you as you jump)
+                </>
+              ) : (
+                "Your position is not known yet (no jump in the journals): the first stop is the start."
+              )}
+            </p>
+            <p className="g3d-menu__sub">{from ? "To, in order" : "Stops, in order"}</p>
             <ol className="g3d-neutron-stops">
               {stops.map((s, i) => (
                 <li key={`${s.name}-${i}`}>
@@ -287,20 +373,6 @@ export function NeutronDrawer({
               }}
               placeholder="Search a system"
             />
-            {ship?.position ? (
-              <button
-                type="button"
-                className="g3d-linkbtn"
-                onClick={() =>
-                  setStops((p) => [
-                    { name: ship.system ?? "Your ship", ...ship.position! },
-                    ...p.slice(p[0]?.name === (ship.system ?? "Your ship") ? 1 : 0),
-                  ])
-                }
-              >
-                Start from my ship
-              </button>
-            ) : null}
           </div>
           <div className="g3d-menu__section">
             <MenuRow
@@ -358,7 +430,7 @@ export function NeutronDrawer({
               type="button"
               className="btn-top-toggle"
               onClick={() => void plan()}
-              disabled={busy || stops.length < 2}
+              disabled={busy || waypoints.length < 2}
             >
               {busy ? "Planning…" : "Plan the route"}
             </button>
@@ -374,8 +446,9 @@ export function NeutronDrawer({
               <button
                 type="button"
                 className="btn-top-toggle"
-                title="After each jump onto a stop, the next stop goes to the clipboard (paste it in the galaxy map; F6 copies it again), and the HUD's Next jump says where to scoop and supercharge. Ends at the last stop, or with a boxel run."
-                onClick={() => void setFlying({ hops: route.hops })}
+                title="From where you are now: after each jump onto a stop the next stop goes to the clipboard (paste it in the galaxy map; F6 copies it again), and the HUD's Next jump says where to scoop and supercharge. Off the route, it is plotted again from where you are. Ends at the last stop, with Stop, or with a boxel run."
+                disabled={busy}
+                onClick={() => void fly()}
               >
                 {live?.active ? "Fly this route instead" : "Fly this route"}
               </button>

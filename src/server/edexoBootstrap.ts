@@ -167,7 +167,10 @@ import { createBookmarksService } from "./bookmarks.js";
 import { spawn } from "node:child_process";
 import { createBoxelRun } from "./boxelRun.js";
 import { createSavedBoxels } from "./savedBoxels.js";
-import { createNeutronLive } from "./neutronLive.js";
+import { createNeutronLive, parseLiveHops } from "./neutronLive.js";
+import { neutronShip } from "./neutronShip.js";
+import { loadNeutronIndex } from "./neutronIndex.js";
+import { planNeutronRoute } from "./neutronRoute.js";
 import { fsdWearEstimate, FSD_WARN } from "../shared/fsdWear.js";
 import { createGreenGiantMarks, greenGiantForRecord, type GreenGiantSources } from "./greenGiants.js";
 import { setNotableOptionsProvider } from "./notableOptions.js";
@@ -406,7 +409,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-boxels.json"),
     // A boxel run takes the clipboard over from a neutron route being flown (plan 8.5).
     onRun: (id) => {
-      if (id) neutronLive.stop();
+      if (id && neutronLive.active()) {
+        neutronLive.stop();
+        neutronStopped();
+      }
     },
   });
   /*
@@ -452,6 +458,54 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     },
   });
   const shipHere = () => ({ name: store.currentSystem ?? null, pos: store.commanderPos ?? null });
+  /** Stopped: the HUD's "Copied … · neutron route" line goes with it (owner, 2026-10-13: it stayed). */
+  const neutronStopped = (): void => {
+    if (store.boxelCopied?.source === "neutron") store.boxelCopied = null;
+    store.boxelsRevision++;
+    push();
+  };
+  /*
+    Off the route (owner, 2026-10-13: "always taking into consideration your current location"): planned again from
+    where the ship is to the stops not reached yet, with the ship as the journals know it now. One at a time; the
+    HUD says "re-plotting" meanwhile, and the new next stop goes to the clipboard.
+  */
+  const replanNeutron = async (): Promise<void> => {
+    const here = shipHere();
+    const left = neutronLive.remaining();
+    if (!here.pos || !left) return;
+    let index;
+    try {
+      index = loadNeutronIndex();
+    } catch {
+      return;
+    }
+    if (!index) return;
+    const s = neutronShip(store);
+    const jumpsPerTank = s.jumpsPerTank ?? 4;
+    neutronLive.setReplanning(true);
+    push();
+    try {
+      const route = await planNeutronRoute(
+        index,
+        [{ name: here.name ?? "Your ship", ...here.pos }, ...left.targets],
+        {
+          rangeLy: s.rangeLy ?? left.rangeLy,
+          boost: s.boostFactor,
+          jumpsPerTank,
+          jumpsNow: Math.min(jumpsPerTank, Math.max(0, s.jumpsNow ?? jumpsPerTank)),
+          fsdHealth: s.fsdHealth,
+          wearPerBoost: s.wearPerBoost,
+        },
+      );
+      const hops = parseLiveHops(route.hops);
+      if (hops && neutronLive.active()) neutronLive.replace(hops, left.targets);
+    } catch (e) {
+      console.warn("[edexo-compare] neutron re-plot failed:", e);
+    } finally {
+      neutronLive.setReplanning(false);
+      push();
+    }
+  };
   const bookmarks = createBookmarksService({
     filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-bookmarks.json"),
   });
@@ -1186,7 +1240,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         if (line.event === "FSDJump") {
           // A neutron route being flown owns the clipboard; else the boxel run or the saved boxel's next.
           const flying = neutronLive.active();
-          neutronLive.onJump(shipHere());
+          const onStop = neutronLive.onJump(shipHere()) != null;
+          if (flying && !onStop && neutronLive.offRoute(shipHere())) void replanNeutron();
           if (!flying) boxelRun.onJump();
           // A run can end on a jump (its last system flown): the HUD line says so.
           if (store.boxelCopied) store.boxelCopied.run = savedBoxels.runId() != null;
@@ -1707,6 +1762,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     savedBoxels,
     neutronLive,
     shipHere,
+    onNeutronStopped: neutronStopped,
     ownGreenGiants: () => {
       const out: { x: number; y: number; z: number; body: string; system: string }[] = [];
       const src = greenSources();

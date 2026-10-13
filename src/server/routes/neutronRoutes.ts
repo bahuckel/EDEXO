@@ -5,12 +5,10 @@
 import type express from "express";
 import { localOnly } from "../lanAuth.js";
 import { touchGalaxyMemory } from "../galaxyMemory.js";
-import { fullJumpRange } from "../../shared/jumpRange.js";
-import { fsdFuelModel } from "../../shared/fsdFuel.js";
-import { fsdWearEstimate, FSD_WARN } from "../../shared/fsdWear.js";
+import { neutronShip } from "../neutronShip.js";
 import { downloadNeutrons, loadNeutronIndex, neutronsStatus, probeNeutronsRelease } from "../neutronIndex.js";
 import { optimiseOrder, planNeutronRoute } from "../neutronRoute.js";
-import { parseLiveHops } from "../neutronLive.js";
+import { parseLiveHops, parseLivePlan } from "../neutronLive.js";
 import type { HttpServerOptions, RouteContext } from "../httpServer.js";
 
 type Waypoint = { name: string; x: number; y: number; z: number };
@@ -25,28 +23,7 @@ export function registerNeutronRoutes(
   /** What the journals say about the ship: range, jumps a full tank and the fuel aboard allow, the FSD's health. */
   const ship = () => {
     const store = opts.getJournalStore?.() ?? null;
-    if (!store) return null;
-    const model = fsdFuelModel(store.fsdFuel);
-    const perJump = model?.maxFuelPerJumpT ?? null;
-    const tank = store.loadoutFuelMainCapacityT;
-    const now = store.liveStatusFuelMainT;
-    const wear = fsdWearEstimate(store.fsdWear);
-    return {
-      rangeLy: fullJumpRange(store.jumpRange) ?? store.loadoutMaxJumpRangeLy ?? null,
-      fuelPerJumpT: perJump,
-      jumpsPerTank: perJump && tank ? Math.floor(tank / perJump) : null,
-      jumpsNow: perJump && now != null ? Math.floor(now / perJump) : null,
-      fsdHealth: wear.health,
-      wearPerBoost: wear.wearPerBoost,
-      wearIsDefault: wear.wearIsDefault,
-      wearFrom: wear.wearFrom,
-      boostFactor: wear.boostFactor,
-      shipType: wear.ship,
-      boostsSinceLoadout: wear.boostsSince,
-      fsdWarn: FSD_WARN,
-      position: store.commanderPos ?? opts.getCommanderPosition?.() ?? null,
-      system: store.currentSystem ?? null,
-    };
+    return store ? neutronShip(store, opts.getCommanderPosition?.() ?? null) : null;
   };
 
   app.get("/api/neutron/status", async (_req, res) => {
@@ -66,18 +43,26 @@ export function registerNeutronRoutes(
   const liveState = () => {
     const live = opts.neutronLive;
     const here = opts.shipHere?.() ?? { name: null, pos: null };
-    return { active: !!live?.active(), view: live?.view(here) ?? null, hops: live?.hops() ?? null };
+    return {
+      active: !!live?.active(),
+      view: live?.view(here) ?? null,
+      hops: live?.hops() ?? null,
+      version: live?.version() ?? 0,
+    };
   };
   app.get("/api/neutron/live", (_req, res) => res.json(liveState()));
   app.post("/api/neutron/live", (req, res) => {
     const live = opts.neutronLive;
     if (!live) return void res.status(501).json({ error: "Not available in this build." });
     const body = (req.body ?? {}) as Record<string, unknown>;
-    if (body.stop === true) live.stop();
-    else {
+    if (body.stop === true) {
+      live.stop();
+      opts.onNeutronStopped?.();
+    } else {
       const hops = parseLiveHops(body.hops);
       if (!hops) return void res.status(400).json({ error: "Not a route: plan one first." });
-      live.start(hops, opts.shipHere?.() ?? { name: null, pos: null });
+      // The commander's own stops and the range: what a plan from wherever the ship goes is made of.
+      live.start(hops, opts.shipHere?.() ?? { name: null, pos: null }, parseLivePlan(body.plan));
     }
     opts.scheduleBroadcast?.();
     res.json(liveState());

@@ -140,4 +140,48 @@ describe("flying a neutron route", () => {
     saved.setRun(b.id);
     expect(live.active()).toBe(false);
   });
+
+  it("knows when the ship is off the route, and plans again from there to the stops not reached", () => {
+    const t = setup();
+    // Two destinations: PSR B ends the first leg (a waypoint), Colonia the second.
+    const route: LiveHop[] = [ROUTE[0]!, ROUTE[1]!, { ...ROUTE[2]!, kind: "waypoint" }, ROUTE[3]!];
+    const targets = [
+      { name: "PSR B", x: 440, y: 0, z: 0 },
+      { name: "Colonia", x: 900, y: 0, z: 0 },
+    ];
+    t.live.start(route, t.at("Sol", 0), { targets, rangeLy: 50 });
+    expect(t.live.remaining()?.targets.map((x) => x.name)).toEqual(["PSR B", "Colonia"]);
+    // Near the way to PSR A (60 ly aside of the line, range 50: within 100): on the route.
+    expect(t.live.offRoute({ name: "Near", pos: { x: 100, y: 60, z: 0 } })).toBe(false);
+    expect(t.live.offRoute({ name: "Far", pos: { x: 100, y: 300, z: 0 } })).toBe(true);
+    t.live.onJump(t.at("PSR A", 200));
+    t.live.onJump(t.at("PSR B", 440));
+    // PSR B reached: only Colonia is left.
+    expect(t.live.remaining()?.targets.map((x) => x.name)).toEqual(["Colonia"]);
+    const v = t.live.version();
+    // Planned again from where the ship went: the new route's next stop is copied, the version moves on.
+    const fresh: LiveHop[] = [
+      hop("Here", 500, { kind: "start", jumps: 0, boosted: 0 }),
+      hop("PSR C", 700),
+      hop("Colonia", 900, { kind: "waypoint" }),
+    ];
+    expect(t.live.replace(fresh, [targets[1]!])).toBe("PSR C");
+    expect(t.live.version()).toBeGreaterThan(v);
+    expect(t.live.view(t.at("Here", 500))).toMatchObject({ at: 0, next: "PSR C", destination: "Colonia" });
+    t.live.setReplanning(true);
+    expect(t.live.view(t.at("Here", 500))?.replanning).toBe(true);
+    // While a re-plot runs it is not asked for again.
+    expect(t.live.offRoute({ name: "Far", pos: { x: 600, y: 500, z: 0 } })).toBe(false);
+  });
+
+  it("stops completely: nothing left to show, a new version for the map to clear", () => {
+    const t = setup();
+    t.live.start(ROUTE, t.at("Sol", 0));
+    const v = t.live.version();
+    t.live.stop();
+    expect(t.live.active()).toBe(false);
+    expect(t.live.view(t.at("Sol", 0))).toBeNull();
+    expect(t.live.version()).toBeGreaterThan(v);
+    expect(t.live.remaining()).toBeNull();
+  });
 });
