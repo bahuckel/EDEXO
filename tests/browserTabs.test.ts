@@ -524,7 +524,8 @@ describe("scriptlets (YouTube)", () => {
     await t.call({ op: "start" });
     const wc = await page(t, "https://www.youtube.com/watch?v=x");
     expect(wc.attached).toBe(true);
-    const [method, params] = wc.commands[0]!;
+    expect(wc.commands[0]![0]).toBe("Page.enable");
+    const [method, params] = wc.commands[1]!;
     expect(method).toBe("Page.addScriptToEvaluateOnNewDocument");
     const src = String(params.source);
     expect(src).toContain("window.__noAds = 1;");
@@ -548,6 +549,7 @@ describe("scriptlets (YouTube)", () => {
       ),
     );
     expect(yt.commands.map(([m]) => m)).toEqual([
+      "Page.enable",
       "Page.addScriptToEvaluateOnNewDocument",
       "Page.removeScriptToEvaluateOnNewDocument",
     ]);
