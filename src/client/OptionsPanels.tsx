@@ -10,10 +10,12 @@ import { useToast } from "./ui/feedback";
 import type { CollectionFocusConfig } from "@shared/collectionFocus";
 import {
   CARRIER_NOTICE_MIN_FROM_SOL_LY,
+  JUMPONIUM_TARGET_MAX,
   NEARBY_JUMPS_MAX,
   NEARBY_JUMPS_MIN,
   NOTABLE_KINDS,
   type CarrierNoticeMode,
+  type JumponiumNotifyPrefsDTO,
   type NearbyPrefsDTO,
   type NotifyPrefsDTO,
   type NotifySettingsDTO,
@@ -365,6 +367,7 @@ export function NotifyPanel() {
 
   if (!st || !p) return null;
   const nb = p.nearby;
+  const jp = p.jumponium ?? { mode: "short" as const, target: 30 };
   const poiOn = POI_GROUP_OPTIONS.filter((g) => nb.poiGroups[g.key]).length;
   const onCount =
     NOTABLE_KINDS.filter((k) => p.notable[k.key]).length +
@@ -373,7 +376,8 @@ export function NotifyPanel() {
     (p.codexFirst ?? true ? 1 : 0) +
     poiOn +
     (nb.carriers !== "off" ? 1 : 0) +
-    BODY_FEATURES.filter((f) => p.features?.[f.key]).length;
+    BODY_FEATURES.filter((f) => p.features?.[f.key]).length +
+    (jp.mode !== "off" ? 1 : 0);
   const radiusLy = st.jumpLy != null ? Math.round(nb.jumps * st.jumpLy) : null;
 
   return (
@@ -493,6 +497,44 @@ export function NotifyPanel() {
           </div>
         </div>
       ))}
+
+      <h4 className="options-notify-h">Jumponium</h4>
+      <p className="dim tiny options-notify-sub">
+        A scanned landable body in the top tenth for an FSD injection material (carbon, vanadium, germanium, arsenic,
+        cadmium, niobium, yttrium, polonium). The galaxy map&apos;s Jumponium tab shows what you hold.
+      </p>
+      <div className="options-focus-grid">
+        <label htmlFor="notify-jumponium">Announce</label>
+        <select
+          id="notify-jumponium"
+          className="options-inline-select"
+          value={jp.mode}
+          disabled={busy}
+          onChange={(ev) => save({ jumponium: { ...jp, mode: ev.target.value as JumponiumNotifyPrefsDTO["mode"] } })}
+        >
+          <option value="off">no bodies</option>
+          <option value="short">only for materials I am short of</option>
+          <option value="always">every rich body</option>
+        </select>
+        {jp.mode === "short" ? (
+          <>
+            <label htmlFor="notify-jumponium-target">Short of</label>
+            <span>
+              under{" "}
+              <input
+                id="notify-jumponium-target"
+                type="number"
+                min={1}
+                max={JUMPONIUM_TARGET_MAX}
+                value={jp.target}
+                disabled={busy}
+                onChange={(ev) => save({ jumponium: { ...jp, target: Number(ev.target.value) } })}
+              />{" "}
+              <span className="dim">of a material aboard</span>
+            </span>
+          </>
+        ) : null}
+      </div>
 
       <h4 className="options-notify-h">Nearby</h4>
       <div className="options-focus-grid">

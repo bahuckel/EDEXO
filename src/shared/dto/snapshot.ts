@@ -27,6 +27,7 @@ import type { SystemMapSnapshot } from "./systemMap.js";
 import type { NoticesSnapshotDTO } from "../notices.js";
 import type { BookmarkDTO } from "../bookmarks.js";
 import type { FsdHealthDTO, NeutronLiveDTO } from "./neutron.js";
+import type { JumponiumDTO } from "../jumponium.js";
 
 export interface AppSnapshot {
   journalPath: string | null;
@@ -234,6 +235,8 @@ export interface AppSnapshot {
   neutronLive?: NeutronLiveDTO | null;
   /** The FSD's health now, when a Loadout gave it (plan 8.4): the header and the HUD warn under 80 %. */
   fsdHealth?: FsdHealthDTO | null;
+  /** Jumponium aboard and the FSD injections it makes (shared/jumponium.ts); null while the journals load. */
+  jumponium?: JumponiumDTO | null;
   /**
    * System map exobiology node suffixes: min estimated sell heuristic (price-list × 5) for `+` and `++`.
    * `++` threshold is always kept strictly greater than `+` (CR, integer).

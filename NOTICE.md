@@ -21,7 +21,11 @@ systems Frontier populated, which the app ships to tell the Bubble from player c
 Spansh's system search (`is_colonised`); `scripts/build-developer-systems.mjs` rebuilds it. The galaxy
 map's star and body filters read `data/galaxy/system-traits.bin.gz`, each system's star classes and
 planet types from Spansh's galaxy dump (`scripts/build-system-traits.ts`; downloaded with the galaxy
-index from the `galaxy-index` release).
+index from the `galaxy-index` release). Since 1.2.16 the galaxy map's stations (`stations.bin`, from Spansh's
+`galaxy_stations.json.gz`: names, types, pads, services) and the neutron route planner's neutron stars
+(`neutrons.bin`, from Spansh's galaxy dump, each with its nearest scoopable star) and the jumponium bodies
+(`jumponium.bin`: the top 1 % of landable bodies for each FSD injection material, from the materials in Spansh's
+galaxy dump) are built from Spansh's dumps too and downloaded from the same release.
 
 ### EDSM — [edsm.net](https://edsm.net)
 
@@ -191,7 +195,20 @@ Frontier Developments.
 [EliteDangerousRegionMap](https://github.com/klightspeed/EliteDangerousRegionMap) by Ben Peddell,
 redistributed under its MIT licence — full text in `data/exomastery/region-map.LICENSE.txt`.
 
+## The EDEXO browser's blocking
+
+The desktop app ships `resources/edexo/browser-adblock.cjs`, a bundle of Ghostery's
+[adblocker](https://github.com/ghostery/adblocker) (`@ghostery/adblocker`, `-content`,
+`-extended-selectors`, `@ghostery/url-parser`) and its `@remusao/*` helpers, all **MPL-2.0**, unmodified;
+their source is at that link and on npm, and the MPL-2.0 text is at
+[mozilla.org/MPL/2.0](https://www.mozilla.org/MPL/2.0/). It also contains `tldts-experimental` (MIT).
+
+The filter lists are not shipped: the browser downloads them from their publishers when it is first
+opened — [EasyList and EasyPrivacy](https://easylist.to) (GPL-3.0 / CC BY-SA 3.0),
+[uBlock Origin's lists](https://github.com/uBlockOrigin/uAssets) (GPL-3.0), and uBlock Origin's scriptlet
+library as Ghostery packages it (GPL-3.0). This project is not affiliated with any of them.
+
 ## Runtime dependencies
 
-`express` (MIT) and `ws` (MIT). Everything else in `package.json` is a development dependency and is
-not redistributed with the application.
+`express` (MIT) and `ws` (MIT), and the browser's blocking bundle above. Everything else in
+`package.json` is a development dependency and is not redistributed with the application.

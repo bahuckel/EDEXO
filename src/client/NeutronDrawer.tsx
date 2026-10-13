@@ -54,6 +54,8 @@ export interface NeutronHopDTO {
   scoopLs: number | null;
   jumpsLeft: number;
   fsdHealth: number | null;
+  /** FSD injections that would take a normal jump off this hop (shared/jumponium.ts), cheapest tier first. */
+  inject?: { tier: "basic" | "standard" | "premium"; count: number }[];
 }
 interface RouteDTO {
   hops: NeutronHopDTO[];
@@ -66,6 +68,15 @@ interface RouteDTO {
   unsafeLegs: number[];
   waypoints: Stop[];
   ms: number;
+  /** Hops an injection shortens, and how many of each tier the stock makes (null while unknown). */
+  injections?: { hops: number; stock: { tier: string; name: string; count: number }[] | null };
+}
+
+const TIER_NAME: Record<string, string> = { basic: "Basic", standard: "Standard", premium: "Premium" };
+/** "1 Premium, 2 Standard or 4 Basic": the injections, one per jump, that save a jump on a hop. */
+function injectText(inject: NonNullable<NeutronHopDTO["inject"]>): string {
+  const parts = [...inject].reverse().map((x) => `${x.count} ${TIER_NAME[x.tier]}`);
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} or ${parts[parts.length - 1]}` : (parts[0] ?? "");
 }
 
 /** The route being flown (`/api/neutron/live`, plan 8.5). */
@@ -460,6 +471,16 @@ export function NeutronDrawer({
                   Repair finds the nearest).
                 </p>
               ) : null}
+              {route.injections?.hops ? (
+                <p className="g3d-panel__note">
+                  ⚗ An FSD injection takes a jump off {route.injections.hops} hop
+                  {route.injections.hops === 1 ? "" : "s"} (marked ⚗ below; it boosts a normal jump, never a
+                  supercharged one).
+                  {route.injections.stock
+                    ? ` You can make ${route.injections.stock.map((t) => `${t.count} ${t.name}`).join(", ")} — Galaxy map → Jumponium for where to find more.`
+                    : " What you hold shows after your next login."}
+                </p>
+              ) : null}
               {route.unsafeLegs.length ? (
                 <p className="g3d-panel__note g3d-panel__note--warn">
                   No fuel-safe neutron way on leg {route.unsafeLegs.join(", ")}: the game's own plot is used
@@ -505,7 +526,16 @@ export function NeutronDrawer({
                         ) : null}
                       </td>
                       <td>
-                        {h.jumps ? `${h.jumps}${h.boosted ? " ⚡" : ""}` : ""}{" "}
+                        {h.jumps ? `${h.jumps}${h.boosted ? " ⚡" : ""}` : ""}
+                        {h.inject?.length ? (
+                          <span
+                            className="g3d-neutron-inject"
+                            title={`One jump fewer with ${injectText(h.inject)} FSD injection${h.inject.length > 1 || h.inject[0]!.count > 1 ? "s" : ""}, one per normal jump`}
+                          >
+                            {" "}
+                            ⚗
+                          </span>
+                        ) : null}{" "}
                         <span className="dim">{h.distanceLy ? fmtLy(h.distanceLy) : ""}</span>
                       </td>
                       <td>{h.jumpsLeft}</td>

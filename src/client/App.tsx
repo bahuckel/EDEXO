@@ -549,6 +549,7 @@ export function App() {
               trip={tripRanks.get(selected.state.key) ?? null}
               includeBacteriumInSearch={snapshot.includeBacteriumInSearch === true}
               onToggleIncludeBacterium={toggleIncludeBacteriumInSearch}
+              jumponium={snapshot.jumponium ?? null}
             />
           ) : null}
         </div>

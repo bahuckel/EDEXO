@@ -30,6 +30,7 @@ const NOTICE_ICON: Record<NoticeDTO["kind"], string> = {
   carrier: "▣",
   codex: "◆",
   achievement: "🏆",
+  jumponium: "⚗",
 };
 
 async function post(path: string, body: unknown): Promise<boolean> {

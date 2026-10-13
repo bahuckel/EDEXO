@@ -12,7 +12,7 @@ import { POI_GROUP_OPTIONS, type PoiGroup } from "./gecCategories.js";
 import { CARRIER_SERVICE_OPTIONS } from "./carrierServices.js";
 
 /** `achievement`: a bronze, silver or gold reached since the app started (owner, 2026-10-05). */
-export type NoticeKind = "notable" | "record" | "nsp" | "poi" | "carrier" | "codex" | "achievement";
+export type NoticeKind = "notable" | "record" | "nsp" | "poi" | "carrier" | "codex" | "achievement" | "jumponium";
 
 export interface NoticeDTO {
   id: string;
@@ -63,7 +63,20 @@ export interface NotifyPrefsDTO {
   nearby: NearbyPrefsDTO;
   /** Body features (shared/bodyFeatures.ts): Notable card and notices. All off until chosen. */
   features: Record<BodyFeatureKey, boolean>;
+  /** A scanned body rich in an FSD injection material (shared/jumponium.ts, 1.2.16). */
+  jumponium: JumponiumNotifyPrefsDTO;
 }
+
+/**
+ * `short`: only for materials the commander holds fewer than `target` of (all of them while the stock is unknown);
+ * `always`: every rich body; `off`: none. "Rich" is the top tenth of landable bodies for that element.
+ */
+export interface JumponiumNotifyPrefsDTO {
+  mode: "off" | "short" | "always";
+  target: number;
+}
+
+export const JUMPONIUM_TARGET_MAX = 300;
 
 export type CarrierNoticeMode = "off" | "every" | "services";
 
@@ -102,6 +115,7 @@ export const DEFAULT_NOTIFY_PREFS: NotifyPrefsDTO = {
     nsp: false,
   },
   features: defaultFeaturePrefs(),
+  jumponium: { mode: "short", target: 30 },
 };
 
 /** Only known keys and booleans get through; anything else keeps its current value. */
@@ -138,7 +152,15 @@ export function mergeNotifyPrefs(prev: NotifyPrefsDTO, raw: unknown): NotifyPref
       nsp: bool(nr.nsp, pn.nsp ?? false),
     },
     features,
+    jumponium: mergeJumponiumPrefs(prev.jumponium ?? DEFAULT_NOTIFY_PREFS.jumponium, r.jumponium),
   };
+}
+
+function mergeJumponiumPrefs(prev: JumponiumNotifyPrefsDTO, raw: unknown): JumponiumNotifyPrefsDTO {
+  const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const mode = r.mode === "off" || r.mode === "short" || r.mode === "always" ? r.mode : prev.mode;
+  const t = typeof r.target === "number" && Number.isFinite(r.target) ? Math.round(r.target) : prev.target;
+  return { mode, target: Math.min(JUMPONIUM_TARGET_MAX, Math.max(1, t)) };
 }
 
 /**

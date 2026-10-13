@@ -38,6 +38,8 @@ import { GenusTag, GlanceGenera, genusRowSpecies, LandableBadge } from "./BodyGl
 import { ExoPayoutRangeDetailModal } from "./ExoPayoutRangeDetailModal";
 import { GenusMatchGroup } from "./GenusMatchGroup";
 import { VolcanismFact } from "./VolcanismFact";
+import { JumponiumFact } from "./JumponiumFact";
+import type { JumponiumDTO } from "@shared/jumponium";
 export { GlanceGenera } from "./BodyGlance";
 
 export const BodyPane = memo(function BodyPane({
@@ -46,8 +48,11 @@ export const BodyPane = memo(function BodyPane({
   trip,
   includeBacteriumInSearch,
   onToggleIncludeBacterium,
+  jumponium,
 }: {
   body: BodyComputed;
+  /** Jumponium aboard (shared/jumponium.ts), for the Jumponium field's hover. */
+  jumponium?: JumponiumDTO | null;
   /** The sampling run in progress on this body, for the rows' n/3 progress; null otherwise. */
   liveRun: LiveRun | null;
   /** This body's flight from the arrival star, against the system's other biological bodies (A2). */
@@ -377,6 +382,7 @@ export const BodyPane = memo(function BodyPane({
                   </span>
                 </div>
                 <VolcanismFact geology={body.geology} />
+                <JumponiumFact materials={body.mergedScan?.materials} stock={jumponium} />
               </div>
 
               {body.ambiguityNote ? <p className="warn tiny">{body.ambiguityNote}</p> : null}

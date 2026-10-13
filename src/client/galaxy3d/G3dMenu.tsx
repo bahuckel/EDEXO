@@ -17,26 +17,65 @@ export type G3dTabKey =
   | "targets"
   | "expedition"
   | "neutron"
-  | "stations";
+  | "stations"
+  | "jumponium";
 
 export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
   { key: "view", label: "View", hint: "View: camera, follow your ship, colours, brightness" },
-  { key: "layers", label: "Layers", hint: "Layers: your systems, borders, names, points of interest, carriers, bookmarks…" },
-  { key: "filter", label: "Filter", hint: "Filter: light the systems with a star, a planet type or a plant you pick" },
-  { key: "search", label: "Search", hint: "Species search: where a species has been recorded, nearest first" },
-  { key: "navroute", label: "NavRoute", hint: "NavRoute: the route plotted now (Next) and the systems you have been to (Previous)" },
+  {
+    key: "layers",
+    label: "Layers",
+    hint: "Layers: your systems, borders, names, points of interest, carriers, bookmarks…",
+  },
+  {
+    key: "filter",
+    label: "Filter",
+    hint: "Filter: light the systems with a star, a planet type or a plant you pick",
+  },
+  {
+    key: "search",
+    label: "Search",
+    hint: "Species search: where a species has been recorded, nearest first",
+  },
+  {
+    key: "navroute",
+    label: "NavRoute",
+    hint: "NavRoute: the route plotted now (Next) and the systems you have been to (Previous)",
+  },
   { key: "codex", label: "Codex", hint: "Codex: what you have logged, region by region" },
-  { key: "targets", label: "Targets", hint: "Biology targets: the nearest system worth flying to, and a plan of several" },
+  {
+    key: "targets",
+    label: "Targets",
+    hint: "Biology targets: the nearest system worth flying to, and a plan of several",
+  },
   {
     key: "expedition",
     label: "Expedition",
     hint: "Expedition: where nobody has been yet — boxels ranked by the first-footfall credits they are likely to hold per jump",
   },
-  { key: "neutron", label: "Neutron", hint: "Neutron route: through two or more systems by supercharged jumps, with refuel stops and the FSD's wear" },
-  { key: "stations", label: "Stations", hint: "Stations: the nearest station with the services you pick (repair, refuel, Vista Genomics…), shown on the map" },
+  {
+    key: "neutron",
+    label: "Neutron",
+    hint: "Neutron route: through two or more systems by supercharged jumps, with refuel stops and the FSD's wear",
+  },
+  {
+    key: "stations",
+    label: "Stations",
+    hint: "Stations: the nearest station with the services you pick (repair, refuel, Vista Genomics…), shown on the map",
+  },
+  {
+    key: "jumponium",
+    label: "Jumponium",
+    hint: "Jumponium: the FSD injection materials you hold, and the nearest bodies rich in the ones you pick, shown on the map",
+  },
 ];
 
 export const G3D_HELP: Record<G3dTabKey, string[]> = {
+  jumponium: [
+    "What you hold of the eight FSD injection materials (from your journals: the game writes the list at every login, the app follows each pick-up, trade and synthesis after it) and how many of each injection that makes: Basic +25 %, Standard +50 %, Premium +100 % jump range for one jump.",
+    "Below, the nearest landable bodies with the elements you pick. Rich is the top tenth of landable bodies for an element, Top 1 % the best hundredth. No body carries all five premium elements (germanium, arsenic, niobium, yttrium, polonium): premium always takes two or more bodies.",
+    "Your own scanned bodies are always searched. The rest of the galaxy comes from a file downloaded with the galaxy index: the top 1 % of landable bodies for vanadium, germanium, arsenic, cadmium, niobium, yttrium or polonium, from Spansh's dump.",
+  ],
   stations: [
     "The nearest stations to your ship with every service you pick (or any of them), a pad big enough and not too far from the arrival star. Settlements and colony construction sites only if you ask for them.",
     "Click a row to fly the map there; Layers → Stations shows every system with a station, and pointing at one names its stations.",
@@ -118,10 +157,25 @@ export function MenuRow({ label, hint, children }: { label: string; hint: string
 }
 
 /** An on / off row, a checkbox under the game-style value box. */
-export function MenuToggle({ label, hint, on, set }: { label: string; hint: string; on: boolean; set: (v: boolean) => void }) {
+export function MenuToggle({
+  label,
+  hint,
+  on,
+  set,
+}: {
+  label: string;
+  hint: string;
+  on: boolean;
+  set: (v: boolean) => void;
+}) {
   return (
     <label className="g3d-row g3d-row--check">
-      <input type="checkbox" className="g3d-row__box" checked={on} onChange={(ev) => set(ev.target.checked)} />
+      <input
+        type="checkbox"
+        className="g3d-row__box"
+        checked={on}
+        onChange={(ev) => set(ev.target.checked)}
+      />
       <Tooltip text={hint} className="g3d-row__label">
         <span>{label}</span>
       </Tooltip>
@@ -132,7 +186,13 @@ export function MenuToggle({ label, hint, on, set }: { label: string; hint: stri
 
 /** The tab icons: drawn, 24 × 24, in the current colour. */
 export function G3dIcon({ name }: { name: G3dTabKey }) {
-  const p = { fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+  const p = {
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.7,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  } as const;
   return (
     <svg className="g3d-tab__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       {name === "view" ? (
@@ -177,6 +237,12 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
           <path {...p} d="M3.5 3.5h17v17h-17z" />
           <path {...p} d="M12 3.5 20.5 12 12 20.5 3.5 12z" />
           <path {...p} d="M8.6 11.3h6.8v1.4H8.6z" strokeWidth={1.3} />
+        </>
+      ) : name === "jumponium" ? (
+        /* A flask: the synthesis. */
+        <>
+          <path {...p} d="M9.5 3h5M10.5 3v6L5 19a1.5 1.5 0 0 0 1.3 2h11.4A1.5 1.5 0 0 0 19 19l-5.5-10V3" />
+          <path {...p} d="M7.5 15h9" />
         </>
       ) : name === "neutron" ? (
         <>

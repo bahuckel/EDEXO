@@ -953,6 +953,53 @@
   font-weight: 600;
 }
 /* Why a system dot is lit: the filter it matches, the layers on it */
+/* Jumponium tab (1.2.16): the stock as element chips, the three injections, a body's elements in the list. */
+.jump-stock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 2px 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+.jump-stock__el b {
+  color: var(--accent-bright);
+  font-weight: 700;
+}
+.jump-stock__el.is-short b,
+.jump-chip--short {
+  color: var(--warn);
+}
+.jump-tiers {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 2px 10px;
+  font-size: 0.92em;
+}
+.jump-tiers li {
+  display: contents;
+}
+.jump-tiers__n {
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.jump-tiers__n.is-zero {
+  color: var(--text-dim);
+}
+.jump-els {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.jump-els span + span {
+  margin-left: 8px;
+}
+.jump-els .is-on {
+  color: var(--accent-bright);
+  font-weight: 700;
+}
 /* Nearest station on the map (StationsPanel compact): rows fly the map there. */
 .g3d-stations-drawer .fdb-scroll {
   max-height: 55vh;
@@ -1474,4 +1521,9 @@
 }
 .g3d-neutron-fuel {
   color: #ffd35a;
+}
+/* An FSD injection would take a jump off this hop (1.2.16). */
+.g3d-neutron-inject {
+  color: #e48cff;
+  cursor: help;
 }

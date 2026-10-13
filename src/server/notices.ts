@@ -29,6 +29,7 @@ import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
 import { greenCodexId, greenGiantLabel, isK10CodexName, type GreenGiantVerdict } from "../shared/greenGasGiant.js";
 import { carrierServiceLabel } from "../shared/carrierServices.js";
 import { bodyKey as toBodyKey } from "../shared/bodyKey.js";
+import { bodyJumponium, hitLabel, jumpElement } from "../shared/jumponium.js";
 import {
   CARRIER_NOTICE_MIN_FROM_SOL_LY,
   DEFAULT_NOTIFY_PREFS,
@@ -84,6 +85,8 @@ export interface NoticesContext {
   ): GreenGiantVerdict | null;
   /** A body the store already has, by `system:body` key — a moon's parent, for the ring features. */
   scanOf?(bodyKey: string): ExplorationScanRecord | null;
+  /** Raw materials aboard (shared/jumponium.ts), null until a login line gave them. */
+  rawStock?(): Record<string, number> | null;
 }
 
 export interface CodexFirstFind {
@@ -458,6 +461,29 @@ export function createNoticesService(opts: {
         added =
           add({ ...base, id: `ggg:${bodyKey}`, kind: "notable", title: greenGiantLabel(v), text: `${body} in ${system} — ${v.why}` }) ||
           added;
+      }
+    }
+
+    const jp = state.prefs.jumponium ?? DEFAULT_NOTIFY_PREFS.jumponium;
+    if (jp.mode !== "off" && line.Landable === true) {
+      const bj = bodyJumponium(line.Materials);
+      const stock = ctx.rawStock?.() ?? null;
+      const rich = (bj?.hits ?? []).filter((h) => h.good && (jp.mode === "always" || stock == null || (stock[h.key] ?? 0) < jp.target));
+      if (rich.length) {
+        const g = num(line.SurfaceGravity);
+        const ls = num(line.DistanceFromArrivalLS);
+        const facts = [g != null ? `${(g / 9.80665).toFixed(2)} g` : "", ls != null ? `${Math.round(ls).toLocaleString("en-US")} ls` : ""]
+          .filter(Boolean)
+          .join(", ");
+        const have = stock ? ` · aboard ${rich.map((h) => `${jumpElement(h.key).symbol} ${stock[h.key] ?? 0}`).join(", ")}` : "";
+        added =
+          add({
+            ...base,
+            id: `jumponium:${bodyKey}`,
+            kind: "jumponium",
+            title: `Jumponium: ${rich.map(hitLabel).join(", ")}`,
+            text: `${body} in ${system}${facts ? ` — ${facts}` : ""}${have}`,
+          }) || added;
       }
     }
 

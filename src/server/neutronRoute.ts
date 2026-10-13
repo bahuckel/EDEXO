@@ -18,6 +18,7 @@
  * sparse space (3 s) never stalls the app.
  */
 import type { NeutronIndex, NeutronStar } from "./neutronIndex.js";
+import { injectionsToSaveJump, type InjectionSave } from "../shared/jumponium.js";
 
 type Pt = { x: number; y: number; z: number };
 
@@ -445,4 +446,17 @@ export function optimiseOrder<T extends Pt>(points: T[]): T[] {
   };
   perm([...mid], 0);
   return [first, ...bestOrder, last];
+}
+
+/**
+ * Per hop, the FSD injections that would take a jump off its normal jumps (shared/jumponium.ts): after a supercharge
+ * the rest of the hop is normal jumps (`jumps - 1` of them past 4R), else all of it.
+ */
+export function routeInjections(hops: readonly NeutronHop[], rangeLy: number, boost = 4): InjectionSave[][] {
+  return hops.map((h, i) => {
+    if (i === 0 || h.jumps < 2) return [];
+    const d = dist(hops[i - 1]!, h);
+    const normalLy = h.boosted ? d - boost * rangeLy : d;
+    return injectionsToSaveJump(normalLy, h.jumps - h.boosted, rangeLy);
+  });
 }

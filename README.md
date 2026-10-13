@@ -21,8 +21,10 @@ Windows; everything the app saves lives in `%LOCALAPPDATA%\ED Exo Compare\`.
 
 Both are the same version and the same code — [all releases](https://github.com/bahuckel/EDEXO-Compare/releases).
 
-The galaxy map's index (every system with recorded biology, from EDAstro's codex data, about 250 MB)
-is a separate download: the map offers it the first time you open it, and updates leave it in place.
+The galaxy map's data is a separate download, offered by the map the first time you open it and left
+in place by updates: the index (every system with recorded biology, from EDAstro's codex data, about
+250 MB), the stations (15.6 MB), the neutron stars for the route planner (40 MB) and the galaxy's
+richest jumponium bodies, with one button that fetches whatever is missing or newer.
 
 Windows will say the publisher is unrecognised: the executable is signed, but with a self-signed
 certificate that SmartScreen does not trust. "More info" → "Run anyway".
@@ -130,15 +132,17 @@ off until you turn it on.
   FSS'd.
 - **Route line**: jumps before you must refuel and the light years left on the plot, with fuel
   costed by your drive's own law (learned from your jumps) and a bar for how long the tank lasts.
-  The route strip puts a yellow pump on the star to refuel at and a blinking red one on the last
-  scoopable star the tank reaches.
+  The route strip shows one refuel pump: yellow on the last system the tank reaches when it is
+  scoopable, blinking red on the last scoopable star before it when it is not (skip that one and the
+  tank runs dry with nowhere to scoop), a red "!" when none is in reach.
 - **Next boxel**: the best unflown boxel within 500 ly by first-footfall credits per jump, asked
   again on every jump; a click opens it in the galaxy map.
+- **Neutron route** card while you fly one, and a red **⚠ FSD** card when the drive is under 80 %.
 - **Body tabs**: every body with biological signals, switched when you target one in the game, plus
   AutoScanned bodies that still want an FSS. Marks for a species missing from your codex (CX) and a
   first codex entry for the region (FCX).
 - **Body facts**: class, atmosphere and pressure, gravity, temperature, distance from arrival,
-  volcanism and its geological signal count.
+  volcanism and its geological signal count, and the jumponium in its crust.
 - **Payout**: the least and most the body should pay, the x5 first-footfall bonus, and what you have
   already confirmed on foot or by composition scan.
 - **Candidates**: each species with its chance, payout, rarity and codex marks; _Why this chance_
@@ -171,7 +175,14 @@ game) or as pop-ups if Tab view is off.
 - **Achievements**: quest-style goals by colour variant, region and rarity, with Bronze, Silver and
   Gold steps and a notice when you reach one; track one on the HUD.
 - **Carriers** and **Points of interest**: EDAstro's lists, downloaded when you ask, searchable by
-  distance and service.
+  distance and service. The Carriers window's **Stations** tab finds the nearest station with the
+  services you pick (refuel, repair, Universal Cartographics, Vista Genomics, Interstellar Factors,
+  material traders, technology brokers and more), by pad size and distance from arrival.
+- **Browser** (desktop app only; "+" → Browser): a private browser in a tab. Nothing a site stores
+  outlives the app unless you mark the site **Remember**; ads, trackers, cookie notices and YouTube
+  ads are blocked (EasyList, EasyPrivacy and uBlock Origin's lists, fetched from their publishers when
+  you first open it); every permission but fullscreen is denied. A start page with EDSM, EDAstro,
+  Spansh, ED GGG, ED-DSN, Inara and your own links.
 - **Bookmarks** with tags, notes and distances; **Green gas giants** by CMDR Arcanic's cloud ladder;
   **Data feeder** for your own Spansh Exomastery dumps; a **Session log**.
 
@@ -179,9 +190,19 @@ game) or as pop-ups if Tab view is off.
 
 - All 5.3 million systems with recorded biology in 3D, by region, sector and neighbourhood, with your
   own route on top; game-style controls (W A S D, Q E, R F) or a mouse; it runs on a phone.
-- **Find** and filters by species, genus, star or planet type; layers for points of interest,
-  Notable Stellar Phenomena, carriers, bookmarks, green gas giants and the 18 helium gas giants on
-  record; your codex by region.
+- **Find** (species, systems and station names) and filters by species, genus, star or planet type;
+  layers for points of interest, Notable Stellar Phenomena, carriers, bookmarks, green gas giants, the
+  18 helium gas giants on record and 800,709 **stations** (names on hover, pads by type); your own
+  carrier and colonies marked, your stations in gold; your codex by region.
+- **Stations** tab: the nearest station with a service, from your ship or any system.
+- **Jumponium** tab: the FSD injection materials you hold (from your journals) and how many basic,
+  standard and premium injections they make, then the nearest landable bodies rich in the elements you
+  pick — any or all of them, rich or the top 1 %, by gravity and distance from arrival — from your own
+  scans and the galaxy's top 1 % of landable bodies for each element.
+- **Neutron** tab: a route through two or more stops by supercharged jumps from neutron star to
+  neutron star, with refuel stops at a scoopable star near one, the order optimised if you want, and
+  FSD wear per hop learned for each ship. **Fly this route** puts the next stop on the clipboard after
+  each jump and plots again from your ship if you leave the route; **Stop** clears it everywhere.
 - **Next target** and **Plan**: the nearest system above a value you set, and up to 20 more in the
   shortest order. **NavRoute** keeps every route you plot with each system's star class.
 - **Expedition**: every boxel round you, or along a route to any system you name (or one of eight
@@ -190,15 +211,16 @@ game) or as pop-ups if Tab view is off.
   in the galaxy index and the 4.2 million flown since 2025 without biology are taken off. A boxel's
   card lists the system names nobody has recorded, ready to copy; a plan puts up to 20 boxels in
   flying order; a species lights only the boxels its position rule allows.
-- The galaxy index is a separate download from inside the map; its update button says how many systems
-  it adds.
+- The galaxy index, the stations and the neutron stars are one download from inside the map; its
+  update button says how many systems it adds.
 
 ### Overlay (HUD)
 
 Click-through panels over the game, each on or off: the exo-distance tracker (a radar with each sample
 ringed at its genus's distance, and the payout), discovery scan count, candidates for the targeted
 body, unsold data value, the next jumps with their star class and whether EDSM knows them, the Next
-boxel line, notable bodies, notices (F5 clears them) and a tracked achievement. Stacked or merged into
+boxel line (or, on a neutron route, where to scoop and supercharge and the FSD's health), notable
+bodies, notices (F5 clears them) and a tracked achievement. Stacked or merged into
 one panel, in the original look, a title bar or an Elite-style frame; any colour, 50–200 % scale,
 10–100 % background, hidden when the game is not in front.
 
@@ -211,11 +233,14 @@ one panel, in the original look, a title bar or an Elite-style frame; any colour
 - **Backups** of your journals and the app's data, with warnings when the folder shares a drive with
   them.
 - **Notify me**: notices for notable bodies, Notable Stellar Phenomena, nearby carriers with the
-  services you pick, achievements, with or without sound.
+  services you pick, achievements, a scanned body rich in a jumponium material you are short of, with or
+  without sound.
 - **Colour scheme** for the app and the HUD; **key binds** in one place, live only while Elite or the
   app is in front; **snapshot images** that render what you see without taking a screenshot of your
   screen; **About this install** for a bug report with paths masked.
 - **Opt-ins**, each off by default: EDSM look-ups and journal upload (your own API key), Canonn, EDDN.
+- **Import visited systems**: the game's own list of every system your account visited, for journals
+  you no longer have; they count as visited on the map, in Find and in the planner.
 - **Close to tray**, and **What's new** once after each update.
 
 ## Where the predictions come from
@@ -278,6 +303,7 @@ There is no telemetry and no analytics. Three requests run without a switch, and
 anything about you: the update check (each time the launcher opens, at most once an hour, GitHub is
 asked for this project's releases; the app's version is in the user agent), the game server status,
 and EDSM's answer to which systems on your plotted route it already knows (the system names only).
+The browser fetches its filter lists from their publishers once you open it (weekly, YouTube's daily).
 Every request is listed in the [privacy policy](public/legal/privacy.html), which ships with the app.
 
 ## Running it
@@ -381,8 +407,8 @@ docs/archive/   internal planning notes — not tracked, see .gitignore
 
 Built on these communities' work, none of them affiliated with this project:
 
-- **[Spansh](https://spansh.co.uk)** — the reason it was started, and the corpus every prediction is
-  measured against.
+- **[Spansh](https://spansh.co.uk)** — the reason it was started, the corpus every prediction is
+  measured against, and the stations and neutron stars on the galaxy map.
 - **[EDSM](https://edsm.net)** — body records and system coordinates.
 - **[Canonn Research Group](https://canonn.science)** — the published species conditions every gate
   in this app started from.
@@ -392,6 +418,9 @@ Built on these communities' work, none of them affiliated with this project:
 - **[EDGalaxyData](https://edgalaxydata.space/EDDN/)** by CMDR Bravada Cadelanne — EDDN's messages
   kept day by day since 2017, for checking against past finds.
 - **[EDAstro](https://edastro.com)** — the codex sightings behind the galaxy map's index.
+- **[Ghostery's adblocker](https://github.com/ghostery/adblocker)** (MPL-2.0), with the
+  [EasyList](https://easylist.to) and [uBlock Origin](https://github.com/uBlockOrigin/uAssets) filter
+  lists — the browser's blocking.
 
 Full attribution in [NOTICE.md](NOTICE.md).
 

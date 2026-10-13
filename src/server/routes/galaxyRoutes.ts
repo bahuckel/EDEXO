@@ -79,6 +79,12 @@ import {
   neutronsStatus,
   probeNeutronsRelease,
 } from "../neutronIndex.js";
+import {
+  clearJumponiumIndex,
+  downloadJumponium,
+  jumponiumIndexStatus,
+  probeJumponiumRelease,
+} from "../jumponiumIndex.js";
 
 export function registerGalaxyRoutes(
   app: express.Express,
@@ -130,6 +136,7 @@ export function registerGalaxyRoutes(
   registerGalaxyCache("boxel-barren", clearBarrenTable);
   registerGalaxyCache("stations", clearStationsIndex);
   registerGalaxyCache("neutrons", clearNeutronIndex);
+  registerGalaxyCache("jumponium", clearJumponiumIndex);
   registerGalaxyCache("system-traits", clearSystemTraits);
   // The galaxy body file (683 MB since version 2) was the one dataset never let go: a single "possible"
   // search kept it for the rest of the session (plan 4.1, 2026-10-10).
@@ -256,6 +263,7 @@ export function registerGalaxyRoutes(
   const extrasStatus = () => {
     const st = stationsStatus();
     const nt = neutronsStatus();
+    const jp = jumponiumIndexStatus();
     // Due: not here, or the release has another build (its count differs) — what the download fetches.
     return {
       stations: {
@@ -272,22 +280,30 @@ export function registerGalaxyRoutes(
         error: nt.error,
         bytes: nt.release?.bytes ?? null,
       },
+      jumponium: {
+        present: jp.present,
+        due: !jp.present || (jp.release != null && jp.release.bodies !== jp.bodies),
+        downloading: jp.downloading,
+        error: jp.error,
+        bytes: jp.release?.bytes ?? null,
+      },
     };
   };
   const combinedStatus = () => {
     const st = galaxyIndexStatus();
     const ex = extrasStatus();
-    const missing = [ex.stations, ex.neutrons].filter((x) => x.due);
+    const missing = [ex.stations, ex.neutrons, ex.jumponium].filter((x) => x.due);
     const extraBytes = missing.reduce((a, x) => a + (x.bytes ?? 0), 0);
     // Progress of whichever part is coming down.
     const downloading =
       st.downloading ??
       (ex.stations.downloading ? { name: "stations.bin.gz", ...ex.stations.downloading } : null) ??
-      (ex.neutrons.downloading ? { name: "neutrons.bin.gz", ...ex.neutrons.downloading } : null);
+      (ex.neutrons.downloading ? { name: "neutrons.bin.gz", ...ex.neutrons.downloading } : null) ??
+      (ex.jumponium.downloading ? { name: "jumponium.bin.gz", ...ex.jumponium.downloading } : null);
     return {
       ...st,
       downloading,
-      error: st.error ?? ex.stations.error ?? ex.neutrons.error,
+      error: st.error ?? ex.stations.error ?? ex.neutrons.error ?? ex.jumponium.error,
       extras: ex,
       // The whole download is under way (between two parts nothing is coming down for a moment).
       busy: combinedRunning,
@@ -302,7 +318,7 @@ export function registerGalaxyRoutes(
     // The release's sizes (HEAD requests), at most every ten minutes: the download and the update check.
     if ((st.downloadBytes == null || st.updateAvailable == null) && Date.now() - indexProbedAt > 600_000) {
       indexProbedAt = Date.now();
-      await Promise.all([probeGalaxyIndexSize(), probeStationsRelease(), probeNeutronsRelease()]);
+      await Promise.all([probeGalaxyIndexSize(), probeStationsRelease(), probeNeutronsRelease(), probeJumponiumRelease()]);
     }
     res.json(combinedStatus());
   });
@@ -327,6 +343,7 @@ export function registerGalaxyRoutes(
           const ex = extrasStatus();
           if (ex.stations.due) await downloadStations(() => opts.scheduleBroadcast?.());
           if (ex.neutrons.due) await downloadNeutrons(() => opts.scheduleBroadcast?.());
+          if (ex.jumponium.due) await downloadJumponium(() => opts.scheduleBroadcast?.());
         } finally {
           combinedRunning = false;
         }

@@ -85,6 +85,7 @@ import {
   type FsdWearState,
 } from "../shared/fsdWear.js";
 import { hydrateOwnAssets, newOwnAssets, ownAssetsLine, type OwnAssetsState } from "../shared/ownAssets.js";
+import { JUMPONIUM_EVENTS, hydrateJumponium, jumponiumLine, newJumponium, type JumponiumState } from "../shared/jumponium.js";
 import { emptyJumpRange, jumpRangeJump, jumpRangeLoadout, type JumpRangeState } from "../shared/jumpRange.js";
 import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
 import { JOURNAL_MERGE_CACHE_FORMAT } from "./journalMergePayload.js";
@@ -856,6 +857,8 @@ export class GameStateStore {
   fsdWear: FsdWearState = newFsdWear();
   /** The commander's own fleet carrier and colonised systems (shared/ownAssets.ts), for the map's badges. */
   ownAssets: OwnAssetsState = newOwnAssets();
+  /** Raw materials aboard and the FSD injections made (shared/jumponium.ts). */
+  jumponium: JumponiumState = newJumponium();
   /** Live `Status.json` cargo (tonnes), part of the ship's mass for the fuel model. */
   liveStatusCargoT: number | null = null;
 
@@ -1805,6 +1808,7 @@ export class GameStateStore {
     this.fsdFuel = emptyFsdFuel();
     this.fsdWear = newFsdWear();
     this.ownAssets = newOwnAssets();
+    this.jumponium = newJumponium();
     this.liveStatusFuelMainT = null;
     this.liveStatusFuelReserveT = null;
     this.lastLiveShipFuelPushKey = null;
@@ -2300,6 +2304,7 @@ export class GameStateStore {
         this.jetConeBoost = null;
       if (typeof event === "string" && (event.startsWith("Carrier") || event.startsWith("ColonisationSystemClaim")))
         ownAssetsLine(this.ownAssets, line as Record<string, unknown>);
+      if (JUMPONIUM_EVENTS.has(event as string)) jumponiumLine(this.jumponium, line as Record<string, unknown>);
 
       /*
         Which body the ship is at: the arrival body on a jump or a load, then whatever it approaches,
@@ -3847,6 +3852,7 @@ export class GameStateStore {
       fsdFuel: structuredClone(this.fsdFuel),
       fsdWear: structuredClone(this.fsdWear),
       ownAssets: structuredClone(this.ownAssets),
+      jumponium: structuredClone(this.jumponium),
     };
   }
 
@@ -4026,6 +4032,7 @@ export class GameStateStore {
     }
     this.fsdWear = hydrateFsdWear(data.fsdWear);
     this.ownAssets = hydrateOwnAssets(data.ownAssets);
+    this.jumponium = hydrateJumponium(data.jumponium);
     const ljd = data.lastFsdJumpDistLy;
     this.lastFsdJumpDistLy = typeof ljd === "number" && Number.isFinite(ljd) && ljd > 0 ? ljd : null;
     return true;
