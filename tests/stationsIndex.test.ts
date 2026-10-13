@@ -235,6 +235,40 @@ describe("the station index", () => {
     expect(two.search("hu")).toEqual([]);
   });
 
+  it("leaves out installations (no landing pad) everywhere, and numbers the map's dots without them", () => {
+    const st = (name: string, pad: 0 | 1 | 2 | 3): St => ({
+      name,
+      services: ["Refuel"],
+      type: "Outpost",
+      pad,
+      ls: 10,
+    });
+    const idx2 = new StationsIndex(
+      encode([
+        { name: "Only installations", x: 0, y: 0, z: 0, stations: [st("Relay Alpha", 0)] },
+        { name: "Mixed", x: 5, y: 0, z: 0, stations: [st("Relay Beta", 0), st("Mixed Port", 2)] },
+        { name: "Port", x: 9, y: 0, z: 0, stations: [st("Relay Port", 3)] },
+      ]),
+    );
+    const counts: [string, number][] = [];
+    idx2.forEachSystem((_x, _y, _z, _pad, n, name) => counts.push([name(), n]));
+    expect(counts).toEqual([
+      ["Only installations", 0],
+      ["Mixed", 1],
+      ["Port", 1],
+    ]);
+    expect(idx2.nearest({ from: { x: 0, y: 0, z: 0 } }).map((r) => r.name)).toEqual([
+      "Mixed Port",
+      "Relay Port",
+    ]);
+    expect(idx2.search("relay").map((r) => r.name)).toEqual(["Relay Port"]);
+    expect(idx2.stationsNear({ x: 5, y: 0, z: 0 }).map((r) => r.name)).toEqual(["Mixed Port"]);
+    expect(idx2.stationsNear({ x: 0, y: 0, z: 0 })).toEqual([]);
+    // The layer draws "Mixed" and "Port" only: their dots are 0 and 1.
+    expect([idx2.pointOf(0), idx2.pointOf(1), idx2.pointOf(2)]).toEqual([-1, 0, 1]);
+    expect(idx2.search("relay port")[0]!.sys).toBe(1);
+  });
+
   it("refuses what is not one", () => {
     const buf = encode(SYSTEMS);
     const wrong = Buffer.from(buf);

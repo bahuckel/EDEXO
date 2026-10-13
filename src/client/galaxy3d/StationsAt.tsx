@@ -14,6 +14,8 @@ export interface StationAtRow {
   distanceLs: number;
   services: string[];
   updated: string | null;
+  /** In a system the commander claimed. */
+  own?: boolean;
 }
 
 const cache = new Map<string, StationAtRow[]>();
@@ -63,13 +65,16 @@ export function StationNames({ x, y, z }: { x: number; y: number; z: number }) {
 /** The side card: every station of the system, with its type, pad, distance and services. */
 export function StationsList({ x, y, z }: { x: number; y: number; z: number }) {
   const rows = useStationsAt({ x, y, z });
-  if (!rows) return <p className="g3d-panel__note">Reading the stations…</p>;
-  if (!rows.length) return null;
+  // Asked for every system picked: nothing at all while it loads or when there are none.
+  if (!rows?.length) return null;
   return (
-    <ul className="g3d-stations-list">
+    <ul className="g3d-stations-list" aria-label="Stations in this system">
+      <li className="g3d-stations-list__head">
+        {rows.length} station{rows.length === 1 ? "" : "s"}
+      </li>
       {rows.map((r, i) => (
         <li key={`${r.name}-${i}`} title={r.services.join(", ")}>
-          <strong>{r.name}</strong>
+          <strong className={r.own ? "stations-own" : undefined}>{r.name}</strong>
           <span className="dim">
             {" "}
             {r.type}

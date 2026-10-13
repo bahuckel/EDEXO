@@ -167,9 +167,12 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
           <path {...p} d="M20 4.5h-4.5A2.5 2.5 0 0 0 13 7v13a2 2 0 0 1 2-2h5V4.5z" />
         </>
       ) : name === "stations" ? (
+        /* A Coriolis starport (owner, 2026-10-13: like EDEXO Colonize's hero): the square front with its docking slot,
+           the triangle over it, the faces turning away on either side. */
         <>
-          <circle {...p} cx="12" cy="12" r="3" />
-          <path {...p} d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+          <path {...p} d="M7.5 11h9l.5 9h-10z" />
+          <path {...p} d="M7.5 11 12 3.5l4.5 7.5M7.5 11 3 12l4 8M16.5 11 21 12l-4 8M7.5 11 5 5.5 12 3.5l7 2-2.5 5.5" />
+          <path {...p} d="M10 15.5h4" strokeWidth={2.2} />
         </>
       ) : name === "neutron" ? (
         <>

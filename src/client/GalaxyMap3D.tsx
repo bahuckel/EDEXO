@@ -311,7 +311,10 @@ export function GalaxyMap3D() {
           if (div.textContent !== l.text) div.textContent = l.text;
           const cls = `g3d-label g3d-label--${l.kind}`;
           if (div.className !== cls) div.className = cls;
-          div.style.transform = `translate(${Math.round(p.left)}px, ${Math.round(p.top)}px)`;
+          // A badge hangs above its dot by its own width (CSS), so its tail points at the dot.
+          const left = l.kind === "badge" ? l.x : p.left;
+          const top = l.kind === "badge" ? l.y : p.top;
+          div.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
           div.style.display = "";
         }
         // Hidden, kept for the next frame — but a system's label is one div per system ever named, so
@@ -1300,7 +1303,6 @@ export function GalaxyMap3D() {
             </p>
           ) : null}
           {xs.detail ? <p className="g3d-panel__note">{xs.detail}</p> : null}
-          {xs.meta.kind === "stations" ? <StationsList x={xs.p[0]} y={xs.p[1]} z={xs.p[2]} /> : null}
           {xs.system ? (
             <>
               <p>
@@ -1418,6 +1420,12 @@ export function GalaxyMap3D() {
             ✕
           </button>
           {panel}
+          {/*
+            The stations of any system picked (owner, 2026-10-13: his own colonies showed none — their own dot lies
+            over the Stations dot, so its card was never asked). Nothing when the system has none or the stations
+            are not downloaded.
+          */}
+          {selection.kind !== "sector" ? <StationsList x={selection.x} y={selection.y} z={selection.z} /> : null}
           <div className="g3d-panel__actions">
             <button type="button" className="g3d-btn" onClick={() => engine.current?.flyTo(selection, selection.kind === "sector" ? 9_000 : 250)}>
               Centre here
@@ -1960,9 +1968,10 @@ export function GalaxyMap3D() {
                       go(h, 400, { kind: "marker", layer: "x-stations", id: String(h.layerId), x: h.x, y: h.y, z: h.z });
                     }}
                   >
-                    <span>{h.label}</span>
+                    <span className={h.own ? "stations-own" : undefined}>{h.label}</span>
                     <em>
-                      station{h.pad ? ` · ${h.pad} pad` : ""}
+                      {h.own ? "your station" : "station"}
+                      {h.pad ? ` · ${h.pad} pad` : ""}
                       {h.label === h.name ? ` · ${h.system}` : ""}
                     </em>
                   </button>

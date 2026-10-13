@@ -24,6 +24,8 @@ interface StationRow {
   z?: number;
   /** Its point on the galaxy map's Stations layer. */
   sys?: number;
+  /** In a system the commander claimed: his own. */
+  own?: boolean;
 }
 
 export type { StationRow as StationPick };
@@ -83,6 +85,29 @@ export function StationsPanel({
   const [settlements, setSettlements] = usePersistedState("stations.settlements", false, isBool);
   const [construction, setConstruction] = usePersistedState("stations.construction", false, isBool);
   const seq = useRef(0);
+  /*
+    By name (owner, 2026-10-13: "search a station by name"): the station's name, or its name and system together;
+    while there is text here the table shows those, nearest first, instead of the nearest with the services.
+  */
+  const [name, setName] = useState("");
+  const [named, setNamed] = useState<StationRow[] | null>(null);
+  useEffect(() => {
+    const q = name.trim();
+    if (q.length < 3) return setNamed(null);
+    const ac = new AbortController();
+    const t = window.setTimeout(() => {
+      void fetch(`/api/stations/search?q=${encodeURIComponent(q)}`, { signal: ac.signal })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { stations?: StationRow[] } | null) => {
+          if (!ac.signal.aborted) setNamed(j?.stations ?? []);
+        })
+        .catch(() => undefined);
+    }, 250);
+    return () => {
+      ac.abort();
+      clearTimeout(t);
+    };
+  }, [name]);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -177,78 +202,106 @@ export function StationsPanel({
       {error ? <p className="fdb-empty">{error}</p> : null}
       {status?.present ? (
         <>
-          <div className="fdb-filters">
-            {SERVICE_CHIPS.map((s) => (
+          <input
+            className="stations-find"
+            type="search"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Find a station by name (or name and system)"
+            aria-label="Find a station by name"
+            spellCheck={false}
+          />
+          {/* Grouped (owner, 2026-10-13: "services, pad size, other"), and set aside while a name is searched. */}
+          <div className={`stations-filters${named ? " is-idle" : ""}`}>
+            <div className="stations-filters__group">
+              <span className="stations-filters__label">Services</span>
+              {SERVICE_CHIPS.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  className={`fdb-chip${services.includes(s.key) ? " fdb-chip--on" : ""}`}
+                  onClick={() => toggle(s.key)}
+                  aria-pressed={services.includes(s.key)}
+                >
+                  {s.label}
+                </button>
+              ))}
               <button
-                key={s.key}
                 type="button"
-                className={`fdb-chip${services.includes(s.key) ? " fdb-chip--on" : ""}`}
-                onClick={() => toggle(s.key)}
-                aria-pressed={services.includes(s.key)}
+                className="fdb-chip stations-filters__mode"
+                onClick={() => setMode(mode === "any" ? "all" : "any")}
+                title="All of the chosen services at one station, or any one of them"
               >
-                {s.label}
+                {mode === "any" ? "Any of them" : "All of them"}
               </button>
-            ))}
-            <span className="fdb-filters__gap" />
-            <button
-              type="button"
-              className="fdb-chip"
-              onClick={() => setMode(mode === "any" ? "all" : "any")}
-              title="All of the chosen services at one station, or any one of them"
-            >
-              {mode === "any" ? "Any of them" : "All of them"}
-            </button>
-            <span className="fdb-filters__gap" />
-            {PADS.map((p) => (
+            </div>
+            <div className="stations-filters__group">
+              <span className="stations-filters__label">Pad size</span>
+              {PADS.map((p) => (
+                <button
+                  key={p.key || "any"}
+                  type="button"
+                  className={`fdb-chip${pad === p.key ? " fdb-chip--on" : ""}`}
+                  onClick={() => setPad(p.key)}
+                  aria-pressed={pad === p.key}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="stations-filters__group">
+              <span className="stations-filters__label">From the arrival star</span>
+              {MAX_LS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={`fdb-chip${maxLs === n ? " fdb-chip--on" : ""}`}
+                  onClick={() => setMaxLs(n)}
+                  aria-pressed={maxLs === n}
+                >
+                  {n === 0 ? "Any distance" : `≤ ${short(n)} ls`}
+                </button>
+              ))}
+            </div>
+            <div className="stations-filters__group">
+              <span className="stations-filters__label">Other</span>
               <button
-                key={p.key || "any"}
                 type="button"
-                className={`fdb-chip${pad === p.key ? " fdb-chip--on" : ""}`}
-                onClick={() => setPad(p.key)}
-                aria-pressed={pad === p.key}
+                className={`fdb-chip${settlements ? " fdb-chip--on" : ""}`}
+                onClick={() => setSettlements((v) => !v)}
+                aria-pressed={settlements}
               >
-                {p.label}
+                Settlements
               </button>
-            ))}
-            <span className="fdb-filters__gap" />
-            {MAX_LS.map((n) => (
               <button
-                key={n}
                 type="button"
-                className={`fdb-chip${maxLs === n ? " fdb-chip--on" : ""}`}
-                onClick={() => setMaxLs(n)}
-                aria-pressed={maxLs === n}
+                className={`fdb-chip${construction ? " fdb-chip--on" : ""}`}
+                onClick={() => setConstruction((v) => !v)}
+                aria-pressed={construction}
               >
-                {n === 0 ? "Any distance" : `≤ ${short(n)} ls`}
+                Colony construction
               </button>
-            ))}
-            <span className="fdb-filters__gap" />
-            <button
-              type="button"
-              className={`fdb-chip${settlements ? " fdb-chip--on" : ""}`}
-              onClick={() => setSettlements((v) => !v)}
-              aria-pressed={settlements}
-            >
-              Settlements
-            </button>
-            <button
-              type="button"
-              className={`fdb-chip${construction ? " fdb-chip--on" : ""}`}
-              onClick={() => setConstruction((v) => !v)}
-              aria-pressed={construction}
-            >
-              Colony construction
-            </button>
+            </div>
           </div>
-          {rows == null && querying ? (
+          {named ? (
+            <p className="fdb-empty">
+              {named.length
+                ? `Stations named like "${name.trim()}", nearest first`
+                : `No station is named like "${name.trim()}".`}
+            </p>
+          ) : null}
+          {!named && rows == null && querying ? (
             <LoadingNote className="fdb-empty" label="Searching the stations…" />
           ) : null}
-          {rows && rows.length === 0 ? (
+          {!named && rows && rows.length === 0 ? (
             <p className="fdb-empty">No station near you has all of that.</p>
           ) : null}
-          {rows && rows.length ? (
+          {(named ?? rows)?.length ? (
             <div className="fdb-scroll">
-              <table className="fdb-table carriers-table" style={querying ? { opacity: 0.6 } : undefined}>
+              <table
+                className="fdb-table carriers-table"
+                style={querying && !named ? { opacity: 0.6 } : undefined}
+              >
                 <thead>
                   <tr>
                     <th>Station</th>
@@ -265,14 +318,19 @@ export function StationsPanel({
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {(named ?? rows ?? []).map((r) => (
                     <tr
                       key={`${r.system}|${r.name}`}
                       title={`${r.services.join(" · ")}${onPick ? "\n\nClick to show it on the map" : ""}`}
                       className={onPick ? "is-pickable" : undefined}
                       onClick={onPick ? () => onPick(r) : undefined}
                     >
-                      <td>{r.name}</td>
+                      <td
+                        className={r.own ? "stations-own" : undefined}
+                        title={r.own ? "Your station" : undefined}
+                      >
+                        {r.name}
+                      </td>
                       <td>
                         {r.system} <CopySystemButton system={r.system} />
                       </td>

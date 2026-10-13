@@ -1022,6 +1022,12 @@
 .g3d-stations-list li + li {
   margin-top: 3px;
 }
+.g3d-stations-list__head {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
 .g3d-why {
   list-style: none;
   margin: 0.5rem 0 0;
@@ -1088,17 +1094,42 @@
 }
 
 /* ---- G5.3: the plan -------------------------------------------------------------------------------- */
-/* His own carrier's system and colonies (GalaxyEngine setBadges). */
+/*
+  His own carrier's system and colonies (GalaxyEngine setBadges): a speech bubble above the system, its tail pointing
+  down at the dot (owner, 2026-10-13: beside it, it covered the dot). Anchored at the dot; `translate` centres it on
+  its own width and lifts it by its height, on top of the position the map sets.
+*/
 .g3d-label--badge {
-  padding: 1px 6px;
-  border: 1px solid rgba(255, 200, 90, 0.7);
-  border-radius: 999px;
-  background: rgba(30, 20, 6, 0.82);
+  translate: -50% -100%;
+  padding: 1px 7px;
+  border: 1px solid rgba(255, 200, 90, 0.75);
+  border-radius: 7px;
+  background: rgba(30, 20, 6, 0.9);
   color: #ffd27a;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-shadow: 0 0 6px rgba(255, 190, 70, 0.5);
+}
+.g3d-label--badge::before,
+.g3d-label--badge::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-style: solid;
+  border-color: transparent;
+}
+/* The tail: an outline triangle with the fill one inside it. */
+.g3d-label--badge::before {
+  top: 100%;
+  border-width: 6px 5px 0;
+  border-top-color: rgba(255, 200, 90, 0.75);
+}
+.g3d-label--badge::after {
+  top: calc(100% - 1px);
+  border-width: 5px 4px 0;
+  border-top-color: rgba(30, 20, 6, 0.9);
 }
 .g3d-label--plan {
   padding: 0 5px;

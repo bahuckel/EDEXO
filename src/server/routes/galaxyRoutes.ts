@@ -715,8 +715,10 @@ export function registerGalaxyRoutes(
     // Stations by name, when they are downloaded (owner, 2026-10-13); a duplicated name says its system.
     let stations: NonNullable<GalaxyFindDTO["stations"]> = [];
     if (stationsStatus().present) {
+      const mine = new Set((opts.getJournalStore?.()?.ownAssets.colonies ?? []).map((c) => c.name.toLowerCase()));
       try {
         stations = (loadStationsIndex()?.search(q) ?? []).map((r) => ({
+          own: mine.has(r.system.toLowerCase()),
           name: r.name,
           system: r.system,
           label: r.dup ? `${r.name} (${r.system})` : r.name,

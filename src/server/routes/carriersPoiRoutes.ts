@@ -45,6 +45,35 @@ export function registerCarriersPoiRoutes(
     void downloadStations(() => opts.scheduleBroadcast?.());
     res.json({ ok: true, status: stationsStatus() });
   });
+  /**
+   * The commander's own stations (owner, 2026-10-13: "own stations should have the name bolded and gold"): every
+   * station in a system he claimed (shared/ownAssets.ts) is marked `own`.
+   */
+  const markOwn = <T extends { system: string }>(rows: T[]): (T & { own: boolean })[] => {
+    const mine = new Set(
+      (opts.getJournalStore?.()?.ownAssets.colonies ?? []).map((c) => c.name.toLowerCase()),
+    );
+    return rows.map((r) => ({ ...r, own: mine.has(r.system.toLowerCase()) }));
+  };
+
+  /** Stations by name (or name and system), nearest to the ship first: `?q=`. */
+  app.get("/api/stations/search", (req, res) => {
+    touchGalaxyMemory();
+    let index;
+    try {
+      index = loadStationsIndex();
+    } catch {
+      index = null;
+    }
+    if (!index) return void res.status(404).json({ error: "No station data yet." });
+    const from = opts.getCommanderPosition?.() ?? null;
+    const rows = index.search(String(req.query.q ?? "").slice(0, 80), 50).map((r) => ({
+      ...r,
+      distanceLy: from ? Math.round(Math.hypot(r.x - from.x, r.y - from.y, r.z - from.z) * 10) / 10 : 0,
+    }));
+    if (from) rows.sort((a, b) => a.distanceLy - b.distanceLy);
+    res.json({ from, stations: markOwn(rows) });
+  });
   /** The stations of the system at a point (the galaxy map's Stations dot): `?x&y&z`. */
   app.get("/api/stations/at", (req, res) => {
     touchGalaxyMemory();
@@ -58,7 +87,7 @@ export function registerCarriersPoiRoutes(
     }
     if (!index) return void res.status(404).json({ error: "No station data yet." });
     // Layer points are rounded to 0.1 ly; a system's own position is exact.
-    res.json({ stations: index.stationsNear(p, 0.5) });
+    res.json({ stations: markOwn(index.stationsNear(p, 0.5)) });
   });
   app.get("/api/stations/nearest", (req, res) => {
     touchGalaxyMemory();
@@ -90,16 +119,18 @@ export function registerCarriersPoiRoutes(
     const maxLs = Number(q.maxLs);
     res.json({
       from,
-      stations: index.nearest({
-        from,
-        services,
-        mode: q.mode === "any" ? "any" : "all",
-        minPad: pad === "L" || pad === "M" || pad === "S" ? pad : "",
-        maxDistanceLs: Number.isFinite(maxLs) && maxLs > 0 ? maxLs : null,
-        settlements: q.settlements === "1",
-        construction: q.construction === "1",
-        limit: Number(q.limit) || 30,
-      }),
+      stations: markOwn(
+        index.nearest({
+          from,
+          services,
+          mode: q.mode === "any" ? "any" : "all",
+          minPad: pad === "L" || pad === "M" || pad === "S" ? pad : "",
+          maxDistanceLs: Number.isFinite(maxLs) && maxLs > 0 ? maxLs : null,
+          settlements: q.settlements === "1",
+          construction: q.construction === "1",
+          limit: Number(q.limit) || 30,
+        }),
+      ),
       services: index.meta.services,
       dump: index.meta.dump ?? null,
     });
