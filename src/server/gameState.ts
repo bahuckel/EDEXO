@@ -76,7 +76,14 @@ import { GEOLOGY_KEY, isLegacyPlantKey } from "../shared/achievements.js";
 import { regionForSystem } from "./regionMapData.js";
 import { parseBoxel } from "../shared/boxel.js";
 import { emptyFsdFuel, fsdFuelJump, fsdFuelLoadout, type FsdFuelState } from "../shared/fsdFuel.js";
-import { fsdWearJump, fsdWearLoadout, fsdWearRepair, newFsdWear, type FsdWearState } from "../shared/fsdWear.js";
+import {
+  fsdWearJump,
+  fsdWearLoadout,
+  fsdWearRepair,
+  hydrateFsdWear,
+  newFsdWear,
+  type FsdWearState,
+} from "../shared/fsdWear.js";
 import { emptyJumpRange, jumpRangeJump, jumpRangeLoadout, type JumpRangeState } from "../shared/jumpRange.js";
 import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
 import { JOURNAL_MERGE_CACHE_FORMAT } from "./journalMergePayload.js";
@@ -4001,17 +4008,7 @@ export class GameStateStore {
         samples: ff.samples.filter((s) => s && s.ly > 0 && s.fuelT > 0 && s.massT > 0),
       };
     }
-    const fw = data.fsdWear;
-    if (fw && typeof fw.boostsSince === "number") {
-      this.fsdWear = {
-        shipId: typeof fw.shipId === "number" ? fw.shipId : null,
-        health: typeof fw.health === "number" ? fw.health : null,
-        boostsSince: Math.max(0, fw.boostsSince),
-        repairedSince: fw.repairedSince === true,
-        boosts: typeof fw.boosts === "number" ? fw.boosts : 0,
-        lost: typeof fw.lost === "number" ? fw.lost : 0,
-      };
-    }
+    this.fsdWear = hydrateFsdWear(data.fsdWear);
     const ljd = data.lastFsdJumpDistLy;
     this.lastFsdJumpDistLy = typeof ljd === "number" && Number.isFinite(ljd) && ljd > 0 ? ljd : null;
     return true;

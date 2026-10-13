@@ -39,6 +39,9 @@ export function registerNeutronRoutes(
       fsdHealth: wear.health,
       wearPerBoost: wear.wearPerBoost,
       wearIsDefault: wear.wearIsDefault,
+      wearFrom: wear.wearFrom,
+      boostFactor: wear.boostFactor,
+      shipType: wear.ship,
       boostsSinceLoadout: wear.boostsSince,
       fsdWarn: FSD_WARN,
       position: store.commanderPos ?? opts.getCommanderPosition?.() ?? null,
@@ -117,6 +120,7 @@ export function registerNeutronRoutes(
         rangeLy,
         jumpsPerTank,
         jumpsNow: Math.min(jumpsPerTank, Math.max(0, jumpsNow ?? jumpsPerTank)),
+        boost: s?.boostFactor ?? undefined,
         fsdHealth: finite(body.fsdHealth) ?? s?.fsdHealth ?? null,
         wearPerBoost: finite(body.wearPerBoost) ?? s?.wearPerBoost ?? null,
       });
