@@ -178,6 +178,9 @@ export function renderBoxelCopied(d, el) {
   is — scoop the system's own star, supercharge — and the stop after (on the clipboard). The game plots the normal
   jumps between two stops itself; "scoop on the way" when they are more than a tank.
 */
+/* "Use Jumponium" (1.2.16): the FSD injections planned for the stretch to the next stop, one per normal jump. */
+var INJECT_NAME = { basic: "Basic", standard: "Standard", premium: "Premium" };
+
 export function renderNeutronLive(d, el) {
   if (!el) return;
   var n = d.neutronLive;
@@ -212,6 +215,7 @@ export function renderNeutronLive(d, el) {
       esc(n.next) +
       (n.nextJumps > 1 ? " · " + n.nextJumps + " jumps" : "") +
       (n.scoopOnWay ? " · scoop on the way" : "") +
+      (n.nextInject ? " · ⚗ " + n.nextInject.count + " " + INJECT_NAME[n.nextInject.tier] : "") +
       "</span>"
     : "";
   el.className = "jump__neutron" + (todo.length ? " jump__neutron--act" : "");

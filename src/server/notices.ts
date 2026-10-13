@@ -29,7 +29,7 @@ import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
 import { greenCodexId, greenGiantLabel, isK10CodexName, type GreenGiantVerdict } from "../shared/greenGasGiant.js";
 import { carrierServiceLabel } from "../shared/carrierServices.js";
 import { bodyKey as toBodyKey } from "../shared/bodyKey.js";
-import { bodyJumponium, hitLabel, jumpElement } from "../shared/jumponium.js";
+import { INJECTIONS, bodyJumponium, hitLabel, jumpElement } from "../shared/jumponium.js";
 import {
   CARRIER_NOTICE_MIN_FROM_SOL_LY,
   DEFAULT_NOTIFY_PREFS,
@@ -464,12 +464,18 @@ export function createNoticesService(opts: {
       }
     }
 
-    const jp = state.prefs.jumponium ?? DEFAULT_NOTIFY_PREFS.jumponium;
-    if (jp.mode !== "off" && line.Landable === true) {
+    const jp = state.prefs.jumponium?.tiers ? state.prefs.jumponium : DEFAULT_NOTIFY_PREFS.jumponium;
+    if (jp.on && line.Landable === true) {
       const bj = bodyJumponium(line.Materials);
       const stock = ctx.rawStock?.() ?? null;
-      const rich = (bj?.hits ?? []).filter((h) => h.good && (jp.mode === "always" || stock == null || (stock[h.key] ?? 0) < jp.target));
+      // The elements of the injections he gathers for (owner: "custom for basic/standard/premium").
+      const tiers = INJECTIONS.filter((i) => jp.tiers[i.tier]);
+      const wanted = new Set(tiers.flatMap((i) => Object.keys(i.recipe)));
+      const rich = (bj?.hits ?? []).filter(
+        (h) => h.good && wanted.has(h.key) && (!jp.onlyShort || stock == null || (stock[h.key] ?? 0) < jp.target),
+      );
       if (rich.length) {
+        const serves = tiers.filter((i) => rich.some((h) => h.key in i.recipe)).map((i) => i.name);
         const g = num(line.SurfaceGravity);
         const ls = num(line.DistanceFromArrivalLS);
         const facts = [g != null ? `${(g / 9.80665).toFixed(2)} g` : "", ls != null ? `${Math.round(ls).toLocaleString("en-US")} ls` : ""]
@@ -481,7 +487,7 @@ export function createNoticesService(opts: {
             ...base,
             id: `jumponium:${bodyKey}`,
             kind: "jumponium",
-            title: `Jumponium: ${rich.map(hitLabel).join(", ")}`,
+            title: `Jumponium (${serves.join(", ")}): ${rich.map(hitLabel).join(", ")}`,
             text: `${body} in ${system}${facts ? ` — ${facts}` : ""}${have}`,
           }) || added;
       }

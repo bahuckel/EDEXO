@@ -18,7 +18,14 @@
  * sparse space (3 s) never stalls the app.
  */
 import type { NeutronIndex, NeutronStar } from "./neutronIndex.js";
-import { injectionsToSaveJump, type InjectionSave } from "../shared/jumponium.js";
+import {
+  INJECTIONS,
+  injectionsToSaveJump,
+  jumpElement,
+  type InjectionSave,
+  type InjectionTier,
+  type JumpElement,
+} from "../shared/jumponium.js";
 
 type Pt = { x: number; y: number; z: number };
 
@@ -459,4 +466,45 @@ export function routeInjections(hops: readonly NeutronHop[], rangeLy: number, bo
     const normalLy = h.boosted ? d - boost * rangeLy : d;
     return injectionsToSaveJump(normalLy, h.jumps - h.boosted, rangeLy);
   });
+}
+
+/** A hop planned with an FSD injection ("Use Jumponium", owner 2026-10-13): what it takes, one jump fewer. */
+export type JumpHop = NeutronHop & { inject: InjectionSave | null };
+
+export interface JumponiumPlan {
+  /** Jumps the injections take off the route. */
+  saved: number;
+  /** Injections of each tier the route uses. */
+  used: Record<InjectionTier, number>;
+  /** The materials they take, by element. */
+  needs: Partial<Record<JumpElement, number>>;
+}
+
+/**
+ * The route flown with FSD injections: on every hop where one takes a jump off, the cheapest way by material rarity
+ * (the recipe's grades summed: basic 5, standard 11, premium 16 an injection), and that jump taken off. Fuel stays as
+ * planned (one jump fewer only leaves more in the tank).
+ */
+export function applyJumponium(
+  route: NeutronRoute,
+  rangeLy: number,
+  boost = 4,
+  recipe: (t: InjectionTier) => Partial<Record<JumpElement, number>> = (t) => INJECTIONS.find((i) => i.tier === t)!.recipe,
+): { route: Omit<NeutronRoute, "hops"> & { hops: JumpHop[] }; plan: JumponiumPlan } {
+  const options = routeInjections(route.hops, rangeLy, boost);
+  const cost = (t: InjectionTier) =>
+    (Object.entries(recipe(t)) as [JumpElement, number][]).reduce((a, [k, q]) => a + jumpElement(k).grade * q, 0);
+  const used: Record<InjectionTier, number> = { basic: 0, standard: 0, premium: 0 };
+  const needs: Partial<Record<JumpElement, number>> = {};
+  let saved = 0;
+  const hops: JumpHop[] = route.hops.map((h, i) => {
+    const opts = options[i] ?? [];
+    if (!opts.length) return { ...h, inject: null };
+    const best = opts.reduce((a, b) => (b.count * cost(b.tier) < a.count * cost(a.tier) ? b : a));
+    used[best.tier] += best.count;
+    for (const [k, q] of Object.entries(recipe(best.tier)) as [JumpElement, number][]) needs[k] = (needs[k] ?? 0) + q * best.count;
+    saved++;
+    return { ...h, jumps: h.jumps - 1, inject: best };
+  });
+  return { route: { ...route, hops, jumps: route.jumps - saved }, plan: { saved, used, needs } };
 }

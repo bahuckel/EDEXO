@@ -7,7 +7,9 @@ import {
   DEFAULT_APP_THEME,
   isAppThemeChoice,
   resolveAppTheme,
+  hexOk,
   rgbToHex,
+  textTokens,
   themeNeutrals,
   type AppThemeChoice,
   type SavedAppTheme,
@@ -15,6 +17,39 @@ import {
 
 const LS_THEME = "edexo.appTheme";
 const LS_SAVED = "edexo.appThemesSaved";
+const LS_CONTRAST = "edexo.appContrast";
+
+/**
+ * Readability (owner, 2026-10-13): `readable` lifts a dark accent until it reads on the page (shared/appThemes.ts);
+ * `text` is a text colour of one's own, null for the scheme's. Per device, like the scheme.
+ */
+export interface AppContrast {
+  readable: boolean;
+  text: string | null;
+}
+
+export function readAppContrast(): AppContrast {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LS_CONTRAST) ?? "null") as Partial<AppContrast> | null;
+    if (raw && typeof raw === "object")
+      return {
+        readable: raw.readable !== false,
+        text: typeof raw.text === "string" && hexOk(raw.text) ? raw.text : null,
+      };
+  } catch {
+    /* default */
+  }
+  return { readable: true, text: null };
+}
+
+export function setAppContrast(c: AppContrast): void {
+  try {
+    localStorage.setItem(LS_CONTRAST, JSON.stringify(c));
+  } catch {
+    /* applied for this session anyway */
+  }
+  applyAppTheme();
+}
 export const APP_THEME_EVENT = "edexo-app-theme";
 
 export function readAppTheme(): AppThemeChoice {
@@ -49,7 +84,8 @@ function hexGridUrl(rgb: string): string {
 }
 
 export function applyAppTheme(choice: AppThemeChoice = readAppTheme()): void {
-  const t = resolveAppTheme(choice);
+  const contrast = readAppContrast();
+  const t = resolveAppTheme(choice, { readable: contrast.readable });
   const root = document.documentElement.style;
   if (t.key === DEFAULT_APP_THEME.key) {
     // The default is what tokens.css already says: leave the page exactly as it was.
@@ -69,6 +105,10 @@ export function applyAppTheme(choice: AppThemeChoice = readAppTheme()): void {
     // The text and panels were tinted towards the orange too (2026-09-30).
     for (const [k, v] of Object.entries(themeNeutrals(t.rgb))) root.setProperty(k, v);
   }
+  // A text colour of one's own goes over the scheme's (and over the default's).
+  const text = contrast.text ? textTokens(contrast.text) : null;
+  if (text) for (const [k, v] of Object.entries(text)) root.setProperty(k, v);
+  else if (t.key === DEFAULT_APP_THEME.key) for (const k of Object.keys(textTokens("#000000")!)) root.removeProperty(k);
   window.dispatchEvent(new CustomEvent(APP_THEME_EVENT));
 }
 
@@ -78,7 +118,7 @@ export function applyAppTheme(choice: AppThemeChoice = readAppTheme()): void {
 */
 export function followAppThemeChanges(): void {
   window.addEventListener("storage", (e) => {
-    if (e.key === LS_THEME || e.key === null) applyAppTheme();
+    if (e.key === LS_THEME || e.key === LS_CONTRAST || e.key === null) applyAppTheme();
   });
 }
 

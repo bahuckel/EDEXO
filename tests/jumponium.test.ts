@@ -6,7 +6,8 @@ import { createNoticesService, type NoticesContext } from "../src/server/notices
 import { DEFAULT_NOTIFY_PREFS, mergeNotifyPrefs } from "../src/shared/notices.js";
 import { JumponiumIndex, filterKeep } from "../src/server/jumponiumIndex.js";
 import { parseJumpFilter } from "../src/server/routes/jumponiumRoutes.js";
-import { routeInjections } from "../src/server/neutronRoute.js";
+import { applyJumponium, routeInjections } from "../src/server/neutronRoute.js";
+import { createNeutronLive, parseLiveHops } from "../src/server/neutronLive.js";
 import {
   bodyJumponium,
   craftable,
@@ -190,32 +191,48 @@ describe("jumponium notices (1.2.16)", () => {
     ...extra,
   });
 
+  const on = (n: ReturnType<typeof createNoticesService>, extra: Record<string, unknown> = {}) =>
+    n.setPrefs({ jumponium: { on: true, ...extra } });
+
+  it("is off until turned on", () => {
+    const n = createNoticesService({ filePath: null });
+    expect(n.observe(scan(2, [{ Name: "polonium", Percent: 1.12 }]), ctx({}))).toBe(false);
+  });
+
   it("announces a rich element he is short of, with gravity, distance and what is aboard", () => {
     const n = createNoticesService({ filePath: null });
+    on(n);
     expect(n.observe(scan(3, [{ Name: "polonium", Percent: 1.12 }, { Name: "germanium", Percent: 4.0 }]), ctx({ polonium: 4 }))).toBe(true);
     const [item] = n.list();
-    expect(item).toMatchObject({ kind: "jumponium", title: "Jumponium: Po 1.12 %", body: "3" });
+    expect(item).toMatchObject({ kind: "jumponium", title: "Jumponium (Premium): Po 1.12 %", body: "3" });
     expect(item!.text).toBe(`3 in ${SYS} — 0.21 g, 1,120 ls · aboard Po 4`);
   });
 
-  it("stays quiet for what he has enough of, for a poor or unlandable body, and when off; always means always", () => {
+  it("stays quiet for what he has enough of, a poor or unlandable body, and an injection he does not gather for", () => {
     const n = createNoticesService({ filePath: null });
+    on(n);
     const rich = [{ Name: "polonium", Percent: 1.12 }];
     expect(n.observe(scan(4, rich), ctx({ polonium: 30 }))).toBe(false);
     expect(n.observe(scan(5, [{ Name: "polonium", Percent: 0.3 }]), ctx({}))).toBe(false);
     expect(n.observe(scan(6, rich, { Landable: false }), ctx({}))).toBe(false);
-    n.setPrefs({ jumponium: { mode: "off", target: 30 } });
+    // Basic and standard only: polonium is premium's alone; germanium serves all three.
+    on(n, { tiers: { basic: true, standard: true, premium: false } });
     expect(n.observe(scan(7, rich), ctx({}))).toBe(false);
-    n.setPrefs({ jumponium: { mode: "always", target: 30 } });
-    expect(n.observe(scan(8, rich), ctx({ polonium: 150 }))).toBe(true);
-    // Stock unknown (no login yet): everything counts as short.
-    n.setPrefs({ jumponium: { mode: "short", target: 30 } });
-    expect(n.observe(scan(9, rich), ctx(null))).toBe(true);
+    expect(n.observe(scan(8, [{ Name: "germanium", Percent: 6.1 }]), ctx({}))).toBe(true);
+    expect(n.list()[0]!.title).toBe("Jumponium (Basic, Standard): Ge 6.10 %");
+    // Every rich body, whatever is aboard; and with the stock unknown everything counts as short.
+    on(n, { tiers: { premium: true }, onlyShort: false });
+    expect(n.observe(scan(9, rich), ctx({ polonium: 150 }))).toBe(true);
+    on(n, { onlyShort: true });
+    expect(n.observe(scan(10, rich), ctx(null))).toBe(true);
   });
 
-  it("keeps the prefs in range", () => {
-    expect(mergeNotifyPrefs(DEFAULT_NOTIFY_PREFS, { jumponium: { mode: "loud", target: 9999 } }).jumponium).toEqual({ mode: "short", target: 300 });
-    expect(mergeNotifyPrefs(DEFAULT_NOTIFY_PREFS, {}).jumponium).toEqual({ mode: "short", target: 30 });
+  it("keeps the prefs in range, and does not carry a test build's shape over", () => {
+    const d = DEFAULT_NOTIFY_PREFS.jumponium;
+    expect(d.on).toBe(false);
+    expect(mergeNotifyPrefs(DEFAULT_NOTIFY_PREFS, { jumponium: { on: "yes", target: 9999 } }).jumponium).toEqual({ ...d, target: 300 });
+    const old = { ...DEFAULT_NOTIFY_PREFS, jumponium: { mode: "short", target: 30 } } as unknown as typeof DEFAULT_NOTIFY_PREFS;
+    expect(mergeNotifyPrefs(old, {}).jumponium).toEqual(d);
   });
 });
 
@@ -333,5 +350,46 @@ describe("the neutron planner's gap hint", () => {
     expect(out[0]).toEqual([]);
     expect(out[1]!.map((x) => x.tier)).toEqual(["basic", "standard", "premium"]);
     expect(out[2]).toEqual([]);
+  });
+});
+
+describe("Use Jumponium on a neutron route", () => {
+  const hop = (x: number, jumps: number, boosted: number) =>
+    ({ name: `h${x}`, x, y: 0, z: 0, kind: "neutron", jumps, boosted, distanceLy: 0, refuel: false, scoopOnWay: false, scoopLs: null, jumpsLeft: 5, fsdHealth: null }) as const;
+  const route = (hops: ReturnType<typeof hop>[]) => ({
+    hops: [...hops],
+    jumps: hops.reduce((a, h) => a + h.jumps, 0),
+    boosted: 0,
+    distanceLy: 0,
+    plainJumps: 0,
+    refuels: 0,
+    repairBefore: null,
+    unsafeLegs: [],
+  });
+  it("takes the cheapest injection by material on each hop it shortens, and the jump off", () => {
+    // R 50: 110 ly in 3 normal jumps (a Basic does it), then 145 ly in 3 (2 Standard = 22 or 1 Premium = 16: Premium).
+    const r = route([hop(0, 0, 0), hop(110, 3, 0), hop(255, 3, 0), hop(275, 1, 0)]);
+    const { route: out, plan } = applyJumponium(r, 50, 4);
+    expect(out.jumps).toBe(r.jumps - 2);
+    expect(out.hops.map((h) => h.inject)).toEqual([null, { tier: "basic", count: 1 }, { tier: "premium", count: 1 }, null]);
+    expect(out.hops[1]!.jumps).toBe(2);
+    expect(plan).toEqual({
+      saved: 2,
+      used: { basic: 1, standard: 0, premium: 1 },
+      needs: { carbon: 2, vanadium: 1, germanium: 2, arsenic: 1, niobium: 1, yttrium: 1, polonium: 1 },
+    });
+  });
+
+  it("the live route keeps each hop's injection, and the HUD's next stop says it", () => {
+    const hops = parseLiveHops([
+      { name: "A", x: 0, y: 0, z: 0, kind: "start", jumps: 0 },
+      { name: "B", x: 110, y: 0, z: 0, kind: "waypoint", jumps: 2, inject: { tier: "basic", count: 1 } },
+      { name: "C", x: 120, y: 0, z: 0, kind: "waypoint", jumps: 1, inject: { tier: "nope", count: 1 } },
+    ])!;
+    expect(hops.map((h) => h.inject)).toEqual([null, { tier: "basic", count: 1 }, null]);
+    const live = createNeutronLive({ filePath: null, deliver: () => undefined });
+    live.start(hops, { name: "A", pos: null }, { targets: [{ name: "C", x: 120, y: 0, z: 0 }], rangeLy: 50, useJumponium: true });
+    expect(live.view({ name: "A", pos: null })?.nextInject).toEqual({ tier: "basic", count: 1 });
+    expect(live.remaining()?.useJumponium).toBe(true);
   });
 });

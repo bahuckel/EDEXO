@@ -31,12 +31,16 @@ export interface LiveHop {
   scoopLs: number | null;
   /** The normal jumps before this stop need a scoopable star on the way. */
   scoopOnWay: boolean;
+  /** "Use Jumponium": the FSD injections planned for the normal jumps to this stop (one jump fewer). */
+  inject?: { tier: "basic" | "standard" | "premium"; count: number } | null;
 }
 
 /** The commander's own stops (not the neutron stars between) and the ship the route was planned for. */
 export interface LivePlan {
   targets: { name: string; x: number; y: number; z: number }[];
   rangeLy: number;
+  /** Planned with FSD injections: a re-plot from where the ship went keeps them. */
+  useJumponium?: boolean;
 }
 
 export interface NeutronLive {
@@ -98,7 +102,7 @@ export function parseLivePlan(raw: unknown): LivePlan | null {
   if (!r || typeof r !== "object") return null;
   const targets = parseTargets(r.targets);
   const rangeLy = typeof r.rangeLy === "number" && r.rangeLy >= 5 && r.rangeLy <= 500 ? r.rangeLy : null;
-  return targets.length && rangeLy ? { targets, rangeLy } : null;
+  return targets.length && rangeLy ? { targets, rangeLy, useJumponium: r.useJumponium === true } : null;
 }
 
 const MAX_HOPS = 5000;
@@ -115,6 +119,14 @@ const sameSystem = (h: LiveHop, here: Here): boolean => {
     Math.abs(p.z - h.z) < SAME_PLACE_LY
   );
 };
+
+function parseInject(v: unknown): LiveHop["inject"] {
+  const o = v as { tier?: unknown; count?: unknown } | null;
+  if (!o || typeof o !== "object") return null;
+  const tier = o.tier === "basic" || o.tier === "standard" || o.tier === "premium" ? o.tier : null;
+  const count = typeof o.count === "number" && Number.isFinite(o.count) ? Math.round(o.count) : 0;
+  return tier && count >= 1 && count <= 99 ? { tier, count } : null;
+}
 
 /** The stops a client sent, checked; null when they are not a route. */
 export function parseLiveHops(raw: unknown): LiveHop[] | null {
@@ -140,6 +152,7 @@ export function parseLiveHops(raw: unknown): LiveHop[] | null {
       refuel: r.refuel === true,
       scoopLs: num(r.scoopLs),
       scoopOnWay: r.scoopOnWay === true,
+      inject: parseInject(r.inject),
     });
   }
   return out;
@@ -205,7 +218,7 @@ export function createNeutronLive(opts: {
       // Each destination ends a leg with a "waypoint" hop; those at or before the stop reached are behind.
       const passed = st.hops.slice(1, st.at + 1).filter((h) => h.kind === "waypoint").length;
       const targets = st.plan.targets.slice(passed);
-      return targets.length ? { targets, rangeLy: st.plan.rangeLy } : null;
+      return targets.length ? { targets, rangeLy: st.plan.rangeLy, useJumponium: st.plan.useJumponium === true } : null;
     },
     offRoute(here) {
       if (!st || !here.pos || replanning) return false;
@@ -274,6 +287,7 @@ export function createNeutronLive(opts: {
           scoopLs: null,
           superchargeHere: false,
           scoopOnWay: false,
+          nextInject: null,
           done: true,
           replanning: false,
           destination: done.destination,
@@ -288,6 +302,7 @@ export function createNeutronLive(opts: {
         next: next?.name ?? null,
         nextJumps: next?.jumps ?? 0,
         nextBoosted: !!next?.boosted,
+        nextInject: next?.inject ?? null,
         onStop,
         refuelHere: onStop && cur.refuel,
         scoopLs: onStop && cur.refuel ? cur.scoopLs : null,

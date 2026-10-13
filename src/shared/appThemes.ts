@@ -175,11 +175,69 @@ export function rgbToHex(rgb: string): string {
   return toHex(rgb.split(",").map((v) => Number(v.trim()) || 0));
 }
 
+/*
+  Readable on the page (owner, 2026-10-13: "If I set the color of the UI to a dark one, all text becomes invisible …
+  checkmarks and other elements are also hard to see"). Everything drawn in the accent — labels, headings, chips,
+  checkboxes, borders — sits on the near-black page, so an accent darker than 4.5 : 1 against it (WCAG's line for
+  text) is lifted, hue and saturation kept, just until it reads. The stored choice stays what was picked.
+*/
+const PAGE_BG: [number, number, number] = [7, 6, 10];
+export const MIN_ACCENT_CONTRAST = 4.5;
+
+function luminance([r, g, b]: [number, number, number]): number {
+  const ch = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+}
+
+/** WCAG contrast ratio between two colours (1 to 21). */
+export function contrastRatio(a: [number, number, number], b: [number, number, number]): number {
+  const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m) as [number, number];
+  return (x + 0.05) / (y + 0.05);
+}
+
+/** The accent as drawn: lifted in lightness until it has {@link MIN_ACCENT_CONTRAST} against the page. */
+export function readableAccent(c: [number, number, number]): { rgb: [number, number, number]; lifted: boolean } {
+  if (contrastRatio(c, PAGE_BG) >= MIN_ACCENT_CONTRAST) return { rgb: c, lifted: false };
+  const [h, s, l] = rgbToHsl(c);
+  for (let nl = l; nl <= 1; nl += 0.01) {
+    const out = hslToRgb([h, s, Math.min(1, nl)]).map(Math.round) as [number, number, number];
+    if (contrastRatio(out, PAGE_BG) >= MIN_ACCENT_CONTRAST) return { rgb: out, lifted: true };
+  }
+  return { rgb: [255, 255, 255], lifted: true };
+}
+
+/** A text colour of one's own, and the dimmer shades the page uses, mixed towards the page. */
+export function textTokens(hex: string): Record<string, string> | null {
+  const c = hexToRgb(hex);
+  if (!c) return null;
+  const mix = (t: number) => toHex(c.map((v, i) => v * t + PAGE_BG[i]! * (1 - t)));
+  return {
+    "--text": toHex(c),
+    "--hud-text": toHex(c),
+    "--text-dim": mix(0.85),
+    "--text-faint": mix(0.68),
+    "--muted": mix(0.55),
+    "--peach-rgb": c.join(", "),
+  };
+}
+
+export function hexOk(hex: string): boolean {
+  return hexToRgb(hex) != null;
+}
+
 /** The colours a stored choice stands for; anything unreadable is the default. */
-export function resolveAppTheme(choice: AppThemeChoice | null | undefined): AppThemeColours & { key: string } {
+export function resolveAppTheme(
+  choice: AppThemeChoice | null | undefined,
+  opts: { readable?: boolean } = {},
+): AppThemeColours & { key: string; lifted?: boolean } {
   if (choice && "custom" in choice) {
-    const c = coloursFromHex(choice.custom);
-    if (c) return { ...c, key: "custom" };
+    const raw = hexToRgb(choice.custom);
+    const r = raw && opts.readable !== false ? readableAccent(raw) : null;
+    const c = coloursFromHex(r ? toHex(r.rgb) : choice.custom);
+    if (c) return { ...c, key: "custom", lifted: r?.lifted ?? false };
   }
   if (choice && "preset" in choice) {
     const p = APP_THEME_PRESETS.find((x) => x.key === choice.preset);

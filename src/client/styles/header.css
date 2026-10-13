@@ -527,6 +527,32 @@
   border-bottom: 1px solid var(--accent-a15);
 }
 
+/*
+  Notify me's sections (owner, 2026-10-13: "collapsable per title"): folds inside the panel, lighter than a panel of
+  their own — no box, a hairline between them, the title a step smaller.
+*/
+.options-notify-section.fold.panel {
+  margin: 0;
+  padding: 0.15rem 0;
+  border: 0;
+  border-top: 1px solid var(--accent-a12);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.options-notify-section:first-of-type {
+  border-top: 0;
+}
+.options-notify-section .fold-title {
+  font-size: var(--fs-md);
+}
+.options-notify-section .fold-inner {
+  padding-left: 0.9rem;
+}
+.options-inline-num {
+  width: 4.2em;
+}
+
 /* ---------------------------------------------------------------------------
  * One-line settings (A5)
  *

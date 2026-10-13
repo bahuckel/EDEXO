@@ -7,8 +7,8 @@ import { localOnly } from "../lanAuth.js";
 import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { neutronShip } from "../neutronShip.js";
 import { downloadNeutrons, loadNeutronIndex, neutronsStatus, probeNeutronsRelease } from "../neutronIndex.js";
-import { optimiseOrder, planNeutronRoute, routeInjections } from "../neutronRoute.js";
-import { jumponiumView } from "../../shared/jumponium.js";
+import { applyJumponium, optimiseOrder, planNeutronRoute, routeInjections } from "../neutronRoute.js";
+import { jumponiumView, recipeFor } from "../../shared/jumponium.js";
 import { parseLiveHops, parseLivePlan } from "../neutronLive.js";
 import type { HttpServerOptions, RouteContext } from "../httpServer.js";
 
@@ -110,14 +110,22 @@ export function registerNeutronRoutes(
         fsdHealth: finite(body.fsdHealth) ?? s?.fsdHealth ?? null,
         wearPerBoost: finite(body.wearPerBoost) ?? s?.wearPerBoost ?? null,
       });
-      const injections = routeInjections(route.hops, rangeLy, s?.boostFactor ?? 4);
+      // "Use Jumponium" (owner, 2026-10-13: a toggle): the route flown with FSD injections where one saves a jump.
       const store = opts.getJournalStore?.() ?? null;
+      const boost = s?.boostFactor ?? 4;
+      const jp = store?.jumponium ?? null;
+      const use = body.useJumponium === true;
+      const applied = use ? applyJumponium(route, rangeLy, boost, (t) => recipeFor(jp, t)) : null;
+      const view = jp?.raw ? jumponiumView(jp) : null;
       res.json({
-        ...route,
-        hops: route.hops.map((h, i) => ({ ...h, inject: injections[i] ?? [] })),
-        injections: {
-          hops: injections.filter((x) => x.length).length,
-          stock: store?.jumponium.raw ? jumponiumView(store.jumponium).tiers.map((t) => ({ tier: t.tier, name: t.name, count: t.count })) : null,
+        ...(applied ? applied.route : route),
+        jumponium: {
+          on: use,
+          // Off: how many jumps it would take off, for the toggle's label.
+          possible: use ? applied!.plan.saved : routeInjections(route.hops, rangeLy, boost).filter((x) => x.length).length,
+          plan: applied?.plan ?? null,
+          held: view ? Object.fromEntries(view.stock.map((e) => [e.key, e.count])) : null,
+          makes: view ? view.tiers.map((t) => ({ tier: t.tier, name: t.name, count: t.count })) : null,
         },
         waypoints: ordered,
         ship: { rangeLy, jumpsPerTank, jumpsNow },
