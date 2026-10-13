@@ -37,6 +37,8 @@ const COSMETIC_PASSES_MS = [1500, 4000, 10000];
   normal reload takes the page's scripts and images from the page process's own memory cache, which never reaches
   webRequest, so the blocker was not asked again; a new tab has a new process and an empty cache.
 */
+/** How long a page's request waits for its scriptlets to be registered (they take a few ms). */
+const INJECT_WAIT_MS = 1500;
 /** Requests of these kinds, once blocked, leave a box on the page: it is collapsed. */
 const COLLAPSE_TYPES = new Set(["subFrame", "image", "object", "media"]);
 
@@ -172,6 +174,13 @@ function createBrowserTabs(o) {
         }
         const wc = details.webContents;
         const tab = wc ? tabOfContents(wc) : null;
+        // A page about to load in a tab: its scriptlets are in place before the request goes (see injectFor).
+        if (details.resourceType === "mainFrame") {
+          if (!tab) return cb({});
+          // At most a moment: a page never waits on its scriptlets for long.
+          const limit = new Promise((r) => setTimeout(r, INJECT_WAIT_MS));
+          return void Promise.race([injectFor(tab, details.url), limit]).finally(() => cb({}));
+        }
         const page = tab ? wc.getURL() || tab.url : null;
         if (!page || !o.prefs.site(domainOf(page) ?? "").blocking) return cb({});
         const d = o.blocker.decide(details, page);
@@ -216,6 +225,42 @@ function createBrowserTabs(o) {
       });
     });
     return ses;
+  }
+
+  /*
+    Scriptlets (browserBlocker.cjs; owner, 2026-10-13: a YouTube ad blocker "like uBlock Origin Lite"): the scripts
+    the lists run on a site go in before the page's own code, through Chromium's DevTools protocol on that tab
+    (Page.addScriptToEvaluateOnNewDocument) — still no preload, nothing exposed to the page, no Runtime domain
+    turned on. Registered while the page's request waits, so the first load has them too; swapped as the tab goes
+    from site to site, and each runs only in the top frame of the hostname it was made for. Most sites have none:
+    then nothing is attached at all.
+  */
+  async function injectFor(t, url) {
+    const wc = t.view?.webContents;
+    if (!wc || wc.isDestroyed()) return;
+    const host = o.blocker.hostOf(url).hostname;
+    const on = !!host && o.prefs.site(domainOf(url) ?? "").blocking;
+    const scripts = on ? o.blocker.scripts(url) : [];
+    const key = scripts.length
+      ? `${host}|${scripts.length}|${scripts.reduce((a, x) => a + x.length, 0)}`
+      : "";
+    if (key === t.injected.key) return;
+    const dbg = wc.debugger;
+    try {
+      if (t.injected.id && dbg.isAttached())
+        await dbg.sendCommand("Page.removeScriptToEvaluateOnNewDocument", { identifier: t.injected.id });
+      t.injected = { key: "", id: null };
+      if (!scripts.length) return;
+      if (!dbg.isAttached()) dbg.attach("1.3");
+      const body = scripts.map((x) => `(function(){try{${x}\n}catch(e){}})();`).join("\n");
+      const source = `(function(){if(window.top!==window||location.hostname!==${JSON.stringify(host)})return;\n${body}\n})();`;
+      const r = await dbg.sendCommand("Page.addScriptToEvaluateOnNewDocument", { source });
+      t.injected = { key, id: r && typeof r.identifier === "string" ? r.identifier : null };
+    } catch (e) {
+      // Not attached (DevTools on the tab, a closed page): the page loads without its scriptlets.
+      o.log?.(`browser: scriptlets for ${host} not set: ${e && e.message ? e.message : e}`);
+      t.injected = { key: "", id: null };
+    }
   }
 
   /** Everything a site stored, except the remembered sites' (plan 9.2: incognito by default). */
@@ -516,6 +561,7 @@ function createBrowserTabs(o) {
     const t = {
       id: nextId++,
       collapse: new Set(),
+      injected: { key: "", id: null },
       seen: { classes: new Set(), ids: new Set(), hrefs: new Set() },
       passTimers: [],
       view: null,
