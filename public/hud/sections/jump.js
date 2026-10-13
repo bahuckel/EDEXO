@@ -192,6 +192,11 @@ export function renderNeutronLive(d, el) {
     el.innerHTML = '<span class="jump__neutron-k">Neutron route</span> done · ' + esc(n.destination);
     return;
   }
+  if (n.replanning) {
+    el.className = "jump__neutron";
+    el.innerHTML = '<span class="jump__neutron-k">Neutron</span> off the route · re-plotting from here…';
+    return;
+  }
   var todo = [];
   if (n.refuelHere)
     todo.push(

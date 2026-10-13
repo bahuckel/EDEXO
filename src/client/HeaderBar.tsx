@@ -75,6 +75,9 @@ import { tabStore, useTabSelector } from "./tabs/tabStore";
 // memo: no props, so a snapshot push never reaches it (D11).
 const GalaxyMap3D = memo(lazy(() => import("./GalaxyMap3D").then((m) => ({ default: m.GalaxyMap3D }))));
 
+/** The EDEXO browser's tab (plan 9): its code loads only when the tab opens. */
+const BrowserScreen = lazy(() => import("./BrowserScreen").then((m) => ({ default: m.BrowserScreen })));
+
 const PlanetQuickFactsPopup = lazy(() =>
   import("./PlanetQuickFactsPopup").then((m) => ({ default: m.PlanetQuickFactsPopup })),
 );
@@ -391,6 +394,7 @@ export const HeaderBar = memo(function HeaderBar({
   const [bookmarksOpen, setBookmarksOpen] = useScreenOpen("bookmarks");
   const [boxelOpen, setBoxelOpen] = useScreenOpen("boxels");
   const [statsOpen, setStatsOpen] = useScreenOpen("stats");
+  const [browserOpen] = useScreenOpen("browser");
   const galaxyTab = useTabSelector((s) => s.on && s.tabs.includes("galaxy"));
   // The menu's panel openers, one object for the header's life (useState setters never change).
   const menuOpeners: MenuOpeners = useMemo(
@@ -961,6 +965,13 @@ export const HeaderBar = memo(function HeaderBar({
             currentSystemAddress={snap.currentSystemAddress ?? null}
           />
         </Suspense>
+        </TabSlot>
+      ) : null}
+      {browserOpen ? (
+        <TabSlot kind="browser">
+          <Suspense fallback={<ModalLoading />}>
+            <BrowserScreen />
+          </Suspense>
         </TabSlot>
       ) : null}
       {poiOpen ? (

@@ -8,7 +8,9 @@
  * by starting a boxel run (the clipboard has one owner at a time).
  *
  * The game plots the normal jumps between two stops itself, so a jump into a system that is not a stop changes
- * nothing: the stop on the clipboard is still the one to fly to.
+ * nothing: the stop on the clipboard is still the one to fly to — while the ship stays near the way there. Once it
+ * is well off it ({@link NeutronLive.offRoute}), the route is planned again from where the ship is to the
+ * destinations not reached yet (owner, 2026-10-13: "always taking into consideration your current location").
  */
 import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import type { NeutronLiveDTO } from "../shared/dto/neutron.js";
@@ -31,8 +33,24 @@ export interface LiveHop {
   scoopOnWay: boolean;
 }
 
+/** The commander's own stops (not the neutron stars between) and the ship the route was planned for. */
+export interface LivePlan {
+  targets: { name: string; x: number; y: number; z: number }[];
+  rangeLy: number;
+}
+
 export interface NeutronLive {
-  start(hops: LiveHop[], here: Here): string | null;
+  start(hops: LiveHop[], here: Here, plan?: LivePlan | null): string | null;
+  /** The destinations not reached yet and the plan's ship, for planning again from here; null without a plan. */
+  remaining(): LivePlan | null;
+  /** The ship is far off the way from the stop reached to the next (more than twice its range, 100 ly at least). */
+  offRoute(here: Here): boolean;
+  /** A new plan from where the ship is (hops[0] = here) to `targets`: the next stop is copied. */
+  replace(hops: LiveHop[], targets: LivePlan["targets"]): string | null;
+  /** Planning again from here is under way (the HUD says so). */
+  setReplanning(on: boolean): void;
+  /** Bumped with every new route, for the galaxy map to draw the new one. */
+  version(): number;
   stop(): void;
   active(): boolean;
   /** The route being flown, for the drawer to show and the map to draw again. */
@@ -45,6 +63,43 @@ export interface NeutronLive {
 }
 
 export type Here = { name: string | null; pos: { x: number; y: number; z: number } | null };
+
+type Pt = { x: number; y: number; z: number };
+/** How far p is from the segment a → b (ly). */
+function distToSegment(p: Pt, a: Pt, b: Pt): number {
+  const ab = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
+  const len2 = ab.x * ab.x + ab.y * ab.y + ab.z * ab.z;
+  const t =
+    len2 > 0
+      ? Math.max(0, Math.min(1, ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y + (p.z - a.z) * ab.z) / len2))
+      : 0;
+  return Math.hypot(p.x - (a.x + t * ab.x), p.y - (a.y + t * ab.y), p.z - (a.z + t * ab.z));
+}
+
+function parseTargets(raw: unknown): LivePlan["targets"] {
+  if (!Array.isArray(raw)) return [];
+  const out: LivePlan["targets"] = [];
+  const ok = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+  for (const r of raw.slice(0, 20) as Record<string, unknown>[]) {
+    if (!r || !ok(r.x) || !ok(r.y) || !ok(r.z)) continue;
+    out.push({
+      name: String(r.name ?? "Stop").slice(0, 80),
+      x: r.x as number,
+      y: r.y as number,
+      z: r.z as number,
+    });
+  }
+  return out;
+}
+
+/** A plan a client sent: its destinations and range; null when it is not one. */
+export function parseLivePlan(raw: unknown): LivePlan | null {
+  const r = raw as Record<string, unknown> | null;
+  if (!r || typeof r !== "object") return null;
+  const targets = parseTargets(r.targets);
+  const rangeLy = typeof r.rangeLy === "number" && r.rangeLy >= 5 && r.rangeLy <= 500 ? r.rangeLy : null;
+  return targets.length && rangeLy ? { targets, rangeLy } : null;
+}
 
 const MAX_HOPS = 5000;
 /** Stops come from the neutron index at 1/32 ly; a system's StarPos is exact to 1/32 too. */
@@ -100,6 +155,8 @@ export function createNeutronLive(opts: {
   const now = opts.now ?? (() => new Date().toISOString());
   let st = load(opts.filePath);
   let done: { destination: string } | null = null;
+  let replanning = false;
+  let version = 1;
 
   const persist = (): void => {
     if (!opts.filePath) return;
@@ -124,7 +181,7 @@ export function createNeutronLive(opts: {
   };
 
   return {
-    start(hops, here) {
+    start(hops, here, plan) {
       opts.onStart?.();
       done = null;
       // Where the ship is on the route: the last stop it is in (a re-plan from mid-route), else the start.
@@ -134,13 +191,42 @@ export function createNeutronLive(opts: {
           at = i;
           break;
         }
-      st = { hops, at, startedAt: now() };
+      st = { hops, at, startedAt: now(), plan: plan ?? null };
+      version++;
       persist();
       return copyNext();
     },
+    remaining() {
+      if (!st?.plan) return null;
+      // Each destination ends a leg with a "waypoint" hop; those at or before the stop reached are behind.
+      const passed = st.hops.slice(1, st.at + 1).filter((h) => h.kind === "waypoint").length;
+      const targets = st.plan.targets.slice(passed);
+      return targets.length ? { targets, rangeLy: st.plan.rangeLy } : null;
+    },
+    offRoute(here) {
+      if (!st || !here.pos || replanning) return false;
+      const cur = st.hops[st.at]!;
+      const next = st.hops[st.at + 1];
+      if (!next || sameSystem(cur, here)) return false;
+      const r = st.plan?.rangeLy ?? 50;
+      return distToSegment(here.pos, cur, next) > Math.max(2 * r, 100);
+    },
+    replace(hops, targets) {
+      if (!st) return null;
+      st = { hops, at: 0, startedAt: st.startedAt, plan: st.plan ? { ...st.plan, targets } : null };
+      version++;
+      persist();
+      return copyNext();
+    },
+    setReplanning(on) {
+      replanning = on;
+    },
+    version: () => version,
     stop() {
       st = null;
       done = null;
+      replanning = false;
+      version++;
       persist();
     },
     active: () => st != null,
@@ -182,6 +268,7 @@ export function createNeutronLive(opts: {
           superchargeHere: false,
           scoopOnWay: false,
           done: true,
+          replanning: false,
           destination: done.destination,
         };
       }
@@ -200,19 +287,23 @@ export function createNeutronLive(opts: {
         superchargeHere: onStop && !!next?.boosted,
         scoopOnWay: !!next?.scoopOnWay,
         done: false,
+        replanning,
         destination: st.hops[st.hops.length - 1]!.name,
       };
     },
   };
 }
 
-function load(filePath: string | null): { hops: LiveHop[]; at: number; startedAt: string } | null {
+function load(
+  filePath: string | null,
+): { hops: LiveHop[]; at: number; startedAt: string; plan: LivePlan | null } | null {
   if (!filePath || !existsSync(filePath)) return null;
   try {
     const raw = JSON.parse(readFileSync(filePath, "utf8")) as {
       hops?: unknown;
       at?: unknown;
       startedAt?: unknown;
+      plan?: unknown;
     };
     const hops = parseLiveHops(raw.hops);
     if (!hops) return null;
@@ -220,7 +311,12 @@ function load(filePath: string | null): { hops: LiveHop[]; at: number; startedAt
       typeof raw.at === "number" && Number.isInteger(raw.at)
         ? Math.max(0, Math.min(hops.length - 2, raw.at))
         : 0;
-    return { hops, at, startedAt: typeof raw.startedAt === "string" ? raw.startedAt : "" };
+    return {
+      hops,
+      at,
+      startedAt: typeof raw.startedAt === "string" ? raw.startedAt : "",
+      plan: parseLivePlan(raw.plan),
+    };
   } catch {
     return null;
   }

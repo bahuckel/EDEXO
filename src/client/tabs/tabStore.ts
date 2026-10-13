@@ -29,7 +29,16 @@ export type TabKind =
   | "poi"
   | "carriers"
   | "backlog"
-  | "session";
+  | "session"
+  | "browser";
+
+/**
+ * The EDEXO browser (plan 9): only in the desktop app, whose main process runs it (electron/browserTabs.cjs). Not
+ * in the app opened in a system browser, on a phone over LAN or in the Linux browser build: they have a browser.
+ */
+export const BROWSER_AVAILABLE =
+  typeof window !== "undefined" &&
+  typeof (window as unknown as { edexoElectron?: { browser?: unknown } }).edexoElectron?.browser === "object";
 
 /** The screens that become tabs, in the order the "+" menu lists them. */
 export const TAB_SCREENS: readonly { kind: TabKind; label: string }[] = [
@@ -46,6 +55,7 @@ export const TAB_SCREENS: readonly { kind: TabKind; label: string }[] = [
   { kind: "carriers", label: "Carriers" },
   { kind: "backlog", label: "Unfinished business" },
   { kind: "session", label: "Session log" },
+  ...(BROWSER_AVAILABLE ? [{ kind: "browser" as const, label: "Browser" }] : []),
 ];
 
 const KINDS = new Set<string>(TAB_SCREENS.map((s) => s.kind));

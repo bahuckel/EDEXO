@@ -29,7 +29,10 @@ const { createKeybinds } = require("./keybinds.cjs");
 const { createTabWindows } = require("./tabWindows.cjs");
 const updater = require("./updater.cjs");
 const { watchForeground, isGameOrOwn, isGame } = require("./foregroundWatch.cjs");
-const { guardWindowNavigation, restrictPermissions } = require("./windowGuards.cjs");
+const { guardWindowNavigation, restrictPermissions, isOwnUrl } = require("./windowGuards.cjs");
+const { createBrowserPrefs } = require("./browserPrefs.cjs");
+const { createBrowserBlocker } = require("./browserBlocker.cjs");
+const { createBrowserTabs } = require("./browserTabs.cjs");
 /** The app's own origin once the server listens (windowGuards.cjs). */
 const ownBase = () => (runtime ? runtime.getLocalBaseUrl() : null);
 /** The foreground watcher (foregroundWatch.cjs), started with the HUDs. */
@@ -969,8 +972,39 @@ app.on("render-process-gone", (_e, wc, d) => {
   huds.log(`page gone: ${wc && !wc.isDestroyed() ? wc.getURL().replace(/^https?:\/\/[^/]+/, "") : "?"} (${d && d.reason})`);
 });
 
+/*
+  The EDEXO browser (plan 9, browserTabs.cjs): made at the first call from the Browser tab, so a run that never
+  opens it loads nothing of it.
+*/
+let browserTabs = null;
+function getBrowserTabs() {
+  if (browserTabs) return browserTabs;
+  const { session, net } = require("electron");
+  const dir = path.dirname(huds.layoutPath());
+  const appSession = session.fromPartition(APP_WINDOW_PARTITION);
+  const blocker = createBrowserBlocker({
+    dir,
+    bundlePath: app.isPackaged
+      ? path.join(process.resourcesPath, "edexo", "browser-adblock.cjs")
+      : path.join(__dirname, "..", "build", "browser-adblock.cjs"),
+    fetch: (url) => net.fetch(url, { cache: "no-store" }),
+    onChange: () => browserTabs?.changed?.(),
+  });
+  browserTabs = createBrowserTabs({
+    electron: require("electron"),
+    prefs: createBrowserPrefs({ dir }),
+    blocker,
+    // The app window and the windows tabs were dragged into: the app's session, the app's own page.
+    isAppWindow: (wc) => wc.session === appSession && isOwnUrl(wc.getURL(), ownBase),
+    enableZoom,
+    log: (m) => huds.log(m),
+  });
+  return browserTabs;
+}
+
 app.whenReady().then(() => {
   if (!gotSingleInstanceLock) return;
+  ipcMain.handle("edexo:browser", (e, msg) => getBrowserTabs().handle(e, msg));
   // Every session the windows use: the launcher's, the app window's, the HUDs' (windowGuards.cjs).
   try {
     const { session } = require("electron");
@@ -1107,6 +1141,7 @@ let serverStopping = false;
 
 app.on("before-quit", (e) => {
   if (holdExitForBackup(e)) return;
+  browserTabs?.clearOnQuit();
   /*
     Let the server write what it holds and stop, in its own process, before this one goes (it used to
     be asked and not waited for). serverChild.cjs gives it a few seconds, then ends it.

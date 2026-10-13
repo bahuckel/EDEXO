@@ -140,4 +140,50 @@ contextBridge.exposeInMainWorld("edexoElectron", {
   onHudPrefs: (cb) => {
     ipcRenderer.on("edexo:hud-prefs", (_evt, prefs) => cb(prefs));
   },
+  /*
+    The EDEXO browser's toolbar (plan 9, electron/browserTabs.cjs): one named call per thing the toolbar does,
+    plain values in and out, each checked in the main process, which also refuses them from any window but the
+    app's. Browsed pages never see this: they run without a preload.
+  */
+  browser: {
+    start: () => browserCall({ op: "start" }),
+    stop: () => browserCall({ op: "stop" }),
+    state: () => browserCall({ op: "state" }),
+    downloadLists: () => browserCall({ op: "downloadLists" }),
+    /** Where the page goes in this window (CSS pixels), or null to hide it. */
+    bounds: (rect) => browserCall({ op: "bounds", rect }),
+    open: (text) => browserCall({ op: "open", text }),
+    close: (id) => browserCall({ op: "close", id }),
+    select: (id) => browserCall({ op: "select", id }),
+    go: (id, text) => browserCall({ op: "go", id, text }),
+    back: (id) => browserCall({ op: "back", id }),
+    forward: (id) => browserCall({ op: "forward", id }),
+    reload: (id) => browserCall({ op: "reload", id }),
+    halt: (id) => browserCall({ op: "halt", id }),
+    home: (id) => browserCall({ op: "home", id }),
+    plainHttp: (id) => browserCall({ op: "plainHttp", id }),
+    siteBlocking: (id, on) => browserCall({ op: "siteBlocking", id, on }),
+    siteRemember: (id, on) => browserCall({ op: "siteRemember", id, on }),
+    forgetSite: (id) => browserCall({ op: "forgetSite", id }),
+    clearAll: () => browserCall({ op: "clearAll" }),
+    addLink: (name, url) => browserCall({ op: "addLink", name, url }),
+    removeLink: (url) => browserCall({ op: "removeLink", url }),
+    setEngine: (key, custom) => browserCall({ op: "setEngine", key, custom }),
+    /** The browser's state as it changes, and "focusAddress" (Ctrl+L in a page). Returns an unsubscribe. */
+    on: (cb) => {
+      const st = (_e, s) => cb({ type: "state", state: s });
+      const ev = (_e, m) => cb({ type: "event", event: m && typeof m.type === "string" ? m.type : "" });
+      ipcRenderer.on("edexo:browser-state", st);
+      ipcRenderer.on("edexo:browser-event", ev);
+      return () => {
+        ipcRenderer.removeListener("edexo:browser-state", st);
+        ipcRenderer.removeListener("edexo:browser-event", ev);
+      };
+    },
+  },
 });
+
+/** Every browser call is one plain object to one channel; the main process checks the op and its values. */
+function browserCall(msg) {
+  return ipcRenderer.invoke("edexo:browser", msg);
+}

@@ -17,6 +17,8 @@ export interface NeutronLiveDTO {
   superchargeHere: boolean;
   /** The normal jumps to the next stop need a scoopable star on the way. */
   scoopOnWay: boolean;
+  /** The ship left the route: it is being planned again from here. */
+  replanning: boolean;
   /** The last stop is reached: shown until the next jump. */
   done: boolean;
   /** The route's last stop. */

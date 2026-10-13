@@ -35,6 +35,22 @@ await esbuild.build({
 
 console.info("Wrote build/app.cjs");
 
+/*
+  The EDEXO browser's blocking engine (plan 9.1, electron/browserAdblockEntry.cjs): Ghostery's adblocker in one
+  file, shipped outside the asar (electron-builder.cjs extraResources) so the main process can parse the filter
+  lists in a worker thread from it.
+*/
+await esbuild.build({
+  entryPoints: ["electron/browserAdblockEntry.cjs"],
+  bundle: true,
+  platform: "node",
+  target: "node22",
+  format: "cjs",
+  outfile: "build/browser-adblock.cjs",
+  logLevel: "info",
+});
+console.info("Wrote build/browser-adblock.cjs");
+
 /**
  * Start the thing we just built and wait for it to say it is listening.
  *

@@ -259,6 +259,8 @@ export interface HttpServerOptions {
   /** The neutron route being flown (`/api/neutron/live`, server/neutronLive.ts), and where the ship is. */
   neutronLive?: NeutronLive;
   shipHere?: () => Here;
+  /** The route being flown was stopped: what it put on the HUD goes too. */
+  onNeutronStopped?: () => void;
   /** Green gas giants the commander confirmed that edGGG does not list, for the galaxy map's layer. */
   ownGreenGiants?: () => readonly OwnGreenGiant[];
   /** Where a system is, from the journals' StarPos, for a new bookmark. */
