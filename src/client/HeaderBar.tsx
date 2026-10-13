@@ -752,6 +752,40 @@ export const HeaderBar = memo(function HeaderBar({
                 </Tooltip>
               )}
             </div>
+            {snap.neutronLive ? (
+              <div
+                className="d-scan-card d-scan-card--header-row header-route-mini d-scan-card--label-only header-neutron"
+                title={
+                  snap.neutronLive.done
+                    ? `Neutron route done: ${snap.neutronLive.destination}`
+                    : `Neutron route to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop is on the clipboard after each jump onto a stop (F6 copies it again).`
+                }
+              >
+                <span className="d-scan-card__label header-metric-card-label">
+                  {snap.neutronLive.done
+                    ? "⚡ Route done"
+                    : snap.neutronLive.refuelHere
+                      ? "⛽ Scoop here"
+                      : snap.neutronLive.superchargeHere
+                        ? "⚡ Supercharge here"
+                        : `⚡ ${snap.neutronLive.at}/${snap.neutronLive.total}`}
+                </span>
+                {snap.neutronLive.next ? (
+                  <span className="header-metric-card-value">{snap.neutronLive.next}</span>
+                ) : null}
+              </div>
+            ) : null}
+            {snap.fsdHealth?.warn ? (
+              <div
+                className="d-scan-card d-scan-card--header-row header-route-mini d-scan-card--label-only header-fsd-warn"
+                title={`The FSD is at ${snap.fsdHealth.estimate ? "about " : ""}${Math.round(snap.fsdHealth.health * 100)} % (the last Loadout, less ${snap.fsdHealth.boostsSince} supercharge${snap.fsdHealth.boostsSince === 1 ? "" : "s"} since): further jumps before a repair are not recommended. Carriers → Stations → Repair finds the nearest.`}
+              >
+                <span className="d-scan-card__label header-metric-card-label">
+                  ⚠ FSD {snap.fsdHealth.estimate ? "~" : ""}
+                  {Math.round(snap.fsdHealth.health * 100)} %
+                </span>
+              </div>
+            ) : null}
             {snap.focusedSystemUndiscovered ? (
               <div
                 className="d-scan-card d-scan-card--complete d-scan-card--header-row header-route-mini d-scan-card--label-only"

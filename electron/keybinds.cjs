@@ -37,7 +37,7 @@ const ACTIONS = {
   tabNext: { default: "Shift+F2", label: "Next screen tab", gameOnly: true, group: "Screen tabs" },
   noticesClear: { default: "F5", label: "Clear the notices (the bell)", gameOnly: true, group: "Notices" },
   // Boxel scanning (owner, 2026-10-06): the next system of the saved boxel he is in, to paste in the galaxy map.
-  boxelCopyNext: { default: "F6", label: "Copy the next boxel system to fly", gameOnly: true, group: "Boxels" },
+  boxelCopyNext: { default: "F6", label: "Copy the next system to fly (boxel, neutron route)", gameOnly: true, group: "Boxels" },
   boxelRun: { default: "F7", label: "Start / finish a boxel run", gameOnly: true, group: "Boxels" },
   boxelPrev: { default: "F8", label: "Copy the previous boxel system", gameOnly: true, group: "Boxels" },
   boxelNext: { default: "F9", label: "Copy the next boxel system after that", gameOnly: true, group: "Boxels" },

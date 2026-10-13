@@ -167,6 +167,8 @@ import { createBookmarksService } from "./bookmarks.js";
 import { spawn } from "node:child_process";
 import { createBoxelRun } from "./boxelRun.js";
 import { createSavedBoxels } from "./savedBoxels.js";
+import { createNeutronLive } from "./neutronLive.js";
+import { fsdWearEstimate, FSD_WARN } from "../shared/fsdWear.js";
 import { createGreenGiantMarks, greenGiantForRecord, type GreenGiantSources } from "./greenGiants.js";
 import { setNotableOptionsProvider } from "./notableOptions.js";
 import { BODY_FEATURES } from "../shared/bodyFeatures.js";
@@ -402,6 +404,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   });
   const savedBoxels = createSavedBoxels({
     filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-boxels.json"),
+    // A boxel run takes the clipboard over from a neutron route being flown (plan 8.5).
+    onRun: (id) => {
+      if (id) neutronLive.stop();
+    },
   });
   /*
     Boxel scanning (owner, 2026-10-06, after EDJP's routing mode; server/boxelRun.ts): the next system to
@@ -409,9 +415,9 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     boxel. The desktop app writes the clipboard (it subscribes); without it, on Windows, `clip` does.
   */
   const boxelNextListeners = new Set<(name: string) => void>();
-  const deliverToClipboard = (name: string): void => {
+  const deliverToClipboard = (name: string, source: "boxel" | "neutron" = "boxel"): void => {
     // The HUD's next-jump card says what is on the clipboard: a key press in the game shows nothing else.
-    store.boxelCopied = { name, at: new Date().toISOString(), run: savedBoxels.runId() != null };
+    store.boxelCopied = { name, at: new Date().toISOString(), run: source === "boxel" && savedBoxels.runId() != null, source };
     store.boxelsRevision++;
     queueMicrotask(() => push());
     if (boxelNextListeners.size) {
@@ -434,6 +440,18 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     currentSystem: () => store.currentSystem,
     deliver: deliverToClipboard,
   });
+  /*
+    A neutron route being flown (plan 8.5, server/neutronLive.ts): its next stop goes to the clipboard after each
+    jump onto a stop, the same way; starting one ends the boxel run.
+  */
+  const neutronLive = createNeutronLive({
+    filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-neutron-live.json"),
+    deliver: (name) => deliverToClipboard(name, "neutron"),
+    onStart: () => {
+      if (savedBoxels.runId()) savedBoxels.setRun(null);
+    },
+  });
+  const shipHere = () => ({ name: store.currentSystem ?? null, pos: store.commanderPos ?? null });
   const bookmarks = createBookmarksService({
     filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-bookmarks.json"),
   });
@@ -533,6 +551,19 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
                   starType: mainStarTypeOf(addr),
                 }),
               );
+      }
+      snap.neutronLive = snap.journalBoot ? null : neutronLive.view(shipHere());
+      {
+        const w = fsdWearEstimate(store.fsdWear);
+        snap.fsdHealth =
+          snap.journalBoot || w.health == null
+            ? null
+            : {
+                health: w.health,
+                warn: w.health < FSD_WARN,
+                boostsSince: w.boostsSince,
+                estimate: w.boostsSince > 0 && w.wearIsDefault,
+              };
       }
       snap.bookmarksHere = bookmarks.forSystem(
         store.viewingSystemAddress ?? store.currentSystemAddress ?? null,
@@ -1153,7 +1184,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         const side = liveSideFiles();
         applyNavRoute(side.route);
         if (line.event === "FSDJump") {
-          boxelRun.onJump();
+          // A neutron route being flown owns the clipboard; else the boxel run or the saved boxel's next.
+          const flying = neutronLive.active();
+          neutronLive.onJump(shipHere());
+          if (!flying) boxelRun.onJump();
           // A run can end on a jump (its last system flown): the HUD line says so.
           if (store.boxelCopied) store.boxelCopied.run = savedBoxels.runId() != null;
         }
@@ -1671,6 +1705,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     getNotifySettings: notifySettings,
     bookmarks,
     savedBoxels,
+    neutronLive,
+    shipHere,
     ownGreenGiants: () => {
       const out: { x: number; y: number; z: number; body: string; system: string }[] = [];
       const src = greenSources();
@@ -2267,7 +2303,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       if (n) push();
       return n;
     },
-    boxelCopyNext: () => boxelRun.copyNext(),
+    // F6: the neutron route's next stop while one is flown, else the boxel's next system.
+    boxelCopyNext: () => (neutronLive.active() ? neutronLive.copyNext() : boxelRun.copyNext()),
     boxelStep: (dir) => boxelRun.step(dir),
     boxelRunToggle: () => {
       const r = boxelRun.toggle();

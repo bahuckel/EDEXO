@@ -26,6 +26,7 @@ import type { JumpTargetSource } from "./scan.js";
 import type { SystemMapSnapshot } from "./systemMap.js";
 import type { NoticesSnapshotDTO } from "../notices.js";
 import type { BookmarkDTO } from "../bookmarks.js";
+import type { FsdHealthDTO, NeutronLiveDTO } from "./neutron.js";
 
 export interface AppSnapshot {
   journalPath: string | null;
@@ -229,6 +230,10 @@ export interface AppSnapshot {
   bookmarksHere?: BookmarkDTO[];
   /** Notable stellar phenomena for the viewed system: seen, logged, or a guess (shared/nspOutlook.ts). */
   nspOutlook?: NspOutlookDTO | null;
+  /** The neutron route being flown (plan 8.5): the next stop, and scoop / supercharge here. */
+  neutronLive?: NeutronLiveDTO | null;
+  /** The FSD's health now, when a Loadout gave it (plan 8.4): the header and the HUD warn under 80 %. */
+  fsdHealth?: FsdHealthDTO | null;
   /**
    * System map exobiology node suffixes: min estimated sell heuristic (price-list × 5) for `+` and `++`.
    * `++` threshold is always kept strictly greater than `+` (CR, integer).
@@ -330,7 +335,7 @@ export interface AppSnapshot {
    * `arrived` flips on the matching `FSDJump`. Null until the first jump this session.
    */
   /** The boxel system last copied to the clipboard (boxel run / keys), and whether a run is on. */
-  boxelCopied?: { name: string; at: string; run: boolean } | null;
+  boxelCopied?: { name: string; at: string; run: boolean; source?: "boxel" | "neutron" } | null;
   /** Changes when the Boxels screen should read its lists again (a route, a target, a run, a copy). */
   boxelsRevision?: number;
   jumpTarget?: {

@@ -311,6 +311,23 @@
   animation: route-refuel-breathe-yellow 1.6s ease-in-out 5;
 }
 
+/* The neutron route being flown and the FSD under 80 % (plan 8.5). */
+.d-scan-card.header-neutron {
+  border-color: rgba(170, 130, 255, 0.65);
+  color: #c9b3ff;
+  background: rgba(30, 18, 58, 0.6);
+  box-shadow: 0 0 14px rgba(150, 110, 255, 0.22);
+  text-shadow: 0 0 10px rgba(160, 120, 255, 0.45);
+}
+
+.d-scan-card.header-fsd-warn {
+  border-color: rgba(255, 90, 70, 0.75);
+  color: #ff8a78;
+  background: rgba(60, 14, 10, 0.65);
+  box-shadow: 0 0 16px rgba(255, 70, 50, 0.28);
+  text-shadow: 0 0 10px rgba(255, 80, 60, 0.5);
+}
+
 .d-scan-card.d-scan-card--route.header-route-mini,
 .header-route-mini.d-scan-card.d-scan-card--route {
   display: inline-flex;

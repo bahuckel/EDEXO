@@ -900,6 +900,46 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
 .jump__copied-run {
   color: var(--bio);
 }
+/* The neutron route being flown (plan 8.5) and the FSD's health (8.4). */
+.jump__neutron,
+.jump__fsd {
+  margin-top: 0.4rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--hud-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jump__neutron-k {
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hud);
+}
+.jump__neutron-do {
+  font-weight: 700;
+}
+.jump__neutron-do--boost {
+  color: #8fd8ff;
+  text-shadow: 0 0 6px rgba(120, 200, 255, 0.6);
+}
+.jump__neutron-do--fuel {
+  color: #ffd23f;
+}
+.jump__neutron-do--fuel .hop__fuel {
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -0.15rem;
+  margin-right: 0.15rem;
+}
+.jump__neutron-next {
+  color: var(--bio);
+}
+.jump__fsd--warn {
+  color: var(--bad);
+  font-weight: 700;
+}
 /* "Next boxel" (plan 2.7): the expedition planner's pick, off unless chosen in the launcher. */
 .jump__boxel {
   margin-top: 0.3rem;

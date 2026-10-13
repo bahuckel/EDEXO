@@ -62,6 +62,13 @@ interface RouteDTO {
   ms: number;
 }
 
+/** The route being flown (`/api/neutron/live`, plan 8.5). */
+interface LiveDTO {
+  active: boolean;
+  view: { at: number; total: number; next: string | null; destination: string; done: boolean } | null;
+  hops: (Stop & { kind: NeutronHopDTO["kind"] })[] | null;
+}
+
 const pct = (v: number | null) => (v == null ? "?" : `${Math.round(v * 100)} %`);
 
 export function NeutronDrawer({
@@ -81,6 +88,7 @@ export function NeutronDrawer({
   const [route, setRoute] = useState<RouteDTO | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [live, setLive] = useState<LiveDTO | null>(null);
 
   const load = () =>
     void fetch("/api/neutron/status")
@@ -88,6 +96,32 @@ export function NeutronDrawer({
       .then((j: Status) => setStatus(j))
       .catch((e) => setError(String(e)));
   useEffect(load, []);
+  // A route being flown: shown, and drawn on the map until another is planned.
+  useEffect(() => {
+    void fetch("/api/neutron/live")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: LiveDTO | null) => {
+        setLive(j);
+        if (j?.hops) onRoute(j.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const setFlying = async (body: object) => {
+    setError(null);
+    try {
+      const r = await fetch("/api/neutron/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const j = (await r.json()) as LiveDTO & { error?: string };
+      if (!r.ok) throw new Error(j.error ?? `Failed (${r.status})`);
+      setLive(j);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
   useEffect(() => {
     if (!status?.downloading) return;
     const t = setTimeout(load, 1000);
@@ -187,7 +221,24 @@ export function NeutronDrawer({
         </div>
       ) : (
         <>
-          <div className="g3d-menu__section g3d-menu__section--first">
+          {live?.active && live.view ? (
+            <div className="g3d-menu__section g3d-menu__section--first">
+              <p className="g3d-panel__note">
+                Flying a route to <strong>{live.view.destination}</strong>: stop {live.view.at} of{" "}
+                {live.view.total}
+                {live.view.next ? (
+                  <>
+                    , next <strong>{live.view.next}</strong> (on the clipboard; F6 copies it again)
+                  </>
+                ) : null}
+                .
+              </p>
+              <button type="button" className="g3d-linkbtn" onClick={() => void setFlying({ stop: true })}>
+                Stop flying it
+              </button>
+            </div>
+          ) : null}
+          <div className={`g3d-menu__section${live?.active ? "" : " g3d-menu__section--first"}`}>
             <p className="g3d-menu__sub">Stops, in order</p>
             <ol className="g3d-neutron-stops">
               {stops.map((s, i) => (
@@ -308,6 +359,14 @@ export function NeutronDrawer({
                 {route.plainJumps} · {fmtLy(route.distanceLy)} · {route.refuels} refuel stop
                 {route.refuels === 1 ? "" : "s"} · {route.ms} ms
               </p>
+              <button
+                type="button"
+                className="btn-top-toggle"
+                title="After each jump onto a stop, the next stop goes to the clipboard (paste it in the galaxy map; F6 copies it again), and the HUD's Next jump says where to scoop and supercharge. Ends at the last stop, or with a boxel run."
+                onClick={() => void setFlying({ hops: route.hops })}
+              >
+                {live?.active ? "Fly this route instead" : "Fly this route"}
+              </button>
               {route.repairBefore != null ? (
                 <p className="g3d-panel__note g3d-panel__note--warn">
                   The FSD is expected under 80 % after stop {route.repairBefore} (

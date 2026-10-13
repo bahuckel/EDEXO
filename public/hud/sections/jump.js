@@ -35,6 +35,8 @@ export var jump = {
       '<div class="jump__disc" data-f="disc" hidden></div>' +
       "</div></div>" +
       '<div class="jump__route" data-f="route" hidden></div>' +
+      '<div class="jump__neutron" data-f="neutron" hidden></div>' +
+      '<div class="jump__fsd" data-f="fsd" hidden></div>' +
       '<div class="jump__copied" data-f="copied" hidden></div>' +
       '<div class="jump__boxel" data-f="boxel" hidden></div>'
     );
@@ -44,6 +46,8 @@ export var jump = {
     var status = q(root, "status");
     var box = q(root, "jump");
     renderRouteStrip(d, q(root, "route"));
+    renderNeutronLive(d, q(root, "neutron"));
+    renderFsdHealth(d, q(root, "fsd"));
     renderBoxelCopied(d, q(root, "copied"));
     renderNextBoxel(d, q(root, "boxel"));
     if (!jt || !jt.starSystem) {
@@ -162,7 +166,74 @@ export function renderBoxelCopied(d, el) {
   el.innerHTML =
     '<span class="jump__copied-k">Copied</span> ' +
     esc(c.name) +
-    (c.run ? ' <span class="jump__copied-run">· boxel run</span>' : "");
+    (c.source === "neutron"
+      ? ' <span class="jump__copied-run">· neutron route</span>'
+      : c.run
+        ? ' <span class="jump__copied-run">· boxel run</span>'
+        : "");
+}
+
+/*
+  The neutron route being flown (plan 8.5, server/neutronLive.ts): which stop of how many, what to do where the ship
+  is — scoop the system's own star, supercharge — and the stop after (on the clipboard). The game plots the normal
+  jumps between two stops itself; "scoop on the way" when they are more than a tank.
+*/
+export function renderNeutronLive(d, el) {
+  if (!el) return;
+  var n = d.neutronLive;
+  if (!n) {
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+  el.hidden = false;
+  if (n.done) {
+    el.className = "jump__neutron";
+    el.innerHTML = '<span class="jump__neutron-k">Neutron route</span> done · ' + esc(n.destination);
+    return;
+  }
+  var todo = [];
+  if (n.refuelHere)
+    todo.push(
+      '<span class="jump__neutron-do jump__neutron-do--fuel">' +
+        fuelPump("yellow") +
+        "Scoop here" +
+        (n.scoopLs != null ? " (" + Math.round(n.scoopLs).toLocaleString("en-US") + " ls)" : "") +
+        "</span>",
+    );
+  if (n.superchargeHere) todo.push('<span class="jump__neutron-do jump__neutron-do--boost">⚡ Supercharge here</span>');
+  var next = n.next
+    ? '<span class="jump__neutron-next">› ' +
+      esc(n.next) +
+      (n.nextJumps > 1 ? " · " + n.nextJumps + " jumps" : "") +
+      (n.scoopOnWay ? " · scoop on the way" : "") +
+      "</span>"
+    : "";
+  el.className = "jump__neutron" + (todo.length ? " jump__neutron--act" : "");
+  el.innerHTML =
+    '<span class="jump__neutron-k">Neutron ' + n.at + "/" + n.total + "</span> " + todo.join(" ") + (todo.length ? " " : "") + next;
+}
+
+/*
+  The FSD's health (plan 8.4): the last Loadout's, less the supercharges since. Under 80 % in red — further jumps
+  before a repair are not recommended (owner, 2026-10-13); while a neutron route is flown, shown always.
+*/
+export function renderFsdHealth(d, el) {
+  if (!el) return;
+  var f = d.fsdHealth;
+  if (!f || (!f.warn && !d.neutronLive)) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  el.hidden = false;
+  el.className = "jump__fsd" + (f.warn ? " jump__fsd--warn" : "");
+  el.innerHTML =
+    '<span class="jump__neutron-k">FSD</span> ' +
+    (f.estimate ? "~" : "") +
+    Math.round(f.health * 100) +
+    " %" +
+    (f.warn ? " · repair before more supercharges" : "");
 }
 
 /*
