@@ -1,17 +1,18 @@
 /**
- * Jumponium bodies for the galaxy map (1.2.16, owner: "trackable on galmap with filters"): every landable body in the
- * top 1 % of landable bodies for vanadium, germanium, arsenic, cadmium, niobium, yttrium or polonium, built by
- * docs/perf/build_jumponium.py from Spansh's dump, an optional download beside the galaxy index; plus every landable
- * body the commander scanned himself (his journals, all of them, not only the top 1 %).
+ * Laboratory bodies for the galaxy map (1.2.16, owner: "trackable on galmap with filters"; the Laboratory, 2026-10-14):
+ * every landable body in the top 1 % of landable bodies for one of thirteen elements — vanadium, germanium, arsenic,
+ * cadmium, niobium, yttrium, polonium (jumponium), zinc, tin, molybdenum, zirconium, tellurium, ruthenium (AFM
+ * refill) — built by docs/perf/build_laboratory.py from Spansh's dump, an optional download beside the galaxy index;
+ * plus every landable body the commander scanned himself (his journals, all of them, not only the top 1 %).
  *
  * Laid out by 1,280 ly sector cell like neutrons.bin: the cell table is read once, a cell's records when a search
  * comes near it, through a small cache let go with the galaxy map's others.
  *
- * File: "EDEXOJMP", u32 version 1, u32 meta length, meta JSON, u32 cells, 14-byte cells (sector x y z u16, first
- * record u32, count u32), 32-byte records (x y z u16 at 1/32 ly from the cell's corner, body id u8, type u8, gravity
- * u16 in 1/1000 g, distance from arrival u16 in 10 ls, V Ge As Cd Nb Y Po u8 — V and Ge in 0.05 %, the rest in
- * 0.02 % —, u8 0, body name u32 string offset, id64 u64), u32 named, 8-byte (record, string offset) pairs, u8-length
- * UTF-8 strings. A body name string is the part after the system's name, or "=" + the whole name.
+ * File: "EDEXOLAB", u32 version 1, u32 meta length, meta JSON, u32 cells, 14-byte cells (sector x y z u16, first
+ * record u32, count u32), 40-byte records (x y z u16 at 1/32 ly from the cell's corner, body id u8, type u8, gravity
+ * u16 in 1/1000 g, distance from arrival u16 in 10 ls, 13 element bytes in FILE_ELS order and unit, 3 bytes 0, body
+ * name u32 string offset, id64 u64), u32 named, 8-byte (record, string offset) pairs, u8-length UTF-8 strings. A body
+ * name string is the part after the system's name, or "=" + the whole name.
  */
 import {
   closeSync,
@@ -33,14 +34,22 @@ import { GALAXY_INDEX_BASE_URL } from "./galaxyIndexFiles.js";
 import { loadSectorNames } from "./expedition.js";
 import { proceduralSystemName } from "../shared/id64.js";
 import { SECTOR_ORIGIN, SECTOR_SIZE_LY } from "../shared/sectorName.js";
-import { JUMP_ELEMENTS, bodyJumponium, type JumpElement } from "../shared/jumponium.js";
+import {
+  bodyJumponium,
+  elementsOf,
+  jumpElement,
+  type JumpElement,
+  type LabKind,
+} from "../shared/jumponium.js";
 
-const MAGIC = "EDEXOJMP";
+const MAGIC = "EDEXOLAB";
 const CELL_B = 14;
-const REC_B = 32;
-export const JUMPONIUM_FILE = "jumponium.bin";
-export const JUMPONIUM_REMOTE = "jumponium.bin.gz";
-export const JUMPONIUM_META_REMOTE = "jumponium.meta.json";
+const REC_B = 40;
+const NAME_AT = 28;
+const ID_AT = 32;
+export const JUMPONIUM_FILE = "laboratory.bin";
+export const JUMPONIUM_REMOTE = "laboratory.bin.gz";
+export const JUMPONIUM_META_REMOTE = "laboratory.meta.json";
 const CELL_CACHE = 1024;
 /** The file's elements, in its order, and their unit. */
 const FILE_ELS: readonly [JumpElement, number][] = [
@@ -51,6 +60,12 @@ const FILE_ELS: readonly [JumpElement, number][] = [
   ["niobium", 0.02],
   ["yttrium", 0.02],
   ["polonium", 0.02],
+  ["zinc", 0.05],
+  ["tin", 0.02],
+  ["molybdenum", 0.02],
+  ["zirconium", 0.05],
+  ["tellurium", 0.02],
+  ["ruthenium", 0.02],
 ];
 const TYPES = ["Rocky body", "High metal content world", "Metal-rich body", "Icy body", "Rocky Ice world"];
 
@@ -70,6 +85,12 @@ export const JUMP_TOP1: Partial<Record<JumpElement, number>> = {
   niobium: 2.48,
   yttrium: 2.19,
   polonium: 1.07,
+  zinc: 9.96,
+  tin: 2.43,
+  molybdenum: 2.37,
+  zirconium: 4.47,
+  tellurium: 1.56,
+  ruthenium: 2.26,
 };
 
 export interface JumpBody {
@@ -204,7 +225,7 @@ export class JumponiumIndex {
         gravityG: buf.readUInt16LE(o + 8) / 1000,
         distLs: buf.readUInt16LE(o + 10) * 10,
         pct,
-        nameOff: buf.readUInt32LE(o + 20),
+        nameOff: buf.readUInt32LE(o + NAME_AT),
       });
     }
     if (this.cache.size >= CELL_CACHE) this.cache.delete(this.cache.keys().next().value!);
@@ -216,7 +237,7 @@ export class JumponiumIndex {
     const stored = this.named.get(i);
     if (stored != null) return stored;
     const buf = Buffer.alloc(8);
-    readSync(this.fd, buf, 0, 8, this.recAt + i * REC_B + 24);
+    readSync(this.fd, buf, 0, 8, this.recAt + i * REC_B + ID_AT);
     return proceduralSystemName(buf.readBigUInt64LE(0), this.sectorOf) ?? `System ${buf.readBigUInt64LE(0)}`;
   }
 
@@ -277,7 +298,9 @@ export class JumponiumIndex {
 export type JumpLevel = "any" | "rich" | "top";
 
 export interface JumpFilter {
-  /** Elements asked for (carbon is everywhere and never a filter). */
+  /** FSD injection or AFM refill: none picked means any of its uncommon elements. */
+  kind: LabKind;
+  /** Elements asked for (common ones — carbon, nickel, chromium, manganese — are never a filter). */
   els: JumpElement[];
   /** Every one of them on the body, or any one. */
   all: boolean;
@@ -290,13 +313,11 @@ export interface JumpFilter {
 export function threshold(el: JumpElement, level: JumpLevel): number {
   if (level === "any") return Number.MIN_VALUE;
   if (level === "top") return JUMP_TOP1[el] ?? Number.POSITIVE_INFINITY;
-  return JUMP_ELEMENTS.find((e) => e.key === el)!.good;
+  return jumpElement(el).good;
 }
 
 export function filterKeep(f: JumpFilter): (b: Pick<JumpBody, "pct" | "gravityG" | "distLs">) => boolean {
-  const els = f.els.length
-    ? f.els
-    : (JUMP_ELEMENTS.map((e) => e.key).filter((k) => k !== "carbon") as JumpElement[]);
+  const els = f.els.length ? f.els : elementsOf(f.kind).filter((k) => !jumpElement(k).common);
   return (b) => {
     if (f.maxG != null && (b.gravityG == null || b.gravityG > f.maxG)) return false;
     if (f.maxLs != null && (b.distLs == null || b.distLs > f.maxLs)) return false;
@@ -448,6 +469,8 @@ export async function downloadJumponium(onDone: () => void, fetchImpl: typeof fe
     if (head.toString("latin1") !== MAGIC) throw new Error("the download is not a jumponium index");
     clearJumponiumIndex();
     renameSync(part, path.join(dir, JUMPONIUM_FILE));
+    // The 1.2.16 test builds' jumponium-only file (69 MB) is replaced by this one.
+    rmSync(path.join(dir, "jumponium.bin"), { force: true });
     downloading = null;
     onDone();
   } catch (e) {

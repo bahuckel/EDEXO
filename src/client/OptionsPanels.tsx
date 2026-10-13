@@ -36,7 +36,7 @@ import {
 import { CARRIER_SERVICE_OPTIONS } from "@shared/carrierServices";
 import type { AppSnapshot } from "@shared/types";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { INJECTIONS } from "@shared/jumponium";
+import { AFM_REFILLS, INJECTIONS } from "@shared/jumponium";
 import { fmtPct } from "@shared/format";
 
 /**
@@ -445,6 +445,8 @@ export function NotifyPanel() {
   const featuresOn = BODY_FEATURES.filter((f) => p.features?.[f.key]).length;
   const exoOn = (p.codexFirst ?? true ? 1 : 0) + (p.codexFirstLowChance ?? true ? 1 : 0);
   const tiersOn = INJECTIONS.filter((i) => jp.tiers[i.tier]);
+  const jpAfm = jp.afm ?? { basic: false, standard: false, premium: false };
+  const afmOn = AFM_REFILLS.filter((i) => jpAfm[i.tier]);
   const onCount =
     notableOn +
     (p.records ? 1 : 0) +
@@ -568,14 +570,21 @@ export function NotifyPanel() {
 
       <NotifySection
         k="jumponium"
-        title="Jumponium"
-        summary={jp.on ? `on · ${tiersOn.map((i) => i.name).join(", ") || "no injection ticked"}` : "off"}
+        title="Laboratory"
+        summary={
+          jp.on
+            ? `on · ${[...tiersOn.map((i) => `FSD ${i.name}`), ...afmOn.map((i) => `AFM ${i.name}`)].join(", ") || "nothing ticked"}`
+            : "off"
+        }
         help={
           <p>
-            A scanned landable body in the top tenth of landable bodies for a material of the FSD injections you
-            tick: Basic (carbon, vanadium, germanium), Standard (+ cadmium, niobium), Premium (carbon, germanium,
-            arsenic, niobium, yttrium, polonium). With &quot;only what I am short of&quot;, only materials you hold
-            fewer of than the number set. The galaxy map&apos;s Jumponium tab shows what you hold.
+            A scanned landable body in the top tenth of landable bodies for a material of what you tick. FSD
+            injections: Basic (carbon, vanadium, germanium), Standard (+ cadmium, niobium), Premium (carbon,
+            germanium, arsenic, niobium, yttrium, polonium). AFM refills: Basic (nickel, zinc, chromium, vanadium),
+            Standard (tin, manganese, vanadium, molybdenum, zirconium), Premium (zinc, chromium, vanadium, zirconium,
+            tellurium, ruthenium). Carbon, nickel, chromium and manganese are on most bodies and never announced.
+            With &quot;only what I am short of&quot;, only materials you hold fewer of than the number set. The
+            galaxy map&apos;s Laboratory tab shows what you hold.
           </p>
         }
       >
@@ -584,6 +593,9 @@ export function NotifyPanel() {
             <input type="checkbox" checked={jp.on} disabled={busy} onChange={(ev) => saveJump({ on: ev.target.checked })} />
             <span>Announce rich bodies</span>
           </label>
+        </div>
+        <p className="dim tiny options-notify-sub">FSD injections (jumponium)</p>
+        <div className="options-notify-grid">
           {INJECTIONS.map((i) => (
             <label key={i.tier} className="options-toggle">
               <input
@@ -593,10 +605,28 @@ export function NotifyPanel() {
                 onChange={(ev) => saveJump({ tiers: { ...jp.tiers, [i.tier]: ev.target.checked } })}
               />
               <span>
-                {i.name} <span className="dim">+{i.bonusPct} %</span>
+                {i.name} <span className="dim">{i.bonus}</span>
               </span>
             </label>
           ))}
+        </div>
+        <p className="dim tiny options-notify-sub">AFM refills</p>
+        <div className="options-notify-grid">
+          {AFM_REFILLS.map((i) => (
+            <label key={i.tier} className="options-toggle">
+              <input
+                type="checkbox"
+                checked={jpAfm[i.tier]}
+                disabled={busy || !jp.on}
+                onChange={(ev) => saveJump({ afm: { ...jpAfm, [i.tier]: ev.target.checked } })}
+              />
+              <span>
+                {i.name} {i.bonus ? <span className="dim">{i.bonus}</span> : null}
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className="options-notify-grid">
           <label className="options-toggle">
             <input
               type="checkbox"

@@ -112,8 +112,10 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
       (ColonisationSystemClaim), for the galaxy map's badges (shared/ownAssets.ts).
   36: `jumponium` — raw materials aboard (Materials at login, then the material events), FSD injections made
       and their recipes as used (shared/jumponium.ts).
+  37: `jumponium` grows the Laboratory: AFM refills made and learned ("afm:<tier>") and the AFMUs fitted from
+      `Loadout` (a full re-read finds them in the journals).
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 36;
+export const JOURNAL_MERGE_CACHE_FORMAT = 37;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {

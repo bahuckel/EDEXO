@@ -64,7 +64,7 @@ export interface NotifyPrefsDTO {
   nearby: NearbyPrefsDTO;
   /** Body features (shared/bodyFeatures.ts): Notable card and notices. All off until chosen. */
   features: Record<BodyFeatureKey, boolean>;
-  /** A scanned body rich in an FSD injection material (shared/jumponium.ts, 1.2.16). */
+  /** A scanned body rich in a Laboratory material, FSD injection or AFM refill (shared/jumponium.ts, 1.2.16). */
   jumponium: JumponiumNotifyPrefsDTO;
 }
 
@@ -76,7 +76,10 @@ export interface NotifyPrefsDTO {
  */
 export interface JumponiumNotifyPrefsDTO {
   on: boolean;
+  /** FSD injection tiers gathered for. */
   tiers: Record<InjectionTier, boolean>;
+  /** AFM refill tiers gathered for (owner, 2026-10-14: the Laboratory); off for a setting saved before them. */
+  afm: Record<InjectionTier, boolean>;
   onlyShort: boolean;
   target: number;
 }
@@ -120,7 +123,13 @@ export const DEFAULT_NOTIFY_PREFS: NotifyPrefsDTO = {
     nsp: false,
   },
   features: defaultFeaturePrefs(),
-  jumponium: { on: false, tiers: { basic: true, standard: true, premium: true }, onlyShort: true, target: 30 },
+  jumponium: {
+    on: false,
+    tiers: { basic: true, standard: true, premium: true },
+    afm: { basic: true, standard: true, premium: true },
+    onlyShort: true,
+    target: 30,
+  },
 };
 
 /** Only known keys and booleans get through; anything else keeps its current value. */
@@ -170,6 +179,9 @@ function mergeJumponiumPrefs(prevRaw: JumponiumNotifyPrefsDTO, raw: unknown): Ju
   const r = "mode" in r0 && !("on" in r0) && !("tiers" in r0) ? {} : r0;
   const bool = (v: unknown, cur: boolean) => (typeof v === "boolean" ? v : cur);
   const tr = r.tiers && typeof r.tiers === "object" ? (r.tiers as Record<string, unknown>) : {};
+  const ar = r.afm && typeof r.afm === "object" ? (r.afm as Record<string, unknown>) : {};
+  // A setting saved before the AFM refills: they start off, so nothing new is announced unasked.
+  const prevAfm = prev.afm ?? (prev === d ? d.afm : { basic: false, standard: false, premium: false });
   const t = typeof r.target === "number" && Number.isFinite(r.target) ? Math.round(r.target) : prev.target;
   return {
     on: bool(r.on, prev.on),
@@ -177,6 +189,11 @@ function mergeJumponiumPrefs(prevRaw: JumponiumNotifyPrefsDTO, raw: unknown): Ju
       basic: bool(tr.basic, prev.tiers.basic),
       standard: bool(tr.standard, prev.tiers.standard),
       premium: bool(tr.premium, prev.tiers.premium),
+    },
+    afm: {
+      basic: bool(ar.basic, prevAfm.basic),
+      standard: bool(ar.standard, prevAfm.standard),
+      premium: bool(ar.premium, prevAfm.premium),
     },
     onlyShort: bool(r.onlyShort, prev.onlyShort),
     target: Math.min(JUMPONIUM_TARGET_MAX, Math.max(1, t)),
