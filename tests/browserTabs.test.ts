@@ -80,6 +80,20 @@ class FakeContents {
     this.css.push(css);
     return Promise.resolve("");
   }
+  commands: [string, Record<string, unknown>][] = [];
+  attached = false;
+  debugger = {
+    isAttached: () => this.attached,
+    attach: () => {
+      this.attached = true;
+    },
+    sendCommand: (method: string, params: Record<string, unknown>) => {
+      this.commands.push([method, params]);
+      return Promise.resolve(
+        method === "Page.addScriptToEvaluateOnNewDocument" ? { identifier: `id${this.commands.length}` } : {},
+      );
+    },
+  };
   executeJavaScriptInIsolatedWorld(world: number, scripts: { code: string }[]) {
     this.isolated.push({ world, code: scripts[0]!.code });
     return Promise.resolve(this.dom);
@@ -208,6 +222,7 @@ function setup() {
       /ads\.example/.test(d.url) ? { cancel: true } : null
     ),
     cosmetics: () => "",
+    scripts: (u: string) => (/youtube\.com/.test(u) ? ["window.__noAds = 1;"] : []),
     domCosmetics: (_u: string, d: { classes: string[] }) =>
       d.classes.includes("ad-slot") ? ".ad-slot { display: none !important; }" : "",
     release: vi.fn(),
@@ -491,5 +506,50 @@ describe("hiding what was blocked", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(wc.isolated).toEqual([]);
     expect(wc.css).toEqual([]);
+  });
+});
+
+describe("scriptlets (YouTube)", () => {
+  const page = async (t: ReturnType<typeof setup>, url: string) => {
+    await t.call({ op: "open", text: url });
+    const wc = FakeView.made[FakeView.made.length - 1]!.webContents;
+    await new Promise<void>((done) =>
+      t.ses.before!({ resourceType: "mainFrame", url, webContents: wc }, () => done()),
+    );
+    return wc;
+  };
+
+  it("go in before the page's own code, only in the top frame of their own site, through the DevTools protocol", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    const wc = await page(t, "https://www.youtube.com/watch?v=x");
+    expect(wc.attached).toBe(true);
+    const [method, params] = wc.commands[0]!;
+    expect(method).toBe("Page.addScriptToEvaluateOnNewDocument");
+    const src = String(params.source);
+    expect(src).toContain("window.__noAds = 1;");
+    expect(src).toContain('location.hostname!=="www.youtube.com"');
+    expect(src).toContain("window.top!==window");
+    // Never the Runtime domain (pages can notice it).
+    expect(wc.commands.some(([m]) => m.startsWith("Runtime."))).toBe(false);
+  });
+
+  it("attach nothing on a site without any, and come off when blocking is switched off there", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    const plain = await page(t, "https://www.edsm.net/");
+    expect(plain.attached).toBe(false);
+    expect(plain.commands).toEqual([]);
+    const yt = await page(t, "https://www.youtube.com/");
+    t.prefs.setBlocking("youtube.com", false);
+    await new Promise<void>((done) =>
+      t.ses.before!({ resourceType: "mainFrame", url: "https://www.youtube.com/", webContents: yt }, () =>
+        done(),
+      ),
+    );
+    expect(yt.commands.map(([m]) => m)).toEqual([
+      "Page.addScriptToEvaluateOnNewDocument",
+      "Page.removeScriptToEvaluateOnNewDocument",
+    ]);
   });
 });

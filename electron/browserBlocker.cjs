@@ -12,6 +12,13 @@
   Network blocking runs on the browser's session only (webRequest), per page: a site with blocking switched off
   gets nothing blocked, ads or trackers. Cosmetic rules (hiding the empty ad boxes) go in as a user stylesheet
   from here, so browsed pages get no preload script at all (plan 9.2).
+
+  Scriptlets (owner, 2026-10-13: "a youtube adblocker", the way uBlock Origin Lite does it): for the sites the
+  lists name, small scripts that run in the page before its own code and take the ads out of what the player is
+  sent. YouTube serves its ads from the same servers as its videos, so blocking requests cannot stop them. The
+  scripts come from uBlock Origin's scriptlet library as Ghostery packages it for this engine (resources.json),
+  downloaded like the lists, never shipped in the app; uBlock's "quick fixes" list carries the YouTube rules. Both
+  change often (YouTube changes its player often), so they are refreshed daily, the rest weekly.
 */
 
 const fs = require("node:fs");
@@ -42,10 +49,25 @@ const LISTS = [
     name: "uBlock cookie notices",
     url: "https://ublockorigin.github.io/uAssets/filters/annoyances-cookies.txt",
   },
+  {
+    key: "ubo-quick-fixes",
+    name: "uBlock quick fixes (YouTube)",
+    url: "https://ublockorigin.github.io/uAssets/filters/quick-fixes.txt",
+    daily: true,
+  },
 ];
+/** The scriptlets the lists' `##+js(...)` rules run (uBlock Origin's library, packaged by Ghostery for its engine). */
+const RESOURCES = {
+  key: "resources",
+  name: "uBlock scriptlets (packaged by Ghostery)",
+  url: "https://raw.githubusercontent.com/ghostery/adblocker/master/packages/adblocker/assets/ublock-origin/resources.json",
+  daily: true,
+};
+const DOWNLOADS = [...LISTS, RESOURCES];
 /** What the lists weighed when measured (2026-10-13), for the "needs N MB" line before the first download. */
-const ESTIMATE_BYTES = 5_500_000;
-const REFRESH_MS = 7 * 24 * 3600 * 1000;
+const ESTIMATE_BYTES = 5_800_000;
+const WEEK_MS = 7 * 24 * 3600 * 1000;
+const DAY_MS = 24 * 3600 * 1000;
 const MAX_LIST_BYTES = 20_000_000;
 
 /** Electron's resource types, as the engine names them. */
@@ -82,14 +104,29 @@ function createBrowserBlocker(o) {
   let progress = null;
   let meta = readMeta();
 
+  /** When each download was fetched (`fetched[key]`), and the first time any was (consent: they are wanted). */
   function readMeta() {
     try {
       const m = JSON.parse(fs.readFileSync(metaPath, "utf8"));
-      return { fetchedAt: typeof m.fetchedAt === "string" ? m.fetchedAt : null, bytes: Number(m.bytes) || 0 };
+      const fetchedAt = typeof m.fetchedAt === "string" ? m.fetchedAt : null;
+      const fetched = {};
+      if (m.fetched && typeof m.fetched === "object")
+        for (const [k, v] of Object.entries(m.fetched)) if (typeof v === "string") fetched[k] = v;
+      // Written before the per-list dates: every list then on disk came with that first download.
+      if (fetchedAt && !m.fetched) for (const l of LISTS.slice(0, 6)) fetched[l.key] = fetchedAt;
+      return { fetchedAt, fetched, bytes: Number(m.bytes) || 0 };
     } catch {
-      return { fetchedAt: null, bytes: 0 };
+      return { fetchedAt: null, fetched: {}, bytes: 0 };
     }
   }
+  const fileOf = (d) =>
+    d === RESOURCES ? path.join(dir, "resources.json") : path.join(listDir, `${d.key}.txt`);
+  /** The downloads due again (daily or weekly), or never fetched (a list added in a newer version). */
+  const stale = () =>
+    DOWNLOADS.filter((d) => {
+      const at = Date.parse(meta.fetched[d.key] ?? "");
+      return !Number.isFinite(at) || Date.now() - at > (d.daily ? DAY_MS : WEEK_MS);
+    });
   const loadLib = () => (lib ??= require(o.bundlePath));
 
   function status() {
@@ -101,14 +138,14 @@ function createBrowserBlocker(o) {
       error,
       fetchedAt: meta.fetchedAt,
       bytes: meta.bytes || ESTIMATE_BYTES,
-      lists: LISTS.map((l) => ({ name: l.name, url: l.url })),
+      lists: DOWNLOADS.map((l) => ({ name: l.name, url: l.url })),
     };
   }
 
-  /** Parses the lists in a worker; resolves with the serialized engine. */
-  function parseInWorker(text) {
+  /** Parses the lists (and the scriptlets) in a worker; resolves with the serialized engine. */
+  function parseInWorker(text, resources) {
     return new Promise((resolve, reject) => {
-      const w = new Worker(o.bundlePath, { workerData: { lists: text } });
+      const w = new Worker(o.bundlePath, { workerData: { lists: text, resources } });
       w.once("message", (m) => {
         void w.terminate();
         if (m && m.ok) resolve(new Uint8Array(m.bytes));
@@ -128,7 +165,13 @@ function createBrowserBlocker(o) {
       }
     }
     if (!parts.length) throw new Error("No filter lists downloaded yet.");
-    const bytes = await parseInWorker(parts.join("\n"));
+    let resources = null;
+    try {
+      resources = fs.readFileSync(fileOf(RESOURCES), "utf8");
+    } catch {
+      /* no scriptlets yet: everything else still blocks */
+    }
+    const bytes = await parseInWorker(parts.join("\n"), resources);
     writeFileAtomic(enginePath, Buffer.from(bytes), null);
     engine = loadLib().FiltersEngine.deserialize(bytes);
   }
@@ -147,23 +190,42 @@ function createBrowserBlocker(o) {
     return true;
   }
 
-  async function download() {
+  /** A download checked: a filter list starts with its header or a comment, the scriptlets are JSON with some. */
+  function check(d, text) {
+    if (text.length > MAX_LIST_BYTES) return false;
+    if (d !== RESOURCES) return /^\s*[![]/.test(text);
+    try {
+      const j = JSON.parse(text);
+      return Array.isArray(j.scriptlets) && j.scriptlets.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  async function download(which = DOWNLOADS) {
     fs.mkdirSync(listDir, { recursive: true });
-    let total = 0;
-    progress = { done: 0, total: LISTS.length };
+    progress = { done: 0, total: which.length };
     o.onChange();
-    for (const l of LISTS) {
-      const r = await o.fetch(l.url);
-      if (!r.ok) throw new Error(`${l.name}: ${r.status} ${r.statusText}`);
+    const now = new Date().toISOString();
+    for (const d of which) {
+      const r = await o.fetch(d.url);
+      if (!r.ok) throw new Error(`${d.name}: ${r.status} ${r.statusText}`);
       const text = await r.text();
-      if (text.length > MAX_LIST_BYTES || !/^\s*[![]/.test(text))
-        throw new Error(`${l.name} is not a filter list.`);
-      writeFileAtomic(path.join(listDir, `${l.key}.txt`), text);
-      total += Buffer.byteLength(text);
-      progress = { done: progress.done + 1, total: LISTS.length };
+      if (!check(d, text)) throw new Error(`${d.name} is not what it should be.`);
+      writeFileAtomic(fileOf(d), text);
+      meta.fetched[d.key] = now;
+      progress = { done: progress.done + 1, total: which.length };
       o.onChange();
     }
-    meta = { fetchedAt: new Date().toISOString(), bytes: total };
+    let total = 0;
+    for (const d of DOWNLOADS) {
+      try {
+        total += fs.statSync(fileOf(d)).size;
+      } catch {
+        /* not there */
+      }
+    }
+    meta = { fetchedAt: meta.fetchedAt ?? now, fetched: meta.fetched, bytes: total };
     writeFileAtomic(metaPath, `${JSON.stringify(meta)}\n`);
     engine = null;
     try {
@@ -197,11 +259,14 @@ function createBrowserBlocker(o) {
     status,
     /** The first download, or "Update now". */
     download: () => run("download", download),
-    /** At the browser's first open in a session: the engine, then the weekly refresh in the background. */
+    /**
+     * At the browser's first open in a session: the engine, then in the background what is due again — the
+     * scriptlets and quick fixes daily, the rest weekly, and any list a newer version added.
+     */
     async ensure() {
       const ok = await run("load", load);
-      const stale = meta.fetchedAt && Date.now() - Date.parse(meta.fetchedAt) > REFRESH_MS;
-      if (ok && stale) void run("refresh", download);
+      const due = meta.fetchedAt ? stale() : [];
+      if (ok && due.length) void run("refresh", () => download(due));
       return engine != null;
     },
     hostOf: (url) => {
@@ -249,6 +314,29 @@ function createBrowserBlocker(o) {
         return "";
       }
     },
+    /** The scriptlets the lists run on this page (its own hostname's rules), ready to inject; [] for most sites. */
+    scripts(url) {
+      if (!engine) return [];
+      const h = this.hostOf(url);
+      if (!h.hostname) return [];
+      try {
+        const r = engine.getCosmeticsFilters({
+          url,
+          hostname: h.hostname,
+          domain: h.domain,
+          getBaseRules: false,
+          getInjectionRules: true,
+          getExtendedRules: false,
+          getRulesFromDOM: false,
+          getRulesFromHostname: true,
+        });
+        return r && r.active && Array.isArray(r.scripts)
+          ? r.scripts.filter((x) => typeof x === "string")
+          : [];
+      } catch {
+        return [];
+      }
+    },
     /** The general hiding rules that match these class names, ids and links of the page, as a stylesheet. */
     domCosmetics(url, dom) {
       if (!engine) return "";
@@ -281,4 +369,4 @@ function createBrowserBlocker(o) {
   };
 }
 
-module.exports = { createBrowserBlocker, LISTS };
+module.exports = { createBrowserBlocker, LISTS, RESOURCES };

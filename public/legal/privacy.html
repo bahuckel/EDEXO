@@ -171,9 +171,13 @@
           <li>
             <strong>Ads and trackers are blocked</strong> on every site unless you switch blocking off for one.
             The blocklists are downloaded only when you press <em>Download the blocklists</em> the first time,
-            then once a week, from their publishers: EasyList and EasyPrivacy (easylist.to) and uBlock Origin's
-            lists (ublockorigin.github.io). Those requests show those servers your IP address and send nothing
-            else.
+            then again in the background, from their publishers: EasyList and EasyPrivacy (easylist.to) and
+            uBlock Origin's lists (ublockorigin.github.io) once a week; uBlock's quick fixes daily, with uBlock's
+            scriptlet library as Ghostery packages it (raw.githubusercontent.com, Ghostery's adblocker
+            repository). The scriptlets are small scripts the lists run on some sites (YouTube among them) before
+            the site's own code, to take the ads out of what the site is sent; they run only on the site they
+            are for, and send nothing anywhere. Those downloads show those servers your IP address and send
+            nothing else.
           </li>
           <li>
             <strong>Searches</strong> typed in the address bar go to the search engine you chose (DuckDuckGo

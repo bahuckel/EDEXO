@@ -18,10 +18,11 @@ if (!wt.isMainThread && wt.workerData && typeof wt.workerData.lists === "string"
       loadCosmeticFilters: true,
       loadNetworkFilters: true,
       loadGenericCosmeticsFilters: true,
-      // Scriptlets would need a script in the page's own world; the browser runs no preload (plan 9.2).
       loadExtendedSelectors: false,
       enableHtmlFiltering: false,
     });
+    // The scriptlets the `##+js(...)` rules run (browserBlocker.cjs RESOURCES); injected by browserTabs.cjs.
+    if (typeof wt.workerData.resources === "string") engine.updateResources(wt.workerData.resources, "edexo");
     const bytes = engine.serialize();
     wt.parentPort.postMessage({ ok: true, bytes }, [bytes.buffer]);
   } catch (e) {
