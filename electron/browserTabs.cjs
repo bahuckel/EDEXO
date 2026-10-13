@@ -37,6 +37,8 @@ const COSMETIC_PASSES_MS = [1500, 4000, 10000];
   normal reload takes the page's scripts and images from the page process's own memory cache, which never reaches
   webRequest, so the blocker was not asked again; a new tab has a new process and an empty cache.
 */
+/** Marks the scriptlets' own console line, so the log can say they ran (random per run: a page cannot fake it). */
+const RAN_TOKEN = `edexo-scriptlets-${Math.random().toString(36).slice(2, 10)}`;
 /** How long a page's request waits for its scriptlets to be registered (they take a few ms). */
 const INJECT_WAIT_MS = 1500;
 /** Requests of these kinds, once blocked, leave a box on the page: it is collapsed. */
@@ -176,7 +178,10 @@ function createBrowserTabs(o) {
         const tab = wc ? tabOfContents(wc) : null;
         // A page about to load in a tab: its scriptlets are in place before the request goes (see injectFor).
         if (details.resourceType === "mainFrame") {
-          if (!tab) return cb({});
+          if (!tab) {
+            if (wc) o.log?.(`browser: a page request without its tab (${new URL(details.url).hostname})`);
+            return cb({});
+          }
           // At most a moment: a page never waits on its scriptlets for long.
           const limit = new Promise((r) => setTimeout(r, INJECT_WAIT_MS));
           return void Promise.race([injectFor(tab, details.url), limit]).finally(() => cb({}));
@@ -251,11 +256,22 @@ function createBrowserTabs(o) {
         await dbg.sendCommand("Page.removeScriptToEvaluateOnNewDocument", { identifier: t.injected.id });
       t.injected = { key: "", id: null };
       if (!scripts.length) return;
-      if (!dbg.isAttached()) dbg.attach("1.3");
+      if (!dbg.isAttached()) {
+        dbg.attach("1.3");
+        t.pageDomain = false;
+      }
+      // Registered scripts run in new documents only once the Page domain is on (Runtime stays off).
+      if (!t.pageDomain) {
+        await dbg.sendCommand("Page.enable");
+        t.pageDomain = true;
+      }
       const body = scripts.map((x) => `(function(){try{${x}\n}catch(e){}})();`).join("\n");
-      const source = `(function(){if(window.top!==window||location.hostname!==${JSON.stringify(host)})return;\n${body}\n})();`;
+      // A line in hud-events.log says they ran in the page (console-message below): the proof a test needs.
+      const ran = `try{console.debug(${JSON.stringify(`${RAN_TOKEN} ${scripts.length}`)})}catch(e){}`;
+      const source = `(function(){if(window.top!==window||location.hostname!==${JSON.stringify(host)})return;${ran}\n${body}\n})();`;
       const r = await dbg.sendCommand("Page.addScriptToEvaluateOnNewDocument", { source });
       t.injected = { key, id: r && typeof r.identifier === "string" ? r.identifier : null };
+      o.log?.(`browser: ${scripts.length} scriptlets registered for ${host}`);
     } catch (e) {
       // Not attached (DevTools on the tab, a closed page): the page loads without its scriptlets.
       o.log?.(`browser: scriptlets for ${host} not set: ${e && e.message ? e.message : e}`);
@@ -414,6 +430,13 @@ function createBrowserTabs(o) {
       if (css) void wc.insertCSS(css, { cssOrigin: "user" }).catch(() => {});
       void cosmeticPass(t);
     });
+    wc.on("console-message", (e, _level, message) => {
+      const m = typeof message === "string" ? message : e && typeof e.message === "string" ? e.message : "";
+      if (m.startsWith(RAN_TOKEN))
+        o.log?.(
+          `browser: ${m.slice(RAN_TOKEN.length + 1)} scriptlets ran on ${wc.getURL().split("/")[2] ?? "?"}`,
+        );
+    });
     wc.on("render-process-gone", (_e, d) => {
       t.error = { code: 0, text: `The page stopped (${d.reason}).`, url: t.url, httpFallback: null };
       t.loading = false;
@@ -562,6 +585,7 @@ function createBrowserTabs(o) {
       id: nextId++,
       collapse: new Set(),
       injected: { key: "", id: null },
+      pageDomain: false,
       seen: { classes: new Set(), ids: new Set(), hrefs: new Set() },
       passTimers: [],
       view: null,
