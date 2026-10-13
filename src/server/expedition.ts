@@ -192,7 +192,12 @@ export function boxelKeyAt(code: MassCode, p: Xyz): string {
   return `${code}:${cell.join(",")}:${position}`;
 }
 
-/** Counts recorded systems per boxel near a field, one mass code at a time, keyed by `gridIdAt`. */
+/**
+ * Counts recorded systems per boxel near a field, one mass code at a time, keyed by `gridIdAt`. A point with its
+ * mass code counts only in the boxel of that code: a d boxel's systems estimate is d systems only, and counting
+ * every system in the cube of every code had made bubble boxels look 20 times as recorded as they are
+ * (2026-10-13: 1,620,948 against 71,134 within 1,000 ly of Sol). A point without a known code counts in all.
+ */
 export class RecordedCounter {
   private readonly maps: Map<number, number>[];
   private readonly reach: number[];
@@ -205,11 +210,12 @@ export class RecordedCounter {
     // A point counts when its boxel's centre can be in the field: the radius plus the half-diagonal.
     this.reach = codes.map((c) => radiusLy + (boxelCubeLy(c) * Math.sqrt(3)) / 2);
   }
-  add(x: number, y: number, z: number): void {
+  add(x: number, y: number, z: number, code?: MassCode | null): void {
     const dx = Math.abs(x - this.center.x);
     const dy = Math.abs(y - this.center.y);
     const dz = Math.abs(z - this.center.z);
     for (let i = 0; i < this.codes.length; i++) {
+      if (code && this.codes[i] !== code) continue;
       const r = this.reach[i]!;
       if (dx > r || dy > r || dz > r) continue;
       const m = this.maps[i]!;
@@ -224,9 +230,14 @@ export class RecordedCounter {
 }
 
 /** Recorded systems per boxel from a list of points (tests and small sets). */
-export function countRecorded(points: Iterable<Xyz>, center: Xyz, radiusLy: number, codes: readonly MassCode[]): RecordedCounter {
+export function countRecorded(
+  points: Iterable<Xyz & { code?: MassCode | null }>,
+  center: Xyz,
+  radiusLy: number,
+  codes: readonly MassCode[],
+): RecordedCounter {
   const c = new RecordedCounter(center, radiusLy, codes);
-  for (const p of points) c.add(p.x, p.y, p.z);
+  for (const p of points) c.add(p.x, p.y, p.z, p.code);
   return c;
 }
 

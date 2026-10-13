@@ -81,6 +81,20 @@ describe("expedition service", () => {
     expect(same.ev).toBeLessThan(top.ev);
   });
 
+  it("counts a galaxy-index system only in its own mass code's boxel when the index knows the code", async () => {
+    const d = deps();
+    const open = await expeditionField({ from: SWOILZ, radiusLy: 300, jumpRangeLy: 60, codes: ["d"], limit: 500 }, d);
+    const top = open.boxels[0]!;
+    // Three c systems inside the top d boxel's cube: none of them is a d system.
+    const pts = [top.center, top.center, top.center];
+    const index = { ...fakeIndex(pts), massCodeAt: () => 2 } as unknown as BioIndex;
+    const f = await expeditionField(
+      { from: { ...SWOILZ, x: SWOILZ.x + 0.2 }, radiusLy: 302, jumpRangeLy: 60, codes: ["d"], limit: 500 },
+      { ...d, index },
+    );
+    expect(f.boxels.find((b) => b.key === top.key)!.recorded).toBe(0);
+  });
+
   it("lights only boxels a species' position rule allows", async () => {
     const f = await expeditionField(
       { from: COALSACK, radiusLy: 400, jumpRangeLy: 60, codes: ["d", "e"], speciesId: "electricae_electricae_radialem", limit: 500 },

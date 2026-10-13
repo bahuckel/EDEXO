@@ -8,6 +8,7 @@
  */
 import { SECTOR_ORIGIN, SECTOR_SIZE_LY } from "./sectorName.js";
 import { MASS_CODE_LETTERS, type MassCode } from "./boxelAdvice.js";
+import { parseBoxel } from "./boxel.js";
 
 export interface Id64Boxel {
   code: MassCode;
@@ -58,4 +59,21 @@ export function id64Boxel(id64: bigint | number | string): Id64Boxel | null {
       z: SECTOR_ORIGIN.z + (grid[2] + 0.5) * size,
     },
   };
+}
+
+/**
+ * A system's mass code: from a procedural name ("… d12-3"), else from its address when the address is exact. A
+ * journal's SystemAddress arrives as a JSON number, which is exact only below 2^53; past that its low bits, the
+ * mass code, may have been rounded away, so it is not trusted.
+ */
+export function massCodeOfSystem(
+  addr: number | bigint | string | null | undefined,
+  name?: string | null,
+): MassCode | null {
+  const fromName = name ? parseBoxel(name) : null;
+  if (fromName && (MASS_CODE_LETTERS as readonly string[]).includes(fromName.massCode))
+    return fromName.massCode as MassCode;
+  if (addr == null) return null;
+  if (typeof addr === "number" && !Number.isSafeInteger(addr)) return null;
+  return id64Boxel(addr)?.code ?? null;
 }

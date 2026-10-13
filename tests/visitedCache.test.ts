@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { id64Boxel } from "../src/shared/id64.js";
+import { id64Boxel, massCodeOfSystem } from "../src/shared/id64.js";
 import {
   clearVisitedImportCache,
   findVisitedCacheFiles,
@@ -61,8 +61,19 @@ describe("id64: where an address puts a system", () => {
       const d = Math.hypot(b.center.x - real.x, b.center.y - real.y, b.center.z - real.z);
       expect(d, String(id)).toBeLessThanOrEqual((b.cubeLy * Math.sqrt(3)) / 2);
     }
+    expect(id64Boxel(COLONIA)!.code).toBe("d");
     expect(id64Boxel("not a number")).toBeNull();
     expect(id64Boxel(-1n)).toBeNull();
+  });
+});
+
+describe("a system's mass code", () => {
+  it("from a procedural name, else from an exact address, never from a rounded one", () => {
+    expect(massCodeOfSystem(null, "Swoilz KI-E b4-9")).toBe("b");
+    expect(massCodeOfSystem(Number(COLONIA), "Colonia")).toBe("d");
+    expect(massCodeOfSystem(Number(SGR_A), "Sagittarius A*")).toBe("g");
+    expect(massCodeOfSystem(2 ** 53 + 2, "Somewhere")).toBeNull();
+    expect(massCodeOfSystem(null, "Sol")).toBeNull();
   });
 });
 

@@ -74,6 +74,8 @@ export interface BioIndex {
   systemAt(i: number): BioIndexSystem;
   /** Just the name, for labels. */
   nameOf(i: number): string;
+  /** The system's mass code index (0 = a … 7 = h): its address's low 3 bits, read without building a record. */
+  massCodeAt?(i: number): number;
   /** Allocation-free pass over every (region, species) pair; see the implementation for why. */
   forEachRegionSpecies(
     cb: (systemIndex: number, regionId: number, speciesIndex: number, tiers: number) => void,
@@ -215,6 +217,10 @@ class Index implements BioIndex {
 
   nameOf(i: number): string {
     return this.nameAt(i);
+  }
+
+  massCodeAt(i: number): number {
+    return this.view.getUint8(this.tableAt + i * RECORD) & 7;
   }
 
   pointAt(i: number): [number, number, number, number, number] {

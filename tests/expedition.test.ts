@@ -78,6 +78,15 @@ describe("expedition: the boxels around a point", () => {
     // The far point counts nowhere near the field.
     expect(m.countIn({ code: "b", center: { x: 9000, y: 0, z: 9000 } })).toBe(0);
   });
+
+  it("counts a system with a known mass code only in its own code's boxel", () => {
+    // Swoilz KI-E b4-9 is a b system: it is no d system of the d boxel round it (2026-10-13: counting every
+    // system in every code's cube made bubble boxels look 20 times as recorded as they are).
+    const m = countRecorded([{ ...SWOILZ, code: "b" }, { ...SWOILZ, code: "d" }, SWOILZ], SWOILZ, 50, ["b", "d"]);
+    const own = boxelsWithin(SWOILZ, 80, ["b", "d"], null).boxels;
+    expect(m.countIn(own.find((x) => x.code === "b" && boxelKey(x) === boxelKeyAt("b", SWOILZ))!)).toBe(2);
+    expect(m.countIn(own.find((x) => x.code === "d" && boxelKey(x) === boxelKeyAt("d", SWOILZ))!)).toBe(2);
+  });
 });
 
 describe("expedition: what a boxel is worth", () => {
