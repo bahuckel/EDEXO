@@ -86,6 +86,10 @@ module.exports = {
     "electron/windowGuards.cjs",
     "electron/keybinds.cjs",
     "electron/tabWindows.cjs",
+    // The EDEXO browser (plan 9).
+    "electron/browserTabs.cjs",
+    "electron/browserPrefs.cjs",
+    "electron/browserBlocker.cjs",
     "electron/updater.cjs",
     // The server's own process (2026-10-09): main.cjs starts app.cjs through it.
     "electron/serverChild.cjs",
@@ -95,6 +99,8 @@ module.exports = {
   ],
   extraResources: [
     { from: "build/app.cjs", to: "edexo/app.cjs" },
+    // The EDEXO browser's blocking engine (plan 9.1): outside the asar, a worker thread loads it.
+    { from: "build/browser-adblock.cjs", to: "edexo/browser-adblock.cjs" },
     { from: "dist/eb-staging/web", to: "web" },
     { from: "dist/eb-staging/data", to: "data" },
     { from: "public/edexo-icon.png", to: "edexo/icon.png" },
