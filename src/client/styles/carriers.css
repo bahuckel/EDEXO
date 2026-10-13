@@ -231,3 +231,55 @@
   vertical-align: 1px;
   color: var(--accent, #6fb3e0);
 }
+
+/* Stations (StationsPanel.tsx): find by name, then the filters in their groups (owner, 2026-10-13). */
+.stations-find {
+  width: 100%;
+  margin: 0.5rem 0;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--accent-a35);
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  box-sizing: border-box;
+}
+.stations-find:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-a20);
+}
+.stations-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+/* A name is being searched: the filters wait (they do not apply to it). */
+.stations-filters.is-idle {
+  opacity: 0.45;
+}
+.stations-filters__group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.stations-filters__label {
+  flex: 0 0 100%;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.stations-filters__mode {
+  font-style: italic;
+}
+/* His own stations, in the systems he claimed (owner, 2026-10-13): bold and gold, wherever they are listed. */
+.stations-own {
+  font-weight: 700;
+  color: #ffd27a;
+  text-shadow: 0 0 6px rgba(255, 190, 70, 0.35);
+}

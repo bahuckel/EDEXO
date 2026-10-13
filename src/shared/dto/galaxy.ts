@@ -506,6 +506,8 @@ export interface GalaxyFindDTO {
     y: number;
     z: number;
     layerId: number;
+    /** In a system the commander claimed: his own. */
+    own: boolean;
   }[];
 }
 

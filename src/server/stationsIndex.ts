@@ -63,7 +63,7 @@ export interface StationRow {
   /** YYYY-MM-DD of the station's last record. */
   updated: string | null;
   distanceLy: number;
-  /** The system's place in {@link StationsIndex.forEachSystem}: its point on the map's Stations layer. */
+  /** Its system's point on the map's Stations layer ({@link StationsIndex.pointOf}). */
   sys: number;
 }
 
@@ -99,6 +99,28 @@ export class StationsIndex {
     return this.buf.toString("utf8", at + 1, at + 1 + n);
   }
 
+  private points: Int32Array | null = null;
+  /**
+   * A system's point on the Stations layer: the layer leaves out systems with installations only (no landing pad),
+   * so a system's point is the number of systems with a pad before it. -1 for one without.
+   */
+  pointOf(sys: number): number {
+    if (!this.points) {
+      const pts = new Int32Array(this.systemCount);
+      let n = 0;
+      for (let s = 0; s < this.systemCount; s++) {
+        const so = this.sysAt + s * SYS;
+        const first = this.buf.readUInt32LE(so + 16);
+        const count = this.buf.readUInt16LE(so + 20);
+        let padded = false;
+        for (let i = first; i < first + count && !padded; i++) padded = this.buf[this.stAt + i * ST + 9]! > 0;
+        pts[s] = padded ? n++ : -1;
+      }
+      this.points = pts;
+    }
+    return this.points[sys] ?? -1;
+  }
+
   /** The services' bits for names (unknown names are ignored). */
   maskOf(names: readonly string[]): number {
     let m = 0;
@@ -127,7 +149,7 @@ export class StationsIndex {
       services: this.meta.services.filter((_s, b) => (mask >>> b) & 1),
       updated: day > 0 ? new Date(EPOCH_MS + day * 86_400_000).toISOString().slice(0, 10) : null,
       distanceLy: Math.round(d * 10) / 10,
-      sys,
+      sys: this.pointOf(sys),
     };
   }
 
@@ -147,7 +169,8 @@ export class StationsIndex {
   }): StationRow[] {
     const want = this.maskOf(q.services ?? []);
     const any = q.mode === "any";
-    const minPad = q.minPad === "L" ? 3 : q.minPad === "M" ? 2 : q.minPad === "S" ? 1 : 0;
+    // A landing pad at least (owner, 2026-10-13: installations, with none, are of no interest).
+    const minPad = q.minPad === "L" ? 3 : q.minPad === "M" ? 2 : 1;
     const maxLs = q.maxDistanceLs != null && q.maxDistanceLs > 0 ? q.maxDistanceLs : Infinity;
     const limit = Math.max(1, Math.min(200, q.limit ?? 30));
     const settlementTypes = new Set(
@@ -188,7 +211,10 @@ export class StationsIndex {
     return best.slice(0, limit).map((b) => this.row(b.i, b.sys, b.d));
   }
 
-  /** One point per system for the map: position, its largest pad, how many stations, its name. */
+  /**
+   * One point per system for the map: position, its largest pad, how many stations with a landing pad, its name.
+   * Called for every system (its place is its point on the Stations layer); `stations` 0: installations only.
+   */
   forEachSystem(
     cb: (x: number, y: number, z: number, bestPad: number, stations: number, name: () => string) => void,
   ): void {
@@ -197,13 +223,18 @@ export class StationsIndex {
       const first = this.buf.readUInt32LE(so + 16);
       const count = this.buf.readUInt16LE(so + 20);
       let pad = 0;
-      for (let i = first; i < first + count; i++) pad = Math.max(pad, this.buf[this.stAt + i * ST + 9]!);
+      let padded = 0;
+      for (let i = first; i < first + count; i++) {
+        const p = this.buf[this.stAt + i * ST + 9]!;
+        pad = Math.max(pad, p);
+        if (p > 0) padded++;
+      }
       cb(
         this.buf.readFloatLE(so),
         this.buf.readFloatLE(so + 4),
         this.buf.readFloatLE(so + 8),
         pad,
-        count,
+        padded,
         () => this.str(this.buf.readUInt32LE(so + 12)),
       );
     }
@@ -228,6 +259,7 @@ export class StationsIndex {
       const count = this.buf.readUInt16LE(so + 20);
       let sysName: string | null = null;
       for (let i = first; i < first + count; i++) {
+        if (this.buf[this.stAt + i * ST + 9] === 0) continue; // an installation: no pad, of no interest
         const name = this.str(this.buf.readUInt32LE(this.stAt + i * ST + 16)).toLowerCase();
         let ok = name.includes(q);
         if (!ok && withSystem) {
@@ -275,7 +307,8 @@ export class StationsIndex {
     const first = this.buf.readUInt32LE(so + 16);
     const count = this.buf.readUInt16LE(so + 20);
     const out: StationRow[] = [];
-    for (let i = first; i < first + count; i++) out.push(this.row(i, bestS, bestD));
+    for (let i = first; i < first + count; i++)
+      if (this.buf[this.stAt + i * ST + 9]! > 0) out.push(this.row(i, bestS, bestD));
     return out;
   }
 }

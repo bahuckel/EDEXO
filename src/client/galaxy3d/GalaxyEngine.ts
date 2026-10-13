@@ -2068,7 +2068,8 @@ export class GalaxyEngine {
       if (v.z > 1 || v.z < -1) return;
       const sx = ((v.x + 1) / 2) * w;
       const sy = ((1 - v.y) / 2) * h;
-      if (onScreen(sx, sy)) out.push({ id: `b${i}`, kind: "badge", text: b.text, x: sx + 7, y: sy + 4, priority: 1.9e9 - i });
+      // The anchor is the dot itself: the bubble is drawn above it, its tail down to it.
+      if (onScreen(sx, sy)) out.push({ id: `b${i}`, kind: "badge", text: b.text, x: sx, y: sy - 7, priority: 1.9e9 - i });
     });
     if (!this.labelsOn) {
       this.opts.onLabels(out);
