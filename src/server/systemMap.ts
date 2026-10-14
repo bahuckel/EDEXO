@@ -189,6 +189,40 @@ function shortLabel(r: ExplorationScanRecord, starSystemName: string): string {
   return acronymFromWords(pc, 5);
 }
 
+/**
+ * A body the map draws without a scan of its own — a barycentre, an inferred parent — with every value
+ * empty. The three places that make one add what they know after it (code review C3, 2026-10-14).
+ */
+function emptyBodyDetail(bodyId: number, bodyName: string, bodyKey: string): SystemMapBodyDetailDTO {
+  return {
+    bodyId,
+    bodyName,
+    bodyKey,
+    isStar: false,
+    journalStellar: false,
+    fssCredits: null,
+    fssFirstDiscoverCredits: null,
+    fssFirstDiscoverBonus: null,
+    dssCredits: null,
+    dssFirstDiscoverCredits: null,
+    dssFirstDiscoverBonus: null,
+    dssVersusFssUpliftCredits: null,
+    dssProjectedCredits: null,
+    dssProbeEfficientApplied: null,
+    valuePlus: false,
+    hasExobiology: false,
+    bioBodyKey: null,
+    estimatedSurfaceTempK: null,
+    surfaceTemperatureRangeK: null,
+    exoMatchSummaries: [],
+    maxExoHeuristicCredits: 0,
+    exoValueTier: 0,
+    exoPayoutRange: null,
+    parentBodyId: null,
+    parentStarIds: [],
+  };
+}
+
 function exoValueTierFromHeuristic(credits: number, plusMin: number, plusPlusMin: number): 0 | 1 | 2 {
   if (credits >= plusPlusMin) return 2;
   if (credits >= plusMin) return 1;
@@ -349,7 +383,14 @@ export function buildSystemMapSnapshot(
       explorationRecordIsStellar(r)
         ? [{ kind: "star", stellarMass: r.stellarMass ?? 1, starType: r.starType }]
         : r.planetClass
-          ? [{ kind: "planet", planetClass: r.planetClass, terraformable: terraformableFromRecord(r), massEM: r.massEM ?? 1 }]
+          ? [
+              {
+                kind: "planet",
+                planetClass: r.planetClass,
+                terraformable: terraformableFromRecord(r),
+                massEM: r.massEM ?? 1,
+              },
+            ]
           : [],
     );
 
@@ -367,31 +408,7 @@ export function buildSystemMapSnapshot(
     if (r.isBarycentreJournal) {
       const bk = bodyKey(r.systemAddress, r.bodyId);
       detailsByBodyId[String(r.bodyId)] = {
-        bodyId: r.bodyId,
-        bodyName: "Mutual barycentre",
-        bodyKey: bk,
-        isStar: false,
-        journalStellar: false,
-        fssCredits: null,
-        fssFirstDiscoverCredits: null,
-        fssFirstDiscoverBonus: null,
-        dssCredits: null,
-        dssFirstDiscoverCredits: null,
-        dssFirstDiscoverBonus: null,
-        dssVersusFssUpliftCredits: null,
-        dssProjectedCredits: null,
-        dssProbeEfficientApplied: null,
-        valuePlus: false,
-        hasExobiology: false,
-        bioBodyKey: null,
-        estimatedSurfaceTempK: null,
-        surfaceTemperatureRangeK: null,
-        exoMatchSummaries: [],
-        maxExoHeuristicCredits: 0,
-        exoValueTier: 0,
-        exoPayoutRange: null,
-        parentBodyId: null,
-        parentStarIds: [],
+        ...emptyBodyDetail(r.bodyId, "Mutual barycentre", bk),
         isMutualBarycentre: true,
         semiMajorAxis: r.semiMajorAxis,
         baryEccentricity: r.eccentricity,
@@ -492,13 +509,19 @@ export function buildSystemMapSnapshot(
     // Green gas giant verdict, and the body features the commander switched on (notableOptions.ts).
     const nopts = notableOptions();
     const green = nopts.green
-      ? greenGiantForRecord(r, { ...nopts.green, greenCodexBodies: store.greenCodexBodies, k10Systems: store.k10Systems })
+      ? greenGiantForRecord(r, {
+          ...nopts.green,
+          greenCodexBodies: store.greenCodexBodies,
+          k10Systems: store.k10Systems,
+        })
       : null;
     // The "green?" question, where edGGG's ladder leaves it open (greenQuestionWorthAsking).
     const askMark = nopts.green ? greenMarkToAsk(r, green, nopts.green.marks) : undefined;
     const dpf = nopts.features.size ? directParent(r.parents) : null;
     const featureHits = nopts.features.size
-      ? bodyFeatures(r, dpf && dpf.kind !== "Null" ? (byId.get(dpf.id) ?? null) : null).filter((f) => nopts.features.has(f.key))
+      ? bodyFeatures(r, dpf && dpf.kind !== "Null" ? (byId.get(dpf.id) ?? null) : null).filter((f) =>
+          nopts.features.has(f.key),
+        )
       : [];
 
     detailsByBodyId[String(r.bodyId)] = {
@@ -585,31 +608,7 @@ export function buildSystemMapSnapshot(
         const existing = detailsByBodyId[String(bodyId)];
         if (!existing) {
           detailsByBodyId[String(bodyId)] = {
-            bodyId,
-            bodyName: pretty,
-            bodyKey: bk,
-            isStar: false,
-            journalStellar: false,
-            fssCredits: null,
-            fssFirstDiscoverCredits: null,
-            fssFirstDiscoverBonus: null,
-            dssCredits: null,
-            dssFirstDiscoverCredits: null,
-            dssFirstDiscoverBonus: null,
-            dssVersusFssUpliftCredits: null,
-            dssProjectedCredits: null,
-            dssProbeEfficientApplied: null,
-            valuePlus: false,
-            hasExobiology: false,
-            bioBodyKey: null,
-            estimatedSurfaceTempK: null,
-            surfaceTemperatureRangeK: null,
-            exoMatchSummaries: [],
-            maxExoHeuristicCredits: 0,
-            exoValueTier: 0,
-            exoPayoutRange: null,
-            parentBodyId: null,
-            parentStarIds: [],
+            ...emptyBodyDetail(bodyId, pretty, bk),
             isMutualBarycentre: true,
             baryAffectsBodyIds: children.map((c) => c.bodyId),
             baryJournalNullId: byId.get(bodyId)?.journalBarycentreNullId,
@@ -646,31 +645,7 @@ export function buildSystemMapSnapshot(
         const placeholderKey = bodyKey(focusAddr, bodyId);
         const phName = `Body ${bodyId}`;
         detailsByBodyId[String(bodyId)] = {
-          bodyId,
-          bodyName: phName,
-          bodyKey: placeholderKey,
-          isStar: false,
-          journalStellar: false,
-          fssCredits: null,
-          fssFirstDiscoverCredits: null,
-          fssFirstDiscoverBonus: null,
-          dssCredits: null,
-          dssFirstDiscoverCredits: null,
-          dssFirstDiscoverBonus: null,
-          dssVersusFssUpliftCredits: null,
-          dssProjectedCredits: null,
-          dssProbeEfficientApplied: null,
-          valuePlus: false,
-          hasExobiology: false,
-          bioBodyKey: null,
-          estimatedSurfaceTempK: null,
-          surfaceTemperatureRangeK: null,
-          exoMatchSummaries: [],
-          maxExoHeuristicCredits: 0,
-          exoValueTier: 0,
-          exoPayoutRange: null,
-          parentBodyId: null,
-          parentStarIds: [],
+          ...emptyBodyDetail(bodyId, phName, placeholderKey),
           isInferredPlaceholder: true,
         };
         return {
