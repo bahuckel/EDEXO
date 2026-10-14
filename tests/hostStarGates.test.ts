@@ -291,7 +291,7 @@ describe("the body that reported the bug", () => {
 
   const find = (r: ReturnType<typeof run>, id: string) => r.matches.find((m) => m.entry.id === id)!;
 
-  it("demotes pluma for its star, and radialem 175 ly from a nebula (owner, 2026-10-08)", () => {
+  it("demotes pluma for its star, and keeps radialem 175 ly from a nebula at a tenth (owner, 2026-10-14)", () => {
     // The journal reports Biological: 2 on this body, and two other genera survive, so nothing is
     // restored to satisfy the count.
     const r = run(2);
@@ -301,16 +301,18 @@ describe("the body that reported the bug", () => {
     expect(pluma.unlikelyReasons!.at(-1)!.detail).toMatch(/neutron star/);
 
     // 175 ly from R CrA, past the 150 ly rule, and 85 ly from the nearest radialem cluster (rule
-    // 50 ly): demoted, the reason on the row (a band kept it at 0.22 from 2026-10-04 to 10-08).
+    // 50 ly), but inside the 150-200 ly band: kept at a tenth of its chance, the reason on the row
+    // (no band 2026-10-08 to 10-14; a band with no outer edge kept it at 0.22 from 10-04 to 10-08).
     const radialem = find(r, RADIALEM);
-    expect(radialem.unlikely).toBe(true);
-    expect(radialem.unlikelyReasons!.some((x) => x.field === "Nebula")).toBe(true);
+    expect(radialem.unlikely).toBeFalsy();
+    expect(radialem.presenceFactor).toBeCloseTo(0.1, 5);
+    expect(radialem.reasons.some((x) => x.field === "Nebula" && /inside 200 ly/.test(x.detail))).toBe(true);
   });
 
   it("keeps the panel's other candidates", () => {
     const shown = run(2).matches.filter((m) => !m.unlikely);
-    // Both Electricae demoted here (pluma on its star, radialem on its nebula), the other genera stay.
-    expect(shown.filter((m) => m.entry.genusDataDir === "electricae")).toEqual([]);
+    // Pluma demoted on its star; radialem kept in the band; the other genera stay.
+    expect(shown.filter((m) => m.entry.genusDataDir === "electricae").map((m) => m.entry.id)).toEqual([RADIALEM]);
     expect(shown.length).toBeGreaterThan(1);
   });
 

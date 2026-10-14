@@ -173,6 +173,16 @@ describe("expedition: target species", () => {
     expect(boxelPassesSpatialGate("stratum_stratum_paleas", box({ code: "b", cubeLy: 20 }), cat)).toBe(true);
   });
 
+  it("gives the planetary nebula rule the same slack (2026-10-14)", () => {
+    // A planetary nebula alone in the catalogue, 130 ly off: a 40 ly boxel (half-diagonal 35 ly) can reach 110 ly,
+    // a 20 ly one (17 ly) cannot.
+    const pn = cat!.planetary!.find((p) => cat!.nebulae.every((n) => Math.hypot(n.x - p.x, n.y - p.y, n.z - p.z) > 1000))!;
+    const only = { ...cat!, planetary: [pn], records: { radialem: [] } };
+    const center = { x: pn.x + 130, y: pn.y, z: pn.z };
+    expect(boxelPassesSpatialGate("electricae_electricae_radialem", box({ center, cubeLy: 40 }), only)).toBe(true);
+    expect(boxelPassesSpatialGate("electricae_electricae_radialem", box({ center, code: "b", cubeLy: 20 }), only)).toBe(false);
+  });
+
   it("expects species bodies from the genus rate and its share in the genus", () => {
     const r = boxelEVForSpecies(box(), {
       table, region: "Inner Orion Spur", genus: "Stratum", speciesId: "stratum_stratum_paleas", shareInGenus: 0.25, catalogue: cat,

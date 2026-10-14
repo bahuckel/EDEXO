@@ -103,12 +103,16 @@ describe("expedition service", () => {
     expect(f.species).toBe("electricae_electricae_radialem");
     expect(f.boxels.length).toBeGreaterThan(0);
     // The rule in words, the points it is measured from with their radius, how many boxels met it.
-    expect(f.rule!.text).toBe("within 150 ly of a nebula or 50 ly of a radialem cluster");
+    expect(f.rule!.text).toBe(
+      "within 150 ly of a nebula, 110 ly of a planetary nebula or 50 ly of a radialem cluster, at 10 % of the chance out to 200 ly",
+    );
     expect(f.rule!.boxelsPassing).toBeGreaterThanOrEqual(f.boxels.length);
     expect(f.rule!.boxelsPassing).toBeLessThanOrEqual(f.rule!.boxelsChecked);
     expect(f.rule!.points.length).toBeGreaterThan(0);
     expect(f.rule!.points.length).toBeLessThanOrEqual(MAX_RULE_POINTS);
-    expect(new Set(f.rule!.points.map((p) => p.radiusLy))).toEqual(new Set([150, 50]));
+    const radii = new Set(f.rule!.points.map((p) => p.radiusLy));
+    expect(radii.has(200)).toBe(true);
+    for (const r of radii) expect([200, 110, 50]).toContain(r);
     for (const b of f.boxels) {
       expect(b.passesGate).toBe(true);
       expect(b.speciesBodies).toBeGreaterThan(0);

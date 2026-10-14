@@ -186,16 +186,23 @@ export function catalogueNear(cat: SpatialCatalogue | null, center: Xyz, reachLy
     return out.length ? out : [best!];
   };
   const records = cat.records ? Object.fromEntries(Object.entries(cat.records).map(([k, v]) => [k, near(v)!])) : undefined;
-  return { ...cat, nebulae: near(cat.nebulae)!, guardian: near(cat.guardian)!, ...(records ? { records } : {}) };
+  return {
+    ...cat,
+    nebulae: near(cat.nebulae)!,
+    guardian: near(cat.guardian)!,
+    ...(cat.planetary ? { planetary: near(cat.planetary)! } : {}),
+    ...(records ? { records } : {}),
+  };
 }
 
 const ly = (v: number) => (v >= 1000 ? `${(v / 1000).toLocaleString("en-US")} kly` : `${v} ly`);
 
-/** A position rule in the reader's words: "within 150 ly of a nebula or 50 ly of a radialem cluster". */
+/** A position rule in the reader's words: "within 150 ly of a nebula, 110 ly of a planetary nebula or 50 ly of a radialem cluster". */
 export function ruleText(gate: SpatialGate): string {
   if (gate.kind === "core") return gate.beyond ? `at least ${ly(gate.thresholdLy)} from Sgr A*` : `within ${ly(gate.thresholdLy)} of Sgr A*`;
   const what = gate.kind === "nebula" ? "a nebula" : "a Guardian site";
   let t = `within ${ly(gate.thresholdLy)} of ${what}`;
+  if (gate.planetary) t += `${gate.records ? "," : " or"} ${ly(gate.planetary.withinLy)} of a planetary nebula`;
   if (gate.records) t += ` or ${ly(gate.records.withinLy)} of a ${gate.records.label.replace(/^Electricae /, "")}`;
   if (gate.softBandLy) t += `, at ${Math.round((gate.softFactor ?? 0.5) * 100)} % of the chance out to ${ly(gate.softBandLy)}`;
   return t;
@@ -221,6 +228,7 @@ export function rulePoints(
   };
   if (gate.kind === "core") add([cat.core], gate.thresholdLy);
   else add(gate.kind === "nebula" ? cat.nebulae : cat.guardian, gate.softBandLy ?? gate.thresholdLy);
+  if (gate.planetary) add(cat.planetary, gate.planetary.withinLy);
   if (gate.records) add(cat.records?.[gate.records.key], gate.records.withinLy);
   out.sort((a, b) => a.d - b.d);
   return { points: out.slice(0, MAX_RULE_POINTS).map(({ d: _d, ...p }) => p), truncated: out.length > MAX_RULE_POINTS };

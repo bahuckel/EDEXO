@@ -361,6 +361,7 @@ export function boxelPassesSpatialGate(speciesId: string, b: ExpeditionBoxel, ca
   const slack = (b.cubeLy * Math.sqrt(3)) / 2;
   if (v.beyond) return v.distanceLy + slack >= v.thresholdLy;
   if (v.distanceLy - slack <= v.thresholdLy) return true;
+  if (v.planetary && v.planetary.distanceLy - slack <= v.planetary.withinLy) return true;
   return !!v.record && v.record.distanceLy - slack <= v.record.withinLy;
 }
 
