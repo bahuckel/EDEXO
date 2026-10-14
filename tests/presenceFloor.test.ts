@@ -195,7 +195,10 @@ describe("after a DSS", () => {
       20 % are well clear of the floor — and the second is still only 0.5 % of its genus. If this
       function ever goes back to reading `presenceProbabilityPercent` here, this is the test that says so.
     */
-    const ms = [match("a_one", 40, { genusSharePercent: 99.5 }), match("a_two", 20, { genusSharePercent: 0.5 })];
+    const ms = [
+      match("a_one", 40, { genusSharePercent: 99.5 }),
+      match("a_two", 20, { genusSharePercent: 0.5 }),
+    ];
     demoteBelowPresenceFloor(ms, withDss(), db);
     expect(shownIds(ms)).toEqual(["a_one"]);
   });
@@ -214,7 +217,11 @@ describe("Hypi Fraae RF-Q b21-2 B 4 (owner, 2026-10-03)", () => {
     1,534 confirmed bodies of that kind the three split evenly (scopulum 33.8, tela 33.3, acies 32.9 %).
   */
   it("offers all three bacteria after the FSS", () => {
-    const ms = [match("bacterium_acies", 57.1), match("bacterium_scopulum", 40.1), match("bacterium_tela", 2.6)];
+    const ms = [
+      match("bacterium_acies", 57.1),
+      match("bacterium_scopulum", 40.1),
+      match("bacterium_tela", 2.6),
+    ];
     demoteBelowPresenceFloor(ms, body(), db);
     expect(shownIds(ms)).toEqual(["bacterium_acies", "bacterium_scopulum", "bacterium_tela"]);
   });
@@ -231,5 +238,23 @@ describe("Hypi Fraae RF-Q b21-2 B 4 (owner, 2026-10-03)", () => {
       db,
     );
     expect(shownIds(ms)).toEqual(["bacterium_acies", "bacterium_scopulum", "bacterium_tela"]);
+  });
+});
+
+// Plan 1.2.17 Part 4 (2026-10-14): two species are held to 0.3 %, measured on the September hold-outs.
+describe("the per-species presence floor", () => {
+  it("keeps Concha labiata at 0.5 % where another species at 0.5 % goes to unlikely", () => {
+    const ms = [
+      match("bacterium_x", 90),
+      match("concha_concha_labiata", 0.5),
+      match("concha_concha_renibus", 0.5),
+    ];
+    demoteBelowPresenceFloor(ms, body(), db);
+    expect(ms.find((m) => m.entry.id === "concha_concha_labiata")!.unlikely).toBeFalsy();
+    expect(ms.find((m) => m.entry.id === "concha_concha_renibus")!.unlikely).toBe(true);
+    const low = [match("bacterium_x", 90), match("concha_concha_labiata", 0.2)];
+    demoteBelowPresenceFloor(low, body(), db);
+    expect(low[1]!.unlikely).toBe(true);
+    expect(low[1]!.unlikelyReasons?.[0]?.detail).toMatch(/under the 0\.3 %/);
   });
 });

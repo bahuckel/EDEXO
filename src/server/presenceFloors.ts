@@ -103,7 +103,8 @@ export function attachPresenceProbability(
       2026-10-09: "Crystalline Shards are getting shown at 0% all the time").
     */
     const fixed = FIXED_PRESENCE_PCT[r.match.entry.id];
-    if (fixed) r.match.presenceProbabilityPercent = (b.biologicalSignals ?? 1) > 1 ? fixed.more : fixed.oneSignal;
+    if (fixed)
+      r.match.presenceProbabilityPercent = (b.biologicalSignals ?? 1) > 1 ? fixed.more : fixed.oneSignal;
   }
 
   /**
@@ -126,7 +127,10 @@ export function attachPresenceProbability(
     row.r.match.genusSharePercent = share == null ? null : Math.round(share * 1000) / 10;
   }
   // Where the model is measurably wrong (Recepta by its sulphur dioxide, tela by atmosphere): measuredOdds.ts.
-  applyMeasuredOdds(ranked.map((r) => r.match), scan);
+  applyMeasuredOdds(
+    ranked.map((r) => r.match),
+    scan,
+  );
 }
 
 /**
@@ -145,6 +149,23 @@ export function attachPresenceProbability(
  * one wrong row more (almost always tela) on 1.4 % and 2.5 % of the bodies.
  */
 export const PRESENCE_FLOOR_PCT = 1;
+
+/**
+ * Species whose own floor is lower, measured (plan 1.2.17 Part 4, 2026-10-14): on two disjoint September hold-outs of
+ * the EDDN year (8,000 bodies each, signals known), the floor per species chosen on one by the fewest misses and then
+ * the fewest false rows, and judged on the other (`docs/perf/formula/part4_floors.py`). These two were shown under 1 %
+ * where they grew; at 0.3 % the judging sample's misses went 7 → 6 for 32 more false rows over 7,768 bodies
+ * (+0.007 rows a body). Concha labiata reads 0.4-0.9 % on the high-metal bodies it is missed on.
+ */
+export const SPECIES_PRESENCE_FLOOR_PCT: Readonly<Record<string, number>> = {
+  concha_concha_labiata: 0.3,
+  brain_trees_brain_tree_lindigoticum: 0.3,
+};
+
+/** The floor this candidate is held to before a DSS. */
+export function presenceFloorFor(speciesId: string): number {
+  return SPECIES_PRESENCE_FLOOR_PCT[speciesId] ?? PRESENCE_FLOOR_PCT;
+}
 
 /**
  * Why a row the floors left in the list stands there, for the [?] on a [CODEX FIRST] row at 1 % or
@@ -213,7 +234,8 @@ export function demoteBelowPresenceFloor(
       m.organicAnalysisComplete === true ||
       m.approximateMatch === true ||
       confirmed.has(m.entry.id);
-    if (immune || pct >= PRESENCE_FLOOR_PCT || kept < keepAtLeast) {
+    const floor = presenceFloorFor(m.entry.id);
+    if (immune || pct >= floor || kept < keepAtLeast) {
       kept++;
       if (pct != null && Number.isFinite(pct)) {
         floorKept.set(m, {
@@ -222,7 +244,7 @@ export function demoteBelowPresenceFloor(
               ? "sampled"
               : m.approximateMatch === true
                 ? "approximate"
-                : pct >= PRESENCE_FLOOR_PCT
+                : pct >= floor
                   ? "passed"
                   : "best",
           pct,
@@ -235,7 +257,7 @@ export function demoteBelowPresenceFloor(
       ...(m.unlikelyReasons ?? []),
       {
         field: "Chance here",
-        detail: `${pct.toFixed(1)} % — under the ${PRESENCE_FLOOR_PCT} % this panel shows. Listed as a low-probability find rather than excluded.`,
+        detail: `${pct.toFixed(1)} % — under the ${floor} % this panel shows. Listed as a low-probability find rather than excluded.`,
       },
     ];
   }
@@ -351,7 +373,11 @@ function demoteBelowGenusShareFloor(matches: SpeciesMatch[], confirmed: Set<stri
  * `exoDataConsistencyAlerts` still reports the mismatch: the row being visible does not make the
  * codex list right.
  */
-export function markSampledDespiteUnlikely(matches: SpeciesMatch[], b: BodyExoState, db: SpeciesDatabase): void {
+export function markSampledDespiteUnlikely(
+  matches: SpeciesMatch[],
+  b: BodyExoState,
+  db: SpeciesDatabase,
+): void {
   const sampled = new Set(collectOwnOrganicLockSpeciesIds(b.organicGenusLocks, db));
   if (sampled.size === 0) return;
   for (const m of matches) {
