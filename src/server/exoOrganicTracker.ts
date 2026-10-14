@@ -158,7 +158,11 @@ function pushAnchor(t: ExoOrganicTrackerInternal, a: ExoOrganicAnchors, scan: nu
  * its own file. So a run rebuilt from the journal (the session file gone, the app restarted) can
  * still place the scans this app watched: the same body and the same second is the same scan.
  */
-function anchorFromMarks(store: ExoOrganicJournalStore, bodyKey: string, line: JournalLine): ExoOrganicAnchors | null {
+function anchorFromMarks(
+  store: ExoOrganicJournalStore,
+  bodyKey: string,
+  line: JournalLine,
+): ExoOrganicAnchors | null {
   const at = typeof line.timestamp === "string" ? line.timestamp : "";
   if (!at) return null;
   const m = (store.surfaceSampleMarks ?? []).find((x) => x.bodyKey === bodyKey && x.atIso === at);
@@ -504,7 +508,8 @@ export function ingestExoOrganicJournalLine(
     const speciesDisplay = speciesDisplayFromLine(line);
     const minM = resolveMinSampleDistanceM(projectRoot, db, genusLoc);
 
-    if (!t) {
+    /** The first plant of a run: a fresh tracker anchored here, the map's mark, the foot session. */
+    const startRun = (): void => {
       store.exoOrganicTracker = {
         bundleKey,
         bodyKey: bk,
@@ -534,6 +539,10 @@ export function ingestExoOrganicJournalLine(
         store.beginFootTravelOdometerSession(bk, bodyNameNormEarly);
       }
       persistSoon(store, projectRoot);
+    };
+
+    if (!t) {
+      startRun();
       return;
     }
 
@@ -551,35 +560,7 @@ export function ingestExoOrganicJournalLine(
     */
     if (effectiveSampleCount(t) >= 3) {
       wipeOrganicSampleSession(store, projectRoot);
-      store.exoOrganicTracker = {
-        bundleKey,
-        bodyKey: bk,
-        speciesKey,
-        speciesDisplay,
-        genusLocalised: genusLoc,
-        bodyNameNorm: bodyNameNormEarly,
-        minSampleDistanceM: minM,
-        anchors: [{ latDeg: fix.latDeg, lonDeg: fix.lonDeg, planetRadiusM: fix.planetRadiusM }],
-        phase: "tracking",
-        celebrationUntil: 0,
-      };
-      // The anchors are this species' own and are wiped when the next one starts; the map wants
-      // every plant taken on this body, so it keeps its own list.
-      store.addSurfaceSampleMark(
-        bk,
-        bodyNameNormEarly,
-        fix.latDeg,
-        fix.lonDeg,
-        speciesDisplay,
-        lineIso,
-        conditionsAtPlant,
-      );
-      store.footSessionBodyKey = bk;
-      store.footSessionBodyNameNorm = bodyNameNormEarly;
-      if (store.footTravelOdometerEnabled) {
-        store.beginFootTravelOdometerSession(bk, bodyNameNormEarly);
-      }
-      persistSoon(store, projectRoot);
+      startRun();
       return;
     }
 
@@ -790,7 +771,9 @@ export function buildExoOrganicOverlayDto(
   let spacingBetweenSamplesM: number | null = null;
 
   const distTo = (a: ExoOrganicAnchors | undefined): number | null =>
-    fix && a && avgR(a) > 0 ? greatCircleDistanceMeters(fix.latDeg, fix.lonDeg, a.latDeg, a.lonDeg, avgR(a)) : null;
+    fix && a && avgR(a) > 0
+      ? greatCircleDistanceMeters(fix.latDeg, fix.lonDeg, a.latDeg, a.lonDeg, avgR(a))
+      : null;
   distFirstM = distTo(byScan[0]);
   distSecondM = distTo(byScan[1]);
   distThirdM = distTo(byScan[2]);
