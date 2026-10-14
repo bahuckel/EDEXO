@@ -8,6 +8,7 @@
  * each candidate's detail, which it fetches when it opens it (`slimMatchForApp`).
  */
 import { createHash } from "node:crypto";
+import { lazyDetailOf } from "./lazyMatchDetail.js";
 import type { AppSnapshot, BodyComputed } from "../shared/types.js";
 import { footfallCertainty, type FootfallCertainty } from "../shared/footfallValue.js";
 
@@ -91,7 +92,11 @@ export function slimBodyForHud(b: BodyComputed): Partial<BodyComputed> & { footf
     // The co-occurrence solver's genus order, most likely first: the HUD lists rows in it, as the app
     // does. The order only; the HUD draws no number from it.
     ...(b.genusLikelihoods?.length
-      ? { genusLikelihoods: b.genusLikelihoods.map((l) => ({ genus: l.genus })) as BodyComputed["genusLikelihoods"] }
+      ? {
+          genusLikelihoods: b.genusLikelihoods.map((l) => ({
+            genus: l.genus,
+          })) as BodyComputed["genusLikelihoods"],
+        }
       : {}),
     matches: b.matches.map((m) => ({
       entry: {
@@ -136,14 +141,47 @@ function detailHasContent(d: Match["exomasteryDetail"]): boolean {
   so the match still changes on the wire when only its detail does and the card fetches it again.
 */
 function slimMatchForApp(m: Match, bodyKey: string): Match {
-  if (m.exomasteryDetail === undefined && m.exomasteryVarietyHints === undefined && m.otherMatchDetailCards === undefined) {
+  const lazy = lazyDetailOf(m);
+  if (lazy) {
+    // Its detail is built when read (lazyMatchDetail.ts): copy the row around it, and stamp it by its token,
+    // built or not, so the stamp does not move when /api/match-detail builds it.
+    const rest: Record<string, unknown> = {};
+    for (const k of Object.keys(m)) {
+      if (k === "exomasteryDetail" || k === "exomasteryVarietyHints" || k === "otherMatchDetailCards")
+        continue;
+      rest[k] = (m as unknown as Record<string, unknown>)[k];
+    }
+    const otherCards = m.otherMatchDetailCards?.length ?? 0;
+    return {
+      ...(rest as unknown as Match),
+      lazyDetail: {
+        body: bodyKey,
+        habitat: lazy.habitat,
+        otherCards,
+        v: detailHash(lazy.token, m.exomasteryVarietyHints, m.otherMatchDetailCards),
+      },
+    };
+  }
+  if (
+    m.exomasteryDetail === undefined &&
+    m.exomasteryVarietyHints === undefined &&
+    m.otherMatchDetailCards === undefined
+  ) {
     return m;
   }
   const { exomasteryDetail, exomasteryVarietyHints: _hints, otherMatchDetailCards, ...rest } = m;
   const habitat = detailHasContent(exomasteryDetail);
   const otherCards = otherMatchDetailCards?.length ?? 0;
   if (!habitat && otherCards === 0) return rest;
-  return { ...rest, lazyDetail: { body: bodyKey, habitat, otherCards, v: detailHash(exomasteryDetail, _hints, otherMatchDetailCards) } };
+  return {
+    ...rest,
+    lazyDetail: {
+      body: bodyKey,
+      habitat,
+      otherCards,
+      v: detailHash(exomasteryDetail, _hints, otherMatchDetailCards),
+    },
+  };
 }
 
 /*
@@ -162,7 +200,10 @@ function detailHash(detail: unknown, hints: unknown, cards: unknown): string {
   if (!byCards) byHints.set(k(hints), (byCards = new WeakMap()));
   let v = byCards.get(k(cards));
   if (v === undefined) {
-    v = createHash("sha1").update(JSON.stringify([detail, hints, cards])).digest("base64").slice(0, 10);
+    v = createHash("sha1")
+      .update(JSON.stringify([detail, hints, cards]))
+      .digest("base64")
+      .slice(0, 10);
     // Only object keys are safe to remember: a missing part shares NONE with every other body.
     if (k(detail) !== NONE || k(hints) !== NONE || k(cards) !== NONE) byCards.set(k(cards), v);
   }
@@ -199,7 +240,9 @@ export function slimSnapshotForChannel(snap: AppSnapshot, channel: WsChannel): P
     return {
       ...snap,
       bodies: snap.bodies ? snap.bodies.map(slimBodyForApp) : snap.bodies,
-      exoOverlayFocusBody: snap.exoOverlayFocusBody ? slimBodyForApp(snap.exoOverlayFocusBody) : snap.exoOverlayFocusBody,
+      exoOverlayFocusBody: snap.exoOverlayFocusBody
+        ? slimBodyForApp(snap.exoOverlayFocusBody)
+        : snap.exoOverlayFocusBody,
     };
   }
   const out: Record<string, unknown> = {};

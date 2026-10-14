@@ -51,9 +51,7 @@ import { resolveSpeciesPhoto } from "./speciesPhotos.js";
 import { loadSpeciesDatabaseFromTree } from "./speciesTreeLoader.js";
 import { loadPriceList, lookupPrice, type PriceIndex } from "./priceList.js";
 import { speciesEntryMatchesOrganicLabel } from "./organicTracking.js";
-import {
-  explorationDataValueBreakdown,
-} from "./explorationDataEstimate.js";
+import { explorationDataValueBreakdown } from "./explorationDataEstimate.js";
 import {
   buildPrimaryStarsHeader,
   buildSystemMapSnapshot,
@@ -77,11 +75,15 @@ import {
   applyExomasteryGenusCompetitivePercent,
   markExomasteryZeroHabitatMatches,
 } from "./exomasteryGenusFinalize.js";
+import { buildOtherMatchDetailDecks, otherMatchHasSimilarity } from "./exomasteryOtherMatch.js";
+import { attachLazyDetail } from "./lazyMatchDetail.js";
 import {
   buildBodyScanExomasteryDetail,
   buildExomasteryDetail,
   buildExomasteryVarietyHints,
   buildOtherMatchDetailCards,
+  exomasteryDetailAlwaysHasStats,
+  type ExomasteryProfileV1,
   exomasteryHabitatQualityPercent,
   exomasteryOtherMatchCardDeckScore,
   feederProfileBodyCount,
@@ -186,6 +188,7 @@ function attachOtherMatchCardScores(
   explorationRec: ExplorationScanRecord | null | undefined,
   root: string,
   journalHost: ReturnType<typeof journalHostObservationFromSpeciesContext>,
+  decks: CandidateDecks,
 ): void {
   if (!scanForExo) {
     for (const m of matches) {
@@ -203,16 +206,14 @@ function attachOtherMatchCardScores(
       m.exomasteryOtherMatchCardScore = null;
       continue;
     }
-    const previewCards = buildOtherMatchDetailCards(
-      prof,
-      scanForExo,
-      explorationRec ?? undefined,
-      null,
-      journalHost,
-    );
-    m.exomasteryOtherMatchCardScore = exomasteryOtherMatchCardDeckScore(previewCards);
+    const both = buildOtherMatchDetailDecks(prof, scanForExo, explorationRec ?? undefined, journalHost);
+    decks.set(m.entry.id, both);
+    m.exomasteryOtherMatchCardScore = exomasteryOtherMatchCardDeckScore(both.withoutSimilarity);
   }
 }
+
+/** The decks {@link attachOtherMatchCardScores} built, for the cards attached after the similarity is known. */
+type CandidateDecks = Map<string, ReturnType<typeof buildOtherMatchDetailDecks>>;
 
 function attachOtherMatchDetailCardsToMatches(
   matches: SpeciesMatch[],
@@ -220,12 +221,19 @@ function attachOtherMatchDetailCardsToMatches(
   explorationRec: ExplorationScanRecord | null | undefined,
   root: string,
   journalHost: ReturnType<typeof journalHostObservationFromSpeciesContext>,
+  decks: CandidateDecks,
 ): SpeciesMatch[] {
   if (!scanForExo) {
     return matches.map((m) => ({ ...m, otherMatchDetailCards: null }));
   }
   return matches.map((m) => {
     if (!m.exomasteryProfilePresent) return { ...m, otherMatchDetailCards: null };
+    const both = decks.get(m.entry.id);
+    if (both) {
+      const sim = otherMatchHasSimilarity(m.exomasterySimilarityPercent ?? null);
+      return { ...m, otherMatchDetailCards: sim ? both.withSimilarity : both.withoutSimilarity };
+    }
+    // A row added after the scores were taken (none today): built as it always was.
     const prof = loadExomasteryProfile(root, m.entry);
     if (!prof) return { ...m, otherMatchDetailCards: null };
     return {
@@ -651,9 +659,7 @@ function attachCodexRegionNovelty(
   const region = ctx?.regionName?.trim();
   if (!region) return;
   for (const m of matches) {
-    const label =
-      m.confirmedColour ??
-      m.predictedColour ?? predictedColourFor(m.entry, ctx, scan);
+    const label = m.confirmedColour ?? m.predictedColour ?? predictedColourFor(m.entry, ctx, scan);
     const fresh = codexNewColoursInRegion(logged, region, m.entry.displayName, label);
     if (fresh) {
       m.codexNew = true;
@@ -736,8 +742,14 @@ function lowChanceWhy(m: SpeciesMatch, k: { why: string; pct: number } | null, p
  * their light on the body, brightest first — a star whose class has no colour row hands over to the
  * next, and with none left it is "(unknown)", never a guessed class (owner, 2026-09-28).
  */
-function predictedColourFor(entry: SpeciesEntry, ctx: SpeciesMatchContext | null, scan: PlanetScan | null): string {
-  const stars = ctx?.colourStarTypes?.length ? ctx.colourStarTypes : [ctx?.colourStarType ?? ctx?.parentStarType];
+function predictedColourFor(
+  entry: SpeciesEntry,
+  ctx: SpeciesMatchContext | null,
+  scan: PlanetScan | null,
+): string {
+  const stars = ctx?.colourStarTypes?.length
+    ? ctx.colourStarTypes
+    : [ctx?.colourStarType ?? ctx?.parentStarType];
   return candidateMorphColorLabelByLight(entry, stars, scan?.materials);
 }
 
@@ -757,10 +769,16 @@ function attachAchievementAdvance(
   if (!tracked) return;
   for (const m of matches) {
     if (m.unlikely) continue;
-    const label =
-      m.confirmedColour ??
-      m.predictedColour ?? predictedColourFor(m.entry, ctx, scan);
-    const adv = achievementAdvanceFor(root, store, cachedDb.species, tracked, m.entry.id, ctx?.regionName, label);
+    const label = m.confirmedColour ?? m.predictedColour ?? predictedColourFor(m.entry, ctx, scan);
+    const adv = achievementAdvanceFor(
+      root,
+      store,
+      cachedDb.species,
+      tracked,
+      m.entry.id,
+      ctx?.regionName,
+      label,
+    );
     if (adv) m.achievementAdvance = adv;
   }
 }
@@ -1018,7 +1036,9 @@ function computeBodyUncached(
     ),
   );
   for (const id of collectResolvedOrganicLockSpeciesIds(
-    (b.organicGenusLocks ?? []).filter((l) => !l.fromSibling && l.source !== "codex" && l.source !== "spansh"),
+    (b.organicGenusLocks ?? []).filter(
+      (l) => !l.fromSibling && l.source !== "codex" && l.source !== "spansh",
+    ),
     db,
   )) {
     compScanOnly.delete(id);
@@ -1039,6 +1059,8 @@ function computeBodyUncached(
       db,
     ),
   );
+  /** Candidates whose habitat detail is attached last, built when read: species id → its profile. */
+  const lazyDetails = new Map<string, ExomasteryProfileV1>();
   let matches: SpeciesMatch[] = raw.map((m) => {
     const { photoUrl, photoNote, photoUrls, photoVariants, photoCreditByUrl } = resolveSpeciesPhoto(
       m.entry,
@@ -1074,10 +1096,15 @@ function computeBodyUncached(
             exomasterySimilarityPercent: null,
             exomasteryVarietyHints: profile ? buildExomasteryVarietyHints(profile) : null,
             exomasteryExportBasename: resolveExomasteryExportBasename(root, m.entry),
-            exomasteryDetail:
-              profile && scanForExo
-                ? buildExomasteryDetail(profile, scanForExo, explorationRec, journalHost)
-                : null,
+            // The habitat detail is attached at the end of this function, built when read (lazyMatchDetail.ts).
+            ...(profile && scanForExo && exomasteryDetailAlwaysHasStats(profile)
+              ? (lazyDetails.set(m.entry.id, profile), {})
+              : {
+                  exomasteryDetail:
+                    profile && scanForExo
+                      ? buildExomasteryDetail(profile, scanForExo, explorationRec, journalHost)
+                      : null,
+                }),
           }
         : {}),
     };
@@ -1163,10 +1190,18 @@ function computeBodyUncached(
       if (r) m.regionRarity = r;
     }
   }
-  attachOtherMatchCardScores(matches, scanForExo, explorationRec, root, journalHost);
+  const decks: CandidateDecks = new Map();
+  attachOtherMatchCardScores(matches, scanForExo, explorationRec, root, journalHost, decks);
   applyExomasteryGenusCompetitivePercent(matches);
   if (matches.length > 0 && scanForExo) {
-    matches = attachOtherMatchDetailCardsToMatches(matches, scanForExo, explorationRec, root, journalHost);
+    matches = attachOtherMatchDetailCardsToMatches(
+      matches,
+      scanForExo,
+      explorationRec,
+      root,
+      journalHost,
+      decks,
+    );
   }
   // `approximateMatchingUsed` (an on-foot scan named a species the gates rejected) is no longer
   // appended here: the owner moved that sentence behind the candidate list's [?] (2026-09-25).
@@ -1212,6 +1247,19 @@ function computeBodyUncached(
     db,
     includeBacterium: store.includeBacteriumInSearch,
   });
+
+  // Last, so no later copy of a row builds it (lazyMatchDetail.ts).
+  if (scanForExo) {
+    for (const m of matches) {
+      const profile = lazyDetails.get(m.entry.id);
+      if (!profile || Object.prototype.hasOwnProperty.call(m, "exomasteryDetail")) continue;
+      attachLazyDetail(
+        m,
+        () => buildExomasteryDetail(profile, scanForExo, explorationRec, journalHost),
+        true,
+      );
+    }
+  }
 
   return {
     state: b,
@@ -1408,7 +1456,8 @@ export function buildSnapshot(
     ...exploreRaw,
     fssValueCredits: Math.round(exploreRaw.fssValueCredits * carrier),
     dssValueCredits: Math.round(exploreRaw.dssValueCredits * carrier),
-    totalCredits: Math.round(exploreRaw.fssValueCredits * carrier) + Math.round(exploreRaw.dssValueCredits * carrier),
+    totalCredits:
+      Math.round(exploreRaw.fssValueCredits * carrier) + Math.round(exploreRaw.dssValueCredits * carrier),
   };
   const explorationScanDataValueCredits = exploreBreakdown.totalCredits;
   const organicPendingLines = bootLoading ? [] : buildOrganicPendingLines(store, db, cachedPrices);
@@ -1586,7 +1635,9 @@ export function buildSnapshot(
     onSiteTiming: timingFromSamples(store.landingMinutesSamples, store.samplingMinutesSamples),
     exoOutliers: exoOutlierTally(),
     explorationFssValueCredits: exploreBreakdown.fssValueCredits,
-    explorationHonkValueCredits: Math.round(("honkValueCredits" in exploreRaw ? exploreRaw.honkValueCredits : 0) * carrier),
+    explorationHonkValueCredits: Math.round(
+      ("honkValueCredits" in exploreRaw ? exploreRaw.honkValueCredits : 0) * carrier,
+    ),
     explorationDssScanCount: exploreBreakdown.dssScanCount,
     explorationDssValueCredits: exploreBreakdown.dssValueCredits,
     dssMappedPlanetaryBodyCount: exploreBreakdown.dssScanCount,

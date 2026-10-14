@@ -161,10 +161,17 @@ export interface ExomasteryProfileV1 {
 }
 
 const profileCache = new Map<string, ExomasteryProfileV1 | null | undefined>();
+/**
+ * {@link resolveExomasteryExportBasename} per species. It reads and parses every profile in the genus folder to
+ * find the one whose label matches, and the foot catalog asks it for every species row of every snapshot: 22 %
+ * of a first-view snapshot's time went here (code review, 2026-10-14). Cleared with the profiles.
+ */
+const exportBasenameCache = new Map<string, string | null>();
 
 /** Drop parsed profiles so the next load re-reads `*_exomastery*.json` from disk (e.g. after feeder export). */
 export function clearExomasteryProfileCache(): void {
   profileCache.clear();
+  exportBasenameCache.clear();
 }
 
 export function speciesSlug(label: string): string {
@@ -416,6 +423,15 @@ export function hasExomasteryProfileFile(projectRoot: string, entry: SpeciesEntr
 
 /** Basename for download: JSON under `exomastery/` (matched by speciesLabel) or legacy genus-root file. */
 export function resolveExomasteryExportBasename(projectRoot: string, entry: SpeciesEntry): string | null {
+  const cacheKey = `${projectRoot}::${entry.genusDataDir}::${entry.id}`;
+  const hit = exportBasenameCache.get(cacheKey);
+  if (hit !== undefined) return hit;
+  const found = resolveExomasteryExportBasenameUncached(projectRoot, entry);
+  exportBasenameCache.set(cacheKey, found);
+  return found;
+}
+
+function resolveExomasteryExportBasenameUncached(projectRoot: string, entry: SpeciesEntry): string | null {
   const base = join(getSpeciesDataDir(projectRoot), entry.genusDataDir);
   const sub = join(base, "exomastery");
   if (existsSync(sub)) {
@@ -807,7 +823,22 @@ export function exomasterySimilarityPercent(
  * §21b.2 fixed the panel's *ordering* with tier weights. This fixes the *number*, which was still the
  * discredited one. Display only; the scorer has never read this function.
  */
+/*
+  The hints read the profile alone, and every candidate of every body asked for them anew (~4 % of a first view,
+  profiled 2026-10-14). One answer per loaded profile; a reloaded profile is a new object, so it is asked again.
+  Read-only to its callers: the rows carry it into the match as is.
+*/
+const varietyHintsMemo = new WeakMap<ExomasteryProfileV1, ExomasteryVarietyItemDTO[]>();
+
 export function buildExomasteryVarietyHints(profile: ExomasteryProfileV1): ExomasteryVarietyItemDTO[] {
+  const hit = varietyHintsMemo.get(profile);
+  if (hit) return hit;
+  const built = buildExomasteryVarietyHintsUncached(profile);
+  varietyHintsMemo.set(profile, built);
+  return built;
+}
+
+function buildExomasteryVarietyHintsUncached(profile: ExomasteryProfileV1): ExomasteryVarietyItemDTO[] {
   const rows: { label: string; concentration: number; rank: number }[] = [];
   // Lower-cased, because the loader hands back `rock` where the measured path is `…solidComposition.Rock`.
   const measured = new Map(
@@ -1146,6 +1177,22 @@ export function exomasteryObservationForProfilePath(
 }
 
 /** Per-field breakdown for UI modal (numeric + categorical; composition in {@link ExomasteryDetailDTO.compositionGroups}). */
+/**
+ * Whether {@link buildExomasteryDetail} gives this profile at least one stat on any body: every numeric fact it
+ * does not omit and that is not a composition tail becomes one, whatever the body. Read by the lazy detail
+ * (lazyMatchDetail.ts) so the push can say "there is a habitat breakdown" without building it.
+ */
+export function exomasteryDetailAlwaysHasStats(profile: ExomasteryProfileV1): boolean {
+  const comp = new Set([
+    ...Object.keys(profile.materials).map((k) => k.toLowerCase()),
+    ...Object.keys(profile.atmosphereComposition).map((k) => k.toLowerCase()),
+    ...Object.keys(profile.solidComposition ?? {}).map((k) => k.toLowerCase()),
+  ]);
+  return Object.keys(profile.numerics).some(
+    (path) => !shouldOmitExomasterySciencePath(path) && !comp.has(exomasteryPathTailLower(path)),
+  );
+}
+
 export function buildExomasteryDetail(
   profile: ExomasteryProfileV1,
   scan: PlanetScan,

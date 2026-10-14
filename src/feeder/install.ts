@@ -21,6 +21,7 @@ import { writeJsonIfChanged } from "./stableWrite.js";
 import { basename, join } from "node:path";
 import type { SpeciesDatabase, SpeciesEntry } from "../shared/types.js";
 import {
+  clearExomasteryProfileCache,
   maxExomasteryProfileSampleCount,
   resolveExomasteryExportBasename,
   resolveExomasteryProfileJsonPath,
@@ -172,6 +173,8 @@ export function installProfile(
   mkdirSync(join(speciesDataDir(), entry.genusDataDir, "exomastery"), { recursive: true });
   // Unchanged apart from its generatedAt stamp: left alone (review F-F7).
   writeJsonIfChanged(path, `${JSON.stringify(stampAppIdentity(profile, entry), null, 2)}\n`);
+  // The profile and file-name memos describe the folder as it was before this write.
+  clearExomasteryProfileCache();
 
   // The loader has its own rules about which file in the folder belongs to which species. If it
   // cannot find what we just wrote, the build "succeeded" and changed nothing the app will read.

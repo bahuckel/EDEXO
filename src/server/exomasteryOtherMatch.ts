@@ -251,6 +251,11 @@ export function exomasteryOtherMatchCardDeckScore(cards: OtherMatchDetailCardDTO
 /**
  * Candidate species — “Other match details”: compact feeder vs body chips (priority + colors align with encyclopedia deviation tiers).
  */
+/** Whether a candidate's similarity was measured, which narrows its deck (see {@link buildOtherMatchDetailDecks}). */
+export function otherMatchHasSimilarity(similarityPercent: number | null | undefined): boolean {
+  return similarityPercent != null && Number.isFinite(similarityPercent) && similarityPercent >= 0;
+}
+
 export function buildOtherMatchDetailCards(
   profile: ExomasteryProfileV1,
   scan: PlanetScan,
@@ -258,12 +263,47 @@ export function buildOtherMatchDetailCards(
   similarityPercent: number | null | undefined,
   journalHost?: JournalHostStarObservation | null,
 ): OtherMatchDetailCardDTO[] {
+  const raw = buildOtherMatchRawCards(profile, scan, rec, journalHost);
+  return finishOtherMatchDeck(raw, otherMatchHasSimilarity(similarityPercent));
+}
+
+/**
+ * Both decks a candidate can get from one build: without its similarity (the snapshot scores the candidate on
+ * that one) and with it (the one the drawer shows once the similarity is known). They differ only in a numeric
+ * fact whose value is present but not finite on a loose band, which the similarity deck leaves out; building
+ * them separately formatted every card twice per candidate per body (code review, 2026-10-14).
+ */
+export function buildOtherMatchDetailDecks(
+  profile: ExomasteryProfileV1,
+  scan: PlanetScan,
+  rec: ExplorationScanRecord | null | undefined,
+  journalHost?: JournalHostStarObservation | null,
+): { withoutSimilarity: OtherMatchDetailCardDTO[]; withSimilarity: OtherMatchDetailCardDTO[] } {
+  const raw = buildOtherMatchRawCards(profile, scan, rec, journalHost);
+  return {
+    withoutSimilarity: finishOtherMatchDeck(raw, false),
+    withSimilarity: finishOtherMatchDeck(raw, true),
+  };
+}
+
+interface RawCards {
+  cards: OtherMatchDetailCardDTO[];
+  /** Cards only the deck without a similarity keeps. */
+  withoutSimilarityOnly: Set<OtherMatchDetailCardDTO>;
+}
+
+function buildOtherMatchRawCards(
+  profile: ExomasteryProfileV1,
+  scan: PlanetScan,
+  rec: ExplorationScanRecord | null | undefined,
+  journalHost?: JournalHostStarObservation | null,
+): RawCards {
   const out: OtherMatchDetailCardDTO[] = [];
+  const withoutSimilarityOnly = new Set<OtherMatchDetailCardDTO>();
   pushHostStarOtherMatchDeckCards(out, profile, journalHost ?? null);
   const materialKeysLower = new Set(Object.keys(profile.materials).map((k) => k.toLowerCase()));
   const atmoKeysLower = new Set(Object.keys(profile.atmosphereComposition).map((k) => k.toLowerCase()));
   const solidKeysLower = new Set(Object.keys(profile.solidComposition ?? {}).map((k) => k.toLowerCase()));
-  const hasSim = similarityPercent != null && Number.isFinite(similarityPercent) && similarityPercent >= 0;
 
   for (const [path, r] of Object.entries(profile.numerics)) {
     if (shouldOmitExomasterySciencePath(path)) continue;
@@ -274,9 +314,10 @@ export function buildOtherMatchDetailCards(
     const mode = r.mode ?? r.mean;
     const tightBand = rollupRelativeBandPercent(r) < 0.1;
     const hasValue = v != null && Number.isFinite(v);
-    if (hasSim) {
-      if (!(tightBand || hasValue)) continue;
-    } else if (v == null && !tightBand) continue;
+    // With a similarity: a fact with a value or a tight band. Without: anything but a missing value on a loose band.
+    const inWith = tightBand || hasValue;
+    const inWithout = !(v == null && !tightBand);
+    if (!inWith && !inWithout) continue;
 
     const devPct = hasValue ? deviationPercentVsRollupMode(v!, r) : 100;
     const highlight = hasValue ? otherMatchHighlightFromDeviation(devPct, v!, r) : "neutral";
@@ -296,6 +337,7 @@ export function buildOtherMatchDetailCards(
       tooltip: `Exomastery sample (${r.count ?? "?"} bodies): min–max ${spanNote}. Band vs mode: ${rollupRelativeBandPercent(r).toFixed(4)}%. Δ vs mode: ${hasValue ? `${devPct.toFixed(2)}%` : "—"}.`,
       highlight,
     });
+    if (!inWith) withoutSimilarityOnly.add(out[out.length - 1]!);
   }
 
   for (const [el, r] of Object.entries(profile.materials)) {
@@ -371,8 +413,13 @@ export function buildOtherMatchDetailCards(
     });
   }
 
+  return { cards: out, withoutSimilarityOnly };
+}
+
+function finishOtherMatchDeck(raw: RawCards, hasSimilarity: boolean): OtherMatchDetailCardDTO[] {
   const dedup = new Map<string, OtherMatchDetailCardDTO>();
-  for (const c of out) {
+  for (const c of raw.cards) {
+    if (hasSimilarity && raw.withoutSimilarityOnly.has(c)) continue;
     const k = `${c.shortTitle.toLowerCase()}|${c.topValue}|${c.bottomValue}`;
     if (!dedup.has(k)) dedup.set(k, c);
   }

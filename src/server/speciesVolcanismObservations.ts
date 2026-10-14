@@ -61,7 +61,22 @@ export const NO_VOLCANISM = "none";
  * {@link NO_VOLCANISM}.
  */
 export function volcanismKey(value: string | null | undefined): string {
-  const raw = (value ?? "").trim().toLowerCase();
+  /*
+    Pure, and asked for every volcanism label of every candidate's profile on every body a snapshot
+    computes (~6 % of a first view, profiled 2026-10-14). The vocabulary is a few dozen strings.
+  */
+  const v = value ?? "";
+  const hit = volcanismKeyMemo.get(v);
+  if (hit !== undefined) return hit;
+  const key = volcanismKeyUncached(v);
+  if (volcanismKeyMemo.size < 4096) volcanismKeyMemo.set(v, key);
+  return key;
+}
+
+const volcanismKeyMemo = new Map<string, string>();
+
+function volcanismKeyUncached(value: string): string {
+  const raw = value.trim().toLowerCase();
   if (!reportsVolcanism(raw)) return NO_VOLCANISM;
   return raw
     .replace(/\bvolcanism\b/g, " ")
