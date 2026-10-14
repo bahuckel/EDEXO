@@ -112,6 +112,8 @@ export function galaxyPoints(stride = 1): Buffer | null {
 }
 
 const pending = new Map<number, Promise<Buffer | null>>();
+/** Bumped by a clear: a build from before it is not kept, and nobody joins it (bioIndex.ts says why). */
+let generation = 0;
 
 /**
  * The same, built in slices with the index read off the main thread (owner, 2026-10-07: the app went
@@ -121,16 +123,22 @@ export function galaxyPointsAsync(stride = 1): Promise<Buffer | null> {
   if (cached.has(stride)) return Promise.resolve(cached.get(stride)!);
   const was = pending.get(stride);
   if (was) return was;
-  const p = (async () => {
+  const gen = generation;
+  const p: Promise<Buffer | null> = (async () => {
     const index = await loadBioIndexAsync();
     const buf = index ? await runSliced(pointsSteps(index, stride, galaxySystemValues(index))) : null;
+    if (gen !== generation) return buf;
     if (!cached.has(stride)) cached.set(stride, buf);
     return cached.get(stride)!;
-  })().finally(() => pending.delete(stride));
+  })().finally(() => {
+    if (pending.get(stride) === p) pending.delete(stride);
+  });
   pending.set(stride, p);
   return p;
 }
 
 export function clearGalaxyPoints(): void {
   cached.clear();
+  pending.clear();
+  generation++;
 }

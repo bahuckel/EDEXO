@@ -255,7 +255,7 @@ export function tileIndexAsync(): Promise<TileIndex | null> {
   if (cached !== undefined) return Promise.resolve(cached);
   if (pending) return pending;
   const gen = generation;
-  pending = (async () => {
+  const p: Promise<TileIndex | null> = (async () => {
     const index = await loadBioIndexAsync();
     if (!index) {
       if (gen === generation && cached === undefined) cached = null;
@@ -265,16 +265,20 @@ export function tileIndexAsync(): Promise<TileIndex | null> {
     const values = galaxySystemValues(index);
     const built = await runSliced(tileIndexSteps(index, values));
     await sectorNamesAsync(built);
-    if (gen === generation && cached === undefined) cached = built;
-    return cached ?? built;
+    if (gen !== generation) return built; // cleared meanwhile: this caller's answer, never the cache's
+    if (cached === undefined) cached = built;
+    return cached;
   })().finally(() => {
-    pending = null;
+    if (pending === p) pending = null;
   });
-  return pending;
+  pending = p;
+  return p;
 }
 
+/** Let it go (idle release, a new download); a build still running is not kept and nobody joins it. */
 export function clearTileIndex(): void {
   cached = undefined;
+  pending = null;
   generation++;
 }
 

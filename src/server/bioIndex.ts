@@ -302,6 +302,11 @@ export function peekBioIndex(): BioIndex | null {
 }
 
 let pending: Promise<BioIndex | null> | null = null;
+/**
+ * Bumped by a clear (code review, 2026-10-14): a read that started before it must not put the old
+ * file's index back afterwards (a download replaces the file and clears), and nobody joins it after.
+ */
+let generation = 0;
 
 /**
  * The same, with the 245 MB read off the main thread (owner, 2026-10-06: opening Boxels froze the
@@ -311,26 +316,27 @@ let pending: Promise<BioIndex | null> | null = null;
 export function loadBioIndexAsync(file = bioIndexPath()): Promise<BioIndex | null> {
   if (cached !== undefined) return Promise.resolve(cached);
   if (pending) return pending;
-  pending = (async () => {
+  const gen = generation;
+  const p: Promise<BioIndex | null> = (async () => {
+    let read: BioIndex | null = null;
     try {
-      if (!existsSync(file)) {
-        if (cached === undefined) cached = null;
-      } else {
-        const buf = await readFile(file);
-        if (cached === undefined) cached = new Index(buf);
-      }
+      if (existsSync(file)) read = new Index(await readFile(file));
     } catch (e) {
       console.warn(`ED Exo Compare — bio index unreadable, continuing without it: ${String(e)}`);
-      if (cached === undefined) cached = null;
     }
+    if (gen !== generation) return read; // cleared meanwhile: this caller's answer, never the cache's
+    if (cached === undefined) cached = read;
     return cached ?? null;
   })().finally(() => {
-    pending = null;
+    if (pending === p) pending = null;
   });
-  return pending;
+  pending = p;
+  return p;
 }
 
-/** Test seam. */
+/** Let the index go (idle release, a new download): the next use reads the file again. */
 export function clearBioIndexCache(): void {
   cached = undefined;
+  pending = null;
+  generation++;
 }

@@ -72,34 +72,37 @@ export function loadSystemTraits(file = systemTraitsPath()): SystemTraits | null
 }
 
 let pending: Promise<SystemTraits | null> | null = null;
+/** Bumped by a clear: a read from before it is not kept, and nobody joins it (bioIndex.ts says why). */
+let generation = 0;
 
 /** The same, read and unzipped off the main thread (bioIndex.ts loadBioIndexAsync says why). */
 export function loadSystemTraitsAsync(file = systemTraitsPath()): Promise<SystemTraits | null> {
   if (cached !== undefined) return Promise.resolve(cached);
   if (pending) return pending;
-  pending = (async () => {
+  const gen = generation;
+  const p: Promise<SystemTraits | null> = (async () => {
+    let read: SystemTraits | null = null;
     try {
-      if (!existsSync(file)) {
-        if (cached === undefined) cached = null;
-      } else {
-        const raw = await promisify(gunzip)(await readFile(file));
-        if (cached === undefined) cached = parseSystemTraits(raw);
-      }
+      if (existsSync(file)) read = parseSystemTraits(await promisify(gunzip)(await readFile(file)));
     } catch (e) {
       console.warn(`ED Exo Compare — system traits unreadable, continuing without them: ${String(e)}`);
-      if (cached === undefined) cached = null;
     }
+    if (gen !== generation) return read;
+    if (cached === undefined) cached = read;
     return cached ?? null;
   })().finally(() => {
-    pending = null;
+    if (pending === p) pending = null;
   });
-  return pending;
+  pending = p;
+  return p;
 }
 
 /** Let the 48 MB go when the map has been idle (galaxyMemory.ts); the next use reads it again. */
 export function clearSystemTraits(): void {
   cached = undefined;
   countsCache = null;
+  pending = null;
+  generation++;
 }
 
 /** Test seam. */
