@@ -171,3 +171,33 @@ describe("which groups get a ring", () => {
     for (const a of shown) for (const b of shown) if (a !== b) expect(Math.hypot(a.sx - b.sx, a.sy - b.sy)).toBeGreaterThanOrEqual(50);
   });
 });
+
+describe("point attributes (code review, 2026-10-14)", () => {
+  it("hold the decoded arrays themselves, not copies, with the same item sizes", async () => {
+    const THREE = await import("three");
+    const { setPointAttributes } = await import("../src/client/galaxy3d/pointAttributes.js");
+    // Views into one response buffer, as galaxyBinary.ts decodes them.
+    const ab = new ArrayBuffer(64);
+    const a = {
+      positions: new Int16Array(ab, 0, 6),
+      tiers: new Uint8Array(ab, 12, 2),
+      species: new Uint8Array(ab, 14, 2),
+      values: new Uint16Array(ab, 16, 2),
+    };
+    a.positions.set([1, -2, 3, 4, 5, -6]);
+    a.values.set([500, 65000]);
+    const geo = new THREE.BufferGeometry();
+    setPointAttributes(geo, a);
+    const at = (n: string) => geo.getAttribute(n) as InstanceType<typeof THREE.BufferAttribute>;
+    expect(at("position").array).toBe(a.positions);
+    expect(at("aTiers").array).toBe(a.tiers);
+    expect(at("aSpecies").array).toBe(a.species);
+    expect(at("aValue").array).toBe(a.values);
+    expect([at("position").itemSize, at("aTiers").itemSize, at("aValue").itemSize]).toEqual([3, 1, 1]);
+    expect(at("position").normalized).toBe(false);
+    expect(at("position").getY(0)).toBe(-2);
+    expect(at("aValue").getX(1)).toBe(65000);
+    // What the typed subclasses do with the same array: a copy (why they are not used).
+    expect(new THREE.Int16BufferAttribute(a.positions, 3).array).not.toBe(a.positions);
+  });
+});

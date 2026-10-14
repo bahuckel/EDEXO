@@ -64,6 +64,7 @@ import {
   type ClusterLevel,
 } from "./clusters";
 import type { GraphicsTier } from "./capabilities";
+import { setPointAttributes } from "./pointAttributes";
 
 /** The colour scheme's accent (`--accent` on the page), for lines drawn in WebGL. */
 function accentColour(): THREE.Color {
@@ -577,13 +578,10 @@ export class GalaxyEngine {
 
   private addOverview(o: OverviewPoints): void {
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Int16BufferAttribute(o.positions, 3));
-    geo.setAttribute("aTiers", new THREE.Uint8BufferAttribute(o.tiers, 1));
-    geo.setAttribute("aSpecies", new THREE.Uint8BufferAttribute(o.species, 1));
-    geo.setAttribute("aValue", new THREE.Uint16BufferAttribute(o.values, 1));
+    setPointAttributes(geo, o);
     this.overviewMatch = new Uint8Array(o.count);
     this.fillMatch(this.overviewMatch, (k) => k * o.stride);
-    // A plain BufferAttribute keeps this very array (Uint8BufferAttribute copies it), so setFilter's
+    // A plain BufferAttribute keeps this very array (as setPointAttributes does), so setFilter's
     // writes reach the GPU: with the copy, the first filter's marks stayed on screen for good (owner, 2026-10-04).
     geo.setAttribute("aMatch", new THREE.BufferAttribute(this.overviewMatch, 1));
     this.overviewMaterial = this.pointMaterial(overviewVertex, {
@@ -1283,10 +1281,7 @@ export class GalaxyEngine {
     const key = cellKey(t.cell);
     if (this.tiles.has(key)) return;
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Int16BufferAttribute(t.positions, 3));
-    geo.setAttribute("aTiers", new THREE.Uint8BufferAttribute(t.tiers, 1));
-    geo.setAttribute("aSpecies", new THREE.Uint8BufferAttribute(t.species, 1));
-    geo.setAttribute("aValue", new THREE.Uint16BufferAttribute(t.values, 1));
+    setPointAttributes(geo, t);
     const match = new Uint8Array(t.count);
     this.fillMatch(match, (i) => t.ordinals[i]!);
     geo.setAttribute("aMatch", new THREE.BufferAttribute(match, 1)); // the same array, not a copy (see addOverview)
