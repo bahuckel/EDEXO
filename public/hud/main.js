@@ -492,8 +492,15 @@ HUD.mount = function (names, opts) {
   */
   var lastWsAt = 0;
   var WS_LIVE_MS = 8000;
+  /*
+    An open socket is a live one even when it is quiet: the server pushes on change only, so a HUD
+    with nothing new to show went 8 s without a frame and fell back to polling a full snapshot every
+    5 s for as long as it stayed quiet (code review D15, 2026-10-14). A socket the server has lost is
+    closed by its keep-alive reaper, which brings onclose and the poll back.
+  */
+  var wsOpen = false;
   function tick() {
-    if (Date.now() - lastWsAt < WS_LIVE_MS) return;
+    if (wsOpen || Date.now() - lastWsAt < WS_LIVE_MS) return;
     fetch(api("/api/state?channel=hud"), { cache: "no-store" })
       .then(function (r) {
         if (!r.ok) throw new Error("HTTP " + r.status);
@@ -524,12 +531,14 @@ HUD.mount = function (names, opts) {
         var ws = new WebSocket(proto + "//" + host + "/ws?channel=hud");
         ws.onopen = function () {
           wsRetryMs = 1000;
+          wsOpen = true;
           // Ask for the HUD's slice of the state, not the whole snapshot (see server/wsChannels.ts).
           try {
             ws.send(JSON.stringify({ type: "hello", channel: "hud" }));
           } catch (e) {}
         };
         ws.onclose = function () {
+          wsOpen = false;
           ws.onclose = null;
           ws.onmessage = null;
           setTimeout(connectWs, wsRetryMs);

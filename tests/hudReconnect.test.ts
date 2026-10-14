@@ -82,3 +82,33 @@ describe("HUD socket", () => {
     }
   });
 });
+
+// Code review D15 (2026-10-14): a quiet open socket used to start the 5 s full-snapshot poll after 8 s.
+describe("HUD fallback poll", () => {
+  beforeEach(() => {
+    FakeSocket.made = [];
+    vi.useFakeTimers();
+    vi.stubGlobal("WebSocket", FakeSocket);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => {})),
+    );
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("does not poll while the socket is open, however quiet, and polls again once it closes", async () => {
+    const HUD = await loadHudModule<HudApi>();
+    HUD.mount(["distance"]);
+    const polls = () => (fetch as unknown as { mock: { calls: unknown[] } }).mock.calls.length;
+    const atMount = polls();
+    FakeSocket.made[0]!.onopen?.();
+    vi.advanceTimersByTime(60_000);
+    expect(polls()).toBe(atMount);
+    FakeSocket.made[0]!.close();
+    vi.advanceTimersByTime(5_000);
+    expect(polls()).toBeGreaterThan(atMount);
+  });
+});
