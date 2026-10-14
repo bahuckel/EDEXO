@@ -57,12 +57,23 @@ export async function listJournalFilesChronological(
   try {
     const names = await fs.readdir(journalDir);
     const journals = names.filter(isJournalFile);
+    /*
+      The mtime only orders logs whose names carry no timestamp (legacy names) or share one, and only
+      stands in for the start time of a nameless one. This runs on every 2 s poll over every journal
+      (~300 here), so the others are not stat'ed at all (code review D8, 2026-10-14).
+    */
+    const keyCount = new Map<number, number>();
+    for (const name of journals) {
+      const k = filenameUtcMs(name);
+      keyCount.set(k, (keyCount.get(k) ?? 0) + 1);
+    }
     const rows = await Promise.all(
       journals.map(async (name) => {
         const p = path.resolve(path.join(journalDir, name));
-        const st = await fs.stat(p);
         const key = filenameUtcMs(name);
-        return { p, name, key, mtime: st.mtimeMs };
+        const needMtime = key <= 0 || (keyCount.get(key) ?? 0) > 1;
+        const mtime = needMtime ? (await fs.stat(p)).mtimeMs : 0;
+        return { p, name, key, mtime };
       }),
     );
     rows.sort((a, b) => a.key - b.key || a.mtime - b.mtime || a.name.localeCompare(b.name));
@@ -100,7 +111,12 @@ async function processLines(
   leftover.buf = parts.pop() ?? "";
   let sliceStart = breathe ? performance.now() : 0;
   for (let i = 0; i < parts.length; i++) {
-    if (breathe && i > 0 && i % REPLAY_CHECK_EVERY === 0 && performance.now() - sliceStart > REPLAY_SLICE_MS) {
+    if (
+      breathe &&
+      i > 0 &&
+      i % REPLAY_CHECK_EVERY === 0 &&
+      performance.now() - sliceStart > REPLAY_SLICE_MS
+    ) {
       await nextTurn();
       sliceStart = performance.now();
     }
@@ -181,7 +197,8 @@ export async function readJournalFromOffset(
       first complete new line on every warm start (combined plan 1.1a, 2026-10-01).
     */
     const prev = Buffer.alloc(1);
-    discardUntilNl = startByte > 0 && !((await fh.read(prev, 0, 1, startByte - 1)).bytesRead === 1 && prev[0] === 0x0a);
+    discardUntilNl =
+      startByte > 0 && !((await fh.read(prev, 0, 1, startByte - 1)).bytesRead === 1 && prev[0] === 0x0a);
     buf = Buffer.alloc(size - startByte);
     const { bytesRead } = await fh.read(buf, 0, buf.length, startByte);
     buf = buf.subarray(0, bytesRead);
@@ -332,8 +349,31 @@ export function startJournalWatcher(
   };
 
   /** The byte the resync reached in `latest` when it says so (1.1b); else the file's size, as before. */
-  const tailStartAfterResync = async (seed: JournalTailSeed | null | void, latest: string): Promise<number> =>
+  const tailStartAfterResync = async (
+    seed: JournalTailSeed | null | void,
+    latest: string,
+  ): Promise<number> =>
     seed && sameJournalPath(seed.path, latest) ? seed.size : (await fs.stat(latest)).size;
+
+  /** Re-read every log and tail the newest from where the replay ended: after a rotation or a new window. */
+  const resyncTo = async (latest: string, identity: string, why: string): Promise<void> => {
+    stopTailWatch();
+    resyncing = true;
+    try {
+      currentPath = latest;
+      position = 0;
+      leftover.buf = "";
+      decoder = new StringDecoder("utf8");
+      position = await tailStartAfterResync(await resyncAllJournalFiles(), latest);
+      lastListIdentity = identity;
+    } catch (e) {
+      console.error(`[journalWatcher] resync after journal ${why} failed:`, e);
+      throw e;
+    } finally {
+      resyncing = false;
+    }
+    refreshTailWatch();
+  };
 
   const pulse = async (): Promise<void> => {
     /*
@@ -365,42 +405,12 @@ export function startJournalWatcher(
     }
 
     if (!sameJournalPath(latest, currentPath)) {
-      stopTailWatch();
-      resyncing = true;
-      try {
-        currentPath = latest;
-        position = 0;
-        leftover.buf = "";
-        decoder = new StringDecoder("utf8");
-        position = await tailStartAfterResync(await resyncAllJournalFiles(), latest);
-        lastListIdentity = identity;
-      } catch (e) {
-        console.error("[journalWatcher] resync after journal rotation failed:", e);
-        throw e;
-      } finally {
-        resyncing = false;
-      }
-      refreshTailWatch();
+      await resyncTo(latest, identity, "rotation");
       return;
     }
 
     if (lastListIdentity !== null && identity !== lastListIdentity) {
-      stopTailWatch();
-      resyncing = true;
-      try {
-        currentPath = latest;
-        position = 0;
-        leftover.buf = "";
-        decoder = new StringDecoder("utf8");
-        position = await tailStartAfterResync(await resyncAllJournalFiles(), latest);
-        lastListIdentity = identity;
-      } catch (e) {
-        console.error("[journalWatcher] resync after journal window change failed:", e);
-        throw e;
-      } finally {
-        resyncing = false;
-      }
-      refreshTailWatch();
+      await resyncTo(latest, identity, "window change");
       return;
     }
 
