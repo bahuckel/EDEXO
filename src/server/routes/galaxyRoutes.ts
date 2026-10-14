@@ -93,6 +93,8 @@ export function registerGalaxyRoutes(
 ): void {
   // The map's extra layers (galaxyLayers.ts): points of interest, phenomena, carriers, bookmarks.
   app.get("/api/galaxy/layers", (req, res) => {
+    // Registered ahead of the /api/galaxy middleware below, and the stations layer reads a registered cache.
+    touchGalaxyMemory();
     const kind = String(req.query?.kind ?? "") as GalaxyLayerKind;
     if (!GALAXY_LAYER_KINDS.includes(kind)) {
       res.status(400).json({ ok: false, error: `kind must be one of ${GALAXY_LAYER_KINDS.join(", ")}` });
@@ -125,8 +127,9 @@ export function registerGalaxyRoutes(
    * than through the decoder so the bytes on the wire are the bytes in the repo, notice and all.
    */
   /*
-    Everything under /api/galaxy keeps the map's memory alive; five idle minutes lets it go
-    (galaxyMemory.ts — the map is its own window, loaded fresh each time, owner 2026-09-28).
+    What under /api/galaxy reads these keeps the map's memory alive (journal-only routes do not, see
+    JOURNAL_ONLY); five idle minutes lets it go (galaxyMemory.ts — the map is its own window, loaded
+    fresh each time, owner 2026-09-28).
   */
   registerGalaxyCache("bio-index", clearBioIndexCache);
   registerGalaxyCache("species-catalogue", clearGalaxyCatalogueCache);
@@ -157,8 +160,15 @@ export function registerGalaxyRoutes(
     "/layers",
     "/own",
   ]);
+  /*
+    These read only the journal store or the download's status, so they do not keep the map's memory
+    alive (code review, 2026-10-14): the map's route and own-assets polls kept resetting the idle clock,
+    and nothing was ever let go while a map tab was open, in front or not. /mine/system (the bio index)
+    reads a registered cache and touches it; /layers is registered above and touches it itself.
+  */
+  const JOURNAL_ONLY = new Set(["/index", "/index/download", "/route", "/visited", "/mine", "/my-sectors", "/own"]);
   app.use("/api/galaxy", (req, _res, next) => {
-    touchGalaxyMemory();
+    if (!JOURNAL_ONLY.has(req.path)) touchGalaxyMemory();
     if (NO_INDEX.has(req.path)) return next();
     void Promise.all([tileIndexAsync(), loadSystemTraitsAsync()])
       .catch(() => undefined)

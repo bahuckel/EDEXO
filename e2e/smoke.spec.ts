@@ -401,6 +401,37 @@ test("galaxy 3D: the game-style menus open and close, each with its help, and th
   expect(errors).toEqual([]);
 });
 
+/*
+  Code review, 2026-10-14: a tab stays mounted behind the others with document.hidden false, and the map's
+  route and own-assets polls went on there, keeping the server's map memory from ever being let go.
+*/
+test("galaxy 3D: behind another tab the map stops asking; back in front it reads at once", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.addInitScript(() => localStorage.setItem("edexo.tabs", JSON.stringify({ tabs: ["galaxy"], active: "galaxy" })));
+  const asked: string[] = [];
+  page.on("request", (r) => {
+    const u = new URL(r.url());
+    if (u.pathname === "/api/galaxy/route" || u.pathname === "/api/galaxy/own") asked.push(u.pathname);
+  });
+  await page.goto("/");
+  type G = { stats: () => { phase: string } };
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __galaxy?: G }).__galaxy?.stats().phase), { timeout: 60_000 })
+    .toBe("ready");
+  await expect.poll(() => asked.includes("/api/galaxy/own")).toBe(true);
+
+  await page.getByRole("tab", { name: "Main" }).click();
+  asked.length = 0;
+  // A jump read from the journal asks the map for the route at once, when it is in front.
+  await page.evaluate(() => window.dispatchEvent(new Event("edexo-system-changed")));
+  await page.waitForTimeout(1500);
+  expect(asked).toEqual([]);
+
+  await page.getByRole("tab", { name: "Galaxy map" }).click();
+  await expect.poll(() => asked.includes("/api/galaxy/route") && asked.includes("/api/galaxy/own")).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test("galaxy 3D: the Filter drawer lights the systems that have what was ticked", async ({ page }) => {
   const errors = watchErrors(page);
   await page.setViewportSize({ width: 1400, height: 820 });

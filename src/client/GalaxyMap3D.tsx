@@ -7,7 +7,7 @@
  * names over the canvas, the hover card, the panels, the commander's own layer and route, the Search
  * and Codex drawers, and what to say when the machine cannot draw it.
  */
-import { useInTab } from "./tabs/TabHost";
+import { useInTab, useTabInFront } from "./tabs/TabHost";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GalaxyEngine,
@@ -149,6 +149,8 @@ const WAIT_MAX_M = 500;
 const WORTH_STEPS_M = [0, 1, 2, 5, 10, 15, 20, 30, 50, 75, 100, 150, 200, 300];
 
 export function GalaxyMap3D() {
+  // Its polls run only while it is in front (a tab behind others stays mounted).
+  const inFront = useTabInFront();
   const host = useRef<HTMLDivElement | null>(null);
   const labelLayer = useRef<HTMLDivElement | null>(null);
   const engine = useRef<GalaxyEngine | null>(null);
@@ -450,9 +452,13 @@ export function GalaxyMap3D() {
     };
   }, [graphics.tier, track]);
 
-  // Where the ship is and this session's jumps: every 3 s while the window is visible (live follow).
+  /*
+    Where the ship is and this session's jumps, while the map is in front: behind another tab it stays
+    mounted with `document.hidden` false, and its polls kept the server's map memory from ever being let
+    go (code review, 2026-10-14). Coming back to the front runs the effect again, which reads at once.
+  */
   useEffect(() => {
-    if (graphics.tier === "none") return;
+    if (graphics.tier === "none" || !inFront) return;
     let live = true;
     const tick = () => {
       if (document.hidden) return;
@@ -492,7 +498,7 @@ export function GalaxyMap3D() {
       clearInterval(t);
       window.removeEventListener(SYSTEM_CHANGED_EVENT, onJump);
     };
-  }, [graphics.tier]);
+  }, [graphics.tier, inFront]);
 
   // Elite controls on the engine (it starts without them).
   useEffect(() => {
@@ -618,7 +624,7 @@ export function GalaxyMap3D() {
   */
   useEffect(() => {
     const e = engine.current;
-    if (!e || stats?.phase !== "ready") return;
+    if (!e || stats?.phase !== "ready" || !inFront) return;
     type Own = { name: string; x: number; y: number; z: number };
     const read = () =>
       void fetch("/api/galaxy/own")
@@ -642,9 +648,11 @@ export function GalaxyMap3D() {
         })
         .catch(() => undefined);
     read();
-    const t = window.setInterval(read, 60_000);
+    const t = window.setInterval(() => {
+      if (!document.hidden) read();
+    }, 60_000);
     return () => clearInterval(t);
-  }, [stats?.phase]);
+  }, [stats?.phase, inFront]);
 
   // The expedition field and plan: drawn while the Expedition drawer has scored something.
   useEffect(() => {

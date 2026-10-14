@@ -85,6 +85,17 @@ export function TabSlot({ kind, children }: { kind: TabKind; children: ReactNode
 }
 
 /**
+ * Whether the screen calling this is the one in front: its tab is the active one, or it is not in a
+ * tab at all (tab view off, a window of its own). A tab once started stays mounted behind the others,
+ * and `document.hidden` is false there, so a screen's polls have to ask this (code review,
+ * 2026-10-14: the galaxy map polled from behind other tabs and kept the server's map memory alive).
+ */
+export function useTabInFront(): boolean {
+  const kind = useContext(InTabContext);
+  return useTabSelector((s) => kind == null || !s.on || s.active === kind);
+}
+
+/**
  * A screen's open state and its setter: the header's own state with tab view off, the tab store with it
  * on (opening goes to the tab, closing closes it).
  */
