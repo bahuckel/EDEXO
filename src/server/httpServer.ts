@@ -60,7 +60,12 @@ import {
 } from "./lanAuth.js";
 import type { JournalScan } from "./statisticsScan.js";
 import type { PredictionQualityDTO } from "../shared/dto/predictions.js";
-import { isLauncherOpenMode, readLauncherOpenMode, writeLanAccess, writeLauncherOpenMode } from "./launcherPrefs.js";
+import {
+  isLauncherOpenMode,
+  readLauncherOpenMode,
+  writeLanAccess,
+  writeLauncherOpenMode,
+} from "./launcherPrefs.js";
 import { type EdsmCatchUpScope } from "./edsmCatchUp.js";
 
 import { GZIP_MIN_BYTES, sendJson } from "./routes/httpHelpers.js";
@@ -258,7 +263,11 @@ export interface HttpServerOptions {
    * The commander's green gas giant call on a scanned body (`/api/ggg/mark`, server/greenGiants.ts).
    * Returns the body's verdict after the call, or false when there is no scan of that body.
    */
-  setGreenGiantMark?: (systemAddress: number, bodyId: number, mark: "yes" | "no" | null) => GreenGiantVerdict | null | false;
+  setGreenGiantMark?: (
+    systemAddress: number,
+    bodyId: number,
+    mark: "yes" | "no" | null,
+  ) => GreenGiantVerdict | null | false;
   /** Boxels the commander is scanning (`/api/boxels`, server/savedBoxels.ts). */
   savedBoxels?: SavedBoxelsService;
   /** The neutron route being flown (`/api/neutron/live`, server/neutronLive.ts), and where the ship is. */
@@ -345,9 +354,7 @@ export interface HttpServerOptions {
   /** GET /api/system/spansh-search?q= — the same shape from Spansh (id64 = SystemAddress). */
   searchSpanshSystems?: (
     query: string,
-  ) => Promise<
-    { ok: true; systems: SpanshSystemHit[] } | { ok: false; error: string }
-  >;
+  ) => Promise<{ ok: true; systems: SpanshSystemHit[] } | { ok: false; error: string }>;
   /**
    * The statistics scan: three years of journals reduced to totals.
    *
@@ -449,7 +456,8 @@ export function createHttpServer(opts: HttpServerOptions): {
             ? (req: express.Request, res: express.Response, next: express.NextFunction) => {
                 try {
                   const r = (h as (a: unknown, b: unknown, c: unknown) => unknown)(req, res, next);
-                  if (r && typeof (r as Promise<unknown>).catch === "function") (r as Promise<unknown>).catch(next);
+                  if (r && typeof (r as Promise<unknown>).catch === "function")
+                    (r as Promise<unknown>).catch(next);
                 } catch (e) {
                   next(e);
                 }
@@ -594,8 +602,12 @@ export function createHttpServer(opts: HttpServerOptions): {
     perfCount("http.apiState");
     res.setHeader("X-Edexo-Rev", String(pushRev));
     const chq = parseWsChannel(req.query?.channel) ?? "app";
-    const snap = opts.getSnapshot();
-    if (chq === "app") lastAppSnap = snap;
+    /*
+      The snapshot a push or another request built in the last second, as a new socket gets it (code
+      review D7, 2026-10-14): a poller, a phone and the client's HTTP backup each used to cost a full
+      rebuild. A push replaces it, so a client fetching after the revision moved still gets the new one.
+    */
+    const snap = recentSnapshot();
     const body = perfTime("http.apiState.serialize", () => JSON.stringify(slimSnapshotForChannel(snap, chq)));
     sendJson(req, res, body, (raw, sent) => {
       perfBytes("http.apiState.bytes", raw);
@@ -743,7 +755,10 @@ export function createHttpServer(opts: HttpServerOptions): {
       res.status(501).type("text/plain").send("Not available");
       return;
     }
-    res.type("text/plain").set("Cache-Control", "no-store").send(await opts.getDiagnostics());
+    res
+      .type("text/plain")
+      .set("Cache-Control", "no-store")
+      .send(await opts.getDiagnostics());
   });
 
   app.post("/api/app/whats-new/seen", localOnly, (_req, res) => {
@@ -943,7 +958,8 @@ export function createHttpServer(opts: HttpServerOptions): {
     // cookie on the handshake; a script can pass ?k= or the header.
     verifyClient: ({ req }, done) => {
       // A web page can open a WebSocket to 127.0.0.1 from anywhere: its Origin must be ours (1.4).
-      if (!requestOriginIsAllowed(req, isOwnLanHost, { checkOrigin: true })) done(false, 403, "Foreign origin");
+      if (!requestOriginIsAllowed(req, isOwnLanHost, { checkOrigin: true }))
+        done(false, 403, "Foreign origin");
       else if (requestIsAuthorized(req, lanKey)) done(true);
       else done(false, 401, "Access key required");
     },
@@ -962,7 +978,9 @@ export function createHttpServer(opts: HttpServerOptions): {
   const alive = new WeakSet<import("ws").WebSocket>();
   /** A slow LAN client gets no push while this much is still unsent to it. */
   const WS_BACKLOG_LIMIT = 8 * 1024 * 1024;
-  wss.on("error", (e) => console.error("[edexo-compare] WebSocket server:", e instanceof Error ? e.message : e));
+  wss.on("error", (e) =>
+    console.error("[edexo-compare] WebSocket server:", e instanceof Error ? e.message : e),
+  );
   const stateMessage = (snap: AppSnapshot, channel: WsChannel): string =>
     JSON.stringify({ type: "state", channel, rev: pushRev, payload: slimSnapshotForChannel(snap, channel) });
 
