@@ -317,3 +317,35 @@ describe("the station index", () => {
     expect(() => new StationsIndex(buf.subarray(0, 80))).toThrow(/truncated/);
   });
 });
+
+/*
+  Owner, 2026-10-15: "Station search - shows System Colonisation Ships even when 'Colony construction' is toggled off".
+  Spansh's dump types them as outposts, named "System Colonisation Ship" or the game's raw $EXT_PANEL_ColonisationShip.
+*/
+describe("colonisation ships", () => {
+  const idx = new StationsIndex(
+    encode([
+      {
+        name: "Claimed",
+        x: 5,
+        y: 0,
+        z: 0,
+        stations: [
+          { name: "System Colonisation Ship", services: ["Refuel"], type: "Outpost", pad: 3, ls: 10 },
+          { name: "$EXT_PANEL_ColonisationShip:#index=1;", services: ["Refuel"], type: "Outpost", pad: 3, ls: 20 },
+          { name: "Claimed Outpost", services: ["Refuel"], type: "Outpost", pad: 2, ls: 30 },
+        ],
+      },
+    ]),
+  );
+  const at = { x: 0, y: 0, z: 0 };
+
+  it("count as colony construction: left out unless asked", () => {
+    expect(idx.nearest({ from: at }).map((r) => r.name)).toEqual(["Claimed Outpost"]);
+    expect(idx.nearest({ from: at, construction: true }).map((r) => r.name)).toEqual([
+      "System Colonisation Ship",
+      "System Colonisation Ship",
+      "Claimed Outpost",
+    ]);
+  });
+});

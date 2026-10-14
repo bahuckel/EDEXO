@@ -55,6 +55,14 @@ export const PAD_FLOOR: Readonly<Record<string, number>> = {
   "Planetary Outpost": 2,
 };
 
+/** A System Colonisation Ship's name, as the dump has it (see {@link StationsIndex.isColonyShip}). */
+const COLONY_SHIP = /colonisation ?ship/i;
+
+/** The game's raw `$EXT_PANEL_ColonisationShip:#index=1;` shown as the ship's name. */
+export function displayStationName(name: string): string {
+  return /^\$EXT_PANEL_ColonisationShip/i.test(name) ? "System Colonisation Ship" : name;
+}
+
 export interface StationsMeta {
   builtAt?: string;
   dump?: string;
@@ -151,6 +159,28 @@ export class StationsIndex {
     return this.points[sys] ?? -1;
   }
 
+  private colonyShips: Uint8Array | null = null;
+  /**
+   * Whether a station is a System Colonisation Ship (owner, 2026-10-15: listed with "Colony construction" off). Spansh's
+   * dump types them as outposts and planetary outposts, named "System Colonisation Ship" or the game's raw
+   * `$EXT_PANEL_ColonisationShip…`, so the construction-depot types never caught them: read by name, once, a name at a
+   * time (the names are shared, so the regex runs once per distinct one).
+   */
+  isColonyShip(i: number): boolean {
+    if (!this.colonyShips) {
+      const flags = new Uint8Array(this.stationCount);
+      const byName = new Map<number, boolean>();
+      for (let k = 0; k < this.stationCount; k++) {
+        const off = this.buf.readUInt32LE(this.stAt + k * ST + 16);
+        let yes = byName.get(off);
+        if (yes === undefined) byName.set(off, (yes = COLONY_SHIP.test(this.str(off))));
+        if (yes) flags[k] = 1;
+      }
+      this.colonyShips = flags;
+    }
+    return this.colonyShips[i] === 1;
+  }
+
   /** The services' bits for names (unknown names are ignored). */
   maskOf(names: readonly string[]): number {
     let m = 0;
@@ -168,7 +198,7 @@ export class StationsIndex {
     const pad = this.padAt(i);
     const day = this.buf.readUInt16LE(o + 14);
     return {
-      name: this.str(this.buf.readUInt32LE(o + 16)),
+      name: displayStationName(this.str(this.buf.readUInt32LE(o + 16))),
       system: this.str(this.buf.readUInt32LE(so + 12)),
       x: this.buf.readFloatLE(so),
       y: this.buf.readFloatLE(so + 4),
@@ -227,7 +257,7 @@ export class StationsIndex {
         if (this.padAt(i) < minPad) continue;
         const t = this.buf[o + 8]!;
         if (!q.settlements && settlementTypes.has(t)) continue;
-        if (!q.construction && constructionTypes.has(t)) continue;
+        if (!q.construction && (constructionTypes.has(t) || this.isColonyShip(i))) continue;
         if (this.buf.readFloatLE(o + 10) > maxLs) continue;
         best.push({ i, sys: s, d });
         if (best.length > limit) {
