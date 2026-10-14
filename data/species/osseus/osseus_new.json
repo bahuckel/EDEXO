@@ -99,12 +99,13 @@
         ],
         "max_gravity": 0.275,
         "atmospherePressureCategory": "thin",
-        "minPressure": 0.009,
+        "minPressure": 0.001,
         "off_list_atmosphere_needs_volcanism": true,
         "matchContextNotes": [
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
           "Morph colour follows host star type (genus meta.color_variants).",
-          "Argon added 2026-10-09: 24 of 6,852 bodies, all Rocky ice in a year of EDDN codex entries (EDGalaxyData archive) grew on it, one per system; the codex list left it out, so each was listed as unlikely."
+          "Argon added 2026-10-09: 24 of 6,852 bodies, all Rocky ice in a year of EDDN codex entries (EDGalaxyData archive) grew on it, one per system; the codex list left it out, so each was listed as unlikely.",
+          "Lowest pressure 0.009 → 0.001 atm (2026-10-14): of the 6,852 bodies of the EDDN year whose codex or on-foot scan names discus, 65 (0.95 %) sit under 0.009 atm, every one on ammonia (51) or argon (14); water bodies never do. The lowest is 0.00102 atm. The 0.009 floor hid 5 known finds on the two September hold-outs (plan 1.2.17 Part 4)."
         ]
       }
     },
