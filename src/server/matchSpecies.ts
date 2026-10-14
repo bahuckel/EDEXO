@@ -224,7 +224,6 @@ export interface PlanetTemperatureBand {
   maxK: number;
 }
 
-
 function speciesTempBand(c: SpeciesCriterion): { lo: number; hi: number } | null {
   const st = c.surfaceTemperatureK;
   if (!st) return null;
@@ -264,7 +263,6 @@ function sightingsBeyondEdge(
   }
   return { straddles: false, near: null };
 }
-
 
 function speciesNeedsTemperatureGate(c: SpeciesCriterion): boolean {
   return speciesTempBand(c) !== null;
@@ -473,7 +471,10 @@ export function speciesMatchesExcludingTempPressure(
           // A species that leaves its codex list only on volcanic ground: no volcanism, no rescue.
           const volcanismKnown = scan.Volcanism !== undefined && scan.Volcanism !== null;
           const rescueBarred =
-            !!observedHere && c.offListAtmosphereNeedsVolcanism === true && volcanismKnown && !presenceReportsAnyVolcanism(scan);
+            !!observedHere &&
+            c.offListAtmosphereNeedsVolcanism === true &&
+            volcanismKnown &&
+            !presenceReportsAnyVolcanism(scan);
           if (observedHere && rescueBarred) {
             failures.push({
               field: "AtmosphereType",
@@ -617,8 +618,14 @@ export function speciesMatchesExcludingTempPressure(
    * Bacterium tela is why the first claim needs overruling: its codex row requires volcanism and 177
    * of its 214 observed bodies have none. Fumerola extremus is why the second does: 10 of its 43 are
    * metallic magma, which its fragment list does not admit.
+   *
+   * The observation compares the type and drops the intensity, so it stays out where the row's own
+   * list names one: Amphora's "Major Metallic Magma" was measured on intensity (all 926 known bodies
+   * major, none minor; 2026-10-14), and a minor metallic magma body is not rescued by them.
    */
-  const volcanismSeen = observedWithVolcanism(entry, scan.Volcanism);
+  const intensityListed =
+    criteriaVolcanoFragments && c.volcanismIncludes!.every((f) => /^\s*(major|minor)\s/i.test(f));
+  const volcanismSeen = intensityListed ? null : observedWithVolcanism(entry, scan.Volcanism);
 
   if (
     (genusNeedsVolcano || criteriaVolcanoFragments || explicitVolcanoRequired) &&
@@ -950,7 +957,9 @@ export function speciesMatchesExcludingTempPressure(
     how rare the species is (Common 50 systems … Legendary 1) instead of one share for everything.
     The EDAstro share gate below stays as the fallback for anything the tier data does not know.
   */
-  const tierVerdict = ctx?.regionName ? tierRegionalPresence(getProjectRoot(), ctx.regionName, entry.id) : null;
+  const tierVerdict = ctx?.regionName
+    ? tierRegionalPresence(getProjectRoot(), ctx.regionName, entry.id)
+    : null;
   if (tierVerdict && ctx?.regionName) {
     /*
       Logged in the region at all, on a body that meets every other condition: it grows there (owner,
@@ -961,7 +970,11 @@ export function speciesMatchesExcludingTempPressure(
     if (loggedHere) {
       reasons.push({ field: "Region", detail: tierRegionDetail(ctx.regionName, tierVerdict, false) });
     } else if (tierVerdict.presence === "absent") {
-      failures.push({ field: "Region", soft: true, detail: tierRegionDetail(ctx.regionName, tierVerdict, true) });
+      failures.push({
+        field: "Region",
+        soft: true,
+        detail: tierRegionDetail(ctx.regionName, tierVerdict, true),
+      });
     } else if (tierVerdict.presence === "present") {
       reasons.push({ field: "Region", detail: tierRegionDetail(ctx.regionName, tierVerdict, false) });
     }
@@ -1163,7 +1176,8 @@ export function speciesMatchesCriteria(
   const sma = scan.SemiMajorAxis;
   let orbitFactor: number | undefined;
   // The context reads the exploration record's Parents; a scan that carries its own is the fallback.
-  const roundAStar = matchContext?.orbitsAStar ?? orbitsAStar((scan as unknown as Record<string, unknown>).Parents);
+  const roundAStar =
+    matchContext?.orbitsAStar ?? orbitsAStar((scan as unknown as Record<string, unknown>).Parents);
   if (smaMax !== undefined && roundAStar) {
     /*
       A planet round a star, where a moon-grower is rarer but does grow (owner, 2026-10-09: 926 of
@@ -1194,7 +1208,12 @@ export function speciesMatchesCriteria(
   }
 
   // Measured absence of volcanism (SpeciesCriterion.softNoVolcanism). Abstains without a volcanism field.
-  if (c.softNoVolcanism && scan.Volcanism !== undefined && scan.Volcanism !== null && presenceReportsAnyVolcanism(scan)) {
+  if (
+    c.softNoVolcanism &&
+    scan.Volcanism !== undefined &&
+    scan.Volcanism !== null &&
+    presenceReportsAnyVolcanism(scan)
+  ) {
     failures.push({
       field: "Volcanism",
       card: "soft-volcanism",
@@ -1254,7 +1273,9 @@ export function speciesMatchesCriteria(
         const observedLinked =
           observedLinkedRaw &&
           linkedCheck &&
-          (!linkedCheck.straddles || linkedCheck.near === null || linkedCheck.near >= MIN_TEMPERATURE_OBSERVATIONS)
+          (!linkedCheck.straddles ||
+            linkedCheck.near === null ||
+            linkedCheck.near >= MIN_TEMPERATURE_OBSERVATIONS)
             ? observedLinkedRaw
             : null;
         if (observedLinkedRaw && !observedLinked) {
@@ -1365,7 +1386,11 @@ export function speciesMatchesCriteria(
           detail: `${shown} atm on ${scan.AtmosphereType}, over the ${cap} atm it has been found at on this atmosphere. ${DEMOTED_NOTE}`,
         });
       } else {
-        extraOkReasons.push({ field: "SurfacePressure", card: "pressure-by-atmosphere", detail: `${shown} atm (up to ${cap} on ${scan.AtmosphereType})` });
+        extraOkReasons.push({
+          field: "SurfacePressure",
+          card: "pressure-by-atmosphere",
+          detail: `${shown} atm (up to ${cap} on ${scan.AtmosphereType})`,
+        });
       }
     }
   }
@@ -1404,7 +1429,9 @@ export function speciesMatchesCriteria(
         detail:
           `${tHere.toFixed(1)} K is outside the ${envelope.min.toFixed(0)}–${envelope.max.toFixed(0)} K ` +
           `range of its ${envelope.count} profile bodies` +
-          (factor < 1 ? `; kept at ×${factor} chance, as rare out here as the corpus has it.` : `; the corpus finds it out here as often as its siblings.`),
+          (factor < 1
+            ? `; kept at ×${factor} chance, as rare out here as the corpus has it.`
+            : `; the corpus finds it out here as often as its siblings.`),
       });
     } else if (outside) {
       failures.push({

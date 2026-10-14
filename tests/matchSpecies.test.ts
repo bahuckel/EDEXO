@@ -351,8 +351,8 @@ describe("matchDatabaseToScan", () => {
    * Amphora's volcanism and temperature, measured 2026-10-14 on the 719 bodies whose DSS names it in
    * Spansh's dump: major volcanism on all 719 (metallic magma, silicate vapour geysers, rocky magma),
    * 955-2,669 K. Before that the row gated on planet class and atmosphere only and was listed on a
-   * 4,594 K metal-rich body with no volcanism; now the volcanism takes it off, and no upper bound
-   * keeps it on the same body once it has major metallic magma.
+   * 4,594 K metal-rich body with no volcanism; now the volcanism takes it off. Its profile (the same
+   * 719 bodies) keeps it on a body like theirs: 1,150 K, 1.5 g, landable, major metallic magma.
    */
   it("lists Amphora Plant on metal-rich bodies with major volcanism only, from 950 K up", () => {
     const inferno = {
@@ -375,10 +375,15 @@ describe("matchDatabaseToScan", () => {
       "anemone_roseum_bioluminescent",
       "anemone_rubeum_bioluminescent",
     ]);
-    expect(ids({ ...inferno, Volcanism: "major metallic magma volcanism" } as PlanetScan)).toContain(
-      "amphora_amphora_plant",
-    );
-    expect(ids({ ...inferno, Volcanism: "minor metallic magma volcanism" } as PlanetScan)).not.toContain(
+    const amphoraBody = {
+      ...inferno,
+      SurfaceTemperature: 1150,
+      SurfaceGravity: 14.7,
+      Landable: true,
+      Volcanism: "major metallic magma volcanism",
+    } as PlanetScan;
+    expect(ids(amphoraBody)).toContain("amphora_amphora_plant");
+    expect(ids({ ...amphoraBody, Volcanism: "minor metallic magma volcanism" } as PlanetScan)).not.toContain(
       "amphora_amphora_plant",
     );
     expect(db.species.find((e) => e.id === "amphora_amphora_plant")!.criteria.surfaceTemperatureK?.min).toBe(
