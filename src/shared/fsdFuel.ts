@@ -34,6 +34,14 @@ export interface FsdFuelState {
   unladenT: number | null;
   /** The drive's most fuel per jump (`Loadout` FSD `MaxFuelPerJump` when engineered), when known. */
   maxFuelPerJumpT: number | null;
+  /**
+   * What the ship carries (t), from the journal's last `Cargo` line; null until one is read, and again
+   * after a ship change or a death. The journal writes one at every login and after every change to the
+   * hold (owner's history, 2026-10-14: 1,013 of 1,013 MarketBuy followed by one), so a replayed jump gets
+   * the cargo it was made with. Live Status.json's cargo was used before, for old jumps too: 0 t on a
+   * first start (the poll starts after the replay) and today's load after a resync (code review).
+   */
+  cargoT: number | null;
   samples: FsdFuelSample[];
 }
 
@@ -47,7 +55,7 @@ export interface FsdFuelModel {
 }
 
 export function emptyFsdFuel(): FsdFuelState {
-  return { shipId: null, loadoutLy: null, unladenT: null, maxFuelPerJumpT: null, samples: [] };
+  return { shipId: null, loadoutLy: null, unladenT: null, maxFuelPerJumpT: null, cargoT: null, samples: [] };
 }
 
 /** A `Loadout`: the ship's mass and drive; another ship or a refit starts the samples over. */
@@ -68,14 +76,24 @@ export function fsdFuelLoadout(st: FsdFuelState, line: Record<string, unknown>):
   if (typeof mf === "number" && mf > 0) st.maxFuelPerJumpT = mf;
 }
 
-/** An `FSDJump`: distance, fuel used and the tank after it. */
-export function fsdFuelJump(st: FsdFuelState, line: Record<string, unknown>, cargoT = 0): void {
+/** A `Cargo` line: the ship's hold in tonnes (the SRV's has its own lines, and is not the ship's mass). */
+export function fsdFuelCargo(st: FsdFuelState, line: Record<string, unknown>): void {
+  if ((line.Vessel ?? "Ship") !== "Ship") return;
+  if (typeof line.Count === "number" && Number.isFinite(line.Count) && line.Count >= 0) st.cargoT = line.Count;
+}
+
+/**
+ * An `FSDJump`: distance, fuel used and the tank after it. `cargoT` null (not known for this jump) leaves
+ * the jump out: its mass would be a guess, and a guess of 0 t for a laden ship moved `k` by ×1.7.
+ */
+export function fsdFuelJump(st: FsdFuelState, line: Record<string, unknown>, cargoT: number | null = 0): void {
   const ly = line.JumpDist;
   const used = line.FuelUsed;
   const level = line.FuelLevel;
   if (typeof ly !== "number" || typeof used !== "number" || typeof level !== "number") return;
   if (!(ly >= MIN_SAMPLE_LY) || !(used > 0) || st.unladenT == null) return;
   if (typeof line.BoostUsed === "number" && line.BoostUsed > 0) return;
+  if (cargoT == null) return;
   st.samples.push({ ly, fuelT: used, massT: st.unladenT + level + used + Math.max(0, cargoT) });
   if (st.samples.length > SAMPLES) st.samples.splice(0, st.samples.length - SAMPLES);
 }

@@ -75,7 +75,7 @@ import {
 import { GEOLOGY_KEY, isLegacyPlantKey } from "../shared/achievements.js";
 import { regionForSystem } from "./regionMapData.js";
 import { parseBoxel } from "../shared/boxel.js";
-import { emptyFsdFuel, fsdFuelJump, fsdFuelLoadout, type FsdFuelState } from "../shared/fsdFuel.js";
+import { emptyFsdFuel, fsdFuelCargo, fsdFuelJump, fsdFuelLoadout, type FsdFuelState } from "../shared/fsdFuel.js";
 import {
   fsdWearJump,
   fsdWearLoadout,
@@ -859,8 +859,10 @@ export class GameStateStore {
   ownAssets: OwnAssetsState = newOwnAssets();
   /** Raw materials aboard and the FSD injections made (shared/jumponium.ts). */
   jumponium: JumponiumState = newJumponium();
-  /** Live `Status.json` cargo (tonnes), part of the ship's mass for the fuel model. */
+  /** Live `Status.json` cargo (tonnes): the ship's mass now, for forecasts (the samples use the journal's, fsdFuel.ts). */
   liveStatusCargoT: number | null = null;
+  /** When that cargo was read (ms): a jump the journal has no cargo for may take it only if made then. */
+  liveStatusCargoAtMs: number | null = null;
 
   /** From live `Status.json` poll (tonnes); null when file missing or parse failed. */
   liveStatusFuelMainT: number | null = null;
@@ -2295,6 +2297,9 @@ export class GameStateStore {
       if (event === "LoadGame") return this.onLoadGame(line);
 
       if (event === "Loadout") return this.onLoadout(line);
+      // The hold, for the fuel model's jump mass (fsdFuel.ts cargoT); another ship's or after a death: unknown.
+      if (event === "Cargo") fsdFuelCargo(this.fsdFuel, line as Record<string, unknown>);
+      if (event === "ShipyardSwap" || event === "ShipyardNew" || event === "Died") this.fsdFuel.cargoT = null;
       if (event === "Repair" || event === "RepairAll") fsdWearRepair(this.fsdWear, line as Record<string, unknown>);
       // Supercharged at a neutron star or white dwarf: the next jump only (the fuel pump costs it as such).
       if (event === "JetConeBoost") {
@@ -2331,7 +2336,7 @@ export class GameStateStore {
         const fu = (line as Record<string, unknown>).FuelUsed;
         const jd = (line as Record<string, unknown>).JumpDist;
         if (typeof jd === "number") jumpRangeJump(this.jumpRange, jd, (line as Record<string, unknown>).BoostUsed);
-        fsdFuelJump(this.fsdFuel, line as Record<string, unknown>, this.liveStatusCargoT ?? 0);
+        fsdFuelJump(this.fsdFuel, line as Record<string, unknown>, this.fsdFuel.cargoT ?? this.liveCargoAt(ts));
         fsdWearJump(this.fsdWear, line as Record<string, unknown>);
         if (
           typeof fu === "number" &&
@@ -3705,12 +3710,27 @@ export class GameStateStore {
   }
 
   /**
+   * Status.json's cargo for a jump made at `iso`, or null: only when it was read within five minutes of the
+   * jump (a live one). The game writes no `Cargo` line after a ship swap (owner's history: 0 of 92), so
+   * without this a swapped-in ship learnt nothing until the next login; a replayed old jump never gets
+   * today's cargo (code review, 2026-10-14).
+   */
+  private liveCargoAt(iso: string | null | undefined): number | null {
+    const t = iso ? Date.parse(iso) : NaN;
+    if (this.liveStatusCargoT == null || this.liveStatusCargoAtMs == null || !Number.isFinite(t)) return null;
+    return Math.abs(t - this.liveStatusCargoAtMs) <= 5 * 60_000 ? this.liveStatusCargoT : null;
+  }
+
+  /**
    * Live `Status.json` fuel — returns true when main/reserve changed (for snapshot push).
    */
   applyLiveShipFuel(mainT: number | null, reserveT: number | null, cargoT?: number | null): boolean {
     this.liveStatusFuelMainT = mainT;
     this.liveStatusFuelReserveT = reserveT;
-    if (cargoT !== undefined) this.liveStatusCargoT = cargoT;
+    if (cargoT !== undefined) {
+      this.liveStatusCargoT = cargoT;
+      this.liveStatusCargoAtMs = cargoT != null ? Date.now() : null;
+    }
     const key =
       mainT != null && reserveT != null && Number.isFinite(mainT) && Number.isFinite(reserveT)
         ? `${mainT.toFixed(4)}|${reserveT.toFixed(4)}`
@@ -4027,6 +4047,7 @@ export class GameStateStore {
         loadoutLy: typeof ff.loadoutLy === "number" ? ff.loadoutLy : null,
         unladenT: typeof ff.unladenT === "number" ? ff.unladenT : null,
         maxFuelPerJumpT: typeof ff.maxFuelPerJumpT === "number" ? ff.maxFuelPerJumpT : null,
+        cargoT: typeof ff.cargoT === "number" ? ff.cargoT : null,
         samples: ff.samples.filter((s) => s && s.ly > 0 && s.fuelT > 0 && s.massT > 0),
       };
     }

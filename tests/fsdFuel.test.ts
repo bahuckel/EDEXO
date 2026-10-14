@@ -2,9 +2,10 @@
  * Fuel per jump by the drive's own law, fitted on the commander's jumps (shared/fsdFuel.ts; owner,
  * 2026-10-08), and the route's fuel with it (server/navRouteFuel.ts).
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   emptyFsdFuel,
+  fsdFuelCargo,
   fsdFuelJump,
   fsdFuelLoadout,
   fsdFuelModel,
@@ -117,5 +118,77 @@ describe("the route's fuel with the drive's law", () => {
       fuelModel: fsdFuelModel(flown(30)),
     })!;
     expect(a.fuelJumpsReachableOnPlottedRoute).toBe(1); // 69.5 ly with ~25 t aboard is out of reach
+  });
+});
+
+/*
+  Code review, 2026-10-14: every jump, replayed or live, was sampled with live Status.json's cargo (0 t before the
+  first poll, today's load after a resync). The journal's own Cargo lines say what was aboard at each jump.
+*/
+describe("the cargo a jump was made with", () => {
+  const CARGO = 100;
+  /** Eight jumps of a ship carrying 100 t, by the drive's law, as journal lines. */
+  function ladenJumps(): Record<string, unknown>[] {
+    const out: Record<string, unknown>[] = [];
+    let tank = 32;
+    for (const d of [20, 24, 28, 32, 36, 40, 44, 47]) {
+      const used = K * (d * (369.3 + CARGO + tank)) ** P;
+      tank -= used;
+      out.push({ event: "FSDJump", JumpDist: d, FuelUsed: used, FuelLevel: tank });
+      tank = 32;
+    }
+    return out;
+  }
+
+  it("is the journal's Cargo count, the SRV's left out", () => {
+    const st = emptyFsdFuel();
+    fsdFuelLoadout(st, loadout);
+    fsdFuelCargo(st, { event: "Cargo", Vessel: "Ship", Count: CARGO });
+    fsdFuelCargo(st, { event: "Cargo", Vessel: "SRV", Count: 2 });
+    for (const j of ladenJumps()) fsdFuelJump(st, j, st.cargoT);
+    const m = fsdFuelModel(st)!;
+    expect(m.k).toBeCloseTo(K, 12);
+    expect(fuelForJump(m, 45, 32, CARGO)).toBeCloseTo(K * (45 * (369.3 + CARGO + 32)) ** P, 6);
+  });
+
+  it("leaves a jump out when it is not known, rather than taking 0 t", () => {
+    const st = emptyFsdFuel();
+    fsdFuelLoadout(st, loadout);
+    for (const j of ladenJumps()) fsdFuelJump(st, j, null);
+    expect(st.samples).toEqual([]);
+  });
+
+  it("through the store: a replay before any Status.json poll learns the drive as flown", async () => {
+    const { GameStateStore } = await import("../src/server/gameState.js");
+    const s = new GameStateStore();
+    let t = Date.parse("2026-10-01T10:00:00Z");
+    const at = (o: Record<string, unknown>) => ({ timestamp: new Date((t += 60_000)).toISOString(), ...o });
+    s.apply(at(loadout));
+    s.apply(at({ event: "Cargo", Vessel: "Ship", Count: CARGO, Inventory: [] }));
+    for (const j of ladenJumps()) s.apply(at({ StarSystem: "Test", SystemAddress: 1, StarPos: [0, 0, 0], ...j }));
+    expect(s.liveStatusCargoT).toBeNull(); // as on a first start: the poll begins after the replay
+    expect(fsdFuelModel(s.fsdFuel)!.k).toBeCloseTo(K, 12);
+    // Another ship: its hold is unknown until its own Cargo line (the game writes none after a swap).
+    s.apply(at({ event: "ShipyardSwap", ShipType: "anaconda", ShipID: 13 }));
+    expect(s.fsdFuel.cargoT).toBeNull();
+    const [jump] = ladenJumps();
+    const n = s.fsdFuel.samples.length;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      // Live: Status.json read as the jump is made, so its cargo is that jump's.
+      vi.setSystemTime(t + 60_000);
+      s.applyLiveShipFuel(20, 0.5, CARGO);
+      s.apply(at({ StarSystem: "Test", SystemAddress: 1, StarPos: [0, 0, 0], ...jump }));
+      expect(s.fsdFuel.samples).toHaveLength(n + 1);
+      // A replayed jump from a month before gets nothing from today's Status.json.
+      s.apply({ timestamp: "2026-09-01T10:00:00Z", StarSystem: "Test", SystemAddress: 1, StarPos: [0, 0, 0], ...jump });
+      expect(s.fsdFuel.samples).toHaveLength(n + 1);
+      // (Old lines are read: with the journal's own cargo the same old jump is a sample.)
+      s.apply({ timestamp: "2026-09-01T10:01:00Z", event: "Cargo", Vessel: "Ship", Count: CARGO });
+      s.apply({ timestamp: "2026-09-01T10:02:00Z", StarSystem: "Test", SystemAddress: 1, StarPos: [0, 0, 0], ...jump });
+      expect(s.fsdFuel.samples).toHaveLength(n + 2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
