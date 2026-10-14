@@ -183,11 +183,18 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
         own host (2026-10-03): 3 of the 5 known Amphora bodies orbit an M, K or F companion in a system
         whose main star is an A (Flyauduae TE-Q d5-4 B 1, Ooscs Free SZ-F d11-9 B 2 a, Prue Flyao ON-J
         d9-1 C 1 a), and read on the host the gate demoted all three before a DSS.
+
+        Any star in the system since 2026-10-14, measured on the 719 bodies whose DSS names Amphora in
+        Spansh's dump (one species, so the genus is the species): main star A 696, B 12, F 6, neutron 1,
+        unknown 4; an A or B star somewhere in the system on 715 of 715 with a star on record. The main
+        star alone would have demoted the 7 under F and neutron primaries.
       */
       judgedOn: "main",
       orHost: true,
+      anyStar: true,
       allowed: ["A", "B"],
-      evidence: "A-class hosts 97.4 % of 1,484 Amphora sightings (B a further 1.8 %); A is 6.2 % of all life",
+      evidence:
+        "An A or B star in the system on 715 of 715 DSS-confirmed Amphora bodies with a star on record (main star A 696, B 12; Spansh dump); A-class main stars on 97.4 % of 1,484 codex sightings, against 6.2 % of all life",
     },
   },
   /*
@@ -201,7 +208,8 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
       anyStar: true,
       allowed: ["B"],
       luminosity: B_DWARF,
-      evidence: "A B IV-V star in the system on 204 of 204 confirmed Luteolum bodies (100.0 %; the main star on 99.0 %; EDAstro codex)",
+      evidence:
+        "A B IV-V star in the system on 204 of 204 confirmed Luteolum bodies (100.0 %; the main star on 99.0 %; EDAstro codex)",
     },
   },
   {
@@ -211,7 +219,8 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
       anyStar: true,
       allowed: ["B"],
       luminosity: B_DWARF,
-      evidence: "A B IV-V star in the system on 796 of 799 confirmed Blatteum bodies (99.6 %; the main star on 96.5 %; EDAstro codex)",
+      evidence:
+        "A B IV-V star in the system on 796 of 799 confirmed Blatteum bodies (99.6 %; the main star on 96.5 %; EDAstro codex)",
     },
   },
   {
@@ -254,7 +263,8 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
       judgedOn: "main",
       anyStar: true,
       allowed: ["O", "W"],
-      evidence: "An O or Wolf-Rayet star in the system on 34 of 34 confirmed Puniceum bodies (100.0 %; the main star on 91.2 %; EDAstro codex)",
+      evidence:
+        "An O or Wolf-Rayet star in the system on 34 of 34 confirmed Puniceum bodies (100.0 %; the main star on 91.2 %; EDAstro codex)",
     },
   },
   {
@@ -330,7 +340,8 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
     idIncludes: "concha_labiata",
     gate: {
       allowed: ["O", "B", "A", "F", "G", "K", "L", "T", "Y", "TTS", "D", "W", "N", "H", "other"],
-      evidence: "main star of 86,565 labiata sightings is M on 1.2 %, against 22.7 % of all life; host M on 3 of 1,923 labiata bodies",
+      evidence:
+        "main star of 86,565 labiata sightings is M on 1.2 %, against 22.7 % of all life; host M on 3 of 1,923 labiata bodies",
     },
   },
   {

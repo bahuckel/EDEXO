@@ -348,12 +348,13 @@ describe("matchDatabaseToScan", () => {
   });
 
   /**
-   * Characterisation, not endorsement: the Amphora Plant codex row gates on planet class and
-   * atmosphere but not on temperature, so the matcher lists it on a 4,594 K metal-rich body. That
-   * is the data speaking, and this test exists so that adding a temperature gate to the row is a
-   * deliberate, visible change rather than a silent one.
+   * Amphora's volcanism and temperature, measured 2026-10-14 on the 719 bodies whose DSS names it in
+   * Spansh's dump: major volcanism on all 719 (metallic magma, silicate vapour geysers, rocky magma),
+   * 955-2,669 K. Before that the row gated on planet class and atmosphere only and was listed on a
+   * 4,594 K metal-rich body with no volcanism; now the volcanism takes it off, and no upper bound
+   * keeps it on the same body once it has major metallic magma.
    */
-  it("still lists Amphora Plant on a scorching metal-rich body, because its row has no temperature gate", () => {
+  it("lists Amphora Plant on metal-rich bodies with major volcanism only, from 950 K up", () => {
     const inferno = {
       ...ROCKY_AIRLESS_VOLCANIC,
       PlanetClass: "Metal rich body",
@@ -362,24 +363,27 @@ describe("matchDatabaseToScan", () => {
       SurfaceGravity: 40.762663,
       Landable: false,
     } as unknown as PlanetScan;
-    const r = matchDatabaseToScan(db, inferno, null, null, { includeBacterium: true });
-    // The four glowing Anemones keep it company for the same reason: metal-rich is on their class
-    // list and none carries a temperature gate (measured to 3,000-10,000 K). With no star scanned,
-    // nothing picks between them.
-    expect(
-      shown(r)
+    const ids = (scan: PlanetScan) =>
+      shown(matchDatabaseToScan(db, scan, null, null, { includeBacterium: true }))
         .map((m) => m.entry.id)
-        .sort(),
-    ).toEqual([
-      "amphora_amphora_plant",
+        .sort();
+    // The four glowing Anemones stay: metal-rich is on their class list and none carries a
+    // temperature gate (measured to 3,000-10,000 K). With no star scanned, nothing picks between them.
+    expect(ids(inferno)).toEqual([
       "anemone_blatteum_bioluminescent",
       "anemone_prasinum_bioluminescent",
       "anemone_roseum_bioluminescent",
       "anemone_rubeum_bioluminescent",
     ]);
-    expect(
-      db.species.find((e) => e.id === "amphora_amphora_plant")!.criteria.surfaceTemperatureK,
-    ).toBeUndefined();
+    expect(ids({ ...inferno, Volcanism: "major metallic magma volcanism" } as PlanetScan)).toContain(
+      "amphora_amphora_plant",
+    );
+    expect(ids({ ...inferno, Volcanism: "minor metallic magma volcanism" } as PlanetScan)).not.toContain(
+      "amphora_amphora_plant",
+    );
+    expect(db.species.find((e) => e.id === "amphora_amphora_plant")!.criteria.surfaceTemperatureK?.min).toBe(
+      950,
+    );
   });
 
   /**

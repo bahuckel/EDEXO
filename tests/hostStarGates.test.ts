@@ -121,11 +121,17 @@ describe("the Anemone colours", () => {
     // HIP 34326 D 2: a confirmed Blatteum Bioluminescent body round a B dwarf in a system whose main
     // star is a neutron star (2026-10-05).
     const stars = [{ type: "N" }, { type: "B", luminosity: "Va" }];
-    expect(evaluateHostStarGate("anemone_blatteum_bioluminescent", ["N"], "N", { type: "N" }, stars)!.passes).toBe(true);
-    expect(evaluateHostStarGate("anemone_blatteum_bioluminescent", ["N"], "N", { type: "N" })!.passes).toBe(false);
+    expect(
+      evaluateHostStarGate("anemone_blatteum_bioluminescent", ["N"], "N", { type: "N" }, stars)!.passes,
+    ).toBe(true);
+    expect(evaluateHostStarGate("anemone_blatteum_bioluminescent", ["N"], "N", { type: "N" })!.passes).toBe(
+      false,
+    );
     // A B giant elsewhere in the system does not make a dwarf species.
     const giant = [{ type: "N" }, { type: "B", luminosity: "III" }];
-    expect(evaluateHostStarGate("anemone_blatteum_bioluminescent", ["N"], "N", { type: "N" }, giant)!.passes).toBe(false);
+    expect(
+      evaluateHostStarGate("anemone_blatteum_bioluminescent", ["N"], "N", { type: "N" }, giant)!.passes,
+    ).toBe(false);
   });
 
   it("names the luminosity when it decided", () => {
@@ -325,8 +331,10 @@ describe("Stratum tectonicas and the star it orbits (owner, 2026-10-02)", () => 
   const TECTONICAS = "stratum_stratum_tectonicas";
 
   it("is demoted under a G, A or neutron host, and only the host counts", () => {
-    for (const host of ["G", "A", "N"]) expect(evaluateHostStarGate(TECTONICAS, [host], "K")!.passes).toBe(false);
-    for (const host of ["K", "M", "F", "L", "T"]) expect(evaluateHostStarGate(TECTONICAS, [host], "G")!.passes).toBe(true);
+    for (const host of ["G", "A", "N"])
+      expect(evaluateHostStarGate(TECTONICAS, [host], "K")!.passes).toBe(false);
+    for (const host of ["K", "M", "F", "L", "T"])
+      expect(evaluateHostStarGate(TECTONICAS, [host], "G")!.passes).toBe(true);
   });
 
   it("keeps a pair with one allowed star", () => {
@@ -378,7 +386,12 @@ describe("a DSS-named genus restores the row the star allows", () => {
   it("takes Prasinum Bioluminescent under an O main star, not Luteolum", () => {
     const strict: Row[] = [];
     const unlikely = [row("anemone_luteolum"), row("anemone_prasinum_bioluminescent")];
-    const ctx = { hostStarClasses: ["T"], systemMainStarClass: "O", systemMainStarType: "O", systemMainStarLuminosity: "V" };
+    const ctx = {
+      hostStarClasses: ["T"],
+      systemMainStarClass: "O",
+      systemMainStarType: "O",
+      systemMainStarLuminosity: "V",
+    };
     demoteFailedHostStarGates(strict, unlikely, ctx as SpeciesMatchContext);
     expect(unlikely[0]!.unlikelyReasons!.map((r) => r.field)).toEqual(["AtmosphereType", "StarType"]);
     restoreDemotionsBelowSignalCount(strict, unlikely, 2, new Set(["anemone"]));
@@ -392,5 +405,14 @@ describe("Amphora's star", () => {
     expect(evaluateHostStarGate("amphora_amphora_plant", ["M"], "A")!.passes).toBe(true);
     expect(evaluateHostStarGate("amphora_amphora_plant", ["B"], "K")!.passes).toBe(true);
     expect(evaluateHostStarGate("amphora_amphora_plant", ["K"], "K")!.passes).toBe(false);
+  });
+
+  // 2026-10-14: 7 of the 719 DSS-confirmed Amphora bodies sit under an F or neutron primary with an A
+  // star elsewhere in the system.
+  it("passes on any A or B star in the system", () => {
+    const main = { type: "F", luminosity: "V" };
+    const a = { type: "A", luminosity: "Va" };
+    expect(evaluateHostStarGate("amphora_amphora_plant", ["K"], "F", main, [main, a])!.passes).toBe(true);
+    expect(evaluateHostStarGate("amphora_amphora_plant", ["K"], "F", main, [main])!.passes).toBe(false);
   });
 });

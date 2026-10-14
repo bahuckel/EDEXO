@@ -48,6 +48,15 @@
         "planet_types": [
           "Metal Rich"
         ],
+        "volcanism": [
+          "Major Metallic Magma",
+          "Major Silicate Vapour",
+          "Major Rocky Magma"
+        ],
+        "temperature_K": [
+          950,
+          null
+        ],
         "parent_star": "A",
         "system_requirements": [
           "Earth-Like World",
@@ -56,18 +65,24 @@
           "Gas Giant with ammonia-based life",
           "Water Giant"
         ],
-        "min_sample_distance_m": 100
+        "min_sample_distance_m": 100,
+        "matchContextNotes": [
+          "Measured 2026-10-14 on the 719 bodies whose DSS names Amphora in Spansh's dump (one species, so the genus is the species): metal-rich 719; airless 718 (one hot thin silicate vapour); volcanism major on all 719 (metallic magma 427, silicate vapour geysers 201, rocky magma 91), never minor or none; 955-2,669 K (5-95 %: 1,010-1,530 K, median 1,125 K); 0.04-3.96 g; 1-2 biological signals. The 7 EDDN ScanOrganic finds of the year agree (all major, 1,029-1,359 K).",
+          "Star: main star A 696, B 12, F 6, neutron 1, unknown 4; an A or B star somewhere in the system on 715 of 715 with a star on record, so the gate reads any star in the system. The body's own host is the A star on fewer than half (K 136, G 47, M 35, F 31 are hosts); parent_star below is the codex's wording and is not read.",
+          "Companion bodies: one of the listed classes is in 709 of 719 systems (the other 10 hold 1-15 known bodies). Gas giant with water-based life is in 684 and the only listed one in 539; Earth-like world in 35 (alone in 23), ammonia world 30, water giant 48, gas giant with ammonia-based life 75. Earth-like or ammonia world alone would hold 65 of 719.",
+          "Against the DSS-mapped airless metal-rich landable bodies around an A or B star with a listed companion (1,020), major volcanism keeps 900 and every Amphora body: 708 of 900 carry it (78.7 %), and 188 of the other 192 carry Anemone instead. Main star A: 689 of 695 (99.1 %); main star B: 12 of 194 (Anemone takes the rest)."
+        ]
       }
     }
   ],
   "authorNotes": {
     "species_count": 1,
-    "temperature_constraints": null,
+    "temperature_constraints": "950 K and up (measured 955-2,669 K on 719 DSS bodies)",
     "gravity_constraints": null,
     "special_rules": [
-      "Requires specific stellar type (A-class star)",
-      "Requires specific system body presence (at least one listed type)",
-      "Only found on airless metal-rich planets"
+      "An A or B star in the system (main star A on 97 %)",
+      "Requires specific system body presence (at least one listed type; gas giant with water-based life on 95 %)",
+      "Only found on airless metal-rich planets with major volcanism (metallic magma, silicate vapour geysers or rocky magma)"
     ]
   }
 }
