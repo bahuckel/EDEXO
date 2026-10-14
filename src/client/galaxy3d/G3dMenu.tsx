@@ -245,9 +245,14 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
           <path {...p} d="M7.5 15h9" />
         </>
       ) : name === "neutron" ? (
+        /*
+          A neutron star, not a sun (owner, 2026-10-15): a small bright core, the two jets the game draws along its
+          axis, and a thin ring tilted across them.
+        */
         <>
-          <circle {...p} cx="12" cy="12" r="2.5" />
-          <path {...p} d="M12 2v6M12 16v6M4.5 7.5l4 2M15.5 14.5l4 2M4.5 16.5l4-2M15.5 9.5l4-2" />
+          <ellipse {...p} cx="12" cy="12" rx="9" ry="2.6" transform="rotate(45 12 12)" strokeWidth={1.1} opacity={0.75} />
+          <path {...p} d="M13.3 10.7 19.4 2.6 21.4 4.6z M10.7 13.3 4.6 21.4 2.6 19.4z" fill="currentColor" strokeWidth={1} />
+          <circle {...p} cx="12" cy="12" r="2.2" fill="currentColor" />
         </>
       ) : name === "expedition" ? (
         <>

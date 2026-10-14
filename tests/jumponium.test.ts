@@ -470,7 +470,25 @@ describe("Use Jumponium on a neutron route", () => {
       saved: 2,
       used: { basic: 1, standard: 0, premium: 1 },
       needs: { carbon: 2, vanadium: 1, germanium: 2, arsenic: 1, niobium: 1, yttrium: 1, polonium: 1 },
+      short: 0,
     });
+  });
+
+  // Owner, 2026-10-15: "fix jumponium use when not available" — it planned injections the hold could not make.
+  it("plans only what the materials held make, the cheapest hops first", () => {
+    const r = route([hop(0, 0, 0), hop(110, 3, 0), hop(255, 3, 0), hop(275, 1, 0)]);
+    // One Basic's worth: the Basic hop takes it; the Premium hop keeps its jumps.
+    const one = applyJumponium(r, 50, 4, undefined, { carbon: 1, vanadium: 1, germanium: 1 });
+    expect(one.route.hops.map((h) => h.inject)).toEqual([null, { tier: "basic", count: 1 }, null, null]);
+    expect(one.route.jumps).toBe(r.jumps - 1);
+    expect(one.plan.short).toBe(1);
+    // Nothing aboard: no injection, both hops counted as short.
+    const none = applyJumponium(r, 50, 4, undefined, {});
+    expect(none.plan.saved).toBe(0);
+    expect(none.plan.short).toBe(2);
+    expect(none.route.jumps).toBe(r.jumps);
+    // No Materials line read yet (null): every hop, as before.
+    expect(applyJumponium(r, 50, 4, undefined, null).plan.saved).toBe(2);
   });
 
   it("the live route keeps each hop's injection, and the HUD's next stop says it", () => {

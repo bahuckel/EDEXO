@@ -478,33 +478,61 @@ export interface JumponiumPlan {
   used: Record<InjectionTier, number>;
   /** The materials they take, by element. */
   needs: Partial<Record<JumpElement, number>>;
+  /** Hops where an injection would take a jump off but the materials held do not cover it (0 without a stock). */
+  short: number;
 }
 
 /**
  * The route flown with FSD injections: on every hop where one takes a jump off, the cheapest way by material rarity
  * (the recipe's grades summed: basic 5, standard 11, premium 16 an injection), and that jump taken off. Fuel stays as
  * planned (one jump fewer only leaves more in the tank).
+ *
+ * With `stock` (the materials held, from the journals) only what they make (owner, 2026-10-15: "fix jumponium use when
+ * not available"): the hops whose cheapest way costs least go first, each taking the cheapest tier the materials left
+ * still cover, so the most jumps are saved; a hop nothing covers keeps its jumps and counts in `short`. Without a stock
+ * (no Materials line read yet) every hop is planned, as before.
  */
 export function applyJumponium(
   route: NeutronRoute,
   rangeLy: number,
   boost = 4,
   recipe: (t: InjectionTier) => Partial<Record<JumpElement, number>> = (t) => INJECTIONS.find((i) => i.tier === t)!.recipe,
+  stock: Partial<Record<JumpElement, number>> | null = null,
 ): { route: Omit<NeutronRoute, "hops"> & { hops: JumpHop[] }; plan: JumponiumPlan } {
   const options = routeInjections(route.hops, rangeLy, boost);
   const cost = (t: InjectionTier) =>
     (Object.entries(recipe(t)) as [JumpElement, number][]).reduce((a, [k, q]) => a + jumpElement(k).grade * q, 0);
+  const price = (o: InjectionSave) => o.count * cost(o.tier);
+  const left: Partial<Record<JumpElement, number>> | null = stock ? { ...stock } : null;
+  const fits = (o: InjectionSave) =>
+    !left ||
+    (Object.entries(recipe(o.tier)) as [JumpElement, number][]).every(([k, q]) => (left[k] ?? 0) >= q * o.count);
+  const chosen = new Map<number, InjectionSave>();
+  let short = 0;
+  const order = options
+    .map((opts, i) => ({ i, opts: [...opts].sort((x, y) => price(x) - price(y)) }))
+    .filter((x) => x.opts.length)
+    .sort((x, y) => price(x.opts[0]!) - price(y.opts[0]!) || x.i - y.i);
+  for (const { i, opts } of order) {
+    const best = opts.find(fits);
+    if (!best) {
+      short++;
+      continue;
+    }
+    chosen.set(i, best);
+    if (left)
+      for (const [k, q] of Object.entries(recipe(best.tier)) as [JumpElement, number][]) left[k] = (left[k] ?? 0) - q * best.count;
+  }
   const used: Record<InjectionTier, number> = { basic: 0, standard: 0, premium: 0 };
   const needs: Partial<Record<JumpElement, number>> = {};
   let saved = 0;
   const hops: JumpHop[] = route.hops.map((h, i) => {
-    const opts = options[i] ?? [];
-    if (!opts.length) return { ...h, inject: null };
-    const best = opts.reduce((a, b) => (b.count * cost(b.tier) < a.count * cost(a.tier) ? b : a));
+    const best = chosen.get(i);
+    if (!best) return { ...h, inject: null };
     used[best.tier] += best.count;
     for (const [k, q] of Object.entries(recipe(best.tier)) as [JumpElement, number][]) needs[k] = (needs[k] ?? 0) + q * best.count;
     saved++;
     return { ...h, jumps: h.jumps - 1, inject: best };
   });
-  return { route: { ...route, hops, jumps: route.jumps - saved }, plan: { saved, used, needs } };
+  return { route: { ...route, hops, jumps: route.jumps - saved }, plan: { saved, used, needs, short } };
 }

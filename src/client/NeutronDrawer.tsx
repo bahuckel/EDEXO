@@ -13,6 +13,8 @@ import { PickList, type PickOption } from "./galaxy3d/PickList";
 import { CopySystemButton } from "./CopySystemButton";
 import { isBool, usePersistedState } from "./usePersistedState";
 
+const isBoost = (v: unknown): v is number | null => v === null || v === 4 || v === 6;
+
 type Pt = { x: number; y: number; z: number };
 type Stop = Pt & { name: string };
 
@@ -25,8 +27,10 @@ interface Ship {
   wearIsDefault: boolean;
   /** This ship's own supercharges, other ships with the same drive, or the default (shared/fsdWear.ts). */
   wearFrom: "ship" | "drive" | "default";
-  /** A supercharge multiplies the range by this: 6 for the Caspian's Mk II SCO drive, else 4. */
+  /** A supercharge multiplies the range by this: the ship type's (6 for the Caspian, else 4). */
   boostFactor: number;
+  /** The ship type is one the app knows; when not, the commander's own ×4 / ×6 is kept. */
+  shipKnown?: boolean;
   shipType: string | null;
   fsdWarn: number;
   position: Pt | null;
@@ -72,9 +76,11 @@ interface RouteDTO {
   /** "Use Jumponium" (owner, 2026-10-13: a toggle): what the injections do on this route and what they take. */
   jumponium?: {
     on: boolean;
-    /** Jumps they take off (on), or would (off). */
+    /** Jumps they take off (on), or would (off), with the materials held. */
     possible: number;
-    plan: { saved: number; used: Record<string, number>; needs: Record<string, number> } | null;
+    /** Hops an injection would shorten with more materials than are held. */
+    short?: number;
+    plan: { saved: number; used: Record<string, number>; needs: Record<string, number>; short?: number } | null;
     held: Record<string, number> | null;
     makes: { tier: string; name: string; count: number }[] | null;
     /** An AFMU is fitted: the AFM refills the hold makes; null without one. */
@@ -125,6 +131,12 @@ export function NeutronDrawer({
   const [found, setFound] = useState<Stop[]>([]);
   const [range, setRange] = useState("");
   const [tank, setTank] = useState("");
+  /*
+    The supercharge (owner, 2026-10-15): the ship type the game writes at login picks it (×6 the Caspian, ×4 the rest);
+    for a ship type the app does not know yet (a game update) it stays at ×4 and the commander's own pick is remembered.
+  */
+  const [boostPicked, setBoostPicked] = usePersistedState<number | null>("galaxy.neutron.boost", null, isBoost);
+  const [boostNow, setBoostNow] = useState<number | null>(null);
   const [optimise, setOptimise] = useState(false);
   const [useJump, setUseJump] = usePersistedState("galaxy.neutron.jumponium", false, isBool);
   const [route, setRoute] = useState<RouteDTO | null>(null);
@@ -208,6 +220,12 @@ export function NeutronDrawer({
     ship is comes from the journals, read again every few seconds while the drawer is open.
   */
   const ship = status?.ship ?? null;
+  // A known ship: its own (picking another is for this plan only); an unknown one: the remembered pick, else ×4.
+  const boost = boostNow ?? (ship?.shipKnown === false ? (boostPicked ?? 4) : null);
+  const setBoost = (v: number) => {
+    setBoostNow(v);
+    if (ship?.shipKnown === false) setBoostPicked(v);
+  };
   useEffect(() => {
     if (!ship) return;
     if (!range && ship.rangeLy) setRange(ship.rangeLy.toFixed(1));
@@ -264,6 +282,7 @@ export function NeutronDrawer({
           waypoints,
           rangeLy: Number(range) || undefined,
           jumpsPerTank: Number(tank) || undefined,
+          boost: boost ?? undefined,
           optimise,
           useJumponium: useJump,
         }),
@@ -306,6 +325,7 @@ export function NeutronDrawer({
       plan: {
         targets: r.waypoints.slice(1),
         rangeLy: Number(range) || ship?.rangeLy || undefined,
+        boost: boost ?? undefined,
         useJumponium: r.jumponium?.on === true,
       },
     });
@@ -422,7 +442,7 @@ export function NeutronDrawer({
           <div className="g3d-menu__section">
             <MenuRow
               label="Jump range"
-              hint={`Laden, unboosted, as your jumps show it (change it for another ship); a supercharge reaches ${ship?.boostFactor === 6 ? "six times this (the Caspian's Mk II SCO drive)" : "four times this"}`}
+              hint={`Laden, unboosted, as your jumps show it (change it for another ship); a supercharge reaches ${(boost ?? ship?.boostFactor) === 6 ? "six times this (the Caspian's Mk II SCO drive)" : "four times this"}`}
             >
               <input
                 className="g3d-input g3d-row__val"
@@ -431,6 +451,24 @@ export function NeutronDrawer({
                 onChange={(e) => setRange(e.target.value)}
                 aria-label="Jump range (ly)"
               />
+            </MenuRow>
+            <MenuRow
+              label="Supercharge"
+              hint={
+                ship?.shipKnown === false
+                  ? "Your ship's type is not one the app knows yet (a game update?): ×4 unless you pick ×6, and your pick is remembered"
+                  : "From your ship's type, as the game writes it at login: ×6 for the Caspian Explorer, ×4 for every other ship. Pick another for a range typed in for another ship"
+              }
+            >
+              <select
+                className="g3d-select g3d-row__val"
+                value={String(boost ?? ship?.boostFactor ?? 4)}
+                onChange={(e) => setBoost(Number(e.target.value))}
+                aria-label="Supercharge"
+              >
+                <option value="4">×4</option>
+                <option value="6">×6 (Caspian)</option>
+              </select>
             </MenuRow>
             <MenuRow
               label="Jumps a tank"
@@ -459,7 +497,7 @@ export function NeutronDrawer({
                   : ship.wearFrom === "drive"
                     ? " (from other ships with this drive, until this one has three supercharges between two Loadouts)"
                     : " (estimate, until this ship has three supercharges between two Loadouts)"}{" "}
-                · supercharge ×{ship.boostFactor}
+                · this ship supercharges ×{ship.boostFactor}
               </p>
             ) : null}
             <label className="g3d-row g3d-row--check">
@@ -543,8 +581,14 @@ export function NeutronDrawer({
                           return `${SYMBOL[k] ?? k} ${n}${held != null ? ` (${held} aboard)` : ""}`;
                         })
                         .join(", ")}
-                      . Galaxy map → Jumponium for where to find more.
+                      .{" "}
+                      {route.jumponium.short
+                        ? `${route.jumponium.short} more hop${route.jumponium.short === 1 ? "" : "s"} would get shorter with more materials. `
+                        : ""}
+                      Galaxy map → Jumponium for where to find more.
                     </>
+                  ) : route.jumponium.short ? (
+                    `⚗ The materials aboard make no injection this route can use; ${route.jumponium.short} hop${route.jumponium.short === 1 ? "" : "s"} would get shorter with more. Galaxy map → Jumponium for where to find them.`
                   ) : (
                     "⚗ No hop on this route gets shorter with an FSD injection."
                   )}

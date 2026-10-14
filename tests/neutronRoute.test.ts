@@ -14,7 +14,9 @@ import {
   fsdWearRepair,
   hydrateFsdWear,
   newFsdWear,
+  superchargeForShip,
 } from "../src/shared/fsdWear.js";
+import { parseLivePlan } from "../src/server/neutronLive.js";
 
 /** Neutron stars every `step` ly along +x from x0 to x1; every `scoopEvery`-th has a scoopable star. */
 function line(x0: number, x1: number, step: number, scoopEvery = 0) {
@@ -168,6 +170,30 @@ describe("FSD wear from the journal", () => {
     fsdWearLoadout(st, loadout(0.96));
     expect(fsdWearEstimate(st)).toMatchObject({ wearFrom: "ship", health: 0.96, boostFactor: 4 });
     expect(fsdWearEstimate(st).wearPerBoost).toBeCloseTo(0.01, 6);
+  });
+
+  /*
+    Owner, 2026-10-15: "detects ship from LoadGame Ship ... auto pick 4x, if ship is not recognized (game update) keep at
+    4x but remember the option". The ship type picks it, not the drive module.
+  */
+  it("picks the supercharge from the ship type: ×6 the Caspian, ×4 every other ship, ×4 and unknown for a new type", () => {
+    expect(superchargeForShip("Mandalay")).toBe(4);
+    expect(superchargeForShip("PantherMkII")).toBe(4);
+    expect(superchargeForShip("Explorer_NX")).toBe(6);
+    expect(superchargeForShip("NewShip_2027")).toBeNull();
+    expect(superchargeForShip(null)).toBeNull();
+    const st = newFsdWear();
+    fsdWearLoadout(st, loadout(1, 3, "int_hyperdrive_size5_class5", "mandalay"));
+    expect(fsdWearEstimate(st)).toMatchObject({ boostFactor: 4, shipKnown: true, ship: "mandalay" });
+    fsdWearLoadout(st, loadout(1, 4, "int_hyperdrive_size7_class5", "newship_2027"));
+    expect(fsdWearEstimate(st)).toMatchObject({ boostFactor: 4, shipKnown: false });
+  });
+
+  it("a flown plan keeps the supercharge it was planned with", () => {
+    const targets = [{ name: "B", x: 1, y: 0, z: 0 }];
+    expect(parseLivePlan({ targets, rangeLy: 60, boost: 6 })?.boost).toBe(6);
+    expect(parseLivePlan({ targets, rangeLy: 60, boost: 5 })?.boost).toBeUndefined();
+    expect(parseLivePlan({ targets, rangeLy: 60 })?.boost).toBeUndefined();
   });
 
   it("lends a drive's wear to another ship with the same drive, and forgets it when the drive changes", () => {

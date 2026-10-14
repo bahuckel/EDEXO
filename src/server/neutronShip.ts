@@ -27,6 +27,7 @@ export function neutronShip(
     wearIsDefault: wear.wearIsDefault,
     wearFrom: wear.wearFrom,
     boostFactor: wear.boostFactor,
+    shipKnown: wear.shipKnown,
     shipType: wear.ship,
     boostsSinceLoadout: wear.boostsSince,
     fsdWarn: FSD_WARN,

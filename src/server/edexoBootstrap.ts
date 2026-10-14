@@ -563,7 +563,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         {
           // The range the route was planned with (he may have typed one for another ship), else the journals'.
           rangeLy: left.rangeLy ?? s.rangeLy,
-          boost: s.boostFactor,
+          boost: left.boost ?? s.boostFactor,
           jumpsPerTank,
           jumpsNow: Math.min(jumpsPerTank, Math.max(0, s.jumpsNow ?? jumpsPerTank)),
           fsdHealth: s.fsdHealth,
@@ -572,8 +572,12 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       );
       // Planned with FSD injections: the re-plot keeps them (shared/jumponium.ts).
       const planned = left.useJumponium
-        ? applyJumponium(route, left.rangeLy ?? s.rangeLy ?? 50, s.boostFactor ?? 4, (t) =>
-            recipeFor(store.jumponium, t),
+        ? applyJumponium(
+            route,
+            left.rangeLy ?? s.rangeLy ?? 50,
+            left.boost ?? s.boostFactor ?? 4,
+            (t) => recipeFor(store.jumponium, t),
+            store.jumponium?.raw ?? null,
           ).route
         : route;
       const hops = parseLiveHops(planned.hops);

@@ -41,6 +41,8 @@ export interface LivePlan {
   rangeLy: number;
   /** Planned with FSD injections: a re-plot from where the ship went keeps them. */
   useJumponium?: boolean;
+  /** The supercharge it was planned with (×4 / ×6), kept by a re-plot; absent: the ship's own. */
+  boost?: number;
 }
 
 export interface NeutronLive {
@@ -102,7 +104,10 @@ export function parseLivePlan(raw: unknown): LivePlan | null {
   if (!r || typeof r !== "object") return null;
   const targets = parseTargets(r.targets);
   const rangeLy = typeof r.rangeLy === "number" && r.rangeLy >= 5 && r.rangeLy <= 500 ? r.rangeLy : null;
-  return targets.length && rangeLy ? { targets, rangeLy, useJumponium: r.useJumponium === true } : null;
+  const boost = r.boost === 4 || r.boost === 6 ? r.boost : undefined;
+  return targets.length && rangeLy
+    ? { targets, rangeLy, useJumponium: r.useJumponium === true, ...(boost ? { boost } : {}) }
+    : null;
 }
 
 const MAX_HOPS = 5000;
@@ -218,7 +223,14 @@ export function createNeutronLive(opts: {
       // Each destination ends a leg with a "waypoint" hop; those at or before the stop reached are behind.
       const passed = st.hops.slice(1, st.at + 1).filter((h) => h.kind === "waypoint").length;
       const targets = st.plan.targets.slice(passed);
-      return targets.length ? { targets, rangeLy: st.plan.rangeLy, useJumponium: st.plan.useJumponium === true } : null;
+      return targets.length
+        ? {
+            targets,
+            rangeLy: st.plan.rangeLy,
+            useJumponium: st.plan.useJumponium === true,
+            ...(st.plan.boost ? { boost: st.plan.boost } : {}),
+          }
+        : null;
     },
     offRoute(here) {
       if (!st || !here.pos || replanning) return false;

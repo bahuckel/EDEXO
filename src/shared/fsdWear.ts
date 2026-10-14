@@ -11,8 +11,8 @@
  * takes what other ships with the same drive learned, else DEFAULT_WEAR (the owner's Asp, 1.17 % on three measured),
  * shown as an estimate.
  *
- * The supercharge itself depends on the drive too: the Caspian Explorer's size 8 Mk II SCO drive (the only size 8
- * FSD, on the only ship that takes one) reaches six times the range at a neutron star, every other drive four.
+ * The supercharge depends on the ship: the Caspian Explorer (its size 8 Mk II SCO drive) reaches six times the range at
+ * a neutron star, every other ship four; read from the ship type (`superchargeForShip`), not the module.
  */
 export const DEFAULT_WEAR = 0.0117;
 /** Health is written to six decimals, so a few supercharges between two Loadouts already measure the wear. */
@@ -116,13 +116,39 @@ export interface FsdWearEstimate {
   /** True while the wear is not this ship's own. */
   wearIsDefault: boolean;
   boostsSince: number;
-  /** A neutron supercharge multiplies the range by this (6 for the Caspian's Mk II SCO drive, else 4). */
+  /**
+   * A neutron supercharge multiplies the range by this: the ship type's ({@link superchargeForShip}), 6 for the
+   * Caspian, else 4; 4 for a type not on the list.
+   */
   boostFactor: number;
+  /** Whether the ship type is known; when it is not, the planner keeps the commander's own ×4 / ×6. */
+  shipKnown: boolean;
   ship: string | null;
 }
 
-export function neutronBoostFor(fsd: string | null): number {
-  return fsd && /hyperdrive.*size8/.test(fsd) ? NEUTRON_BOOST_MK2 : NEUTRON_BOOST;
+/**
+ * Every ship the game sells, by the type the journal writes (`LoadGame.Ship` / `Loadout.Ship`, lower case), from the
+ * shipyards in Spansh's station dump of 2026-10-12 (47) and the Cutter. Suits and SRVs never reach this: they have no
+ * Loadout of their own.
+ */
+export const KNOWN_SHIPS: ReadonlySet<string> = new Set([
+  "adder", "anaconda", "asp", "asp_scout", "belugaliner", "cobramkiii", "cobramkiv", "cobramkv", "corsair", "cutter",
+  "diamondback", "diamondbackxl", "dolphin", "eagle", "empire_courier", "empire_eagle", "empire_trader", "explorer_nx",
+  "federation_corvette", "federation_dropship", "federation_dropship_mkii", "federation_gunship", "ferdelance",
+  "hauler", "independant_trader", "krait_light", "krait_mkii", "lakonminer", "mamba", "mandalay", "mediumtransport01",
+  "orca", "panthermkii", "python", "python_nx", "sidewinder", "smallcombat01_nx", "type6", "type7", "type8", "type9",
+  "type9_military", "typex", "typex_2", "typex_3", "viper", "viper_mkiv", "vulture",
+]);
+
+/**
+ * The supercharge of a ship type (owner, 2026-10-15: "detects ship from LoadGame Ship ... auto pick 4x, if ship is not
+ * recognized (game update) keep at 4x but remember the option"): ×6 for the Caspian Explorer, ×4 for every other ship
+ * the game sells, null for a type not on the list (the planner then keeps the commander's own pick).
+ */
+export function superchargeForShip(ship: string | null | undefined): number | null {
+  const t = ship?.toLowerCase();
+  if (!t || !KNOWN_SHIPS.has(t)) return null;
+  return t === "explorer_nx" ? NEUTRON_BOOST_MK2 : NEUTRON_BOOST;
 }
 
 export function fsdWearEstimate(st: FsdWearState): FsdWearEstimate {
@@ -151,7 +177,8 @@ export function fsdWearEstimate(st: FsdWearState): FsdWearEstimate {
     wearFrom: from,
     wearIsDefault: from !== "ship",
     boostsSince: s?.boostsSince ?? 0,
-    boostFactor: neutronBoostFor(s?.fsd ?? null),
+    boostFactor: superchargeForShip(s?.ship) ?? NEUTRON_BOOST,
+    shipKnown: superchargeForShip(s?.ship) != null,
     ship: s?.ship ?? null,
   };
 }
