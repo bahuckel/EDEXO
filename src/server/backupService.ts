@@ -186,7 +186,7 @@ export function createBackupService(o: BackupServiceOptions): BackupService {
         last = { file: r.file, at: new Date(now()).toISOString(), bytes: r.bytes, kind: r.kind };
         lastBackupAt = now();
         known = true;
-        lastError = r.errors.length ? { at: new Date(now()).toISOString(), message: `Saved with ${r.errors.length} problem(s): ${r.errors[0]}` } : null;
+        lastError = r.errors.length ? { at: new Date(now()).toISOString(), message: `Saved with ${r.errors.length} problem(s), kept beside the complete backups: ${r.errors[0]}` } : null;
         log(
           `backup (${why}): ${r.file}, ${r.journals} journal files, ${r.appDataFiles} app files ` +
             `(${r.reused} copied from an earlier backup), ` +

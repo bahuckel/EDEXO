@@ -140,12 +140,22 @@ interface FileStat {
   mtimeMs: number;
 }
 
-function walk(dir: string, relBase = ""): FileStat[] {
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const vanished = (e: unknown) => (e as NodeJS.ErrnoException)?.code === "ENOENT";
+
+/**
+ * Every file under `dir`. A folder or file it cannot read goes to `problem` (code review, 2026-10-14):
+ * they were skipped without a word, so a journal folder that went away gave backups with no journals
+ * and no errors, which then pruned the good ones. A file or subfolder deleted between the listing and
+ * the look at it is not a problem; the folder itself missing is.
+ */
+function walk(dir: string, problem: (msg: string, rel: string) => void, relBase = "", recurse = true): FileStat[] {
   const out: FileStat[] = [];
   let names: string[];
   try {
     names = readdirSync(dir);
-  } catch {
+  } catch (e) {
+    if (!(relBase && vanished(e))) problem(`cannot read ${relBase || "the folder"}: ${errText(e)}`, relBase);
     return out;
   }
   for (const n of names) {
@@ -154,11 +164,13 @@ function walk(dir: string, relBase = ""): FileStat[] {
     let st;
     try {
       st = statSync(abs);
-    } catch {
+    } catch (e) {
+      if (!vanished(e)) problem(`cannot read ${rel}: ${errText(e)}`, rel);
       continue;
     }
-    if (st.isDirectory()) out.push(...walk(abs, rel));
-    else if (st.isFile()) out.push({ rel, abs, size: st.size, mtimeMs: Math.round(st.mtimeMs) });
+    if (st.isDirectory()) {
+      if (recurse) out.push(...walk(abs, problem, rel));
+    } else if (st.isFile()) out.push({ rel, abs, size: st.size, mtimeMs: Math.round(st.mtimeMs) });
   }
   return out;
 }
@@ -274,8 +286,13 @@ export async function runBackup(src: BackupSources, settings: BackupSettings, no
   // Journals: every one in the folder, every time.
   const journalAll: (JournalRecord & { abs: string })[] = [];
   if (src.journalDir) {
-    for (const f of walk(src.journalDir)) {
-      if (f.rel.includes("/") || !isJournalFolderFile(f.rel)) continue;
+    // Its own files only: nothing below it goes in, so nothing below it can make a backup incomplete.
+    const journalProblem = (m: string, rel: string) => {
+      // The folder itself, or a file a backup would take; another program's file there is not ours.
+      if (!rel || isJournalFolderFile(rel)) errors.push(`journal folder: ${m}`);
+    };
+    for (const f of walk(src.journalDir, journalProblem, "", false)) {
+      if (!isJournalFolderFile(f.rel)) continue;
       journalAll.push({ name: f.rel, size: f.size, mtimeMs: f.mtimeMs, abs: f.abs });
     }
   }
@@ -283,7 +300,7 @@ export async function runBackup(src: BackupSources, settings: BackupSettings, no
   // App data, minus the exclusions.
   const appFiles: FileStat[] = [];
   const excluded: { path: string; reason: string }[] = [];
-  for (const f of walk(src.appDataDir)) {
+  for (const f of walk(src.appDataDir, (m) => errors.push(`app data folder: ${m}`))) {
     const why = appDataExclusion(f.rel, settings);
     if (why) excluded.push({ path: f.rel, reason: why });
     else appFiles.push(f);
@@ -388,16 +405,31 @@ export async function runBackup(src: BackupSources, settings: BackupSettings, no
   };
 }
 
+/** A backup that saved everything it set out to (no errors in its manifest). */
+export function backupComplete(b: Pick<BackupInfo, "manifest">): boolean {
+  return !b.manifest.errors?.length;
+}
+
 /**
- * Keep the newest `keep` backups and remove the rest — except a backup that a kept one still builds
- * on (the incremental backups of the first test build name theirs in `previous`), so pruning can never
- * leave a kept backup incomplete.
+ * Keep the newest `keep` complete backups and remove the rest — except a backup that a kept one still
+ * builds on (the incremental backups of the first test build name theirs in `previous`), so pruning
+ * can never leave a kept backup incomplete.
+ *
+ * A backup with errors (a journal it could not read, a folder that went away) does not count towards
+ * `keep` and never pushes a complete one out (code review, 2026-10-14: with keep 1 one bad run deleted
+ * the only good backup; a journal folder gone made every timed backup "complete" with no journals).
+ * Those are kept only while newer than the newest complete one, at most `keep` of them, for whatever
+ * they did save; the next complete backup lets them go.
  */
 export async function pruneBackups(folder: string, keep: number): Promise<string[]> {
   const all = await listBackups(folder);
   const byFile = new Map(all.map((b) => [b.file, b]));
+  const n = Math.max(1, keep);
+  const complete = all.filter(backupComplete);
+  const newestComplete = complete.at(-1)?.manifest.created ?? "";
+  const partial = all.filter((b) => !backupComplete(b) && b.manifest.created > newestComplete);
   const needed = new Set<string>();
-  for (const b of all.slice(-Math.max(1, keep))) {
+  for (const b of [...complete.slice(-n), ...partial.slice(-n)]) {
     for (let cur: BackupInfo | undefined = b; cur && !needed.has(cur.file); ) {
       needed.add(cur.file);
       cur = cur.manifest.previous ? byFile.get(cur.manifest.previous) : undefined;
@@ -477,7 +509,8 @@ export function applyPendingRestore(appDataDir: string, now = new Date()): strin
   }
   let moved = 0;
   let asideCount = 0;
-  for (const f of walk(staging)) {
+  const unread: string[] = [];
+  for (const f of walk(staging, (m) => unread.push(m))) {
     const dest = path.join(appDataDir, ...f.rel.split("/"));
     if (existsSync(dest)) {
       const keep = path.join(aside, ...f.rel.split("/"));
@@ -494,6 +527,7 @@ export function applyPendingRestore(appDataDir: string, now = new Date()): strin
   return [
     `restore: ${moved} files from ${from}` +
       (asideCount ? `; the ${asideCount} they replaced are in ${path.basename(aside)}` : ""),
+    ...unread.map((m) => `restore: staged copy, ${m}`),
   ];
 }
 

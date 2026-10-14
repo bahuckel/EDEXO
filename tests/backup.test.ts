@@ -205,6 +205,53 @@ describe("backups", () => {
     expect((await pruneBackups(w.out, 1)).sort()).toHaveLength(2);
   });
 
+  /*
+    Code review, 2026-10-14: a backup with errors counted towards `keep` like a complete one, so with keep 1 one
+    bad run deleted the only good backup; and a journal folder that went away was skipped without a word.
+  */
+  it("a backup with errors never pushes a complete one out, and the next complete one lets it go", async () => {
+    const w = world();
+    const settings = { ...w.settings, keep: 1 };
+    const bad = { ...w.src, exports: () => [{ fileName: "../escape.json", body: {} }] };
+    const good = await runBackup(w.src, settings, minute(0));
+    const partial = await runBackup(bad, settings, minute(1));
+    expect(partial.errors).toHaveLength(1);
+    expect(partial.pruned).toEqual([]);
+    expect((await listBackups(w.out)).map((b) => b.file)).toEqual([good.file, partial.file]);
+    const next = await runBackup(w.src, settings, minute(2));
+    expect(next.pruned.sort()).toEqual([good.file, partial.file].sort());
+    expect((await listBackups(w.out)).map((b) => b.file)).toEqual([next.file]);
+  });
+
+  it("keeps at most `keep` backups with errors, the newest, and all `keep` complete ones", async () => {
+    const w = world();
+    const settings = { ...w.settings, keep: 2 };
+    const bad = { ...w.src, exports: () => [{ fileName: "../escape.json", body: {} }] };
+    const good = [await runBackup(w.src, settings, minute(0)), await runBackup(w.src, settings, minute(1))];
+    const partial = [];
+    for (let i = 2; i < 6; i++) partial.push(await runBackup(bad, settings, minute(i)));
+    expect((await listBackups(w.out)).map((b) => b.file)).toEqual([...good, ...partial.slice(-2)].map((r) => r.file));
+  });
+
+  it("a journal folder that went away is an error, not a complete backup with no journals", async () => {
+    const w = world();
+    const settings = { ...w.settings, keep: 1 };
+    const good = await runBackup(w.src, settings, minute(0));
+    const gone = await runBackup({ ...w.src, journalDir: path.join(w.root, "journals-moved") }, settings, minute(1));
+    expect(gone.journals).toBe(0);
+    expect(gone.errors.join()).toMatch(/journal folder: cannot read the folder/);
+    expect((await listBackups(w.out)).map((b) => b.file)).toEqual([good.file, gone.file]);
+  });
+
+  it("does not let another program's subfolder in the journal folder make a backup incomplete", async () => {
+    const w = world();
+    mkdirSync(path.join(w.journals, "Screenshots", "deep"), { recursive: true });
+    writeFileSync(path.join(w.journals, "Screenshots", "deep", "Journal.2026-09-02T100000.01.log"), "{}\n");
+    const r = await runBackup(w.src, w.settings, minute(0));
+    expect(r.errors).toEqual([]);
+    expect((await names(r.path)).filter((n) => n.includes("Screenshots"))).toEqual([]);
+  });
+
   it("an archive that fails to write ends the backup, and the last good one stays (code review, 2026-10-14)", async () => {
     const w = world();
     const good = await runBackup(w.src, w.settings, minute(0));
