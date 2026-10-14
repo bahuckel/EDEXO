@@ -19,15 +19,26 @@ const BUDGET_MS = 350;
 
 const packCell = (cx: number, cy: number, cz: number) => ((cx + 512) * 1024 + (cy + 512)) * 1024 + (cz + 512);
 
+type SectorColumn = { name: string; cells: number[]; n: number; sx: number; sy: number; sz: number };
+
+/*
+  Built from every cell of the index, and the find box asks on each keystroke (code review D9, 2026-10-14).
+  Kept per index object, so it goes when the index is released after idle (galaxyMemory.ts).
+*/
+const sectorColumnsMemo = new WeakMap<TileIndex, Map<string, SectorColumn>>();
+
 /** Sector columns by name: every height of a sector merged, as the map's groups are. */
-function sectorColumns(
-  t: TileIndex,
-): Map<string, { name: string; cells: number[]; n: number; sx: number; sy: number; sz: number }> {
+function sectorColumns(t: TileIndex): Map<string, SectorColumn> {
+  const hit = sectorColumnsMemo.get(t);
+  if (hit) return hit;
+  const built = sectorColumnsUncached(t);
+  sectorColumnsMemo.set(t, built);
+  return built;
+}
+
+function sectorColumnsUncached(t: TileIndex): Map<string, SectorColumn> {
   const names = sectorNames(t);
-  const out = new Map<
-    string,
-    { name: string; cells: number[]; n: number; sx: number; sy: number; sz: number }
-  >();
+  const out = new Map<string, SectorColumn>();
   t.cells.forEach((c, i) => {
     const name = names[i];
     if (!name) return;
