@@ -177,9 +177,105 @@ export function parseBioRegionLine(line: string, col: { id: number; region: numb
 }
 
 type NspRow = NspFile["rows"][number];
-let memo: { mtimeMs: number; file: NspFile; systems: number; nsp: NspRow[]; green: NspRow[] } | null = null;
 
-type Loaded = { file: NspFile; systems: number; nsp: NspRow[]; green: NspRow[] };
+/**
+ * The phenomena as columns, one entry per system (code review, 2026-10-14). Kept as the parsed rows they were
+ * 270,000 seven-element arrays with their coordinates boxed, plus a second copy grouped by system for the map
+ * and the NSP card: about 100 MB of the server's 320 MB at rest on the owner's profile. A system's rows keep
+ * the file's order inside it, and a system its first row's place, so every answer comes out as before.
+ */
+interface NspColumns {
+  /** Rows of phenomena (not green giants), as the status counts them. */
+  rows: number;
+  sysName: string[];
+  /** NaN where the file had no address. */
+  sysAddr: Float64Array;
+  sx: Float64Array;
+  sy: Float64Array;
+  sz: Float64Array;
+  /** System i's rows are rowStart[i] .. rowStart[i + 1]. */
+  rowStart: Uint32Array;
+  rowId: Uint16Array;
+  rowName: Uint16Array;
+  idStr: string[];
+  nameStr: string[];
+}
+
+/** The file without its rows (they live in {@link NspColumns}); what the status and a refresh need of it. */
+type NspFileMeta = Omit<NspFile, "rows">;
+
+let memo: { mtimeMs: number; file: NspFileMeta; systems: number; cols: NspColumns; green: NspRow[] } | null =
+  null;
+
+type Loaded = { file: NspFileMeta; systems: number; cols: NspColumns; green: NspRow[] };
+
+function toColumns(nsp: NspRow[]): NspColumns {
+  const idIdx = new Map<string, number>();
+  const nameIdx = new Map<string, number>();
+  const idStr: string[] = [];
+  const nameStr: string[] = [];
+  const intern = (m: Map<string, number>, arr: string[], v: string) => {
+    let i = m.get(v);
+    if (i === undefined) {
+      i = arr.length;
+      arr.push(v);
+      m.set(v, i);
+    }
+    return i;
+  };
+  // Systems in the order their first row comes, keyed as the grouping always was.
+  const sysOf = new Map<string, number>();
+  const rowSys = new Uint32Array(nsp.length);
+  const firstRow: number[] = [];
+  nsp.forEach((r, i) => {
+    const k = String(r[3] ?? r[2]);
+    let si = sysOf.get(k);
+    if (si === undefined) {
+      si = firstRow.length;
+      sysOf.set(k, si);
+      firstRow.push(i);
+    }
+    rowSys[i] = si;
+  });
+  const n = firstRow.length;
+  const rowStart = new Uint32Array(n + 1);
+  for (let i = 0; i < nsp.length; i++) rowStart[rowSys[i]! + 1]!++;
+  for (let i = 0; i < n; i++) rowStart[i + 1]! += rowStart[i]!;
+  const fill = rowStart.slice(0, n);
+  const rowId = new Uint16Array(nsp.length);
+  const rowName = new Uint16Array(nsp.length);
+  nsp.forEach((r, i) => {
+    const at = fill[rowSys[i]!]!++;
+    rowId[at] = intern(idIdx, idStr, r[0]);
+    rowName[at] = intern(nameIdx, nameStr, r[1]);
+  });
+  const sysName: string[] = new Array(n);
+  const sysAddr = new Float64Array(n);
+  const sx = new Float64Array(n);
+  const sy = new Float64Array(n);
+  const sz = new Float64Array(n);
+  firstRow.forEach((ri, si) => {
+    const r = nsp[ri]!;
+    sysName[si] = r[2];
+    sysAddr[si] = r[3] ?? Number.NaN;
+    sx[si] = r[4];
+    sy[si] = r[5];
+    sz[si] = r[6];
+  });
+  return { rows: nsp.length, sysName, sysAddr, sx, sy, sz, rowStart, rowId, rowName, idStr, nameStr };
+}
+
+const addrOf = (c: NspColumns, i: number): number | null =>
+  Number.isNaN(c.sysAddr[i]!) ? null : c.sysAddr[i]!;
+/** System i's distinct names / ids, in the order its rows came. */
+function distinct(c: NspColumns, i: number, col: Uint16Array, strs: string[]): string[] {
+  const out: string[] = [];
+  for (let r = c.rowStart[i]!; r < c.rowStart[i + 1]!; r++) {
+    const v = strs[col[r]!]!;
+    if (!out.includes(v)) out.push(v);
+  }
+  return out;
+}
 /*
   The last answer, reused for a second: every gas giant asks twice per snapshot (K10 anomaly, green
   reports), and a stat per ask — a throw when nothing was ever downloaded, the usual case — was a
@@ -229,7 +325,8 @@ function loadFileNow(p: string): Loaded | null {
       (GREEN_ID.test(r[0]) ? green : nsp).push(r);
     }
     const systems = new Set(nsp.map((r) => r[3] ?? r[2])).size;
-    memo = { mtimeMs: st.mtimeMs, file, systems, nsp, green };
+    const { rows: _rows, ...meta } = file;
+    memo = { mtimeMs: st.mtimeMs, file: meta, systems, cols: toColumns(nsp), green };
     return memo;
   } catch {
     memo = null;
@@ -249,7 +346,7 @@ export function readNspStatus(nowMs: number = Date.now()): NspStatusDTO {
   const since = f ? nowMs - f.file.fetchedAtMs : Number.POSITIVE_INFINITY;
   return {
     haveData: f != null,
-    rowCount: f?.nsp.length ?? 0,
+    rowCount: f?.cols.rows ?? 0,
     systemCount: f?.systems ?? 0,
     fetchedAtMs: f?.file.fetchedAtMs ?? null,
     running: job.running,
@@ -291,8 +388,9 @@ async function downloadNsp(fetchImpl: typeof fetch): Promise<void> {
   if (prev?.etag && prev.filterVersion === NSP_FILTER_VERSION) headers["If-None-Match"] = prev.etag;
   const res = await fetchImpl(NSP_URL, { headers });
   if (res.status === 304 && prev) {
-    // Unchanged: keep the rows, restart the clock.
-    writeNspFile({ ...prev, fetchedAtMs: Date.now() });
+    // Unchanged: keep the rows (read back from the file), restart the clock.
+    const onDisk = JSON.parse(readFileSync(resolveNspCachePath(), "utf8")) as NspFile;
+    writeNspFile({ ...onDisk, fetchedAtMs: Date.now() });
     return;
   }
   if (!res.ok || !res.body) throw new Error(`EDAstro answered ${res.status}`);
@@ -346,7 +444,7 @@ async function downloadNsp(fetchImpl: typeof fetch): Promise<void> {
   });
 }
 
-let bioMemo: { file: NspFile; ids: ReadonlySet<string> } | null = null;
+let bioMemo: { file: NspFileMeta; ids: ReadonlySet<string> } | null = null;
 
 /**
  * Every plant EDAstro has logged, per region (`regionJoinKey|codex id`), and when the file was
@@ -375,18 +473,20 @@ export function nearbyNsp(
 ): { system: string; systemAddress: number | null; distanceLy: number; names: string[] }[] {
   const f = loadFile();
   if (!f) return [];
-  const bySys = new Map<string, { system: string; systemAddress: number | null; distanceLy: number; names: string[] }>();
+  const c = f.cols;
+  const out: { system: string; systemAddress: number | null; distanceLy: number; names: string[] }[] = [];
   const r2 = radiusLy * radiusLy;
-  for (const [, name, system, addr, x, y, z] of f.nsp) {
-    const d2 = (x - origin.x) ** 2 + (y - origin.y) ** 2 + (z - origin.z) ** 2;
+  for (let i = 0; i < c.sysName.length; i++) {
+    const d2 = (c.sx[i]! - origin.x) ** 2 + (c.sy[i]! - origin.y) ** 2 + (c.sz[i]! - origin.z) ** 2;
     if (d2 > r2) continue;
-    const key = String(addr ?? system);
-    const g = bySys.get(key);
-    if (g) {
-      if (!g.names.includes(name)) g.names.push(name);
-    } else bySys.set(key, { system, systemAddress: addr, distanceLy: Math.sqrt(d2), names: [name] });
+    out.push({
+      system: c.sysName[i]!,
+      systemAddress: addrOf(c, i),
+      distanceLy: Math.sqrt(d2),
+      names: distinct(c, i, c.rowName, c.nameStr),
+    });
   }
-  return [...bySys.values()].sort((a, b) => a.distanceLy - b.distanceLy);
+  return out.sort((a, b) => a.distanceLy - b.distanceLy);
 }
 
 /** Every system with a phenomenon, with the phenomena's names (the galaxy map's layer). */
@@ -401,35 +501,77 @@ export interface NspSystem {
   ids: string[];
 }
 
-let bySystemMemo: { file: NspFile; list: NspSystem[] } | null = null;
+/** Built on each call and not kept: the galaxy map's layer asks for it once per request. */
 export function nspBySystem(): readonly NspSystem[] {
   const f = loadFile();
   if (!f) return [];
-  if (bySystemMemo?.file === f.file) return bySystemMemo.list;
-  const by = new Map<string, NspSystem>();
-  for (const [id, name, system, addr, x, y, z] of f.nsp) {
-    const k = String(addr ?? system);
-    const g = by.get(k);
-    if (g) {
-      if (!g.names.includes(name)) g.names.push(name);
-      if (!g.ids.includes(id)) g.ids.push(id);
-    } else by.set(k, { system, systemAddress: addr, x, y, z, names: [name], ids: [id] });
+  const c = f.cols;
+  const out: NspSystem[] = new Array(c.sysName.length);
+  for (let i = 0; i < c.sysName.length; i++) {
+    out[i] = {
+      system: c.sysName[i]!,
+      systemAddress: addrOf(c, i),
+      x: c.sx[i]!,
+      y: c.sy[i]!,
+      z: c.sz[i]!,
+      names: distinct(c, i, c.rowName, c.nameStr),
+      ids: distinct(c, i, c.rowId, c.idStr),
+    };
   }
-  bySystemMemo = { file: f.file, list: [...by.values()] };
-  return bySystemMemo.list;
+  return out;
+}
+
+/** The phenomena systems one at a time, for a walk that needs only their place and, for a few, their ids. */
+export interface NspSystemsView {
+  count: number;
+  address(i: number): number | null;
+  name(i: number): string;
+  x(i: number): number;
+  y(i: number): number;
+  z(i: number): number;
+  ids(i: number): string[];
+  names(i: number): string[];
+}
+export function nspSystemsView(): NspSystemsView | null {
+  const f = loadFile();
+  if (!f) return null;
+  const c = f.cols;
+  return {
+    count: c.sysName.length,
+    address: (i) => addrOf(c, i),
+    name: (i) => c.sysName[i]!,
+    x: (i) => c.sx[i]!,
+    y: (i) => c.sy[i]!,
+    z: (i) => c.sz[i]!,
+    ids: (i) => distinct(c, i, c.rowId, c.idStr),
+    names: (i) => distinct(c, i, c.rowName, c.nameStr),
+  };
 }
 
 /**
  * Systems with a K10-Type Anomaly in EDAstro's codex file — an NSP that only spawns around green gas
  * giants (shared/greenGasGiant.ts). Kept per file version; empty until the file is downloaded.
  */
-let k10Memo: { file: NspFile; addrs: Set<number> } | null = null;
+let k10Memo: { file: NspFileMeta; addrs: Set<number> } | null = null;
 export function nspK10Systems(): ReadonlySet<number> {
   const f = loadFile();
   if (!f) return new Set();
   if (k10Memo?.file === f.file) return k10Memo.addrs;
+  const c = f.cols;
   const addrs = new Set<number>();
-  for (const [id, , , addr] of f.nsp) if (id === K10_CODEX_ID && typeof addr === "number") addrs.add(addr);
+  const k10 = c.idStr.indexOf(K10_CODEX_ID);
+  if (k10 >= 0) {
+    for (let i = 0; i < c.sysName.length; i++) {
+      const a = addrOf(c, i);
+      if (a == null) continue;
+      for (let r = c.rowStart[i]!; r < c.rowStart[i + 1]!; r++) {
+        if (c.rowId[r] === k10) {
+          addrs.add(a);
+          break;
+        }
+      }
+    }
+  }
   k10Memo = { file: f.file, addrs };
   return addrs;
 }
@@ -444,7 +586,11 @@ export interface EdastroGreenReport {
   z: number;
 }
 
-let greenMemo: { file: NspFile; list: EdastroGreenReport[]; byAddr: Map<number, EdastroGreenReport> } | null = null;
+let greenMemo: {
+  file: NspFileMeta;
+  list: EdastroGreenReport[];
+  byAddr: Map<number, EdastroGreenReport>;
+} | null = null;
 function greenReports() {
   const f = loadFile();
   if (!f) return null;
