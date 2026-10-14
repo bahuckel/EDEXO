@@ -70,8 +70,13 @@ describe("the gate itself", () => {
   });
 
   it("knows the Brain Trees' list, which their own rows do not carry", () => {
-    expect(BRAIN_TREE_SYSTEM_REQUIREMENT).toEqual(["Earth-Like World", "Gas Giant with water-based life"]);
-    expect(evaluateSystemBodyGate(BRAIN_TREE_SYSTEM_REQUIREMENT, ["Water giant"], true)?.kind).toBe("fail");
+    // Measured 2026-10-14 (systemBodyGates.ts): a water world or an ammonia world is enough, an icy body is not.
+    expect(evaluateSystemBodyGate(BRAIN_TREE_SYSTEM_REQUIREMENT, ["Water world"], true)?.kind).toBe("pass");
+    expect(evaluateSystemBodyGate(BRAIN_TREE_SYSTEM_REQUIREMENT, ["Ammonia world"], true)?.kind).toBe("pass");
+    expect(evaluateSystemBodyGate(BRAIN_TREE_SYSTEM_REQUIREMENT, ["Water giant"], true)?.kind).toBe("pass");
+    expect(
+      evaluateSystemBodyGate(BRAIN_TREE_SYSTEM_REQUIREMENT, ["Icy body", "Rocky body"], true)?.kind,
+    ).toBe("fail");
   });
 });
 

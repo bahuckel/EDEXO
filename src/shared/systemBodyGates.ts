@@ -66,14 +66,23 @@ export function keysForRequirement(entry: string): string[] {
 /**
  * The Brain Trees' requirement, which their rows carry as a bare `requires_system_bodies: true`.
  *
- * The genus file spells it out one level up, in `meta.general.system_requirements`: *"Presence of
- * Earth-Like World OR Gas Giant with water-based life (for most variants)"*. "Most variants" is why
- * this demotes rather than excludes, and why Brain Tree Roseum — whose row says
- * `requires_system_bodies: false` — is left alone by the loader.
+ * The genus file used to spell it *"Presence of Earth-Like World OR Gas Giant with water-based life (for
+ * most variants)"*, and the data says that list is too short. Measured 2026-10-14 on every body of the
+ * EDDN year whose codex or on-foot scan names the species, joined to its system's bodies in Spansh's dump
+ * (`docs/perf/companion_rule_check.py`): an Earth-like world or a gas giant with water-based life is in
+ * the system on 30-76 % of them (Lindigoticum 30 %, Aureum 52 %, Puniceum 55 %, Ostrinum 60 %, Gypseeum
+ * 74 %, Viride 76 %), and one of the six below on 98.9-100 % (water worlds alone: 17 of 20 Lindigoticum
+ * systems). Lividum and Roseum, whose rows say `requires_system_bodies: false`, have one on 44 %: they
+ * really need none, and the loader leaves them alone. Read the old way the rule demoted the species on
+ * about half its own bodies (Ostrinum on 2 of 5 hot high-metal bodies in Inner Orion Spur).
  */
 export const BRAIN_TREE_SYSTEM_REQUIREMENT: SystemBodyRequirement = [
   "Earth-Like World",
   "Gas Giant with water-based life",
+  "Water World",
+  "Gas Giant with ammonia-based life",
+  "Water Giant",
+  "Ammonia World",
 ];
 
 export type SystemBodyVerdict =

@@ -37,9 +37,14 @@ describe("predictionUnsupported", () => {
 
     // The Brain Trees say `requires_system_bodies: true` and leave the list to the genus file.
     const aureum = db.species.find((e) => e.displayName === "Brain Tree Aureum");
+    // The six measured on 2026-10-14 (systemBodyGates.ts BRAIN_TREE_SYSTEM_REQUIREMENT).
     expect(aureum!.criteria.systemBodyClassesAnyOf).toEqual([
       "Earth-Like World",
       "Gas Giant with water-based life",
+      "Water World",
+      "Gas Giant with ammonia-based life",
+      "Water Giant",
+      "Ammonia World",
     ]);
   });
 

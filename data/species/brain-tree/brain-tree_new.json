@@ -16,7 +16,7 @@
         ]
       },
       "system_requirements": [
-        "Presence of Earth-Like World OR Gas Giant with water-based life (for most variants)"
+        "Presence of an Earth-like world, water world, ammonia world, water giant or gas giant with water- or ammonia-based life (all but Lividum and Roseum; measured 2026-10-14 on the EDDN year joined to Spansh systems: 98.9-100 % of each species' bodies)"
       ]
     },
     "summary": "Fungal-like organic structures resembling trees with brain-shaped growths. They absorb minerals through subsurface roots and energy via their outer surfaces.",
@@ -244,7 +244,7 @@
       "Often linked to Guardian space regions"
     ],
     "system_dependency": [
-      "Most species require presence of Earth-Like World OR Gas Giant with water-based life",
+      "All but Lividum and Roseum require an Earth-like world, water world, ammonia world, water giant or gas giant with water- or ammonia-based life in the system",
       "Roseum is the exception and does NOT require system-level bodies"
     ],
     "temperature_ranges": [
