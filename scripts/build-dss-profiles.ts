@@ -9,6 +9,11 @@
  *
  *   npx tsx scripts/build-dss-profiles.ts <contexts dir> amphora [bark-mound ...]          report only
  *   npx tsx scripts/build-dss-profiles.ts <contexts dir> amphora --write [--allow-downgrade]
+ *
+ * `--species <species id...>`: a genus with several species, from the EDDN year's identified bodies
+ * (`docs/perf/eddn_species_contexts.py`, one `<display name slug>.contexts.jsonl` per species; 2026-10-14 for
+ * Anemone, whose feeder profiles held 4-25 bodies and no ranking histograms). With `--histograms-only` only the
+ * histograms are written into the installed profile (what Anemone got; see the note in the loop).
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -23,6 +28,8 @@ import { buildDisplayHistograms, buildSpeciesHistograms } from "../src/feeder/hi
 import { flattenForStats } from "../src/feeder/flatten.js";
 import type { HistogramEdgesFile } from "../src/shared/likelihoodBins.js";
 import { shouldOmitExomasterySciencePath } from "../src/server/exomasteryPathHygiene.js";
+import { resolveExomasteryProfileJsonPath } from "../src/server/exomasteryProfile.js";
+import { writeJsonIfChanged } from "../src/feeder/stableWrite.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -54,15 +61,34 @@ const db = loadSpeciesDatabaseFromTree(root);
 const edgesFile = JSON.parse(
   readFileSync(path.join(root, "data", "exomastery", "histogram-edges.json"), "utf8"),
 ) as HistogramEdgesFile;
-for (const genusDir of genera) {
-  const entries = db.species.filter((e) => e.genusDataDir === genusDir);
+const slug = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+const jobs: { entry: (typeof db.species)[number]; file: string; label: string }[] = [];
+for (const name of genera) {
+  if (flags.has("--species")) {
+    const entry = db.species.find((e) => e.id === name);
+    if (!entry) {
+      console.error(`${name}: no species with this id`);
+      process.exitCode = 1;
+      continue;
+    }
+    jobs.push({ entry, file: `${slug(entry.displayName)}.contexts.jsonl`, label: "EDDN-year bodies" });
+    continue;
+  }
+  const entries = db.species.filter((e) => e.genusDataDir === name);
   if (entries.length !== 1) {
-    console.error(`${genusDir}: ${entries.length} species — this is for single-species genera only`);
+    console.error(`${name}: ${entries.length} species — this is for single-species genera only (or --species)`);
     process.exitCode = 1;
     continue;
   }
-  const entry = entries[0]!;
-  const rows = readFileSync(path.join(dir, `${genusDir}.contexts.jsonl`), "utf8")
+  jobs.push({ entry: entries[0]!, file: `${name}.contexts.jsonl`, label: "DSS-confirmed bodies" });
+}
+for (const { entry, file, label } of jobs) {
+  const genusDir = entry.genusDataDir;
+  const rows = readFileSync(path.join(dir, file), "utf8")
     .split("\n")
     .filter(Boolean)
     .map((l) => JSON.parse(l) as ContextRow);
@@ -108,7 +134,7 @@ for (const genusDir of genera) {
       .slice(0, 6)
       .map(([v, n]) => `${v} ${n}`)
       .join(", ");
-  console.log(`\n${entry.displayName} (${genusDir}): ${rows.length} DSS-confirmed bodies`);
+  console.log(`\n${entry.displayName} (${genusDir}): ${rows.length} ${label}`);
   for (const k of [
     "body.surfaceTemperature",
     "body.gravity",
@@ -126,6 +152,29 @@ for (const genusDir of genera) {
     "exo.system_primary_spectral",
   ]) {
     console.log(`  ${k.padEnd(28)} ${top(k)}`);
+  }
+  if (flags.has("--histograms-only")) {
+    /*
+      Only the ranking and chart histograms go into the profile already installed; its observations stay. The whole
+      Anemone profile rebuilt from the EDDN year hid 23 of 3,000 DSS-confirmed Anemone bodies (2026-10-14): the
+      year's bodies rarely have thin sulphur dioxide (6 of 351 Luteolum), so the larger categorical counts scored
+      the rocky thin-atmosphere bodies under 1 %, and 112 Croceum bodies were enough for a temperature envelope that
+      a 437 K find sits outside. Same raw file rewrite as applyParameterImportance (the loader normalises on read).
+    */
+    const target = resolveExomasteryProfileJsonPath(root, entry);
+    if (!target) {
+      console.log(`  no installed profile for ${entry.displayName}: left unscored`);
+      continue;
+    }
+    const raw = JSON.parse(readFileSync(target, "utf8")) as Record<string, unknown>;
+    raw.histograms = histograms;
+    raw.displayHistograms = displayHistograms;
+    const changed = flags.has("--write") && writeJsonIfChanged(target, `${JSON.stringify(raw, null, 2)}\n`);
+    console.log(
+      `  histograms ${Object.keys(histograms).length} from ${rows.length} bodies -> ${path.basename(target)} ` +
+        `(${raw.sampleCount} profile bodies)${changed ? ", written" : ""}`,
+    );
+    continue;
   }
   if (flags.has("--write")) {
     console.log(
