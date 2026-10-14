@@ -18,6 +18,9 @@ export default tseslint.config(
       "public/launcher.html",
       // Local screenshots, backups and one-off probes; never shipped, never imported.
       "build-artifacts/**",
+      // The local scratch folder (excluded from git in .git/info/exclude): it failed `npm run lint` on this
+      // machine with 23 errors that are nobody's code (code review A19).
+      "tmp-t/**",
     ],
   },
   js.configs.recommended,
@@ -81,6 +84,16 @@ export default tseslint.config(
   {
     files: ["scripts/**/*.ts"],
     rules: { "no-undef": "off" },
+  },
+  {
+    // The tests throw values away the way src does (`const { computedAt: _x, ...rest } = …`).
+    files: ["tests/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" },
+      ],
+    },
   },
   {
     // The HUD overlays' plain browser script (no bundler): browser globals, plus the `module` check
