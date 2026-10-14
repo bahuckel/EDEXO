@@ -6,7 +6,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   appDataExclusion,
   applyPendingRestore,
@@ -203,6 +203,27 @@ describe("backups", () => {
     expect(await listBackups(w.out)).toHaveLength(3);
     // Keep 1: only the new backup; the pair goes together.
     expect((await pruneBackups(w.out, 1)).sort()).toHaveLength(2);
+  });
+
+  it("an archive that fails to write ends the backup, and the last good one stays (code review, 2026-10-14)", async () => {
+    const w = world();
+    const good = await runBackup(w.src, w.settings, minute(0));
+    // A journal that grew, so it is compressed again (an unchanged one is copied from the good backup).
+    writeFileSync(path.join(w.journals, "Journal.2026-09-01T100000.01.log"), '{"event":"Fileheader"}\n{"event":"Music"}\n');
+    const addFile = ZipWriter.prototype.addFile;
+    const spy = vi.spyOn(ZipWriter.prototype, "addFile").mockImplementation(async function (this: ZipWriter, ...a) {
+      const out = (this as unknown as { out: import("node:fs").WriteStream }).out;
+      out.destroy(Object.assign(new Error("ENOSPC: no space left on device, write"), { code: "ENOSPC" }));
+      return addFile.apply(this, a);
+    });
+    try {
+      // Not one "journal …: ENOSPC" per file in a published backup: the run fails as a whole.
+      await expect(runBackup(w.src, { ...w.settings, keep: 1 }, minute(1))).rejects.toThrow(/ENOSPC/);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(readdirSync(w.out).filter((f) => f.endsWith(".partial"))).toEqual([]);
+    expect((await listBackups(w.out)).map((b) => b.file)).toEqual([good.file]);
   });
 
   it("a partial file is not left behind when a backup fails", async () => {

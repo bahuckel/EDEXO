@@ -322,6 +322,7 @@ export async function runBackup(src: BackupSources, settings: BackupSettings, no
       try {
         await add(`journals/${j.name}`, j);
       } catch (e) {
+        if (zip.failed) throw zip.failed; // the archive itself, not this file: nothing more can go in
         errors.push(`journal ${j.name}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
@@ -329,6 +330,7 @@ export async function runBackup(src: BackupSources, settings: BackupSettings, no
       try {
         await add(`app-data/${f.rel}`, f);
       } catch (e) {
+        if (zip.failed) throw zip.failed; // the archive itself, not this file: nothing more can go in
         errors.push(`app data ${f.rel}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
@@ -338,6 +340,7 @@ export async function runBackup(src: BackupSources, settings: BackupSettings, no
         exportNames.push(x.fileName);
       }
     } catch (e) {
+      if (zip.failed) throw zip.failed;
       errors.push(`exports: ${e instanceof Error ? e.message : String(e)}`);
     }
     const manifest: BackupManifest = {

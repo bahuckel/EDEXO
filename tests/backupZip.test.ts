@@ -19,6 +19,34 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
+describe("when the archive file itself fails (code review, 2026-10-14)", () => {
+  // With no 'error' listener on the output these were uncaught exceptions, and the server's entry exits
+  // on those; a drain wait during a failure also never settled.
+  it("a folder it cannot open: every call rejects, nothing escapes, abort settles", async () => {
+    const w = new ZipWriter(path.join(tmp(), "gone", "out.zip"));
+    await expect(w.addBuffer("a.txt", "a")).rejects.toThrow(/ENOENT/);
+    expect(w.failed?.message).toMatch(/ENOENT/);
+    await expect(w.addBuffer("b.txt", "b")).rejects.toThrow(/ENOENT/);
+    await expect(w.finish()).rejects.toThrow(/ENOENT/);
+    await w.abort();
+  });
+
+  it("a write that fails while a big entry streams in rejects that entry instead of hanging", async () => {
+    const d = tmp();
+    const big = Buffer.alloc(8_000_000);
+    for (let i = 0; i < big.length; i++) big[i] = (i * 7919) % 251;
+    writeFileSync(path.join(d, "big.bin"), big);
+    const w = new ZipWriter(path.join(d, "out.zip"));
+    const out = (w as unknown as { out: import("node:fs").WriteStream }).out;
+    const adding = w.addFile("big.bin", path.join(d, "big.bin"));
+    setImmediate(() => out.destroy(Object.assign(new Error("ENOSPC: no space left on device, write"), { code: "ENOSPC" })));
+    await expect(adding).rejects.toThrow(/ENOSPC/);
+    await expect(w.addBuffer("next.txt", "x")).rejects.toThrow(/ENOSPC/);
+    await w.abort();
+    rmSync(path.join(d, "out.zip"), { force: true }); // the handle is closed: Windows lets it go
+  });
+});
+
 describe("backup zip", () => {
   it("computes the standard CRC-32", () => {
     expect(crc32(Buffer.from("123456789"))).toBe(0xcbf43926);

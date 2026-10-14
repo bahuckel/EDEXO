@@ -26,7 +26,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { Readable } from "node:stream";
+import { Readable, type Writable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import type { UpdateDownloadDTO } from "../shared/types.js";
 import { APP_USER_AGENT, APP_VERSION } from "./appVersion.js";
@@ -46,6 +47,12 @@ export interface StagedUpdate {
 export const READY_FILE = "ready.json";
 /** The swap's own log (electron/update-apply.ps1), kept across starts: it is how a failure is seen. */
 export const LOG_FILE = "update.log";
+
+/** Resolves once a file stream has let go of its handle ('destroyed' comes before that). */
+function closed(s: Writable): Promise<void> {
+  if (s.closed) return Promise.resolve();
+  return new Promise((resolve) => s.once("close", () => resolve()));
+}
 
 /**
  * Why the last install did not go in, from the swap's log, or null when the last one went in (or
@@ -164,17 +171,33 @@ export function createAppUpdater(o: AppUpdaterOptions) {
     if (!res.ok || !res.body) throw new Error(`Download answered HTTP ${res.status}`);
     total = asset.size ?? (Number(res.headers.get("content-length")) || null);
     const hash = createHash("sha256");
+    // pipeline carries an error from either end (a full disk, a lost connection) into this promise and
+    // destroys both; a bare write stream with no 'error' listener took the whole server down instead
+    // (the entry exits on uncaughtException), and its 'drain' wait never settled.
     const out = createWriteStream(part);
     try {
-      for await (const chunk of Readable.fromWeb(res.body as unknown as WebReadableStream<Uint8Array>)) {
-        const buf = chunk as Buffer;
-        hash.update(buf);
-        received += buf.length;
-        if (!out.write(buf)) await new Promise<void>((r) => out.once("drain", () => r()));
+      await pipeline(
+        Readable.fromWeb(res.body as unknown as WebReadableStream<Uint8Array>),
+        async function* (source: AsyncIterable<Buffer>) {
+          for await (const buf of source) {
+            hash.update(buf);
+            received += buf.length;
+            yield buf;
+          }
+        },
+        out,
+      );
+    } catch (e) {
+      await closed(out);
+      try {
+        rmSync(part, { force: true });
+      } catch {
+        /* the next start's cleanUpdateDir takes it; the download's own error is the one to show */
       }
-    } finally {
-      await new Promise<void>((r) => out.end(() => r()));
+      throw e;
     }
+    // The file is renamed below: on Windows the handle has to be closed first.
+    await closed(out);
     const got = hash.digest("hex");
     if (got !== asset.sha256) {
       rmSync(part, { force: true });

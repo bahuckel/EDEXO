@@ -109,6 +109,40 @@ describe("downloading the newer release", () => {
     expect(existsSync(path.join(dir, "EDExoCompare.exe"))).toBe(false);
   });
 
+  it("a file it cannot write ends in an error the launcher shows, not a dead server, and the next try works", async () => {
+    // Code review 2026-10-14: the write stream had no 'error' listener, so a disk-full or a locked file
+    // was an uncaught exception (the server's entry exits on those) and the state stayed "downloading".
+    const u = await updaterFor("portable", { "EDExoCompare.exe": EXE });
+    mkdirSync(path.join(dir, "EDExoCompare.exe.part"), { recursive: true }); // opening it fails
+    const st = await u.start();
+    expect(st.state).toBe("error");
+    expect(st.error).toMatch(/EISDIR|EPERM|illegal operation/i);
+    expect(u.staged()).toBeNull();
+    rmSync(path.join(dir, "EDExoCompare.exe.part"), { recursive: true });
+    expect((await u.start()).state).toBe("ready");
+  });
+
+  it("a download cut off midway is an error, and its part file goes", async () => {
+    const half = (async (url: string) => {
+      if (String(url).startsWith("https://api.github.com/")) return new Response(JSON.stringify(RELEASES), { status: 200 });
+      const body = new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(new Uint8Array(EXE.subarray(0, 4)));
+          c.error(new Error("connection reset"));
+        },
+      });
+      return new Response(body, { status: 200 });
+    }) as unknown as typeof fetch;
+    const checker = createUpdateChecker({ fetchImpl: half, current: "1.2.9", form: "portable" });
+    await checker.check(true);
+    const u = createAppUpdater({ newerAsset: () => checker.newerAsset(), form: "portable", dir, fetchImpl: half, current: "1.2.9", supported: true });
+    const st = await u.start();
+    expect(st.state).toBe("error");
+    expect(st.error).toMatch(/connection reset/);
+    expect(existsSync(path.join(dir, "EDExoCompare.exe.part"))).toBe(false);
+    expect(existsSync(path.join(dir, "EDExoCompare.exe"))).toBe(false);
+  });
+
   it("downloads once when asked twice at the same time", async () => {
     const seen: string[] = [];
     const u = await updaterFor("zip", { "EDExoCompare-1.3.0-win-x64.zip": ZIP }, seen);

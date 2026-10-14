@@ -66,15 +66,62 @@ export class ZipWriter {
   private offset = 0;
   private readonly entries: Written[] = [];
   private readonly names = new Set<string>();
+  private failure: Error | null = null;
+  /** Entries being piped in when the archive file fails: their 'drain' would never come. */
+  private readonly onFail = new Set<(e: Error) => void>();
 
   constructor(path: string) {
     this.out = createWriteStream(path);
+    // With no listener, an 'error' here (a full disk, a backup folder that went away) is an uncaught
+    // exception, and the server's entry exits on those: the first one is kept and every write after
+    // it rejects with it.
+    this.out.on("error", (e) => {
+      this.failure ??= e;
+      for (const fail of [...this.onFail]) fail(e);
+      this.onFail.clear();
+    });
+  }
+
+  /** The archive file's own failure, once it had one; nothing more can be added. */
+  get failed(): Error | null {
+    return this.failure;
   }
 
   private write(buf: Buffer): Promise<void> {
+    if (this.failure) return Promise.reject(this.failure);
     this.offset += buf.length;
     return new Promise((resolve, reject) => {
-      this.out.write(buf, (err) => (err ? reject(err) : resolve()));
+      this.out.write(buf, (err) => {
+        if (!err) return resolve();
+        // The callback can come before the 'error' event, and after a destroy it only says "destroyed":
+        // the stream's own `errored` holds the cause.
+        this.failure ??= this.out.errored ?? err;
+        reject(this.failure);
+      });
+    });
+  }
+
+  /**
+   * Run a piped copy into the archive; `start` returns how to stop its input. It settles on the
+   * archive's failure too, and stops the input then, so a journal is not left open.
+   */
+  private piping(start: (resolve: () => void, reject: (e: unknown) => void) => () => void): Promise<void> {
+    if (this.failure) return Promise.reject(this.failure);
+    return new Promise<void>((resolve, reject) => {
+      let stop = () => {};
+      const fail = (e: Error) => {
+        stop();
+        reject(e);
+      };
+      this.onFail.add(fail);
+      const settle = (f: () => void) => {
+        this.onFail.delete(fail);
+        f();
+      };
+      stop = start(
+        () => settle(resolve),
+        (e) => settle(() => reject(e)),
+      );
     });
   }
 
@@ -90,7 +137,7 @@ export class ZipWriter {
     await this.addStream(name, () => bufferStream(buf), mtime);
   }
 
-  private async addStream(name: string, source: () => NodeJS.ReadableStream, mtime: Date): Promise<void> {
+  private async addStream(name: string, source: () => Readable, mtime: Date): Promise<void> {
     const clean = name.replace(/\\/g, "/").replace(/^\/+/, "");
     if (!clean || clean.split("/").some((p) => p === ".." || p === "")) throw new Error(`bad entry name: ${name}`);
     if (this.names.has(clean)) throw new Error(`duplicate entry: ${clean}`);
@@ -115,7 +162,7 @@ export class ZipWriter {
     let crc = 0;
     let size = 0;
     let compressed = 0;
-    await new Promise<void>((resolve, reject) => {
+    await this.piping((resolve, reject) => {
       const input = source();
       const deflate = createDeflateRaw({ level: 6 });
       input.on("data", (chunk: Buffer) => {
@@ -134,6 +181,10 @@ export class ZipWriter {
       });
       deflate.on("end", () => resolve());
       input.pipe(deflate);
+      return () => {
+        input.destroy();
+        deflate.destroy();
+      };
     });
     if (size > MAX_32 || compressed > MAX_32 || this.offset > MAX_32) {
       throw new Error(`${clean} is too large for a zip without ZIP64`);
@@ -176,7 +227,7 @@ export class ZipWriter {
     await this.write(lh);
     await this.write(nameBuf);
     if (e.compressed > 0) {
-      await new Promise<void>((resolve, reject) => {
+      await this.piping((resolve, reject) => {
         const input = createReadStream(sourceZip, { start: at, end: at + e.compressed - 1 });
         input.on("error", reject);
         input.on("data", (data: string | Buffer) => {
@@ -188,6 +239,7 @@ export class ZipWriter {
           }
         });
         input.on("end", () => resolve());
+        return () => input.destroy();
       });
     }
     if (this.offset > MAX_32) throw new Error(`${clean} is too large for a zip without ZIP64`);
@@ -228,13 +280,20 @@ export class ZipWriter {
     return this.offset;
   }
 
-  /** Close and leave the partial file for the caller to delete (a failed backup). */
+  /**
+   * Close and leave the partial file for the caller to delete (a failed backup). Resolves once the
+   * handle is released (Windows will not delete an open file), whether or not the file failed.
+   */
   abort(): Promise<void> {
-    return new Promise((resolve) => this.out.end(() => resolve()));
+    return new Promise((resolve) => {
+      if (this.out.closed) return resolve();
+      this.out.once("close", () => resolve());
+      this.out.destroy();
+    });
   }
 }
 
-function bufferStream(buf: Buffer): NodeJS.ReadableStream {
+function bufferStream(buf: Buffer): Readable {
   return Readable.from([buf]);
 }
 
