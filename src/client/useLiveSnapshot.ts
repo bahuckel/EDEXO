@@ -204,10 +204,11 @@ export function useLiveSnapshot(): {
       };
       ws.onmessage = (ev) => {
         try {
+          const arrivedAt = performance.now();
           const raw = String(ev.data);
           const msg = JSON.parse(raw);
           if (msg.type === "state") {
-            perfSnapshotReceived(raw.length);
+            perfSnapshotReceived(raw.length, arrivedAt);
             if (typeof msg.rev === "number") lastRev = shownRev = msg.rev;
             applyPayload(
               msg.payload as AppSnapshot,

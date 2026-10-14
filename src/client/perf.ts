@@ -75,16 +75,26 @@ function ensureReporter(): void {
   console.log(`[perf] client instrumentation ON — reporting every ${PERF_REPORT_MS / 1000}s`);
 }
 
-/** Call as soon as a snapshot payload arrives, before setState. */
-export function perfSnapshotReceived(payloadBytes: number): void {
+/**
+ * Call as soon as a snapshot payload arrives, before setState; `arrivedAt` when it came before parsing
+ * (the WebSocket path parses to learn the message type, and its timer used to start after that). Of
+ * several within a second before one commit, the first arrival is kept: what the commander waited
+ * from (code review, 2026-10-14: each overwrote the last, so a burst read as fast).
+ */
+export function perfSnapshotReceived(payloadBytes: number, arrivedAt = performance.now()): void {
   if (!CLIENT_PERF_ENABLED) return;
   ensureReporter();
   received += 1;
   push(bytes, payloadBytes);
-  pendingAt = performance.now();
+  // An arrival with no commit after it (nothing changed: the snapshot object is reused) must not
+  // linger as the start of the next one: older than a second, it is replaced.
+  if (pendingAt == null || arrivedAt - pendingAt > 1000) pendingAt = arrivedAt;
 }
 
-/** Call from an effect that runs after the snapshot has been committed to the DOM. */
+/**
+ * Call from an effect that runs after the snapshot has been committed to the DOM. "paint" is the next
+ * animation frame after that: close to when it is on screen, not a measured present.
+ */
 export function perfSnapshotCommitted(): void {
   if (!CLIENT_PERF_ENABLED || pendingAt == null) return;
   const started = pendingAt;
