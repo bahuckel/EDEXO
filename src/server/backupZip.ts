@@ -373,6 +373,22 @@ async function entryDataOffset(path: string, e: ZipEntry): Promise<number> {
  * Does an entry still read back to its CRC and size? Streamed: a 0.5 GB entry is never held in
  * memory. False on any damage, never a throw.
  */
+/** CRC-32 and length of a file on disk, read once (no compression). */
+export function fileCrc32(path: string): Promise<{ crc: number; size: number }> {
+  return new Promise((resolve, reject) => {
+    let crc = 0;
+    let size = 0;
+    const input = createReadStream(path);
+    input.on("error", reject);
+    input.on("data", (data: string | Buffer) => {
+      const chunk = typeof data === "string" ? Buffer.from(data) : data;
+      crc = crc32(chunk, crc);
+      size += chunk.length;
+    });
+    input.on("end", () => resolve({ crc, size }));
+  });
+}
+
 export async function verifyZipEntry(path: string, e: ZipEntry): Promise<boolean> {
   if (e.method !== 8 && e.method !== 0) return false;
   let at: number;

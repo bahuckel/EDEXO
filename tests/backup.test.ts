@@ -205,6 +205,21 @@ describe("backups", () => {
     expect((await pruneBackups(w.out, 1)).sort()).toHaveLength(2);
   });
 
+  it("a file rewritten at the same length within the zip's 2 s is compressed again, not copied stale (code review, 2026-10-14)", async () => {
+    const w = world();
+    const settingsFile = path.join(w.app, "edexo-compare-user-settings.json");
+    const first = await runBackup(w.src, w.settings, minute(0));
+    const entry = (await listZip(first.path)).find((e) => e.name === "app-data/edexo-compare-user-settings.json")!;
+    // Same length, and the file's time put back where the zip has it.
+    writeFileSync(settingsFile, '{"a":2}');
+    utimesSync(settingsFile, entry.mtime, entry.mtime);
+    const second = await runBackup(w.src, w.settings, minute(1));
+    const now = (await listZip(second.path)).find((e) => e.name === "app-data/edexo-compare-user-settings.json")!;
+    expect((await readZipEntry(second.path, now)).toString()).toBe('{"a":2}');
+    // Everything unchanged is still copied: the journal by its size and time, the rest by its CRC.
+    expect(second.reused).toBe(first.journals + first.appDataFiles - 1);
+  });
+
   /*
     Code review, 2026-10-14: a backup with errors counted towards `keep` like a complete one, so with keep 1 one
     bad run deleted the only good backup; and a journal folder that went away was skipped without a word.

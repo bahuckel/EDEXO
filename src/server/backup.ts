@@ -32,7 +32,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, s
 import { mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
-import { listZip, readZipEntry, verifyZipEntry, ZipWriter, type ZipEntry } from "./backupZip.js";
+import { fileCrc32, listZip, readZipEntry, verifyZipEntry, ZipWriter, type ZipEntry } from "./backupZip.js";
 import { writeFileAtomic } from "./atomicWrite.js";
 
 export const BACKUP_SETTINGS_FILE = "edexo-backup-settings.json";
@@ -316,11 +316,34 @@ export async function runBackup(src: BackupSources, settings: BackupSettings, no
     }
   }
   let reused = 0;
+  /*
+    Size and a time to 2 s say a file is unchanged only for one that is only ever appended to: a journal
+    (every write makes it longer). A settings file or Status.json rewritten at the same length inside one
+    2 s slot was copied from the old backup, stale, and carried forward (code review, 2026-10-14). Those
+    are compared by their CRC, read from the file itself; cheaper than the inflate the old entry's own
+    check already costs.
+  */
+  const appendOnly = (name: string) => /^journals\/Journal\..+\.log$/i.test(name);
+  const sameAsSource = async (name: string, f: { abs: string; size: number }, e: ZipEntry) => {
+    if (appendOnly(name)) return true;
+    try {
+      const now = await fileCrc32(f.abs);
+      return now.crc === e.crc && now.size === e.size;
+    } catch {
+      return false; // unreadable now: compressed fresh, where its error is reported
+    }
+  };
   /** Copy from an earlier backup when that entry is this very file and still reads back; else compress. */
   const add = async (name: string, f: { abs: string; size: number; mtimeMs: number }) => {
     const r = reusable.get(name);
     // Zip times are local and to 2 s, so "the same time" is within 2 s.
-    if (r && r.entry.size === f.size && Math.abs(r.entry.mtime.getTime() - f.mtimeMs) < 2000 && (await verifyZipEntry(r.zip, r.entry))) {
+    if (
+      r &&
+      r.entry.size === f.size &&
+      Math.abs(r.entry.mtime.getTime() - f.mtimeMs) < 2000 &&
+      (await sameAsSource(name, f, r.entry)) &&
+      (await verifyZipEntry(r.zip, r.entry))
+    ) {
       await zip.addCopy(name, r.zip, r.entry);
       reused++;
       return;
