@@ -59,9 +59,10 @@ import {
   buildExoPayoutRangeForRecord,
   scanForMatch,
   exoMatchSummaries,
+  type ExoMatchRun,
 } from "./systemMapExo.js";
 export { exoMarkerBasis, bodyHasJournalExoEvidence, bodyHasExoMarkers } from "./systemMapExo.js";
-export type { ExoMarkerBasis } from "./systemMapExo.js";
+export type { ExoMarkerBasis, ExoMatchRun } from "./systemMapExo.js";
 
 export type StarRolesConfig = {
   fuelPrefixes: string[];
@@ -342,6 +343,12 @@ export function buildSystemMapSnapshot(
    * panel beside it had already demoted for sitting 175 ly from the nearest nebula.
    */
   spatialCatalogue: SpatialCatalogue | null,
+  /**
+   * The body tab's own pipeline runs from the same snapshot, by body key (plan 1.2.17 Part 3, 2026-10-15): the map
+   * ran the whole chain again per body on a first view (~13 % of it). On the owner's history the two agreed on every
+   * one of 589 bodies, shown species and chances (docs/perf/map-vs-tab.mts). A body without one runs its own.
+   */
+  tabRuns?: ReadonlyMap<string, ExoMatchRun>,
 ): SystemMapSnapshot | null {
   if (focusSystemAddress == null) return null;
   /** Narrowed copy: the closures below lose the null-check on the captured parameter. */
@@ -493,7 +500,7 @@ export function buildSystemMapSnapshot(
      * fetch it separately — 81 runs of the matcher on a 27-body system to produce 27 results, each
      * rebuilding the same context and walking the same 108 species.
      */
-    const matchRun = exoMatchRun(store, db, r, spatialCatalogue);
+    const matchRun = tabRuns?.get(bk) ?? exoMatchRun(store, db, r, spatialCatalogue);
     const maxExo = maxExoHeuristicPair(store, prices, r, matchRun);
     const exoTier = exoValueTierFromHeuristic(
       maxExo.tierValue,

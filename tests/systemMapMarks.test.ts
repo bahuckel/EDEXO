@@ -184,3 +184,38 @@ describe("ringed planets", () => {
     expect(all.find((n) => n.bodyId === 1)?.rings).toBeUndefined();
   });
 });
+
+/*
+  The map takes the body tab's pipeline run from the same snapshot instead of running the chain again (plan 1.2.17
+  Part 3, 2026-10-15; the two agreed on all 589 bodies of the owner's history, docs/perf/map-vs-tab.mts).
+*/
+describe("the map's species come from the tab's run", () => {
+  loadSpeciesDatabase();
+
+  it("lists the tab's shown species for the body", () => {
+    const snap = buildSnapshot(store(), null, "", "127.0.0.1", 0, [], 1);
+    const tab = snap.bodies.find((b) => b.state.bodyId === 17)!;
+    const shown = tab.matches.filter((m) => !m.unlikely).map((m) => m.entry.id);
+    expect(shown.length).toBeGreaterThan(0);
+    expect(snap.systemMap!.detailsByBodyId["17"]!.exoMatchSummaries.map((m) => m.id)).toEqual(shown.slice(0, 48));
+  });
+
+  it("uses a run it is handed, and runs its own without one", async () => {
+    const { buildSystemMapSnapshot, loadStarRolesConfig } = await import("../src/server/systemMap.js");
+    const { loadPriceList } = await import("../src/server/priceList.js");
+    const { getProjectRoot } = await import("../src/server/paths.js");
+    const s = store();
+    const db = loadSpeciesDatabase();
+    const cfg = loadStarRolesConfig(getProjectRoot());
+    const prices = loadPriceList(getProjectRoot());
+    const own = buildSystemMapSnapshot(s, ADDR, db, cfg, prices, null)!;
+    expect(own.detailsByBodyId["17"]!.exoMatchSummaries.length).toBeGreaterThan(0);
+
+    const exo = s.bioBodyState(`${ADDR}:17`)!;
+    const one = { entry: { id: "x_handed", displayName: "Handed in" }, reasons: [] } as never;
+    const handed = buildSystemMapSnapshot(s, ADDR, db, cfg, prices, null, new Map([
+      [`${ADDR}:17`, { exo, scan: exo.scan!, matches: [one], shown: [one], approximateMatchingUsed: false }],
+    ]))!;
+    expect(handed.detailsByBodyId["17"]!.exoMatchSummaries).toEqual([{ displayName: "Handed in", id: "x_handed" }]);
+  });
+});

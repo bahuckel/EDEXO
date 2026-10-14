@@ -59,6 +59,7 @@ import {
   bodyHasExoMarkers,
   exoMarkerBasis,
   loadStarRolesConfig,
+  type ExoMatchRun,
 } from "./systemMap.js";
 import { computeExoPayoutRangeFromMatches, resolveOrganicSlotCount } from "./exoPayoutRange.js";
 import { countEdsmPlanetRows } from "./exomasteryEdsmEncyclopedia.js";
@@ -1472,6 +1473,24 @@ export function buildSnapshot(
           .map((b) => computeBody(b, db, cachedPrices, store)),
       );
 
+  /*
+    The map's species for a body are the tab's (buildSystemMapSnapshot `tabRuns`): only where the map would have run
+    the chain itself — a body with exo markers whose scan names a planet class — and before the AutoScan-only rows
+    below, which the map does not list.
+  */
+  const tabRuns = new Map<string, ExoMatchRun>();
+  for (const c of bodies) {
+    const scan = c.mergedScan;
+    if (!scan?.PlanetClass?.trim() || !bodyHasExoMarkers(c.state)) continue;
+    tabRuns.set(bodyKey(c.state.systemAddress, c.state.bodyId), {
+      exo: c.state,
+      scan,
+      matches: c.matches,
+      shown: shownSpeciesMatches(c.matches),
+      approximateMatchingUsed: c.approximateMatchingUsed,
+    });
+  }
+
   const focusAddr = store.viewingSystemAddress ?? store.currentSystemAddress;
   const fssAllBodiesFoundNoBio = bootLoading
     ? false
@@ -1514,6 +1533,7 @@ export function buildSnapshot(
             cachedStarRoles!,
             cachedPrices,
             loadSpatialCatalogue(projectRoot),
+            tabRuns,
           ),
         );
   const dScanBodies = bootLoading

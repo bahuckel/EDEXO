@@ -91,7 +91,7 @@ export function bodyHasExoMarkers(b: BodyExoState): boolean {
  * markers, or no scan that names a planet class — which all three consumers used to decide for
  * themselves, in the same words.
  */
-interface ExoMatchRun {
+export interface ExoMatchRun {
   exo: BodyExoState;
   scan: PlanetScan;
   /**
