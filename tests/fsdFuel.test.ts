@@ -106,18 +106,22 @@ describe("the route's fuel with the drive's law", () => {
     expect(a.fuelJumpsReachableOnPlottedRoute).toBe(2);
   });
 
-  it("stops at a leg longer than this tank's longest jump", () => {
+  /*
+    It used to stop there: the law's longest jump with ~25 t aboard is under 69.5 ly. But the game plotted the leg,
+    and on the owner's history 41 of 677 full-tank jumps went further than the law's longest jump (up to 17.5 %), so
+    the pump blinked red on a full tank (2026-10-15). The fuel decides, a leg costing at most the drive's most fuel.
+  */
+  it("counts a plotted leg the law calls out of reach: the game plotted it", () => {
     const far = [
       ...route.slice(0, 2),
       { ...route[2]!, starPos: [66 + 69.5, 0, 0] as [number, number, number] },
     ];
-    const a = analyzeNavRouteFuel({
-      ...base,
-      route: far,
-      fuelTotalT: 30,
-      fuelModel: fsdFuelModel(flown(30)),
-    })!;
-    expect(a.fuelJumpsReachableOnPlottedRoute).toBe(1); // 69.5 ly with ~25 t aboard is out of reach
+    const model = fsdFuelModel(flown(30))!;
+    const a = analyzeNavRouteFuel({ ...base, route: far, fuelTotalT: 30, fuelModel: model })!;
+    expect(a.fuelJumpsReachableOnPlottedRoute).toBe(2);
+    expect(a.fuelCanFinishPlottedRoute).toBe(true);
+    // Each leg costs no more than the drive can spend on one jump: two of them out of 30 t leave fuel over.
+    expect(2 * model.maxFuelPerJumpT!).toBeLessThan(30);
   });
 });
 
