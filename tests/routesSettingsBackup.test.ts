@@ -235,3 +235,31 @@ describe("backup routes", () => {
     expect((await s.call("POST", "/api/backup/settings", { folder: "nowhere" })).status).toBe(400);
   });
 });
+
+// The six on/off settings share one handler since 2026-10-14 (code review C7): each still answers as before.
+describe("settings routes: the boolean switches", () => {
+  const routes = [
+    ["/api/settings/include-bacterium", "setIncludeBacterium"],
+    ["/api/settings/include-exploration-scan-data", "setIncludeExplorationScanData"],
+    ["/api/settings/pranav-antal-bonus", "setPranavAntalBonus"],
+    ["/api/settings/fleet-carrier-sale", "setSellAtFleetCarrier"],
+    ["/api/settings/fleet-carrier-own", "setFleetCarrierIsOwn"],
+    ["/api/settings/foot-travel-odometer", "setFootTravelOdometer"],
+  ] as const;
+
+  it("answer 501 unwired, 400 without a boolean, and set and push with one", async () => {
+    const bare = await start();
+    for (const [path] of routes) expect((await bare.call("POST", path, { value: true })).status).toBe(501);
+    const got: Record<string, boolean[]> = {};
+    const setters = Object.fromEntries(routes.map(([, k]) => [k, (v: boolean) => (got[k] ??= []).push(v)]));
+    const s = await start(setters as Partial<HttpServerOptions>);
+    for (const [path, k] of routes) {
+      expect((await s.call("POST", path, { value: "yes" })).status).toBe(400);
+      const ok = await s.call("POST", path, { value: false });
+      expect(ok.status).toBe(200);
+      expect(ok.json).toEqual({ ok: true });
+      expect(got[k]).toEqual([false]);
+    }
+    expect(s.broadcasts()).toBe(routes.length);
+  });
+});
