@@ -20,10 +20,24 @@
  */
 import * as THREE from "three";
 import { MapControls } from "three/examples/jsm/controls/MapControls.js";
-import { TILE_ORIGIN, TILE_SIZE_LY, TILE_STEP_LY, cellKey, cellMin, maskTexel } from "../../shared/galaxyGrid";
+import {
+  TILE_ORIGIN,
+  TILE_SIZE_LY,
+  TILE_STEP_LY,
+  cellKey,
+  cellMin,
+  maskTexel,
+} from "../../shared/galaxyGrid";
 import type { CellBounds, CellCoord } from "../../shared/galaxyGrid";
 import type { RegionOutlines } from "../../shared/regionBorders";
-import { readCells, readOverview, readTile, type CellList, type OverviewPoints, type Tile } from "./galaxyBinary";
+import {
+  readCells,
+  readOverview,
+  readTile,
+  type CellList,
+  type OverviewPoints,
+  type Tile,
+} from "./galaxyBinary";
 import {
   cloudFragment,
   cloudVertex,
@@ -101,7 +115,15 @@ export interface EngineLabel {
 }
 
 export type HoverInfo =
-  | { kind: "system"; ordinal: number; name: string | null; species: number; value: number; x: number; y: number }
+  | {
+      kind: "system";
+      ordinal: number;
+      name: string | null;
+      species: number;
+      value: number;
+      x: number;
+      y: number;
+    }
   | {
       kind: "group";
       level: ClusterLevel;
@@ -195,9 +217,16 @@ export class GalaxyEngine {
   private readonly points = new THREE.Scene();
   private readonly overlay = new THREE.Scene();
   private readonly pickScene = new THREE.Scene();
-  private readonly composite: { scene: THREE.Scene; camera: THREE.OrthographicCamera; material: THREE.ShaderMaterial };
+  private readonly composite: {
+    scene: THREE.Scene;
+    camera: THREE.OrthographicCamera;
+    material: THREE.ShaderMaterial;
+  };
   private accum: THREE.WebGLRenderTarget;
-  private readonly pickTarget = new THREE.WebGLRenderTarget(9, 9, { type: THREE.UnsignedByteType, depthBuffer: true });
+  private readonly pickTarget = new THREE.WebGLRenderTarget(9, 9, {
+    type: THREE.UnsignedByteType,
+    depthBuffer: true,
+  });
   private readonly pickCamera = new THREE.PerspectiveCamera();
   private readonly pickFrustum = new THREE.Frustum();
   private readonly tmpMat = new THREE.Matrix4();
@@ -295,9 +324,22 @@ export class GalaxyEngine {
   private selected: Selection | null = null;
   private readonly names = new Map<number, string>();
   private namesInflight = false;
-  private systemLabels: { ordinal: number; x: number; y: number; z: number; value: number; species: number }[] = [];
-  private flight: { from: THREE.Vector3; to: THREE.Vector3; fromDist: number; toDist: number; t0: number; ms: number } | null =
-    null;
+  private systemLabels: {
+    ordinal: number;
+    x: number;
+    y: number;
+    z: number;
+    value: number;
+    species: number;
+  }[] = [];
+  private flight: {
+    from: THREE.Vector3;
+    to: THREE.Vector3;
+    fromDist: number;
+    toDist: number;
+    t0: number;
+    ms: number;
+  } | null = null;
   private needsRender = true;
   private raf = 0;
   private disposed = false;
@@ -705,7 +747,12 @@ export class GalaxyEngine {
       this.borders = new THREE.LineSegments(
         geo,
         // The scheme's accent, not a fixed orange (review O-26): read once when the borders are built.
-        new THREE.LineBasicMaterial({ color: accentColour(), transparent: true, opacity: 0.22, depthTest: false }),
+        new THREE.LineBasicMaterial({
+          color: accentColour(),
+          transparent: true,
+          opacity: 0.22,
+          depthTest: false,
+        }),
       );
       this.borders.visible = this.bordersOn;
       this.backdrop.add(this.borders);
@@ -777,7 +824,9 @@ export class GalaxyEngine {
     this.filterBits = bits;
     this.pointUniforms.uFilter.value = bits ? (hide ? 2 : 1) : 0;
     const total = Math.max(1, (this.overviewMatch?.length ?? 1) * this.stats.stride);
-    this.pointUniforms.uMatchBoost.value = bits ? Math.min(12, Math.max(1.5, Math.sqrt(total / Math.max(1, matched)))) : 1;
+    this.pointUniforms.uMatchBoost.value = bits
+      ? Math.min(12, Math.max(1.5, Math.sqrt(total / Math.max(1, matched))))
+      : 1;
     const ov = this.overview?.geometry.getAttribute("aMatch") as THREE.BufferAttribute | undefined;
     if (this.overviewMatch && ov) {
       const stride = this.stats.stride;
@@ -902,7 +951,13 @@ export class GalaxyEngine {
       points.visible = wasVisible;
       points.renderOrder = priority;
       this.overlay.add(points);
-      this.markerLayers.set(layer, { items, points, sx: new Float32Array(n), sy: new Float32Array(n), priority });
+      this.markerLayers.set(layer, {
+        items,
+        points,
+        sx: new Float32Array(n),
+        sy: new Float32Array(n),
+        priority,
+      });
     }
     this.invalidate();
   }
@@ -918,7 +973,10 @@ export class GalaxyEngine {
   }
 
   /** This session's jumps as a line, and the ship at its end (game coordinates). */
-  setRoute(route: { x: number; y: number; z: number }[], ship: { x: number; y: number; z: number } | null): void {
+  setRoute(
+    route: { x: number; y: number; z: number }[],
+    ship: { x: number; y: number; z: number } | null,
+  ): void {
     // Polled every 10 s: the same jumps and ship rebuilt the line's geometry each time (plan 2.5).
     const sig = JSON.stringify([route, ship]);
     if (sig === this.routeSig) return;
@@ -1011,7 +1069,10 @@ export class GalaxyEngine {
       pts.forEach((p, i) => pos.set([p.x, p.y, -p.z], i * 3));
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.9, depthTest: false }));
+      const line = new THREE.Line(
+        geo,
+        new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.9, depthTest: false }),
+      );
       line.frustumCulled = false;
       line.renderOrder = 4;
       this.overlay.add(line);
@@ -1042,13 +1103,26 @@ export class GalaxyEngine {
         for (let i = 0; i < SEG; i++) {
           const a0 = (i / SEG) * Math.PI * 2;
           const a1 = ((i + 1) / SEG) * Math.PI * 2;
-          pos.set([c.x + c.r * Math.cos(a0), c.y, -(c.z + c.r * Math.sin(a0)), c.x + c.r * Math.cos(a1), c.y, -(c.z + c.r * Math.sin(a1))], o);
+          pos.set(
+            [
+              c.x + c.r * Math.cos(a0),
+              c.y,
+              -(c.z + c.r * Math.sin(a0)),
+              c.x + c.r * Math.cos(a1),
+              c.y,
+              -(c.z + c.r * Math.sin(a1)),
+            ],
+            o,
+          );
           o += 6;
         }
       }
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-      const lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.55, depthTest: false }));
+      const lines = new THREE.LineSegments(
+        geo,
+        new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.55, depthTest: false }),
+      );
       lines.frustumCulled = false;
       lines.renderOrder = 3;
       this.overlay.add(lines);
@@ -1302,7 +1376,9 @@ export class GalaxyEngine {
   private evict(): void {
     if (this.tiles.size <= this.maxTiles) return;
     const want = new Set(this.wanted);
-    const old = [...this.tiles.values()].filter((e) => !want.has(e.key)).sort((a, b) => a.lastUsed - b.lastUsed);
+    const old = [...this.tiles.values()]
+      .filter((e) => !want.has(e.key))
+      .sort((a, b) => a.lastUsed - b.lastUsed);
     for (const e of old.slice(0, this.tiles.size - this.maxTiles)) {
       this.points.remove(e.points);
       this.pickScene.remove(e.pick);
@@ -1347,11 +1423,14 @@ export class GalaxyEngine {
       );
     } else if (level === 320 || level === 80) {
       const parts: (Cluster & { name: null })[] = [];
-      for (const e of shownTiles) for (const g of level === 320 ? e.groups320 : e.groups80) parts.push({ ...g, name: null });
+      for (const e of shownTiles)
+        for (const g of level === 320 ? e.groups320 : e.groups80) parts.push({ ...g, name: null });
       groups = mergeColumns(parts, (g) => g.key);
     }
     // With a value floor, a group with nothing worth that much inside is no group worth showing.
-    this.allGroups = groups.filter((g) => g.top >= minV).map((g) => ({ ...g, sx: 0, sy: 0, radius: ringRadius(g.count) }));
+    this.allGroups = groups
+      .filter((g) => g.top >= minV)
+      .map((g) => ({ ...g, sx: 0, sy: 0, radius: ringRadius(g.count) }));
     this.chooseGroups();
   }
 
@@ -1566,7 +1645,10 @@ export class GalaxyEngine {
   private nearerOf(x: number, y: number) {
     const mk = this.markerAt(x, y);
     const g = this.groupAt(x, y);
-    if (mk && g) return Math.hypot(mk.sx - x, mk.sy - y) <= Math.hypot(g.sx - x, g.sy - y) ? { mk, g: null } : { mk: null, g };
+    if (mk && g)
+      return Math.hypot(mk.sx - x, mk.sy - y) <= Math.hypot(g.sx - x, g.sy - y)
+        ? { mk, g: null }
+        : { mk: null, g };
     return { mk, g };
   }
 
@@ -1580,7 +1662,15 @@ export class GalaxyEngine {
     }
     if (g) {
       const moved = this.placeMarker(this.hoverMarker, null);
-      this.setHover({ kind: "group", level: this.stats.level, count: g.count, top: g.top, name: g.name, x: g.sx, y: g.sy });
+      this.setHover({
+        kind: "group",
+        level: this.stats.level,
+        count: g.count,
+        top: g.top,
+        name: g.name,
+        x: g.sx,
+        y: g.sy,
+      });
       return moved;
     }
     const dist = this.camera.position.distanceTo(this.controls.target);
@@ -1690,10 +1780,21 @@ export class GalaxyEngine {
       this.systemLabels = [];
       return;
     }
-    const vp = new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+    const vp = new THREE.Matrix4().multiplyMatrices(
+      this.camera.projectionMatrix,
+      this.camera.matrixWorldInverse,
+    );
     const e = vp.elements;
     const t = this.controls.target;
-    const cands: { ordinal: number; x: number; y: number; z: number; value: number; species: number; score: number }[] = [];
+    const cands: {
+      ordinal: number;
+      x: number;
+      y: number;
+      z: number;
+      value: number;
+      species: number;
+      score: number;
+    }[] = [];
     for (const tile of this.tiles.values()) {
       if (!tile.points.visible) continue;
       const m = cellMin(tile.cell);
@@ -1740,7 +1841,11 @@ export class GalaxyEngine {
     this.rightDrag = null;
     const c = this.controls;
     if (on) {
-      c.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: null as unknown as THREE.MOUSE };
+      c.mouseButtons = {
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: null as unknown as THREE.MOUSE,
+      };
       c.minPolarAngle = 0.01;
       c.maxPolarAngle = Math.PI - 0.01;
     } else {
@@ -1836,8 +1941,18 @@ export class GalaxyEngine {
   private makeCrosshair(): THREE.Group {
     const g = new THREE.Group();
     const colour = accentColour();
-    const mat = new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.9, depthTest: false });
-    const faint = new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.45, depthTest: false });
+    const mat = new THREE.LineBasicMaterial({
+      color: colour,
+      transparent: true,
+      opacity: 0.9,
+      depthTest: false,
+    });
+    const faint = new THREE.LineBasicMaterial({
+      color: colour,
+      transparent: true,
+      opacity: 0.45,
+      depthTest: false,
+    });
     const cross = new THREE.LineSegments(
       new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(-1, 0, 0),
@@ -1953,12 +2068,16 @@ export class GalaxyEngine {
    */
   private autoExpose(): void {
     const d = Math.max(1, this.camera.position.distanceTo(this.controls.target));
-    this.pointUniforms.uIntensity.value = Math.min(0.8, 0.035 * Math.pow(110_000 / d, 0.55) * this.floorBoost);
+    this.pointUniforms.uIntensity.value = Math.min(
+      0.8,
+      0.035 * Math.pow(110_000 / d, 0.55) * this.floorBoost,
+    );
     this.markerScale.value = d > 30_000 ? 0.45 : d > 8_000 ? 0.7 : 1;
     if (this.photo) {
       const m = this.photo.material as THREE.MeshBasicMaterial;
       // Under the clouds it is a base, not the picture: faint, and gone close in like before.
-      m.opacity = (this.clouds.length ? PLANE_UNDER_CLOUDS : 0.5) * Math.min(1, Math.max(0, (d - 4_000) / 30_000));
+      m.opacity =
+        (this.clouds.length ? PLANE_UNDER_CLOUDS : 0.5) * Math.min(1, Math.max(0, (d - 4_000) / 30_000));
     }
     if (this.clouds.length) {
       // Pixels per light year at unit distance, so a sprite is as big on screen as it is in space.
@@ -1967,7 +2086,8 @@ export class GalaxyEngine {
       this.cloudUniforms.uMaxPx.value = Math.min(this.maxPointPx, Math.max(96, h * 0.35));
       // Close in the clouds thin out to a haze: the systems are what matters there.
       // Half strength under the systems' own light, as the flat picture was.
-      this.cloudUniforms.uOpacity.value = CLOUDS_OVER_PLANE * Math.min(1, Math.max(0.08, (d - 4_000) / 30_000));
+      this.cloudUniforms.uOpacity.value =
+        CLOUDS_OVER_PLANE * Math.min(1, Math.max(0.08, (d - 4_000) / 30_000));
     }
   }
 
@@ -2012,7 +2132,8 @@ export class GalaxyEngine {
       const look = this.controls.target.clone().sub(cam).normalize();
       const toCore = CORE.clone().sub(cam).normalize();
       const along = look.dot(toCore);
-      if (along > 0.96) f = Math.min(1, (along - 0.96) / 0.03) * Math.min(1, (polar - Math.PI * 0.43) / (Math.PI * 0.03));
+      if (along > 0.96)
+        f = Math.min(1, (along - 0.96) / 0.03) * Math.min(1, (polar - Math.PI * 0.43) / (Math.PI * 0.03));
     }
     if (f <= 0.01) {
       if (this.egg) this.egg.visible = false;
@@ -2032,7 +2153,13 @@ export class GalaxyEngine {
       g.fillText("Powered by EDAstro", 1024, 128);
       const tex = new THREE.CanvasTexture(c);
       tex.colorSpace = THREE.SRGBColorSpace;
-      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 0 });
+      const mat = new THREE.MeshBasicMaterial({
+        map: tex,
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        opacity: 0,
+      });
       this.egg = new THREE.Mesh(new THREE.PlaneGeometry(5_200, 650), mat);
       // Galaxy (x, y, z) → world (x, y, -z): 9,000 ly towards the core, 2,200 ly above the plane, facing Sol.
       this.egg.position.set(12, 2_200, -9_000);
@@ -2045,7 +2172,10 @@ export class GalaxyEngine {
 
   debugEgg(): { visible: boolean; opacity: number } {
     const m = this.egg;
-    return { visible: !!m?.visible, opacity: m ? Math.round((m.material as THREE.MeshBasicMaterial).opacity * 100) / 100 : 0 };
+    return {
+      visible: !!m?.visible,
+      opacity: m ? Math.round((m.material as THREE.MeshBasicMaterial).opacity * 100) / 100 : 0,
+    };
   }
 
   private emitLabels(): void {
@@ -2061,7 +2191,8 @@ export class GalaxyEngine {
       if (v.z > 1 || v.z < -1) return;
       const sx = ((v.x + 1) / 2) * w;
       const sy = ((1 - v.y) / 2) * h;
-      if (onScreen(sx, sy)) out.push({ id: `p${i}`, kind: "plan", text: p.label, x: sx + 7, y: sy - 12, priority: 2e9 - i });
+      if (onScreen(sx, sy))
+        out.push({ id: `p${i}`, kind: "plan", text: p.label, x: sx + 7, y: sy - 12, priority: 2e9 - i });
     });
     this.badges.forEach((b, i) => {
       v.set(b.x, b.y, -b.z).project(this.camera);
@@ -2072,7 +2203,8 @@ export class GalaxyEngine {
         The anchor is the bubble's centre, a bubble's half height plus its tail above the dot: placement keeps its box
         where it is drawn (review 1.2.16), and CSS centres it there.
       */
-      if (onScreen(sx, sy)) out.push({ id: `b${i}`, kind: "badge", text: b.text, x: sx, y: sy - 17, priority: 1.9e9 - i });
+      if (onScreen(sx, sy))
+        out.push({ id: `b${i}`, kind: "badge", text: b.text, x: sx, y: sy - 17, priority: 1.9e9 - i });
     });
     if (!this.labelsOn) {
       this.opts.onLabels(out);
@@ -2089,11 +2221,21 @@ export class GalaxyEngine {
         if (a.pixels < 3000 && dist > 60_000) continue;
         const sx = ((v.x + 1) / 2) * w;
         const sy = ((1 - v.y) / 2) * h;
-        if (onScreen(sx, sy)) out.push({ id: `r${a.index}`, kind: "region", text: a.name, x: sx, y: sy, priority: 1e9 + a.pixels });
+        if (onScreen(sx, sy))
+          out.push({
+            id: `r${a.index}`,
+            kind: "region",
+            text: a.name,
+            x: sx,
+            y: sy,
+            priority: 1e9 + a.pixels,
+          });
       }
     }
     // Groups: sector names (with counts) at the sector grid, counts at the finer grids.
-    const byCount = [...this.shownGroups].filter((g) => onScreen(g.sx, g.sy)).sort((a, b) => b.count - a.count);
+    const byCount = [...this.shownGroups]
+      .filter((g) => onScreen(g.sx, g.sy))
+      .sort((a, b) => b.count - a.count);
     for (const g of byCount.slice(0, level === 1280 ? 80 : 40)) {
       const text = level === 1280 && g.name ? `${g.name} · ${formatCount(g.count)}` : formatCount(g.count);
       out.push({
@@ -2115,7 +2257,14 @@ export class GalaxyEngine {
         const sx = ((v.x + 1) / 2) * w;
         const sy = ((1 - v.y) / 2) * h;
         if (onScreen(sx, sy)) {
-          out.push({ id: `s${s.ordinal}`, kind: "system", text: name, x: sx + 6, y: sy - 11, priority: 1e3 + s.value });
+          out.push({
+            id: `s${s.ordinal}`,
+            kind: "system",
+            text: name,
+            x: sx + 6,
+            y: sy - 11,
+            priority: 1e3 + s.value,
+          });
         }
       }
     }
@@ -2174,7 +2323,10 @@ export class GalaxyEngine {
     return null;
   }
 
-  debugTargets(): { group: { x: number; y: number } | null; system: { x: number; y: number; ordinal: number } | null } {
+  debugTargets(): {
+    group: { x: number; y: number } | null;
+    system: { x: number; y: number; ordinal: number } | null;
+  } {
     const w = this.host.clientWidth;
     const h = this.host.clientHeight;
     const g = [...this.shownGroups]
@@ -2257,6 +2409,20 @@ export class GalaxyEngine {
     this.pickTarget.dispose();
     this.tiles.clear();
     this.slots.clear();
+    /*
+      The engine object can outlive its canvas (a debug handle, a late callback), and these hold the
+      whole galaxy: the 5.3 M-system overview arrays, every system name met, the labels. Let them go
+      with the GPU buffers (code review A17, 2026-10-14).
+    */
+    this.overviewValues = null;
+    this.overviewMatch = null;
+    this.filterBits = null;
+    this.sectorNames = null;
+    this.names.clear();
+    this.markerLayers.clear();
+    this.systemLabels = [];
+    this.allGroups = [];
+    this.shownGroups = [];
     this.renderer.dispose();
     this.renderer.forceContextLoss();
     this.renderer.domElement.remove();
