@@ -269,6 +269,9 @@ export function GalaxyMap3D() {
   const [planCopied, setPlanCopied] = useState(false);
   const screenRef = useRef<HTMLDivElement | null>(null);
   const lastShip = useRef<{ x: number; y: number; z: number } | null>(null);
+  // The route poll's read, for NavRoute → Next to ask for the plotted route at once (stable for the panel's effect).
+  const readRouteNow = useRef<(() => void) | null>(null);
+  const readRoute = useCallback(() => readRouteNow.current?.(), []);
   const loadMine = useRef<(() => Promise<void>) | null>(null);
   const mineRev = useRef<string | null>(null);
   const followRef = useRef(follow);
@@ -483,6 +486,7 @@ export function GalaxyMap3D() {
         .catch(() => {});
     };
     tick();
+    readRouteNow.current = tick;
     /*
       A jump, read from the journal by the app on this page, moves the map at once (owner, 2026-10-07:
       "use the hyperspace jump ... I don't see a reason the galmap should poll"). The slow check stays
@@ -497,6 +501,7 @@ export function GalaxyMap3D() {
       live = false;
       clearInterval(t);
       window.removeEventListener(SYSTEM_CHANGED_EVENT, onJump);
+      if (readRouteNow.current === tick) readRouteNow.current = null;
     };
   }, [graphics.tier, inFront]);
 
@@ -2110,6 +2115,7 @@ export function GalaxyMap3D() {
           <MenuHead title="NavRoute" help={G3D_HELP.navroute} />
           <GalaxyNavRoutePanel
             next={route?.navRoute ?? []}
+            readRoute={readRoute}
             onShown={setNavShown}
             onFly={(s) => engine.current?.flyTo({ x: s.pos[0], y: s.pos[1], z: s.pos[2] }, 250)}
           />

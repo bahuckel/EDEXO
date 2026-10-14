@@ -55,9 +55,16 @@ export function GalaxyNavRoutePanel({
   next,
   onShown,
   onFly,
+  readRoute,
 }: {
   /** The route plotted now (from the map's route poll). */
   next: GalaxyRouteDTO["navRoute"];
+  /**
+   * Read the plotted route again now. The map reads it on a jump and every 30 s, so a route plotted in the game a
+   * moment ago was not in Next yet and its systems were "not found" (owner, 2026-10-15): Next reads it on opening
+   * and every 3 s while it is open.
+   */
+  readRoute?: () => void;
   /** The systems the filters leave, for the map's markers. */
   onShown: (systems: NavRouteSystemDTO[]) => void;
   onFly: (s: NavRouteSystemDTO) => void;
@@ -81,6 +88,12 @@ export function GalaxyNavRoutePanel({
   useEffect(() => {
     if (half === "next") void loadLog();
   }, [half, loadLog]);
+  useEffect(() => {
+    if (half !== "next" || !readRoute) return;
+    readRoute();
+    const t = window.setInterval(readRoute, 3000);
+    return () => window.clearInterval(t);
+  }, [half, readRoute]);
   useEffect(() => {
     if (!log?.checking) return;
     const t = window.setInterval(() => void loadLog(), 2000);

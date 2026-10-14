@@ -613,6 +613,40 @@ test("galaxy 3D: NavRoute — Next is the plotted route with EDSM checks, Previo
 });
 
 /*
+  Owner, 2026-10-15: "NavRoute > Next ... does not find a system even if I copy the name from a galmap location". The map
+  read the plotted route on a jump and every 30 s, so a route plotted a moment ago was not there yet. Next reads it on
+  opening and every 3 s while open.
+*/
+test("galaxy 3D: NavRoute — a route plotted while Next is open shows within seconds", async ({ page }) => {
+  const errors = watchErrors(page);
+  let plotted: { address: number; name: string; starClass: string; x: number; y: number; z: number; visited: boolean }[] = [];
+  await page.route("**/api/galaxy/route", async (route) => {
+    const res = await route.fetch();
+    const body = (await res.json()) as Record<string, unknown>;
+    body.navRoute = plotted;
+    await route.fulfill({ response: res, json: body });
+  });
+  await page.setViewportSize({ width: 1400, height: 820 });
+  await page.goto("/?screen=galaxy");
+  type G = { stats: () => { phase: string } };
+  await expect
+    .poll(async () => page.evaluate(() => (window as unknown as { __galaxy?: G }).__galaxy?.stats().phase), { timeout: 60_000 })
+    .toBe("ready");
+  await page.getByRole("button", { name: "NavRoute", exact: true }).click();
+  const drawer = page.getByTestId("g3d-navroute");
+  await drawer.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(drawer).toContainText("No route plotted");
+  // Plotted in the game now: well inside the map's 30 s poll.
+  plotted = [
+    { address: 11, name: "Smoke Start", starClass: "K", x: 0, y: 0, z: 0, visited: true },
+    { address: 12, name: "Copied From Galmap", starClass: "N", x: 40, y: 0, z: 0, visited: false },
+  ];
+  await drawer.getByLabel("Filter by system name").fill("Copied From Galmap");
+  await expect(drawer.locator(".g3d-navroute__item")).toContainText("Copied From Galmap", { timeout: 6_000 });
+  expect(errors).toEqual([]);
+});
+
+/*
   G2: the groups and the systems answer the mouse. A ring names its group and flies into it; a system
   under the cursor gets a card, and a click opens its panel with the name from the index.
 */
