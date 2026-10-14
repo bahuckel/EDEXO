@@ -43,7 +43,9 @@ describe("the galaxy index download", () => {
     const p = galaxyIndexFilePath("bio-index.bin");
     expect(p.startsWith(dir)).toBe(true);
     expect(readFileSync(p, "utf8")).toBe("index:bio-index.bin");
-    expect(readFileSync(galaxyIndexFilePath("system-traits.bin.gz"), "utf8")).toBe("index:system-traits.bin.gz");
+    expect(readFileSync(galaxyIndexFilePath("system-traits.bin.gz"), "utf8")).toBe(
+      "index:system-traits.bin.gz",
+    );
     const st = galaxyIndexStatus();
     expect(st.present).toBe(true);
     expect(st.downloading).toBeNull();
@@ -62,7 +64,11 @@ describe("the galaxy index download", () => {
   it("says when the release holds other files than the ones here", async () => {
     await downloadGalaxyIndex(() => {}, serve());
     const sized = (n: number) =>
-      (async () => new Response(null, { status: 200, headers: { "content-length": String(n) } })) as unknown as typeof fetch;
+      (async () =>
+        new Response(null, {
+          status: 200,
+          headers: { "content-length": String(n) },
+        })) as unknown as typeof fetch;
     await probeGalaxyIndexSize(sized("index:bio-index.bin".length));
     expect(galaxyIndexStatus().updateAvailable).toBe(true); // the traits file differs in size
     const same = (async (url: string) => {
@@ -113,5 +119,27 @@ describe("the galaxy index in systems, not megabytes (owner, 2026-10-12)", () =>
     expect(st.systemsHere).toBe(5_337_927);
     expect(st.systemsOnRelease).toBe(5_348_227);
     expect(ranges).toContain("bytes=0-19");
+  });
+});
+
+// Code review A10 (2026-10-14): a connection that stops sending used to leave "downloading" up for good.
+describe("a stalled galaxy index download", () => {
+  it("gives up after the idle time, says so, and leaves no half file", async () => {
+    const stalled = (async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(new TextEncoder().encode("half"));
+          // ...and never another byte, never closed.
+        },
+      });
+      return new Response(stream, { status: 200, headers: { "content-length": "1000" } });
+    }) as unknown as typeof fetch;
+    let done = 0;
+    await downloadGalaxyIndex(() => (done += 1), stalled, { connectMs: 200, idleMs: 50 });
+    expect(done).toBe(0);
+    const st = galaxyIndexStatus();
+    expect(st.downloading).toBeNull();
+    expect(st.error).toMatch(/no data for/);
+    expect(galaxyIndexFilePath("bio-index.bin").startsWith(dir)).toBe(false);
   });
 });

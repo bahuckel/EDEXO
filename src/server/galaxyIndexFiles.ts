@@ -8,7 +8,17 @@
  * map offers them from a fixed GitHub release and they land beside the user's settings, where an
  * update leaves them alone. A developer tree keeps reading its own `data/galaxy/` copies.
  */
-import { closeSync, createWriteStream, existsSync, mkdirSync, openSync, readSync, renameSync, rmSync, statSync } from "node:fs";
+import {
+  closeSync,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readSync,
+  renameSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -18,7 +28,8 @@ export const GALAXY_INDEX_FILES = ["bio-index.bin", "system-traits.bin.gz"] as c
 export type GalaxyIndexFile = (typeof GALAXY_INDEX_FILES)[number];
 
 /** Where the release keeps them: one release, updated when the index is rebuilt. */
-export const GALAXY_INDEX_BASE_URL = "https://github.com/bahuckel/EDEXO-Compare/releases/download/galaxy-index";
+export const GALAXY_INDEX_BASE_URL =
+  "https://github.com/bahuckel/EDEXO-Compare/releases/download/galaxy-index";
 
 function userGalaxyDir(): string {
   return path.join(path.dirname(resolveUserSettingsJsonPath()), "galaxy");
@@ -131,7 +142,9 @@ export function galaxyIndexStatus(): GalaxyIndexStatus {
     }
     return { name, bytes };
   });
-  const updateAvailable = remoteSizes ? files.some((f) => f.bytes != null && f.bytes !== remoteSizes!.get(f.name)) : null;
+  const updateAvailable = remoteSizes
+    ? files.some((f) => f.bytes != null && f.bytes !== remoteSizes!.get(f.name))
+    : null;
   return {
     present: files[0]!.bytes != null,
     files,
@@ -150,7 +163,11 @@ export async function probeGalaxyIndexSize(fetchImpl: typeof fetch = fetch): Pro
     let total = 0;
     const sizes = new Map<string, number>();
     for (const name of GALAXY_INDEX_FILES) {
-      const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${name}`, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
+      const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${name}`, {
+        method: "HEAD",
+        redirect: "follow",
+        signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+      });
       const n = Number(r.headers.get("content-length"));
       if (!r.ok || !Number.isFinite(n) || n <= 0) return null;
       sizes.set(name, n);
@@ -170,7 +187,18 @@ export async function probeGalaxyIndexSize(fetchImpl: typeof fetch = fetch): Pro
  * place when complete — a cut download never looks like an index. `onDone` clears the caches that read
  * them. A second call while one runs is ignored.
  */
-export async function downloadGalaxyIndex(onDone: () => void, fetchImpl: typeof fetch = fetch): Promise<void> {
+/** How long the galaxy index download waits for an answer, and for the next bytes once it streams. */
+export const INDEX_CONNECT_TIMEOUT_MS = 30_000;
+export const INDEX_IDLE_TIMEOUT_MS = 60_000;
+
+export async function downloadGalaxyIndex(
+  onDone: () => void,
+  fetchImpl: typeof fetch = fetch,
+  timeouts: { connectMs: number; idleMs: number } = {
+    connectMs: INDEX_CONNECT_TIMEOUT_MS,
+    idleMs: INDEX_IDLE_TIMEOUT_MS,
+  },
+): Promise<void> {
   if (downloading) return;
   lastError = null;
   const dir = userGalaxyDir();
@@ -178,17 +206,46 @@ export async function downloadGalaxyIndex(onDone: () => void, fetchImpl: typeof 
   try {
     for (const name of GALAXY_INDEX_FILES) {
       downloading = { name, done: 0, total: null };
-      const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${name}`, { redirect: "follow" });
-      if (!r.ok || !r.body) throw new Error(`${name}: HTTP ${r.status}`);
-      const total = Number(r.headers.get("content-length"));
-      downloading = { name, done: 0, total: Number.isFinite(total) && total > 0 ? total : null };
-      const part = path.join(dir, `${name}.part`);
-      const body = Readable.fromWeb(r.body as import("node:stream/web").ReadableStream<Uint8Array>);
-      body.on("data", (chunk: Buffer) => {
-        if (downloading) downloading = { ...downloading, done: downloading.done + chunk.length };
-      });
-      await pipeline(body, createWriteStream(part));
-      renameSync(part, path.join(dir, name));
+      /*
+        A stalled connection used to leave "downloading" up until the app restarted, and a second
+        click was ignored while it was (code review A10, 2026-10-14). No answer in 30 s, or no bytes
+        for 60 s once it streams, ends this attempt like any other failure: the error is shown, the
+        `.part` file goes, and the button works again.
+      */
+      const ac = new AbortController();
+      let idle = setTimeout(
+        () => ac.abort(new Error(`${name}: no answer in ${timeouts.connectMs / 1000} s`)),
+        timeouts.connectMs,
+      );
+      const stall = () => {
+        clearTimeout(idle);
+        idle = setTimeout(
+          () => ac.abort(new Error(`${name}: no data for ${timeouts.idleMs / 1000} s`)),
+          timeouts.idleMs,
+        );
+      };
+      try {
+        const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${name}`, {
+          redirect: "follow",
+          signal: ac.signal,
+        });
+        if (!r.ok || !r.body) throw new Error(`${name}: HTTP ${r.status}`);
+        stall();
+        const total = Number(r.headers.get("content-length"));
+        downloading = { name, done: 0, total: Number.isFinite(total) && total > 0 ? total : null };
+        const part = path.join(dir, `${name}.part`);
+        const body = Readable.fromWeb(r.body as import("node:stream/web").ReadableStream<Uint8Array>);
+        body.on("data", (chunk: Buffer) => {
+          stall();
+          if (downloading) downloading = { ...downloading, done: downloading.done + chunk.length };
+        });
+        await pipeline(body, createWriteStream(part), { signal: ac.signal });
+        renameSync(part, path.join(dir, name));
+      } catch (e) {
+        throw ac.signal.aborted && ac.signal.reason instanceof Error ? ac.signal.reason : e;
+      } finally {
+        clearTimeout(idle);
+      }
     }
     downloading = null;
     remoteSizes = null; // asked again next time: the files here are now the release's
