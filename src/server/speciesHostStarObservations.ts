@@ -162,6 +162,8 @@ export function speciesHostStarObservations(
 /** Forget what the profiles said: after "Refresh exomastery" the next read must see the new ones. */
 export function clearHostStarObservationsCache(): void {
   cache.clear();
+  // The confirmed hosts are read from the same profiles (code review B10: this one was missed).
+  confirmedCache = null;
 }
 
 export type HostStarVerdict =

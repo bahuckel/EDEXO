@@ -171,7 +171,13 @@ describe("surface marks written by an older build", () => {
 describe("the species split tables", () => {
   it("re-read the file after the cache is cleared, and Refresh exomastery clears them", async () => {
     const { clearSpeciesSplitCache, speciesSplitGenera } = await import("../src/server/speciesSplit.js");
-    const table = (genus: string) => ({ formatVersion: 1, log10: [], categories: {}, edges: {}, genera: { [genus]: {} } });
+    const table = (genus: string) => ({
+      formatVersion: 1,
+      log10: [],
+      categories: {},
+      edges: {},
+      genera: { [genus]: {} },
+    });
     const root = rootWith("data/exomastery/species-split.json", table("Stratum"));
     clearSpeciesSplitCache();
     expect(speciesSplitGenera(root)).toEqual(["Stratum"]);
@@ -185,7 +191,57 @@ describe("the species split tables", () => {
     // The launcher button's list (edexoBootstrap.ts reloadSpeciesDerivedCaches) includes it.
     const { readFileSync } = await import("node:fs");
     const src = readFileSync(join(__dirname, "../src/server/edexoBootstrap.ts"), "utf8");
-    const body = src.slice(src.indexOf("function reloadSpeciesDerivedCaches"), src.indexOf("export async function startEdexo"));
+    const body = src.slice(
+      src.indexOf("function reloadSpeciesDerivedCaches"),
+      src.indexOf("export async function startEdexo"),
+    );
     expect(body).toContain("clearSpeciesSplitCache()");
+  });
+});
+
+// Code review B10 (2026-10-14): these kept the old table until a restart.
+describe("the genus chances, the Brain Tree / Tubers split and the ranking's tables", () => {
+  it("are on Refresh exomastery's list", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(join(__dirname, "../src/server/edexoBootstrap.ts"), "utf8");
+    const body = src.slice(
+      src.indexOf("function reloadSpeciesDerivedCaches"),
+      src.indexOf("export async function startEdexo"),
+    );
+    for (const call of [
+      "clearGenusPriorCache()",
+      "resetGenusBodySplitCache()",
+      "clearLikelihoodDataCache()",
+      "clearHostStarObservationsCache()",
+    ]) {
+      expect(body, call).toContain(call);
+    }
+  });
+
+  it("re-read the genus limits after the clear", async () => {
+    const { clearGenusPriorCache, genusPriorFor } = await import("../src/server/genusPrior.js");
+    const cell = (p: Record<string, number>) => ({
+      formatVersion: 1,
+      min: 1,
+      cells: { "L5|1": { n: 10, p } },
+    });
+    const root = rootWith("data/exomastery/genus-prior.json", cell({ bacter: 1 }));
+    clearGenusPriorCache();
+    const scan = {
+      PlanetClass: "Rocky body",
+      SurfaceTemperature: 200,
+      AtmosphereType: "None",
+      Volcanism: "",
+    } as never;
+    expect(genusPriorFor(root, scan, 1, "K")?.p.bacter).toBe(1);
+    writeFileSync(
+      join(root, "data/exomastery/genus-prior.json"),
+      JSON.stringify(cell({ bacter: 0.5 })),
+      "utf8",
+    );
+    expect(genusPriorFor(root, scan, 1, "K")?.p.bacter).toBe(1);
+    clearGenusPriorCache();
+    expect(genusPriorFor(root, scan, 1, "K")?.p.bacter).toBe(0.5);
+    clearGenusPriorCache();
   });
 });

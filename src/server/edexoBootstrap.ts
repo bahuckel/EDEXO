@@ -106,6 +106,9 @@ import { clearStarlightRangesCache } from "./starlightRanges.js";
 import { clearObservedEnvelopeCache } from "./observedEnvelope.js";
 import { clearBodyTypePriorCache } from "./bodyTypePrior.js";
 import { clearSpeciesSplitCache } from "./speciesSplit.js";
+import { clearGenusPriorCache } from "./genusPrior.js";
+import { resetGenusBodySplitCache } from "./genusBodySplit.js";
+import { clearLikelihoodDataCache } from "./likelihoodData.js";
 import { clearGenusPhotosFolderCache, getSpeciesDataWarnings } from "./speciesTreeLoader.js";
 import {
   parseStatusJsonDestination,
@@ -114,9 +117,22 @@ import {
   readStatusJsonFootFixText,
 } from "./footTravelStatus.js";
 import { parseNavRouteJson } from "./navRouteFuel.js";
-import { getProjectRoot, resolveLanKeyPath, resolveUserSettingsJsonPath, resolveExoOutlierLogPath, USER_SETTINGS_FILENAME, getSpeciesDataDir, reapplySpeciesDataDirDiscoveryFromDisk, resolveImportDumpLedgerPath } from "./paths.js";
+import {
+  getProjectRoot,
+  resolveLanKeyPath,
+  resolveUserSettingsJsonPath,
+  resolveExoOutlierLogPath,
+  USER_SETTINGS_FILENAME,
+  getSpeciesDataDir,
+  reapplySpeciesDataDirDiscoveryFromDisk,
+  resolveImportDumpLedgerPath,
+} from "./paths.js";
 import { guarded } from "./guarded.js";
-import { loadPersistedJournalDir, persistJournalDirPreference, resolveInitialJournalDir } from "./journalDirPreference.js";
+import {
+  loadPersistedJournalDir,
+  persistJournalDirPreference,
+  resolveInitialJournalDir,
+} from "./journalDirPreference.js";
 import {
   buildExoMinimapDto,
   buildExoOrganicOverlayDto,
@@ -127,7 +143,10 @@ import { clearEddsnColourVariantsCache } from "./eddsnColourVariants.js";
 import { clearPhotoCreditsCache } from "./photoCredits.js";
 import { clearRegionSpeciesCache } from "./regionSpeciesData.js";
 import { perfTime, startPerfReporter } from "./perf.js";
-import { flushPendingOrganicSampleSession, loadOrganicSampleSessionFromDisk } from "./organicSampleSessionFile.js";
+import {
+  flushPendingOrganicSampleSession,
+  loadOrganicSampleSessionFromDisk,
+} from "./organicSampleSessionFile.js";
 import {
   buildJournalFileManifest,
   removeJournalMergeCache,
@@ -265,6 +284,11 @@ function reloadSpeciesDerivedCaches(): void {
   // The fitted which-of-the-genus tables (data/exomastery/species-split.json, speciesSplit.ts).
   clearSpeciesSplitCache();
   clearAchievementsCache();
+  // Code review B10 (2026-10-14): the genus chances and limits, the Brain Tree / Tubers split and the
+  // ranking's edges and prevalence were kept until a restart.
+  clearGenusPriorCache();
+  resetGenusBodySplitCache();
+  clearLikelihoodDataCache();
 }
 
 /** The journal folder is there and can be listed (a drive not mounted yet is not an empty folder). */
@@ -288,7 +312,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
 
   const projectRoot = getProjectRoot();
   const updateChecker = createUpdateChecker();
-  const appUpdater = createAppUpdater({ newerAsset: () => updateChecker.newerAsset(), form: currentReleaseForm() });
+  const appUpdater = createAppUpdater({
+    newerAsset: () => updateChecker.newerAsset(),
+    form: currentReleaseForm(),
+  });
   const whatsNew = createWhatsNew({
     check: () => updateChecker.check(false),
     notesBetween: (from, to) => updateChecker.notesBetween(from, to),
@@ -305,10 +332,25 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     if (changed && recordNavRoute(waypoints)) store.boxelsRevision++;
     return changed;
   }
+  /*
+    Read on every Status tick (10 a second at the commander's 100 ms, plus every watch event), and a
+    plotted route makes it a large file: re-read only when its size or mtime moved, the last parse
+    standing in between (code review D6, 2026-10-14). A missing file still reads as no route.
+  */
+  let navRouteFileSeen: { key: string; waypoints: NonNullable<ReturnType<typeof parseNavRouteJson>> } | null =
+    null;
   function readLiveNavRouteWaypoints() {
+    const file = path.join(journalDir, "NavRoute.json");
     try {
-      return parseNavRouteJson(readFileSync(path.join(journalDir, "NavRoute.json"), "utf8"));
+      const st = statSync(file);
+      const key = `${file}|${st.size}|${st.mtimeMs}`;
+      if (navRouteFileSeen?.key === key) return navRouteFileSeen.waypoints;
+      const waypoints = parseNavRouteJson(readFileSync(file, "utf8"));
+      // Only a route is kept: no route also reads as null for a file caught mid-write, and that must retry.
+      navRouteFileSeen = waypoints ? { key, waypoints } : null;
+      return waypoints;
     } catch {
+      navRouteFileSeen = null;
       return null;
     }
   }
@@ -370,7 +412,19 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   // used to run with no key at all because only 0.0.0.0 counted (combined plan 1.4).
   const lanExposed = !isLoopbackHostName(bindHost);
   const lanKey = lanExposed ? loadOrCreateLanKey(resolveLanKeyPath()) : null;
-  const lanUrlsWithKey = (): string[] => getLanIPv4s(port).map((u) => lanUrlWithKey(u, lanKey));
+  /*
+    Read for every snapshot and every status poll in LAN mode, and `os.networkInterfaces()` is slow on
+    Windows with VPN or Hyper-V adapters; the addresses change rarely, so 30 s old is fresh enough
+    (code review D7, 2026-10-14).
+  */
+  let lanUrlsCache: { at: number; urls: string[] } | null = null;
+  const lanUrlsWithKey = (): string[] => {
+    const now = Date.now();
+    if (!lanUrlsCache || now - lanUrlsCache.at > 30_000) {
+      lanUrlsCache = { at: now, urls: getLanIPv4s(port).map((u) => lanUrlWithKey(u, lanKey)) };
+    }
+    return lanUrlsCache.urls;
+  };
 
   let journalBootProgress: JournalBootProgressDTO | null = {
     percent: 0,
@@ -425,7 +479,12 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   const boxelNextListeners = new Set<(name: string) => void>();
   const deliverToClipboard = (name: string, source: "boxel" | "neutron" = "boxel"): void => {
     // The HUD's next-jump card says what is on the clipboard: a key press in the game shows nothing else.
-    store.boxelCopied = { name, at: new Date().toISOString(), run: source === "boxel" && savedBoxels.runId() != null, source };
+    store.boxelCopied = {
+      name,
+      at: new Date().toISOString(),
+      run: source === "boxel" && savedBoxels.runId() != null,
+      source,
+    };
     store.boxelsRevision++;
     queueMicrotask(() => push());
     if (boxelNextListeners.size) {
@@ -513,10 +572,13 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       );
       // Planned with FSD injections: the re-plot keeps them (shared/jumponium.ts).
       const planned = left.useJumponium
-        ? applyJumponium(route, left.rangeLy ?? s.rangeLy ?? 50, s.boostFactor ?? 4, (t) => recipeFor(store.jumponium, t)).route
+        ? applyJumponium(route, left.rangeLy ?? s.rangeLy ?? 50, s.boostFactor ?? 4, (t) =>
+            recipeFor(store.jumponium, t),
+          ).route
         : route;
       const hops = parseLiveHops(planned.hops);
-      if (hops && neutronLive.active() && neutronLive.version() === version) neutronLive.replace(hops, left.targets);
+      if (hops && neutronLive.active() && neutronLive.version() === version)
+        neutronLive.replace(hops, left.targets);
     } catch (e) {
       console.warn("[edexo-compare] neutron re-plot failed:", e);
     } finally {
@@ -568,7 +630,13 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     nearbyPois: (origin, radiusLy, groups) =>
       queryPoi({ origin, groups, limit: 50 })
         .filter((r) => r.distanceLy != null && r.distanceLy <= radiusLy)
-        .map((r) => ({ key: r.key, name: r.name, system: r.system, typeLabel: r.typeLabel, distanceLy: r.distanceLy! })),
+        .map((r) => ({
+          key: r.key,
+          name: r.name,
+          system: r.system,
+          typeLabel: r.typeLabel,
+          distanceLy: r.distanceLy!,
+        })),
     nearbyCarriers: (origin, radiusLy) =>
       queryCarriers({ origin, limit: 100 })
         .filter((r) => r.distanceLy != null && r.distanceLy <= radiusLy)
@@ -607,7 +675,9 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         sessionLog.toDto(),
       );
       // Neither while the history replays: the boot screen covers both (plan 2.3, Opus 20).
-      snap.notices = snap.journalBoot ? undefined : notices.snapshot(store.viewingSystemAddress ?? store.currentSystemAddress ?? null);
+      snap.notices = snap.journalBoot
+        ? undefined
+        : notices.snapshot(store.viewingSystemAddress ?? store.currentSystemAddress ?? null);
       {
         // The NSP card (2026-09-30): what he saw, what EDAstro has, else a guess from the neighbourhood.
         const addr = store.viewingSystemAddress ?? store.currentSystemAddress ?? null;
@@ -621,7 +691,9 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
                   seen: store.nspSeen.get(addr) ?? [],
                   region: (() => {
                     const pos = store.systemPositions.get(addr);
-                    return pos ? regionForSystem(getProjectRoot(), pos.x, pos.y, pos.z) : (snap.currentRegion?.name ?? null);
+                    return pos
+                      ? regionForSystem(getProjectRoot(), pos.x, pos.y, pos.z)
+                      : (snap.currentRegion?.name ?? null);
                   })(),
                   starType: mainStarTypeOf(addr),
                 }),
@@ -990,7 +1062,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     }
     footStatusArmedMs = next;
     const tick = footStatusTick;
-    footStatusPollTimer = setInterval(guarded("Status.json poll", () => tick()), next);
+    footStatusPollTimer = setInterval(
+      guarded("Status.json poll", () => tick()),
+      next,
+    );
   }
 
   /**
@@ -1249,7 +1324,12 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         achievementWatch.prime();
         store.applyLive(line);
         for (const a of achievementWatch.check()) {
-          if (notices.announceAchievement({ id: a.id, step: a.step, ...achievementNoticeText(a) }, String(line.timestamp ?? new Date().toISOString())))
+          if (
+            notices.announceAchievement(
+              { id: a.id, step: a.step, ...achievementNoticeText(a) },
+              String(line.timestamp ?? new Date().toISOString()),
+            )
+          )
             push();
         }
         // Live lines only. The historical replay calls store.apply directly, which is what keeps a
@@ -1347,7 +1427,9 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     // replays the new file's Fileheader and LoadGame here, where the live tail never sees them.
     const run = resyncAllJournalFilesInner()
       .then(primeEddnFromNewestJournal)
-      .then((): JournalTailSeed | null => (journalPath !== null ? { path: journalPath, size: journalSeedBytes } : null))
+      .then((): JournalTailSeed | null =>
+        journalPath !== null ? { path: journalPath, size: journalSeedBytes } : null,
+      )
       .finally(() => {
         if (resyncInFlight?.run === run) resyncInFlight = null;
       });
@@ -1416,6 +1498,16 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       }
       journalSeedBytes = manifest[manifest.length - 1]!.size;
     };
+    /** The end of a replay, from the cache or from every file: tail the newest log, restore the session, push. */
+    const finishReplay = (): void => {
+      settleManifest();
+      journalPath = files[files.length - 1]!;
+      store.resetFootTravelRuntime();
+      loadOrganicSampleSessionFromDisk(projectRoot, store, getCachedSpeciesDatabase());
+      journalBootProgress = null;
+      refreshLiveHudFromJournalDir();
+      pushFlush();
+    };
     bootMark("manifest");
     const cacheResult =
       process.env.EDEXO_DISABLE_JOURNAL_CACHE === "1"
@@ -1468,7 +1560,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
           pushFlush();
           for (const step of cacheResult.steps) {
             if (step.kind === "tail") {
-              consumed.set(step.path, await readJournalFromOffset(step.path, step.startByte, applyReplayLine));
+              consumed.set(
+                step.path,
+                await readJournalFromOffset(step.path, step.startByte, applyReplayLine),
+              );
             } else {
               consumed.set(step.path, await readJournalFull(step.path, applyReplayLine));
             }
@@ -1495,16 +1590,16 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         }
         await backfillCommanderPosition(store, files);
         bootMark("position backfill");
-        settleManifest();
-        journalPath = files[files.length - 1]!;
-        store.resetFootTravelRuntime();
-        loadOrganicSampleSessionFromDisk(projectRoot, store, getCachedSpeciesDatabase());
-        journalBootProgress = null;
-        refreshLiveHudFromJournalDir();
-        pushFlush();
+        finishReplay();
         bootMark("session + first push");
         if (cacheResult.steps.length > 0 || cacheResult.loadedFromLegacy) {
-          await saveJournalMergeCache(journalDirNorm, manifest, store, projectRoot, store.journalHistoryPreset);
+          await saveJournalMergeCache(
+            journalDirNorm,
+            manifest,
+            store,
+            projectRoot,
+            store.journalHistoryPreset,
+          );
           bootMark("cache save");
         }
         bootReport("cache");
@@ -1550,13 +1645,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       };
       pushMergeProgress();
     }
-    settleManifest();
-    journalPath = files[files.length - 1]!;
-    store.resetFootTravelRuntime();
-    loadOrganicSampleSessionFromDisk(projectRoot, store, getCachedSpeciesDatabase());
-    journalBootProgress = null;
-    refreshLiveHudFromJournalDir();
-    pushFlush();
+    finishReplay();
     bootMark(`replay ${files.length} file(s)`);
     await saveJournalMergeCache(journalDirNorm, manifest, store, projectRoot, store.journalHistoryPreset);
     bootMark("cache save");
@@ -1752,11 +1841,20 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         store,
         backlogMap(store, firstDiscoveryBacklogNow(store)),
         // The game's own visited list (plan 6.1): placed by the galaxy index only if it is already loaded.
-        importedSystems(loadVisitedImport(), new Set([...store.visitedSystems.keys(), ...store.systemPositions.keys()]), peekBioIndex()),
+        importedSystems(
+          loadVisitedImport(),
+          new Set([...store.visitedSystems.keys(), ...store.systemPositions.keys()]),
+          peekBioIndex(),
+        ),
       ),
     getImportedSystems: () =>
-      importedSystems(loadVisitedImport(), new Set([...store.visitedSystems.keys(), ...store.systemPositions.keys()]), peekBioIndex()),
-    getMySystem: (addr) => mySystemDetail(store, addr, backlogMap(store, firstDiscoveryBacklogNow(store)), loadBioIndex()),
+      importedSystems(
+        loadVisitedImport(),
+        new Set([...store.visitedSystems.keys(), ...store.systemPositions.keys()]),
+        peekBioIndex(),
+      ),
+    getMySystem: (addr) =>
+      mySystemDetail(store, addr, backlogMap(store, firstDiscoveryBacklogNow(store)), loadBioIndex()),
     getSessionRoute: () => sessionRouteDto(store, sessionLog.toDto().systems),
     getVisitedSystems: (days) => visitedSystemsDto(store, days),
     getJournalStore: () => store,
@@ -1791,13 +1889,17 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     ownGreenGiants: () => {
       const out: { x: number; y: number; z: number; body: string; system: string }[] = [];
       const src = greenSources();
-      const keys = new Set([...store.greenCodexBodies.keys(), ...[...greenMarks.all()].filter(([, m]) => m.mark === "yes").map(([k]) => k)]);
+      const keys = new Set([
+        ...store.greenCodexBodies.keys(),
+        ...[...greenMarks.all()].filter(([, m]) => m.mark === "yes").map(([k]) => k),
+      ]);
       for (const k of keys) {
         const rec = scanOf(k);
         const pos = rec ? store.systemPositions.get(rec.systemAddress) : undefined;
         if (!rec || !pos) continue;
         const v = greenGiantForRecord(rec, src);
-        if (v?.level === "confirmed" && !v.gggNumber) out.push({ ...pos, body: rec.bodyName, system: rec.starSystem });
+        if (v?.level === "confirmed" && !v.gggNumber)
+          out.push({ ...pos, body: rec.bodyName, system: rec.starSystem });
       }
       return out;
     },
@@ -1817,7 +1919,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       const lowBefore = notices.prefs().codexFirstLowChance;
       notices.setPrefs(raw);
       // The switch changes rows of bodies already computed.
-      if (notices.prefs().codexFirstLowChance !== lowBefore) setCodexFirstLowChanceKept(() => notices.prefs().codexFirstLowChance ?? true);
+      if (notices.prefs().codexFirstLowChance !== lowBefore)
+        setCodexFirstLowChanceKept(() => notices.prefs().codexFirstLowChance ?? true);
       push();
       return notifySettings();
     },
@@ -2080,10 +2183,15 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     getFieldGuide: () => buildFieldGuide(projectRoot, getCachedSpeciesDatabase()),
     getEncyclopediaRegion: (name) =>
       Object.fromEntries(
-        getCachedSpeciesDatabase().species.map((e) => [e.id, regionalRarity(projectRoot, name, e.id)] as const),
+        getCachedSpeciesDatabase().species.map(
+          (e) => [e.id, regionalRarity(projectRoot, name, e.id)] as const,
+        ),
       ),
     getFeederStatus: () => buildFeederStatus(projectRoot, getCachedSpeciesDatabase()),
-    getUpdateInfo: async (force) => ({ ...(await updateChecker.check(force)), download: appUpdater.status() }),
+    getUpdateInfo: async (force) => ({
+      ...(await updateChecker.check(force)),
+      download: appUpdater.status(),
+    }),
     startUpdateDownload: () => {
       void appUpdater.start();
       return appUpdater.status();
@@ -2428,11 +2536,7 @@ export function electronRuntimeOptions(
 ): { bindHost: string; port: number } {
   const explicitHost = electronHostIsExplicit(argv);
   return {
-    bindHost: explicitHost
-      ? parseHost([...argv])
-      : mode === "server" && lanAccess
-        ? "0.0.0.0"
-        : "127.0.0.1",
+    bindHost: explicitHost ? parseHost([...argv]) : mode === "server" && lanAccess ? "0.0.0.0" : "127.0.0.1",
     port: parsePort([...argv]),
   };
 }

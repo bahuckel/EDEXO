@@ -43,6 +43,11 @@ interface PriorFile {
 
 let cache: { root: string; file: PriorFile | null } | null = null;
 
+/** Forget the table: after "Refresh exomastery" the next read sees the file on disk (code review B10). */
+export function clearGenusPriorCache(): void {
+  cache = null;
+}
+
 function load(root: string): PriorFile | null {
   if (cache?.root === root) return cache.file;
   let file: PriorFile | null = null;
@@ -61,7 +66,10 @@ function load(root: string): PriorFile | null {
 
 /** One key for a genus however it is spelt ("Brain Tree" / "Brain Trees", "Sinuous Tuber(s)"). */
 export function genusPriorKey(name: string): string {
-  return name.toLowerCase().replace(/[^a-z]/g, "").slice(0, 6);
+  return name
+    .toLowerCase()
+    .replace(/[^a-z]/g, "")
+    .slice(0, 6);
 }
 
 /** The table's cells for a body, finest first — the same keys docs/perf/genus_prior_eval.py writes. */
@@ -144,11 +152,7 @@ export function vetoUnseenGenera(
   const protectedGenera = new Set<string>();
   for (const m of shown) {
     const k = genusPriorKey(m.entry.genus);
-    if (
-      gateForSpeciesId(m.entry.id) ||
-      confirmedIds.has(m.entry.id) ||
-      m.organicAnalysisComplete === true
-    ) {
+    if (gateForSpeciesId(m.entry.id) || confirmedIds.has(m.entry.id) || m.organicAnalysisComplete === true) {
       protectedGenera.add(k);
     }
   }
@@ -156,7 +160,11 @@ export function vetoUnseenGenera(
   const vetoed = [...genera].filter((g) => !protectedGenera.has(g) && (prior.p[g] ?? 0) < (limits[g] ?? 0));
   if (vetoed.length === 0) return;
   // Never empty the list: if every genus would go, the one the dump sees most stays.
-  if (vetoed.length === genera.size) vetoed.splice(vetoed.indexOf(vetoed.reduce((a, g) => ((prior.p[g] ?? 0) > (prior.p[a] ?? 0) ? g : a))), 1);
+  if (vetoed.length === genera.size)
+    vetoed.splice(
+      vetoed.indexOf(vetoed.reduce((a, g) => ((prior.p[g] ?? 0) > (prior.p[a] ?? 0) ? g : a))),
+      1,
+    );
   const out = new Set(vetoed);
   for (const m of shown) {
     const k = genusPriorKey(m.entry.genus);
@@ -194,17 +202,24 @@ export function applyGenusPrior(
   // A genus placed by where the system is (a nebula, a Guardian site, the core) keeps the model's
   // chance, all of its species: the table cannot see position, and pulled Electricae under the floor
   // beside nebulae (radialem is gated there, pluma is not, and they are one genus).
-  const placed = new Set(matches.filter((m) => gateForSpeciesId(m.entry.id)).map((m) => genusPriorKey(m.entry.genus)));
+  const placed = new Set(
+    matches.filter((m) => gateForSpeciesId(m.entry.id)).map((m) => genusPriorKey(m.entry.genus)),
+  );
   const byGenus = new Map<string, SpeciesMatch[]>();
   for (const m of matches) {
-    if (m.unlikely || m.presenceProbabilityPercent == null || !Number.isFinite(m.presenceProbabilityPercent)) continue;
+    if (m.unlikely || m.presenceProbabilityPercent == null || !Number.isFinite(m.presenceProbabilityPercent))
+      continue;
     const k = genusPriorKey(m.entry.genus);
     if (placed.has(k)) continue;
     byGenus.set(k, [...(byGenus.get(k) ?? []), m]);
   }
   if (byGenus.size < 2) return;
   const mass = new Map<string, number>();
-  for (const [g, rows] of byGenus) mass.set(g, rows.reduce((a, m) => a + m.presenceProbabilityPercent!, 0));
+  for (const [g, rows] of byGenus)
+    mass.set(
+      g,
+      rows.reduce((a, m) => a + m.presenceProbabilityPercent!, 0),
+    );
   const total = [...mass.values()].reduce((a, x) => a + x, 0);
   if (!(total > 0)) return;
   // A genus the table never saw on such bodies: half a body's worth, not zero (rank, never wall).
@@ -214,7 +229,9 @@ export function applyGenusPrior(
     const p = Math.max(prior.p[g] ?? 0, floor);
     target.set(
       g,
-      Math.exp((1 - GENUS_PRIOR_WEIGHT) * Math.log(Math.max(mm / 100, 1e-6)) + GENUS_PRIOR_WEIGHT * Math.log(p)),
+      Math.exp(
+        (1 - GENUS_PRIOR_WEIGHT) * Math.log(Math.max(mm / 100, 1e-6)) + GENUS_PRIOR_WEIGHT * Math.log(p),
+      ),
     );
   }
   const z = [...target.values()].reduce((a, x) => a + x, 0);

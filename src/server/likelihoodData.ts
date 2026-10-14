@@ -59,8 +59,11 @@ export function loadSpeciesPrevalence(projectRoot: string): SpeciesPrevalenceFil
   return value;
 }
 
-/** Test seam — both files are cached per root, and a test that writes one needs the next read to see it. */
-export function clearLikelihoodDataCacheForTests(): void {
+/** Both files are cached per root: after "Refresh exomastery" (or a test that writes one) the next read sees them. */
+export function clearLikelihoodDataCache(): void {
   edgesCache.clear();
   prevalenceCache.clear();
 }
+
+/** The name the tests know it by. */
+export const clearLikelihoodDataCacheForTests = clearLikelihoodDataCache;
