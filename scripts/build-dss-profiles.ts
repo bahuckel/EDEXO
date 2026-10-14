@@ -19,6 +19,10 @@ import { sanitizeExomasteryProfileForEdexo } from "../src/feeder/profileExportSa
 import { describeInstall, installProfile } from "../src/feeder/install.js";
 import type { FeederStarSummary } from "../src/feeder/feederStarHost.js";
 import type { EdsmBody } from "../src/feeder/edsm.js";
+import { buildDisplayHistograms, buildSpeciesHistograms } from "../src/feeder/histograms.js";
+import { flattenForStats } from "../src/feeder/flatten.js";
+import type { HistogramEdgesFile } from "../src/shared/likelihoodBins.js";
+import { shouldOmitExomasterySciencePath } from "../src/server/exomasteryPathHygiene.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -47,6 +51,9 @@ const star = (s: FeederStarSummary): FeederStarSummary => ({
 });
 
 const db = loadSpeciesDatabaseFromTree(root);
+const edgesFile = JSON.parse(
+  readFileSync(path.join(root, "data", "exomastery", "histogram-edges.json"), "utf8"),
+) as HistogramEdgesFile;
 for (const genusDir of genera) {
   const entries = db.species.filter((e) => e.genusDataDir === genusDir);
   if (entries.length !== 1) {
@@ -71,6 +78,27 @@ for (const genusDir of genera) {
     occurrences: rows.length,
   });
   const profile = sanitizeExomasteryProfileForEdexo(built);
+  /*
+    The ranking model's histograms, on the corpus's shared edges, as applyParameterImportance writes them for the
+    feeder's profiles (it reads the feeder's sample packs, which hold none of these bodies). Without them a profile
+    is scored on its categorical terms alone and pays none of the ~27 numeric ones every other species pays, so it
+    wins the body's softmax: the 8,036-body Bark Mounds profile took Brain Tree and Tubers shares down ten-fold on
+    2-signal bodies (2026-10-14).
+  */
+  const samples = new Map<string, number[]>();
+  for (const r of rows) {
+    for (const [p, v] of flattenForStats(r.targetBody, "body", 0, new Map())) {
+      if (typeof v !== "number" || !Number.isFinite(v) || shouldOmitExomasterySciencePath(p)) continue;
+      const list = samples.get(p) ?? [];
+      list.push(v);
+      samples.set(p, list);
+    }
+  }
+  const histograms = buildSpeciesHistograms(samples, edgesFile.edges);
+  const displayHistograms = buildDisplayHistograms(samples);
+  const withHist: typeof profile & { histograms?: unknown; displayHistograms?: unknown } = profile;
+  if (Object.keys(histograms).length > 0) withHist.histograms = histograms;
+  if (Object.keys(displayHistograms).length > 0) withHist.displayHistograms = displayHistograms;
 
   const cat = profile.categorical as Record<string, Record<string, number>>;
   const num = profile.numerics as Record<string, { min: number; max: number; mode: number; count: number }>;
