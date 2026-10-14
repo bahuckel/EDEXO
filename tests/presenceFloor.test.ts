@@ -12,6 +12,7 @@ import {
   PRESENCE_FLOOR_PCT,
   demoteBelowPresenceFloor,
 } from "../src/server/snapshot.js";
+import { signalMultipliers } from "../src/server/presenceFloors.js";
 import type { BodyExoState, SpeciesDatabase, SpeciesMatch } from "../src/shared/types.js";
 
 const db: SpeciesDatabase = { species: [] };
@@ -256,5 +257,46 @@ describe("the per-species presence floor", () => {
     demoteBelowPresenceFloor(low, body(), db);
     expect(low[1]!.unlikely).toBe(true);
     expect(low[1]!.unlikelyReasons?.[0]?.detail).toMatch(/under the 0\.3 %/);
+  });
+});
+
+/**
+ * The signals the game counted are all spent (2026-10-14). HIP 10861 B 2 d, two signals, a DSS listing Bacterium and
+ * Anemone: cerbrus held 99 % of the posterior and read 100 % (198 % unclipped), the Anemone 0.7 %, under the floor.
+ */
+describe("signal multipliers", () => {
+  const row = (id: string, s: number) => ({ match: match(id, null), s });
+  const run = (rows: { match: SpeciesMatch; s: number }[], n: number) =>
+    signalMultipliers(rows, (r) => r.s, n);
+
+  it("hands a filled genus's leftover signal to the other genera", () => {
+    const m = run([row("bacterium_cerbrus", 0.99), row("anemone_prasinum", 0.01)], 2);
+    expect(m.get("bacterium")).toBe(2);
+    // One signal left, 1 % of the posterior left: the Anemone takes the whole signal.
+    expect(0.01 * m.get("anemone")!).toBeCloseTo(1, 6);
+  });
+
+  it("leaves the count alone when no genus fills a signal", () => {
+    const m = run([row("bacterium_cerbrus", 0.3), row("stratum_paleas", 0.3), row("anemone_prasinum", 0.4)], 2);
+    expect([...m.values()]).toEqual([2, 2, 2]);
+  });
+
+  it("does not hand the leftover to a filled genus's own siblings", () => {
+    const m = run([row("bacterium_cerbrus", 0.7), row("bacterium_tela", 0.25), row("stratum_paleas", 0.05)], 2);
+    expect(m.get("bacterium")).toBe(2);
+    expect(0.05 * m.get("stratum")!).toBeCloseTo(1, 6);
+  });
+
+  it("caps a genus that fills only after the first round at a whole signal", () => {
+    // Three signals: Bacterium fills on the count; then 2 signals over 0.4 of posterior lift Stratum (0.3) past one.
+    const m = run([row("bacterium_cerbrus", 0.6), row("stratum_paleas", 0.3), row("anemone_prasinum", 0.1)], 3);
+    expect(m.get("bacterium")).toBe(3);
+    expect(0.3 * m.get("stratum")!).toBeCloseTo(1, 6);
+    expect(0.1 * m.get("anemone")!).toBeCloseTo(1, 6);
+  });
+
+  it("never lowers a chance below the plain count", () => {
+    const m = run([row("bacterium_cerbrus", 1)], 1);
+    expect(m.get("bacterium")).toBe(1);
   });
 });

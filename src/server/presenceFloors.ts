@@ -94,8 +94,10 @@ export function attachPresenceProbability(
   const total = ranked.reduce((a, r) => a + r.probability, 0);
   const weighted = ranked.reduce((a, r) => a + r.probability * (r.match.presenceFactor ?? 1), 0);
   const norm = weighted > 0 ? total / weighted : 1;
+  const share = (r: (typeof ranked)[number]) => r.probability * (r.match.presenceFactor ?? 1) * norm;
+  const multiplier = signalMultipliers(ranked, share, scale);
   for (const r of ranked) {
-    const p = Math.max(0, Math.min(1, r.probability * (r.match.presenceFactor ?? 1) * norm * scale));
+    const p = Math.max(0, Math.min(1, share(r) * (multiplier.get(r.match.entry.genusDataDir) ?? scale)));
     r.match.presenceProbabilityPercent = Math.round(p * 1000) / 10;
     /*
       A measured rate is the answer for its species, not the ranking's: Crystalline Shards' profile
@@ -131,6 +133,50 @@ export function attachPresenceProbability(
     ranked.map((r) => r.match),
     scan,
   );
+}
+
+/**
+ * What each genus's shares are multiplied by to become chances, so the signals the game counted are all spent.
+ *
+ * A share times the signal count, clipped at 100 %, throws away whatever a dominant genus is clipped by: on a
+ * 2-signal body where Bacterium cerbrus held 99 % of the posterior it read 100 % (198 % unclipped), and the Anemone
+ * on the second signal read 0.7 % — under the floor, on a body Spansh's DSS lists with Anemone (2026-10-14). The
+ * game places one genus per signal, so a genus whose shares reach a whole signal takes one, and the signals left
+ * are shared among the other genera in proportion. Iterated until no further genus fills up; the multiplier of an
+ * uncapped genus only grows, so no chance falls by this. Not to the capped genus's own siblings: one species of a
+ * genus per body.
+ */
+export function signalMultipliers<R extends { match: SpeciesMatch }>(
+  ranked: R[],
+  share: (r: R) => number,
+  signals: number,
+): Map<string, number> {
+  const byGenus = new Map<string, number>();
+  for (const r of ranked) {
+    const g = r.match.entry.genusDataDir;
+    byGenus.set(g, (byGenus.get(g) ?? 0) + share(r));
+  }
+  const out = new Map<string, number>();
+  const capped = new Set<string>();
+  for (let guard = 0; guard <= byGenus.size; guard++) {
+    const left = signals - capped.size;
+    const rest = [...byGenus].filter(([g]) => !capped.has(g)).reduce((a, [, s]) => a + s, 0);
+    if (left <= 0 || rest <= 0) break;
+    const m = Math.max(signals, left / rest);
+    let grew = false;
+    for (const [g, s] of byGenus) {
+      if (capped.has(g)) continue;
+      out.set(g, m);
+      if (s * m >= 1) {
+        capped.add(g);
+        grew = true;
+      }
+    }
+    if (!grew) break;
+  }
+  // A genus that fills a signal reads 100 % as a whole; one already there on the plain count keeps it, as before.
+  for (const g of capped) out.set(g, Math.max(signals, 1 / byGenus.get(g)!));
+  return out;
 }
 
 /**
