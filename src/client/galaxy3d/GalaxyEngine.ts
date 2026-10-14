@@ -344,6 +344,11 @@ export class GalaxyEngine {
   private needsRender = true;
   private raf = 0;
   private disposed = false;
+  /**
+   * The engine's own requests (overview, tiles, names), cancelled by dispose(): a tile or a names answer
+   * that came after the map closed used to rebuild cleared state (code review, 2026-10-14).
+   */
+  private readonly requests = new AbortController();
   private lastLod = 0;
   private down: { x: number; y: number; t: number; button: number } | null = null;
   private hoverQueued: { x: number; y: number } | null = null;
@@ -550,6 +555,7 @@ export class GalaxyEngine {
       this.stats.phase = "ready";
       this.updateLod(true);
     } catch (e) {
+      if (this.disposed) return; // closed while loading: cancelled, not failed
       this.stats.phase = "failed";
       this.stats.error = String(e instanceof Error ? e.message : e);
     }
@@ -558,7 +564,7 @@ export class GalaxyEngine {
   }
 
   private async fetchBinary(path: string): Promise<ArrayBuffer> {
-    const r = await fetch(this.api + path);
+    const r = await fetch(this.api + path, { signal: this.requests.signal });
     if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
     return r.arrayBuffer();
   }
@@ -1249,8 +1255,10 @@ export class GalaxyEngine {
   private async loadSectorNames(): Promise<void> {
     this.sectorNamesAsked = true;
     try {
-      const r = await fetch(`${this.api}/api/galaxy/sector-names`);
-      if (r.ok) this.sectorNames = (await r.json()) as string[];
+      const r = await fetch(`${this.api}/api/galaxy/sector-names`, { signal: this.requests.signal });
+      const names = r.ok ? ((await r.json()) as string[]) : null;
+      if (this.disposed) return;
+      if (names) this.sectorNames = names;
       this.groupsKey = "";
       this.settleAt = performance.now();
       this.invalidate();
@@ -1263,9 +1271,11 @@ export class GalaxyEngine {
     const key = cellKey(cell);
     this.inflight.add(key);
     try {
-      const r = await fetch(`${this.api}/api/galaxy/tile?c=${key}`);
+      const r = await fetch(`${this.api}/api/galaxy/tile?c=${key}`, { signal: this.requests.signal });
       if (!r.ok || this.disposed) return;
-      this.addTile(readTile(await r.arrayBuffer()));
+      const body = await r.arrayBuffer();
+      if (this.disposed) return;
+      this.addTile(readTile(body));
     } catch {
       /* a failed tile leaves the overview showing there; the next LOD pass asks again */
     } finally {
@@ -1742,9 +1752,11 @@ export class GalaxyEngine {
     if (!want.length || this.namesInflight) return;
     this.namesInflight = true;
     try {
-      const r = await fetch(`${this.api}/api/galaxy/names?i=${want.slice(0, 400).join(",")}`);
-      if (r.ok) {
-        const got = (await r.json()) as Record<string, string>;
+      const r = await fetch(`${this.api}/api/galaxy/names?i=${want.slice(0, 400).join(",")}`, {
+        signal: this.requests.signal,
+      });
+      const got = r.ok ? ((await r.json()) as Record<string, string>) : null;
+      if (got && !this.disposed) {
         for (const [k, v] of Object.entries(got)) this.names.set(Number(k), v);
         // A long session of flying about asks for tens of thousands; the oldest go (plan 2.5).
         if (this.names.size > NAMES_MAX) {
@@ -1758,9 +1770,11 @@ export class GalaxyEngine {
       /* labels wait for the next try */
     } finally {
       this.namesInflight = false;
-      this.hovered = null; // let the tooltip pick up the name
-      if (this.hoverQueued === null && this.lastMouse) this.hoverQueued = this.lastMouse;
-      this.invalidate();
+      if (!this.disposed) {
+        this.hovered = null; // let the tooltip pick up the name
+        if (this.hoverQueued === null && this.lastMouse) this.hoverQueued = this.lastMouse;
+        this.invalidate();
+      }
     }
   }
   private lastMouse: { x: number; y: number } | null = null;
@@ -2366,6 +2380,7 @@ export class GalaxyEngine {
 
   dispose(): void {
     this.disposed = true;
+    this.requests.abort();
     if (this.egg) {
       const mat = this.egg.material as THREE.MeshBasicMaterial;
       mat.map?.dispose();

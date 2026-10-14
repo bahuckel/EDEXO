@@ -432,6 +432,37 @@ test("galaxy 3D: behind another tab the map stops asking; back in front it reads
   expect(errors).toEqual([]);
 });
 
+/* Code review, 2026-10-14: a tile that arrived after the map closed was added to the cleared engine. */
+test("galaxy 3D: closing the map cancels the tiles still coming", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.addInitScript(() => localStorage.setItem("edexo.tabs", JSON.stringify({ tabs: ["galaxy"], active: "galaxy" })));
+  // Tiles are held until the map has closed.
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  let asked = 0;
+  await page.route("**/api/galaxy/tile*", async (route) => {
+    asked++;
+    await held;
+    await route.continue().catch(() => undefined); // cancelled meanwhile
+  });
+  const cancelled: string[] = [];
+  page.on("requestfailed", (r) => {
+    if (r.url().includes("/api/galaxy/tile")) cancelled.push(r.failure()?.errorText ?? "");
+  });
+  await page.goto("/");
+  type G = { stats: () => { phase: string }; lookAt: (x: number, y: number, z: number, d: number) => void };
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __galaxy?: G }).__galaxy?.stats().phase), { timeout: 60_000 })
+    .toBe("ready");
+  await page.evaluate(() => (window as unknown as { __galaxy: G }).__galaxy.lookAt(0, 0, 0, 2500));
+  await expect.poll(() => asked).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Close Galaxy map" }).click();
+  await expect.poll(() => cancelled.length).toBeGreaterThan(0);
+  release();
+  await page.waitForTimeout(500);
+  expect(errors).toEqual([]);
+});
+
 test("galaxy 3D: the Filter drawer lights the systems that have what was ticked", async ({ page }) => {
   const errors = watchErrors(page);
   await page.setViewportSize({ width: 1400, height: 820 });
