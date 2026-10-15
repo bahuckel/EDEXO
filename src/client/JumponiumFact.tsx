@@ -1,6 +1,6 @@
 /**
- * The Planetary body card's Laboratory field (1.2.16): the FSD injection and AFM refill materials in this body's
- * crust, the rich ones (top tenth of landable bodies) marked, and on hover each one's percent against what is aboard
+ * The Planetary body card's Laboratory field (1.2.16; "Mats", symbols only since 1.2.17): the FSD injection and AFM
+ * refill materials in this body's crust, the rich ones (top tenth of landable bodies) marked, and on hover each one's percent against what is aboard
  * and what each recipe still lacks. Common elements (carbon, nickel, chromium, manganese) are left out. Nothing shows
  * for a body without a materials list (a detailed scan gives it).
  */
@@ -28,7 +28,9 @@ export function JumponiumFact({
   const hits = (bj?.hits ?? []).filter((h) => !jumpElement(h.key).common);
   if (!hits.length) return null;
   const rich = hits.filter((h) => h.good);
-  const shown = (rich.length ? rich : hits).slice(0, 3);
+  // Symbols only on the card (owner, 2026-10-15: "a lot of them are cut out ... just the periodic table/abbreviations
+  // no percentages"); the percentages stay in the hover panel.
+  const shown = (rich.length ? rich : hits).slice(0, 6);
   const have = (k: string) => stock?.stock.find((s) => s.key === k);
   const makes = (k: JumpElement) =>
     [FSD_ELS.has(k) ? "FSD" : "", AFM_ELS.has(k) ? "AFM" : ""].filter(Boolean).join(" / ");
@@ -76,9 +78,9 @@ export function JumponiumFact({
   );
   return (
     <Tooltip text={pop} className="fact">
-      <span className="fact-k">Laboratory</span>
+      <span className="fact-k">Mats</span>
       <span className="fact-v">
-        {shown.map(hitLabel).join(" · ")}
+        {shown.map((h) => jumpElement(h.key).symbol).join(" ")}
         {rich.length ? " ★" : ""}
       </span>
     </Tooltip>
