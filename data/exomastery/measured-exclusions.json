@@ -216,6 +216,17 @@
     ],
     "speciesBodies": 9509,
     "expected": 325.8
+   },
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 9509,
+    "expected": 612.5
    }
   ],
   "frutexa_frutexa_fera": [
@@ -292,6 +303,19 @@
     "expected": 307.1
    }
   ],
+  "frutexa_frutexa_flammasis": [
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 3145,
+    "expected": 252.3
+   }
+  ],
   "frutexa_frutexa_metallicum": [
    {
     "when": [
@@ -324,6 +348,17 @@
     ],
     "speciesBodies": 9293,
     "expected": 666.8
+   },
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 9293,
+    "expected": 248.5
    }
   ],
   "fungoida_fungoida_setisis": [
@@ -411,6 +446,19 @@
     ],
     "speciesBodies": 3451,
     "expected": 2673.3
+   }
+  ],
+  "stratum_stratum_excutitus": [
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "N"
+     }
+    ],
+    "speciesBodies": 3888,
+    "expected": 124.5
    }
   ],
   "stratum_stratum_paleas": [
@@ -520,6 +568,19 @@
     "expected": 29.1
    }
   ],
+  "tussock_tussock_albata": [
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 4502,
+    "expected": 231.6
+   }
+  ],
   "tussock_tussock_catena": [
    {
     "when": [
@@ -595,6 +656,19 @@
     "expected": 513.4
    }
   ],
+  "tussock_tussock_ignis": [
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 8380,
+    "expected": 431.2
+   }
+  ],
   "tussock_tussock_propagito": [
    {
     "when": [
@@ -611,6 +685,19 @@
     ],
     "speciesBodies": 14448,
     "expected": 813.8
+   }
+  ],
+  "tussock_tussock_serrati": [
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 3063,
+    "expected": 157.6
    }
   ]
  }
