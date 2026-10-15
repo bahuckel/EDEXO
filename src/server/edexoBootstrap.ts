@@ -103,6 +103,7 @@ import {
 import { clearHostStarObservationsCache } from "./speciesHostStarObservations.js";
 import { clearColourStarNeverCache } from "./colourStarNever.js";
 import { clearEddnTemperatureRangeCache } from "./eddnTemperatureRange.js";
+import { clearMeasuredExclusionsCache } from "./measuredExclusions.js";
 import { clearPlanetClassObservationsCache } from "./speciesPlanetClassObservations.js";
 import { clearStarlightRangesCache } from "./starlightRanges.js";
 import { clearObservedEnvelopeCache } from "./observedEnvelope.js";
@@ -281,6 +282,7 @@ function reloadSpeciesDerivedCaches(): void {
   clearHostStarObservationsCache();
   clearColourStarNeverCache();
   clearEddnTemperatureRangeCache();
+  clearMeasuredExclusionsCache();
   clearPlanetClassObservationsCache();
   clearStarlightRangesCache();
   clearObservedEnvelopeCache();

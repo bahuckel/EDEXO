@@ -22,6 +22,8 @@ export interface SpeciesMatchContext {
   orbitDistanceFromParentStarLs?: number;
   /** The body orbits a star (or a barycentre of stars), not a planet — from its `Parents`. */
   orbitsAStar?: boolean;
+  /** Kind of the journal `Parents[0]` entry: Star, Planet or Null (a barycentre). */
+  parentKind?: "Star" | "Planet" | "Null";
   /** The body's `DistanceFromArrivalLS`: how far it is from the system's arrival (main) star. */
   distanceFromArrivalLs?: number;
   /** The body's system (id64), for species known from one system only. */

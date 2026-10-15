@@ -30,7 +30,6 @@
       ],
       "candidates": [
         "aleoida_aleoida_laminiae",
-        "aleoida_aleoida_spica",
         "bacterium_bacterium_alcyoneum",
         "cactoida_cactoida_lapis",
         "cactoida_cactoida_peperatis",
@@ -44,6 +43,7 @@
         "tussock_tussock_divisa"
       ],
       "unlikely": [
+        "aleoida_aleoida_spica",
         "anemone_blatteum_bioluminescent",
         "anemone_prasinum_bioluminescent",
         "anemone_puniceum",

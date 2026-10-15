@@ -709,7 +709,11 @@ export function buildSpeciesMatchContextFromRecords(i: MatchContextInputs): Spec
   if (parentStarLuminosity) ctx.parentStarLuminosity = parentStarLuminosity;
   if (orbitDistanceFromParentStarLs !== undefined)
     ctx.orbitDistanceFromParentStarLs = orbitDistanceFromParentStarLs;
-  if (rec && Array.isArray(rec.parents)) ctx.orbitsAStar = orbitsAStar(rec.parents);
+  if (rec && Array.isArray(rec.parents)) {
+    ctx.orbitsAStar = orbitsAStar(rec.parents);
+    const p0 = parseJournalParentEntry(rec.parents[0]);
+    if (p0) ctx.parentKind = p0.kind;
+  }
   if (signalHints?.length) ctx.signalHints = signalHints;
   if (hostStarClasses?.length) ctx.hostStarClasses = hostStarClasses;
   const mainStar = mainStarClassOf(byId);

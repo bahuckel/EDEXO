@@ -1,0 +1,617 @@
+{
+ "formatVersion": 1,
+ "builtAt": "2026-10-15",
+ "source": "EDDN year (342k bodies, each species logged on the exact body) + hold-outs A/B/D + the owner's journals: no confirmed body of the species inside any rule. Values: temp K, mass Earth masses, parent = the journal Parents[0] kind (Star / Null / Planet), sma_ls semi-major axis in light-seconds, orb_d orbital period in days, dist_ls distance from arrival, grav_g g, c_metal metal fraction, host = the parent star's class, main = the system main star's class (hostStarClassKey), region = galactic region. Built by docs/perf/build_measured_exclusions.py.",
+ "species": {
+  "aleoida_aleoida_spica": [
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": "<=",
+      "is": 167.675064
+     }
+    ],
+    "speciesBodies": 1271,
+    "expected": 611.1
+   }
+  ],
+  "cactoida_cactoida_cortexum": [
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "K"
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "K"
+     }
+    ],
+    "speciesBodies": 2609,
+    "expected": 610.8
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Hawking's Gap"
+     }
+    ],
+    "speciesBodies": 2609,
+    "expected": 89.9
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Inner Scutum-Centaurus Arm"
+     }
+    ],
+    "speciesBodies": 2609,
+    "expected": 279.7
+   }
+  ],
+  "cactoida_cactoida_lapis": [
+   {
+    "when": [
+     {
+      "value": "dist_ls",
+      "op": "<=",
+      "is": 24019.10382
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "K"
+     }
+    ],
+    "speciesBodies": 4366,
+    "expected": 956.3
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Elysian Shore"
+     }
+    ],
+    "speciesBodies": 4366,
+    "expected": 221.6
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Sanguineous Rim"
+     }
+    ],
+    "speciesBodies": 4366,
+    "expected": 518.2
+   }
+  ],
+  "cactoida_cactoida_peperatis": [
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Empyrean Straits"
+     }
+    ],
+    "speciesBodies": 2500,
+    "expected": 76.9
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Norma Arm"
+     }
+    ],
+    "speciesBodies": 2500,
+    "expected": 53.2
+   }
+  ],
+  "cactoida_cactoida_pullulanta": [
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Hawking's Gap"
+     }
+    ],
+    "speciesBodies": 1483,
+    "expected": 51.1
+   }
+  ],
+  "concha_concha_aureolas": [
+   {
+    "when": [
+     {
+      "value": "sma_ls",
+      "op": ">=",
+      "is": 19.945803
+     }
+    ],
+    "speciesBodies": 2137,
+    "expected": 166.7
+   },
+   {
+    "when": [
+     {
+      "value": "sma_ls",
+      "op": ">=",
+      "is": 9.676355
+     },
+     {
+      "value": "orb_d",
+      "op": "<=",
+      "is": 21.563857
+     }
+    ],
+    "speciesBodies": 2137,
+    "expected": 294.6
+   },
+   {
+    "when": [
+     {
+      "value": "grav_g",
+      "op": ">=",
+      "is": 0.133236
+     },
+     {
+      "value": "parent",
+      "op": "=",
+      "is": "Null"
+     }
+    ],
+    "speciesBodies": 2137,
+    "expected": 27.5
+   }
+  ],
+  "frutexa_frutexa_acus": [
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "K"
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "K"
+     }
+    ],
+    "speciesBodies": 9509,
+    "expected": 2109.6
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Inner Scutum-Centaurus Arm"
+     }
+    ],
+    "speciesBodies": 9509,
+    "expected": 1278.0
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Hawking's Gap"
+     }
+    ],
+    "speciesBodies": 9509,
+    "expected": 325.8
+   }
+  ],
+  "frutexa_frutexa_fera": [
+   {
+    "when": [
+     {
+      "value": "dist_ls",
+      "op": "<=",
+      "is": 3449.705788
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "K"
+     }
+    ],
+    "speciesBodies": 2987,
+    "expected": 640.5
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Norma Expanse"
+     }
+    ],
+    "speciesBodies": 2987,
+    "expected": 90.7
+   }
+  ],
+  "frutexa_frutexa_flabellum": [
+   {
+    "when": [
+     {
+      "value": "orb_d",
+      "op": "<=",
+      "is": 49.917823
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "K"
+     }
+    ],
+    "speciesBodies": 6099,
+    "expected": 1297.1
+   },
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 6099,
+    "expected": 489.3
+   },
+   {
+    "when": [
+     {
+      "value": "dist_ls",
+      "op": "<=",
+      "is": 3361.850207
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 6099,
+    "expected": 307.1
+   }
+  ],
+  "frutexa_frutexa_metallicum": [
+   {
+    "when": [
+     {
+      "value": "sma_ls",
+      "op": "<=",
+      "is": 1108.057525
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "K"
+     }
+    ],
+    "speciesBodies": 9293,
+    "expected": 2631.1
+   },
+   {
+    "when": [
+     {
+      "value": "c_metal",
+      "op": ">=",
+      "is": 0.332331
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "K"
+     }
+    ],
+    "speciesBodies": 9293,
+    "expected": 666.8
+   }
+  ],
+  "fungoida_fungoida_setisis": [
+   {
+    "when": [
+     {
+      "value": "grav_g",
+      "op": ">=",
+      "is": 0.275392
+     }
+    ],
+    "speciesBodies": 19507,
+    "expected": 4190.5
+   }
+  ],
+  "osseus_osseus_spiralis": [
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "M"
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "M"
+     }
+    ],
+    "speciesBodies": 12329,
+    "expected": 955.6
+   },
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "L"
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "M"
+     }
+    ],
+    "speciesBodies": 12329,
+    "expected": 516.0
+   },
+   {
+    "when": [
+     {
+      "value": "dist_ls",
+      "op": ">=",
+      "is": 100010.399088
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "M"
+     }
+    ],
+    "speciesBodies": 12329,
+    "expected": 210.5
+   }
+  ],
+  "stratum_stratum_cucumisis": [
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "G"
+     }
+    ],
+    "speciesBodies": 3451,
+    "expected": 557.2
+   },
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": "<=",
+      "is": 190.760788
+     }
+    ],
+    "speciesBodies": 3451,
+    "expected": 2673.3
+   }
+  ],
+  "stratum_stratum_paleas": [
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "N"
+     }
+    ],
+    "speciesBodies": 17590,
+    "expected": 438.3
+   }
+  ],
+  "tubus_tubus_cavas": [
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Temple"
+     }
+    ],
+    "speciesBodies": 6080,
+    "expected": 52.1
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Empyrean Straits"
+     }
+    ],
+    "speciesBodies": 6080,
+    "expected": 175.1
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Norma Arm"
+     }
+    ],
+    "speciesBodies": 6080,
+    "expected": 131.4
+   }
+  ],
+  "tubus_tubus_compagibus": [
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Temple"
+     }
+    ],
+    "speciesBodies": 9738,
+    "expected": 83.5
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Outer Orion Spur"
+     }
+    ],
+    "speciesBodies": 9738,
+    "expected": 312.0
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Empyrean Straits"
+     }
+    ],
+    "speciesBodies": 9738,
+    "expected": 280.4
+   }
+  ],
+  "tubus_tubus_conifer": [
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Empyrean Straits"
+     }
+    ],
+    "speciesBodies": 4098,
+    "expected": 118.0
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Orion-Cygnus Arm"
+     }
+    ],
+    "speciesBodies": 4098,
+    "expected": 29.1
+   }
+  ],
+  "tussock_tussock_catena": [
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Hawking's Gap"
+     }
+    ],
+    "speciesBodies": 4234,
+    "expected": 144.5
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Arcadian Stream"
+     }
+    ],
+    "speciesBodies": 4234,
+    "expected": 119.3
+   },
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 4234,
+    "expected": 231.6
+   }
+  ],
+  "tussock_tussock_cultro": [
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Hawking's Gap"
+     }
+    ],
+    "speciesBodies": 7058,
+    "expected": 240.9
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Empyrean Straits"
+     }
+    ],
+    "speciesBodies": 7058,
+    "expected": 217.1
+   },
+   {
+    "when": [
+     {
+      "value": "dist_ls",
+      "op": "<=",
+      "is": 7830.485611
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 7058,
+    "expected": 513.4
+   }
+  ],
+  "tussock_tussock_propagito": [
+   {
+    "when": [
+     {
+      "value": "dist_ls",
+      "op": "<=",
+      "is": 5338.893309
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 14448,
+    "expected": 813.8
+   }
+  ]
+ }
+}

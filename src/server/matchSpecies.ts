@@ -69,6 +69,8 @@ import { observedWithVolcanism } from "./speciesVolcanismObservations.js";
 import { hostStarVerdict, type HostStarVerdict } from "./speciesHostStarObservations.js";
 import { colourStarNever } from "./colourStarNever.js";
 import { eddnSeenThisFarOut } from "./eddnTemperatureRange.js";
+import { describeExclusion, measuredExclusion, type ExclusionValues } from "./measuredExclusions.js";
+import { hostStarClassKey } from "../shared/hostStarClass.js";
 import { volcanismJournalMatchesFragments } from "../shared/volcanismMatch.js";
 import { isBacteriumSpeciesEntry } from "../shared/speciesBacterium.js";
 import { reportsVolcanism } from "../shared/volcanismText.js";
@@ -303,6 +305,26 @@ export function resolvePlanetTemperatureBand(
   }
   if (est) return { minK: est.tMin, maxK: est.tMax };
   return null;
+}
+
+/** The body values the measured-exclusion rules test, in the units of their table. */
+function exclusionValues(scan: PlanetScan, ctx: SpeciesMatchContext | undefined): ExclusionValues {
+  const num = (v: unknown, k = 1): number | undefined =>
+    typeof v === "number" && Number.isFinite(v) ? v * k : undefined;
+  const metal = scan.composition?.Metal ?? scan.composition?.metal;
+  return {
+    temp: num(scan.SurfaceTemperature),
+    mass: num(scan.MassEM),
+    parent: ctx?.parentKind,
+    sma_ls: num(scan.SemiMajorAxis, 1 / 299_792_458),
+    orb_d: typeof scan.OrbitalPeriod === "number" ? num(Math.abs(scan.OrbitalPeriod), 1 / 86_400) : undefined,
+    dist_ls: num(scan.distanceFromArrivalLs) ?? num(ctx?.distanceFromArrivalLs),
+    grav_g: num(scan.SurfaceGravity, 1 / 9.80665),
+    c_metal: num(metal),
+    host: hostStarClassKey(ctx?.parentStarType) ?? undefined,
+    main: ctx?.systemMainStarClass,
+    region: ctx?.regionName,
+  };
 }
 
 /**
@@ -828,6 +850,19 @@ export function speciesMatchesExcludingTempPressure(
         detail: `Colour star ${ctx.colourStarType} (the brightest in this body's sky): none of the ${never.speciesBodies.toLocaleString("en-US")} bodies in a year of EDDN finds grew under a ${never.cls} colour star, where about ${Math.round(never.expected)} would be expected. ${DEMOTED_NOTE}`,
       });
     }
+  }
+
+  // Where the species never grows although its rate says it should (measuredExclusions.ts, 1.2.18 Part 3b).
+  const excluded = measuredExclusion(entry.id, exclusionValues(scan, ctx));
+  if (excluded) {
+    failures.push({
+      field: "Never found here",
+      soft: true,
+      detail:
+        `${describeExclusion(excluded)}: none of its ${excluded.speciesBodies.toLocaleString("en-US")} bodies in a ` +
+        `year of EDDN finds, nor any other confirmed find, grew here, where about ${Math.round(excluded.expected)} ` +
+        `would be expected. ${DEMOTED_NOTE}`,
+    });
   }
 
   const orb = c.orbitDistanceFromParentStarLs;
