@@ -68,6 +68,7 @@ import { observedEnvelopeFactor } from "./observedEnvelope.js";
 import { observedWithVolcanism } from "./speciesVolcanismObservations.js";
 import { hostStarVerdict, type HostStarVerdict } from "./speciesHostStarObservations.js";
 import { colourStarNever } from "./colourStarNever.js";
+import { eddnSeenThisFarOut } from "./eddnTemperatureRange.js";
 import { volcanismJournalMatchesFragments } from "../shared/volcanismMatch.js";
 import { isBacteriumSpeciesEntry } from "../shared/speciesBacterium.js";
 import { reportsVolcanism } from "../shared/volcanismText.js";
@@ -1112,7 +1113,25 @@ export function speciesMatchesCriteria(
       const beyond =
         !!edgeCheck &&
         (!edgeCheck.straddles || edgeCheck.near === null || edgeCheck.near >= MIN_TEMPERATURE_OBSERVATIONS);
-      if (observedHere && beyond) {
+      // A rescue reaches only as far as the EDDN year has seen the species (eddnTemperatureRange.ts, 1.2.18 Part 2).
+      const eddn = observedHere
+        ? eddnSeenThisFarOut(
+            entry.id,
+            scan.SurfaceTemperature!,
+            c.surfaceTemperatureK?.min,
+            gameTemperatureCeilingK(c.surfaceTemperatureK?.max),
+          )
+        : null;
+      if (observedHere && beyond && eddn && !eddn.seen && eddn.range) {
+        failures.push({
+          field: "SurfaceTemperature",
+          soft: true,
+          detail:
+            `${scan.SurfaceTemperature!.toFixed(1)} K — outside the codex ${speciesRange}, and none of its ` +
+            `${eddn.range.bodies.toLocaleString("en-US")} bodies in a year of EDDN finds grew this far out ` +
+            `(${eddn.range.minK.toFixed(1)}–${eddn.range.maxK.toFixed(1)} K). ${DEMOTED_NOTE}`,
+        });
+      } else if (observedHere && beyond) {
         extraOkReasons.push({
           field: "SurfaceTemperature",
           detail: `${scan.SurfaceTemperature!.toFixed(1)} K — outside the codex ${speciesRange}, but ${observedHere.observations} of ${observedHere.total} observed bodies sit between ${observedHere.binLowK.toFixed(0)} and ${observedHere.binHighK.toFixed(0)} K.`,
@@ -1282,15 +1301,29 @@ export function speciesMatchesCriteria(
         const linkedCheck = observedLinkedRaw
           ? sightingsBeyondEdge(entry, observedLinkedRaw, scan.SurfaceTemperature!, linkedMin, linkedMax)
           : null;
+        const linkedEddn = observedLinkedRaw
+          ? eddnSeenThisFarOut(entry.id, scan.SurfaceTemperature!, linkedMin, linkedMax, "linked")
+          : null;
         const observedLinked =
           observedLinkedRaw &&
           linkedCheck &&
           (!linkedCheck.straddles ||
             linkedCheck.near === null ||
-            linkedCheck.near >= MIN_TEMPERATURE_OBSERVATIONS)
+            linkedCheck.near >= MIN_TEMPERATURE_OBSERVATIONS) &&
+          linkedEddn?.seen !== false
             ? observedLinkedRaw
             : null;
-        if (observedLinkedRaw && !observedLinked) {
+        if (observedLinkedRaw && !observedLinked && linkedEddn?.seen === false && linkedEddn.range) {
+          failures.push({
+            field: "SurfaceTemperature",
+            card: "linked-temp-cap",
+            soft: true,
+            detail:
+              `${(scan.SurfaceTemperature ?? 0).toFixed(0)} K is outside the codex band for this atmosphere, and none ` +
+              `of its ${linkedEddn.range.bodies.toLocaleString("en-US")} bodies in a year of EDDN finds grew this far out ` +
+              `(${linkedEddn.range.minK.toFixed(1)}–${linkedEddn.range.maxK.toFixed(1)} K). ${DEMOTED_NOTE}`,
+          });
+        } else if (observedLinkedRaw && !observedLinked) {
           failures.push({
             field: "SurfaceTemperature",
             card: "linked-temp-cap",

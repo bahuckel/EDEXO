@@ -148,9 +148,20 @@
         "whenAtmosphereLinkedAtmosphereAnyOf": [
           "Carbon Dioxide"
         ],
+        "presence_any_of": [
+          {
+            "volcanismActiveRequired": true
+          },
+          {
+            "temperature_K": {
+              "min": 180
+            }
+          }
+        ],
         "matchContextNotes": [
           "For carbon dioxide atmospheres the codex mean temperature must sit between 180 K and 195 K. Water atmospheres carry no temperature rule at all, so the band is linked to the atmosphere rather than applied flat.",
-          "Ammonia added 2026-10-09: 19 of 20,697 bodies in a year of EDDN codex entries (EDGalaxyData archive) grew on it, one per system; the codex list left it out, so each was listed as unlikely."
+          "Ammonia added 2026-10-09: 19 of 20,697 bodies in a year of EDDN codex entries (EDGalaxyData archive) grew on it, one per system; the codex list left it out, so each was listed as unlikely.",
+          "Volcanism or 180 K, every atmosphere (2026-10-15): in a year of EDDN finds the 3,901 carbon dioxide bodies without volcanism are never under 180.0 K, its 7 ammonia and 27 methane bodies are all volcanic, and 21,625 ammonia bodies without volcanism under 180 K have none."
         ]
       },
       "color_rules": {

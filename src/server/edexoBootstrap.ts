@@ -102,6 +102,7 @@ import {
 } from "./footScannedCatalog.js";
 import { clearHostStarObservationsCache } from "./speciesHostStarObservations.js";
 import { clearColourStarNeverCache } from "./colourStarNever.js";
+import { clearEddnTemperatureRangeCache } from "./eddnTemperatureRange.js";
 import { clearPlanetClassObservationsCache } from "./speciesPlanetClassObservations.js";
 import { clearStarlightRangesCache } from "./starlightRanges.js";
 import { clearObservedEnvelopeCache } from "./observedEnvelope.js";
@@ -279,6 +280,7 @@ function reloadSpeciesDerivedCaches(): void {
   clearRegionSpeciesCache();
   clearHostStarObservationsCache();
   clearColourStarNeverCache();
+  clearEddnTemperatureRangeCache();
   clearPlanetClassObservationsCache();
   clearStarlightRangesCache();
   clearObservedEnvelopeCache();

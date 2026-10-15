@@ -7,14 +7,18 @@
  * exactly here, decides a straddling bin instead: sightings within a few kelvin of the body, on the
  * body's side of the edge.
  *
- * The same rule must not cost a real find. Stratum paleas at 162.1 K — the commander's own, below a
- * codex floor of 165 K — sits beside 33 bodies recorded at 162.6–165 K and stays shown.
+ * The same rule must not cost a real find. Stratum paleas at 162.1 K — counted as the commander's own in 2026-09,
+ * below a codex floor of 165 K — sat beside 33 profile bodies at 162.6–165 K and stayed shown; since 1.2.18 Part 2 the
+ * EDDN year (none under 165.0 K in 17,590) decides how far such a rescue reaches.
  */
 import { describe, expect, it } from "vitest";
 import { loadSpeciesDatabase } from "../src/server/snapshot.js";
 import { resolvePlanetTemperatureBand, speciesMatchesCriteria } from "../src/server/matchSpecies.js";
 import { estimatedTemperatureRangeForScan } from "../src/server/planetTemperature.js";
-import { MIN_TEMPERATURE_OBSERVATIONS, observedNearTemperature } from "../src/server/speciesTemperatureObservations.js";
+import {
+  MIN_TEMPERATURE_OBSERVATIONS,
+  observedNearTemperature,
+} from "../src/server/speciesTemperatureObservations.js";
 import type { PlanetScan, SpeciesEntry } from "../src/shared/types.js";
 
 const db = loadSpeciesDatabase() as unknown as { species: SpeciesEntry[] };
@@ -67,8 +71,18 @@ describe("the matcher, on a straddling bin", () => {
     expect(r.reasons.some((x) => x.field === "SurfaceTemperature")).toBe(true);
   });
 
-  it("keeps paleas at 162.1 K shown", () => {
-    expect(judge("stratum_stratum_paleas", body(162.1, "CarbonDioxide")).ok).toBe(true);
+  /*
+    Was "keeps paleas at 162.1 K shown" (2026-09-23, then counted as one of the commander's finds). Since 1.2.18 Part 2
+    a rescue reaches only as far as the EDDN year has seen the species: none of paleas's 17,590 bodies there is under
+    165.0 K, and neither his journals (Log / Sample) nor his on-foot catalog hold a paleas under 167.3 K today. The 33
+    profile bodies at 162.6-165 K still exist (above) — they just no longer reopen the floor.
+  */
+  it("no longer rescues paleas at 162.1 K: the EDDN year has none of it under 165 K", () => {
+    const r = judge("stratum_stratum_paleas", body(162.1, "CarbonDioxide"));
+    expect(r.ok).toBe(false);
+    expect(
+      r.reasons.some((x) => x.field === "SurfaceTemperature" && /year of EDDN finds/.test(x.detail)),
+    ).toBe(true);
   });
 
   it("still rescues a bin wholly beyond the band — Fungoida stabitis on water above 424 K", () => {

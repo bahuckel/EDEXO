@@ -1,0 +1,381 @@
+{
+ "formatVersion": 1,
+ "builtAt": "2026-10-15",
+ "rule": "Owner 2026-10-15: one lone outlier never sets a range. Two or more systems per species = a pattern to examine; a gate widens only when the pattern is legit, by hand, with the evidence.",
+ "sources": "real-app runs app15 on EDDN hold-outs A/B, hold-out D (judge), his journals (no names); codex temperature outliers over the whole EDDN year. Built by docs/perf/build_outlier_register.py.",
+ "species": {
+  "brain_trees_brain_tree_aureum": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "663513827667:30",
+     "body": "Wregoe ON-J d9-19 B 3",
+     "kind": "demoted",
+     "field": "System bodies"
+    }
+   ]
+  },
+  "brain_trees_brain_tree_ostrinum": {
+   "bodies": 2,
+   "systems": 2,
+   "status": "pattern: examine",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "11680565765425:5",
+     "body": "Col 173 Sector MW-V b18-5 1",
+     "kind": "demoted",
+     "field": "System bodies"
+    },
+    {
+     "src": "holdD (judge)",
+     "key": "354410285395:8",
+     "body": "Col 173 Sector RY-Q d5-10 A 1",
+     "kind": "demoted",
+     "field": "System bodies"
+    }
+   ]
+  },
+  "brain_trees_brain_tree_puniceum": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "29009995894443:4",
+     "body": "Puekee EF-R d4-844 A 2",
+     "kind": "demoted",
+     "field": "System bodies"
+    }
+   ]
+  },
+  "concha_concha_labiata": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "123715334298:24",
+     "body": "Pleia Aoc JH-T c17-0 BC 2",
+     "kind": "demoted",
+     "field": "Orbit"
+    }
+   ]
+  },
+  "concha_concha_renibus": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "train",
+     "key": "87677146338:16",
+     "kind": "codex-temperature",
+     "field": "SurfaceTemperature linked-above 195.5 K",
+     "K": 196.5,
+     "atmo": "carbondioxide"
+    }
+   ]
+  },
+  "electricae_electricae_pluma": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "284046118859:6",
+     "body": "Greia Phoe IZ-M d8-8 A 1 a",
+     "kind": "demoted",
+     "field": "StarType"
+    }
+   ]
+  },
+  "fonticulua_fonticulua_upupam": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdB",
+     "key": "702358821961:6",
+     "body": "Scheau Phio QY-O b8-0 A 3",
+     "kind": "demoted",
+     "field": "Chance here",
+     "K": 63.05,
+     "atm": 0.03635177886997286,
+     "g": 0.263,
+     "atmo": "argonrich"
+    }
+   ]
+  },
+  "frutexa_frutexa_metallicum": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "110956252107:20",
+     "body": "Bya Eup ZQ-L d8-3 B 6",
+     "kind": "demoted",
+     "field": "AtmosphereType"
+    }
+   ]
+  },
+  "fungoida_fungoida_bullarum": {
+   "bodies": 2,
+   "systems": 2,
+   "status": "pattern: examine",
+   "rows": [
+    {
+     "src": "holdA",
+     "key": "3058419704305:1",
+     "body": "Plua Thua FQ-V b57-1 1",
+     "kind": "demoted",
+     "field": "PlanetClass",
+     "K": 60.43,
+     "atm": 0.00800767877621515,
+     "g": 0.263,
+     "atmo": "argon"
+    },
+    {
+     "src": "holdD (judge)",
+     "key": "703166161321:2",
+     "body": "Flyua Eork DG-V b49-0 2",
+     "kind": "demoted",
+     "field": "PlanetClass"
+    }
+   ]
+  },
+  "fungoida_fungoida_stabitis": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "train",
+     "key": "87677146338:16",
+     "kind": "codex-temperature",
+     "field": "SurfaceTemperature linked-above 195.5 K",
+     "K": 196.5,
+     "atmo": "carbondioxide"
+    }
+   ]
+  },
+  "osseus_osseus_discus": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "663362767227:76",
+     "body": "HIP 65459 ABC 7 a",
+     "kind": "demoted",
+     "field": "Chance here"
+    }
+   ]
+  },
+  "osseus_osseus_pellebantus": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "train",
+     "key": "87677146338:16",
+     "kind": "codex-temperature",
+     "field": "SurfaceTemperature flat-above 195.5 K",
+     "K": 196.5,
+     "atmo": "carbondioxide"
+    }
+   ]
+  },
+  "osseus_osseus_spiralis": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdB",
+     "key": "89622779442:21",
+     "body": "Yaikao ND-V c5-0 1 b",
+     "kind": "demoted",
+     "field": "Volcanism",
+     "K": 176.11,
+     "atm": 0.010392733293856404,
+     "g": 0.055,
+     "atmo": "ammonia"
+    }
+   ]
+  },
+  "recepta_recepta_umbrux": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "5920402641395:19",
+     "body": "Dryaa Pri JP-D d13-172 ABC 1 f",
+     "kind": "demoted",
+     "field": "AtmosphereType"
+    }
+   ]
+  },
+  "sinuous_tuber_sinuous_tubers_blatteum": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "1317321935859:7",
+     "body": "Syralaei YL-C d13-38 B 2",
+     "kind": "demoted",
+     "field": "Chance here"
+    }
+   ]
+  },
+  "stratum_stratum_araneamus": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdB",
+     "key": "16198441843:20",
+     "body": "Blie Auscs FS-B d13-0 6 d",
+     "kind": "demoted",
+     "field": "Chance here",
+     "K": 169.27,
+     "atm": 0.008448323987169997,
+     "g": 0.274,
+     "atmo": "sulphurdioxide"
+    }
+   ]
+  },
+  "stratum_stratum_excutitus": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "220036407:14",
+     "body": "Byooma AA-A h26 3 b",
+     "kind": "demoted",
+     "field": "Chance here"
+    }
+   ]
+  },
+  "stratum_stratum_tectonicas": {
+   "bodies": 2,
+   "systems": 2,
+   "status": "pattern: examine",
+   "rows": [
+    {
+     "src": "holdB",
+     "key": "62921128234747:28",
+     "body": "Grea Hypoo PA-C d14-1831 C 3",
+     "kind": "demoted",
+     "field": "StarType",
+     "K": 176.83,
+     "atm": 0.0018381831334813718,
+     "g": 0.367,
+     "atmo": "sulphurdioxide"
+    },
+    {
+     "src": "holdB",
+     "key": "2278245438538:2",
+     "body": "Bleae Thaa CD-L c8-8 1",
+     "kind": "demoted",
+     "field": "AtmosphereType",
+     "K": 170.13,
+     "atm": 0.050675189479397975,
+     "g": 0.498,
+     "atmo": "argonrich"
+    }
+   ]
+  },
+  "tubus_tubus_compagibus": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "train",
+     "key": "87677146338:16",
+     "kind": "codex-temperature",
+     "field": "SurfaceTemperature flat-above 195.5 K",
+     "K": 196.5,
+     "atmo": "carbondioxide"
+    }
+   ]
+  },
+  "tubus_tubus_sororibus": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "train",
+     "key": "2949434599937:19",
+     "kind": "codex-temperature",
+     "field": "SurfaceTemperature flat-above 190 K",
+     "K": 190.91,
+     "atmo": "carbondioxide"
+    }
+   ]
+  },
+  "tussock_tussock_divisa": {
+   "bodies": 3,
+   "systems": 3,
+   "status": "pattern: examine",
+   "rows": [
+    {
+     "src": "holdD (judge)",
+     "key": "77409358082:16",
+     "body": "Oochody HX-B c0 6 a",
+     "kind": "demoted",
+     "field": "Chance here"
+    },
+    {
+     "src": "holdD (judge)",
+     "key": "904660685010:21",
+     "body": "Slegi SD-K c24-3 1 a",
+     "kind": "demoted",
+     "field": "Chance here"
+    },
+    {
+     "src": "holdD (judge)",
+     "key": "1762538850235:81",
+     "body": "Gludgoi NB-O d6-51 14 f",
+     "kind": "demoted",
+     "field": "StarType"
+    }
+   ]
+  },
+  "tussock_tussock_triticum": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "train",
+     "key": "87677146338:16",
+     "kind": "codex-temperature",
+     "field": "SurfaceTemperature flat-above 195.5 K",
+     "K": 196.5,
+     "atmo": "carbondioxide"
+    }
+   ]
+  }
+ }
+}

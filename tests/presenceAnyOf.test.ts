@@ -131,6 +131,11 @@ describe("the loader", () => {
     expect(tela.criteria.presenceAnyOf).toHaveLength(2);
     expect(tela.criteria.presenceAnyOf![0]!.volcanismActiveRequired).toBe(true);
     expect(tela.criteria.presenceAnyOf![1]!.surfaceTemperatureK).toEqual({ min: 300, max: undefined });
+    // Concha renibus, volcanism or 180 K on every atmosphere (plan-15102026-1.2.18 Part 2).
+    const renibus = db.species.find((e) => e.displayName === "Concha renibus")!;
+    expect(renibus.criteria.presenceAnyOf).toHaveLength(2);
+    expect(renibus.criteria.presenceAnyOf![0]!.volcanismActiveRequired).toBe(true);
+    expect(renibus.criteria.presenceAnyOf![1]!.surfaceTemperatureK).toEqual({ min: 180, max: undefined });
   });
 
   it("leaves every other species without branches", () => {
@@ -140,7 +145,7 @@ describe("the loader", () => {
       enough to notice.
     */
     const carriers = db.species.filter((e) => e.criteria.presenceAnyOf?.length);
-    expect(carriers.map((e) => e.displayName)).toEqual(["Bacterium tela"]);
+    expect(carriers.map((e) => e.displayName).sort()).toEqual(["Bacterium tela", "Concha renibus"]);
   });
 });
 

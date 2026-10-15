@@ -1,0 +1,581 @@
+{
+ "formatVersion": 2,
+ "builtAt": "2026-10-15",
+ "source": "EDDN year (EDGalaxyData archive) without hold-outs A/B, each species logged on the exact body; journal SurfaceTemperature. Lone outliers beyond a codex edge never set the range (outlier-register.json). Built by docs/perf/build_eddn_temperature_range.py.",
+ "minBodies": 50,
+ "species": {
+  "aleoida_aleoida_arcus": {
+   "minK": 175.0,
+   "maxK": 180.0,
+   "bodies": 2917
+  },
+  "aleoida_aleoida_coronamus": {
+   "minK": 180.0,
+   "maxK": 190.0,
+   "bodies": 2926
+  },
+  "aleoida_aleoida_gravis": {
+   "minK": 190.01,
+   "maxK": 195.4,
+   "bodies": 1206
+  },
+  "aleoida_aleoida_laminiae": {
+   "minK": 152.16,
+   "maxK": 176.54,
+   "bodies": 2579
+  },
+  "aleoida_aleoida_spica": {
+   "minK": 170.0,
+   "maxK": 176.43,
+   "bodies": 1271
+  },
+  "amphora_amphora_plant": {
+   "minK": 1002.3,
+   "maxK": 1808.79,
+   "bodies": 174
+  },
+  "anemone_blatteum_bioluminescent": {
+   "minK": 211.79,
+   "maxK": 4636.2,
+   "bodies": 1082
+  },
+  "anemone_croceum": {
+   "minK": 200.64,
+   "maxK": 432.1,
+   "bodies": 88
+  },
+  "anemone_luteolum": {
+   "minK": 200.4,
+   "maxK": 439.77,
+   "bodies": 307
+  },
+  "anemone_prasinum_bioluminescent": {
+   "minK": 111.81,
+   "maxK": 6429.77,
+   "bodies": 598
+  },
+  "anemone_roseum": {
+   "minK": 219.79,
+   "maxK": 438.4,
+   "bodies": 72
+  },
+  "anemone_roseum_bioluminescent": {
+   "minK": 30.37,
+   "maxK": 3062.89,
+   "bodies": 828
+  },
+  "anemone_rubeum_bioluminescent": {
+   "minK": 164.17,
+   "maxK": 2105.97,
+   "bodies": 851
+  },
+  "bacterium_bacterium_acies": {
+   "minK": 20.01,
+   "maxK": 138.48,
+   "bodies": 34465
+  },
+  "bacterium_bacterium_alcyoneum": {
+   "minK": 152.16,
+   "maxK": 176.56,
+   "bodies": 26918
+  },
+  "bacterium_bacterium_aurasus": {
+   "minK": 146.07,
+   "maxK": 399.21,
+   "bodies": 64711
+  },
+  "bacterium_bacterium_bullaris": {
+   "minK": 67.65,
+   "maxK": 142.37,
+   "bodies": 19004
+  },
+  "bacterium_bacterium_cerbrus": {
+   "minK": 132.03,
+   "maxK": 498.88,
+   "bodies": 47902
+  },
+  "bacterium_bacterium_informem": {
+   "minK": 42.93,
+   "maxK": 230.14,
+   "bodies": 31478
+  },
+  "bacterium_bacterium_nebulus": {
+   "minK": 20.09,
+   "maxK": 20.7,
+   "bodies": 1477
+  },
+  "bacterium_bacterium_omentum": {
+   "minK": 20.01,
+   "maxK": 305.66,
+   "bodies": 2586
+  },
+  "bacterium_bacterium_scopulum": {
+   "minK": 20.01,
+   "maxK": 228.37,
+   "bodies": 1761
+  },
+  "bacterium_bacterium_tela": {
+   "minK": 20.01,
+   "maxK": 598.96,
+   "bodies": 17680
+  },
+  "bacterium_bacterium_verrata": {
+   "minK": 20.03,
+   "maxK": 430.75,
+   "bodies": 2285
+  },
+  "bacterium_bacterium_vesicula": {
+   "minK": 50.2,
+   "maxK": 295.78,
+   "bodies": 46662
+  },
+  "bacterium_bacterium_volu": {
+   "minK": 145.65,
+   "maxK": 245.6,
+   "bodies": 3799
+  },
+  "bark_mounds_bark_mounds": {
+   "minK": 200.08,
+   "maxK": 439.67,
+   "bodies": 1235
+  },
+  "brain_trees_brain_tree_gypseeum": {
+   "minK": 200.12,
+   "maxK": 328.75,
+   "bodies": 73
+  },
+  "brain_trees_brain_tree_lividum": {
+   "minK": 305.55,
+   "maxK": 495.15,
+   "bodies": 93
+  },
+  "brain_trees_brain_tree_ostrinum": {
+   "minK": 20.15,
+   "maxK": 1926.3,
+   "bodies": 461
+  },
+  "brain_trees_brain_tree_puniceum": {
+   "minK": 31.36,
+   "maxK": 1806.32,
+   "bodies": 81
+  },
+  "brain_trees_brain_tree_roseum": {
+   "minK": 200.02,
+   "maxK": 499.7,
+   "bodies": 1435
+  },
+  "brain_trees_brain_tree_viride": {
+   "minK": 100.83,
+   "maxK": 189.86,
+   "bodies": 83
+  },
+  "cactoida_cactoida_cortexum": {
+   "minK": 180.0,
+   "maxK": 195.38,
+   "bodies": 2609
+  },
+  "cactoida_cactoida_lapis": {
+   "minK": 160.02,
+   "maxK": 176.61,
+   "bodies": 4366
+  },
+  "cactoida_cactoida_peperatis": {
+   "minK": 160.0,
+   "maxK": 176.54,
+   "bodies": 2500
+  },
+  "cactoida_cactoida_pullulanta": {
+   "minK": 180.01,
+   "maxK": 195.35,
+   "bodies": 1483
+  },
+  "cactoida_cactoida_vermis": {
+   "minK": 160.49,
+   "maxK": 449.87,
+   "bodies": 2336
+  },
+  "clypeus_clypeus_lacrimam": {
+   "minK": 190.01,
+   "maxK": 451.76,
+   "bodies": 2891
+  },
+  "clypeus_clypeus_margaritus": {
+   "minK": 190.01,
+   "maxK": 450.93,
+   "bodies": 1898
+  },
+  "clypeus_clypeus_speculumi": {
+   "minK": 190.0,
+   "maxK": 451.14,
+   "bodies": 963
+  },
+  "concha_concha_aureolas": {
+   "minK": 152.16,
+   "maxK": 176.61,
+   "bodies": 2137
+  },
+  "concha_concha_biconcavis": {
+   "minK": 42.93,
+   "maxK": 50.2,
+   "bodies": 273
+  },
+  "concha_concha_labiata": {
+   "minK": 150.0,
+   "maxK": 195.4,
+   "bodies": 11154
+  },
+  "concha_concha_renibus": {
+   "minK": 78.82,
+   "maxK": 451.76,
+   "bodies": 7027,
+   "linkedMinK": 180.0,
+   "linkedMaxK": 195.5,
+   "linkedBodies": 3901
+  },
+  "crystalline_shards_crystalline_shards": {
+   "minK": 20.72,
+   "maxK": 266.9,
+   "bodies": 1873
+  },
+  "electricae_electricae_pluma": {
+   "minK": 27.97,
+   "maxK": 149.61,
+   "bodies": 1731
+  },
+  "electricae_electricae_radialem": {
+   "minK": 50.21,
+   "maxK": 149.0,
+   "bodies": 2279
+  },
+  "fonticulua_fonticulua_campestris": {
+   "minK": 50.2,
+   "maxK": 150.1,
+   "bodies": 30022
+  },
+  "fonticulua_fonticulua_digitos": {
+   "minK": 83.76,
+   "maxK": 108.57,
+   "bodies": 7287
+  },
+  "fonticulua_fonticulua_fluctus": {
+   "minK": 145.65,
+   "maxK": 197.82,
+   "bodies": 191
+  },
+  "fonticulua_fonticulua_lapida": {
+   "minK": 50.24,
+   "maxK": 80.78,
+   "bodies": 10345
+  },
+  "fonticulua_fonticulua_segmentatus": {
+   "minK": 50.62,
+   "maxK": 74.67,
+   "bodies": 1125
+  },
+  "fonticulua_fonticulua_upupam": {
+   "minK": 60.66,
+   "maxK": 124.74,
+   "bodies": 5631
+  },
+  "frutexa_frutexa_acus": {
+   "minK": 146.53,
+   "maxK": 195.38,
+   "bodies": 9509,
+   "linkedMinK": 146.53,
+   "linkedMaxK": 195.38,
+   "linkedBodies": 9509
+  },
+  "frutexa_frutexa_collum": {
+   "minK": 132.08,
+   "maxK": 166.43,
+   "bodies": 562
+  },
+  "frutexa_frutexa_fera": {
+   "minK": 146.07,
+   "maxK": 195.4,
+   "bodies": 2987,
+   "linkedMinK": 146.07,
+   "linkedMaxK": 195.4,
+   "linkedBodies": 2987
+  },
+  "frutexa_frutexa_flabellum": {
+   "minK": 152.17,
+   "maxK": 176.61,
+   "bodies": 6099
+  },
+  "frutexa_frutexa_flammasis": {
+   "minK": 152.22,
+   "maxK": 176.54,
+   "bodies": 3145
+  },
+  "frutexa_frutexa_metallicum": {
+   "minK": 103.33,
+   "maxK": 399.47,
+   "bodies": 9293,
+   "linkedMinK": 146.41,
+   "linkedMaxK": 195.38,
+   "linkedBodies": 4852
+  },
+  "frutexa_frutexa_sponsae": {
+   "minK": 395.03,
+   "maxK": 451.76,
+   "bodies": 1299
+  },
+  "fumerola_fumerola_aquatis": {
+   "minK": 20.01,
+   "maxK": 441.91,
+   "bodies": 932
+  },
+  "fumerola_fumerola_carbosis": {
+   "minK": 56.54,
+   "maxK": 256.96,
+   "bodies": 1033
+  },
+  "fumerola_fumerola_extremus": {
+   "minK": 70.67,
+   "maxK": 201.09,
+   "bodies": 315
+  },
+  "fumerola_fumerola_nitris": {
+   "minK": 50.29,
+   "maxK": 249.78,
+   "bodies": 1255
+  },
+  "fungoida_fungoida_bullarum": {
+   "minK": 50.01,
+   "maxK": 133.31,
+   "bodies": 2718
+  },
+  "fungoida_fungoida_gelata": {
+   "minK": 79.45,
+   "maxK": 451.76,
+   "bodies": 7758,
+   "linkedMinK": 180.0,
+   "linkedMaxK": 195.4,
+   "linkedBodies": 5612
+  },
+  "fungoida_fungoida_setisis": {
+   "minK": 67.65,
+   "maxK": 176.61,
+   "bodies": 19507
+  },
+  "fungoida_fungoida_stabitis": {
+   "minK": 78.82,
+   "maxK": 450.67,
+   "bodies": 3978,
+   "linkedMinK": 180.0,
+   "linkedMaxK": 195.5,
+   "linkedBodies": 2906
+  },
+  "osseus_osseus_cornibus": {
+   "minK": 180.0,
+   "maxK": 195.26,
+   "bodies": 1889
+  },
+  "osseus_osseus_discus": {
+   "minK": 70.67,
+   "maxK": 451.76,
+   "bodies": 2221
+  },
+  "osseus_osseus_fractus": {
+   "minK": 180.0,
+   "maxK": 190.0,
+   "bodies": 4691
+  },
+  "osseus_osseus_pellebantus": {
+   "minK": 191.0,
+   "maxK": 195.5,
+   "bodies": 1225
+  },
+  "osseus_osseus_pumice": {
+   "minK": 42.93,
+   "maxK": 135.83,
+   "bodies": 3999
+  },
+  "osseus_osseus_spiralis": {
+   "minK": 160.0,
+   "maxK": 176.61,
+   "bodies": 12329
+  },
+  "recepta_recepta_conditivus": {
+   "minK": 132.03,
+   "maxK": 272.44,
+   "bodies": 1921
+  },
+  "recepta_recepta_deltahedronix": {
+   "minK": 132.03,
+   "maxK": 271.78,
+   "bodies": 617
+  },
+  "recepta_recepta_umbrux": {
+   "minK": 132.06,
+   "maxK": 272.9,
+   "bodies": 2656
+  },
+  "sinuous_tuber_sinuous_tubers_blatteum": {
+   "minK": 205.42,
+   "maxK": 498.64,
+   "bodies": 64
+  },
+  "sinuous_tuber_sinuous_tubers_caeruleum": {
+   "minK": 200.03,
+   "maxK": 499.84,
+   "bodies": 511
+  },
+  "sinuous_tuber_sinuous_tubers_lindigoticum": {
+   "minK": 205.11,
+   "maxK": 490.19,
+   "bodies": 79
+  },
+  "sinuous_tuber_sinuous_tubers_prasinum": {
+   "minK": 200.21,
+   "maxK": 499.93,
+   "bodies": 875
+  },
+  "sinuous_tuber_sinuous_tubers_roseum": {
+   "minK": 200.63,
+   "maxK": 498.71,
+   "bodies": 173
+  },
+  "stratum_stratum_araneamus": {
+   "minK": 165.04,
+   "maxK": 372.7,
+   "bodies": 3177
+  },
+  "stratum_stratum_cucumisis": {
+   "minK": 191.01,
+   "maxK": 372.62,
+   "bodies": 3451
+  },
+  "stratum_stratum_excutitus": {
+   "minK": 165.0,
+   "maxK": 189.96,
+   "bodies": 3888
+  },
+  "stratum_stratum_frigus": {
+   "minK": 191.02,
+   "maxK": 371.95,
+   "bodies": 811
+  },
+  "stratum_stratum_laminamus": {
+   "minK": 165.0,
+   "maxK": 176.61,
+   "bodies": 1034
+  },
+  "stratum_stratum_limaxus": {
+   "minK": 165.01,
+   "maxK": 189.98,
+   "bodies": 2558
+  },
+  "stratum_stratum_paleas": {
+   "minK": 165.0,
+   "maxK": 449.53,
+   "bodies": 17590
+  },
+  "stratum_stratum_tectonicas": {
+   "minK": 165.0,
+   "maxK": 449.93,
+   "bodies": 52275
+  },
+  "tubus_tubus_cavas": {
+   "minK": 160.0,
+   "maxK": 195.2,
+   "bodies": 6080
+  },
+  "tubus_tubus_compagibus": {
+   "minK": 160.0,
+   "maxK": 195.5,
+   "bodies": 9738
+  },
+  "tubus_tubus_conifer": {
+   "minK": 160.0,
+   "maxK": 194.99,
+   "bodies": 4098
+  },
+  "tubus_tubus_rosarium": {
+   "minK": 160.01,
+   "maxK": 176.61,
+   "bodies": 1968
+  },
+  "tubus_tubus_sororibus": {
+   "minK": 160.0,
+   "maxK": 190,
+   "bodies": 2067
+  },
+  "tussock_tussock_albata": {
+   "minK": 175.0,
+   "maxK": 180.0,
+   "bodies": 4502
+  },
+  "tussock_tussock_capillum": {
+   "minK": 80.01,
+   "maxK": 128.23,
+   "bodies": 1724
+  },
+  "tussock_tussock_caputus": {
+   "minK": 181.0,
+   "maxK": 190.0,
+   "bodies": 4059
+  },
+  "tussock_tussock_catena": {
+   "minK": 152.18,
+   "maxK": 176.54,
+   "bodies": 4234
+  },
+  "tussock_tussock_cultro": {
+   "minK": 152.17,
+   "maxK": 176.61,
+   "bodies": 7058
+  },
+  "tussock_tussock_divisa": {
+   "minK": 152.2,
+   "maxK": 176.43,
+   "bodies": 4174
+  },
+  "tussock_tussock_ignis": {
+   "minK": 161.0,
+   "maxK": 170.0,
+   "bodies": 8380
+  },
+  "tussock_tussock_pennata": {
+   "minK": 146.22,
+   "maxK": 154.0,
+   "bodies": 1174
+  },
+  "tussock_tussock_pennatis": {
+   "minK": 146.07,
+   "maxK": 195.4,
+   "bodies": 5565
+  },
+  "tussock_tussock_propagito": {
+   "minK": 146.89,
+   "maxK": 195.39,
+   "bodies": 14448
+  },
+  "tussock_tussock_serrati": {
+   "minK": 171.0,
+   "maxK": 174.0,
+   "bodies": 3063
+  },
+  "tussock_tussock_stigmasis": {
+   "minK": 132.03,
+   "maxK": 166.43,
+   "bodies": 866
+  },
+  "tussock_tussock_triticum": {
+   "minK": 191.0,
+   "maxK": 195.5,
+   "bodies": 1195
+  },
+  "tussock_tussock_ventusa": {
+   "minK": 155.01,
+   "maxK": 160.0,
+   "bodies": 2509
+  },
+  "tussock_tussock_virgam": {
+   "minK": 391.95,
+   "maxK": 449.87,
+   "bodies": 2387
+  }
+ }
+}
