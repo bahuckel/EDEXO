@@ -14,7 +14,10 @@ const pages = [
   ...readdirSync(path.join("public", "legal"))
     .filter((f) => f.endsWith(".html"))
     .map((f) => path.join("public", "legal", f)),
-  path.join("src", "client", "index.html"),
+  // The app and, since 1.2.17, the HUD overlay pages (Vite entries).
+  ...readdirSync(path.join("src", "client"))
+    .filter((f) => f.endsWith(".html"))
+    .map((f) => path.join("src", "client", f)),
 ];
 
 describe("Content-Security-Policy", () => {

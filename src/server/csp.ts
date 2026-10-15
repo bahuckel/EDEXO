@@ -5,7 +5,8 @@
  * send it: its React refresh runs inline.
  *
  * - Scripts: this origin only. The launcher's script moved to launcher.js and the overlays' to
- *   hud/boot.js for this; an inline script or an `on…=` attribute no longer runs.
+ *   hud/boot (a module; src/client/hud/boot.ts since 1.2.17) for this; an inline script or an `on…=` attribute no
+ *   longer runs.
  * - Styles: inline allowed — the launcher's one <style> block and style attributes throughout.
  * - Connections: this origin, its WebSocket, the local API by address (the launcher builds
  *   `http://127.0.0.1:<port>` URLs), and api.ipify.org for the launcher's "show my public address".

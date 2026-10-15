@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 /**
- * The HUD overlay logic (public/hud/) against fake snapshots.
+ * The HUD overlay logic (src/client/hud/, React since 1.2.17; public/hud/ before) against fake snapshots.
  *
- * public/hud/ holds the rendering of the overlay sections as plain browser modules, no build step.
+ * src/client/hud/ holds the rendering of the overlay sections: React components with the markup the plain modules
+ * built, so these tests carried over unchanged.
  * They are loaded into jsdom here (tests/helpers/loadHud.ts) and driven through `HUD.mount` / `HUD.render` with `noTimers`, so nothing
  * polls or opens sockets. These are the rules the owner asked for and the bugs he reported: the
  * unlikely tier hidden unless confirmed, scan progress after the species, the targeted body winning

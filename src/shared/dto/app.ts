@@ -246,6 +246,11 @@ export interface HudPrefsDTO {
   tiltMode?: "turn" | "slant";
   /** Elite Style's slant, degrees, -15..15 (positive: rising to the right). */
   slant?: number;
+  /**
+   * The HUD sections open in the app, in the launcher's stack order (owner, 2026-10-15: the phone shows what the app
+   * has enabled, in its order). Absent when the launcher cannot tell (not in Electron).
+   */
+  sections?: string[];
 }
 
 /** The session log: what happened since the app started, for the modal and the Markdown copy. */

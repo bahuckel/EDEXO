@@ -18,7 +18,7 @@ export function parseWsChannel(v: unknown): WsChannel | null {
   return v === "app" || v === "hud" || v === "launcher" ? v : null;
 }
 
-/** Everything `public/hud/` reads off the snapshot (`d.<key>`), plus the bodies it looks up. */
+/** Everything the HUD (`src/client/hud/`) reads off the snapshot (`d.<key>`), plus the bodies it looks up. */
 const HUD_KEYS = [
   "port",
   "journalBoot",

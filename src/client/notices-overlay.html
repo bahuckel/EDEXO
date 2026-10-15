@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Notices</title>
-    <!-- One HUD section on its own. The look is hud.css, the section and its data feed are hud/ (main.js mounts it). -->
-    <link rel="stylesheet" href="hud.css?v=19" />
+    <!-- One HUD section on its own. The look is hud.css, the section and its data feed are src/client/hud/ (React since 1.2.17; main.tsx mounts it). -->
+    <link rel="stylesheet" href="/hud.css?v=21" />
   </head>
   <body data-sections="notices">
     <div class="shell" id="shell">
@@ -13,6 +13,6 @@
         <div class="panel__body" id="hud"></div>
       </div>
     </div>
-    <script type="module" src="hud/boot.js"></script>
+    <script type="module" src="./hud/boot.ts"></script>
   </body>
 </html>

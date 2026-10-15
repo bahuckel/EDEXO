@@ -1313,6 +1313,13 @@ export class GameStateStore {
     if (typeof r.tilt === "number" && Number.isFinite(r.tilt)) out.tilt = Math.min(35, Math.max(-35, r.tilt));
     if (r.tiltMode === "turn" || r.tiltMode === "slant") out.tiltMode = r.tiltMode;
     if (typeof r.slant === "number" && Number.isFinite(r.slant)) out.slant = Math.min(15, Math.max(-15, r.slant));
+    if (Array.isArray(r.sections)) {
+      const known = ["jump", "fss", "candidates", "distance", "datavalue", "achievement", "notable", "notices"];
+      out.sections = [];
+      for (const n of r.sections) {
+        if (typeof n === "string" && known.includes(n) && !out.sections.includes(n)) out.sections.push(n);
+      }
+    }
     this.hudPrefs = out;
     return out;
   }

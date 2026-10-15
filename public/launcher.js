@@ -1895,7 +1895,44 @@
       if (mark) mark.textContent = on ? "✓" : "";
     });
     if (ovMerge) ovMerge.checked = hudMergeOn();
+    void refreshPhoneSections();
   }
+
+  /*
+    The phone HUD shows what the app has open, in the app's stack order (owner, 2026-10-15: it showed every section
+    in its own order). Read from the windows that exist, so a HUD opened or closed any way — the picker, merge, the
+    windows restored at start — reaches the phone on the next look; sent with the other HUD settings.
+  */
+  var hudPhoneSections = null;
+  async function refreshPhoneSections() {
+    var ee = window.edexoElectron;
+    if (!ee || typeof ee.getHudOverlayState !== "function") return;
+    var order = typeof hudOrder !== "undefined" && hudOrder ? hudOrder : HUD_SECTION_ORDER;
+    try {
+      if (typeof ee.getHudLayout === "function") {
+        var lay = await ee.getHudLayout();
+        if (lay && Array.isArray(lay.order) && lay.order.length) {
+          var secs = lay.order.map(function (k) { return HUD_SECTION_BY_PATH[k]; }).filter(Boolean);
+          order = secs.concat(HUD_SECTION_ORDER.filter(function (s) { return secs.indexOf(s) < 0; }));
+        }
+      }
+    } catch (e) {
+      /* the launcher's own list */
+    }
+    var active = activeSections(await hudPaths());
+    var list = order.filter(function (s) {
+      return active.indexOf(s) >= 0;
+    });
+    if (hudPhoneSections && hudPhoneSections.join(",") === list.join(",")) return;
+    hudPhoneSections = list;
+    syncHudPrefs();
+  }
+  setTimeout(function () {
+    void refreshPhoneSections();
+  }, 3000);
+  setInterval(function () {
+    void refreshPhoneSections();
+  }, 10000);
 
   async function toggleHudOverlayPath(pathname, width, height) {
     launcherActionMsg.className = "msg-launcher";
@@ -2147,6 +2184,7 @@
     try { var tl = parseFloat(localStorage.getItem(LS_HUD_TILT) || ""); prefs.tilt = isFinite(tl) ? tl : 15; } catch (e) {}
     try { prefs.tiltMode = localStorage.getItem(LS_HUD_TILT_MODE) === "slant" ? "slant" : "turn"; } catch (e) {}
     try { var sl = parseFloat(localStorage.getItem(LS_HUD_SLANT) || ""); prefs.slant = isFinite(sl) ? sl : 6; } catch (e) {}
+    if (hudPhoneSections) prefs.sections = hudPhoneSections.slice();
     return prefs;
   }
   function syncHudPrefs() {
@@ -2425,7 +2463,11 @@
   function pushLayout() {
     var ee = window.edexoElectron;
     if (ee && typeof ee.setHudLayout === "function") {
-      void ee.setHudLayout({ corner: hudCorner ? hudCorner.value : "tr", order: layoutOrderKeys() });
+      void Promise.resolve(ee.setHudLayout({ corner: hudCorner ? hudCorner.value : "tr", order: layoutOrderKeys() })).then(
+        function () {
+          return refreshPhoneSections();
+        },
+      ).catch(function () {});
     }
     // The merged HUD orders its sections itself; re-show it so the panel follows the list.
     if (hudMergeOn()) {

@@ -1168,12 +1168,22 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
 }
 
 /* ---- phone mode (task 13): the same HUD, laid out for a hand-held screen ------------------------ */
+/* The page itself black as well (owner, 2026-10-15): the overlays' transparent page must never show
+   a browser's own (white) canvas past the body, nor a light form control. */
+html.phone {
+  background: #050406 !important;
+  color-scheme: dark;
+  /* The page scrolls, as any page (owner, 2026-10-15: the Elite Style did not; the overlays' hidden overflow
+     on the root stopped every touch scroll, a short HUD just never needed one). */
+  overflow-x: hidden;
+  overflow-y: auto;
+}
 body.phone {
   min-height: 100vh;
   padding: 0.4rem 0.4rem 1.2rem;
   background: #050406 !important;
   font-size: 18px;
-  overflow: auto;
+  overflow: visible;
 }
 body.phone .shell {
   max-width: none;
@@ -1189,9 +1199,6 @@ body.phone .panel__body {
 body.phone .hud-section + .hud-section {
   margin-top: 0;
   padding-top: 0.6rem;
-}
-body.phone .hud-section--distance {
-  order: -1;
 }
 @media (orientation: landscape) and (min-width: 640px) {
   body.phone .panel__body {
@@ -1242,10 +1249,60 @@ body.phone .phone-chip--dim {
 body.phone.phone--fullscreen {
   padding-top: 0.2rem;
 }
+/*
+  Full screen (owner, 2026-10-15): the chip row folds into a gear in the corner, and the gear fades away after
+  3 s without a touch; any touch brings it back. The gear opens the row over the top of the HUD.
+*/
+.phone-gear {
+  display: none;
+}
+body.phone.phone--fullscreen .phone-gear {
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0;
+  color: var(--hud-hi);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--hud-dim);
+  clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+  cursor: pointer;
+  transition: opacity 0.4s ease;
+}
+body.phone.phone--fullscreen.phone--menu .phone-gear {
+  color: #07060a;
+  background: linear-gradient(180deg, var(--hud-hi), var(--hud) 60%, var(--hud));
+  border-color: var(--hud-hi);
+}
+body.phone.phone--fullscreen.phone--idle:not(.phone--menu) .phone-gear {
+  opacity: 0;
+  pointer-events: none;
+}
+body.phone.phone--fullscreen .phone-bar {
+  display: none;
+}
+body.phone.phone--fullscreen.phone--menu .phone-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 19;
+  display: flex;
+  margin: 0;
+  padding: 0.5rem 3.6rem 0.6rem 0.5rem;
+  background: rgba(5, 4, 6, 0.94);
+  border-bottom: 1px solid var(--hud-dim);
+}
 
-/* phone: nothing may size itself to its content — the strip must overflow its box, not the screen */
+/* phone: nothing may size itself to its content — the strip must overflow its box, not the screen
+   (clipped, not hidden: a hidden overflow would make the body a scroller of its own and take the scroll) */
 body.phone {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 body.phone .shell,
 body.phone .panel,

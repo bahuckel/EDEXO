@@ -143,7 +143,7 @@ describe("attaching to another instance", () => {
 describe("the overlay commands, as the app actually reads them", () => {
   it("sets HUD sections with the key the page reads", async () => {
     /*
-      THE ONE THAT MATTERS HERE. The HUD (public/hud/main.js) reads `?s=`; `?sections=` is not an error to it — with no
+      THE ONE THAT MATTERS HERE. The HUD (src/client/hud/main.tsx) reads `?s=`; `?sections=` is not an error to it — with no
       `s` in the query `sectionsFromUrl` falls back to **every** section. So the wrong key made the
       command report success while doing the opposite of what was asked, on a real HUD window.
     */
@@ -203,7 +203,8 @@ describe("overlay names and route import (code review A4/A5, 2026-09-27)", () =>
     const { existsSync } = await import("node:fs");
     for (const n of ["hud", "distance", "radar", "foot", "jump", "candidates", "fss", "datavalue"]) {
       const page = overlayPage(n);
-      expect(existsSync(`public${page}`), `${n} → ${page}`).toBe(true);
+      // The overlay pages are Vite entries in src/client since 1.2.17 (built to dist/web at the same paths).
+      expect(existsSync(`src/client${page}`), `${n} → ${page}`).toBe(true);
     }
   });
 });

@@ -46,7 +46,7 @@ export function parsePairs(args: string[]): Record<string, unknown> {
   return out;
 }
 
-/** The HUD's own section names, from `public/hud/main.js` (`ORDER`). */
+/** The HUD's own section names, from `src/client/hud/main.tsx` (`ORDER`). */
 export const HUD_SECTIONS = ["jump", "fss", "candidates", "distance", "datavalue", "achievement"];
 
 const onOff = (args: string[]): boolean | null =>
