@@ -1,19 +1,43 @@
 {
  "formatVersion": 1,
- "builtAt": "2026-10-15",
+ "builtAt": "2026-10-16",
  "source": "EDDN year (342k bodies, each species logged on the exact body) + hold-outs A/B/D + the owner's journals: no confirmed body of the species inside any rule. Values: temp K, mass Earth masses, parent = the journal Parents[0] kind (Star / Null / Planet), sma_ls semi-major axis in light-seconds, orb_d orbital period in days, dist_ls distance from arrival, grav_g g, c_metal metal fraction, host = the parent star's class, main = the system main star's class (hostStarClassKey), region = galactic region. Built by docs/perf/build_measured_exclusions.py.",
  "species": {
+  "aleoida_aleoida_laminiae": [
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Norma Expanse"
+     }
+    ],
+    "speciesBodies": 2579,
+    "expected": 73.5
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Norma Arm"
+     }
+    ],
+    "speciesBodies": 2579,
+    "expected": 54.9
+   }
+  ],
   "aleoida_aleoida_spica": [
    {
     "when": [
      {
       "value": "temp",
       "op": "<=",
-      "is": 167.675064
+      "is": 164.99
      }
     ],
     "speciesBodies": 1271,
-    "expected": 611.1
+    "expected": 424.3
    }
   ],
   "cactoida_cactoida_cortexum": [
@@ -94,6 +118,39 @@
     ],
     "speciesBodies": 4366,
     "expected": 518.2
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Outer Orion Spur"
+     }
+    ],
+    "speciesBodies": 4366,
+    "expected": 179.9
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Empyrean Straits"
+     }
+    ],
+    "speciesBodies": 4366,
+    "expected": 134.3
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Temple"
+     }
+    ],
+    "speciesBodies": 4366,
+    "expected": 44.0
    }
   ],
   "cactoida_cactoida_peperatis": [
@@ -118,6 +175,33 @@
     ],
     "speciesBodies": 2500,
     "expected": 53.2
+   },
+   {
+    "when": [
+     {
+      "value": "host",
+      "op": "=",
+      "is": "K"
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "K"
+     }
+    ],
+    "speciesBodies": 2500,
+    "expected": 537.2
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Temple"
+     }
+    ],
+    "speciesBodies": 2500,
+    "expected": 25.2
    }
   ],
   "cactoida_cactoida_pullulanta": [
@@ -131,6 +215,17 @@
     ],
     "speciesBodies": 1483,
     "expected": 51.1
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Inner Scutum-Centaurus Arm"
+     }
+    ],
+    "speciesBodies": 1483,
+    "expected": 159.0
    }
   ],
   "concha_concha_aureolas": [
@@ -176,6 +271,38 @@
     ],
     "speciesBodies": 2137,
     "expected": 27.5
+   },
+   {
+    "when": [
+     {
+      "value": "sma_ls",
+      "op": ">=",
+      "is": 9.175549
+     },
+     {
+      "value": "orb_d",
+      "op": "<=",
+      "is": 30.80997
+     }
+    ],
+    "speciesBodies": 2137,
+    "expected": 478.2
+   },
+   {
+    "when": [
+     {
+      "value": "sma_ls",
+      "op": "<=",
+      "is": 19.383103
+     },
+     {
+      "value": "sma_ls",
+      "op": ">=",
+      "is": 16.217654
+     }
+    ],
+    "speciesBodies": 2137,
+    "expected": 93.5
    }
   ],
   "frutexa_frutexa_acus": [
@@ -227,6 +354,28 @@
     ],
     "speciesBodies": 9509,
     "expected": 612.5
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Ryker's Hope"
+     }
+    ],
+    "speciesBodies": 9509,
+    "expected": 145.3
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Elysian Shore"
+     }
+    ],
+    "speciesBodies": 9509,
+    "expected": 419.8
    }
   ],
   "frutexa_frutexa_fera": [
@@ -256,6 +405,17 @@
     ],
     "speciesBodies": 2987,
     "expected": 90.7
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Inner Scutum-Centaurus Arm"
+     }
+    ],
+    "speciesBodies": 2987,
+    "expected": 401.4
    }
   ],
   "frutexa_frutexa_flabellum": [
@@ -314,6 +474,22 @@
     ],
     "speciesBodies": 3145,
     "expected": 252.3
+   },
+   {
+    "when": [
+     {
+      "value": "orb_d",
+      "op": "<=",
+      "is": 84.411563
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "K"
+     }
+    ],
+    "speciesBodies": 3145,
+    "expected": 726.6
    }
   ],
   "frutexa_frutexa_metallicum": [
@@ -372,6 +548,19 @@
     ],
     "speciesBodies": 19507,
     "expected": 4190.5
+   }
+  ],
+  "osseus_osseus_pellebantus": [
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": "<=",
+      "is": 190.844978
+     }
+    ],
+    "speciesBodies": 1225,
+    "expected": 895.6
    }
   ],
   "osseus_osseus_spiralis": [
@@ -507,6 +696,17 @@
     ],
     "speciesBodies": 6080,
     "expected": 131.4
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Orion-Cygnus Arm"
+     }
+    ],
+    "speciesBodies": 6080,
+    "expected": 43.2
    }
   ],
   "tubus_tubus_compagibus": [
@@ -542,6 +742,28 @@
     ],
     "speciesBodies": 9738,
     "expected": 280.4
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Norma Arm"
+     }
+    ],
+    "speciesBodies": 9738,
+    "expected": 210.5
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Orion-Cygnus Arm"
+     }
+    ],
+    "speciesBodies": 9738,
+    "expected": 69.1
    }
   ],
   "tubus_tubus_conifer": [
@@ -566,6 +788,17 @@
     ],
     "speciesBodies": 4098,
     "expected": 29.1
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Outer Orion Spur"
+     }
+    ],
+    "speciesBodies": 4098,
+    "expected": 131.3
    }
   ],
   "tussock_tussock_albata": [
@@ -579,6 +812,19 @@
     ],
     "speciesBodies": 4502,
     "expected": 231.6
+   }
+  ],
+  "tussock_tussock_caputus": [
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": "<=",
+      "is": 180.960568
+     }
+    ],
+    "speciesBodies": 4059,
+    "expected": 2429.9
    }
   ],
   "tussock_tussock_catena": [
@@ -654,6 +900,52 @@
     ],
     "speciesBodies": 7058,
     "expected": 513.4
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Norma Arm"
+     }
+    ],
+    "speciesBodies": 7058,
+    "expected": 150.2
+   }
+  ],
+  "tussock_tussock_divisa": [
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Hawking's Gap"
+     }
+    ],
+    "speciesBodies": 4174,
+    "expected": 142.5
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Empyrean Straits"
+     }
+    ],
+    "speciesBodies": 4174,
+    "expected": 128.4
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Outer Arm"
+     }
+    ],
+    "speciesBodies": 4174,
+    "expected": 18.0
    }
   ],
   "tussock_tussock_ignis": [
@@ -667,6 +959,17 @@
     ],
     "speciesBodies": 8380,
     "expected": 431.2
+   },
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": "<=",
+      "is": 160.690964
+     }
+    ],
+    "speciesBodies": 8380,
+    "expected": 881.9
    }
   ],
   "tussock_tussock_propagito": [
@@ -698,6 +1001,17 @@
     ],
     "speciesBodies": 3063,
     "expected": 157.6
+   },
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": "<=",
+      "is": 170.99881
+     }
+    ],
+    "speciesBodies": 3063,
+    "expected": 1103.9
    }
   ]
  }
