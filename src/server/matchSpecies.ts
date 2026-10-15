@@ -67,6 +67,7 @@ import {
 import { observedEnvelopeFactor } from "./observedEnvelope.js";
 import { observedWithVolcanism } from "./speciesVolcanismObservations.js";
 import { hostStarVerdict, type HostStarVerdict } from "./speciesHostStarObservations.js";
+import { colourStarNever } from "./colourStarNever.js";
 import { volcanismJournalMatchesFragments } from "../shared/volcanismMatch.js";
 import { isBacteriumSpeciesEntry } from "../shared/speciesBacterium.js";
 import { reportsVolcanism } from "../shared/volcanismText.js";
@@ -815,6 +816,17 @@ export function speciesMatchesExcludingTempPressure(
       field: "StarType",
       detail: `${ctx?.parentStarType} — ${Math.round(starVerdict.share * 100)}% of ${starVerdict.total} observed bodies have this host class.`,
     });
+  }
+  // Never under this colour star in the EDDN year where its usual rate expects 20+ (colourStarNever.ts, 1.2.18 Part 1).
+  if (starVerdict.kind !== "never" && ctx?.colourStarType?.trim()) {
+    const never = colourStarNever(entry.id, ctx.colourStarType);
+    if (never) {
+      failures.push({
+        field: "StarType",
+        soft: true,
+        detail: `Colour star ${ctx.colourStarType} (the brightest in this body's sky): none of the ${never.speciesBodies.toLocaleString("en-US")} bodies in a year of EDDN finds grew under a ${never.cls} colour star, where about ${Math.round(never.expected)} would be expected. ${DEMOTED_NOTE}`,
+      });
+    }
   }
 
   const orb = c.orbitDistanceFromParentStarLs;
