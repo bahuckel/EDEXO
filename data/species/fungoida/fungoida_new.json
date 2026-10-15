@@ -71,14 +71,16 @@
         "planet_types": [
           "Rocky",
           "Icy",
-          "Rocky Ice"
+          "Rocky Ice",
+          "High Metal Content"
         ],
         "max_gravity": 0.28,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
           "Codex: surface structures on high ground — mountains, cliffs, plateau edges (not a hard planet-class gate).",
           "Morph colour is driven by planetary rare materials (genus meta.color_variants), not star class.",
-          "Nitrogen added 2026-10-09: 232 of its 8,188 Rocky ice bodies (253 systems, 10 with an organic sample) in a year of EDDN codex entries (EDGalaxyData archive); the codex list left it out, so each was listed as unlikely before a DSS."
+          "Nitrogen added 2026-10-09: 232 of its 8,188 Rocky ice bodies (253 systems, 10 with an organic sample) in a year of EDDN codex entries (EDGalaxyData archive); the codex list left it out, so each was listed as unlikely before a DSS.",
+          "High Metal Content added 2026-10-15 (outlier register, a pattern): 14 of the 22 High metal content bodies with life under thin Argon at 76 K or less in a year of EDDN finds carry it (64 %), one per system, 59-75 K; the codex list left it out, so each was listed as unlikely."
         ]
       }
     },

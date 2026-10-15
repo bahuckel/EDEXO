@@ -2,7 +2,7 @@
  "formatVersion": 1,
  "builtAt": "2026-10-15",
  "rule": "Owner 2026-10-15: one lone outlier never sets a range. Two or more systems per species = a pattern to examine; a gate widens only when the pattern is legit, by hand, with the evidence.",
- "sources": "real-app runs app15 on EDDN hold-outs A/B, hold-out D (judge), his journals (no names); codex temperature outliers over the whole EDDN year. Built by docs/perf/build_outlier_register.py.",
+ "sources": "real-app runs app17 on EDDN hold-outs A/B, hold-out D (judge), his journals (no names); codex temperature outliers over the whole EDDN year. Built by docs/perf/build_outlier_register.py.",
  "species": {
   "brain_trees_brain_tree_aureum": {
    "bodies": 1,
@@ -125,31 +125,6 @@
      "body": "Bya Eup ZQ-L d8-3 B 6",
      "kind": "demoted",
      "field": "AtmosphereType"
-    }
-   ]
-  },
-  "fungoida_fungoida_bullarum": {
-   "bodies": 2,
-   "systems": 2,
-   "status": "pattern: examine",
-   "rows": [
-    {
-     "src": "holdA",
-     "key": "3058419704305:1",
-     "body": "Plua Thua FQ-V b57-1 1",
-     "kind": "demoted",
-     "field": "PlanetClass",
-     "K": 60.43,
-     "atm": 0.00800767877621515,
-     "g": 0.263,
-     "atmo": "argon"
-    },
-    {
-     "src": "holdD (judge)",
-     "key": "703166161321:2",
-     "body": "Flyua Eork DG-V b49-0 2",
-     "kind": "demoted",
-     "field": "PlanetClass"
     }
    ]
   },
@@ -276,9 +251,9 @@
    ]
   },
   "stratum_stratum_tectonicas": {
-   "bodies": 2,
-   "systems": 2,
-   "status": "pattern: examine",
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
    "rows": [
     {
      "src": "holdB",
@@ -290,17 +265,6 @@
      "atm": 0.0018381831334813718,
      "g": 0.367,
      "atmo": "sulphurdioxide"
-    },
-    {
-     "src": "holdB",
-     "key": "2278245438538:2",
-     "body": "Bleae Thaa CD-L c8-8 1",
-     "kind": "demoted",
-     "field": "AtmosphereType",
-     "K": 170.13,
-     "atm": 0.050675189479397975,
-     "g": 0.498,
-     "atmo": "argonrich"
     }
    ]
   },
