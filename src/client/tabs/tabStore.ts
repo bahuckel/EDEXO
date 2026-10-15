@@ -16,6 +16,7 @@
  * in another window brings that window forward instead.
  */
 import { useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
 
 export type TabKind =
   | "galaxy"
@@ -136,7 +137,34 @@ let state: TabState = read();
 const panes = new Map<TabKind, HTMLElement>();
 const listeners = new Set<() => void>();
 
+/*
+  A tab switch as a short crossfade (plan 3.5, View Transitions; owner, 2026-10-15: "Go"): the screen going and the one
+  coming are captured and blended over 140 ms (tabs.css), the switch itself flushed inside the transition so the new
+  screen is what it captures. Not when the commander asked for less motion, nor where the browser has no
+  startViewTransition (tests, an older WebView): there the switch is instant, as before.
+*/
+function switchesFront(next: TabState): boolean {
+  if (next.active === state.active || typeof document === "undefined") return false;
+  const d = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+  if (typeof d.startViewTransition !== "function") return false;
+  return !(typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
 function emit(next: TabState): void {
+  // The state moves at once (callers read it straight after a switch); only the screens' re-render is in the fade.
+  const fade = switchesFront(next);
+  commit(next);
+  if (fade) {
+    const d = document as Document & { startViewTransition: (cb: () => void) => unknown };
+    d.startViewTransition(() => flushSync(notify));
+  } else notify();
+}
+
+function notify(): void {
+  for (const l of listeners) l();
+}
+
+function commit(next: TabState): void {
   const tabsChanged = next.tabs !== state.tabs;
   state = next;
   try {
@@ -148,7 +176,6 @@ function emit(next: TabState): void {
   if (tabsChanged) TAB_BRIDGE?.report(next.tabs);
   // A detached window with nothing left in it closes.
   if (IS_DETACHED && !next.tabs.length) TAB_BRIDGE?.windowEmpty();
-  for (const l of listeners) l();
 }
 
 /** The window holding `kind` when it is not this one. */

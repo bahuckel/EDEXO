@@ -976,7 +976,11 @@ button.body-detail-kv-value.body-detail-kv-interactive:hover {
   margin: 0.25rem 0;
 }
 
-@media (max-width: 900px) {
+/* By the map panel's width since 1.2.17 (plan 3.5), so a narrow tab window stacks the side panel too. */
+.system-map-panel {
+  container: sysmap / inline-size;
+}
+@container sysmap (max-width: 900px) {
   .system-map-body {
     flex-direction: column;
   }

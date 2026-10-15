@@ -316,8 +316,12 @@
   flex: 0 0 auto;
 }
 /* On a phone the toggles may shrink, so their wrap can happen (UI review V1: the row was 56 px
-   wider than the screen and the whole page scrolled sideways). */
-@media (max-width: 699px) {
+   wider than the screen and the whole page scrolled sideways). By the pane's width since 1.2.17 (plan 3.5): the
+   same pane in a narrow tab window wraps too. */
+.body-pane {
+  container: body-pane / inline-size;
+}
+@container body-pane (max-width: 699px) {
   .candidate-species-toggles {
     flex: 1 1 auto;
     min-width: 0;

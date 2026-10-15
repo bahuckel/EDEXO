@@ -230,3 +230,12 @@ html.custom-title-bar .tab-pane--screen > .modal-backdrop {
 html.custom-title-bar .photo-lightbox-close {
   top: calc(var(--tab-strip-h) + 0.75rem);
 }
+
+/*
+  A tab switch crossfades (tabStore.ts, plan 3.5): the browser's default is 250 ms, long enough to read as lag on a
+  screen switched as often as these; 140 ms reads as a cut that is not a jump.
+*/
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 140ms;
+}

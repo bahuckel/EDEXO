@@ -170,8 +170,52 @@
 }
 
 /* The rail needs 466 px of column beside the list. Below that width — or that height, since the
-   modal body shrinks with the window — it stacks above the list behind a toggle instead. */
-@media (max-width: 1099px), (max-height: 580px) {
+   modal body shrinks with the window — it stacks above the list behind a toggle instead. The width is the modal
+   body's since 1.2.17 (plan 3.5: a container query), the height stays the window's (a height container would
+   need a body whose height does not follow its content). */
+.encyclopedia-body {
+  container: ency / inline-size;
+}
+@container ency (max-width: 1099px) {
+  .ency-layout {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .ency-rail {
+    flex: 0 0 auto;
+    display: none;
+  }
+
+  .ency-rail--open {
+    display: block;
+  }
+
+  .ency-rail .encyclopedia-filters__grid {
+    grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  }
+
+  .ency-rail-toggle {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+    color: rgba(215, 228, 255, 0.92);
+    background: rgba(20, 30, 56, 0.9);
+    border: 1px solid rgba(120, 160, 255, 0.4);
+    border-radius: var(--r-sm);
+  }
+
+  .ency-rail-toggle--on {
+    border-color: rgba(160, 200, 255, 0.9);
+    background: rgba(40, 58, 102, 0.95);
+  }
+}
+@media (max-height: 580px) {
   .ency-layout {
     flex-direction: column;
     gap: 0.5rem;
