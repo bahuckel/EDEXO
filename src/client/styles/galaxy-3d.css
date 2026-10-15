@@ -1551,3 +1551,137 @@
   color: #e48cff;
   cursor: help;
 }
+
+/* The Laboratory's crafting view (LabCrafting.tsx, owner 2026-10-15): materials | lines | recipe cards. */
+.lab-views {
+  display: flex;
+  gap: var(--s-2);
+  margin: var(--s-2) 0;
+}
+.lab-craft {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 3.4rem;
+  align-items: center;
+  margin: var(--s-2) 0 var(--s-3);
+}
+.lab-craft__lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.lab-craft__line path {
+  fill: none;
+  stroke-width: 1.4;
+  transition: opacity 0.15s ease;
+}
+.lab-craft__line.is-ok path {
+  stroke: rgba(110, 220, 140, 0.75);
+}
+.lab-craft__line.is-short path {
+  stroke: rgba(255, 96, 80, 0.75);
+  stroke-dasharray: 3 3;
+}
+.lab-craft__line text {
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--text-dim);
+}
+.lab-craft__line.is-dim {
+  opacity: 0.12;
+}
+.lab-craft__mats,
+.lab-craft__cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  position: relative;
+}
+.lab-craft__cards {
+  gap: 0.6rem;
+}
+.lab-craft__mat {
+  display: grid;
+  grid-template-columns: 1.9rem auto;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--accent-a20);
+  border-radius: var(--r-sm, 4px);
+  background: rgba(0, 0, 0, 0.35);
+  font-size: var(--fs-sm);
+  cursor: default;
+}
+.lab-craft__mat.is-short {
+  border-color: rgba(255, 96, 80, 0.55);
+}
+.lab-craft__mat.is-hot,
+.lab-craft__card.is-hot {
+  border-color: var(--accent-bright);
+  box-shadow: 0 0 0 1px var(--accent-a30);
+}
+.lab-craft__sym {
+  font-family: var(--hud-font, inherit);
+  font-size: 0.95rem;
+  color: var(--accent-bright);
+  text-align: center;
+}
+.lab-craft__held,
+.lab-craft__make {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.lab-craft__held svg,
+.lab-craft__make svg {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+}
+.lab-craft__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--accent-a35);
+  border-radius: var(--r-md, 6px);
+  background: linear-gradient(180deg, var(--accent-a10), rgba(0, 0, 0, 0.4));
+  cursor: default;
+}
+.lab-craft__card.is-none {
+  border-color: var(--accent-a15);
+  background: rgba(0, 0, 0, 0.35);
+}
+.lab-craft__tier {
+  font-family: var(--hud-font, inherit);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+}
+.lab-craft__bonus,
+.lab-craft__next {
+  font-size: var(--fs-xs, 0.72rem);
+  opacity: 0.8;
+}
+.lab-craft__make {
+  font-size: 1.05rem;
+}
+.lab-craft__card.is-none .lab-craft__make {
+  opacity: 0.55;
+}
+.lab-craft__next {
+  color: rgba(255, 140, 120, 0.95);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab-craft__line path {
+    transition: none;
+  }
+}

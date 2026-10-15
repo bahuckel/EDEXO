@@ -647,6 +647,57 @@ test("galaxy 3D: NavRoute — a route plotted while Next is open shows within se
 });
 
 /*
+  The Laboratory's crafting view (owner, 2026-10-15: "dedicated cards for basic/standard/premium, connected to materials
+  with lines, a 'backpack' icon with how many the user has and a gear icon showing how much he can craft"). The drawer is
+  fed a stock built by the app's own view from a login's material list.
+*/
+test("galaxy 3D: Laboratory crafting view joins materials to recipe cards", async ({ page }) => {
+  const errors = watchErrors(page);
+  const { jumponiumLine, jumponiumView, newJumponium } = await import("../src/shared/jumponium");
+  const st = newJumponium();
+  const raw: Record<string, number> = { carbon: 40, vanadium: 12, germanium: 9, cadmium: 3, niobium: 0, arsenic: 5, yttrium: 2, polonium: 1 };
+  jumponiumLine(st, {
+    timestamp: "2026-10-15T10:00:00Z",
+    event: "Materials",
+    Raw: Object.entries(raw).map(([Name, Count]) => ({ Name, Count })),
+    Manufactured: [],
+    Encoded: [],
+  });
+  const stock = jumponiumView(st);
+  await page.route("**/api/jumponium/near?*", (route) =>
+    route.fulfill({ json: { bodies: [], galaxyFile: true, ownScanned: 0, stock } }),
+  );
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.goto("/?screen=galaxy");
+  type G = { stats: () => { phase: string } };
+  await expect
+    .poll(async () => page.evaluate(() => (window as unknown as { __galaxy?: G }).__galaxy?.stats().phase), { timeout: 60_000 })
+    .toBe("ready");
+  await page.getByRole("button", { name: "Laboratory", exact: true }).click();
+  const drawer = page.getByTestId("g3d-jumponium");
+  await drawer.getByRole("button", { name: "Crafting", exact: true }).click();
+  const cards = drawer.locator(".lab-craft__card");
+  await expect(cards).toHaveCount(3);
+  // Basic: C 40, V 12, Ge 9 -> 9; Standard needs Nb, held 0 -> 0; Premium needs Nb too -> 0.
+  await expect(cards.nth(0)).toContainText("9");
+  await expect(cards.nth(1)).toHaveClass(/is-none/);
+  // A line per ingredient: 3 + 5 + 6.
+  await expect(drawer.locator(".lab-craft__line")).toHaveCount(14);
+  await expect(drawer.locator(".lab-craft__line.is-short")).toHaveCount(2); // niobium into Standard and Premium
+  await expect(drawer.locator(".lab-craft__mat[title^=\"Niobium\"]")).toHaveClass(/is-short/);
+  await expect(drawer.locator(".lab-craft__mat[title^=\"Vanadium\"]")).toContainText("12/250");
+  // Hover a card: the other cards' lines dim.
+  await cards.nth(0).hover();
+  await expect(drawer.locator(".lab-craft__line.is-dim")).toHaveCount(11);
+  await page.screenshot({ path: `${OUT}/galaxy-3d-lab-craft.png` });
+  // Collection is the list as before.
+  await drawer.getByRole("button", { name: "Collection", exact: true }).click();
+  await expect(drawer.locator(".lab-craft")).toHaveCount(0);
+  await expect(drawer.getByText("Elements")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+/*
   G2: the groups and the systems answer the mouse. A ring names its group and flies into it; a system
   under the cursor gets a card, and a click opens its panel with the name from the index.
 */

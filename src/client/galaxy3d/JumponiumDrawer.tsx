@@ -19,6 +19,7 @@ import { isBool, isNum, isStrArr, usePersistedState } from "../usePersistedState
 import { CopySystemButton } from "../CopySystemButton";
 import { LoadingNote } from "../ui/Loading";
 import { G3D_HELP, MenuHead } from "./G3dMenu";
+import { LabCrafting } from "./LabCrafting";
 
 export interface JumpRow {
   id: string;
@@ -49,6 +50,7 @@ const pickable = (kind: LabKind) =>
     .filter((k) => !jumpElement(k).common)
     .map(jumpElement);
 const isKind = (v: unknown): v is LabKind => v === "fsd" || v === "afm";
+const isView = (v: unknown): v is "craft" | "collect" => v === "craft" || v === "collect";
 const LEVELS = [
   { key: "any", label: "Any amount" },
   { key: "rich", label: "Rich" },
@@ -72,6 +74,8 @@ export function JumponiumDrawer({
   shipKey: string;
 }) {
   const [kind, setKind] = usePersistedState<LabKind>("galaxy.lab.kind", "fsd", isKind);
+  // Crafting (owner, 2026-10-15: "a 'Crafting screen' ... Collection screen, similar to what it is now") or Collection.
+  const [view, setView] = usePersistedState<"craft" | "collect">("galaxy.lab.view", "craft", isView);
   // The elements picked, kept per inner tab.
   const [fsdEls, setFsdEls] = usePersistedState<string[]>("galaxy.jump.els", [], isStrArr);
   const [afmEls, setAfmEls] = usePersistedState<string[]>("galaxy.lab.afm.els", [], isStrArr);
@@ -206,205 +210,245 @@ export function JumponiumDrawer({
           </button>
         ))}
       </div>
+      <div className="lab-views" role="group" aria-label="View">
+        {(
+          [
+            ["craft", "Crafting", "What your materials make, and what each recipe takes"],
+            ["collect", "Collection", "Where to find the materials: the nearest bodies rich in them"],
+          ] as const
+        ).map(([v, label, hint]) => (
+          <button
+            key={v}
+            type="button"
+            className={`fdb-chip${view === v ? " fdb-chip--on" : ""}`}
+            aria-pressed={view === v}
+            title={hint}
+            onClick={() => setView(v)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="g3d-menu__section g3d-menu__section--first">
-        {stock?.known ? (
-          <>
-            <div className="jump-stock">
-              {stock.stock
-                .filter((s) => kindEls.has(s.key))
-                .map((s) => (
-                  <span
-                    key={s.key}
-                    className={`jump-stock__el${short.has(s.key) ? " is-short" : ""}`}
-                    title={`${s.label}: ${s.count} of ${s.cap}`}
-                  >
-                    <b>{s.symbol}</b> {s.count}
-                  </span>
-                ))}
-            </div>
-            <ul className="jump-tiers">
-              {tiers.map((t) => (
-                <li key={t.tier}>
-                  <span className="jump-tiers__name">
-                    {t.name} {t.bonus ? <span className="dim">{t.bonus}</span> : null}
-                  </span>
-                  <span className={t.count ? "jump-tiers__n" : "jump-tiers__n is-zero"}>{t.count}</span>
-                  <span className="dim">
-                    {t.short.length ? `next: ${t.short.map((x) => `${x.symbol} ${x.need}`).join(", ")}` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {kind === "afm" ? (
-              <p className="dim tiny">
-                {stock.afmu == null
-                  ? "Fitted AFMUs show after your next loadout."
-                  : stock.afmu.length
-                    ? `AFMU fitted: ${stock.afmu.map((a) => (a.size != null && a.cls != null ? `${a.size}${"EDCBA"[a.cls - 1] ?? ""}` : "?")).join(", ")}. Its ammunition is not in the journals: the game shows it in the module panel.`
+        {view === "craft" ? (
+          stock?.known ? (
+            <>
+              <LabCrafting stock={stock} kind={kind} />
+              {kind === "afm" && stock.afmu != null ? (
+                <p className="dim tiny">
+                  {stock.afmu.length
+                    ? `AFMU fitted: ${stock.afmu.map((a) => (a.size != null && a.cls != null ? `${a.size}${"EDCBA"[a.cls - 1] ?? ""}` : "?")).join(", ")}.`
                     : "No AFMU fitted on this ship."}
-              </p>
-            ) : null}
-          </>
+                </p>
+              ) : null}
+            </>
+          ) : reply == null && busy ? (
+            <LoadingNote className="fdb-empty" label="Reading what you hold…" />
+          ) : (
+            <p className="fdb-empty">What you hold shows after your next login: the game writes the list then.</p>
+          )
         ) : (
-          <p className="fdb-empty">
-            What you hold shows after your next login: the game writes the list then.
-          </p>
-        )}
-
-        <div className="stations-filters">
-          <div className="stations-filters__group">
-            <span className="stations-filters__label">Elements</span>
-            {pickable(kind).map((e) => (
-              <button
-                key={e.key}
-                type="button"
-                className={`fdb-chip${els.includes(e.key) ? " fdb-chip--on" : ""}${short.has(e.key) ? " jump-chip--short" : ""}`}
-                onClick={() => toggle(e.key)}
-                aria-pressed={els.includes(e.key)}
-                title={`${e.label}${short.has(e.key) ? " — you are short of it" : ""}`}
-              >
-                {e.symbol}
-              </button>
-            ))}
-            <button
-              type="button"
-              className="fdb-chip stations-filters__mode"
-              onClick={() => setAll(!all)}
-              title="Every picked element on one body, or any one of them (none picked: any of them)"
-            >
-              {all ? "All of them" : "Any of them"}
-            </button>
-          </div>
-          <div className="stations-filters__group">
-            <span className="stations-filters__label">How much</span>
-            {LEVELS.map((l) => (
-              <button
-                key={l.key}
-                type="button"
-                className={`fdb-chip${level === l.key ? " fdb-chip--on" : ""}`}
-                onClick={() => setLevel(l.key)}
-                aria-pressed={level === l.key}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-          <div className="stations-filters__group">
-            <span className="stations-filters__label">Gravity</span>
-            {MAX_G.map((g) => (
-              <button
-                key={g}
-                type="button"
-                className={`fdb-chip${maxG === g ? " fdb-chip--on" : ""}`}
-                onClick={() => setMaxG(g)}
-              >
-                {g === 0 ? "Any" : `≤ ${g} g`}
-              </button>
-            ))}
-          </div>
-          <div className="stations-filters__group">
-            <span className="stations-filters__label">From the arrival star</span>
-            {MAX_LS.map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={`fdb-chip${maxLs === n ? " fdb-chip--on" : ""}`}
-                onClick={() => setMaxLs(n)}
-              >
-                {n === 0 ? "Any" : `≤ ${n.toLocaleString("en-US")} ls`}
-              </button>
-            ))}
-          </div>
-          <div className="stations-filters__group">
-            <span className="stations-filters__label">Within</span>
-            {RANGES.map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={`fdb-chip${range === n ? " fdb-chip--on" : ""}`}
-                onClick={() => setRange(n)}
-              >
-                {n.toLocaleString("en-US")} ly
-              </button>
-            ))}
-            <button
-              type="button"
-              className={`fdb-chip${ownOnly ? " fdb-chip--on" : ""}`}
-              onClick={() => setOwnOnly(!ownOnly)}
-              title="Only bodies you scanned yourself"
-            >
-              My scans only
-            </button>
-          </div>
-        </div>
-
-        {downloadError ? <p className="fdb-empty">{downloadError}</p> : null}
-        {reply && !reply.galaxyFile && !reply.error ? (
-          <div className="carriers-fetch">
-            <button
-              type="button"
-              className="fdb-chip fdb-chip--on"
-              onClick={() => void download()}
-              disabled={downloading}
-            >
-              {downloading ? "Downloading…" : "Download the galaxy's Laboratory bodies"}
-            </button>
-            <span className="dim">
-              Searching your own {reply.ownScanned.toLocaleString("en-US")} scanned landable bodies only. The
-              download adds the top 1 % of the galaxy&apos;s landable bodies for each element, from
-              Spansh&apos;s dump.
-            </span>
-          </div>
-        ) : null}
-        {reply?.error ? <p className="fdb-empty">{reply.error}</p> : null}
-        {reply == null && busy ? <LoadingNote className="fdb-empty" label="Searching…" /> : null}
-        {reply && rows.length === 0 ? (
-          <p className="fdb-empty">No body within {range.toLocaleString("en-US")} ly has that.</p>
-        ) : null}
-        {rows.length ? (
-          <div className="fdb-scroll">
-            <table className="fdb-table carriers-table" style={busy ? { opacity: 0.6 } : undefined}>
-              <thead>
-                <tr>
-                  <th>Body</th>
-                  <th>Distance</th>
-                  <th>Elements</th>
-                  <th>Gravity</th>
-                  <th>From arrival</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="is-pickable"
-                    onClick={() => onPick(r)}
-                    title="Click to show it on the map"
-                  >
-                    <td
-                      className={r.own ? "stations-own" : undefined}
-                      title={r.own ? "You scanned it" : undefined}
+          <>
+          {stock?.known ? (
+            <>
+              <div className="jump-stock">
+                {stock.stock
+                  .filter((s) => kindEls.has(s.key))
+                  .map((s) => (
+                    <span
+                      key={s.key}
+                      className={`jump-stock__el${short.has(s.key) ? " is-short" : ""}`}
+                      title={`${s.label}: ${s.count} of ${s.cap}`}
                     >
-                      {r.body} <CopySystemButton system={r.system} />
-                    </td>
-                    <td>{fmtLyAway(r.distLy)}</td>
-                    <td className="jump-els">
-                      {(Object.entries(r.pct) as [JumpElement, number][])
-                        .filter(([k]) => kindEls.has(k) && !jumpElement(k).common)
-                        .map(([k, v]) => (
-                          <span key={k} className={els.includes(k) ? "is-on" : undefined}>
-                            {jumpElement(k).symbol} {pctLabel(v)}
-                          </span>
-                        ))}
-                    </td>
-                    <td>{r.gravityG != null ? `${r.gravityG.toFixed(2)} g` : "—"}</td>
-                    <td>{r.distLs != null ? `${Math.round(r.distLs).toLocaleString("en-US")} ls` : "—"}</td>
-                  </tr>
+                      <b>{s.symbol}</b> {s.count}
+                    </span>
+                  ))}
+              </div>
+              <ul className="jump-tiers">
+                {tiers.map((t) => (
+                  <li key={t.tier}>
+                    <span className="jump-tiers__name">
+                      {t.name} {t.bonus ? <span className="dim">{t.bonus}</span> : null}
+                    </span>
+                    <span className={t.count ? "jump-tiers__n" : "jump-tiers__n is-zero"}>{t.count}</span>
+                    <span className="dim">
+                      {t.short.length ? `next: ${t.short.map((x) => `${x.symbol} ${x.need}`).join(", ")}` : ""}
+                    </span>
+                  </li>
                 ))}
-              </tbody>
-            </table>
+              </ul>
+              {kind === "afm" ? (
+                <p className="dim tiny">
+                  {stock.afmu == null
+                    ? "Fitted AFMUs show after your next loadout."
+                    : stock.afmu.length
+                      ? `AFMU fitted: ${stock.afmu.map((a) => (a.size != null && a.cls != null ? `${a.size}${"EDCBA"[a.cls - 1] ?? ""}` : "?")).join(", ")}. Its ammunition is not in the journals: the game shows it in the module panel.`
+                      : "No AFMU fitted on this ship."}
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="fdb-empty">
+              What you hold shows after your next login: the game writes the list then.
+            </p>
+          )}
+
+          <div className="stations-filters">
+            <div className="stations-filters__group">
+              <span className="stations-filters__label">Elements</span>
+              {pickable(kind).map((e) => (
+                <button
+                  key={e.key}
+                  type="button"
+                  className={`fdb-chip${els.includes(e.key) ? " fdb-chip--on" : ""}${short.has(e.key) ? " jump-chip--short" : ""}`}
+                  onClick={() => toggle(e.key)}
+                  aria-pressed={els.includes(e.key)}
+                  title={`${e.label}${short.has(e.key) ? " — you are short of it" : ""}`}
+                >
+                  {e.symbol}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="fdb-chip stations-filters__mode"
+                onClick={() => setAll(!all)}
+                title="Every picked element on one body, or any one of them (none picked: any of them)"
+              >
+                {all ? "All of them" : "Any of them"}
+              </button>
+            </div>
+            <div className="stations-filters__group">
+              <span className="stations-filters__label">How much</span>
+              {LEVELS.map((l) => (
+                <button
+                  key={l.key}
+                  type="button"
+                  className={`fdb-chip${level === l.key ? " fdb-chip--on" : ""}`}
+                  onClick={() => setLevel(l.key)}
+                  aria-pressed={level === l.key}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+            <div className="stations-filters__group">
+              <span className="stations-filters__label">Gravity</span>
+              {MAX_G.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  className={`fdb-chip${maxG === g ? " fdb-chip--on" : ""}`}
+                  onClick={() => setMaxG(g)}
+                >
+                  {g === 0 ? "Any" : `≤ ${g} g`}
+                </button>
+              ))}
+            </div>
+            <div className="stations-filters__group">
+              <span className="stations-filters__label">From the arrival star</span>
+              {MAX_LS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={`fdb-chip${maxLs === n ? " fdb-chip--on" : ""}`}
+                  onClick={() => setMaxLs(n)}
+                >
+                  {n === 0 ? "Any" : `≤ ${n.toLocaleString("en-US")} ls`}
+                </button>
+              ))}
+            </div>
+            <div className="stations-filters__group">
+              <span className="stations-filters__label">Within</span>
+              {RANGES.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={`fdb-chip${range === n ? " fdb-chip--on" : ""}`}
+                  onClick={() => setRange(n)}
+                >
+                  {n.toLocaleString("en-US")} ly
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`fdb-chip${ownOnly ? " fdb-chip--on" : ""}`}
+                onClick={() => setOwnOnly(!ownOnly)}
+                title="Only bodies you scanned yourself"
+              >
+                My scans only
+              </button>
+            </div>
           </div>
-        ) : null}
+
+          {downloadError ? <p className="fdb-empty">{downloadError}</p> : null}
+          {reply && !reply.galaxyFile && !reply.error ? (
+            <div className="carriers-fetch">
+              <button
+                type="button"
+                className="fdb-chip fdb-chip--on"
+                onClick={() => void download()}
+                disabled={downloading}
+              >
+                {downloading ? "Downloading…" : "Download the galaxy's Laboratory bodies"}
+              </button>
+              <span className="dim">
+                Searching your own {reply.ownScanned.toLocaleString("en-US")} scanned landable bodies only. The
+                download adds the top 1 % of the galaxy&apos;s landable bodies for each element, from
+                Spansh&apos;s dump.
+              </span>
+            </div>
+          ) : null}
+          {reply?.error ? <p className="fdb-empty">{reply.error}</p> : null}
+          {reply == null && busy ? <LoadingNote className="fdb-empty" label="Searching…" /> : null}
+          {reply && rows.length === 0 ? (
+            <p className="fdb-empty">No body within {range.toLocaleString("en-US")} ly has that.</p>
+          ) : null}
+          {rows.length ? (
+            <div className="fdb-scroll">
+              <table className="fdb-table carriers-table" style={busy ? { opacity: 0.6 } : undefined}>
+                <thead>
+                  <tr>
+                    <th>Body</th>
+                    <th>Distance</th>
+                    <th>Elements</th>
+                    <th>Gravity</th>
+                    <th>From arrival</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr
+                      key={r.id}
+                      className="is-pickable"
+                      onClick={() => onPick(r)}
+                      title="Click to show it on the map"
+                    >
+                      <td
+                        className={r.own ? "stations-own" : undefined}
+                        title={r.own ? "You scanned it" : undefined}
+                      >
+                        {r.body} <CopySystemButton system={r.system} />
+                      </td>
+                      <td>{fmtLyAway(r.distLy)}</td>
+                      <td className="jump-els">
+                        {(Object.entries(r.pct) as [JumpElement, number][])
+                          .filter(([k]) => kindEls.has(k) && !jumpElement(k).common)
+                          .map(([k, v]) => (
+                            <span key={k} className={els.includes(k) ? "is-on" : undefined}>
+                              {jumpElement(k).symbol} {pctLabel(v)}
+                            </span>
+                          ))}
+                      </td>
+                      <td>{r.gravityG != null ? `${r.gravityG.toFixed(2)} g` : "—"}</td>
+                      <td>{r.distLs != null ? `${Math.round(r.distLs).toLocaleString("en-US")} ls` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          </>
+        )}
       </div>
     </aside>
   );

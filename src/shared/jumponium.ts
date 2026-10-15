@@ -478,6 +478,8 @@ export interface LabTierDTO {
   count: number;
   /** What one more needs: element and how many short. */
   short: { key: JumpElement; symbol: string; need: number }[];
+  /** What one takes, as the commander's own syntheses have it (else the table): the crafting view's lines. */
+  recipe: { key: JumpElement; symbol: string; qty: number }[];
   made: number;
 }
 
@@ -512,6 +514,11 @@ function tierView(st: JumponiumState, i: LabRecipe): LabTierDTO {
       need,
     })),
     made: st.made[recipeKey(i.kind, i.tier)] ?? 0,
+    recipe: (Object.entries(recipeFor(st, i.tier, i.kind)) as [JumpElement, number][]).map(([key, qty]) => ({
+      key,
+      symbol: jumpElement(key).symbol,
+      qty,
+    })),
   };
 }
 
