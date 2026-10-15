@@ -5,6 +5,7 @@
  * itself on hover, and each menu has a [?] for the longer story.
  */
 import type { ReactNode } from "react";
+import { BookOpen, Compass, Crosshair, Eye, Filter, FlaskConical, Layers, Route, Search, type LucideIcon } from "lucide-react";
 import { InfoPopover, Tooltip } from "../ui/Tooltip";
 
 export type G3dTabKey =
@@ -109,7 +110,7 @@ export const G3D_HELP: Record<G3dTabKey, string[]> = {
     "Your codex, region by region: how many of a region's entries you have logged. Click a region on the map or in the list to see its systems.",
   ],
   neutron: [
-    "A route through two or more systems, jumping from neutron star to neutron star: at one the FSD supercharges and the next jump reaches four times your range (six with the Caspian's Mk II SCO drive).",
+    "A route through two or more systems, jumping from neutron star to neutron star: at one the FSD supercharges and the next jump reaches four times your range (six in a Caspian Explorer: read from the ship you fly).",
     "Your jump range, how many full-range jumps a tank does and the fuel aboard come from your journals; change them for another ship.",
     "Refuel stops are neutron stars with a scoopable star of their own (four in ten): scoop it, then supercharge. Where only normal jumps cross a gap longer than the tank lasts, the route says to scoop on the way.",
     "Every supercharge wears the FSD, by how much depends on the ship and its drive: learned for each ship from its Loadouts (about 1 % until it has three supercharges between two of them). The plan marks where it is expected under 80 %: repair before going on — Carriers → Stations → Repair finds the nearest.",
@@ -184,8 +185,25 @@ export function MenuToggle({
   );
 }
 
-/** The tab icons: drawn, 24 × 24, in the current colour. */
+/*
+  The tab icons, 24 × 24 in the current colour: lucide's (1.2.17, owner 2026-10-15: "uses for lucide approved") at the
+  stroke the drawn ones had, except the two drawn for him — the Coriolis starport and the neutron star — which stay.
+*/
+const LUCIDE_TABS: Partial<Record<G3dTabKey, LucideIcon>> = {
+  view: Eye,
+  layers: Layers,
+  filter: Filter,
+  search: Search,
+  navroute: Route,
+  codex: BookOpen,
+  targets: Crosshair,
+  expedition: Compass,
+  jumponium: FlaskConical,
+};
+
 export function G3dIcon({ name }: { name: G3dTabKey }) {
+  const L = LUCIDE_TABS[name];
+  if (L) return <L className="g3d-tab__icon" strokeWidth={1.7} aria-hidden="true" focusable="false" />;
   const p = {
     fill: "none",
     stroke: "currentColor",
@@ -195,38 +213,7 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
   } as const;
   return (
     <svg className="g3d-tab__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      {name === "view" ? (
-        <>
-          <path {...p} d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
-          <circle {...p} cx="12" cy="12" r="3" />
-        </>
-      ) : name === "layers" ? (
-        <>
-          <path {...p} d="M12 3 2.5 8 12 13l9.5-5L12 3z" />
-          <path {...p} d="m2.5 12.5 9.5 5 9.5-5" />
-          <path {...p} d="m2.5 16.5 9.5 5 9.5-5" />
-        </>
-      ) : name === "filter" ? (
-        <path {...p} d="M3 4.5h18l-7 8.5v6l-4 1.5V13L3 4.5z" />
-      ) : name === "search" ? (
-        <>
-          <circle {...p} cx="10.5" cy="10.5" r="6.5" />
-          <path {...p} d="m15.5 15.5 5.5 5.5" />
-          <path {...p} d="M10.5 7.5c-1.8 1-2.2 3-1 4.8 1.6-.4 2.6-2.4 1-4.8z" />
-        </>
-      ) : name === "navroute" ? (
-        <>
-          <circle {...p} cx="5" cy="18" r="2" />
-          <circle {...p} cx="12" cy="9" r="2" />
-          <circle {...p} cx="19" cy="5" r="2" />
-          <path {...p} d="m6.3 16.4 4.4-5.8M13.8 8l3.4-2" />
-        </>
-      ) : name === "codex" ? (
-        <>
-          <path {...p} d="M4 4.5h6.5A2.5 2.5 0 0 1 13 7v13a2 2 0 0 0-2-2H4V4.5z" />
-          <path {...p} d="M20 4.5h-4.5A2.5 2.5 0 0 0 13 7v13a2 2 0 0 1 2-2h5V4.5z" />
-        </>
-      ) : name === "stations" ? (
+      {name === "stations" ? (
         /*
           A Coriolis starport face on (owner, 2026-10-13): a cuboctahedron — six squares meeting at their corners, a
           triangle in each gap. From the front its outline is a square; the front square stands on a corner inside
@@ -238,13 +225,7 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
           <path {...p} d="M12 3.5 20.5 12 12 20.5 3.5 12z" />
           <path {...p} d="M8.6 11.3h6.8v1.4H8.6z" strokeWidth={1.3} />
         </>
-      ) : name === "jumponium" ? (
-        /* A flask: the synthesis. */
-        <>
-          <path {...p} d="M9.5 3h5M10.5 3v6L5 19a1.5 1.5 0 0 0 1.3 2h11.4A1.5 1.5 0 0 0 19 19l-5.5-10V3" />
-          <path {...p} d="M7.5 15h9" />
-        </>
-      ) : name === "neutron" ? (
+      ) : (
         /*
           A neutron star, not a sun (owner, 2026-10-15): a small bright core, the two jets the game draws along its
           axis, and a thin ring tilted across them.
@@ -253,17 +234,6 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
           <ellipse {...p} cx="12" cy="12" rx="9" ry="2.6" transform="rotate(45 12 12)" strokeWidth={1.1} opacity={0.75} />
           <path {...p} d="M13.3 10.7 19.4 2.6 21.4 4.6z M10.7 13.3 4.6 21.4 2.6 19.4z" fill="currentColor" strokeWidth={1} />
           <circle {...p} cx="12" cy="12" r="2.2" fill="currentColor" />
-        </>
-      ) : name === "expedition" ? (
-        <>
-          <circle {...p} cx="12" cy="12" r="9" />
-          <path {...p} d="m15.5 8.5-2 5-5 2 2-5 5-2z" />
-        </>
-      ) : (
-        <>
-          <circle {...p} cx="12" cy="12" r="8" />
-          <circle {...p} cx="12" cy="12" r="3" />
-          <path {...p} d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" />
         </>
       )}
     </svg>
