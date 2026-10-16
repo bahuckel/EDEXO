@@ -8,24 +8,27 @@ game content.** See "Species photographs" below, which is the part still being r
 
 ## Standing on other people's work
 
-This project would not exist without five communities, none of which are affiliated with it and none
+This project would not exist without these communities, none of which are affiliated with it and none
 of which have endorsed it.
 
 ### Spansh — [spansh.co.uk](https://spansh.co.uk)
 
-The reason this project was started. Spansh's exobiology search showed that "which species can live
-on this body" is a question data can answer, and its route exports are the corpus every prediction in
-this app is measured against — 47,983 confirmed sightings across 13,789 bodies at the time of
-writing. Every calibration figure quoted in the README traces back to a Spansh export. The list of
+Where this project started. Spansh's Exomastery planning dumps showed that "which species can live on
+this body" is a question data can answer; they were the project's first data and, for its first months,
+its only data. The species profiles the ranking model reads are still built from Spansh exports, and the
+genus chances (`data/exomastery/genus-prior.json`) are counted from the DSS genus lists of the 2.8 million
+bio bodies in Spansh's galaxy dump. (Since October 2026 the predictions are measured against a year of
+EDDN finds, below.) The list of
 systems Frontier populated, which the app ships to tell the Bubble from player colonies, comes from
 Spansh's system search (`is_colonised`); `scripts/build-developer-systems.mjs` rebuilds it. The galaxy
 map's star and body filters read `data/galaxy/system-traits.bin.gz`, each system's star classes and
 planet types from Spansh's galaxy dump (`scripts/build-system-traits.ts`; downloaded with the galaxy
 index from the `galaxy-index` release). Since 1.2.16 the galaxy map's stations (`stations.bin`, from Spansh's
 `galaxy_stations.json.gz`: names, types, pads, services) and the neutron route planner's neutron stars
-(`neutrons.bin`, from Spansh's galaxy dump, each with its nearest scoopable star) and the jumponium bodies
-(`jumponium.bin`: the top 1 % of landable bodies for each FSD injection material, from the materials in Spansh's
-galaxy dump) are built from Spansh's dumps too and downloaded from the same release.
+(`neutrons.bin`, from Spansh's galaxy dump, each with its nearest scoopable star) and the Laboratory bodies
+(`laboratory.bin`: the top 1 % of landable bodies for each of the thirteen FSD injection and AFM refill
+elements, from the materials in Spansh's galaxy dump) are built from Spansh's dumps too and downloaded from the
+same release.
 
 ### EDSM — [edsm.net](https://edsm.net)
 
@@ -64,8 +67,8 @@ licence ([`data/LICENSE-DATA.txt`](data/LICENSE-DATA.txt)). The EDAstro-derived 
   planet type, volcanism, temperature band and atmosphere on the Spansh galaxy dump's bodies where
   EDSM's and EDAstro's codex log exactly one species of the genus in the system;
 - `data/exomastery/genus-prior.json` — how often each genus is found on bodies of each planet type,
-  signal count, atmosphere, temperature band, host star class and volcanism, counted from the DSS
-  genus lists in the Spansh galaxy dump.
+  signal count, atmosphere, temperature band, pressure band, gravity band, host star class and volcanism,
+  counted from the DSS genus lists in the Spansh galaxy dump.
 
 Releases 1.1.0 to 1.2.7 shipped these under the MIT notice by mistake; they were always under
 CC BY-NC-SA 3.0. Data the app downloads from EDAstro on the user's machine (phenomena, carriers,
@@ -84,18 +87,23 @@ A day-by-day archive of the messages EDDN relays, kept since 2017 and free to do
 run by CMDR Bravada Cadelanne ([EDCodex entry](https://edcodex.info/?m=tools&entry=491)). No licence or
 terms are stated for it. This project uses it for research: a year of scans, codex entries, FSS body
 signals and organic scans (2025-10 to 2026-10) to check the green gas giant catalogue and the species
-predictions against other commanders' finds, with each body's conditions. Anything derived from it
+predictions against other commanders' finds, with each body's conditions. The app also ships
+tables measured on it: `data/exomastery/eddn-temperature-range.json` (the temperatures each species really
+reaches), `colour-star-never.json` (colour stars a species is never found under), `measured-exclusions.json`
+(conditions a species is never found in), `outlier-register.json` and the Encyclopedia's bands
+(`species-bands.json`). Anything derived from it
 that this project ships is part of the project's data and is under the data licence (CC BY-NC-SA 3.0,
 [`data/LICENSE-DATA.txt`](data/LICENSE-DATA.txt)), unless CMDR Bravada Cadelanne states other terms,
 in which case theirs apply. Thank you for keeping it running.
 
 ### Canonn Research Group — [canonn.science](https://canonn.science)
 
-The community's accumulated knowledge of where exobiology grows: the genus and species conditions,
-the gravity and temperature limits, the atmosphere and volcanism requirements. Where this app's own
-observations disagree with the published conditions, the observation wins — but the published
-conditions are where every gate started, and being able to disagree with something is a debt to
-whoever wrote it down first.
+The app can send your discoveries to Canonn's research archive, off unless you switch it on. This
+project did not start from Canonn — it started from Spansh's dumps, and its developer came across Canonn
+much later — and its species rules do not come from Canonn's published conditions. Two things of
+Canonn's were used afterwards as a check: its Bioforge figures, against the Bacterium tela rule, and its
+codex reference list, when the colour variants' names were rebuilt from the game's own codex in
+September 2026. Thank you for both.
 
 ### ED-DSN — [ed-dsn.net](https://ed-dsn.net)
 

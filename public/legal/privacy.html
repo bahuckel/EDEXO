@@ -21,7 +21,7 @@
 
       <main class="site-main">
         <h1 class="legal-hed">Privacy Policy</h1>
-        <p class="legal-updated">Last updated: 13 October 2026 · applies to version 1.2.16 and later</p>
+        <p class="legal-updated">Last updated: 16 October 2026 · applies to version 1.2.18 and later</p>
 
         <div class="legal-box">
           <p>
@@ -81,6 +81,13 @@
             of the systems on it (up to 40 per request, at least 5 seconds apart) are sent to EDSM to see which
             it already knows &mdash; how the app tells whether a first footfall may still be possible.
             Only the system names are sent: never your commander name or your EDSM key.
+          </li>
+          <li>
+            <strong>Community Goals &mdash; Frontier</strong> (api.orerve.net). About 30 seconds after the app
+            starts and then once an hour, the app asks Frontier's public list of running Community Goals &mdash;
+            the list Frontier's own website reads &mdash; to give you a notice when a new one starts. It sends
+            nothing about you; the app's version is in the request's <em>User-Agent</em>. Switch it off in
+            <em>Options &rarr; Notify me &rarr; Community goals</em> and the request stops.
           </li>
         </ul>
 
@@ -169,6 +176,22 @@
             there, apart from the app's.
           </li>
           <li>
+            <strong>Keep page cache</strong> (off by default): when you switch it on, the browser's page cache
+            (copies of pages, scripts and images it fetched) is kept between starts so sites you visited load
+            faster; cookies and site storage are still cleared as above. The cache stays on this PC and can show
+            which sites you visited; <em>Clear everything now</em> empties it.
+          </li>
+          <li>
+            <strong>Remember passwords</strong> (off by default): when you switch it on, the browser offers to save
+            the username and password you sign in with on an HTTPS site, and fills them in again on that same site
+            only: on its own when one login is saved for it, or with the key button when there are several. They are encrypted with your operating system's protection
+            (Windows' data protection, the macOS keychain or a Linux keyring, through Electron's safeStorage)
+            before they are written to <code>browser/passwords.json</code> in the app's data folder; where no such
+            protection exists nothing is saved. They are kept only on this PC and never sent anywhere. You can
+            delete them one by one or all at once in the browser's menu; switching the option off keeps them but
+            stops saving and filling.
+          </li>
+          <li>
             <strong>Ads and trackers are blocked</strong> on every site unless you switch blocking off for one.
             The blocklists are downloaded only when you press <em>Download the blocklists</em> the first time,
             then again in the background, from their publishers: EasyList and EasyPrivacy (easylist.to) and
@@ -184,9 +207,9 @@
             unless you change it) and are subject to its privacy policy.
           </li>
           <li>
-            <strong>Downloads</strong> ask where to save every time and are never opened by the app. No password
-            saving, no autofill, no extensions. Sites get no camera, microphone, location, notifications or any
-            other permission.
+            <strong>Downloads</strong> ask where to save every time and are never opened by the app. No form
+            autofill beyond <em>Remember passwords</em>, no extensions. Sites get no camera, microphone, location,
+            notifications or any other permission.
           </li>
         </ul>
 

@@ -16,32 +16,34 @@ Windows; everything the app saves lives in `%LOCALAPPDATA%\ED Exo Compare\`.
 
 |                                                                                                                |                                                                       |
 | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **[Portable — one file](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.17/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
-| **[Program folder — .zip](https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.2.17-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
+| **[Portable — one file](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.18/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
+| **[Program folder — .zip](https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.2.18-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
 
 Both are the same version and the same code — [all releases](https://github.com/bahuckel/EDEXO-Compare/releases).
 
 The galaxy map's data is a separate download, offered by the map the first time you open it and left
 in place by updates: the index (every system with recorded biology, from EDAstro's codex data, about
-250 MB), the stations (15.6 MB), the neutron stars for the route planner (40 MB) and the galaxy's
-richest Laboratory bodies (jumponium and AFM refill materials), with one button that fetches whatever is missing or newer.
+260 MB), the stations (15.6 MB), the neutron stars for the route planner (40 MB) and the galaxy's
+richest Laboratory bodies (jumponium and AFM refill materials, 55 MB), with one button that fetches whatever is
+missing or newer.
 
-Windows will say the publisher is unrecognised: the executable is signed, but with a self-signed
-certificate that SmartScreen does not trust. "More info" → "Run anyway".
+Windows will say the publisher is unrecognised: the executable is not code-signed, so SmartScreen does
+not know it. "More info" → "Run anyway". GitHub shows each release file's SHA-256 digest, to check a download
+against.
 
 ### Linux — ![Untested](https://img.shields.io/badge/Linux-untested-orange)
 
-**First Linux release, not yet tried on a real Linux desktop with the game running.** It starts,
-finds a Proton journal folder and serves the app on Ubuntu 24.04; the HUD windows themselves have
-not been seen over the game yet. If you try it, an issue saying what worked and what did not —
+**Linux builds have shipped since 1.2.4, but none has been tried on a real Linux desktop with the game
+running yet.** It starts, finds a Proton journal folder and serves the app on Ubuntu 24.04; the HUD windows
+themselves have not been seen over the game yet. If you try it, an issue saying what worked and what did not —
 distro, desktop, X11 or Wayland — is the most useful thing you can send.
 
 |                                                                                                                                         |                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.17-zip/EDExoCompare-1.2.17-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
-| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.17-zip/EDExoCompare-1.2.17-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
+| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.18-zip/EDExoCompare-1.2.18-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
+| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.18-zip/EDExoCompare-1.2.18-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
 
-**AppImage:** `chmod +x EDExoCompare-1.2.17-x86_64.AppImage`, then run it. It needs FUSE 2:
+**AppImage:** `chmod +x EDExoCompare-1.2.18-x86_64.AppImage`, then run it. It needs FUSE 2:
 
 | Distro                                            | Command                                   |
 | ------------------------------------------------- | ----------------------------------------- |
@@ -52,13 +54,13 @@ distro, desktop, X11 or Wayland — is the most useful thing you can send.
 | openSUSE                                          | `sudo zypper install libfuse2`            |
 | Arch, CachyOS, Manjaro                            | `sudo pacman -S --needed fuse2`           |
 
-Without FUSE, `./EDExoCompare-1.2.17-x86_64.AppImage --appimage-extract-and-run` works too.
+Without FUSE, `./EDExoCompare-1.2.18-x86_64.AppImage --appimage-extract-and-run` works too.
 
 On start the launcher checks your desktop and lists anything the HUD needs that is missing, with the
 install command for your distro: XWayland on a Wayland session, a compositor on a bare window
 manager (the HUD is see-through only with one), the AppIndicator extension for the tray on GNOME.
 
-**Browser build:** `tar xzf EDExoCompare-1.2.17-linux-x64.tar.gz`, then `./edexo-client.sh` in the
+**Browser build:** `tar xzf EDExoCompare-1.2.18-linux-x64.tar.gz`, then `./edexo-client.sh` in the
 folder it makes. Its `README.txt` has the rest.
 
 **Both:** the journals are found inside the game's Proton or Wine prefix — every Steam library
@@ -81,8 +83,9 @@ sampling run per genus.
 **How likely each species is.** _Chance here_ is a calibrated probability, not a resemblance score.
 It is built from how often a species has actually been recorded at this gravity, temperature,
 pressure, planet class, atmosphere and host star, weighted by how common it is, and normalised
-across the body's candidates. On bodies where every genus was sampled, rows it calls 90–100 % turn
-up 97.8 % of the time.
+across the body's candidates, then weighed against how often each genus turns up on bodies like this
+one. Checked on 14,560 bodies other commanders logged on EDDN, where every species on the body is known:
+rows it calls 90–100 % turn up 98.8 % of the time, rows under 10 % 5.8 %.
 
 **Which species, once you have mapped it.** After a DSS names the genus, the same posterior
 renormalises inside that genus to say which of its species you are looking at.
@@ -105,7 +108,8 @@ systems come from other commanders' records, so first footfall is most likely go
 2D Classic map opens instead.
 
 **Where it was wrong.** Every species you find that the app failed to offer is written to a local
-miss log. That log is the reason recall went from 93.2 % to 97.1 %: it is read, not just recorded.
+miss log, and that log is read, not just recorded: it is how most gates were corrected. On the developer's
+own 764 confirmed finds the panel now lists every one before a DSS.
 
 **On a second screen.** Open `?screen=triage` on a phone or tablet for a read-only triage view that
 updates as you jump. In the desktop app, turn on **LAN access** in Network settings first.
@@ -181,8 +185,9 @@ game) or as pop-ups if Tab view is off.
 - **Browser** (desktop app only; "+" → Browser): a private browser in a tab. Nothing a site stores
   outlives the app unless you mark the site **Remember**; ads, trackers, cookie notices and YouTube
   ads are blocked (EasyList, EasyPrivacy and uBlock Origin's lists, fetched from their publishers when
-  you first open it); every permission but fullscreen is denied. A start page with EDSM, EDAstro,
-  Spansh, ED GGG, ED-DSN, Inara and your own links.
+  you first open it); every permission but fullscreen is denied. Optional, both off by default: **Keep
+  page cache** (faster revisits), **Remember passwords** (encrypted by the operating system, filled in on
+  the site it was saved for). A start page with EDSM, EDAstro, Spansh, ED GGG, ED-DSN, Inara and your own links.
 - **Bookmarks** with tags, notes and distances; **Green gas giants** by CMDR Arcanic's cloud ladder;
   **Data feeder** for your own Spansh Exomastery dumps; a **Session log**.
 
@@ -234,8 +239,8 @@ one panel, in the original look, a title bar or an Elite-style frame; any colour
 - **Backups** of your journals and the app's data, with warnings when the folder shares a drive with
   them.
 - **Notify me**: notices for notable bodies, Notable Stellar Phenomena, nearby carriers with the
-  services you pick, achievements, a scanned body rich in a Laboratory material you are short of, with or
-  without sound.
+  services you pick, achievements, a scanned body rich in a Laboratory material you are short of, and a new
+  Community Goal (where to sign up, the objective, when it ends and the rewards), with or without sound.
 - **Colour scheme** for the app and the HUD (a dark colour is lightened until it reads, and the text can take
   a colour of its own); **key binds** in one place, live only while Elite or the
   app is in front; **snapshot images** that render what you see without taking a screenshot of your
@@ -247,22 +252,31 @@ one panel, in the original look, a title bar or an Elite-style frame; any colour
 
 ## Where the predictions come from
 
-Two sources, and the app tells them apart.
+The project started from [Spansh](https://spansh.co.uk)'s Exomastery dumps, and it still works the
+same way: rules say where a species can grow, and records of where it has grown decide.
 
-The **codex rows** in `data/species/` say where a species should grow. A local corpus of ~39,000
-real sightings says where it has grown. Where they disagree on a species the corpus has watched
-enough times, **observation wins** — for host star, planet class, temperature, volcanism type,
-gravity and atmosphere. Each of those six thresholds was swept against the app's own accuracy probe
-before it shipped.
+- **The species rules** in `data/species/` — planet class, atmosphere, temperature, gravity, pressure,
+  volcanism, star — were written for this app and are corrected by what has actually been found.
+  Where a rule and the records disagree on a species seen often enough, **observation wins**.
+- **The species profiles** (how often each species is found at each temperature, gravity, pressure and
+  so on) are built from Spansh's Exomastery exports, hydrated with EDSM's body records.
+- **How often each genus is on a body like this one** — by planet type, signal count, atmosphere,
+  temperature, pressure, gravity, star and volcanism — comes from the 2.8 million bodies with a DSS genus
+  list in Spansh's galaxy dump.
+- **A year of other commanders' finds on EDDN** (342,000 bodies, each species logged on the exact body,
+  from the EDGalaxyData archive) sets the measured limits — the temperatures a species really reaches,
+  the colour stars it never grows under, the places it is never found — and holds back the test sets
+  every change is judged on: no change ships if it hides a species those finds confirm.
+- **Your own journals** are the final check: the app's miss log, and the accuracy probes below.
 
-No number reaches the screen as a percentage unless the probe has calibrated it.
+No number reaches the screen as a percentage unless it has been checked against real finds.
 
 ### The 1 % chance floor
 
 Every candidate carries a **Chance here** figure — how often a species with this profile turns out to
 actually be on a body like this one. It is the one percentage in the app that has been calibrated
-against real outcomes: on bodies where every species is known, the 90-100 % band comes in at 97.8 %
-and the 0-10 % band at 8.9 %.
+against real outcomes: on 14,560 EDDN bodies where every species is known, the 90-100 % band comes in
+at 98.8 % and the 0-10 % band at 5.8 %.
 
 Candidates below **1 %** are moved behind _show unlikely_ rather than listed. The rule is no misses
 first: a list of three where one is right beats a list of one that is wrong. The floor was 5 % until
@@ -271,8 +285,9 @@ for one wrong row more on 2.5 % of the bodies.
 
 The floor never empties a panel — if nothing clears it, the single best candidate stays — never
 touches a row the model has no opinion about, and never argues with a species you have scanned on
-foot yourself. Checked against other commanders' finds on EDDN: after a DSS, 6,599 of 6,599 species
-were listed.
+foot yourself. A row it hid comes back when nothing else of its genus is listed and bodies like this
+one carry that genus at least 80 % of the time. Checked against other commanders' finds on EDDN: after
+a DSS, 31,985 of 31,987 confirmed species were listed.
 
 To change it, edit `PRESENCE_FLOOR_PCT` in [`src/server/presenceFloors.ts`](src/server/presenceFloors.ts) and
 rebuild.
@@ -301,10 +316,19 @@ entries and whatever else Canonn is currently asking for — **with your CMDR na
 their archive is keyed on it, and with the journal line exactly as the game wrote it. There is no
 anonymous form of it. Only live events go: switching it on never uploads journals you already have.
 
-There is no telemetry and no analytics. Three requests run without a switch, and none carries
-anything about you: the update check (each time the launcher opens, at most once an hour, GitHub is
-asked for this project's releases; the app's version is in the user agent), the game server status,
-and EDSM's answer to which systems on your plotted route it already knows (the system names only).
+There is no telemetry and no analytics. These requests run without you pressing anything, and none
+carries anything about you:
+
+- the update check — each time the launcher opens, at most once an hour, GitHub is asked for this
+  project's releases (the app's version is in the user agent);
+- the game server status — Frontier's status page, or EDSM's if that does not answer, about once a
+  minute while the app's window is open;
+- EDSM's answer to which systems on your plotted route it already knows (the system names only);
+- whether a newer galaxy index, station list or neutron list is out — the sizes and versions of the
+  files on this project's `galaxy-index` release, when the galaxy map asks;
+- Frontier's public list of Community Goals, once an hour, for the notice when a new one starts
+  (switch it off in **Notify me → Community goals**).
+
 The browser fetches its filter lists from their publishers once you open it (weekly, YouTube's daily).
 Every request is listed in the [privacy policy](public/legal/privacy.html), which ships with the app.
 
@@ -401,25 +425,31 @@ scripts/        the feeder CLI and the accuracy probes
 data/species/   the species database, one folder per genus
 public/         launcher, the transparent HUD overlays, and the privacy policy and terms (legal/)
 electron/       launcher window
+src/cli/        the console build's commands
 tests/          vitest suites
-docs/archive/   internal planning notes — not tracked, see .gitignore
+e2e/            Playwright tests against the dev server
+docs/           internal notes and research — not tracked, see .gitignore
 ```
 
 ## Credits
 
 Built on these communities' work, none of them affiliated with this project:
 
-- **[Spansh](https://spansh.co.uk)** — the reason it was started, the corpus every prediction is
-  measured against, and the stations and neutron stars on the galaxy map.
-- **[EDSM](https://edsm.net)** — body records and system coordinates.
-- **[Canonn Research Group](https://canonn.science)** — the published species conditions every gate
-  in this app started from.
+- **[Spansh](https://spansh.co.uk)** — where this project started: its Exomastery dumps, the species
+  profiles built from them, the galaxy dump behind the genus chances, and the stations and neutron
+  stars on the galaxy map.
+- **[EDSM](https://edsm.net)** — body records, system coordinates and the codex dump behind the rarity
+  tiers.
 - **[ED-DSN](https://ed-dsn.net)** — the species photographs.
 - **[EDDN](https://github.com/EDCD/EDDN)** (Elite Dangerous Data Network) — other commanders' live
   scans, the test set every prediction is checked against.
 - **[EDGalaxyData](https://edgalaxydata.space/EDDN/)** by CMDR Bravada Cadelanne — EDDN's messages
   kept day by day since 2017, for checking against past finds.
-- **[EDAstro](https://edastro.com)** — the codex sightings behind the galaxy map's index.
+- **[EDAstro](https://edastro.com)** — the codex sightings behind the galaxy map's index and the region
+  tables, the nebula and Guardian-site coordinates, carriers, points of interest and galactic records.
+- **[Canonn Research Group](https://canonn.science)** — the optional upload of your discoveries. Its
+  Bioforge figures and codex reference were used later to check one rule (Bacterium tela) and the colour
+  variants' names; the project did not start from Canonn, and its rules do not come from there.
 - **[Ghostery's adblocker](https://github.com/ghostery/adblocker)** (MPL-2.0), with the
   [EasyList](https://easylist.to) and [uBlock Origin](https://github.com/uBlockOrigin/uAssets) filter
   lists — the browser's blocking.
