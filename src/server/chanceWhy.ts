@@ -14,7 +14,13 @@
  */
 import type { BodyExoState, ExplorationScanRecord, PlanetScan, SpeciesMatch } from "../shared/types.js";
 import type { CandidateInputs } from "./candidatePipeline.js";
-import { genusPriorBaseline, genusPriorFor, genusPriorKey } from "./genusPrior.js";
+import {
+  GENUS_PRIOR_GRAVITY_BANDS_G,
+  GENUS_PRIOR_PRESSURE_BANDS_ATM,
+  genusPriorBaseline,
+  genusPriorFor,
+  genusPriorKey,
+} from "./genusPrior.js";
 import { measuredOddsNote } from "./measuredOdds.js";
 import { regionalSpeciesCount } from "./regionSpeciesData.js";
 import { speciesLogScore, TERM_DAMPING } from "./speciesLikelihood.js";
@@ -71,14 +77,33 @@ function fieldLabel(path: string, scan: PlanetScan, rec: ExplorationScanRecord |
 }
 
 /** One genus's cell of the genus prior, as words: "HMC · 1 signal · carbon dioxide · 180–199 K · K star". */
+/** "0.005–0.01 atm" for a band index of {@link GENUS_PRIOR_PRESSURE_BANDS_ATM} (and the gravity bands, in g). */
+function bandWords(b: string | undefined, edges: readonly number[], unit: string): string | null {
+  const i = Number(b);
+  if (b == null || !Number.isInteger(i)) return null;
+  if (i <= 0) return `under ${edges[0]} ${unit}`;
+  if (i >= edges.length) return `${edges[edges.length - 1]} ${unit} and up`;
+  return `${edges[i - 1]}–${edges[i]} ${unit}`;
+}
+
 function cellWords(cell: string): string {
-  const [level, type, n, atmo, temp, star, volc] = cell.split("|");
+  const all = cell.split("|");
+  // The pressure / gravity cells carry two more fields after the temperature band (genusPriorCells).
+  const pg = all[0] === "P0" || all[0] === "P1";
+  const [level, type, n, atmo, temp] = all;
+  const [star, volc] = pg ? [all[7], all[8]] : [all[5], all[6]];
   const parts: string[] = [];
   if (level === "L5") return `bodies with ${type} signal${type === "1" ? "" : "s"}`;
   if (type) parts.push(type === "hmc" ? "HMC" : type);
   if (n) parts.push(`${n} signal${n === "1" ? "" : "s"}`);
   if (atmo) parts.push(atmo === "none" ? "no atmosphere" : atmo);
   if (temp && temp !== "?") parts.push(`${Number(temp) * 20}–${Number(temp) * 20 + 19} K`);
+  if (pg) {
+    const pw = bandWords(all[5], GENUS_PRIOR_PRESSURE_BANDS_ATM, "atm");
+    const gw = bandWords(all[6], GENUS_PRIOR_GRAVITY_BANDS_G, "g");
+    if (pw) parts.push(pw);
+    if (gw) parts.push(gw);
+  }
   if (star && star !== "?") parts.push(`${star} star`);
   if (volc) parts.push(volc === "none" ? "no volcanism" : volc);
   return parts.join(" · ");

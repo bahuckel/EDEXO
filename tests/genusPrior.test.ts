@@ -8,6 +8,7 @@ import {
   genusPriorCells,
   genusPriorFor,
   genusPriorKey,
+  rescueByGenusPrior,
   vetoUnseenGenera,
 } from "../src/server/genusPrior.js";
 import type { PlanetScan, SpeciesMatch } from "../src/shared/types.js";
@@ -166,5 +167,72 @@ describe("hiding a genus such bodies almost never carry, before a DSS (owner, 20
       new Set(),
     );
     expect(ms.every((m) => !m.unlikely)).toBe(true);
+  });
+});
+
+describe("bringing back a row the floor hid on the model's number (rescueByGenusPrior)", () => {
+  // Hold-out D, Tussock divisa (2026-10-16): 5 signals, rocky, thin ammonia, 175 K, G host. The model put the only
+  // Tussock candidate at 0.4 % and the floor hid it; the dump's cell carries Tussock on 91 % of such bodies.
+  const scan = {
+    PlanetClass: "Rocky body",
+    SurfaceTemperature: 175.2,
+    AtmosphereType: "Ammonia",
+    Volcanism: "",
+  } as PlanetScan;
+  const body = { genusHints: null, biologicalSignals: 5 };
+  const ctx = { parentStarType: "G" };
+  const hidden = (id: string, genus: string, pct: number): SpeciesMatch => ({
+    ...match(id, genus, pct),
+    unlikely: true,
+    unlikelyReasons: [{ field: "Chance here", detail: `${pct} % — under the 1 % this panel shows.` }],
+  });
+
+  it("brings it back at the genus prior's blend when its genus has nothing else shown", () => {
+    const divisa = hidden("tussock_tussock_divisa", "Tussock", 0.4);
+    const rows = [match("bacterium_bacterium_alcyoneum", "Bacterium", 100), divisa];
+    rescueByGenusPrior(rows, body, scan, ctx, root);
+    expect(divisa.unlikely).toBe(false);
+    expect(divisa.unlikelyReasons).toEqual([]);
+    expect(divisa.presenceProbabilityPercent).toBeGreaterThan(15);
+    expect(rows[0]!.presenceProbabilityPercent).toBe(100);
+  });
+
+  it("leaves it hidden when a sibling of its genus is already shown", () => {
+    const divisa = hidden("tussock_tussock_divisa", "Tussock", 0.4);
+    rescueByGenusPrior([match("tussock_tussock_catena", "Tussock", 40), divisa], body, scan, ctx, root);
+    expect(divisa.unlikely).toBe(true);
+  });
+
+  it("leaves it hidden when the cell rarely carries the genus, or another reason hid it too", () => {
+    const concha = hidden("concha_concha_aureolas", "Concha", 0.4);
+    rescueByGenusPrior([concha], body, scan, ctx, root);
+    expect(concha.unlikely).toBe(true);
+    const two = hidden("tussock_tussock_divisa", "Tussock", 0.4);
+    two.unlikelyReasons!.push({ field: "Region", detail: "not here" });
+    rescueByGenusPrior([two], body, scan, ctx, root);
+    expect(two.unlikely).toBe(true);
+  });
+
+  it("does nothing after a DSS", () => {
+    const divisa = hidden("tussock_tussock_divisa", "Tussock", 0.4);
+    rescueByGenusPrior([divisa], { genusHints: [{ Genus: "$Codex_Ent_Tussocks_Genus_Name;", Genus_Localised: "Tussock" }], biologicalSignals: 5 }, scan, ctx, root);
+    expect(divisa.unlikely).toBe(true);
+  });
+});
+
+describe("pressure and gravity cells (2026-10-16)", () => {
+  it("puts two pressure / gravity cells in front when both are known, and leaves them out for the veto", () => {
+    const scan = hmc({ SurfacePressure: 0.02 * 101_325, SurfaceGravity: 0.3 * 9.80665 });
+    const cells = genusPriorCells(scan, 1, "K");
+    expect(cells.slice(0, 2)).toEqual(["P0|hmc|1|sulphur dioxide|13|3|4|K|none", "P1|hmc|1|sulphur dioxide|13|3|4"]);
+    expect(cells[2]).toBe("L0|hmc|1|sulphur dioxide|13|K|none");
+    expect(genusPriorCells(scan, 1, "K", true)[0]).toBe("L0|hmc|1|sulphur dioxide|13|K|none");
+    expect(genusPriorCells(hmc(), 1, "K")[0]).toBe("L0|hmc|1|sulphur dioxide|13|K|none");
+  });
+
+  it("finds a pressure / gravity cell for a common body", () => {
+    const p = genusPriorFor(root, hmc({ SurfacePressure: 0.003 * 101_325, SurfaceGravity: 0.5 * 9.80665 }), 1, "K")!;
+    expect(p.cell.startsWith("P")).toBe(true);
+    expect(p.n).toBeGreaterThanOrEqual(100);
   });
 });

@@ -9,6 +9,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { PlanetScan, SpeciesDatabase, SpeciesEntry, SpeciesMatchContext } from "../src/shared/types.js";
 import { colourStarNever, setColourStarNeverRootForTests } from "../src/server/colourStarNever.js";
+import { colourStarClassKey } from "../src/shared/hostStarClass.js";
 import { setHostStarObservationsRootForTests } from "../src/server/speciesHostStarObservations.js";
 import { matchDatabaseToScan, shownSpeciesMatches } from "../src/server/matchSpecies.js";
 
@@ -64,5 +65,48 @@ describe("colourStarNever", () => {
     const underK = { parentStarType: "G", colourStarType: "K" } as SpeciesMatchContext;
     const b = matchDatabaseToScan(db, scan, null, null, { includeBacterium: true, matchContext: underK });
     expect(shownSpeciesMatches(b.matches)).toHaveLength(1);
+  });
+});
+
+describe("Herbig Ae/Be apart from A (owner, 2026-10-16)", () => {
+  it("keys a Herbig Ae/Be star as Ae for colour, and everything else as before", () => {
+    expect(colourStarClassKey("AeBe")).toBe("Ae");
+    expect(colourStarClassKey("Herbig Ae/Be Star")).toBe("Ae");
+    expect(colourStarClassKey("A")).toBe("A");
+    expect(colourStarClassKey("A_BlueWhiteSuperGiant")).toBe("A");
+    expect(colourStarClassKey("K")).toBe("K");
+    expect(colourStarClassKey(null)).toBeNull();
+  });
+
+  const stratum = (id: string) =>
+    ({
+      id,
+      displayName: id,
+      genus: "Stratum",
+      genusDataDir: "stratum",
+      criteria: { planetClassAnyOf: ["Rocky body"], landable: true },
+    }) as unknown as SpeciesEntry;
+  const scan = { PlanetClass: "Rocky body", Landable: true } as unknown as PlanetScan;
+  const run = (id: string, colourCandidateStarTypes: string[]) =>
+    matchDatabaseToScan({ species: [stratum(id)] } as SpeciesDatabase, scan, null, null, {
+      includeBacterium: true,
+      matchContext: { parentStarType: colourCandidateStarTypes[0], colourCandidateStarTypes } as SpeciesMatchContext,
+    });
+
+  it("demotes a Stratum other than araneamus when only plain A stars can colour the body", () => {
+    const a = run("stratum_stratum_cucumisis", ["A"]);
+    expect(shownSpeciesMatches(a.matches)).toHaveLength(0);
+    expect(a.matches[0]!.unlikelyReasons?.some((r) => /only araneamus grows under one/.test(r.detail))).toBe(true);
+  });
+
+  it("leaves araneamus, a Herbig Ae/Be star, and a second star that could colour it alone", () => {
+    for (const [id, stars] of [
+      ["stratum_stratum_araneamus", ["A"]],
+      ["stratum_stratum_cucumisis", ["AeBe"]],
+      ["stratum_stratum_cucumisis", ["A", "Y"]],
+    ] as const) {
+      const r = run(id, [...stars]);
+      expect(r.matches[0]!.unlikelyReasons?.some((x) => /only araneamus grows under one/.test(x.detail)) ?? false).toBe(false);
+    }
   });
 });

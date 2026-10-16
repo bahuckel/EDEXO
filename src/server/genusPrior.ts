@@ -39,6 +39,11 @@ interface PriorFile {
   cells: Record<string, { n: number; p: Record<string, number> }>;
   /** Per genus key: the cell share below which it is hidden before a DSS (see {@link vetoUnseenGenera}). */
   veto?: Record<string, number>;
+  /**
+   * Per genus key: the same kind of limit measured on the pressure / gravity cells (P0 / P1). Only genera listed
+   * here are judged on those cells; the others keep the coarse cells alone.
+   */
+  vetoFine?: Record<string, number>;
 }
 
 let cache: { root: string; file: PriorFile | null } | null = null;
@@ -72,11 +77,24 @@ export function genusPriorKey(name: string): string {
     .slice(0, 6);
 }
 
+/**
+ * Pressure (atmospheres) and gravity (g) band edges of the two finest cells (owner, 2026-10-16: rocky bodies "all over
+ * the place"). Most wrong rows on rocky and high-metal-content bodies are a genus that is not there at all, and on a
+ * year of EDDN finds pressure and gravity predict which genera a body carries clearly better than the old cells
+ * (held out by system: Stratum, Tussock and Fonticulua 5-8 % better log-loss; docs/perf/interact/genus_interaction.py).
+ * The same edges as docs/perf/genus_prior_eval.py.
+ */
+export const GENUS_PRIOR_PRESSURE_BANDS_ATM: readonly number[] = [0.002, 0.005, 0.01, 0.03, 0.1];
+export const GENUS_PRIOR_GRAVITY_BANDS_G: readonly number[] = [0.05, 0.1, 0.15, 0.25, 0.4];
+const band = (v: number, edges: readonly number[]) => String(edges.filter((e) => v >= e).length);
+
 /** The table's cells for a body, finest first — the same keys docs/perf/genus_prior_eval.py writes. */
 export function genusPriorCells(
   scan: PlanetScan,
   signals: number,
   hostStar: string | null | undefined,
+  /** Leave out the pressure / gravity cells: the veto's limits were measured on the coarser ones. */
+  coarse = false,
 ): string[] {
   const type = bodyFacts(scan).type ?? "?";
   const n = String(Math.min(Math.trunc(signals), 5));
@@ -85,7 +103,21 @@ export function genusPriorCells(
   const temp = t != null && Number.isFinite(t) ? String(Math.floor(t / 20)) : "?";
   const star = hostStarClassKey(hostStar) ?? "?";
   const volc = volcanismKind(scan.Volcanism);
+  const pa = scan.SurfacePressure;
+  const ms2 = scan.SurfaceGravity;
+  const fine =
+    !coarse && pa != null && Number.isFinite(pa) && ms2 != null && Number.isFinite(ms2) && temp !== "?"
+      ? (() => {
+          const pb = band(pa / 101_325, GENUS_PRIOR_PRESSURE_BANDS_ATM);
+          const gb = band(ms2 / 9.80665, GENUS_PRIOR_GRAVITY_BANDS_G);
+          return [
+            ["P0", type, n, atmo, temp, pb, gb, star, volc],
+            ["P1", type, n, atmo, temp, pb, gb],
+          ];
+        })()
+      : [];
   return [
+    ...fine,
     ["L0", type, n, atmo, temp, star, volc],
     ["L1", type, n, atmo, temp, star],
     ["L2", type, n, atmo, temp],
@@ -101,10 +133,11 @@ export function genusPriorFor(
   scan: PlanetScan,
   signals: number,
   hostStar: string | null | undefined,
+  coarse = false,
 ): { cell: string; n: number; p: Record<string, number> } | null {
   const file = load(root);
   if (!file) return null;
-  for (const key of genusPriorCells(scan, signals, hostStar)) {
+  for (const key of genusPriorCells(scan, signals, hostStar, coarse)) {
     const c = file.cells[key];
     if (c && c.n >= file.min) return { cell: key, n: c.n, p: c.p };
   }
@@ -145,7 +178,9 @@ export function vetoUnseenGenera(
   if (!scan || b.genusHints?.length) return;
   const signals = b.biologicalSignals;
   if (signals == null || !Number.isFinite(signals) || signals < 1) return;
-  const prior = genusPriorFor(root, scan, signals, ctx?.parentStarType);
+  // The coarse cells: the limits below were measured on them, and the finer pressure / gravity cells hid real
+  // Recepta, Tubus and Aleoida finds when the veto read them (hold-outs A / B / D, 2026-10-16).
+  const prior = genusPriorFor(root, scan, signals, ctx?.parentStarType, true);
   if (!prior) return;
   const shown = matches.filter((m) => !m.unlikely);
   const genera = new Set(shown.map((m) => genusPriorKey(m.entry.genus)));
@@ -156,8 +191,21 @@ export function vetoUnseenGenera(
       protectedGenera.add(k);
     }
   }
-  const limits = load(root)?.veto ?? {};
-  const vetoed = [...genera].filter((g) => !protectedGenera.has(g) && (prior.p[g] ?? 0) < (limits[g] ?? 0));
+  const file = load(root);
+  const limits = file?.veto ?? {};
+  /*
+    The pressure / gravity cells as well, for the genera whose limit there was measured and checked (2026-10-16):
+    a genus is hidden when either its coarse cell or its pressure / gravity cell says such bodies almost never
+    carry it. Left out on the hold-outs' evidence: Bacterium, Recepta and Tubus (hold-outs A / B), Aleoida and
+    Fumerola (hold-out D), which the finer cells hid where they grew.
+  */
+  const fineLimits = file?.vetoFine ?? {};
+  const fine = Object.keys(fineLimits).length ? genusPriorFor(root, scan, signals, ctx?.parentStarType) : null;
+  const fineCell = fine && fine.cell.startsWith("P") ? fine : null;
+  const fineSays = (g: string) => fineCell != null && g in fineLimits && (fineCell.p[g] ?? 0) < fineLimits[g]!;
+  const vetoed = [...genera].filter(
+    (g) => !protectedGenera.has(g) && ((prior.p[g] ?? 0) < (limits[g] ?? 0) || fineSays(g)),
+  );
   if (vetoed.length === 0) return;
   // Never empty the list: if every genus would go, the one the dump sees most stays.
   if (vetoed.length === genera.size)
@@ -169,15 +217,17 @@ export function vetoUnseenGenera(
   for (const m of shown) {
     const k = genusPriorKey(m.entry.genus);
     if (!out.has(k)) continue;
+    const byFine = !((prior.p[k] ?? 0) < (limits[k] ?? 0)) && fineCell != null;
+    const cell = byFine ? fineCell : prior;
     m.unlikely = true;
     m.unlikelyReasons = [
       ...(m.unlikelyReasons ?? []),
       {
         field: "Chance here",
         detail:
-          `${m.entry.genus} is on ${((prior.p[k] ?? 0) * 100).toFixed(1)} % of ${prior.n.toLocaleString("en-US")} bodies like this one ` +
-          `(planet type, signals, atmosphere, temperature, star) in the Spansh galaxy dump. Listed as a ` +
-          `low-probability find rather than excluded.`,
+          `${m.entry.genus} is on ${((cell.p[k] ?? 0) * 100).toFixed(1)} % of ${cell.n.toLocaleString("en-US")} bodies like this one ` +
+          `(planet type, signals, atmosphere, temperature, ${byFine ? "pressure, gravity" : "star"}) in the Spansh galaxy ` +
+          `dump. Listed as a low-probability find rather than excluded.`,
       },
     ];
   }
@@ -254,4 +304,52 @@ export function genusPriorBaseline(root: string, signals: number): Record<string
   const file = load(root);
   const c = file?.cells[`L5|${Math.min(Math.trunc(signals), 5)}`];
   return c ? c.p : null;
+}
+
+/**
+ * The genus share a body's cell must reach before {@link rescueByGenusPrior} brings back a row the floor hid.
+ *
+ * Measured on the EDDN hold-outs (2026-10-16, real app): at 0.8 three misses came back (hold-out B Fonticulua upupam,
+ * hold-out D Tussock divisa twice) for 5 / 3 / 6 more wrong rows on A / B / D (~0.1 %) and none on his journals; 0.5
+ * and 0.3 brought back the same three for 2-3 times the rows. Divisa's two cells carry Tussock 91 and 94 % of the time.
+ */
+export const RESCUE_MIN_GENUS_SHARE = 0.8;
+
+/**
+ * Before a DSS: a row the 1 % floor hid on the model's own number comes back when its genus has nothing else shown and
+ * the dump's cell says bodies like this carry the genus at least `minShare` of the time (hold-out D, Tussock divisa on
+ * 5-signal ammonia bodies: model 0.4 %, cell 91 %). The floor runs before {@link applyGenusPrior}, so the prior never
+ * saw such a row. Its chance becomes the prior's own blend, model^(1 - w) x cell^w; no other row moves. It only ever
+ * un-hides, so it cannot cost a find. Not for a genus placed by position (its chance is the model's), nor for a row a
+ * gate demoted as well.
+ */
+export function rescueByGenusPrior(
+  matches: SpeciesMatch[],
+  b: Pick<BodyExoState, "genusHints" | "biologicalSignals">,
+  scan: PlanetScan | null,
+  ctx: Pick<SpeciesMatchContext, "parentStarType"> | null | undefined,
+  root: string,
+  minShare = RESCUE_MIN_GENUS_SHARE,
+): void {
+  if (!scan || b.genusHints?.length) return;
+  const signals = b.biologicalSignals;
+  if (signals == null || !Number.isFinite(signals) || signals < 1) return;
+  const prior = genusPriorFor(root, scan, signals, ctx?.parentStarType);
+  if (!prior) return;
+  const shownGenera = new Set(matches.filter((m) => !m.unlikely).map((m) => genusPriorKey(m.entry.genus)));
+  for (const m of matches) {
+    const why = m.unlikelyReasons ?? [];
+    if (!m.unlikely || why.length !== 1 || why[0]!.field !== "Chance here") continue;
+    const g = genusPriorKey(m.entry.genus);
+    if (shownGenera.has(g) || gateForSpeciesId(m.entry.id)) continue;
+    const p = prior.p[g] ?? 0;
+    const pct = m.presenceProbabilityPercent;
+    if (p < minShare || pct == null || !Number.isFinite(pct)) continue;
+    const blended = Math.exp(
+      (1 - GENUS_PRIOR_WEIGHT) * Math.log(Math.max(pct / 100, 1e-6)) + GENUS_PRIOR_WEIGHT * Math.log(p),
+    );
+    m.unlikely = false;
+    m.unlikelyReasons = [];
+    m.presenceProbabilityPercent = Math.round(Math.min(100, blended * 100) * 10) / 10;
+  }
 }

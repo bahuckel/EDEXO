@@ -672,11 +672,13 @@ export function buildSpeciesMatchContextFromRecords(i: MatchContextInputs): Spec
    * every star the chain names, and every star in the system when it names none.
    */
   let hostStarClasses: string[] | undefined;
+  let colourCandidateStarTypes: string[] | undefined;
   if (rec) {
-    const keys = hostStarClassKeys(
-      hostStarBodyIdsForExobiology(rec, byId).map((id) => byId.get(id)?.starType),
-    );
+    const types = hostStarBodyIdsForExobiology(rec, byId).map((id) => byId.get(id)?.starType);
+    const keys = hostStarClassKeys(types);
     if (keys.length) hostStarClasses = keys;
+    const raw = [...new Set(types.map((t) => t?.trim()).filter((t): t is string => !!t))];
+    if (raw.length) colourCandidateStarTypes = raw;
   }
 
   const orbitDistanceFromParentStarLs = starDistanceLs(rec, scan, byId);
@@ -716,6 +718,7 @@ export function buildSpeciesMatchContextFromRecords(i: MatchContextInputs): Spec
   }
   if (signalHints?.length) ctx.signalHints = signalHints;
   if (hostStarClasses?.length) ctx.hostStarClasses = hostStarClasses;
+  if (colourCandidateStarTypes?.length) ctx.colourCandidateStarTypes = colourCandidateStarTypes;
   const mainStar = mainStarClassOf(byId);
   if (Number.isFinite(exo.systemAddress)) ctx.systemAddress = exo.systemAddress;
   const arrivalLs = rec?.distanceFromArrivalLs ?? scan?.distanceFromArrivalLs;

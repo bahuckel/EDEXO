@@ -39,6 +39,12 @@ export interface SpeciesMatchContext {
    */
   hostStarClasses?: string[];
   /**
+   * Journal star types of every star that could colour this body (the stars behind {@link hostStarClasses}, before
+   * the brightest-star override), as the journal writes them — "A" and "AeBe" kept apart. Read by the Stratum
+   * colour rule in matchSpecies (owner, 2026-10-16).
+   */
+  colourCandidateStarTypes?: string[];
+  /**
    * Host-class key of the system's **main** star — the arrival star — which is not always the body's
    * host. Some species follow it rather than the star the body orbits: Stratum araneamus is under an
    * A, neutron, B or black-hole main star on 98.9 % of its codex sightings while a third of its bodies

@@ -40,6 +40,19 @@
     "expected": 424.3
    }
   ],
+  "bacterium_bacterium_aurasus": [
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": ">=",
+      "is": 404.131928
+     }
+    ],
+    "speciesBodies": 64711,
+    "expected": 69.4
+   }
+  ],
   "cactoida_cactoida_cortexum": [
    {
     "when": [
@@ -228,6 +241,42 @@
     "expected": 159.0
    }
   ],
+  "clypeus_clypeus_lacrimam": [
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": "<=",
+      "is": 194.283455
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 2891,
+    "expected": 157.1
+   }
+  ],
+  "clypeus_clypeus_speculumi": [
+   {
+    "when": [
+     {
+      "value": "sma_ls",
+      "op": "<=",
+      "is": 0.832238
+     },
+     {
+      "value": "c_metal",
+      "op": ">=",
+      "is": 0.092398
+     }
+    ],
+    "speciesBodies": 963,
+    "expected": 53.9
+   }
+  ],
   "concha_concha_aureolas": [
    {
     "when": [
@@ -303,6 +352,24 @@
     ],
     "speciesBodies": 2137,
     "expected": 93.5
+   }
+  ],
+  "concha_concha_labiata": [
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": ">=",
+      "is": 180.018158
+     },
+     {
+      "value": "sma_ls",
+      "op": ">=",
+      "is": 12.881304
+     }
+    ],
+    "speciesBodies": 11154,
+    "expected": 2864.5
    }
   ],
   "frutexa_frutexa_acus": [
@@ -613,6 +680,42 @@
     "expected": 210.5
    }
   ],
+  "recepta_recepta_deltahedronix": [
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": ">=",
+      "is": 167.646186
+     },
+     {
+      "value": "orb_d",
+      "op": ">=",
+      "is": 70.160307
+     }
+    ],
+    "speciesBodies": 617,
+    "expected": 196.0
+   }
+  ],
+  "stratum_stratum_araneamus": [
+   {
+    "when": [
+     {
+      "value": "dist_ls",
+      "op": "<=",
+      "is": 5133.995794
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "M"
+     }
+    ],
+    "speciesBodies": 3177,
+    "expected": 42.9
+   }
+  ],
   "stratum_stratum_cucumisis": [
    {
     "when": [
@@ -635,6 +738,17 @@
     ],
     "speciesBodies": 3451,
     "expected": 2673.3
+   },
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": "<=",
+      "is": 190.914395
+     }
+    ],
+    "speciesBodies": 3451,
+    "expected": 2678.2
    }
   ],
   "stratum_stratum_excutitus": [
@@ -707,6 +821,22 @@
     ],
     "speciesBodies": 6080,
     "expected": 43.2
+   },
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": ">=",
+      "is": 171.139236
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "H"
+     }
+    ],
+    "speciesBodies": 6080,
+    "expected": 18.2
    }
   ],
   "tubus_tubus_compagibus": [

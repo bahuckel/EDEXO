@@ -70,7 +70,7 @@ import { hostStarVerdict, type HostStarVerdict } from "./speciesHostStarObservat
 import { colourStarNever } from "./colourStarNever.js";
 import { eddnSeenThisFarOut } from "./eddnTemperatureRange.js";
 import { describeExclusion, measuredExclusion, type ExclusionValues } from "./measuredExclusions.js";
-import { hostStarClassKey } from "../shared/hostStarClass.js";
+import { colourStarClassKey, hostStarClassKey } from "../shared/hostStarClass.js";
 import { volcanismJournalMatchesFragments } from "../shared/volcanismMatch.js";
 import { isBacteriumSpeciesEntry } from "../shared/speciesBacterium.js";
 import { reportsVolcanism } from "../shared/volcanismText.js";
@@ -850,6 +850,27 @@ export function speciesMatchesExcludingTempPressure(
         detail: `Colour star ${ctx.colourStarType} (the brightest in this body's sky): none of the ${never.speciesBodies.toLocaleString("en-US")} bodies in a year of EDDN finds grew under a ${never.cls} colour star, where about ${Math.round(never.expected)} would be expected. ${DEMOTED_NOTE}`,
       });
     }
+  }
+
+  /*
+    Stratum has no colour under an A-type star (owner, 2026-10-16): only araneamus grows under one. Every other Stratum
+    needs another star to colour it — a companion, or a star in a planet slot (often a Y, L or T Tauri dwarf). In a year
+    of EDDN finds (342k bodies) and hold-outs A, B and D, on bodies where every star that could colour the body is a
+    plain A star, the only Stratum logged was araneamus (1,486 finds) and no other Stratum species was found at all.
+    A Herbig Ae/Be star is not an A star here: six Stratum species grow under one, in their own Ae colour.
+  */
+  const colourStars = ctx?.colourCandidateStarTypes;
+  if (
+    (entry.genus ?? "").trim().toLowerCase() === "stratum" &&
+    entry.id !== "stratum_stratum_araneamus" &&
+    colourStars?.length &&
+    colourStars.every((t) => colourStarClassKey(t) === "A")
+  ) {
+    failures.push({
+      field: "StarType",
+      soft: true,
+      detail: `Only A-type stars can colour this body (${colourStars.join(", ")}), and Stratum has no colour under an A star — only araneamus grows under one. ${DEMOTED_NOTE}`,
+    });
   }
 
   // Where the species never grows although its rate says it should (measuredExclusions.ts, 1.2.18 Part 3b).

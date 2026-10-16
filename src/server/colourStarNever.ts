@@ -21,7 +21,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { hostStarClassKey } from "../shared/hostStarClass.js";
+import { colourStarClassKey } from "../shared/hostStarClass.js";
 import { getProjectRoot } from "./paths.js";
 
 export interface ColourStarNever {
@@ -80,7 +80,7 @@ export function colourStarNever(
   colourStarType: string | null | undefined,
   root?: string,
 ): ColourStarNever | null {
-  const cls = hostStarClassKey(colourStarType);
+  const cls = colourStarClassKey(colourStarType);
   if (!cls) return null;
   const hit = table(root ?? rootOverride ?? getProjectRoot())
     .get(speciesId)

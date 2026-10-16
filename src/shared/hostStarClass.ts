@@ -63,6 +63,20 @@ export function hostStarClassKey(value: string | null | undefined): string | nul
 }
 
 /**
+ * The class a star colours a plant as: {@link hostStarClassKey}, except that a Herbig Ae/Be star is `Ae`, not `A`.
+ *
+ * The two are different stars to the game. Stratum has no colour for an A star and grows under one only as araneamus;
+ * under a Herbig Ae/Be it grows in its own Ae colour (owner, 2026-10-16; the EDDN year: 1,917 Stratum finds under a
+ * plain A parent, every one araneamus, against 21 of six other Stratum species under AeBe stars, all Ae-coloured).
+ * Folded into A, those 21 kept the colour-star table from ever saying "never under A" for those six.
+ */
+export function colourStarClassKey(value: string | null | undefined): string | null {
+  const v = (value ?? "").trim();
+  if (/^aebe$/i.test(v) || /\bherbig\s+ae\/?be\b/i.test(v)) return "Ae";
+  return hostStarClassKey(v);
+}
+
+/**
  * Position on the Harvard sequence, or null for anything off it.
  *
  * Distance along O-B-A-F-G-K-M-L-T-Y is a real similarity: an F host and a G host are neighbouring

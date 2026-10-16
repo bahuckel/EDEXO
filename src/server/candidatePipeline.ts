@@ -31,7 +31,7 @@ import { loadSpatialCatalogue } from "./spatialCatalogue.js";
 import type { SpatialCatalogue } from "../shared/spatialGates.js";
 import { attachPresenceProbability, demoteBelowPresenceFloor, markSampledDespiteUnlikely } from "./presenceFloors.js";
 import { applyGenusBodySplit } from "./genusBodySplit.js";
-import { applyGenusPrior, vetoUnseenGenera } from "./genusPrior.js";
+import { applyGenusPrior, rescueByGenusPrior, vetoUnseenGenera } from "./genusPrior.js";
 import { applyMeasuredOdds } from "./measuredOdds.js";
 import { orderConchaPair } from "./conchaOrder.js";
 import { collectResolvedOrganicLockSpeciesIds } from "./organicLocks.js";
@@ -124,6 +124,12 @@ export function rankCandidates(
     re-weight the chances of what the floor left, and hide only a genus such bodies almost never carry.
   */
   applyGenusPrior(matches, b, scan, ctx, root);
+  /*
+    The floor judged the model's own number, before the prior above could lift a genus the model under-reads: a row
+    it hid comes back when nothing else of its genus is shown and bodies like this carry the genus most of the time
+    (owner, 2026-10-16: Tussock divisa, 0.4 % on 5-signal ammonia bodies that carry Tussock 91 % of the time).
+  */
+  rescueByGenusPrior(matches, b, scan, ctx, root);
   vetoUnseenGenera(matches, b, scan, ctx, root, locked());
   /*
     The measured odds once more, over the genus prior (code review 2026-10-10, B8): the prior blends a

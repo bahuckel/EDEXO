@@ -1,6 +1,6 @@
 {
  "formatVersion": 1,
- "builtAt": "2026-10-15",
+ "builtAt": "2026-10-16",
  "source": "EDDN year (EDGalaxyData archive), each species logged on the exact body; colour star = the app's colourStarTypeFor (brightest star in the body's sky). Built by docs/perf/build_colour_star_never.py.",
  "minExpected": 20,
  "species": {
@@ -82,7 +82,7 @@
   },
   "frutexa_frutexa_collum": {
    "A": {
-    "expected": 43.1,
+    "expected": 43.0,
     "speciesBodies": 562
    },
    "K": {
@@ -92,7 +92,7 @@
   },
   "frutexa_frutexa_fera": {
    "A": {
-    "expected": 230.1,
+    "expected": 229.5,
     "speciesBodies": 2987
    }
   },
@@ -147,6 +147,10 @@
    }
   },
   "stratum_stratum_frigus": {
+   "A": {
+    "expected": 89.7,
+    "speciesBodies": 811
+   },
    "G": {
     "expected": 147.8,
     "speciesBodies": 811
@@ -204,7 +208,7 @@
   },
   "tussock_tussock_divisa": {
    "A": {
-    "expected": 291.7,
+    "expected": 291.5,
     "speciesBodies": 4174
    }
   },
@@ -216,13 +220,13 @@
   },
   "tussock_tussock_pennata": {
    "A": {
-    "expected": 70.0,
+    "expected": 69.8,
     "speciesBodies": 1174
    }
   },
   "tussock_tussock_pennatis": {
    "A": {
-    "expected": 331.7,
+    "expected": 331.0,
     "speciesBodies": 5565
    }
   },
@@ -236,9 +240,15 @@
     "speciesBodies": 14448
    }
   },
+  "tussock_tussock_stigmasis": {
+   "A": {
+    "expected": 66.2,
+    "speciesBodies": 866
+   }
+  },
   "tussock_tussock_ventusa": {
    "A": {
-    "expected": 149.6,
+    "expected": 149.2,
     "speciesBodies": 2509
    }
   },
