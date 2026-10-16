@@ -3,23 +3,34 @@
  * every page gets, the session's guards (permissions, HTTPS first, per-site blocking, DNT / GPC), incognito by
  * default, and calls refused from anything but the app's own window. Electron is faked: nothing opens.
  */
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { createBrowserTabs, resolveTyped, isLocalHost, cosmeticScript } =
-  require("../electron/browserTabs.cjs") as {
-    cosmeticScript: (blocked: string[]) => string;
-    createBrowserTabs: (o: unknown) => {
-      handle: (e: { sender: FakeContents }, a: unknown) => Promise<Record<string, unknown>>;
-      isBrowserContents: (wc: unknown) => boolean;
-    };
-    resolveTyped: (t: string, s: (q: string) => string) => string | null;
-    isLocalHost: (h: string) => boolean;
+const {
+  createBrowserTabs,
+  resolveTyped,
+  isLocalHost,
+  cosmeticScript,
+  passwordCaptureScript,
+  passwordFillScript,
+  DATA_TYPES_BUT_CACHE,
+} = require("../electron/browserTabs.cjs") as {
+  cosmeticScript: (blocked: string[]) => string;
+  passwordCaptureScript: (nonce: string) => string;
+  passwordFillScript: (origin: string, username: string, password: string, auto?: boolean) => string;
+  DATA_TYPES_BUT_CACHE: string[];
+  createBrowserTabs: (o: unknown) => {
+    handle: (e: { sender: FakeContents }, a: unknown) => Promise<Record<string, unknown>>;
+    isBrowserContents: (wc: unknown) => boolean;
+    reloadFocused: () => boolean;
   };
+  resolveTyped: (t: string, s: (q: string) => string) => string | null;
+  isLocalHost: (h: string) => boolean;
+};
 const { createBrowserPrefs } = require("../electron/browserPrefs.cjs") as {
   createBrowserPrefs: (o: { dir: string }) => {
     site(d: string): { remember: boolean; blocking: boolean; origins: string[] };
@@ -31,8 +42,40 @@ const { createBrowserPrefs } = require("../electron/browserPrefs.cjs") as {
     links(): { name: string; url: string; builtIn: boolean }[];
     setEngine(k: string, c?: string): boolean;
     searchUrl(t: string): string;
+    keepCache(): boolean;
+    setKeepCache(on: boolean): void;
+    rememberPasswords(): boolean;
+    setRememberPasswords(on: boolean): void;
+    passwordNever(): string[];
+    addPasswordNever(o: string): boolean;
+    removePasswordNever(o: string): boolean;
   };
 };
+const { createBrowserPasswords } = require("../electron/browserPasswords.cjs") as {
+  createBrowserPasswords: (o: { dir: string; safeStorage: unknown; platform?: string }) => {
+    list(): { origin: string; username: string }[];
+    save(origin: string, username: string, password: string): { ok?: boolean; error?: string };
+  };
+};
+/** safeStorage, faked: a reversible scramble (browserPasswords.test.ts covers the store itself). */
+const fakeSafeStorage = () => ({
+  isEncryptionAvailable: () => true,
+  getSelectedStorageBackend: () => "gnome_libsecret",
+  encryptString: (s: string) => Buffer.from(`ENC1${[...s].reverse().join("")}`, "utf8"),
+  decryptString: (b: Buffer) => [...b.toString("utf8").slice(4)].reverse().join(""),
+});
+/** The Electron 42 clearData types (electron.d.ts, ClearDataOptions.dataTypes). */
+const ELECTRON_DATA_TYPES = [
+  "backgroundFetch",
+  "cache",
+  "cookies",
+  "downloads",
+  "fileSystems",
+  "indexedDB",
+  "localStorage",
+  "serviceWorkers",
+  "webSQL",
+];
 
 type Listener = (...a: never[]) => unknown;
 class FakeContents {
@@ -81,6 +124,10 @@ class FakeContents {
   isDestroyed() {
     return this.closed;
   }
+  focused = false;
+  isFocused() {
+    return this.focused;
+  }
   css: string[] = [];
   isolated: { world: number; code: string }[] = [];
   dom = { classes: ["ad-slot", "article"], ids: ["main"], hrefs: [], collapsed: 0 };
@@ -102,13 +149,17 @@ class FakeContents {
       );
     },
   };
+  /** What a script in the password world returns (a fill: whether it found the fields). */
+  pwResult: unknown = true;
   executeJavaScriptInIsolatedWorld(world: number, scripts: { code: string }[]) {
     this.isolated.push({ world, code: scripts[0]!.code });
-    return Promise.resolve(this.dom);
+    return Promise.resolve(world === 1078 ? this.pwResult : this.dom);
   }
   reloads = 0;
+  /** F5 and the Reload button: a normal reload, the cache kept (1.2.18). */
+  plainReloads = 0;
   reload() {
-    throw new Error("a plain reload keeps the page process's memory cache, which the blocker never sees");
+    this.plainReloads++;
   }
   reloadIgnoringCache() {
     this.reloads++;
@@ -159,8 +210,9 @@ class FakeWindow {
   once() {
     this.listeners++;
   }
+  destroyed = false;
   isDestroyed() {
-    return false;
+    return this.destroyed;
   }
 }
 type PermissionHandler = (wc: unknown, p: string, cb: (ok: boolean) => void) => void;
@@ -224,7 +276,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function setup() {
+function setup(opts: { passwords?: boolean } = {}) {
   const ses = fakeSession();
   const fakeApp = {
     getPath: () => dir,
@@ -234,6 +286,9 @@ function setup() {
   // A window a tab was dragged into: an app window too.
   const appWin2 = new FakeWindow();
   const prefs = createBrowserPrefs({ dir });
+  const passwords = opts.passwords
+    ? createBrowserPasswords({ dir, safeStorage: fakeSafeStorage(), platform: "win32" })
+    : undefined;
   const decided: string[] = [];
   const blocker = {
     status: () => ({ ready: true }),
@@ -271,9 +326,10 @@ function setup() {
     prefs,
     blocker,
     isAppWindow: (wc: unknown) => wc === appWin.webContents || wc === appWin2.webContents,
+    passwords,
   });
   const call = (a: Record<string, unknown>) => tabs.handle({ sender: appWin.webContents }, a);
-  return { ses, appWin, appWin2, prefs, blocker, decided, tabs, call, fakeApp };
+  return { ses, appWin, appWin2, prefs, blocker, decided, tabs, call, fakeApp, passwords };
 }
 
 describe("the address bar", () => {
@@ -390,8 +446,11 @@ describe("the browser's session", () => {
     // Switched off from the toolbar: the page loads again past every cache, so the change shows at once.
     await t.call({ op: "siteBlocking", id: 2, on: false });
     expect(wc.reloads).toBe(1);
+    expect(wc.plainReloads).toBe(0);
+    // The Reload button is a normal reload again, the cache kept (1.2.18: skipping it made every reload a first visit).
     await t.call({ op: "reload", id: 2 });
-    expect(wc.reloads).toBe(2);
+    expect(wc.reloads).toBe(1);
+    expect(wc.plainReloads).toBe(1);
     t.decided.length = 0;
     expect(ask((cb) => t.ses.before!(req, cb))).toEqual({});
     expect(t.decided).toEqual([]);
@@ -707,5 +766,351 @@ describe("review 1.2.16", () => {
         (x) => x.id === id,
       )?.startPage,
     ).toBe(false);
+  });
+});
+
+describe("keep page cache (owner, 2026-10-16)", () => {
+  it("is off by default and kept with the other settings", () => {
+    const p = createBrowserPrefs({ dir });
+    expect(p.keepCache()).toBe(false);
+    expect(p.rememberPasswords()).toBe(false);
+    expect(p.passwordNever()).toEqual([]);
+    p.setKeepCache(true);
+    p.setRememberPasswords(true);
+    expect(p.addPasswordNever("https://inara.cz")).toBe(true);
+    expect(p.addPasswordNever("https://inara.cz")).toBe(false);
+    // Exact https origins only: no path, no plain HTTP.
+    expect(p.addPasswordNever("https://inara.cz/login")).toBe(false);
+    expect(p.addPasswordNever("http://inara.cz")).toBe(false);
+    p.setEngine("brave");
+    const again = createBrowserPrefs({ dir });
+    expect(again.keepCache()).toBe(true);
+    expect(again.rememberPasswords()).toBe(true);
+    expect(again.passwordNever()).toEqual(["https://inara.cz"]);
+    // The rest of the settings merge in unchanged.
+    expect(again.searchUrl("x")).toBe("https://search.brave.com/search?q=x");
+    expect(again.removePasswordNever("https://inara.cz")).toBe(true);
+    again.setKeepCache(false);
+    expect(createBrowserPrefs({ dir }).keepCache()).toBe(false);
+  });
+
+  it("off: clears everything as before; on: everything but the cache, the remembered sites still kept", async () => {
+    const off = setup();
+    await off.call({ op: "start" });
+    expect(off.ses.cleared).toEqual([{}]);
+
+    const on = setup();
+    on.prefs.setKeepCache(true);
+    on.prefs.setRemember("edsm.net", true);
+    await on.call({ op: "start" });
+    expect(on.ses.cleared).toEqual([
+      { dataTypes: DATA_TYPES_BUT_CACHE, excludeOrigins: ["https://edsm.net", "https://www.edsm.net"] },
+    ]);
+    expect(DATA_TYPES_BUT_CACHE).not.toContain("cache");
+    expect([...DATA_TYPES_BUT_CACHE, "cache"].sort()).toEqual([...ELECTRON_DATA_TYPES].sort());
+    // Switched from the menu; "Clear everything now" still takes the cache too.
+    const r = (await on.call({ op: "setKeepCache", on: false })) as { state: { keepCache: boolean } };
+    expect(r.state.keepCache).toBe(false);
+    await on.call({ op: "clearAll" });
+    expect(on.ses.cleared.at(-1)).toBeNull();
+  });
+});
+
+describe("remember passwords (owner, 2026-10-16)", () => {
+  type St = {
+    tabs: {
+      id: number;
+      passwordPrompt: { origin: string; username: string; update: boolean } | null;
+      logins: string[];
+    }[];
+    rememberPasswords: boolean;
+    passwords: { available: boolean; saved: { origin: string; username: string }[]; never: string[] };
+  };
+  const SECRET = "hunter2-very-secret";
+
+  /** A login page on the browser, the option on, its dom-ready done: the tab, its page and the page's nonce. */
+  async function loginPage(url = "https://inara.cz/login", on = true) {
+    const t = setup({ passwords: true });
+    if (on) t.prefs.setRememberPasswords(true);
+    await t.call({ op: "start" });
+    const { id } = (await t.call({ op: "open", text: url })) as { id: number };
+    const wc = FakeView.made.at(-1)!.webContents;
+    wc.emit("dom-ready");
+    const script = wc.isolated.find((x) => x.world === 1078)?.code ?? "";
+    const nonce = /const N = "([^"]+)";/.exec(script)?.[1] ?? null;
+    const state = async () => (await t.call({ op: "state" })) as unknown as St;
+    const tab = async () => (await state()).tabs.find((x) => x.id === id)!;
+    const say = (message: string, frame: unknown = { parent: null }) =>
+      wc.emit("console-message", { message, frame }, 0, message, 1, "");
+    return { t, id, wc, nonce, state, tab, say };
+  }
+  const submit = (nonce: string, o: Record<string, unknown> = {}) =>
+    nonce +
+    JSON.stringify({ t: "submit", origin: "https://inara.cz", username: "cmdr", password: SECRET, ...o });
+
+  it("watches nothing while off, and nothing on plain HTTP", async () => {
+    const off = await loginPage("https://inara.cz/login", false);
+    expect(off.nonce).toBeNull();
+    expect(off.wc.isolated.filter((x) => x.world === 1078)).toEqual([]);
+    const http = await loginPage("http://192.168.1.20/login");
+    expect(http.nonce).toBeNull();
+  });
+
+  it("takes a report only with this page's nonce, from the top frame, for the page's origin", async () => {
+    const p = await loginPage();
+    expect(p.nonce).toMatch(/^[0-9a-f]{32}:$/);
+    const nonce = p.nonce!;
+    // The page's own console.log cannot know the nonce.
+    p.say(submit("0123456789abcdef0123456789abcdef:"));
+    p.say(JSON.stringify({ t: "submit", origin: "https://inara.cz", username: "x", password: "y" }));
+    p.say(submit(nonce), { parent: { url: "https://ads.example/" } });
+    p.say(submit(nonce, { origin: "https://evil.example" }));
+    expect((await p.tab()).passwordPrompt).toBeNull();
+    // Electron 42's details object …
+    p.say(submit(nonce));
+    expect((await p.tab()).passwordPrompt).toEqual({
+      origin: "https://inara.cz",
+      username: "cmdr",
+      update: false,
+    });
+    // … and the older positional message (no details.message) both count.
+    await p.t.call({ op: "passwordAnswer", id: p.id, answer: "later" });
+    p.wc.emit("console-message", { frame: { parent: null } }, 0, submit(nonce), 1, "");
+    expect((await p.tab()).passwordPrompt).toMatchObject({ origin: "https://inara.cz" });
+    await p.t.call({ op: "passwordAnswer", id: p.id, answer: "later" });
+    // The navigation a submit starts does not lose its report (it can arrive after) …
+    p.wc.emit("did-start-navigation", { isMainFrame: true, isSameDocument: false });
+    p.say(submit(nonce));
+    expect((await p.tab()).passwordPrompt).toMatchObject({ origin: "https://inara.cz" });
+    await p.t.call({ op: "passwordAnswer", id: p.id, answer: "later" });
+    // … but the next document has its own nonce, and the old one counts no more.
+    p.wc.emit("dom-ready");
+    const fresh = /const N = "([^"]+)";/.exec(
+      p.wc.isolated.filter((x) => x.world === 1078).at(-1)!.code,
+    )?.[1];
+    expect(fresh).toMatch(/^[0-9a-f]{32}:$/);
+    expect(fresh).not.toBe(nonce);
+    p.say(submit(nonce));
+    expect((await p.tab()).passwordPrompt).toBeNull();
+    p.say(submit(fresh!));
+    expect((await p.tab()).passwordPrompt).toMatchObject({ origin: "https://inara.cz" });
+  });
+
+  it("never puts a password in the toolbar's state, and saves it encrypted on Save", async () => {
+    const p = await loginPage();
+    p.say(submit(p.nonce!));
+    const before = await p.state();
+    expect(JSON.stringify(before)).not.toContain(SECRET);
+    expect(JSON.stringify(p.t.appWin.webContents.sent)).not.toContain(SECRET);
+    const r = (await p.t.call({ op: "passwordAnswer", id: p.id, answer: "save" })) as unknown as {
+      ok: boolean;
+      state: St;
+    };
+    expect(r.ok).toBe(true);
+    expect(JSON.stringify(r)).not.toContain(SECRET);
+    expect(r.state.passwords.saved).toEqual([{ origin: "https://inara.cz", username: "cmdr" }]);
+    expect(r.state.tabs.find((x) => x.id === p.id)!.passwordPrompt).toBeNull();
+    expect(readFileSync(path.join(dir, "browser", "passwords.json"), "utf8")).not.toContain(SECRET);
+    // The same login again: no prompt; another password for it: "update".
+    p.say(submit(p.nonce!));
+    expect((await p.tab()).passwordPrompt).toBeNull();
+    p.say(submit(p.nonce!, { password: "new-one" }));
+    expect((await p.tab()).passwordPrompt).toMatchObject({ update: true });
+  });
+
+  it("remembers Never for this site, and Not now forgets the password", async () => {
+    const p = await loginPage();
+    p.say(submit(p.nonce!));
+    await p.t.call({ op: "passwordAnswer", id: p.id, answer: "later" });
+    expect((await p.tab()).passwordPrompt).toBeNull();
+    expect(p.t.passwords!.list()).toEqual([]);
+    p.say(submit(p.nonce!, { password: "second" }));
+    await p.t.call({ op: "passwordAnswer", id: p.id, answer: "never" });
+    expect(p.t.prefs.passwordNever()).toEqual(["https://inara.cz"]);
+    p.say(submit(p.nonce!, { password: "third" }));
+    expect((await p.tab()).passwordPrompt).toBeNull();
+  });
+
+  it("fills a lone saved login on its own once per page, through the password world (owner, 2026-10-16)", async () => {
+    const p = await loginPage();
+    p.t.passwords!.save("https://inara.cz", "cmdr", SECRET);
+    p.say(`${p.nonce}${JSON.stringify({ t: "field", has: true })}`);
+    const fills = () => p.wc.isolated.filter((x) => x.world === 1078).slice(1);
+    expect(fills()).toHaveLength(1);
+    expect(fills()[0]!.code).toContain("const AUTO = true;");
+    expect(fills()[0]!.code).toContain(JSON.stringify(SECRET));
+    // The field going and coming back on the same page does not fill again.
+    p.say(`${p.nonce}${JSON.stringify({ t: "field", has: false })}`);
+    p.say(`${p.nonce}${JSON.stringify({ t: "field", has: true })}`);
+    expect(fills()).toHaveLength(1);
+  });
+
+  it("fills nothing on its own when several logins are saved for the site: the key button chooses", async () => {
+    const p = await loginPage();
+    p.t.passwords!.save("https://inara.cz", "a", "1");
+    p.t.passwords!.save("https://inara.cz", "b", "2");
+    p.say(`${p.nonce}${JSON.stringify({ t: "field", has: true })}`);
+    expect(p.wc.isolated.filter((x) => x.world === 1078)).toHaveLength(1);
+  });
+
+  it("shows the key on a page with a password field and fills through the password world when asked", async () => {
+    const p = await loginPage();
+    p.t.passwords!.save("https://inara.cz", "cmdr", SECRET);
+    expect((await p.tab()).logins).toEqual([]);
+    p.say(`${p.nonce}${JSON.stringify({ t: "field", has: true })}`);
+    expect((await p.tab()).logins).toEqual(["cmdr"]);
+    const r = await p.t.call({ op: "passwordFill", id: p.id });
+    expect(r).toEqual({ ok: true });
+    const fill = p.wc.isolated.at(-1)!;
+    expect(fill.world).toBe(1078);
+    expect(fill.code).toContain(JSON.stringify(SECRET));
+    expect(fill.code).toContain('location.origin !== "https://inara.cz"');
+    // Off: no key, no fill, the saved login kept.
+    await p.t.call({ op: "setRememberPasswords", on: false });
+    expect((await p.tab()).logins).toEqual([]);
+    expect(await p.t.call({ op: "passwordFill", id: p.id })).toEqual({ error: "Nothing to fill." });
+    expect((await p.state()).passwords.saved).toHaveLength(1);
+  });
+
+  it("deletes one saved password, or all", async () => {
+    const p = await loginPage();
+    p.t.passwords!.save("https://inara.cz", "a", "1");
+    p.t.passwords!.save("https://inara.cz", "b", "2");
+    let r = (await p.t.call({
+      op: "passwordDelete",
+      origin: "https://inara.cz",
+      username: "a",
+    })) as unknown as {
+      state: St;
+    };
+    expect(r.state.passwords.saved).toEqual([{ origin: "https://inara.cz", username: "b" }]);
+    r = (await p.t.call({ op: "passwordDeleteAll" })) as unknown as { state: St };
+    expect(r.state.passwords.saved).toEqual([]);
+  });
+});
+
+describe("the password world's scripts, on a page", () => {
+  // jsdom has no type declarations here; only the page's document and its console are needed.
+  type Dom = {
+    window: Window & {
+      eval: (code: string) => unknown;
+      close: () => void;
+      Event: typeof Event;
+      MouseEvent: typeof MouseEvent;
+    };
+  };
+  const { JSDOM, VirtualConsole } = require("jsdom") as {
+    JSDOM: new (html: string, o: Record<string, unknown>) => Dom;
+    VirtualConsole: new () => { on(ev: string, cb: (...a: unknown[]) => void): void };
+  };
+  function page(html: string) {
+    const logs: string[] = [];
+    const vc = new VirtualConsole();
+    vc.on("log", (...a) => logs.push(a.map(String).join(" ")));
+    const dom = new JSDOM(html, {
+      url: "https://inara.cz/login",
+      runScripts: "outside-only",
+      virtualConsole: vc,
+    });
+    // jsdom lays nothing out: every element counts as shown.
+    (
+      dom.window as unknown as { Element: { prototype: { getClientRects: () => unknown[] } } }
+    ).Element.prototype.getClientRects = () => [{}];
+    return { dom, logs, doc: dom.window.document };
+  }
+
+  it("reports a form's login with the nonce, and says the page has a password field", () => {
+    const { dom, logs, doc } = page(
+      `<form><input name="q"><input id="u" type="email" autocomplete="username"><input id="p" type="password"><button>Sign in</button></form>`,
+    );
+    dom.window.eval(passwordCaptureScript("abc:"));
+    expect(logs).toEqual([`abc:${JSON.stringify({ t: "field", has: true })}`]);
+    (doc.querySelector("#u") as HTMLInputElement).value = "cmdr";
+    (doc.querySelector("#p") as HTMLInputElement).value = "pw1";
+    doc
+      .querySelector("form")!
+      .dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+    const report = logs.at(-1)!;
+    expect(report.startsWith("abc:")).toBe(true);
+    expect(JSON.parse(report.slice(4))).toEqual({
+      t: "submit",
+      origin: "https://inara.cz",
+      username: "cmdr",
+      password: "pw1",
+    });
+    // A click on the button as well as the submit: reported once.
+    doc.querySelector("button")!.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    expect(logs.filter((l) => l.includes('"submit"'))).toHaveLength(1);
+    dom.window.close();
+  });
+
+  it("takes the nearest text input before the password when nothing says username", () => {
+    const { dom, logs, doc } = page(
+      `<div><input id="other" type="text"><input id="u" type="text"><input id="p" type="password"><div role="button">Go</div></div>`,
+    );
+    dom.window.eval(passwordCaptureScript("n:"));
+    (doc.querySelector("#u") as HTMLInputElement).value = "cmdr";
+    (doc.querySelector("#p") as HTMLInputElement).value = "pw";
+    doc.querySelector("[role=button]")!.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    expect(JSON.parse(logs.at(-1)!.slice(2))).toMatchObject({ username: "cmdr", password: "pw" });
+    dom.window.close();
+  });
+
+  it("fills the username and password as typed input, on its own origin only", () => {
+    const { dom, doc } = page(`<form><input id="u" type="text"><input id="p" type="password"></form>`);
+    const seen: string[] = [];
+    doc.addEventListener("input", (e) => seen.push((e.target as HTMLInputElement).id), true);
+    expect(dom.window.eval(passwordFillScript("https://other.example", "cmdr", "pw"))).toBe(false);
+    expect((doc.querySelector("#p") as HTMLInputElement).value).toBe("");
+    expect(dom.window.eval(passwordFillScript("https://inara.cz", "cmdr", 'p"w\\'))).toBe(true);
+    expect((doc.querySelector("#u") as HTMLInputElement).value).toBe("cmdr");
+    expect((doc.querySelector("#p") as HTMLInputElement).value).toBe('p"w\\');
+    expect(seen).toEqual(["u", "p"]);
+    dom.window.close();
+  });
+
+  it("on its own, fills only empty fields and leaves the keyboard focus alone", () => {
+    const { dom, doc } = page(`<form><input id="u" type="text"><input id="p" type="password"><input id="x" type="text"></form>`);
+    const x = doc.querySelector("#x") as HTMLInputElement;
+    x.focus();
+    (doc.querySelector("#u") as HTMLInputElement).value = "typed";
+    expect(dom.window.eval(passwordFillScript("https://inara.cz", "cmdr", "pw", true))).toBe(true);
+    expect((doc.querySelector("#u") as HTMLInputElement).value).toBe("typed");
+    expect((doc.querySelector("#p") as HTMLInputElement).value).toBe("pw");
+    expect(doc.activeElement).toBe(x);
+    // A password already typed is never replaced.
+    (doc.querySelector("#p") as HTMLInputElement).value = "mine";
+    expect(dom.window.eval(passwordFillScript("https://inara.cz", "cmdr", "pw", true))).toBe(false);
+    expect((doc.querySelector("#p") as HTMLInputElement).value).toBe("mine");
+    dom.window.close();
+  });
+});
+
+describe("F5 in a browsed page (owner, 2026-10-16: F5 did nothing in the browser)", () => {
+  it("reloads the page that has the keyboard, and only when one has it", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://www.edsm.net/" });
+    const wc = FakeView.made[FakeView.made.length - 1]!.webContents;
+    expect(t.tabs.reloadFocused()).toBe(false);
+    expect(wc.plainReloads).toBe(0);
+    wc.focused = true;
+    expect(t.tabs.reloadFocused()).toBe(true);
+    expect(wc.plainReloads).toBe(1);
+  });
+});
+
+describe("closing the app (owner, 2026-10-16: \"Cannot read properties of undefined (reading 'isDestroyed') at closeTab\")", () => {
+  it("a page torn down at quit closes its tab without touching its gone webContents, and opens no new page", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://www.edsm.net/" });
+    const before = FakeView.made.length;
+    const view = FakeView.made[before - 1]!;
+    const wc = view.webContents;
+    t.appWin.destroyed = true;
+    (view as unknown as { webContents: unknown }).webContents = undefined;
+    expect(() => wc.close()).not.toThrow();
+    expect(FakeView.made.length).toBe(before);
   });
 });

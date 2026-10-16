@@ -10,16 +10,19 @@
   (a link that opens one becomes a tab), no navigation outside http(s), no certificate exceptions.
 
   Private by default: everything a site stores is cleared at the browser's first use in each run (and at quit),
-  except for the sites marked "Remember this site". Blocking (browserBlocker.cjs) is on for every site unless
-  switched off for it. Nothing is collected: no history kept, no telemetry, Do Not Track and Global Privacy
-  Control sent, a plain Chrome user agent (no Electron or app name in it).
+  except for the sites marked "Remember this site" (and the page cache, when "Keep page cache" is on). Blocking
+  (browserBlocker.cjs) is on for every site unless switched off for it. Nothing is collected: no history kept, no
+  telemetry, Do Not Track and Global Privacy Control sent, a plain Chrome user agent (no Electron or app name in it).
+  "Remember passwords" (off by default) keeps logins encrypted by the operating system (browserPasswords.cjs).
 
   RAM: nothing until the Browser tab opens; one renderer per page while it is open; when the tab closes every page
   closes and the blocking engine is let go.
 */
 
 const path = require("node:path");
+const { randomBytes } = require("node:crypto");
 const { httpUrl } = require("./browserPrefs.cjs");
+const { passwordOrigin } = require("./browserPasswords.cjs");
 
 const PARTITION = "persist:edexo-browser";
 const MAX_TABS = 30;
@@ -30,12 +33,37 @@ const DETACH_GRACE_MS = 4000;
  * reach (the DOM is shared, the scripts are not), so browsed pages still get no preload.
  */
 const COSMETIC_WORLD = 1077;
+/**
+ * The script world "Remember passwords" works in: its own, apart from the cosmetic one and from the page's, so the
+ * page can neither read the nonce its reports carry nor see the password a fill puts in.
+ */
+const PASSWORD_WORLD = 1078;
+/** A captured login waits this long for Save / Never / Not now, then the password is dropped from memory. */
+const PASSWORD_PROMPT_MS = 10 * 60 * 1000;
+/*
+  "Keep page cache" (owner, 2026-10-16): everything a site stored is cleared as before except the HTTP cache, so a
+  site visited in an earlier run loads from disk. Measured with docs/perf/browser/timing.cjs on five sites: a cold
+  load took ~775-895 ms, a warm one ~142-300 ms. Every clearData data type but "cache" (Electron 42's list).
+*/
+const DATA_TYPES_BUT_CACHE = [
+  "backgroundFetch",
+  "cookies",
+  "downloads",
+  "fileSystems",
+  "indexedDB",
+  "localStorage",
+  "serviceWorkers",
+  "webSQL",
+];
 /** Looked again after the page loaded, for what it adds later (lazy ad slots). */
 const COSMETIC_PASSES_MS = [1500, 4000, 10000];
 /*
-  Every reload here skips the cache (owner, 2026-10-13: blocking switched on or off showed only in a new tab). A
-  normal reload takes the page's scripts and images from the page process's own memory cache, which never reaches
-  webRequest, so the blocker was not asked again; a new tab has a new process and an empty cache.
+  A reload after blocking is switched on or off, or a site's data is cleared, skips the cache (owner, 2026-10-13:
+  the change showed only in a new tab). A normal reload takes the page's scripts and images from the page process's
+  own memory cache, which never reaches webRequest, so the blocker was not asked again; a new tab has a new process
+  and an empty cache. F5, Ctrl+R and the Reload button are normal reloads again (1.2.18, owner: "the browser is slow"):
+  skipping the cache made every reload as slow as a first visit — measured 357-514 ms against 142-300 ms
+  (docs/perf/browser/timing.cjs, five sites).
 */
 /** How long a page's request waits for its scriptlets to be registered (they take a few ms). */
 const INJECT_WAIT_MS = 1500;
@@ -70,6 +98,104 @@ function cosmeticScript(blocked) {
     }
   }
   return { classes: [...classes].slice(0, 8000), ids: [...ids].slice(0, 4000), hrefs: [...hrefs].slice(0, 4000), collapsed };
+})()`;
+}
+
+/*
+  "Remember passwords" (owner, 2026-10-16): run in the password world at each page's dom-ready while the option is
+  on. It watches, in the capture phase, a form's submit and a click or Enter on a submit-like button in a form or
+  beside a filled password field, then reports the password and the best username field (autocomplete="username" or
+  "email", else the nearest text or email input before the password) as a console line that starts with the nonce
+  the main process made for this page. The page's own scripts run in another world: they cannot read the nonce, so
+  they cannot forge a report. It also says whether the page has a visible password field (the toolbar's key).
+*/
+function passwordCaptureScript(nonce) {
+  return `(() => {
+  if (globalThis.__pwWatch) return;
+  globalThis.__pwWatch = true;
+  const N = ${JSON.stringify(nonce)};
+  const say = (m) => console.log(N + JSON.stringify(m));
+  const shown = (el) => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+  const isLoginField = (i) =>
+    (i.getAttribute("autocomplete") || "").toLowerCase().split(" ").some((w) => w === "username" || w === "email");
+  const pwFields = (root) => [...(root || document).querySelectorAll('input[type="password"]')].filter(shown);
+  const filled = (root) => pwFields(root).find((x) => x.value);
+  const userFor = (pw) => {
+    const inputs = [...(pw.form || document).querySelectorAll("input")].filter(shown);
+    const auto = inputs.find((i) => i !== pw && isLoginField(i));
+    if (auto) return auto;
+    for (let k = inputs.indexOf(pw) - 1; k >= 0; k--)
+      if (["text", "email", "tel"].includes(inputs[k].type)) return inputs[k];
+    return null;
+  };
+  let last = "";
+  const report = (pw) => {
+    if (!pw || !pw.value) return;
+    const u = userFor(pw);
+    const m = { t: "submit", origin: location.origin, username: u ? String(u.value).trim() : "", password: pw.value };
+    const key = JSON.stringify([m.username, m.password]);
+    if (key === last) return;
+    last = key;
+    say(m);
+  };
+  const formOf = (el) => (el && (el.form || (el.closest && el.closest("form")))) || null;
+  const near = (el) => {
+    const f = formOf(el);
+    if (f) return filled(f);
+    const all = pwFields().filter((x) => x.value);
+    return all.length === 1 ? all[0] : null;
+  };
+  document.addEventListener("submit", (e) => report(filled(e.target)), true);
+  document.addEventListener("click", (e) => {
+    const b = e.target && e.target.closest && e.target.closest('button, input[type="submit"], input[type="image"], [role="button"]');
+    if (!b || (b.tagName === "BUTTON" && b.type !== "submit" && !formOf(b) && !near(b))) return;
+    report(near(b));
+  }, true);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target && e.target.tagName === "INPUT") report(near(e.target));
+  }, true);
+  let had = null, timer = 0;
+  const look = () => {
+    timer = 0;
+    const has = pwFields().length > 0;
+    if (has !== had) say({ t: "field", has: (had = has) });
+  };
+  look();
+  new MutationObserver(() => { if (!timer) timer = setTimeout(look, 500); })
+    .observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["type", "style", "class", "hidden"] });
+})()`;
+}
+
+/**
+ * Fills a saved login on the page it was saved for, as typed input, in the password world: the key button, or with
+ * `auto` on its own when the page shows its password field (only empty fields, the keyboard focus left alone).
+ */
+function passwordFillScript(origin, username, password, auto = false) {
+  return `(() => {
+  if (location.origin !== ${JSON.stringify(origin)}) return false;
+  const shown = (el) => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+  const isLoginField = (i) =>
+    (i.getAttribute("autocomplete") || "").toLowerCase().split(" ").some((w) => w === "username" || w === "email");
+  const pw = [...document.querySelectorAll('input[type="password"]')].find(shown);
+  if (!pw) return false;
+  const inputs = [...(pw.form || document).querySelectorAll("input")].filter(shown);
+  let user = inputs.find((i) => i !== pw && isLoginField(i));
+  if (!user)
+    for (let k = inputs.indexOf(pw) - 1; k >= 0 && !user; k--)
+      if (["text", "email", "tel"].includes(inputs[k].type)) user = inputs[k];
+  const AUTO = ${auto ? "true" : "false"};
+  if (AUTO && pw.value) return false;
+  const put = (el, v) => {
+    if (AUTO && el.value) return;
+    if (!AUTO) el.focus();
+    el.value = v;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  const u = ${JSON.stringify(username)};
+  if (user && u) put(user, u);
+  put(pw, ${JSON.stringify(password)});
+  return true;
 })()`;
 }
 
@@ -284,10 +410,13 @@ function createBrowserTabs(o) {
     }
   }
 
-  /** Everything a site stored, except the remembered sites' (plan 9.2: incognito by default). */
+  /** Everything a site stored, except the remembered sites' (plan 9.2: incognito by default), and the cache if kept. */
   async function clearUnremembered() {
     const keep = o.prefs.keptOrigins();
-    await getSession().clearData(keep.length ? { excludeOrigins: keep } : {});
+    const what = {};
+    if (o.prefs.keepCache()) what.dataTypes = [...DATA_TYPES_BUT_CACHE];
+    if (keep.length) what.excludeOrigins = keep;
+    await getSession().clearData(what);
   }
 
   // ---- tabs ----------------------------------------------------------------------------------------------------
@@ -326,6 +455,12 @@ function createBrowserTabs(o) {
       secure: (t.url || "").startsWith("https://"),
       startPage: !!t.startPage,
       error: t.error,
+      // Origin and username only: the captured password stays in the main process.
+      passwordPrompt: t.pwPrompt
+        ? { origin: t.pwPrompt.origin, username: t.pwPrompt.username, update: t.pwPrompt.update }
+        : null,
+      // The key button: saved usernames for this exact origin, while the page shows a password field.
+      logins: t.pw && t.pwField && passwordsOn() ? passwords.usernames(t.pw.origin) : [],
     };
   }
 
@@ -339,6 +474,9 @@ function createBrowserTabs(o) {
       engines: o.prefs.engines(),
       engine: o.prefs.engine(),
       customSearch: o.prefs.customSearch(),
+      keepCache: o.prefs.keepCache(),
+      rememberPasswords: o.prefs.rememberPasswords(),
+      passwords: passwordsView(),
     };
   }
 
@@ -414,7 +552,18 @@ function createBrowserTabs(o) {
         t.collapse.clear();
         t.seen = { classes: new Set(), ids: new Set(), hrefs: new Set() };
         for (const x of t.passTimers.splice(0)) clearTimeout(x);
+        /*
+          Leaving the page: its password field (the key) goes now, its nonce at the next document's dom-ready. The
+          report a sign-in's submit sends can arrive after the navigation it starts; only the old page knows its
+          nonce, and that page is gone once the new one is in.
+        */
+        t.pwField = false;
       }
+    });
+    // The password world's reports (see onPageConsole); every other console line is ignored, and nothing is logged.
+    wc.on("console-message", (details, _level, legacyMessage) => {
+      const message = typeof details?.message === "string" ? details.message : legacyMessage;
+      onPageConsole(t, wc, message, details?.frame);
     });
     wc.on("did-navigate", (_e, url) => {
       t.url = url;
@@ -453,6 +602,7 @@ function createBrowserTabs(o) {
     });
     wc.on("dom-ready", () => {
       const url = wc.getURL();
+      watchPasswords(t, wc, url);
       if (!o.prefs.site(domainOf(url) ?? "").blocking) return;
       const css = o.blocker.cosmetics(url);
       if (css) void wc.insertCSS(css, { cssOrigin: "user" }).catch(() => {});
@@ -486,7 +636,7 @@ function createBrowserTabs(o) {
       if (ctrl && k === "t") openTab(null);
       else if (ctrl && k === "w") closeTab(t.id);
       else if (ctrl && k === "l") send("focusAddress");
-      else if (k === "f5" || (ctrl && k === "r")) wc.reloadIgnoringCache();
+      else if (k === "f5" || (ctrl && k === "r")) wc.reload();
       else if (input.alt && k === "arrowleft") wc.navigationHistory.goBack();
       else if (input.alt && k === "arrowright") wc.navigationHistory.goForward();
       else if (ctrl && k === "tab") stepTab(input.shift ? -1 : 1);
@@ -526,7 +676,7 @@ function createBrowserTabs(o) {
           enabled: wc.navigationHistory.canGoForward(),
           click: () => wc.navigationHistory.goForward(),
         },
-        { label: "Reload", click: () => wc.reloadIgnoringCache() },
+        { label: "Reload", click: () => wc.reload() },
       );
       Menu.buildFromTemplate(items).popup({ window: host && !host.isDestroyed() ? host : undefined });
     });
@@ -568,6 +718,105 @@ function createBrowserTabs(o) {
     for (const x of t.passTimers.splice(0)) clearTimeout(x);
     void cosmeticPass(t);
     for (const ms of COSMETIC_PASSES_MS) t.passTimers.push(setTimeout(() => void cosmeticPass(t), ms));
+  }
+
+  // ---- remember passwords ----------------------------------------------------------------------------------------
+  const passwords = o.passwords ?? null;
+  const passwordsOn = () => !!passwords && o.prefs.rememberPasswords() && passwords.available().ok;
+
+  /** At each page's dom-ready, with the option on and an https page: a fresh nonce, and the watcher in. */
+  function watchPasswords(t, wc, url) {
+    t.pw = null;
+    t.pwField = false;
+    t.pwAutoFilled = false;
+    const origin = passwordOrigin(url);
+    if (!origin || !passwordsOn()) return;
+    const nonce = `${randomBytes(16).toString("hex")}:`;
+    t.pw = { nonce, origin };
+    void wc
+      .executeJavaScriptInIsolatedWorld(PASSWORD_WORLD, [{ code: passwordCaptureScript(nonce) }])
+      .catch(() => {});
+  }
+
+  /**
+   * A console line from a page. Only one that starts with this page's nonce counts (only the password world knows
+   * it), from the top frame, for the origin the nonce was made for. Never logged, never written: a password lives in
+   * memory until the prompt is answered (or PASSWORD_PROMPT_MS), and on disk only encrypted.
+   */
+  function onPageConsole(t, wc, message, frame) {
+    const pw = t.pw;
+    if (!pw || typeof message !== "string" || !message.startsWith(pw.nonce)) return;
+    if (frame && frame.parent) return;
+    if (!passwordsOn()) return;
+    let m;
+    try {
+      m = JSON.parse(message.slice(pw.nonce.length));
+    } catch {
+      return;
+    }
+    if (!m || typeof m !== "object") return;
+    if (m.t === "field") {
+      const has = m.has === true;
+      if (has !== t.pwField) {
+        t.pwField = has;
+        changed();
+      }
+      if (has) autoFill(t, wc, pw.origin);
+      return;
+    }
+    if (m.t !== "submit" || m.origin !== pw.origin) return;
+    if (o.prefs.passwordNever().includes(pw.origin)) return;
+    const username = typeof m.username === "string" ? m.username : "";
+    const password = typeof m.password === "string" ? m.password : "";
+    const kind = passwords.check(pw.origin, username, password);
+    if (kind !== "new" && kind !== "update") return;
+    clearTimeout(t.pwPrompt?.timer);
+    t.pwPrompt = {
+      origin: pw.origin,
+      username,
+      password,
+      update: kind === "update",
+      timer: setTimeout(() => {
+        if (tabs.get(t.id) === t) dropPrompt(t);
+        changed();
+      }, PASSWORD_PROMPT_MS),
+    };
+    changed();
+  }
+
+  /*
+    Filled on its own, as other browsers do (owner, 2026-10-16: the login was saved but "not remembered" — it only
+    filled on the key button): once per page, when the page shows a password field and exactly one login is saved
+    for this exact origin. Only empty fields, and the keyboard focus stays where it is. Several logins: the key
+    button chooses.
+  */
+  function autoFill(t, wc, origin) {
+    if (t.pwAutoFilled || !passwordsOn() || wc.isDestroyed()) return;
+    const names = passwords.usernames(origin);
+    if (names.length !== 1) return;
+    const secret = passwords.lookup(origin, names[0]);
+    if (secret == null) return;
+    t.pwAutoFilled = true;
+    void wc
+      .executeJavaScriptInIsolatedWorld(PASSWORD_WORLD, [{ code: passwordFillScript(origin, names[0], secret, true) }])
+      .catch(() => {});
+  }
+
+  function dropPrompt(t) {
+    if (!t.pwPrompt) return;
+    clearTimeout(t.pwPrompt.timer);
+    t.pwPrompt = null;
+  }
+
+  /** What the toolbar may know about passwords: origins and usernames, never a password. */
+  function passwordsView() {
+    const a = passwords ? passwords.available() : { ok: false, reason: "Not available." };
+    return {
+      available: a.ok,
+      reason: a.ok ? null : a.reason,
+      saved: passwords ? passwords.list() : [],
+      never: o.prefs.passwordNever(),
+    };
   }
 
   function send(type) {
@@ -675,6 +924,9 @@ function createBrowserTabs(o) {
       blocked: 0,
       error: null,
       startPage: true,
+      pw: null,
+      pwField: false,
+      pwPrompt: null,
     };
     tabs.set(t.id, t);
     const i = after != null ? order.indexOf(after) : -1;
@@ -691,17 +943,28 @@ function createBrowserTabs(o) {
     const t = tabs.get(id);
     if (!t) return;
     for (const x of t.passTimers.splice(0)) clearTimeout(x);
+    dropPrompt(t);
     if (fullscreen?.id === id) leaveFullscreen();
     tabs.delete(id);
     if (t.view) {
-      if (host && !host.isDestroyed()) host.contentView.removeChildView(t.view);
-      if (!t.view.webContents.isDestroyed()) t.view.webContents.close();
+      /*
+        At quit the page goes first and its "destroyed" handler lands here with the view already torn down: its
+        webContents reads undefined (owner, 2026-10-16: "Cannot read properties of undefined (reading
+        'isDestroyed') at closeTab" on closing the app). Nothing left to close then.
+      */
+      try {
+        if (host && !host.isDestroyed()) host.contentView.removeChildView(t.view);
+      } catch {
+        /* the window is going away with it */
+      }
+      const wc = t.view.webContents;
+      if (wc && !wc.isDestroyed()) wc.close();
     }
     const i = order.indexOf(id);
     order = order.filter((x) => x !== id);
     if (active === id) active = order[Math.min(i, order.length - 1)] ?? null;
-    // The last page closed: a fresh start page, so the Browser tab never shows nothing.
-    if (!order.length) openTab(null);
+    // The last page closed: a fresh start page, so the Browser tab never shows nothing — not while the window goes.
+    if (!order.length && host && !host.isDestroyed()) openTab(null);
     placeViews();
     changed();
   }
@@ -719,9 +982,16 @@ function createBrowserTabs(o) {
     leaveFullscreen();
     for (const t of tabs.values()) {
       for (const x of t.passTimers.splice(0)) clearTimeout(x);
+      dropPrompt(t);
       if (!t.view) continue;
-      if (host && !host.isDestroyed()) host.contentView.removeChildView(t.view);
-      if (!t.view.webContents.isDestroyed()) t.view.webContents.close();
+      try {
+        if (host && !host.isDestroyed()) host.contentView.removeChildView(t.view);
+      } catch {
+        /* the window is going away with it */
+      }
+      // Torn down already at quit (see closeTab).
+      const wc = t.view.webContents;
+      if (wc && !wc.isDestroyed()) wc.close();
     }
     tabs.clear();
     order = [];
@@ -827,7 +1097,7 @@ function createBrowserTabs(o) {
         }
         return { ok: true };
       case "reload":
-        if (t?.view) t.view.webContents.reloadIgnoringCache();
+        if (t?.view) t.view.webContents.reload();
         return { ok: true };
       case "halt":
         if (t?.view) t.view.webContents.stop();
@@ -897,6 +1167,64 @@ function createBrowserTabs(o) {
         return { ok: o.prefs.removeLink(String(a?.url ?? "")), state: state() };
       case "setEngine":
         return { ok: o.prefs.setEngine(String(a?.key ?? ""), a?.custom), state: state() };
+      case "setKeepCache":
+        o.prefs.setKeepCache(a?.on === true);
+        return { ok: true, state: state() };
+      case "setRememberPasswords":
+        // Off stops capture and fill; what is saved stays (the settings say so).
+        o.prefs.setRememberPasswords(a?.on === true);
+        if (a?.on !== true) for (const x of tabs.values()) dropPrompt(x);
+        changed();
+        return { ok: true, state: state() };
+      case "passwordAnswer": {
+        const p = t?.pwPrompt;
+        if (!t || !p) return { error: "Nothing to save." };
+        dropPrompt(t);
+        let r = { ok: true };
+        if (a?.answer === "save")
+          r = passwords ? passwords.save(p.origin, p.username, p.password) : { error: "Not available." };
+        else if (a?.answer === "never") o.prefs.addPasswordNever(p.origin);
+        changed();
+        return { ...r, state: state() };
+      }
+      case "passwordFill": {
+        const wcp = t?.view?.webContents;
+        if (!wcp || wcp.isDestroyed() || !passwordsOn()) return { error: "Nothing to fill." };
+        const origin = passwordOrigin(wcp.getURL());
+        const names = origin ? passwords.usernames(origin) : [];
+        const username = typeof a?.username === "string" ? a.username : names.length === 1 ? names[0] : null;
+        if (!origin || username == null || !names.includes(username)) return { error: "Nothing to fill." };
+        const secret = passwords.lookup(origin, username);
+        if (secret == null) return { error: "That password cannot be read on this PC." };
+        const filled = await wcp
+          .executeJavaScriptInIsolatedWorld(PASSWORD_WORLD, [
+            { code: passwordFillScript(origin, username, secret) },
+          ])
+          .catch(() => false);
+        return filled === true ? { ok: true } : { error: "No password field on this page." };
+      }
+      case "passwordDelete": {
+        if (!passwords || typeof a?.origin !== "string" || typeof a?.username !== "string")
+          return { error: "No such password." };
+        try {
+          passwords.remove(a.origin, a.username);
+        } catch {
+          return { error: "The change could not be written.", state: state() };
+        }
+        changed();
+        return { ok: true, state: state() };
+      }
+      case "passwordDeleteAll":
+        try {
+          passwords?.clear();
+        } catch {
+          return { error: "The change could not be written.", state: state() };
+        }
+        changed();
+        return { ok: true, state: state() };
+      case "passwordNeverRemove":
+        o.prefs.removePasswordNever(String(a?.origin ?? ""));
+        return { ok: true, state: state() };
       default:
         return { error: "Unknown call." };
     }
@@ -905,6 +1233,21 @@ function createBrowserTabs(o) {
   return {
     handle,
     isBrowserContents,
+    /**
+     * F5 while a browsed page has the keyboard: reload it, true when one did (owner, 2026-10-16: F5 did nothing in
+     * the browser). The app's F5 key bind (Clear the notices) stays registered while the app is in front, so
+     * Windows hands F5 to the bind and the page never sees it; the bind asks here first.
+     */
+    reloadFocused() {
+      for (const t of tabs.values()) {
+        const wc = t.view?.webContents;
+        if (wc && !wc.isDestroyed() && wc.isFocused()) {
+          wc.reload();
+          return true;
+        }
+      }
+      return false;
+    },
     /** Something the toolbar shows changed (the blocklists' download, from browserBlocker.cjs). */
     changed,
     /** At quit: what a site stored goes, as at the next start (best effort; the next start clears it anyway). */
@@ -914,4 +1257,14 @@ function createBrowserTabs(o) {
   };
 }
 
-module.exports = { createBrowserTabs, resolveTyped, isLocalHost, chromeUserAgent, cosmeticScript, PARTITION };
+module.exports = {
+  createBrowserTabs,
+  resolveTyped,
+  isLocalHost,
+  chromeUserAgent,
+  cosmeticScript,
+  passwordCaptureScript,
+  passwordFillScript,
+  PARTITION,
+  DATA_TYPES_BUT_CACHE,
+};

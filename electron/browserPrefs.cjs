@@ -3,8 +3,10 @@
 /*
   The EDEXO browser's settings (plan 9, owner 2026-10-13), in `edexo-browser.json` beside the app's own: per site
   (registrable domain) whether its cookies and storage are kept ("Remember this site"; incognito otherwise) and
-  whether blocking is off for it; the start page's own links; the search engine. Kept in the app's settings, not
-  in the browser's storage, so "Clear everything" cannot lose them and a site cannot read them.
+  whether blocking is off for it; the start page's own links; the search engine; "Keep page cache" and "Remember
+  passwords" (owner, 2026-10-16, both off by default) with the origins never to offer a save for (no secrets here:
+  the passwords themselves are in browserPasswords.cjs). Kept in the app's settings, not in the browser's storage,
+  so "Clear everything" cannot lose them and a site cannot read them.
 */
 
 const fs = require("node:fs");
@@ -32,6 +34,13 @@ const DEFAULT_LINKS = [
 
 const MAX_LINKS = 40;
 const MAX_SITES = 2000;
+const MAX_NEVER = 2000;
+
+/** An exact https origin ("https://host[:port]"), or null. */
+function httpsOrigin(raw) {
+  const u = httpUrl(raw);
+  return u && u.protocol === "https:" && u.origin === raw ? raw : null;
+}
 
 /** An http(s) URL, or null. */
 function httpUrl(raw) {
@@ -49,7 +58,15 @@ function httpUrl(raw) {
  */
 function createBrowserPrefs(o) {
   const file = path.join(o.dir, "edexo-browser.json");
-  let data = { sites: {}, links: [], engine: "duckduckgo", customSearch: null };
+  let data = {
+    sites: {},
+    links: [],
+    engine: "duckduckgo",
+    customSearch: null,
+    keepCache: false,
+    rememberPasswords: false,
+    passwordNever: [],
+  };
   try {
     const raw = JSON.parse(fs.readFileSync(file, "utf8"));
     if (raw && typeof raw === "object") {
@@ -78,6 +95,13 @@ function createBrowserPrefs(o) {
         httpUrl(raw.customSearch.replace("%s", "x"))
       )
         data.customSearch = raw.customSearch;
+      data.keepCache = raw.keepCache === true;
+      data.rememberPasswords = raw.rememberPasswords === true;
+      if (Array.isArray(raw.passwordNever))
+        data.passwordNever = [...new Set(raw.passwordNever.filter((x) => httpsOrigin(x)))].slice(
+          0,
+          MAX_NEVER,
+        );
     }
   } catch {
     /* first start, or a broken file: the defaults */
@@ -161,6 +185,37 @@ function createBrowserPrefs(o) {
       data.engine = key;
       save();
       return true;
+    },
+    /** Keep the HTTP cache when the rest of what sites stored is cleared (pages load faster on a revisit). */
+    keepCache: () => data.keepCache,
+    setKeepCache(on) {
+      data.keepCache = on === true;
+      save();
+    },
+    /** Offer to save logins, and fill saved ones from the key button. Off leaves the saved ones in place. */
+    rememberPasswords: () => data.rememberPasswords,
+    setRememberPasswords(on) {
+      data.rememberPasswords = on === true;
+      save();
+    },
+    /** Origins never to offer a password save for ("Never for this site"). */
+    passwordNever: () => [...data.passwordNever],
+    addPasswordNever(origin) {
+      if (
+        !httpsOrigin(origin) ||
+        data.passwordNever.includes(origin) ||
+        data.passwordNever.length >= MAX_NEVER
+      )
+        return false;
+      data.passwordNever.push(origin);
+      save();
+      return true;
+    },
+    removePasswordNever(origin) {
+      const before = data.passwordNever.length;
+      data.passwordNever = data.passwordNever.filter((x) => x !== origin);
+      if (data.passwordNever.length !== before) save();
+      return data.passwordNever.length !== before;
     },
     /** The search URL for typed text. */
     searchUrl(text) {

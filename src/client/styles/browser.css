@@ -228,6 +228,72 @@
   text-transform: uppercase;
   color: var(--text-dim);
 }
+/* Keep page cache, Remember passwords: a checkbox and one line of help each. */
+.ebr-menu__opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 24rem;
+  padding: 6px 10px;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+.ebr-menu__opt input {
+  margin-top: 3px;
+}
+.ebr-menu__help {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+.ebr-menu__pw {
+  max-height: 12rem;
+  margin: 0;
+  padding: 0 6px;
+  overflow-y: auto;
+  list-style: none;
+}
+.ebr-menu__pw li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 4px;
+  font-size: var(--fs-sm);
+}
+.ebr-menu__pw button,
+.ebr-pwbar button {
+  padding: 3px 10px;
+  border: 1px solid var(--accent-a35);
+  border-radius: var(--r-sm);
+  background: var(--accent-a06);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+/* The save prompt: a bar under the toolbar, never over the page (the page is a native view and would cover it). */
+.ebr-pwbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--accent-a20);
+  font-size: var(--fs-sm);
+}
+.ebr-pwbar > span {
+  flex: 1;
+  min-width: 12rem;
+}
+.ebr-pwbar button.is-main {
+  border-color: var(--accent-a45);
+  background: var(--accent-a15);
+  color: var(--accent);
+}
 .ebr-menu__custom {
   display: flex;
   gap: 4px;
@@ -361,4 +427,9 @@
   border-radius: var(--r-pill);
   background: var(--surface-1);
   font-size: var(--fs-sm);
+}
+
+/* The key on the "Fill login" chip (Lucide KeyRound), on the text line. */
+.ebr-key-icon {
+  vertical-align: -3px;
 }

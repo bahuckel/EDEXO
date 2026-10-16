@@ -89,6 +89,7 @@ module.exports = {
     // The EDEXO browser (plan 9).
     "electron/browserTabs.cjs",
     "electron/browserPrefs.cjs",
+    "electron/browserPasswords.cjs",
     "electron/browserBlocker.cjs",
     "electron/updater.cjs",
     // The server's own process (2026-10-09): main.cjs starts app.cjs through it.

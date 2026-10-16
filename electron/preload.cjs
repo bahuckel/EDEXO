@@ -169,6 +169,15 @@ contextBridge.exposeInMainWorld("edexoElectron", {
     addLink: (name, url) => browserCall({ op: "addLink", name, url }),
     removeLink: (url) => browserCall({ op: "removeLink", url }),
     setEngine: (key, custom) => browserCall({ op: "setEngine", key, custom }),
+    setKeepCache: (on) => browserCall({ op: "setKeepCache", on }),
+    setRememberPasswords: (on) => browserCall({ op: "setRememberPasswords", on }),
+    /** The save prompt's answer: "save", "never" (for this site) or "later". */
+    passwordAnswer: (id, answer) => browserCall({ op: "passwordAnswer", id, answer }),
+    /** Fills a saved login into the tab's page; the password never comes to this side. */
+    passwordFill: (id, username) => browserCall({ op: "passwordFill", id, username }),
+    passwordDelete: (origin, username) => browserCall({ op: "passwordDelete", origin, username }),
+    passwordDeleteAll: () => browserCall({ op: "passwordDeleteAll" }),
+    passwordNeverRemove: (origin) => browserCall({ op: "passwordNeverRemove", origin }),
     /** The browser's state as it changes, and "focusAddress" (Ctrl+L in a page). Returns an unsubscribe. */
     on: (cb) => {
       const st = (_e, s) => cb({ type: "state", state: s });

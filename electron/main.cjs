@@ -33,6 +33,7 @@ const { guardWindowNavigation, restrictPermissions, isOwnUrl } = require("./wind
 const { createBrowserPrefs } = require("./browserPrefs.cjs");
 const { createBrowserBlocker } = require("./browserBlocker.cjs");
 const { createBrowserTabs } = require("./browserTabs.cjs");
+const { createBrowserPasswords } = require("./browserPasswords.cjs");
 /** The app's own origin once the server listens (windowGuards.cjs). */
 const ownBase = () => (runtime ? runtime.getLocalBaseUrl() : null);
 /** The foreground watcher (foregroundWatch.cjs), started with the HUDs. */
@@ -178,7 +179,11 @@ const keybinds = createKeybinds({
     tabPrev: () => uiCommandEverywhere({ cmd: "screenTab", dir: -1 }),
     tabNext: () => uiCommandEverywhere({ cmd: "screenTab", dir: 1 }),
     // The server answers in its own process (serverChild.cjs); a key never waits for it.
-    noticesClear: () => void runtime?.clearNotices?.()?.catch?.(() => {}),
+    // F5 is also the browser's reload: a browsed page with the keyboard gets it instead of the bell.
+    noticesClear: () => {
+      if (browserTabs?.reloadFocused?.()) return;
+      void runtime?.clearNotices?.()?.catch?.(() => {});
+    },
     // Boxel scanning (server/boxelRun.ts): the server picks the system, the clipboard writer below copies it.
     boxelCopyNext: () => void runtime?.boxelCopyNext?.()?.catch?.(() => {}),
     boxelRun: () => {
@@ -994,7 +999,7 @@ app.on("render-process-gone", (_e, wc, d) => {
 let browserTabs = null;
 function getBrowserTabs() {
   if (browserTabs) return browserTabs;
-  const { session, net } = require("electron");
+  const { session, net, safeStorage } = require("electron");
   const dir = path.dirname(huds.layoutPath());
   const appSession = session.fromPartition(APP_WINDOW_PARTITION);
   const blocker = createBrowserBlocker({
@@ -1008,6 +1013,8 @@ function getBrowserTabs() {
   browserTabs = createBrowserTabs({
     electron: require("electron"),
     prefs: createBrowserPrefs({ dir }),
+    // "Remember passwords": encrypted by the operating system (safeStorage), in browser/passwords.json.
+    passwords: createBrowserPasswords({ dir, safeStorage }),
     blocker,
     // The app window and the windows tabs were dragged into: the app's session, the app's own page.
     isAppWindow: (wc) => wc.session === appSession && isOwnUrl(wc.getURL(), ownBase),

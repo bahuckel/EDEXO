@@ -21,6 +21,7 @@ import {
   Database,
   Flag,
   History,
+  KeyRound,
   MapPin,
   Orbit,
   Save,
@@ -49,6 +50,8 @@ function glyph(L: LucideIcon) {
   };
 }
 
+/** A key — fill a login the browser saved (Remember passwords). */
+export const IconKey = glyph(KeyRound);
 /** A sprout — completed on-foot samples. */
 export const IconExobiology = glyph(Sprout);
 /** A flag — the first-discovery backlog: bodies where the flag is still there to be planted. */

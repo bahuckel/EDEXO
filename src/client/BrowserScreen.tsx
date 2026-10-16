@@ -9,6 +9,7 @@
  * and addresses are shown as text, never as markup, so nothing from a page reaches the app's own page.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { IconKey } from "./ui/icons";
 import "./styles/browser.css";
 
 interface BrowserTab {
@@ -25,6 +26,10 @@ interface BrowserTab {
   secure: boolean;
   startPage: boolean;
   error: { code: number; text: string; url: string; httpFallback: string | null } | null;
+  /** A login was just used on this page: save it? Origin and username only, never the password. */
+  passwordPrompt: { origin: string; username: string; update: boolean } | null;
+  /** Usernames saved for this page's exact origin, while it shows a password field (the key button). */
+  logins: string[];
 }
 interface BrowserState {
   tabs: BrowserTab[];
@@ -44,7 +49,16 @@ interface BrowserState {
   engines: { key: string; label: string }[];
   engine: string;
   customSearch: string | null;
+  keepCache: boolean;
+  rememberPasswords: boolean;
+  passwords: {
+    available: boolean;
+    reason: string | null;
+    saved: { origin: string; username: string }[];
+    never: string[];
+  };
 }
+type WithState = { ok?: boolean; error?: string; state: BrowserState };
 type Rect = { x: number; y: number; width: number; height: number };
 interface BrowserBridge {
   start(): Promise<BrowserState>;
@@ -69,6 +83,13 @@ interface BrowserBridge {
   addLink(name: string, url: string): Promise<{ ok: boolean; state: BrowserState }>;
   removeLink(url: string): Promise<{ ok: boolean; state: BrowserState }>;
   setEngine(key: string, custom?: string): Promise<{ ok: boolean; state: BrowserState }>;
+  setKeepCache(on: boolean): Promise<WithState>;
+  setRememberPasswords(on: boolean): Promise<WithState>;
+  passwordAnswer(id: number, answer: "save" | "never" | "later"): Promise<WithState>;
+  passwordFill(id: number, username?: string): Promise<{ ok?: boolean; error?: string }>;
+  passwordDelete(origin: string, username: string): Promise<WithState>;
+  passwordDeleteAll(): Promise<WithState>;
+  passwordNeverRemove(origin: string): Promise<WithState>;
   on(cb: (m: { type: "state"; state: BrowserState } | { type: "event"; event: string }) => void): () => void;
 }
 
@@ -91,6 +112,8 @@ export function BrowserScreen() {
   const [linkUrl, setLinkUrl] = useState("");
   const [customSearch, setCustomSearch] = useState("");
   const [failure, setFailure] = useState<string | null>(null);
+  const [keyMenu, setKeyMenu] = useState(false);
+  const [pwNote, setPwNote] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const addressRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -188,7 +211,7 @@ export function BrowserScreen() {
       document.removeEventListener("visibilitychange", place);
     };
     // Once more when the toolbar replaces the blocklists' gate: the box exists from then on.
-  }, [place, menuOpen, st?.blocker.ready]);
+  }, [place, menuOpen, keyMenu, st?.blocker.ready]);
 
   // Ctrl+T / Ctrl+W / Ctrl+L on the toolbar: this browser's tabs, not the app's (TabHost closes app tabs on Ctrl+W).
   useEffect(() => {
@@ -277,6 +300,19 @@ export function BrowserScreen() {
     if (text && st.active != null) void api.go(st.active, text);
   };
   const lastDownload = st.downloads[0];
+  const prompt = tab?.passwordPrompt ?? null;
+  const fill = (username?: string) => {
+    setKeyMenu(false);
+    if (!tab) return;
+    void api.passwordFill(tab.id, username).then((r) => setPwNote(r.error ?? null));
+  };
+  const answer = (a: "save" | "never" | "later") => {
+    if (!tab) return;
+    void api.passwordAnswer(tab.id, a).then((r) => {
+      setSt(r.state);
+      setPwNote(r.error ?? null);
+    });
+  };
 
   return (
     <div className="ebr">
@@ -400,6 +436,34 @@ export function BrowserScreen() {
             </button>
           </>
         ) : null}
+        {tab && !tab.startPage && tab.logins.length ? (
+          <div className="ebr-more">
+            <button
+              type="button"
+              className="ebr-chip is-on"
+              aria-label="Fill a saved password"
+              aria-expanded={tab.logins.length > 1 ? keyMenu : undefined}
+              title={
+                tab.logins.length > 1
+                  ? "Fill a saved password"
+                  : `Fill the saved password${tab.logins[0] ? ` for ${tab.logins[0]}` : ""}`
+              }
+              onClick={() => (tab.logins.length > 1 ? setKeyMenu(!keyMenu) : fill(tab.logins[0]))}
+            >
+              {/* A word beside the key (owner, 2026-10-16: the bare icon went unnoticed). */}
+              <IconKey className="ebr-key-icon" /> {tab.logins.length > 1 ? "Logins ▾" : "Fill login"}
+            </button>
+            {keyMenu && tab.logins.length > 1 ? (
+              <div className="ebr-menu" role="menu" onMouseLeave={() => setKeyMenu(false)}>
+                {tab.logins.map((u) => (
+                  <button key={u} type="button" role="menuitem" onClick={() => fill(u)}>
+                    {u || "(no username)"}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className="ebr-more">
           <button
             type="button"
@@ -471,10 +535,116 @@ export function BrowserScreen() {
                   {st.engine === "custom" ? "● Use" : "Use"}
                 </button>
               </div>
+              <div className="ebr-menu__sub">Options</div>
+              <label className="ebr-menu__opt">
+                <input
+                  type="checkbox"
+                  checked={st.keepCache}
+                  onChange={(e) => void api.setKeepCache(e.target.checked).then((r) => setSt(r.state))}
+                />
+                <span>
+                  Keep page cache
+                  <span className="ebr-menu__help">
+                    Pages load faster on the next visit; the cache can show a site you visited before.
+                  </span>
+                </span>
+              </label>
+              <label className="ebr-menu__opt">
+                <input
+                  type="checkbox"
+                  checked={st.rememberPasswords}
+                  disabled={!st.passwords.available && !st.rememberPasswords}
+                  onChange={(e) =>
+                    void api.setRememberPasswords(e.target.checked).then((r) => setSt(r.state))
+                  }
+                />
+                <span>
+                  Remember passwords
+                  <span className="ebr-menu__help">
+                    {st.passwords.available
+                      ? "Offers to save a login on HTTPS sites, encrypted by the operating system, on this PC only; it is filled in on that site (the key button chooses between several). Turning this off keeps what is saved, but nothing is saved or filled."
+                      : `Not available: ${st.passwords.reason ?? "no password protection on this system."} Nothing is saved.`}
+                  </span>
+                </span>
+              </label>
+              {st.passwords.saved.length ? (
+                <>
+                  <div className="ebr-menu__sub">Saved passwords</div>
+                  <ul className="ebr-menu__pw">
+                    {st.passwords.saved.map((x) => (
+                      <li key={`${x.origin} ${x.username}`}>
+                        <span title={x.origin}>
+                          {new URL(x.origin).host}{" "}
+                          <span className="dim">{x.username || "(no username)"}</span>
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Delete the password for ${x.username || "no username"} on ${x.origin}`}
+                          onClick={() =>
+                            void api.passwordDelete(x.origin, x.username).then((r) => setSt(r.state))
+                          }
+                        >
+                          Delete
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => void api.passwordDeleteAll().then((r) => setSt(r.state))}
+                  >
+                    Delete all saved passwords
+                  </button>
+                </>
+              ) : null}
+              {st.passwords.never.length ? (
+                <>
+                  <div className="ebr-menu__sub">Never save passwords for</div>
+                  <ul className="ebr-menu__pw">
+                    {st.passwords.never.map((origin) => (
+                      <li key={origin}>
+                        <span title={origin}>{new URL(origin).host}</span>
+                        <button
+                          type="button"
+                          aria-label={`Offer to save passwords for ${origin} again`}
+                          onClick={() => void api.passwordNeverRemove(origin).then((r) => setSt(r.state))}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
             </div>
           ) : null}
         </div>
       </form>
+      {prompt ? (
+        <div className="ebr-pwbar" role="status">
+          <span>
+            {prompt.update ? "Update" : "Save"} the password for {prompt.origin}?
+            {prompt.username ? <span className="dim"> ({prompt.username})</span> : null}
+          </span>
+          <button type="button" className="is-main" onClick={() => answer("save")}>
+            {prompt.update ? "Update" : "Save"}
+          </button>
+          <button type="button" onClick={() => answer("never")}>
+            Never for this site
+          </button>
+          <button type="button" onClick={() => answer("later")}>
+            Not now
+          </button>
+        </div>
+      ) : pwNote ? (
+        <div className="ebr-pwbar" role="status">
+          <span>{pwNote}</span>
+          <button type="button" onClick={() => setPwNote(null)}>
+            OK
+          </button>
+        </div>
+      ) : null}
       <div className="ebr-box" ref={boxRef}>
         {tab?.error ? (
           <div className="ebr-page ebr-page--error">
