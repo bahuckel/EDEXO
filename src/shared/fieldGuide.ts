@@ -46,6 +46,11 @@ export interface GuideMeasured {
   locked: number | null;
   /** surface materials: the mode percentage, and on how many of the bodies it was present */
   materials: { name: string; mode: number; n: number }[];
+  /**
+   * When set, `planet` and `atmosphere` are the EDDN year's counts over this many bodies (species-bands.json), not
+   * the Spansh profile's (owner, 2026-10-16: the profile never saw Fungoida bullarum on a High metal content body).
+   */
+  sharesFromEddn?: number;
 }
 
 export interface GuideRequirement {
@@ -100,6 +105,8 @@ export interface GuideBands {
     volcanism: GuideWithinRow[];
     host: GuideWithinRow[];
   } | null;
+  /** On how many of its bodies each planet class and atmosphere, in the guide's labels; null when not built. */
+  shares: { planet: GuideShare[]; atmosphere: GuideShare[] } | null;
 }
 
 const isBand = (v: unknown): v is GuideBand =>
@@ -128,10 +135,12 @@ export function guideBands(raw: unknown, atmoLabels: Record<string, string>): Gu
       .filter((r): r is [string, number, number] => Array.isArray(r) && typeof r[0] === "string" && num(r[1]) != null && num(r[2]) != null)
       .map(([key, genusN, k]) => ({ key, label: label(key), genusN, n: k }));
   const w = isObj(raw.within) ? raw.within : null;
+  const sh = isObj(raw.shares) ? raw.shares : null;
   return {
     n,
     all,
     atmo,
+    shares: sh ? { planet: shares(sh.planet, guideBodyName), atmosphere: shares(sh.atmosphere) } : null,
     within: w
       ? {
           genus: str(w.genus),
@@ -331,6 +340,8 @@ const BODY_NAMES: Record<string, string> = {
   "Metal-rich body": "Metal rich",
   "Rocky ice world": "Rocky ice",
   "Rocky Ice world": "Rocky ice",
+  // The journal's own spelling: without it a rocky ice body was never matched as "this body".
+  "Rocky ice body": "Rocky ice",
   "Icy body": "Icy",
 };
 
@@ -414,6 +425,29 @@ export function guideMeasured(p: unknown): GuideMeasured | null {
 }
 
 /**
+ * The profile's measurements with the Body and Atmosphere shares taken from the EDDN year where the bands file has
+ * them (owner, 2026-10-16): the Spansh profile is a few hundred bodies at most and misses whole classes the EDDN
+ * year has (Fungoida bullarum: 103 profile bodies, none High metal content; 2,718 EDDN bodies, 13 of them).
+ */
+function measuredWithBands(
+  measured: GuideMeasured | null,
+  bands: GuideBands | null,
+): { measured: GuideMeasured | null; bands: GuideBands | null } {
+  if (!measured || !bands?.shares || (!bands.shares.planet.length && !bands.shares.atmosphere.length)) {
+    return { measured, bands };
+  }
+  return {
+    measured: {
+      ...measured,
+      planet: bands.shares.planet.length ? bands.shares.planet : measured.planet,
+      atmosphere: bands.shares.atmosphere.length ? bands.shares.atmosphere : measured.atmosphere,
+      sharesFromEddn: bands.n,
+    },
+    bands,
+  };
+}
+
+/**
  * One genus file (`<genus>_new.json`, parsed) and a profile per species, slimmed. `profileFor` gets
  * the species id and display name and returns the parsed profile or null.
  */
@@ -445,8 +479,7 @@ export function buildGuideGenus(
       sampleDistanceM: own != null && own >= 10 && own !== genusDist ? own : null,
       requires: requirements(c),
       colours: colourTable(s.color_rules),
-      measured: guideMeasured(profileFor(id, name)),
-      bands: bandsFor(id),
+      ...measuredWithBands(guideMeasured(profileFor(id, name)), bandsFor(id)),
     };
   });
   species.sort((a, b) => a.name.localeCompare(b.name));

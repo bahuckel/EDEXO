@@ -766,6 +766,7 @@ export const BodyPane = memo(function BodyPane({
                                 }
                                 hostStarTypes={body.speciesMatchContext?.hostStarClasses}
                                 compactCandidateView={compactCandidateView}
+                                alwaysShowGenus
                               />
                             ))}
                           </div>

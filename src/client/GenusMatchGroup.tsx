@@ -19,6 +19,7 @@ export const GenusMatchGroup = memo(function GenusMatchGroup({
   hostStarTypes,
   compactCandidateView,
   genusConfirmed,
+  alwaysShowGenus,
 }: {
   group: { groupKey: string; title: string; items: BodyComputed["matches"] };
   scan: PlanetScan | null;
@@ -30,6 +31,11 @@ export const GenusMatchGroup = memo(function GenusMatchGroup({
   compactCandidateView?: boolean;
   /** DSS has named this genus, so it is here and only the species is open (B3). */
   genusConfirmed?: boolean;
+  /**
+   * Keep the genus heading over a lone species in row view. The unlikely list sets it (owner, 2026-10-16): a single
+   * demoted row such as Aleoida spica lost its genus there, while the main list rightly folds a one-species genus.
+   */
+  alwaysShowGenus?: boolean;
 }) {
   const [open, setOpen] = useState(true);
   // Which rows are unfolded into their full card (3.1). Nothing by default: the row is the glance.
@@ -97,7 +103,7 @@ export const GenusMatchGroup = memo(function GenusMatchGroup({
   return (
     <section
       ref={shellRef}
-      className={`genus-card-shell${compactCandidateView && group.items.length === 1 ? " genus-card-shell--single" : ""}${
+      className={`genus-card-shell${compactCandidateView && group.items.length === 1 && !alwaysShowGenus ? " genus-card-shell--single" : ""}${
         group.items.length > 1 ? " genus-card-shell--multi" : ""
       }${group.items.length > 2 ? " genus-card-shell--wide" : ""}`}
       aria-labelledby={headId}

@@ -674,6 +674,12 @@ export function GuideMeasuredBlock({ m, body, bands }: { m: GuideMeasured; body:
       <div className="fg-found">
         <p className="fg-sub">
           Measured on <b>{GROUPED.format(m.bodies)}</b> bodies where it was confirmed
+          {m.sharesFromEddn ? (
+            <>
+              {" "}
+              · body and atmosphere over <b>{GROUPED.format(m.sharesFromEddn)}</b> bodies logged to EDDN
+            </>
+          ) : null}
         </p>
         <dl className="fg-shares">
           <ShareRow label="Body" items={m.planet} colour={seg} mine={body?.planet ?? null} />

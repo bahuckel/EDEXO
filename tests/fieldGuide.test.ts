@@ -72,6 +72,19 @@ describe("field guide", () => {
     expect(guideStarClass("F3")).toBe("F");
   });
 
+  it("takes the Body and Atmosphere shares from the EDDN year where the bands file has them", () => {
+    // Fungoida bullarum: the Spansh profile never saw it on a High metal content body; the EDDN year has 13 (2026-10-16).
+    const db = getCachedSpeciesDatabase();
+    const guide = buildFieldGuide(getProjectRoot(), db);
+    const bullarum = guide.genera.find((g) => g.id === "fungoida")!.species.find((s) => s.name === "Fungoida bullarum")!;
+    expect(bullarum.measured!.sharesFromEddn).toBe(bullarum.bands!.n);
+    expect(bullarum.measured!.planet.find((p) => p.label === "High metal content")?.n).toBeGreaterThan(0);
+    const tectonicas = guide.genera.find((g) => g.id === "stratum")!.species.find((s) => s.name === "Stratum tectonicas")!;
+    expect(tectonicas.measured!.atmosphere.some((a) => a.label === "Thin argon-rich")).toBe(true);
+    // The journal spells it "Rocky ice body"; the guide must still mark it as this body's class.
+    expect(guideBodyName("Rocky ice body")).toBe("Rocky ice");
+  });
+
   it("puts the journal's body on the guide's scales and units", () => {
     const scan = {
       BodyName: "B 6 a",
