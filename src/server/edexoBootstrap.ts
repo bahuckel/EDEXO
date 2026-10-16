@@ -60,7 +60,7 @@ import { readLanAccess, resolveLanAccess } from "./launcherPrefs.js";
 import { isLoopbackHostName } from "./lanAuth.js";
 import { applyPendingRestore } from "./backup.js";
 import { createBackupService } from "./backupService.js";
-import { APP_VERSION } from "./appVersion.js";
+import { APP_USER_AGENT, APP_VERSION } from "./appVersion.js";
 import os from "node:os";
 import {
   edsmCredentialsStatus,
@@ -185,6 +185,7 @@ import { backfillCommanderPosition } from "./commanderPositionBackfill.js";
 import { fullJumpRange } from "../shared/jumpRange.js";
 import { createGggResearch } from "./gggResearch.js";
 import { createNoticesService, type CodexFirstFind, type NoticesContext } from "./notices.js";
+import { communityGoalNoticeText, startCommunityGoalPoller } from "./communityGoals.js";
 import { createBookmarksService } from "./bookmarks.js";
 import { spawn } from "node:child_process";
 import { createBoxelRun } from "./boxelRun.js";
@@ -1207,6 +1208,21 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     startEdsmRun(EDSM_LIVE_SCOPE, true);
   }, EDSM_LIVE_INTERVAL_MS);
   edsmLiveTimer.unref?.();
+
+  // Community Goals: Frontier's public list, hourly while Notify me → Community goals is on (communityGoals.ts).
+  startCommunityGoalPoller({
+    enabled: () => notices.prefs().communityGoals,
+    userAgent: APP_USER_AGENT,
+    onGoals: (goals) => {
+      const at = new Date().toISOString();
+      let added = false;
+      for (const g of goals) {
+        if (notices.announceCommunityGoal({ id: g.id, title: g.title, system: g.system, text: communityGoalNoticeText(g) }, at))
+          added = true;
+      }
+      if (added) push();
+    },
+  });
 
   // The EDDN collector's codex ledger, when one runs on this machine: fresher [CODEX FIRST] (eddnLedger.ts).
   startEddnLedgerWatch(getProjectRoot());

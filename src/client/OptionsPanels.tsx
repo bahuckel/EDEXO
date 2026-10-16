@@ -62,8 +62,8 @@ export function CanonnUploadPanel({ state }: { state: AppSnapshot["canonnUpload"
       help={
         <>
           <p>
-            Canonn Research is the community science archive this app's matching rules came from. Sending
-            discoveries back is how the rules get better for everyone.
+            Canonn Research is a community science archive of exobiology and other discoveries. Sending yours
+            adds them to its research; nothing in this app depends on it.
           </p>
           <p>
             <strong>What is sent</strong> — organic scans, the sales that date them, codex entries, and
@@ -455,7 +455,8 @@ export function NotifyPanel() {
     poiOn +
     (nb.carriers !== "off" ? 1 : 0) +
     featuresOn +
-    (jp.on ? 1 : 0);
+    (jp.on ? 1 : 0) +
+    (p.communityGoals ?? true ? 1 : 0);
   const radiusLy = st.jumpLy != null ? Math.round(nb.jumps * st.jumpLy) : null;
   const saveJump = (patch: Partial<JumponiumNotifyPrefsDTO>) => save({ jumponium: { ...jp, ...patch } });
 
@@ -676,6 +677,31 @@ export function NotifyPanel() {
               onChange={(ev) => save({ chime: ev.target.checked })}
             />
             <span>Chime when a record falls (this PC only)</span>
+          </label>
+        </div>
+      </NotifySection>
+
+      <NotifySection
+        k="cg"
+        title="Community goals"
+        summary={p.communityGoals ?? true ? "on" : "off"}
+        help={
+          <p>
+            A notice when a new Community Goal starts: where to sign up, the objective, when it ends, how far along it
+            is and its rewards. The app asks Frontier&apos;s public list once an hour while this is on; the request
+            carries nothing about you.
+          </p>
+        }
+      >
+        <div className="options-notify-grid">
+          <label className="options-toggle">
+            <input
+              type="checkbox"
+              checked={p.communityGoals ?? true}
+              disabled={busy}
+              onChange={(ev) => save({ communityGoals: ev.target.checked })}
+            />
+            <span>New Community Goals</span>
           </label>
         </div>
       </NotifySection>

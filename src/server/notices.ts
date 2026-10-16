@@ -211,6 +211,8 @@ export interface NoticesService {
   announceAchievement(a: { id: string; step: number; title: string; text: string }, at: string): boolean;
   /** A gas giant to photograph for the nudge research (server/gggResearch.ts; the developer's PC only). */
   announceGggResearch(n: { bodyKey: string; system: string; systemAddress: number; body: string; title: string; text: string }, at: string): boolean;
+  /** A Community Goal on Frontier's list (server/communityGoals.ts): once per goal, ever. True when it was added. */
+  announceCommunityGoal(g: { id: string; title: string; system: string; text: string }, at: string): boolean;
   /**
    * Candidates nobody has logged in their region ([CODEX FIRST]), from the snapshot of the system the
    * commander is in. Each species, colour and body is announced once.
@@ -781,6 +783,22 @@ export function createNoticesService(opts: {
         title: a.title,
         text: a.text,
         system: "",
+        systemAddress: null,
+        body: null,
+        bodyKey: null,
+      });
+      if (added) save();
+      return added;
+    },
+    announceCommunityGoal(g, at) {
+      if (!state.prefs.communityGoals) return false;
+      const added = add({
+        id: `cg:${g.id}`,
+        at,
+        kind: "cg",
+        title: `Community Goal: ${g.title}`,
+        text: g.text,
+        system: g.system,
         systemAddress: null,
         body: null,
         bodyKey: null,

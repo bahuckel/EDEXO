@@ -12,8 +12,11 @@ import { POI_GROUP_OPTIONS, type PoiGroup } from "./gecCategories.js";
 import { CARRIER_SERVICE_OPTIONS } from "./carrierServices.js";
 import type { InjectionTier } from "./jumponium.js";
 
-/** `achievement`: a bronze, silver or gold reached since the app started (owner, 2026-10-05). */
-export type NoticeKind = "notable" | "record" | "nsp" | "poi" | "carrier" | "codex" | "achievement" | "jumponium";
+/**
+ * `achievement`: a bronze, silver or gold reached since the app started (owner, 2026-10-05). `cg`: a Community Goal
+ * on Frontier's list, announced once (server/communityGoals.ts; owner, 2026-10-16).
+ */
+export type NoticeKind = "notable" | "record" | "nsp" | "poi" | "carrier" | "codex" | "achievement" | "jumponium" | "cg";
 
 export interface NoticeDTO {
   id: string;
@@ -66,6 +69,11 @@ export interface NotifyPrefsDTO {
   features: Record<BodyFeatureKey, boolean>;
   /** A scanned body rich in a Laboratory material, FSD injection or AFM refill (shared/jumponium.ts, 1.2.16). */
   jumponium: JumponiumNotifyPrefsDTO;
+  /**
+   * A new Community Goal, from Frontier's public list asked hourly (server/communityGoals.ts). On by default: the
+   * request carries nothing about the commander (owner, 2026-10-16).
+   */
+  communityGoals: boolean;
 }
 
 /**
@@ -130,6 +138,7 @@ export const DEFAULT_NOTIFY_PREFS: NotifyPrefsDTO = {
     onlyShort: true,
     target: 30,
   },
+  communityGoals: true,
 };
 
 /** Only known keys and booleans get through; anything else keeps its current value. */
@@ -167,6 +176,7 @@ export function mergeNotifyPrefs(prev: NotifyPrefsDTO, raw: unknown): NotifyPref
     },
     features,
     jumponium: mergeJumponiumPrefs(prev.jumponium ?? DEFAULT_NOTIFY_PREFS.jumponium, r.jumponium),
+    communityGoals: bool(r.communityGoals, prev.communityGoals ?? true),
   };
 }
 

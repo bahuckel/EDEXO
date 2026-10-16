@@ -31,6 +31,7 @@ const NOTICE_ICON: Record<NoticeDTO["kind"], string> = {
   codex: "◆",
   achievement: "🏆",
   jumponium: "⚗",
+  cg: "⚑",
 };
 
 async function post(path: string, body: unknown): Promise<boolean> {
@@ -127,6 +128,16 @@ export const NoticesBell = memoOnSnapSlice(BELL_FIELDS, function NoticesBell({
             onClick={() => show(n)}
           >
             Show
+          </button>
+        ) : null}
+        {n.kind === "cg" ? (
+          <button
+            type="button"
+            className="exo-data-alert__btn"
+            title={`Copy ${n.system} to paste into the galaxy map`}
+            onClick={() => void navigator.clipboard?.writeText(n.system).catch(() => {})}
+          >
+            Copy system
           </button>
         ) : null}
         <button
