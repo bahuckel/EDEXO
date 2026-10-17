@@ -197,6 +197,14 @@ describe("bringing back a row the floor hid on the model's number (rescueByGenus
     expect(rows[0]!.presenceProbabilityPercent).toBe(100);
   });
 
+  it("brings back one row per genus, the likeliest (1.2.19 review: three hidden Tussock came back together)", () => {
+    const divisa = hidden("tussock_tussock_divisa", "Tussock", 0.4);
+    const catena = hidden("tussock_tussock_catena", "Tussock", 0.3);
+    const albata = hidden("tussock_tussock_albata", "Tussock", 0.2);
+    rescueByGenusPrior([match("bacterium_bacterium_alcyoneum", "Bacterium", 100), catena, albata, divisa], body, scan, ctx, root);
+    expect([divisa, catena, albata].map((m) => m.unlikely)).toEqual([false, true, true]);
+  });
+
   it("leaves it hidden when a sibling of its genus is already shown", () => {
     const divisa = hidden("tussock_tussock_divisa", "Tussock", 0.4);
     rescueByGenusPrior([match("tussock_tussock_catena", "Tussock", 40), divisa], body, scan, ctx, root);

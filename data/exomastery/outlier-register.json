@@ -340,6 +340,27 @@
      "atmo": "carbondioxide"
     }
    ]
+  },
+  "stratum_stratum_laminamus": {
+   "bodies": 2,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "Spansh (other commanders), owner's alert 2026-10-17",
+     "key": "594592958827:1a",
+     "body": "HIP 64848 1 a",
+     "kind": "demoted",
+     "field": "Colour star G (Indigo = its Y-dwarf colour; body orbits a planet-slot Y dwarf)"
+    },
+    {
+     "src": "Spansh (other commanders), owner's alert 2026-10-17",
+     "key": "594592958827:1b",
+     "body": "HIP 64848 1 b",
+     "kind": "demoted",
+     "field": "Colour star G (Indigo = its Y-dwarf colour; body orbits a planet-slot Y dwarf)"
+    }
+   ]
   }
  }
 }

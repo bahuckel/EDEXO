@@ -123,13 +123,17 @@ function hasVolcanism(scan: PlanetScan): boolean {
   return reportsVolcanism(scan.Volcanism);
 }
 
-/** Lays the measured odds over the model's `presenceProbabilityPercent` / `genusSharePercent` on the shown rows. */
-export function applyMeasuredOdds(shown: SpeciesMatch[], scan: PlanetScan): void {
+/**
+ * Lays the measured odds over the model's `presenceProbabilityPercent` / `genusSharePercent` on the shown rows.
+ * `afterDss`: the body's genera are named. Recepta's rate answers "is Recepta here at all", so it stands down once a
+ * DSS has said (1.2.19 review: a named Recepta read 24 % × its share instead of adding up to the genus).
+ */
+export function applyMeasuredOdds(shown: SpeciesMatch[], scan: PlanetScan, afterDss = false): void {
   const atmo = atmosphereTypeKeyOf(scan);
 
   // Recepta where sulphur dioxide is a trace in another gas: the genus at its measured rate, the species
   // split as the model has it.
-  if (atmo === "carbondioxide" || atmo === "oxygen") {
+  if (!afterDss && (atmo === "carbondioxide" || atmo === "oxygen")) {
     const rate = receptaRate(gasSharePercent(scan, "SulphurDioxide") ?? 0);
     const rows = shown.filter((m) => m.entry.genusDataDir === "recepta");
     if (rate != null && rows.length) {

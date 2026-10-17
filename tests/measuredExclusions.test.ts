@@ -101,3 +101,68 @@ describe("in the matcher", () => {
     expect(shownSpeciesMatches(b.matches)).toHaveLength(1);
   });
 });
+
+describe("1.2.19: pressure, gases and materials in the rules", () => {
+  it("reads gas / material shares (0 % when not listed, nothing when the scan lists none) and says them in words", () => {
+    const pressRule = {
+      when: [
+        { value: "press_atm", op: ">=", is: 0.0562 },
+        { value: "host", op: "=", is: "M" },
+      ],
+      speciesBodies: 3000,
+      expected: 40,
+    } as const;
+    const gasRule = { when: [{ value: "gas_carbondioxide", op: ">=", is: 98.75 }], speciesBodies: 2000, expected: 30 } as const;
+    const noArgonRule = { when: [{ value: "gas_argon", op: "<=", is: 0 }], speciesBodies: 2000, expected: 30 } as const;
+    writeFileSync(
+      path.join(root, "data", "exomastery", "measured-exclusions.json"),
+      JSON.stringify({ formatVersion: 1, species: { a: [pressRule], b: [gasRule], c: [noArgonRule] } }),
+    );
+    setMeasuredExclusionsRootForTests(root);
+    expect(measuredExclusion("a", { press_atm: 0.06, host: "M" }, root)).not.toBeNull();
+    expect(measuredExclusion("a", { press_atm: 0.05, host: "M" }, root)).toBeNull();
+    expect(measuredExclusion("b", { gas: { gas_carbondioxide: 99 } }, root)).not.toBeNull();
+    expect(measuredExclusion("b", { gas: { gas_carbondioxide: 90 } }, root)).toBeNull();
+    // Argon not in the list: 0 % → inside; no composition at all → no opinion.
+    expect(measuredExclusion("c", { gas: { gas_carbondioxide: 99 } }, root)).not.toBeNull();
+    expect(measuredExclusion("c", {}, root)).toBeNull();
+    expect(describeExclusion(pressRule as never)).toBe("pressure ≥ 0.0562 atm and parent star M");
+    expect(describeExclusion(gasRule as never)).toBe("carbon dioxide in the atmosphere ≥ 98.75 %");
+  });
+});
+
+describe("1.2.19: the journal's composition reaches the rules", () => {
+  it("reads AtmosphereComposition by the training table's keys (CarbonDioxide → gas_carbondioxide)", () => {
+    writeFileSync(
+      path.join(root, "data", "exomastery", "measured-exclusions.json"),
+      JSON.stringify({
+        formatVersion: 1,
+        species: {
+          concha_concha_aureolas: [
+            { when: [{ value: "gas_carbondioxide", op: ">=", is: 98.75 }], speciesBodies: 2367, expected: 30 },
+          ],
+        },
+      }),
+    );
+    setMeasuredExclusionsRootForTests(root);
+    const entry = {
+      id: "concha_concha_aureolas",
+      displayName: "Concha aureolas",
+      genus: "Concha",
+      genusDataDir: "concha",
+      criteria: { planetClassAnyOf: ["Rocky body"], landable: true },
+    } as unknown as SpeciesEntry;
+    const db = { species: [entry] } as SpeciesDatabase;
+    const scan = (pct: number) =>
+      ({
+        PlanetClass: "Rocky body",
+        Landable: true,
+        atmosphereComposition: [{ Name: "CarbonDioxide", Percent: pct }, { Name: "SulphurDioxide", Percent: 100 - pct }],
+      }) as unknown as PlanetScan;
+    const hi = matchDatabaseToScan(db, scan(99.5), null, null, { includeBacterium: true, matchContext: {} as SpeciesMatchContext });
+    expect(shownSpeciesMatches(hi.matches)).toHaveLength(0);
+    expect(hi.matches[0]!.unlikelyReasons?.[0]?.detail).toMatch(/carbon dioxide in the atmosphere ≥ 98.75 %/);
+    const lo = matchDatabaseToScan(db, scan(90), null, null, { includeBacterium: true, matchContext: {} as SpeciesMatchContext });
+    expect(shownSpeciesMatches(lo.matches)).toHaveLength(1);
+  });
+});

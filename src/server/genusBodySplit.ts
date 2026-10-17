@@ -262,10 +262,14 @@ export function applyGenusBodySplit(
     if (!shares) continue;
     const measured = rows.filter((m) => m.presenceProbabilityPercent != null && Number.isFinite(m.presenceProbabilityPercent));
     const genusPct = measured.length ? measured.reduce((a, m) => a + m.presenceProbabilityPercent!, 0) : null;
+    // The measured rows' total is shared among the measured rows only (1.2.19 review): a row the model has no number
+    // for stays unmeasured instead of taking part of the others' chance.
+    const measuredShare = measured.reduce((a, m) => a + (shares.get(m.entry.id) ?? 0), 0);
     for (const m of rows) {
       const s = shares.get(m.entry.id) ?? 0;
       m.genusSharePercent = Math.round(s * 1000) / 10;
-      if (genusPct != null) m.presenceProbabilityPercent = Math.round(Math.min(100, genusPct * s) * 10) / 10;
+      if (genusPct != null && measuredShare > 0 && measured.includes(m))
+        m.presenceProbabilityPercent = Math.round(Math.min(100, (genusPct * s) / measuredShare) * 10) / 10;
     }
     const floor = file.genera[genus]!.floor;
     if (!(floor > 0)) continue;

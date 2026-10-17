@@ -1,6 +1,6 @@
 {
  "formatVersion": 1,
- "builtAt": "2026-10-16",
+ "builtAt": "2026-10-17",
  "source": "EDDN year (342k bodies, each species logged on the exact body) + hold-outs A/B/D + the owner's journals: no confirmed body of the species inside any rule. Values: temp K, mass Earth masses, parent = the journal Parents[0] kind (Star / Null / Planet), sma_ls semi-major axis in light-seconds, orb_d orbital period in days, dist_ls distance from arrival, grav_g g, c_metal metal fraction, host = the parent star's class, main = the system main star's class (hostStarClassKey), region = galactic region. Built by docs/perf/build_measured_exclusions.py.",
  "species": {
   "aleoida_aleoida_laminiae": [
@@ -25,6 +25,28 @@
     ],
     "speciesBodies": 2579,
     "expected": 54.9
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Sanguineous Rim"
+     }
+    ],
+    "speciesBodies": 2579,
+    "expected": 306.1
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Elysian Shore"
+     }
+    ],
+    "speciesBodies": 2579,
+    "expected": 130.9
    }
   ],
   "aleoida_aleoida_spica": [
@@ -164,6 +186,17 @@
     ],
     "speciesBodies": 4366,
     "expected": 44.0
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Norma Arm"
+     }
+    ],
+    "speciesBodies": 4366,
+    "expected": 92.9
    }
   ],
   "cactoida_cactoida_peperatis": [
@@ -352,6 +385,22 @@
     ],
     "speciesBodies": 2137,
     "expected": 93.5
+   },
+   {
+    "when": [
+     {
+      "value": "dist_ls",
+      "op": "<=",
+      "is": 21747.854814
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "M"
+     }
+    ],
+    "speciesBodies": 2137,
+    "expected": 95.4
    }
   ],
   "concha_concha_labiata": [
@@ -443,6 +492,44 @@
     ],
     "speciesBodies": 9509,
     "expected": 419.8
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Sanguineous Rim"
+     }
+    ],
+    "speciesBodies": 9509,
+    "expected": 828.1
+   },
+   {
+    "when": [
+     {
+      "value": "dist_ls",
+      "op": "<=",
+      "is": 1920.271879
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "K"
+     }
+    ],
+    "speciesBodies": 9509,
+    "expected": 1985.2
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Achilles's Altar"
+     }
+    ],
+    "speciesBodies": 9509,
+    "expected": 45.5
    }
   ],
   "frutexa_frutexa_fera": [
@@ -483,6 +570,17 @@
     ],
     "speciesBodies": 2987,
     "expected": 401.4
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Ryker's Hope"
+     }
+    ],
+    "speciesBodies": 2987,
+    "expected": 45.7
    }
   ],
   "frutexa_frutexa_flabellum": [
@@ -615,6 +713,24 @@
     ],
     "speciesBodies": 19507,
     "expected": 4190.5
+   }
+  ],
+  "osseus_osseus_cornibus": [
+   {
+    "when": [
+     {
+      "value": "press_atm",
+      "op": ">=",
+      "is": 0.056221
+     },
+     {
+      "value": "host",
+      "op": "=",
+      "is": "M"
+     }
+    ],
+    "speciesBodies": 1889,
+    "expected": 44.9
    }
   ],
   "osseus_osseus_pellebantus": [
@@ -990,6 +1106,17 @@
     ],
     "speciesBodies": 4234,
     "expected": 231.6
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Outer Arm"
+     }
+    ],
+    "speciesBodies": 4234,
+    "expected": 18.2
    }
   ],
   "tussock_tussock_cultro": [
@@ -1118,6 +1245,44 @@
     ],
     "speciesBodies": 14448,
     "expected": 813.8
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Inner Orion Spur"
+     }
+    ],
+    "speciesBodies": 14448,
+    "expected": 3487.4
+   },
+   {
+    "when": [
+     {
+      "value": "region",
+      "op": "=",
+      "is": "Hawking's Gap"
+     }
+    ],
+    "speciesBodies": 14448,
+    "expected": 497.7
+   },
+   {
+    "when": [
+     {
+      "value": "dist_ls",
+      "op": "<=",
+      "is": 6334.487973
+     },
+     {
+      "value": "main",
+      "op": "=",
+      "is": "A"
+     }
+    ],
+    "speciesBodies": 14448,
+    "expected": 886.4
    }
   ],
   "tussock_tussock_serrati": [
@@ -1142,6 +1307,17 @@
     ],
     "speciesBodies": 3063,
     "expected": 1103.9
+   },
+   {
+    "when": [
+     {
+      "value": "temp",
+      "op": ">=",
+      "is": 174.041394
+     }
+    ],
+    "speciesBodies": 3063,
+    "expected": 1716.0
    }
   ]
  }

@@ -26,7 +26,9 @@ import { applyMeasuredOdds } from "./measuredOdds.js";
  * than not scoring it at all.
  */
 function regionIndexForBody(store: GameStateStore, b: BodyExoState, projectRoot: string): number | null {
-  const pos = store.systemPositions.get(b.systemAddress);
+  // A system looked up on Spansh is placed by its own coordinates, as the match context does (1.2.19 review: such a
+  // body was scored with no region weighting while its region gates applied).
+  const pos = store.systemPositions.get(b.systemAddress) ?? store.remoteSystems.get(b.systemAddress)?.coords;
   if (!pos) return null;
   const index = regionIndexForSystem(projectRoot, pos.x, pos.z);
   return index != null && index > 0 ? index : null;
@@ -132,6 +134,7 @@ export function attachPresenceProbability(
   applyMeasuredOdds(
     ranked.map((r) => r.match),
     scan,
+    !!b.genusHints?.length,
   );
 }
 

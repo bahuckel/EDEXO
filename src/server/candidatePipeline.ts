@@ -136,7 +136,7 @@ export function rankCandidates(
     genus's mass with the dump's cell share, which re-diluted Recepta's measured rate. The first pass,
     inside attachPresenceProbability, is what the 1 % floors judged; this one is what is shown.
   */
-  if (scan) applyMeasuredOdds(matches.filter((m) => !m.unlikely), scan);
+  if (scan) applyMeasuredOdds(matches.filter((m) => !m.unlikely), scan, !!b.genusHints?.length);
   /*
     Which species of the genus, from the fitted tables, for the five genera where they order better
     than the model (speciesSplit.ts; owner, 2026-10-10). The genus keeps its chance.
@@ -144,11 +144,33 @@ export function rankCandidates(
   const split = scan
     ? applySpeciesSplit(matches, splitInputsFor(b, { ...inputs, scan }, store, root))
     : new Set<string>();
+  capNamedGeneraAfterDss(matches, b);
   // Order only, after every floor: Concha labiata or renibus leads by gravity (conchaOrder.ts), unless
   // the tables have ordered Concha already.
   if (!split.has("Concha")) orderConchaPair(matches, scan);
   markSampledDespiteUnlikely(matches, b, db);
   return split;
+}
+
+/**
+ * After a DSS each named genus is on the body once, so its listed species share one genus: their chances add up to at
+ * most 100 % (1.2.19). The signal multiplier (presenceFloors.ts) scales a genus to signals × its share, and on a
+ * 2-signal body two Cactoida read 64 % and 76 %; measured on the held-back samples, rows said 65-80 % after a DSS came
+ * true about 54 %. Order and the floors are untouched (a scaled row only moves down, never below what it was hidden at).
+ */
+export function capNamedGeneraAfterDss(matches: SpeciesMatch[], b: Pick<BodyExoState, "genusHints">): void {
+  if (!b.genusHints?.length) return;
+  const total = new Map<string, number>();
+  for (const m of matches) {
+    const p = m.presenceProbabilityPercent;
+    if (m.unlikely || typeof p !== "number" || !Number.isFinite(p)) continue;
+    total.set(m.entry.genus, (total.get(m.entry.genus) ?? 0) + p);
+  }
+  for (const m of matches) {
+    const t = total.get(m.entry.genus);
+    if (m.unlikely || t == null || t <= 100 || typeof m.presenceProbabilityPercent !== "number") continue;
+    m.presenceProbabilityPercent = Math.round(((m.presenceProbabilityPercent * 100) / t) * 10) / 10;
+  }
 }
 
 export interface CandidateRun {

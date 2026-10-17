@@ -110,6 +110,16 @@ describe("applying it to a body's candidates", () => {
     for (const m of ms.filter((x) => x.unlikely)) expect(m.genusSharePercent!).toBeLessThan(15);
   });
 
+  it("a row the model has no number for stays unmeasured; the measured rows keep their total (1.2.19 review)", () => {
+    const ms = SINUOUS.map((id) => match(id, "Sinuous Tubers", "sinuous-tubers", 10));
+    const blank = ms[0]!;
+    blank.presenceProbabilityPercent = null as never;
+    applyGenusBodySplit(ms, scan({ Volcanism: "minor silicate vapour geysers volcanism" }), null, root, new Set());
+    expect(blank.presenceProbabilityPercent ?? null).toBeNull();
+    const total = ms.reduce((a, m) => a + (m.presenceProbabilityPercent ?? 0), 0);
+    expect(total).toBeCloseTo(10 * (SINUOUS.length - 1), 0);
+  });
+
   it("never demotes what the commander has sampled here", () => {
     const ms = SINUOUS.map((id) => match(id, "Sinuous Tubers", "sinuous-tubers", 10));
     applyGenusBodySplit(ms, scan({ Volcanism: "minor silicate vapour geysers volcanism" }), null, root, new Set([ST("violaceum")]));

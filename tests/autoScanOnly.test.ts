@@ -121,3 +121,15 @@ describe("a body the ship only AutoScanned", () => {
     }
   });
 });
+
+describe("organic locks (1.2.19 review)", () => {
+  it("a body holding organic locks (a sibling's propagated scans) is a bio tab, not AutoScanned-only as well", () => {
+    const s = storeWith([scan(14, "AutoScan")]);
+    expect(keys(s)).toContain(14);
+    const key = [...s.bodies.keys()].find((k) => k.endsWith(":14"));
+    const held = key ? s.bodies.get(key) : undefined;
+    if (!held) return; // the AutoScan made no store body: nothing to double up
+    held.organicGenusLocks = [{ genus: "Bacterium" } as never];
+    expect(keys(s)).not.toContain(14);
+  });
+});

@@ -337,7 +337,10 @@ export function rescueByGenusPrior(
   const prior = genusPriorFor(root, scan, signals, ctx?.parentStarType);
   if (!prior) return;
   const shownGenera = new Set(matches.filter((m) => !m.unlikely).map((m) => genusPriorKey(m.entry.genus)));
-  for (const m of matches) {
+  // One row per genus, the likeliest first (1.2.19 review: three hidden Tussock came back at ~20 % each, 65 % for
+  // one genus, where the rescue meant the one row the floor should not have hidden).
+  const hidden = [...matches].sort((a, b) => (b.presenceProbabilityPercent ?? -1) - (a.presenceProbabilityPercent ?? -1));
+  for (const m of hidden) {
     const why = m.unlikelyReasons ?? [];
     if (!m.unlikely || why.length !== 1 || why[0]!.field !== "Chance here") continue;
     const g = genusPriorKey(m.entry.genus);
@@ -351,5 +354,6 @@ export function rescueByGenusPrior(
     m.unlikely = false;
     m.unlikelyReasons = [];
     m.presenceProbabilityPercent = Math.round(Math.min(100, blended * 100) * 10) / 10;
+    shownGenera.add(g);
   }
 }

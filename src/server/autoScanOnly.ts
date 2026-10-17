@@ -26,9 +26,17 @@ export function autoScanOnlyBodies(store: GameStateStore, systemAddress: number)
     const key = bodyKey(rec.systemAddress, rec.bodyId);
     if (store.fssBodySignalsBodyKeys.has(key)) continue;
     // The store may already hold a body for it (a Scan can create one); it counts only once it knows
-    // something about life there.
+    // something about life there — the same test as the bio tab list (gameState journalBioBodies), organic locks
+    // included: a sibling's propagated locks made one body a bio tab AND an AutoScanned-only tab (1.2.19 review).
     const held = store.bodies.get(key);
-    if (held && (held.biologicalSignals !== null || held.genusHints?.length || held.confirmedVariants.length)) continue;
+    if (
+      held &&
+      (held.biologicalSignals !== null ||
+        held.genusHints?.length ||
+        held.confirmedVariants.length ||
+        held.organicGenusLocks.length)
+    )
+      continue;
     if (held) {
       out.push({ ...held, scan: held.scan ?? planetScanFromExplorationRecord(rec), autoScanOnly: true });
       continue;

@@ -312,6 +312,17 @@ function exclusionValues(scan: PlanetScan, ctx: SpeciesMatchContext | undefined)
   const num = (v: unknown, k = 1): number | undefined =>
     typeof v === "number" && Number.isFinite(v) ? v * k : undefined;
   const metal = scan.composition?.Metal ?? scan.composition?.metal;
+  /** Name → share in %, keys `prefix` + the name lower-cased without spaces; undefined when the scan lists none. */
+  const shares = (rows: { Name?: string; name?: string; Percent?: number; percent?: number }[] | undefined, prefix: string) => {
+    if (!Array.isArray(rows) || !rows.length) return undefined;
+    const out: Record<string, number> = {};
+    for (const r of rows) {
+      const name = String(r?.Name ?? r?.name ?? "").toLowerCase().replace(/[^a-z]/g, "");
+      const pct = r?.Percent ?? r?.percent;
+      if (name && typeof pct === "number" && Number.isFinite(pct)) out[prefix + name] = Math.max(out[prefix + name] ?? 0, pct);
+    }
+    return out;
+  };
   return {
     temp: num(scan.SurfaceTemperature),
     mass: num(scan.MassEM),
@@ -324,6 +335,14 @@ function exclusionValues(scan: PlanetScan, ctx: SpeciesMatchContext | undefined)
     host: hostStarClassKey(ctx?.parentStarType) ?? undefined,
     main: ctx?.systemMainStarClass,
     region: ctx?.regionName,
+    press_atm: num(scan.SurfacePressure, 1 / 101_325),
+    radius_km: num(scan.radius, 1 / 1000),
+    ecc: num(scan.Eccentricity),
+    rot_d: typeof scan.RotationPeriod === "number" ? num(Math.abs(scan.RotationPeriod), 1 / 86_400) : undefined,
+    c_ice: num(scan.composition?.Ice ?? scan.composition?.ice),
+    c_rock: num(scan.composition?.Rock ?? scan.composition?.rock),
+    gas: shares(scan.atmosphereComposition, "gas_"),
+    mat: shares(scan.materials, "mat_"),
   };
 }
 
@@ -841,6 +860,10 @@ export function speciesMatchesExcludingTempPressure(
     });
   }
   // Never under this colour star in the EDDN year where its usual rate expects 20+ (colourStarNever.ts, 1.2.18 Part 1).
+  // Read from the brightest star only. HIP 64848 1 a / 1 b carry Stratum laminamus in Indigo (its Y-dwarf colour) with
+  // a G star brightest: one system, registered as a lone outlier (outlier-register.json). Lifting the rule for a
+  // companion (app27), for any planetary star in the system (app28) or for the one the body orbits (app29) added
+  // 1-3 % wrong rows on the held-back samples and recovered no find (2026-10-17).
   if (starVerdict.kind !== "never" && ctx?.colourStarType?.trim()) {
     const never = colourStarNever(entry.id, ctx.colourStarType);
     if (never) {
@@ -1089,6 +1112,7 @@ export function speciesMatchesExcludingTempPressure(
  * A moon-grower on a planet round a star (owner, 2026-10-09): Concha labiata's star-orbiting share
  * against renibus's in the same climate, 3.4 % / 22 % (a year of EDDN: 926 of its 27,415 bodies).
  */
+
 const STAR_ORBIT_FACTOR = 0.15;
 
 export function speciesMatchesCriteria(

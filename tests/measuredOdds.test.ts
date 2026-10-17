@@ -30,6 +30,12 @@ describe("Recepta by its sulphur dioxide", () => {
     expect(high.map((x) => x.presenceProbabilityPercent)).toEqual([53.4, 35.6]);
   });
 
+  it("stands down once a DSS has named the genera (1.2.19 review: the rate answers 'is Recepta here at all')", () => {
+    const named = [m("recepta_recepta_umbrux", "recepta", 60, 60), m("recepta_recepta_conditivus", "recepta", 40, 40)];
+    applyMeasuredOdds(named, co2(1.05), true);
+    expect(named.map((x) => x.presenceProbabilityPercent)).toEqual([60, 40]);
+  });
+
   it("leaves a sulphur dioxide atmosphere, and a trace under the line, to the model", () => {
     const so2 = [m("recepta_recepta_umbrux", "recepta", 40, 100)];
     applyMeasuredOdds(so2, scan({ AtmosphereType: "SulphurDioxide", atmosphereComposition: [{ Name: "SulphurDioxide", Percent: 100 }] }));

@@ -31,10 +31,24 @@ export interface ExclusionValues {
   /** System main star class, `hostStarClassKey`. */
   main?: string;
   region?: string;
+  /** 1.2.19: more of the journal scan, so the rule finder can use every value its training table has. */
+  press_atm?: number;
+  radius_km?: number;
+  ecc?: number;
+  /** Rotation period in days (absolute). */
+  rot_d?: number;
+  c_ice?: number;
+  c_rock?: number;
+  /** Atmosphere composition in %, keyed like the training table (`gas_carbondioxide`); 0 for a gas not listed. */
+  gas?: Record<string, number>;
+  /** Crust materials in %, keyed like the training table (`mat_iron`); 0 for a material not listed. */
+  mat?: Record<string, number>;
 }
 
+type PlainValue = Exclude<keyof ExclusionValues, "gas" | "mat">;
+
 interface Condition {
-  value: keyof ExclusionValues;
+  value: PlainValue | `gas_${string}` | `mat_${string}`;
   op: "=" | "<=" | ">=";
   is: string | number;
 }
@@ -74,8 +88,16 @@ function load(root: string): Map<string, MeasuredExclusion[]> {
   return bySpecies;
 }
 
+/** A condition's value on this body: a plain field, or one gas / material share. */
+function valueOf(c: Condition, v: ExclusionValues): string | number | undefined {
+  // A gas or material the scan does not list is 0 %, as the training table writes it; no list at all says nothing.
+  if (c.value.startsWith("gas_")) return v.gas ? (v.gas[c.value] ?? 0) : undefined;
+  if (c.value.startsWith("mat_")) return v.mat ? (v.mat[c.value] ?? 0) : undefined;
+  return v[c.value as PlainValue];
+}
+
 function holds(c: Condition, v: ExclusionValues): boolean {
-  const have = v[c.value];
+  const have = valueOf(c, v);
   if (have === undefined || have === null) return false;
   if (c.op === "=") return typeof have === "string" && have === c.is;
   if (typeof have !== "number" || !Number.isFinite(have) || typeof c.is !== "number") return false;
@@ -96,7 +118,7 @@ export function measuredExclusion(
   return null;
 }
 
-const LABEL: Record<keyof ExclusionValues, string> = {
+const LABEL: Record<PlainValue, string> = {
   temp: "temperature",
   mass: "mass",
   parent: "orbiting",
@@ -108,15 +130,30 @@ const LABEL: Record<keyof ExclusionValues, string> = {
   host: "parent star",
   main: "main star",
   region: "region",
+  press_atm: "pressure",
+  radius_km: "radius",
+  ecc: "eccentricity",
+  rot_d: "rotation period",
+  c_ice: "ice content",
+  c_rock: "rock content",
 };
 
-const UNIT: Partial<Record<keyof ExclusionValues, string>> = {
+/** A gas or material condition's words: "carbon dioxide", "sulphur". */
+function shareLabel(key: string): string {
+  const name = key.slice(4);
+  return name.replace(/dioxide$/, " dioxide").replace(/^sulphur /, "sulphur ");
+}
+
+const UNIT: Partial<Record<PlainValue, string>> = {
   temp: " K",
   mass: " Earth masses",
   sma_ls: " ls",
   orb_d: " days",
   dist_ls: " ls",
   grav_g: " g",
+  press_atm: " atm",
+  radius_km: " km",
+  rot_d: " days",
 };
 
 /** "parent star K and main star K" — the rule in words, for the reason line. */
@@ -127,10 +164,15 @@ export function describeExclusion(rule: MeasuredExclusion): string {
         const kind = c.is === "Null" ? "a barycentre" : c.is === "Star" ? "a star" : "a planet";
         return `orbiting ${kind}`;
       }
-      if (c.op === "=") return `${LABEL[c.value]} ${c.is}`;
+      const cmp = c.op === "<=" ? "≤" : "≥";
       const n = typeof c.is === "number" ? Number(c.is.toPrecision(4)) : c.is;
-      const shown = c.value === "c_metal" && typeof n === "number" ? `${Math.round(n * 100)} %` : `${n}${UNIT[c.value] ?? ""}`;
-      return `${LABEL[c.value]} ${c.op === "<=" ? "≤" : "≥"} ${shown}`;
+      if (c.value.startsWith("gas_") || c.value.startsWith("mat_"))
+        return `${shareLabel(c.value)} ${c.value.startsWith("gas_") ? "in the atmosphere" : "in the crust"} ${cmp} ${n} %`;
+      const key = c.value as PlainValue;
+      if (c.op === "=") return `${LABEL[key]} ${c.is}`;
+      const fraction = key === "c_metal" || key === "c_ice" || key === "c_rock";
+      const shown = fraction && typeof n === "number" ? `${Math.round(n * 100)} %` : `${n}${UNIT[key] ?? ""}`;
+      return `${LABEL[key]} ${cmp} ${shown}`;
     })
     .join(" and ");
 }

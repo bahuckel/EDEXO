@@ -1,8 +1,8 @@
 {
  "formatVersion": 1,
  "builtAt": "2026-10-16",
- "source": "EDDN year (EDGalaxyData archive), each species logged on the exact body; colour star = the app's colourStarTypeFor (brightest star in the body's sky). Built by docs/perf/build_colour_star_never.py.",
- "minExpected": 20,
+ "source": "EDDN year (EDGalaxyData archive), each species logged on the exact body; colour star = the app's colourStarTypeFor (brightest star in the body's sky). Built by docs/perf/build_colour_star_never.py. 1.2.19: pairs from 10 expected and species from 100 bodies, none in hold-outs A / B / D.",
+ "minExpected": 10,
  "species": {
   "aleoida_aleoida_arcus": {
    "G": {
@@ -62,6 +62,10 @@
    "B": {
     "expected": 39.4,
     "speciesBodies": 1873
+   },
+   "TTS": {
+    "expected": 14.9,
+    "speciesBodies": 1873
    }
   },
   "electricae_electricae_pluma": {
@@ -71,6 +75,10 @@
    },
    "G": {
     "expected": 78.1,
+    "speciesBodies": 1731
+   },
+   "TTS": {
+    "expected": 14.3,
     "speciesBodies": 1731
    }
   },
@@ -122,6 +130,10 @@
    "N": {
     "expected": 288.3,
     "speciesBodies": 12329
+   },
+   "B": {
+    "expected": 12.4,
+    "speciesBodies": 12329
    }
   },
   "stratum_stratum_araneamus": {
@@ -131,6 +143,14 @@
    },
    "G": {
     "expected": 270.1,
+    "speciesBodies": 3177
+   },
+   "L": {
+    "expected": 15.4,
+    "speciesBodies": 3177
+   },
+   "TTS": {
+    "expected": 12.7,
     "speciesBodies": 3177
    }
   },
@@ -182,6 +202,10 @@
    "N": {
     "expected": 109.7,
     "speciesBodies": 2558
+   },
+   "B": {
+    "expected": 17.2,
+    "speciesBodies": 2558
    }
   },
   "stratum_stratum_paleas": {
@@ -210,11 +234,19 @@
    "A": {
     "expected": 291.5,
     "speciesBodies": 4174
+   },
+   "TTS": {
+    "expected": 12.7,
+    "speciesBodies": 4174
    }
   },
   "tussock_tussock_ignis": {
    "TTS": {
     "expected": 22.6,
+    "speciesBodies": 8380
+   },
+   "B": {
+    "expected": 11.8,
     "speciesBodies": 8380
    }
   },
@@ -227,6 +259,10 @@
   "tussock_tussock_pennatis": {
    "A": {
     "expected": 331.0,
+    "speciesBodies": 5565
+   },
+   "TTS": {
+    "expected": 15.0,
     "speciesBodies": 5565
    }
   },
@@ -260,6 +296,42 @@
    "B": {
     "expected": 79.4,
     "speciesBodies": 2387
+   }
+  },
+  "brain_trees_brain_tree_ostrinum": {
+   "N": {
+    "expected": 11.7,
+    "speciesBodies": 461
+   }
+  },
+  "frutexa_frutexa_acus": {
+   "T": {
+    "expected": 10.6,
+    "speciesBodies": 9509
+   }
+  },
+  "sinuous_tuber_sinuous_tubers_caeruleum": {
+   "O": {
+    "expected": 17.8,
+    "speciesBodies": 511
+   }
+  },
+  "tussock_tussock_albata": {
+   "TTS": {
+    "expected": 12.2,
+    "speciesBodies": 4502
+   }
+  },
+  "tussock_tussock_caputus": {
+   "TTS": {
+    "expected": 11.0,
+    "speciesBodies": 4059
+   }
+  },
+  "tussock_tussock_catena": {
+   "TTS": {
+    "expected": 12.9,
+    "speciesBodies": 4234
    }
   }
  }
