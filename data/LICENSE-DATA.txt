@@ -76,6 +76,15 @@ so the data has one licence. The EDAstro-derived files, and what was changed
       volcanism, temperature band and atmosphere on the Spansh galaxy dump's
       bodies where EDSM's and EDAstro's codex log exactly one species of the
       genus in the system. No system of EDAstro's is in it.
+  * data/codex/variant-region-systems.json (from version 1.2.19)
+      Per biological colour variant, how many systems have it logged,
+      galaxy-wide and per region, counted from EDAstro's codex-data.csv.
+      No system of EDAstro's is in it.
+  * data/codex/variant-sites/*.json.gz (from version 1.2.19)
+      Per region and biological colour variant, systems EDAstro's
+      codex-data.csv lists for it, with their names and coordinates: all of
+      them for the rarer ones (25 systems or fewer in a region), else one per
+      1,000 ly cube where it is logged most (15 cubes at most).
 
 The other sources of the data are credited in NOTICE.md. Among them, the EDDN
 archive EDGalaxyData (https://edgalaxydata.space/EDDN/), by CMDR Bravada

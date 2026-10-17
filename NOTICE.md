@@ -66,6 +66,11 @@ licence ([`data/LICENSE-DATA.txt`](data/LICENSE-DATA.txt)). The EDAstro-derived 
 - `data/exomastery/genus-body-split.json` — per Sinuous Tubers and Brain Tree species, counts of
   planet type, volcanism, temperature band and atmosphere on the Spansh galaxy dump's bodies where
   EDSM's and EDAstro's codex log exactly one species of the genus in the system;
+- `data/codex/variant-region-systems.json` (from 1.2.19) — per biological colour variant, how many systems
+  have it logged, galaxy-wide and per region, counted from EDAstro's `codex-data.csv`;
+- `data/codex/variant-sites/*.json.gz` (from 1.2.19, one file per region) — per region and colour variant, systems EDAstro's
+  `codex-data.csv` lists for it (names and coordinates): all of them for the rarer ones, else one per 1,000 ly cube
+  where it is logged most;
 - `data/exomastery/genus-prior.json` — how often each genus is found on bodies of each planet type,
   signal count, atmosphere, temperature band, pressure band, gravity band, host star class and volcanism,
   counted from the DSS genus lists in the Spansh galaxy dump.

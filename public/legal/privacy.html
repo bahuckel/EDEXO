@@ -189,7 +189,10 @@
             before they are written to <code>browser/passwords.json</code> in the app's data folder; where no such
             protection exists nothing is saved. They are kept only on this PC and never sent anywhere. You can
             delete them one by one or all at once in the browser's menu; switching the option off keeps them but
-            stops saving and filling.
+            stops saving and filling. An optional <strong>master password</strong> adds a second lock: the logins are
+            then also encrypted with a key made from it (scrypt, AES-256-GCM), which is kept in memory only from the
+            moment you unlock until the app closes or you lock it. The master password itself is never stored.
+            Saved passwords are left out of the app's backups.
           </li>
           <li>
             <strong>Ads and trackers are blocked</strong> on every site unless you switch blocking off for one.

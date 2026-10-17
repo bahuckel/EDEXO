@@ -85,7 +85,7 @@ It is built from how often a species has actually been recorded at this gravity,
 pressure, planet class, atmosphere and host star, weighted by how common it is, and normalised
 across the body's candidates, then weighed against how often each genus turns up on bodies like this
 one. Checked on 14,560 bodies other commanders logged on EDDN, where every species on the body is known:
-rows it calls 90–100 % turn up 98.8 % of the time, rows under 10 % 5.8 %.
+rows it calls 90–100 % turn up 98.9 % of the time, rows under 10 % 6.0 %.
 
 **Which species, once you have mapped it.** After a DSS names the genus, the same posterior
 renormalises inside that genus to say which of its species you are looking at.
@@ -117,7 +117,7 @@ updates as you jump. In the desktop app, turn on **LAN access** in Network setti
 **Backups.** The launcher's Backups tile zips your journals, the app's own data (settings, on-foot
 scans, surface marks, the miss log) and your exomastery and codex downloads — when you leave the game,
 on a timer, or when you ask. Every backup is complete; unchanged files are copied from the one before,
-so it stays quick. Choose a folder on another drive, a USB drive or a synced folder: the launcher warns
+so it stays quick. Saved browser passwords stay out (they can be read on this PC only). Choose a folder on another drive, a USB drive or a synced folder: the launcher warns
 in red when the folder shares a partition with your journals, and in yellow when it shares the physical
 drive. A restore never overwrites: app data goes back at the next start with the replaced files set
 aside, and journals go into a folder you pick.
@@ -148,11 +148,15 @@ off until you turn it on.
 - **Body facts**: class, atmosphere and pressure, gravity, temperature, distance from arrival,
   volcanism and its geological signal count, and the jumponium and AFM refill materials in its crust.
 - **Payout**: the least and most the body should pay, the x5 first-footfall bonus, and what you have
-  already confirmed on foot or by composition scan.
+  already confirmed on foot or by composition scan. Beside it, the body's **expected value** (each listed
+  species' chance x its price, one species per genus), with a _DSS first_ tag when most of it rests on one
+  unlikely species a DSS would settle; the body tabs can be ordered by it.
 - **Candidates**: each species with its chance, payout, rarity and codex marks; _Why this chance_
-  says what the percentage is made of; an _Unknown plant_ row when a signal is left unfilled; Thargoid
-  sites with their Vista prices; `[CODEX FIRST]` for a colour nobody has logged in the region; a
-  _worth sampling_ marker where the data needs more finds.
+  says what the percentage is made of and how often rows at that chance came true on a year of EDDN
+  finds; an _Unknown plant_ row when a signal is left unfilled; Thargoid sites with their Vista prices;
+  `[CODEX FIRST]` for a colour nobody has logged in the region; `[RARE]` (and a notice) for a colour
+  logged in 10 systems or fewer galaxy-wide (EDAstro's codex); a _worth sampling_ marker where the data
+  needs more finds.
 
 ### Screens
 
@@ -185,9 +189,9 @@ game) or as pop-ups if Tab view is off.
 - **Browser** (desktop app only; "+" → Browser): a private browser in a tab. Nothing a site stores
   outlives the app unless you mark the site **Remember**; ads, trackers, cookie notices and YouTube
   ads are blocked (EasyList, EasyPrivacy and uBlock Origin's lists, fetched from their publishers when
-  you first open it); every permission but fullscreen is denied. Optional, both off by default: **Keep
+  you first open it); every permission but fullscreen is denied. Optional, in its **Privacy & Security** menu, off by default: **Keep
   page cache** (faster revisits), **Remember passwords** (encrypted by the operating system, filled in on
-  the site it was saved for). A start page with EDSM, EDAstro, Spansh, ED GGG, ED-DSN, Inara and your own links.
+  the site it was saved for, with an optional master password asked once per start). A start page with EDSM, EDAstro, Spansh, ED GGG, ED-DSN, Inara and your own links.
 - **Bookmarks** with tags, notes and distances; **Green gas giants** by CMDR Arcanic's cloud ladder;
   **Data feeder** for your own Spansh Exomastery dumps; a **Session log**.
 
@@ -198,7 +202,9 @@ game) or as pop-ups if Tab view is off.
 - **Find** (species, systems and station names) and filters by species, genus, star or planet type;
   layers for points of interest, Notable Stellar Phenomena, carriers, bookmarks, green gas giants, the
   18 helium gas giants on record and 800,709 **stations** (names on hover, pads by type); your own
-  carrier and colonies marked, your stations in gold; your codex by region.
+  carrier and colonies marked, your stations in gold; your codex by region, with the biology others have
+  logged in a region that is not in your codex yet, rarest first — a click flies to the nearest system in
+  that same region that has it.
 - **Stations** tab: the nearest station with a service, from your ship or any system.
 - **Laboratory** tab, with a Jumponium and an AFM Refill tab inside: the materials you hold (from your
   journals) and how many FSD injections or AFM refills of each tier they make, whether an AFMU is fitted, then
@@ -276,7 +282,7 @@ No number reaches the screen as a percentage unless it has been checked against 
 Every candidate carries a **Chance here** figure — how often a species with this profile turns out to
 actually be on a body like this one. It is the one percentage in the app that has been calibrated
 against real outcomes: on 14,560 EDDN bodies where every species is known, the 90-100 % band comes in
-at 98.8 % and the 0-10 % band at 5.8 %.
+at 98.9 % and the 0-10 % band at 6.0 %.
 
 Candidates below **1 %** are moved behind _show unlikely_ rather than listed. The rule is no misses
 first: a list of three where one is right beats a list of one that is wrong. The floor was 5 % until
