@@ -100,6 +100,8 @@ describe("what goes in", () => {
     expect(appDataExclusion("edexo-compare-edsm-key.json", s)).toMatch(/key/);
     expect(appDataExclusion("edexo-compare-lan-key.txt", s)).toMatch(/key/);
     expect(appDataExclusion("window-state.json", s)).toMatch(/this PC/);
+    expect(appDataExclusion("browser/passwords.json", { ...s, includeKeys: true })).toMatch(/saved passwords/);
+    expect(appDataExclusion("edexo-browser.json", s)).toBeNull();
     expect(appDataExclusion("edexo-predictions.json.before-smoke-removal.bak", s)).toMatch(/old copy/);
     expect(appDataExclusion("restore-pending/x.json", s)).toMatch(/restore/);
   });

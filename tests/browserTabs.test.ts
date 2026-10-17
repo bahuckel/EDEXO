@@ -26,7 +26,7 @@ const {
   createBrowserTabs: (o: unknown) => {
     handle: (e: { sender: FakeContents }, a: unknown) => Promise<Record<string, unknown>>;
     isBrowserContents: (wc: unknown) => boolean;
-    reloadFocused: () => boolean;
+    reloadShown: () => boolean;
   };
   resolveTyped: (t: string, s: (q: string) => string) => string | null;
   isLocalHost: (h: string) => boolean;
@@ -213,6 +213,10 @@ class FakeWindow {
   destroyed = false;
   isDestroyed() {
     return this.destroyed;
+  }
+  focused = true;
+  isFocused() {
+    return this.focused;
   }
 }
 type PermissionHandler = (wc: unknown, p: string, cb: (ok: boolean) => void) => void;
@@ -503,6 +507,21 @@ describe("the toolbar's calls", () => {
     expect(v.visible).toBe(false);
     await t.call({ op: "bounds", rect: { x: "x" } });
     expect(v.visible).toBe(false);
+  });
+
+  it("hands the toolbar a still of the page in front, to show while a menu covers it (owner, 2026-10-17)", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    expect(await t.call({ op: "snapshot" })).toEqual({ dataUrl: null });
+    await t.call({ op: "open", text: "https://edsm.net/" });
+    await t.call({ op: "bounds", rect: { x: 0, y: 100, width: 800, height: 600 } });
+    const wc = FakeView.made[FakeView.made.length - 1]!.webContents as unknown as Record<string, unknown>;
+    wc.capturePage = async () => ({ isEmpty: () => false, toJPEG: () => Buffer.from("jpg") });
+    expect(await t.call({ op: "snapshot" })).toEqual({ dataUrl: `data:image/jpeg;base64,${Buffer.from("jpg").toString("base64")}` });
+    wc.capturePage = async () => {
+      throw new Error("gone");
+    };
+    expect(await t.call({ op: "snapshot" })).toEqual({ dataUrl: null });
   });
 
   it("close every page when the Browser tab goes and does not come back", async () => {
@@ -1012,10 +1031,14 @@ describe("the password world's scripts, on a page", () => {
       runScripts: "outside-only",
       virtualConsole: vc,
     });
-    // jsdom lays nothing out: every element counts as shown.
-    (
-      dom.window as unknown as { Element: { prototype: { getClientRects: () => unknown[] } } }
-    ).Element.prototype.getClientRects = () => [{}];
+    // jsdom lays nothing out: every element counts as shown, a normal-sized box on screen unless a test says so.
+    const proto = (dom.window as unknown as { Element: { prototype: Record<string, unknown> } }).Element.prototype;
+    proto.getClientRects = () => [{}];
+    proto.getBoundingClientRect = function (this: Element) {
+      return this.getAttribute("data-box") === "tiny"
+        ? { top: 0, left: 0, bottom: 1, right: 1, width: 1, height: 1 }
+        : { top: 100, left: 100, bottom: 130, right: 300, width: 200, height: 30 };
+    };
     return { dom, logs, doc: dom.window.document };
   }
 
@@ -1084,19 +1107,54 @@ describe("the password world's scripts, on a page", () => {
     expect((doc.querySelector("#p") as HTMLInputElement).value).toBe("mine");
     dom.window.close();
   });
+  it("on its own, never fills a hidden field a page script slipped in (1.2.19 review); the key button still fills", () => {
+    const tiny = page(`<form><input id="u" type="text"><input id="p" type="password" data-box="tiny"></form>`);
+    expect(tiny.dom.window.eval(passwordFillScript("https://inara.cz", "cmdr", "pw", true))).toBe(false);
+    expect((tiny.doc.querySelector("#p") as HTMLInputElement).value).toBe("");
+    expect(tiny.dom.window.eval(passwordFillScript("https://inara.cz", "cmdr", "pw"))).toBe(true);
+    tiny.dom.window.close();
+    const clear = page(`<form><input id="u" type="text"><div style="opacity:0"><input id="p" type="password"></div></form>`);
+    expect(clear.dom.window.eval(passwordFillScript("https://inara.cz", "cmdr", "pw", true))).toBe(false);
+    clear.dom.window.close();
+  });
 });
 
 describe("F5 in a browsed page (owner, 2026-10-16: F5 did nothing in the browser)", () => {
-  it("reloads the page that has the keyboard, and only when one has it", async () => {
+  it("reloads the page that has the keyboard", async () => {
     const t = setup();
     await t.call({ op: "start" });
     await t.call({ op: "open", text: "https://www.edsm.net/" });
     const wc = FakeView.made[FakeView.made.length - 1]!.webContents;
-    expect(t.tabs.reloadFocused()).toBe(false);
-    expect(wc.plainReloads).toBe(0);
     wc.focused = true;
-    expect(t.tabs.reloadFocused()).toBe(true);
+    expect(t.tabs.reloadShown()).toBe(true);
     expect(wc.plainReloads).toBe(1);
+  });
+
+  it("reloads the page on screen without the keyboard (owner, 2026-10-17: F5 cleared the notices instead)", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://www.edsm.net/" });
+    const wc = FakeView.made[FakeView.made.length - 1]!.webContents;
+    // Not on screen yet (no box): the notices.
+    expect(t.tabs.reloadShown()).toBe(false);
+    await t.call({ op: "bounds", rect: { x: 0, y: 40, width: 800, height: 600 } });
+    expect(t.tabs.reloadShown()).toBe(true);
+    expect(wc.plainReloads).toBe(1);
+    // The app's window not in front (the game is): the notices.
+    t.appWin.focused = false;
+    expect(t.tabs.reloadShown()).toBe(false);
+    t.appWin.focused = true;
+    // A menu open over the page (the box goes): the notices.
+    await t.call({ op: "bounds", rect: null });
+    expect(t.tabs.reloadShown()).toBe(false);
+    expect(wc.plainReloads).toBe(1);
+  });
+
+  it("leaves the start page alone: F5 there clears the notices", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "bounds", rect: { x: 0, y: 40, width: 800, height: 600 } });
+    expect(t.tabs.reloadShown()).toBe(false);
   });
 });
 

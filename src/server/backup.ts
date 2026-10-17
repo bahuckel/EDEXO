@@ -122,6 +122,9 @@ export function appDataExclusion(rel: string, s: Pick<BackupSettings, "includeKe
     return "download or cache (fetched again)";
   }
   if ((base === "edexo-compare-edsm-key.json" || base === "edexo-compare-lan-key.txt") && !s.includeKeys) return "key (off by default)";
+  // Saved browser passwords are encrypted with this Windows account's key, which lives outside the app data
+  // folder: a restored copy could not be read, and a zip should not list the sites with saved logins.
+  if (rel === "browser/passwords.json") return "saved passwords (readable on this PC only)";
   // Where the windows were belongs to this PC's screens, not to the data.
   if (base === "window-state.json" || base === "app-window.json") return "window positions (this PC only)";
   if (/\.(bak|tmp|partial|rar|zip|7z)$/i.test(base) || /\.bak-/i.test(base)) return "old copy or archive";

@@ -185,6 +185,23 @@ function passwordFillScript(origin, username, password, auto = false) {
       if (["text", "email", "tel"].includes(inputs[k].type)) user = inputs[k];
   const AUTO = ${auto ? "true" : "false"};
   if (AUTO && pw.value) return false;
+  /*
+    Filled on its own only into fields a person can see (1.2.19 review): a third-party script on the login page could
+    add a hidden password field (transparent, 1 px, off-screen) and read what the auto-fill puts there. The key
+    button, a person's choice, still fills the field the page shows.
+  */
+  const plainlyVisible = (el) => {
+    const r = el.getBoundingClientRect();
+    if (r.width < 20 || r.height < 10) return false;
+    if (r.bottom <= 0 || r.right <= 0 || r.top >= innerHeight || r.left >= innerWidth) return false;
+    for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
+      const cs = getComputedStyle(e);
+      if (parseFloat(cs.opacity) < 0.1 || cs.visibility === "hidden" || cs.display === "none") return false;
+    }
+    return true;
+  };
+  if (AUTO && !plainlyVisible(pw)) return false;
+  if (AUTO && user && !plainlyVisible(user)) user = null;
   const put = (el, v) => {
     if (AUTO && el.value) return;
     if (!AUTO) el.focus();
@@ -461,6 +478,8 @@ function createBrowserTabs(o) {
         : null,
       // The key button: saved usernames for this exact origin, while the page shows a password field.
       logins: t.pw && t.pwField && passwordsOn() ? passwords.usernames(t.pw.origin) : [],
+      // Logins saved for this origin that the master password still locks: the key button offers an unlock.
+      loginsLocked: t.pw && t.pwField && passwordsOn() ? passwords.lockedCount(t.pw.origin) : 0,
     };
   }
 
@@ -815,6 +834,8 @@ function createBrowserTabs(o) {
       available: a.ok,
       reason: a.ok ? null : a.reason,
       saved: passwords ? passwords.list() : [],
+      savedCount: passwords ? passwords.count() : 0,
+      master: passwords ? passwords.masterState() : { set: false, unlocked: false },
       never: o.prefs.passwordNever(),
     };
   }
@@ -1053,6 +1074,22 @@ function createBrowserTabs(o) {
         changed();
         return state();
       }
+      /*
+        A picture of the page in front (owner, 2026-10-17: a menu over the browser hid the page, the app's background
+        showed through). The page is a native layer above the app window, so anything drawn over it hides it; the app
+        shows this still in its place while a menu is open, and the live page comes back when the menu closes.
+      */
+      case "snapshot": {
+        const t2 = active != null ? tabs.get(active) : null;
+        const wcs = t2?.view?.webContents;
+        if (!wcs || wcs.isDestroyed() || !bounds) return { dataUrl: null };
+        try {
+          const img = await wcs.capturePage();
+          return { dataUrl: img.isEmpty() ? null : `data:image/jpeg;base64,${img.toJPEG(80).toString("base64")}` };
+        } catch {
+          return { dataUrl: null };
+        }
+      }
       case "bounds": {
         if (win !== host) adopt(win);
         const r = a?.rect;
@@ -1222,6 +1259,33 @@ function createBrowserTabs(o) {
         }
         changed();
         return { ok: true, state: state() };
+      // The master password (1.2.19): it reaches the main process only to derive the key, and is never kept.
+      case "masterUnlock": {
+        const ok = !!passwords && (await passwords.unlock(String(a?.password ?? "")));
+        if (ok) {
+          changed();
+          // A page already showing its login form gets the one saved login now, as on load.
+          for (const x of tabs.values())
+            if (x.pwField && x.pw && x.view && !x.view.webContents.isDestroyed()) autoFill(x, x.view.webContents, x.pw.origin);
+        }
+        return ok ? { ok: true, state: state() } : { error: "Wrong master password.", state: state() };
+      }
+      case "masterLock":
+        passwords?.lock();
+        changed();
+        return { ok: true, state: state() };
+      case "masterSet": {
+        const r = passwords
+          ? await passwords.setMaster(String(a?.password ?? ""), typeof a?.current === "string" ? a.current : undefined)
+          : { error: "Not available." };
+        changed();
+        return { ...r, state: state() };
+      }
+      case "masterRemove": {
+        const r = passwords ? await passwords.removeMaster(String(a?.current ?? "")) : { error: "Not available." };
+        changed();
+        return { ...r, state: state() };
+      }
       case "passwordNeverRemove":
         o.prefs.removePasswordNever(String(a?.origin ?? ""));
         return { ok: true, state: state() };
@@ -1234,19 +1298,27 @@ function createBrowserTabs(o) {
     handle,
     isBrowserContents,
     /**
-     * F5 while a browsed page has the keyboard: reload it, true when one did (owner, 2026-10-16: F5 did nothing in
-     * the browser). The app's F5 key bind (Clear the notices) stays registered while the app is in front, so
-     * Windows hands F5 to the bind and the page never sees it; the bind asks here first.
+     * F5 while a browsed page is on screen in the window in front: reload it, true when one did (owner, 2026-10-16:
+     * F5 did nothing in the browser). The app's F5 key bind (Clear the notices) stays registered while the app is in
+     * front, so Windows hands F5 to the bind and the page never sees it; the bind asks here first. Not only when the
+     * page has the keyboard (owner, 2026-10-17: F5 cleared the notices instead): a click on the toolbar or a menu
+     * takes the keyboard from the page. A menu open over the page (no box) or another tab of the app: the notices.
      */
-    reloadFocused() {
+    reloadShown() {
+      const reload = (t) => {
+        const wc = t?.view?.webContents;
+        if (!wc || wc.isDestroyed()) return false;
+        wc.reload();
+        return true;
+      };
       for (const t of tabs.values()) {
         const wc = t.view?.webContents;
-        if (wc && !wc.isDestroyed() && wc.isFocused()) {
-          wc.reload();
-          return true;
-        }
+        if (wc && !wc.isDestroyed() && wc.isFocused()) return reload(t);
       }
-      return false;
+      if (!host || host.isDestroyed() || !host.isFocused()) return false;
+      if (fullscreen) return reload(tabs.get(fullscreen.id));
+      const t = active != null ? tabs.get(active) : null;
+      return !!(bounds && t && !t.startPage) && reload(t);
     },
     /** Something the toolbar shows changed (the blocklists' download, from browserBlocker.cjs). */
     changed,

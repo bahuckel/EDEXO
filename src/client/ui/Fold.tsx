@@ -109,16 +109,12 @@ export function FoldPanel({
         {aside ? <div className="fold-aside">{aside}</div> : null}
         {tools ? <div className="fold-tools">{tools}</div> : null}
         {help ? (
-          <button
-            type="button"
-            className={`fold-help-btn${helpOpen ? " fold-help-btn--on" : ""}`}
-            onClick={toggleHelp}
-            aria-expanded={helpOpen}
-            aria-controls={`${panelId}-help`}
+          <HelpToggle
+            open={helpOpen}
+            onToggle={toggleHelp}
+            controls={`${panelId}-help`}
             title={helpOpen ? "Hide the explanations" : "What do these mean?"}
-          >
-            ?
-          </button>
+          />
         ) : null}
       </div>
       <div id={panelId} className="fold-body" aria-hidden={!open}>
@@ -132,5 +128,31 @@ export function FoldPanel({
         </div>
       </div>
     </section>
+  );
+}
+
+/** The "?" that opens an explanation (fold heads, the browser's Privacy & Security rows). */
+export function HelpToggle({
+  open,
+  onToggle,
+  title,
+  controls,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  title: string;
+  controls?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={`fold-help-btn${open ? " fold-help-btn--on" : ""}`}
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={controls}
+      title={title}
+    >
+      ?
+    </button>
   );
 }

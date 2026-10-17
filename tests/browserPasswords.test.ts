@@ -18,6 +18,13 @@ type Store = {
   lookup(origin: string, username: string): string | null;
   remove(origin: string, username: string): boolean;
   clear(): void;
+  count(): number;
+  lockedCount(origin: string): number;
+  masterState(): { set: boolean; unlocked: boolean };
+  unlock(password: string): Promise<boolean>;
+  lock(): void;
+  setMaster(password: string, current?: string): Promise<{ ok?: boolean; error?: string }>;
+  removeMaster(current: string): Promise<{ ok?: boolean; error?: string }>;
 };
 const { createBrowserPasswords, passwordOrigin } = require("../electron/browserPasswords.cjs") as {
   createBrowserPasswords: (o: { dir: string; safeStorage: unknown; platform?: string }) => Store;
@@ -150,5 +157,69 @@ describe("saved passwords", () => {
     expect(p.list()).toEqual([]);
     writeFileSync(file(), "{not json");
     expect(createBrowserPasswords({ dir, safeStorage: fakeSafeStorage() }).list()).toEqual([]);
+  });
+});
+
+describe("master password (1.2.19)", async () => {
+  const O = "https://forums.example.com";
+  const make = () => createBrowserPasswords({ dir, safeStorage: fakeSafeStorage() });
+
+  it("seals the saved logins under the master key: a new start is locked until the right password", async () => {
+    const a = make();
+    a.save(O, "cmdr", "hunter2");
+    expect(await a.setMaster("short")).toMatchObject({ error: expect.stringMatching(/6 characters/) });
+    expect(await a.setMaster("correct horse")).toEqual({ ok: true });
+    expect(a.masterState()).toEqual({ set: true, unlocked: true });
+    expect(a.lookup(O, "cmdr")).toBe("hunter2");
+    // The operating system's layer alone no longer opens the entries.
+    const raw = JSON.parse(readFileSync(file(), "utf8"));
+    expect(raw.formatVersion).toBe(2);
+    const outer = fakeSafeStorage().decryptString(Buffer.from(raw.entries[0].p, "base64"));
+    expect(outer).not.toContain("hunter2");
+
+    const b = make();
+    expect(b.masterState()).toEqual({ set: true, unlocked: false });
+    expect(b.count()).toBe(1);
+    expect(b.list()).toEqual([]);
+    expect(b.usernames(O)).toEqual([]);
+    expect(b.lockedCount(O)).toBe(1);
+    expect(b.lookup(O, "cmdr")).toBeNull();
+    expect(b.check(O, "new", "pw")).toBeNull();
+    expect(b.save(O, "new", "pw")).toMatchObject({ error: expect.stringMatching(/Unlock/) });
+    expect(await b.unlock("wrong one")).toBe(false);
+    expect(await b.unlock("correct horse")).toBe(true);
+    expect(b.lockedCount(O)).toBe(0);
+    expect(b.usernames(O)).toEqual(["cmdr"]);
+    expect(b.lookup(O, "cmdr")).toBe("hunter2");
+    b.lock();
+    expect(b.lookup(O, "cmdr")).toBeNull();
+  });
+
+  it("changes and removes only with the current password; every login survives both", async () => {
+    const a = make();
+    a.save(O, "cmdr", "hunter2");
+    await a.setMaster("first pass");
+    expect(await a.setMaster("second pass", "nope")).toMatchObject({ error: expect.stringMatching(/wrong/) });
+    expect(await a.setMaster("second pass", "first pass")).toEqual({ ok: true });
+    const b = make();
+    expect(await b.unlock("first pass")).toBe(false);
+    expect(await b.unlock("second pass")).toBe(true);
+    expect(await b.removeMaster("first pass")).toMatchObject({ error: expect.stringMatching(/wrong/) });
+    expect(await b.removeMaster("second pass")).toEqual({ ok: true });
+    const c = make();
+    expect(c.masterState()).toEqual({ set: false, unlocked: false });
+    expect(c.lookup(O, "cmdr")).toBe("hunter2");
+    expect(JSON.parse(readFileSync(file(), "utf8")).formatVersion).toBe(1);
+  });
+
+  it("delete all is the way back from a forgotten master password", async () => {
+    const a = make();
+    a.save(O, "cmdr", "hunter2");
+    await a.setMaster("forgotten soon");
+    const b = make();
+    b.clear();
+    expect(b.masterState()).toEqual({ set: false, unlocked: false });
+    expect(b.count()).toBe(0);
+    expect(make().masterState().set).toBe(false);
   });
 });

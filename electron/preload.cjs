@@ -152,6 +152,8 @@ contextBridge.exposeInMainWorld("edexoElectron", {
     downloadLists: () => browserCall({ op: "downloadLists" }),
     /** Where the page goes in this window (CSS pixels), or null to hide it. */
     bounds: (rect) => browserCall({ op: "bounds", rect }),
+    /** A still of the page in front, shown in its place while a menu covers it. */
+    snapshot: () => browserCall({ op: "snapshot" }),
     open: (text) => browserCall({ op: "open", text }),
     close: (id) => browserCall({ op: "close", id }),
     select: (id) => browserCall({ op: "select", id }),
@@ -178,6 +180,11 @@ contextBridge.exposeInMainWorld("edexoElectron", {
     passwordDelete: (origin, username) => browserCall({ op: "passwordDelete", origin, username }),
     passwordDeleteAll: () => browserCall({ op: "passwordDeleteAll" }),
     passwordNeverRemove: (origin) => browserCall({ op: "passwordNeverRemove", origin }),
+    /** The optional master password over the saved logins (1.2.19). */
+    masterUnlock: (password) => browserCall({ op: "masterUnlock", password }),
+    masterLock: () => browserCall({ op: "masterLock" }),
+    masterSet: (password, current) => browserCall({ op: "masterSet", password, current }),
+    masterRemove: (current) => browserCall({ op: "masterRemove", current }),
     /** The browser's state as it changes, and "focusAddress" (Ctrl+L in a page). Returns an unsubscribe. */
     on: (cb) => {
       const st = (_e, s) => cb({ type: "state", state: s });

@@ -112,6 +112,10 @@
 }
 
 /* ---- address bar ---- */
+/* The address is its own form inside the toolbar row; the form itself takes no box. */
+.ebr-address-form {
+  display: contents;
+}
 .ebr-bar {
   display: flex;
   align-items: center;
@@ -228,20 +232,6 @@
   text-transform: uppercase;
   color: var(--text-dim);
 }
-/* Keep page cache, Remember passwords: a checkbox and one line of help each. */
-.ebr-menu__opt {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  max-width: 24rem;
-  padding: 6px 10px;
-  font-size: var(--fs-sm);
-  color: var(--text);
-  cursor: pointer;
-}
-.ebr-menu__opt input {
-  margin-top: 3px;
-}
 .ebr-menu__help {
   display: block;
   margin-top: 2px;
@@ -273,6 +263,101 @@
   font: inherit;
   font-size: var(--fs-xs);
   cursor: pointer;
+}
+/* Privacy & Security (owner, 2026-10-17): its own view in the ⋯ menu, one row per option with a [?] that unfolds
+   its explanation; buttons in the app's own cut-corner style (btn-top-neutral / btn-confirm-go). */
+.ebr-privacy {
+  display: flex;
+  flex-direction: column;
+  max-width: 26rem;
+}
+.ebr-privacy > button[role="menuitem"] {
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.ebr-privacy > button[role="menuitem"]:hover {
+  background: var(--accent-a15);
+}
+.ebr-privacy__opt {
+  padding: 4px 10px;
+}
+.ebr-privacy__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.ebr-privacy__title {
+  flex: 1;
+}
+.ebr-privacy__help {
+  margin: 4px 0 2px 24px;
+}
+.ebr-privacy__dot {
+  display: inline-block;
+  width: 13px;
+}
+/* btn-top-neutral only sets the shape; its colours here: the frame that fills on hover, as in the cockpit. */
+.ebr-menu .btn-top-neutral {
+  border: 1px solid var(--accent-a35);
+  background: none;
+  color: var(--accent);
+}
+.ebr-menu .btn-confirm-go {
+  border: 1px solid var(--accent-bright);
+}
+.ebr-privacy__btn {
+  margin: 4px 10px;
+  padding: 4px 10px;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+/* The master password rows (1.2.19): a help line, inputs and small buttons, wrapping in the menu's width. */
+.ebr-menu__master {
+  padding: 0 4px 4px;
+}
+.ebr-menu__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+}
+.ebr-menu__form .ebr-menu__help {
+  flex-basis: 100%;
+}
+.ebr-menu__form input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  height: 1.8rem;
+  padding: 0 8px;
+  border: 1px solid var(--accent-a25);
+  border-radius: var(--r-sm);
+  background: var(--surface-0, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+}
+.ebr-menu__form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.ebr-menu__form button {
+  padding: 4px 10px;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.ebr-menu__error {
+  padding: 0 6px;
+  color: var(--warn);
 }
 /* The save prompt: a bar under the toolbar, never over the page (the page is a native view and would cover it). */
 .ebr-pwbar {
@@ -324,6 +409,16 @@
 }
 
 /* ---- page box, start page, error page ---- */
+/* The page's picture while a menu covers it (the live page is a native layer the menu cannot be drawn over). */
+.ebr-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 0;
+}
 .ebr-box {
   position: relative;
   flex: 1;

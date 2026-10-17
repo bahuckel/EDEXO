@@ -163,6 +163,9 @@ function createBrowserPrefs(o) {
       const u = httpUrl(url);
       const n = typeof name === "string" ? name.trim().slice(0, 60) : "";
       if (!u || !n || data.links.length >= MAX_LINKS) return false;
+      // One link per address (1.2.19 review): links are keyed and removed by address, so a second copy of a link, or
+      // of a built-in one, could not be told apart and removing one removed both.
+      if (DEFAULT_LINKS.some((l) => l.url === u.href) || data.links.some((l) => l.url === u.href)) return false;
       data.links.push({ name: n, url: u.href });
       save();
       return true;

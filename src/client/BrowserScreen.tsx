@@ -10,6 +10,8 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { IconKey } from "./ui/icons";
+import { UnlockLoginsChip } from "./BrowserMasterPassword";
+import { BrowserPrivacyPanel } from "./BrowserPrivacyPanel";
 import "./styles/browser.css";
 
 interface BrowserTab {
@@ -30,8 +32,10 @@ interface BrowserTab {
   passwordPrompt: { origin: string; username: string; update: boolean } | null;
   /** Usernames saved for this page's exact origin, while it shows a password field (the key button). */
   logins: string[];
+  /** Logins saved for this origin that the master password still locks (1.2.19). */
+  loginsLocked: number;
 }
-interface BrowserState {
+export interface BrowserState {
   tabs: BrowserTab[];
   active: number | null;
   blocker: {
@@ -55,17 +59,21 @@ interface BrowserState {
     available: boolean;
     reason: string | null;
     saved: { origin: string; username: string }[];
+    /** Saved logins, readable or locked; master password state (1.2.19). */
+    savedCount: number;
+    master: { set: boolean; unlocked: boolean };
     never: string[];
   };
 }
-type WithState = { ok?: boolean; error?: string; state: BrowserState };
+export type WithState = { ok?: boolean; error?: string; state: BrowserState };
 type Rect = { x: number; y: number; width: number; height: number };
-interface BrowserBridge {
+export interface BrowserBridge {
   start(): Promise<BrowserState>;
   stop(): Promise<unknown>;
   state(): Promise<BrowserState>;
   downloadLists(): Promise<BrowserState>;
   bounds(rect: Rect | null): Promise<unknown>;
+  snapshot(): Promise<{ dataUrl: string | null }>;
   open(text?: string): Promise<{ id?: number; error?: string }>;
   close(id: number): Promise<unknown>;
   select(id: number): Promise<unknown>;
@@ -90,6 +98,10 @@ interface BrowserBridge {
   passwordDelete(origin: string, username: string): Promise<WithState>;
   passwordDeleteAll(): Promise<WithState>;
   passwordNeverRemove(origin: string): Promise<WithState>;
+  masterUnlock(password: string): Promise<WithState>;
+  masterLock(): Promise<WithState>;
+  masterSet(password: string, current?: string): Promise<WithState>;
+  masterRemove(current: string): Promise<WithState>;
   on(cb: (m: { type: "state"; state: BrowserState } | { type: "event"; event: string }) => void): () => void;
 }
 
@@ -108,13 +120,22 @@ export function BrowserScreen() {
   const [address, setAddress] = useState("");
   const [editing, setEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // The ⋯ menu shows its main list or the Privacy & Security view (owner, 2026-10-17).
+  const [menuView, setMenuView] = useState<"main" | "privacy">("main");
   const [linkName, setLinkName] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
-  const [customSearch, setCustomSearch] = useState("");
+  // null until typed in: the box shows the saved address, and Use sends what the box shows.
+  const [customSearch, setCustomSearch] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [keyMenu, setKeyMenu] = useState(false);
   const [pwNote, setPwNote] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  /*
+    While a menu covers the page: a still of it in its place (owner, 2026-10-17: the page vanished behind every menu).
+    `still` is shown; the ref holds it for place(), "" while one is being taken, "none" when there is no picture.
+  */
+  const [still, setStill] = useState<string | null>(null);
+  const stillRef = useRef<string | null>(null);
   const addressRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const sentRef = useRef<string>("");
@@ -169,8 +190,8 @@ export function BrowserScreen() {
           q.top < r.bottom
         );
       });
-    const rect =
-      pageShown && visible && !covered
+    const box =
+      pageShown && visible
         ? {
             x: Math.round(r.left),
             y: Math.round(r.top),
@@ -178,11 +199,33 @@ export function BrowserScreen() {
             height: Math.round(r.height),
           }
         : null;
+    if (box && covered && stillRef.current == null) {
+      // A menu just opened over the page: the page stays until its picture is ready, then the picture takes its place.
+      stillRef.current = "";
+      void api
+        .snapshot()
+        .catch(() => ({ dataUrl: null }))
+        .then((s) => {
+          if (stillRef.current !== "") return;
+          stillRef.current = s.dataUrl ?? "none";
+          setStill(s.dataUrl);
+          place();
+        });
+      return;
+    }
+    if (box && covered && stillRef.current === "") return;
+    const rect = box && !covered ? box : null;
     // The app's page changes many times a second in flight: only a different box goes to the main process.
     const key = JSON.stringify(rect);
-    if (key === sentRef.current) return;
-    sentRef.current = key;
-    void api.bounds(rect);
+    if (key !== sentRef.current) {
+      sentRef.current = key;
+      void api.bounds(rect);
+    }
+    // The menu closed (or the page went): the live page is back, the picture goes.
+    if (!covered && stillRef.current != null) {
+      stillRef.current = null;
+      setStill(null);
+    }
   }, [api, pageShown]);
   useLayoutEffect(() => {
     place();
@@ -353,7 +396,8 @@ export function BrowserScreen() {
           +
         </button>
       </div>
-      <form className="ebr-bar" onSubmit={go}>
+      {/* Only the address is a form (1.2.19): a toolbar-wide form made Enter anywhere in its menus navigate. */}
+      <div className="ebr-bar">
         <button
           type="button"
           aria-label="Back"
@@ -388,26 +432,28 @@ export function BrowserScreen() {
         >
           {tab && !tab.startPage ? (tab.secure ? "🔒" : "⚠") : ""}
         </span>
-        <input
-          ref={addressRef}
-          className="ebr-address"
-          value={address}
-          spellCheck={false}
-          placeholder="Search or type an address"
-          aria-label="Address"
-          onFocus={(e) => {
-            setEditing(true);
-            e.currentTarget.select();
-          }}
-          onBlur={() => setEditing(false)}
-          onChange={(e) => setAddress(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setEditing(false);
-              e.currentTarget.blur();
-            }
-          }}
-        />
+        <form className="ebr-address-form" onSubmit={go}>
+          <input
+            ref={addressRef}
+            className="ebr-address"
+            value={address}
+            spellCheck={false}
+            placeholder="Search or type an address"
+            aria-label="Address"
+            onFocus={(e) => {
+              setEditing(true);
+              e.currentTarget.select();
+            }}
+            onBlur={() => setEditing(false)}
+            onChange={(e) => setAddress(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setEditing(false);
+                e.currentTarget.blur();
+              }
+            }}
+          />
+        </form>
         {tab && tab.domain && !tab.startPage ? (
           <>
             <button
@@ -464,163 +510,111 @@ export function BrowserScreen() {
             ) : null}
           </div>
         ) : null}
+        {tab && !tab.startPage && !tab.logins.length && tab.loginsLocked > 0 ? (
+          <UnlockLoginsChip
+            count={tab.loginsLocked}
+            unlock={(password) =>
+              api.masterUnlock(password).then((r) => {
+                setSt(r.state);
+                return r;
+              })
+            }
+          />
+        ) : null}
         <div className="ebr-more">
           <button
             type="button"
             aria-label="More"
             aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => {
+              setMenuView("main");
+              setMenuOpen(!menuOpen);
+            }}
           >
             ⋯
           </button>
           {menuOpen ? (
-            <div className="ebr-menu" role="menu" onMouseLeave={() => setMenuOpen(false)}>
-              {tab?.domain && !tab.startPage ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void api.forgetSite(tab.id);
-                  }}
-                >
-                  Forget {tab.domain} (its cookies, storage and settings)
-                </button>
-              ) : null}
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false);
-                  void api.clearAll();
-                }}
-              >
-                Clear everything now (every site, remembered ones too)
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                disabled={b.busy != null}
-                onClick={() => {
-                  setMenuOpen(false);
-                  void api.downloadLists().then(setSt);
-                }}
-              >
-                Update the blocklists{b.fetchedAt ? ` (from ${b.fetchedAt.slice(0, 10)})` : ""}
-              </button>
-              <div className="ebr-menu__sub">Search with</div>
-              {st.engines.map((e) => (
-                <button
-                  key={e.key}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={st.engine === e.key}
-                  onClick={() => void api.setEngine(e.key).then((r) => setSt(r.state))}
-                >
-                  {st.engine === e.key ? "● " : "○ "}
-                  {e.label}
-                </button>
-              ))}
-              <div className="ebr-menu__custom">
-                <input
-                  value={customSearch || st.customSearch || ""}
-                  onChange={(e) => setCustomSearch(e.target.value)}
-                  placeholder="Custom: https://…?q=%s"
-                  aria-label="Custom search address, %s for the words"
-                />
-                <button
-                  type="button"
-                  onClick={() => void api.setEngine("custom", customSearch).then((r) => setSt(r.state))}
-                >
-                  {st.engine === "custom" ? "● Use" : "Use"}
-                </button>
-              </div>
-              <div className="ebr-menu__sub">Options</div>
-              <label className="ebr-menu__opt">
-                <input
-                  type="checkbox"
-                  checked={st.keepCache}
-                  onChange={(e) => void api.setKeepCache(e.target.checked).then((r) => setSt(r.state))}
-                />
-                <span>
-                  Keep page cache
-                  <span className="ebr-menu__help">
-                    Pages load faster on the next visit; the cache can show a site you visited before.
-                  </span>
-                </span>
-              </label>
-              <label className="ebr-menu__opt">
-                <input
-                  type="checkbox"
-                  checked={st.rememberPasswords}
-                  disabled={!st.passwords.available && !st.rememberPasswords}
-                  onChange={(e) =>
-                    void api.setRememberPasswords(e.target.checked).then((r) => setSt(r.state))
-                  }
-                />
-                <span>
-                  Remember passwords
-                  <span className="ebr-menu__help">
-                    {st.passwords.available
-                      ? "Offers to save a login on HTTPS sites, encrypted by the operating system, on this PC only; it is filled in on that site (the key button chooses between several). Turning this off keeps what is saved, but nothing is saved or filled."
-                      : `Not available: ${st.passwords.reason ?? "no password protection on this system."} Nothing is saved.`}
-                  </span>
-                </span>
-              </label>
-              {st.passwords.saved.length ? (
+            <div
+              className="ebr-menu"
+              role="menu"
+              onMouseLeave={() => {
+                if (menuView === "main") setMenuOpen(false);
+              }}
+            >
+              {menuView === "privacy" ? (
+                <BrowserPrivacyPanel st={st} api={api} setSt={setSt} onBack={() => setMenuView("main")} />
+              ) : (
                 <>
-                  <div className="ebr-menu__sub">Saved passwords</div>
-                  <ul className="ebr-menu__pw">
-                    {st.passwords.saved.map((x) => (
-                      <li key={`${x.origin} ${x.username}`}>
-                        <span title={x.origin}>
-                          {new URL(x.origin).host}{" "}
-                          <span className="dim">{x.username || "(no username)"}</span>
-                        </span>
-                        <button
-                          type="button"
-                          aria-label={`Delete the password for ${x.username || "no username"} on ${x.origin}`}
-                          onClick={() =>
-                            void api.passwordDelete(x.origin, x.username).then((r) => setSt(r.state))
-                          }
-                        >
-                          Delete
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                  {tab?.domain && !tab.startPage ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        void api.forgetSite(tab.id);
+                      }}
+                    >
+                      Forget {tab.domain} (its cookies, storage and settings)
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     role="menuitem"
-                    onClick={() => void api.passwordDeleteAll().then((r) => setSt(r.state))}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void api.clearAll();
+                    }}
                   >
-                    Delete all saved passwords
+                    Clear everything now (every site, remembered ones too)
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={b.busy != null}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void api.downloadLists().then(setSt);
+                    }}
+                  >
+                    Update the blocklists{b.fetchedAt ? ` (from ${b.fetchedAt.slice(0, 10)})` : ""}
+                  </button>
+                  <div className="ebr-menu__sub">Search with</div>
+                  {st.engines.map((e) => (
+                    <button
+                      key={e.key}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={st.engine === e.key}
+                      onClick={() => void api.setEngine(e.key).then((r) => setSt(r.state))}
+                    >
+                      {st.engine === e.key ? "● " : "○ "}
+                      {e.label}
+                    </button>
+                  ))}
+                  <form
+                    className="ebr-menu__custom"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void api.setEngine("custom", customSearch ?? st.customSearch ?? "").then((r) => setSt(r.state));
+                    }}
+                  >
+                    <input
+                      value={customSearch ?? st.customSearch ?? ""}
+                      onChange={(e) => setCustomSearch(e.target.value)}
+                      placeholder="Custom: https://…?q=%s"
+                      aria-label="Custom search address, %s for the words"
+                    />
+                    <button type="submit">{st.engine === "custom" ? "● Use" : "Use"}</button>
+                  </form>
+                  <button type="button" role="menuitem" onClick={() => setMenuView("privacy")}>
+                    Privacy &amp; Security ›
                   </button>
                 </>
-              ) : null}
-              {st.passwords.never.length ? (
-                <>
-                  <div className="ebr-menu__sub">Never save passwords for</div>
-                  <ul className="ebr-menu__pw">
-                    {st.passwords.never.map((origin) => (
-                      <li key={origin}>
-                        <span title={origin}>{new URL(origin).host}</span>
-                        <button
-                          type="button"
-                          aria-label={`Offer to save passwords for ${origin} again`}
-                          onClick={() => void api.passwordNeverRemove(origin).then((r) => setSt(r.state))}
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : null}
+              )}
             </div>
           ) : null}
         </div>
-      </form>
+      </div>
       {prompt ? (
         <div className="ebr-pwbar" role="status">
           <span>
@@ -646,6 +640,7 @@ export function BrowserScreen() {
         </div>
       ) : null}
       <div className="ebr-box" ref={boxRef}>
+        {still ? <img className="ebr-still" src={still} alt="" aria-hidden="true" /> : null}
         {tab?.error ? (
           <div className="ebr-page ebr-page--error">
             <h2>This page could not be loaded</h2>
