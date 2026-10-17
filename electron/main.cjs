@@ -34,6 +34,15 @@ const { createBrowserPrefs } = require("./browserPrefs.cjs");
 const { createBrowserBlocker } = require("./browserBlocker.cjs");
 const { createBrowserTabs } = require("./browserTabs.cjs");
 const { createBrowserPasswords } = require("./browserPasswords.cjs");
+
+/*
+  An isolated profile (`EDEXO_USER_DATA_DIR`) takes Electron's own directory with it (2026-10-17: an isolated
+  copy still wrote the real app's %APPDATA%\edexo-compare — page caches, the windows' local storage, the
+  browser's cookies). Set before anything reads it; the real profile is then neither written nor migrated from.
+*/
+if (process.env.EDEXO_USER_DATA_DIR) {
+  app.setPath("userData", path.join(process.env.EDEXO_USER_DATA_DIR, "electron"));
+}
 /** The app's own origin once the server listens (windowGuards.cjs). */
 const ownBase = () => (runtime ? runtime.getLocalBaseUrl() : null);
 /** The foreground watcher (foregroundWatch.cjs), started with the HUDs. */
