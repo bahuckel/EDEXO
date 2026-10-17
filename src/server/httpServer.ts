@@ -381,6 +381,8 @@ export interface HttpServerOptions {
   lookupSystem?: (systemAddress: number, starSystem: string) => void;
   /** POST /api/ui/selected-body — JSON { bodyKey: string | null } */
   setUiSelectedBodyKey?: (bodyKey: string | null) => boolean | void;
+  /** Switch the main window's body tab to this body (a notice's or bookmark's Show; 1.2.19). */
+  focusUiBody?: (bodyKey: string) => void;
   /** POST /api/settings/journal-directory — JSON { journalDir: string } */
   setJournalDirectory?: (dir: string) => Promise<{ ok: boolean; error?: string }>;
   /** POST /api/settings/journal-history — JSON { preset: JournalHistoryPreset } */

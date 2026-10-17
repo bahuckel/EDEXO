@@ -98,7 +98,7 @@ export const NoticesBell = memoOnSnapSlice(BELL_FIELDS, function NoticesBell({
       const here = n.systemAddress === snap.currentSystemAddress;
       void (async () => {
         await post("/api/ui/view-system", { systemAddress: here ? null : n.systemAddress });
-        if (n.bodyKey) await post("/api/ui/selected-body", { bodyKey: n.bodyKey });
+        if (n.bodyKey) await post("/api/ui/selected-body", { bodyKey: n.bodyKey, focus: true });
       })();
       if (!n.read) setRead([n.id], true);
       setOpen(false);

@@ -289,29 +289,28 @@ export function CollectionFocusPanel() {
         <div className="options-focus-grid">
           <label htmlFor="focus-target">Stop asking after</label>
           <span>
-            <input
+            {/* Saved on Enter or leaving the field (1.2.19 review: per keystroke, "250" was saved as "2" and the field
+                locked mid-typing). */}
+            <DraftNumber
               id="focus-target"
-              type="number"
               min={1}
               max={20}
               value={cfg.targetScans}
               disabled={busy}
-              onChange={(ev) => save({ targetScans: Number(ev.target.value) })}
+              onCommit={(targetScans) => save({ targetScans })}
             />{" "}
             <span className="dim">of your own scans</span>
           </span>
 
           <label htmlFor="focus-floor">Corpus counts as thin under</label>
           <span>
-            <input
+            <DraftNumber
               id="focus-floor"
-              type="number"
               min={0}
               max={5000}
-              step={10}
               value={cfg.corpusFloor}
               disabled={busy}
-              onChange={(ev) => save({ corpusFloor: Number(ev.target.value) })}
+              onCommit={(corpusFloor) => save({ corpusFloor })}
             />{" "}
             <span className="dim">bodies</span>
           </span>
@@ -443,7 +442,8 @@ export function NotifyPanel() {
   const poiOn = POI_GROUP_OPTIONS.filter((g) => nb.poiGroups[g.key]).length;
   const notableOn = NOTABLE_KINDS.filter((k) => p.notable[k.key]).length;
   const featuresOn = BODY_FEATURES.filter((f) => p.features?.[f.key]).length;
-  const exoOn = (p.codexFirst ?? true ? 1 : 0) + (p.codexFirstLowChance ?? true ? 1 : 0);
+  const exoOn =
+    (p.codexFirst ?? true ? 1 : 0) + (p.codexFirstLowChance ?? true ? 1 : 0) + (p.rareColours ?? true ? 1 : 0);
   const tiersOn = INJECTIONS.filter((i) => jp.tiers[i.tier]);
   const jpAfm = jp.afm ?? { basic: false, standard: false, premium: false };
   const afmOn = AFM_REFILLS.filter((i) => jpAfm[i.tier]);
@@ -452,6 +452,7 @@ export function NotifyPanel() {
     (p.records ? 1 : 0) +
     (p.nsp ? 1 : 0) +
     (p.codexFirst ?? true ? 1 : 0) +
+    (p.rareColours ?? true ? 1 : 0) +
     poiOn +
     (nb.carriers !== "off" ? 1 : 0) +
     featuresOn +
@@ -538,13 +539,19 @@ export function NotifyPanel() {
       <NotifySection
         k="exobio"
         title="Exobiology"
-        summary={`${exoOn} of 2 on`}
+        summary={`${exoOn} of 3 on`}
         help={
-          <p>
-            <strong>Codex first</strong>: a candidate plant on a body in your system that nobody has logged in this
-            region yet (EDSM&apos;s codex), the gold [CODEX FIRST]. Kept in the list at 1 % or less, it is tinted red
-            with a [?] saying why it is there; off, it goes to the unlikely list like any low row.
-          </p>
+          <>
+            <p>
+              <strong>Codex first</strong>: a candidate plant on a body in your system that nobody has logged in this
+              region yet (EDSM&apos;s codex), the gold [CODEX FIRST]. Kept in the list at 1 % or less, it is tinted red
+              with a [?] saying why it is there; off, it goes to the unlikely list like any low row.
+            </p>
+            <p>
+              <strong>Rare colours</strong>: a candidate plant on a body in your system whose colour has been logged in
+              10 systems or fewer in the whole galaxy (EDAstro&apos;s codex), the [RARE] mark on its row.
+            </p>
+          </>
         }
       >
         <div className="options-notify-grid">
@@ -565,6 +572,15 @@ export function NotifyPanel() {
               onChange={(ev) => save({ codexFirstLowChance: ev.target.checked })}
             />
             <span>Codex first: keep it in the list at 1 % or less</span>
+          </label>
+          <label className="options-toggle">
+            <input
+              type="checkbox"
+              checked={p.rareColours ?? true}
+              disabled={busy}
+              onChange={(ev) => save({ rareColours: ev.target.checked })}
+            />
+            <span>Rare colours: logged in 10 systems or fewer galaxy-wide</span>
           </label>
         </div>
       </NotifySection>
@@ -1275,7 +1291,11 @@ export function EdsmFetchPanel({ state }: { state: AppSnapshot["edsmAutoFetch"] 
             setBusy(true);
             setMsg(null);
             void postSetting("/api/settings/edsm-credentials", null, "DELETE")
-              .then(() => {
+              .then((r) => {
+                if (!r.ok) {
+                  setMsg({ kind: "err", text: r.error ?? "The key could not be deleted." });
+                  return;
+                }
                 setApiKey("");
                 setMsg({ kind: "ok", text: "Key deleted." });
               })
@@ -1479,7 +1499,7 @@ export function EdsmUploadPanel({ state, hasKey }: { state: AppSnapshot["edsmUpl
  * failure.
  */
 export function FeederCorpusSetting() {
-  const { status } = useFeederStatus();
+  const { status, refresh } = useFeederStatus();
   const toast = useToast();
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1500,13 +1520,15 @@ export function FeederCorpusSetting() {
         const j = (await r.json().catch(() => null)) as { error?: string } | null;
         if (!r.ok) throw new Error(j?.error || r.statusText);
         toast.success(value ? "Corpus folder saved — reopen the app to load it." : "Corpus folder cleared.");
+        // The panel's own status follows the change (1.2.19 review: Clear stayed disabled, "Found at" stale).
+        refresh();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Could not save the corpus folder.");
       } finally {
         setBusy(false);
       }
     },
-    [toast],
+    [toast, refresh],
   );
 
   if (!status) return null;

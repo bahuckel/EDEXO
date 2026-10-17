@@ -11,7 +11,7 @@ import type {
   ExomasteryVarietyItemDTO,
   OtherMatchDetailCardDTO,
 } from "@shared/types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { exomasteryDetailHasContent } from "./speciesMatchHelpers";
 
 type Match = BodyComputed["matches"][number];
@@ -45,6 +45,13 @@ export function useMatchDetail(m: Match, want: boolean): { data: MatchDetail | n
     }),
     [m.exomasteryDetail, m.exomasteryVarietyHints, m.otherMatchDetailCards],
   );
+
+  // Opening again after a failed load tries again (1.2.19 review: the cached error left the button doing nothing).
+  const wanted = useRef(want);
+  useEffect(() => {
+    if (want && !wanted.current && got?.error) setGot(null);
+    wanted.current = want;
+  }, [want, got]);
 
   useEffect(() => {
     if (!want || !lazy || have) return;

@@ -583,3 +583,9 @@
   padding: 0.2rem 0.4rem;
   width: 11rem;
 }
+
+/* Errors in the Options panels (1.2.19 review: the classes had no rule here, so errors read as plain text). */
+.options-error,
+.msg.err {
+  color: #ffb38a;
+}

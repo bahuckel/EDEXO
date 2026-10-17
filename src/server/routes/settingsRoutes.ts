@@ -626,7 +626,11 @@ export function registerSettingsRoutes(
     // The client applies the selection optimistically; the broadcast exists only so the overlay
     // windows follow along. Skip it when nothing changed — this fires on every tab click.
     const changed = opts.setUiSelectedBodyKey(raw);
-    if (changed !== false) opts.scheduleBroadcast?.();
+    // `focus`: a notice's or bookmark's Show — the main window's tab strip follows only the one-shot auto-select, so
+    // the body is queued there too (1.2.19 review: Show switched the system but opened another tab).
+    const focus = req.body?.focus === true && typeof raw === "string";
+    if (focus) opts.focusUiBody?.(raw);
+    if (changed !== false || focus) opts.scheduleBroadcast?.();
     res.json({ ok: true });
   });
 

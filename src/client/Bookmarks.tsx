@@ -73,7 +73,7 @@ export function BookmarksModal({
         await fetch("/api/ui/selected-body", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bodyKey: b.bodyKey }),
+          body: JSON.stringify({ bodyKey: b.bodyKey, focus: true }),
         });
       }
     })();

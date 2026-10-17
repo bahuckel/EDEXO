@@ -179,9 +179,9 @@ const keybinds = createKeybinds({
     tabPrev: () => uiCommandEverywhere({ cmd: "screenTab", dir: -1 }),
     tabNext: () => uiCommandEverywhere({ cmd: "screenTab", dir: 1 }),
     // The server answers in its own process (serverChild.cjs); a key never waits for it.
-    // F5 is also the browser's reload: a browsed page with the keyboard gets it instead of the bell.
+    // F5 is also the browser's reload: a browsed page on screen gets it instead of the bell.
     noticesClear: () => {
-      if (browserTabs?.reloadFocused?.()) return;
+      if (browserTabs?.reloadShown?.()) return;
       void runtime?.clearNotices?.()?.catch?.(() => {});
     },
     // Boxel scanning (server/boxelRun.ts): the server picks the system, the clipboard writer below copies it.
@@ -356,7 +356,18 @@ function openAppUiWindow(iconForChild) {
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     return { action: "deny" };
   });
+  /*
+    Every page window the app opens keeps the app's bridge (it inherits the preload), so none may wander off: its
+    links out go to the commander's browser and it never navigates to another site (1.2.19 review: a target=_blank
+    link on the privacy page opened an outside site in a window that still had the bridge).
+  */
+  win.webContents.on("will-navigate", (e, url) => {
+    if (isOwnUrl(url, ownBase)) return;
+    e.preventDefault();
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+  });
   win.webContents.on("did-create-window", (child, { url }) => {
+    guardWindowNavigation(child, ownBase, shell);
     if (childWindowKind(url) !== "galaxy") return;
     galaxyWindow = child;
     if (readWindowState("galaxy")?.maximized) child.maximize();
@@ -443,8 +454,13 @@ function registerFootOverlayIpc(iconForChild) {
     registered: hotkeyRegistered,
   }));
   ipcMain.handle("edexo:get-keybinds", () => keybinds.get());
-  ipcMain.handle("edexo:pause-keybinds", (_evt, opts) => keybinds.pause(!!(opts && typeof opts === "object" && opts.on)));
-  ipcMain.handle("edexo:set-keybinds", (_evt, next) => {
+  // Global keys are the launcher's to change (1.2.19 review): no other page, whatever it is, registers shortcuts.
+  const fromLauncher = (evt) => !!mainWindow && !mainWindow.isDestroyed() && evt.sender === mainWindow.webContents;
+  ipcMain.handle("edexo:pause-keybinds", (evt, opts) =>
+    fromLauncher(evt) ? keybinds.pause(!!(opts && typeof opts === "object" && opts.on)) : keybinds.get(),
+  );
+  ipcMain.handle("edexo:set-keybinds", (evt, next) => {
+    if (!fromLauncher(evt)) return keybinds.get();
     const r = keybinds.set(next && typeof next === "object" ? next : {});
     hotkeyRegistered = keybinds.statusFor("hudToggle") === "ok";
     trayControl.refresh();
@@ -879,8 +895,11 @@ async function start() {
     if (holdExitForBackup(e)) return;
     huds.dispose();
     trayControl.destroy();
-    // The launcher is still the app: closing it closes the app window too, as it always quit.
+    // The launcher is still the app: closing it closes the app window too, as it always quit — and every other
+    // window (galaxy map, privacy page, torn-off tabs): one left open kept the app alive with no launcher and no tray,
+    // holding the single-instance lock so the next start did nothing (1.2.19 review).
     if (appUiWindow && !appUiWindow.isDestroyed()) appUiWindow.close();
+    for (const w of BrowserWindow.getAllWindows()) if (w !== mainWindow && !w.isDestroyed()) w.close();
   });
   /*
     Windows logoff or shutdown ends the app without before-quit (combined plan 1.6d), so the clean

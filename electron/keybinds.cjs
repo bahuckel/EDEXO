@@ -159,6 +159,9 @@ function createKeybinds(deps) {
         else if (typeof v === "string" && validAccelerator(v)) binds[k] = v;
       }
     }
+    // A recorded bind ends the recording: the launcher pauses the binds while it listens and never un-pauses on a
+    // save, which left `paused` set and the game-only binds frozen for the rest of the run (1.2.19 review).
+    paused = false;
     save();
     apply();
     return get();

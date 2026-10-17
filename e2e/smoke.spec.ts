@@ -421,6 +421,10 @@ test("galaxy 3D: behind another tab the map stops asking; back in front it reads
   await expect.poll(() => asked.includes("/api/galaxy/own")).toBe(true);
 
   await page.getByRole("tab", { name: "Main" }).click();
+  // The switch has to have happened (rendered, effects run) before the jump: 54 ms after the click the map was still
+  // listening on a busy machine (2026-10-17), the same on the committed code — a race in the test, not the app.
+  await expect(page.getByRole("tab", { name: "Main" })).toHaveAttribute("aria-selected", "true");
+  await page.waitForTimeout(300);
   asked.length = 0;
   // A jump read from the journal asks the map for the route at once, when it is in front.
   await page.evaluate(() => window.dispatchEvent(new Event("edexo-system-changed")));

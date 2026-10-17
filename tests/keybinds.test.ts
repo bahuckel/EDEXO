@@ -147,6 +147,19 @@ describe("registering them", () => {
     expect([...held.keys()].sort()).toEqual(["Control+Alt+H", "F1", "F2", "F5", "F6", "F7", "F8", "F9", "Shift+F1", "Shift+F2"]);
   });
 
+  it("a recorded bind ends the pause: game-only keys follow the game again (1.2.19 review)", () => {
+    const k = make();
+    k.load();
+    k.setGameFocused(true);
+    k.pause(true);
+    // The launcher saves the new key without un-pausing (launcher.js save()).
+    k.set({ hudToggle: "Control+Alt+J" });
+    k.setGameFocused(false);
+    expect(held.has("F5")).toBe(false);
+    k.setGameFocused(true);
+    expect(held.has("F5")).toBe(true);
+  });
+
   it("holds the body keys and F5 only while Elite is in front; the HUD key always (owner, 2026-10-05)", () => {
     const k = make();
     k.load();
