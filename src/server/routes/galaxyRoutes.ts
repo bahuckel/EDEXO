@@ -18,7 +18,8 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import express from "express";
 import { getProjectRoot } from "../paths.js";
 import { perfCount } from "../perf.js";
-import { codexMapRegion, codexMapRegions } from "../codexMap.js";
+import { codexMapRegion, codexMapRegions, codexRegionsData } from "../codexMap.js";
+import { codexRegionGaps, nearestInRegion } from "../codexVariantCounts.js";
 import { clearGalaxyPoints, galaxyPointsAsync } from "../galaxyPoints.js";
 import {
   clearTileIndex,
@@ -1037,6 +1038,42 @@ export function registerGalaxyRoutes(
     const out = codexMapRegion(getProjectRoot(), opts.getCodexMapLogged?.() ?? new Set(), name, kind);
     if (!out) {
       res.status(404).json({ error: "no codex data for that region" });
+      return;
+    }
+    res.json(out);
+  });
+
+  // The colours logged in a region that are not in the commander's codex there, rarest first (1.2.19).
+  app.get("/api/codex/gaps", (req, res) => {
+    perfCount("http.codexGaps");
+    const name = typeof req.query.region === "string" ? req.query.region : "";
+    if (!name) {
+      res.status(400).json({ error: "region is required" });
+      return;
+    }
+    const root = getProjectRoot();
+    const names = new Map((codexRegionsData(root)?.types ?? []).map(([id, n]) => [id, n] as [string, string]));
+    const out = codexRegionGaps(root, opts.getCodexMapLogged?.() ?? new Set(), name, names);
+    if (!out) {
+      res.status(404).json({ error: "no codex data for that region" });
+      return;
+    }
+    res.json(out);
+  });
+
+  // The nearest system IN THAT REGION known to have a codex entry, from the given position (1.2.19).
+  app.get("/api/codex/nearest", (req, res) => {
+    perfCount("http.codexNearest");
+    const region = typeof req.query.region === "string" ? req.query.region : "";
+    const key = typeof req.query.key === "string" ? req.query.key : "";
+    const num = (v: unknown) => (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : 0);
+    if (!region || !key) {
+      res.status(400).json({ error: "region and key are required" });
+      return;
+    }
+    const out = nearestInRegion(getProjectRoot(), region, key, { x: num(req.query.x), y: num(req.query.y), z: num(req.query.z) });
+    if (!out) {
+      res.status(404).json({ error: "no known system with it in that region" });
       return;
     }
     res.json(out);

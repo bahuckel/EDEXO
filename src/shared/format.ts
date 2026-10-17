@@ -94,3 +94,11 @@ export function fmtPct(pct: number, digits = 0): string {
   if (digits === 0 && pct > 0 && pct < 1) return "<1%";
   return `${pct.toFixed(digits)}%`;
 }
+
+/* ------------------------------------------------------------------ counts */
+
+/** "1 system", "3,201 systems": the number grouped, the noun in the plural unless it is exactly one. */
+export function fmtCount(n: number, noun: string, plural = `${noun}s`): string {
+  return `${n.toLocaleString("en-US")} ${n === 1 ? noun : plural}`;
+}
+

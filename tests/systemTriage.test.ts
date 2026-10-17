@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { BodyComputed } from "../src/shared/types.js";
 import {
   arrivalTripRanks,
+  bodyExpectedValue,
   genusShares,
   MIN_TIMING_SAMPLES,
   onSiteMinutes,
@@ -23,7 +24,7 @@ function body(over: Partial<TriageBodyInput> = {}): TriageBodyInput {
     certain: false,
     candidates: [
       { speciesId: "s1", genus: "g", displayName: "One", probability: 0.8, priceCredits: 1_000_000 },
-      { speciesId: "s2", genus: "g", displayName: "Two", probability: 0.5, priceCredits: 2_000_000 },
+      { speciesId: "s2", genus: "h", displayName: "Two", probability: 0.5, priceCredits: 2_000_000 },
     ],
     ...over,
   };
@@ -247,5 +248,73 @@ describe("arrivalTripRanks", () => {
     const ranks = arrivalTripRanks([dead, bioBody("a", 300)]);
     expect(ranks.has("x")).toBe(false);
     expect(ranks.get("a")).toMatchObject({ rank: 1, ranked: 1 });
+  });
+});
+
+describe("body expected value (1.2.19, glance bar + Expected value order)", () => {
+  function computed(
+    matches: { genus: string; pct: number | null; price: number; unlikely?: boolean }[],
+    mult: 1 | 5 = 1,
+  ) {
+    return {
+      state: { key: "1:7", bodyName: "X 7", biologicalSignals: 2 },
+      tabLabel: "7",
+      matches: matches.map((m, i) => ({
+        entry: { id: `s${i}`, displayName: `Sp ${i}`, genus: m.genus },
+        presenceProbabilityPercent: m.pct ?? undefined,
+        priceCredits: m.price,
+        unlikely: !!m.unlikely,
+      })),
+      exoPayoutRange: { mult },
+      mergedScan: { distanceFromArrivalLs: 100 },
+    } as unknown as BodyComputed;
+  }
+
+  it("adds chance × price × first footfall over the listed species, unlikely rows left out", () => {
+    const ev = bodyExpectedValue(
+      computed(
+        [
+          { genus: "Stratum", pct: 50, price: 10_000_000 },
+          { genus: "Bacterium", pct: 100, price: 1_000_000 },
+          { genus: "Tubus", pct: 90, price: 5_000_000, unlikely: true },
+        ],
+        5,
+      ),
+    );
+    expect(ev?.expectedCredits).toBe((0.5 * 10_000_000 + 1_000_000) * 5);
+  });
+
+  it("follows the glance bar's ×5: a body the journal calls unwalked counts first footfall before the bonus settles", () => {
+    const b = computed([{ genus: "Stratum", pct: 100, price: 1_000_000 }]);
+    (b as unknown as { exoPayoutRange: object }).exoPayoutRange = { mult: 1, journalWasFootfalled: false };
+    expect(bodyExpectedValue(b)?.expectedCredits).toBe(5_000_000);
+    (b as unknown as { exoPayoutRange: object }).exoPayoutRange = { mult: 1, journalWasFootfalled: true };
+    expect(bodyExpectedValue(b)?.expectedCredits).toBe(1_000_000);
+  });
+
+  it("counts a genus once: two species of one genus adding up past 100 % are scaled to 100 %", () => {
+    const ev = bodyExpectedValue(
+      computed([
+        { genus: "Cactoida", pct: 60, price: 2_000_000 },
+        { genus: "Cactoida", pct: 90, price: 2_000_000 },
+        { genus: "Concha", pct: 100, price: 1_000_000 },
+      ]),
+    );
+    expect(ev?.expectedCredits).toBe(2_000_000 + 1_000_000);
+  });
+
+  it("is null for a body with no listed candidates", () => {
+    expect(bodyExpectedValue(computed([{ genus: "Tubus", pct: 90, price: 5, unlikely: true }]))).toBeNull();
+  });
+
+  it("flags DSS first when most of the value rests on one unlikely species of another genus", () => {
+    const ev = bodyExpectedValue(
+      computed([
+        { genus: "Stratum", pct: 30, price: 19_000_000 },
+        { genus: "Bacterium", pct: 90, price: 1_000_000 },
+      ]),
+    );
+    expect(ev?.risk.mapFirst).toBe(true);
+    expect(ev?.risk.topSpecies).toBe("Sp 0");
   });
 });

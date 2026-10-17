@@ -20,7 +20,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { codexSpeciesKey, gameOrderSpeciesName } from "../shared/codexLog.js";
+import { codexSpeciesKey, colourLabelOptions, gameOrderSpeciesName } from "../shared/codexLog.js";
 import { regionJoinKey } from "../shared/regionMap.js";
 
 interface RegionsFile {
@@ -145,14 +145,7 @@ export function codexFirstCheck(
   const ed = edastro ? edastroKeys(d, projectRoot, edastro) : null;
   const lg = ledgerKeys(d, projectRoot);
   const has = (k: string) => d.logged.has(k) || (ed?.logged.has(k) ?? false) || (lg?.has(k) ?? false);
-  const label = (colourLabel ?? "").trim();
-  const colours =
-    !label || label.startsWith("(")
-      ? []
-      : label
-          .split(" or ")
-          .map((c) => c.trim())
-          .filter(Boolean);
+  const colours = colourLabelOptions(colourLabel);
   let fresh: string[];
   if (colours.length === 0) {
     if (has(`${r}|${species}|*`)) return null;
@@ -216,9 +209,28 @@ function ledgerKeys(d: Loaded, root: string): Set<string> | null {
   return logged;
 }
 
+let idMemo: { root: string; map: Map<string, string> } | null = null;
+
+/**
+ * The codex id of one species colour: ("Stratum Excutitus", "Teal") → "codex_ent_stratum_01_ae". Null when EDSM's
+ * table has no such variant (1.2.19, rare colours).
+ */
+export function codexVariantId(projectRoot: string, displayName: string, colour: string): string | null {
+  const d = load(projectRoot);
+  if (!d) return null;
+  if (idMemo?.root !== projectRoot) {
+    const map = new Map<string, string>();
+    for (const [id, [species, c]] of d.byId) if (!map.has(`${species}|${c}`)) map.set(`${species}|${c}`, id);
+    idMemo = { root: projectRoot, map };
+  }
+  const species = codexSpeciesKey(gameOrderSpeciesName(displayName));
+  return idMemo.map.get(`${species}|${colour.trim().toLowerCase()}`) ?? null;
+}
+
 /** For tests. */
 export function resetCodexFirst(): void {
   memo = null;
+  idMemo = null;
   edMemo = null;
   ledgerIds = null;
   ledgerMemo = null;

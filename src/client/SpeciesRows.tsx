@@ -1,4 +1,4 @@
-import { achievementMarkTitle, codexFirstTitle, codexMarkTitle } from "./codexMark";
+import { achievementMarkTitle, codexFirstTitle, codexMarkTitle, rareColourOf, rareColourTitle } from "./codexMark";
 import { useState, type ReactNode } from "react";
 import type { BodyComputed, PlanetScan } from "@shared/types";
 import { settledMultiplier } from "@shared/footfallValue";
@@ -149,7 +149,8 @@ export function SpeciesRow({
     typeof chance === "number" && Number.isFinite(chance) ? Math.max(0, Math.min(100, chance)) : null;
   const fit = m.exomasterySimilarityPercent;
   const dist = m.entry.genusMinSampleDistanceM;
-  const [thumbMissing, setThumbMissing] = useState(false);
+  // Which photo failed, not whether one did: a later colour's photo is tried again (1.2.19 review).
+  const [failedThumb, setFailedThumb] = useState<string | null>(null);
   const priceTag = footfall === "unwalked" ? "×5" : footfall === "walked" ? "×1" : "×1 ?";
   const priceTitle =
     m.priceCredits == null
@@ -182,11 +183,11 @@ export function SpeciesRow({
         title={open ? "Fold the card" : "Unfold the full card"}
       >
         <img
-          className={`srow-thumb${thumbMissing || !thumbUrl ? " srow-thumb--missing" : ""}`}
+          className={`srow-thumb${failedThumb === thumbUrl || !thumbUrl ? " srow-thumb--missing" : ""}`}
           src={thumbUrl ? speciesPhotoVariant(thumbUrl, "thumb") : undefined}
           alt=""
           loading="lazy"
-          onError={() => setThumbMissing(true)}
+          onError={() => setFailedThumb(thumbUrl ?? null)}
         />
         <span className="srow-name">
           <RarityGem rarity={m.entry.rarity} regional={m.regionRarity} className="rarity-gem--row" />
@@ -215,6 +216,11 @@ export function SpeciesRow({
           {m.codexNew && m.codexFirst ? (
             <span className="srow-tag srow-tag--codex srow-tag--codex-first" title={codexFirstTitle(m)}>
               [CODEX FIRST]
+            </span>
+          ) : null}
+          {rareColourOf(m).length ? (
+            <span className="srow-tag srow-tag--codex srow-tag--rare" title={rareColourTitle(m)}>
+              [RARE]
             </span>
           ) : null}
           {m.lowChanceWhy ? (
@@ -271,7 +277,7 @@ export function SpeciesRow({
               className="srow-tag srow-tag--others"
               title="Logged on this body by other commanders (Spansh). Not from your journal."
             >
-              logged by other commanders
+              [OTHER CMDR]
             </span>
           ) : m.loggedBy === "you" ? (
             <span

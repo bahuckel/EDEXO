@@ -227,6 +227,10 @@
   color: #ff8a7a;
   cursor: help;
 }
+/* "Why this chance" [?]: help on hover, in the row's own colour (not the low-chance warning's red). */
+.srow-tag--chance-why {
+  cursor: help;
+}
 
 /* the unfolded card: the existing species card, arriving with the fold rhythm */
 .srow-card {
@@ -337,6 +341,12 @@
 .genus-tag--codex-first {
   color: #f5c96a;
   text-shadow: 0 0 6px rgba(245, 184, 61, 0.55);
+}
+/* [RARE]: a colour logged in 10 systems or fewer galaxy-wide (1.2.19) — violet, apart from cyan, gold and orange. */
+.srow-tag--rare,
+.species-codex-mark--rare {
+  color: #b99bff;
+  text-shadow: 0 0 6px rgba(160, 120, 255, 0.5);
 }
 .tab-cx {
   font-weight: 800;

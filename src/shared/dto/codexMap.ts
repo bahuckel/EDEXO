@@ -51,6 +51,27 @@ export interface CodexMapSystemDTO {
   entries: CodexMapEntryDTO[];
 }
 
+/** Colours logged in a region by anyone but not in the commander's codex there, rarest first (1.2.19). */
+export interface CodexGapsDTO {
+  region: string;
+  /** Colours logged in the region (EDAstro), and how many of them are in the commander's codex. */
+  known: number;
+  logged: number;
+  gaps: { key: string; name: string; regionSystems: number; galaxySystems: number }[];
+}
+
+/** The nearest system in a region known to have a codex entry (1.2.19, a click on a codex gap). */
+export interface CodexNearestDTO {
+  systemAddress: string;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  distanceLy: number;
+  known: number;
+  complete: boolean;
+}
+
 export interface CodexMapRegionDTO {
   region: string;
   kind: CodexMapKind;

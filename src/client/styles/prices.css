@@ -36,6 +36,11 @@
 .price-tag--walked {
   color: var(--text-faint);
 }
+/* the glance bar's expected value (1.2.19): most of it rests on one unlikely species, a DSS would settle it */
+.price-tag--map-first {
+  color: var(--warn);
+  margin-left: 0.35rem;
+}
 
 /* species cards: the value they would pay here, and the same tag */
 .species-compact-payout-amount .price-tag,

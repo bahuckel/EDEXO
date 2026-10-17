@@ -678,7 +678,16 @@ export interface SpeciesMatch {
    * strongest first. `weight` is a log-odds nudge (+ for, − against) where there is one, null for a
    * plain measured fact. Body tab only; absent on the other surfaces.
    */
-  chanceWhy?: { label: string; weight: number | null; kind: "genus" | "field" | "measured" | "region" }[];
+  chanceWhy?: {
+    label: string;
+    weight: number | null;
+    kind: "genus" | "field" | "measured" | "region" | "calibration";
+  }[];
+  /**
+   * How many systems each colour this row would grow here has been logged in (1.2.19; `server/codexVariantCounts.ts`,
+   * EDAstro's codex): galaxy-wide and in this region. One entry per possible colour; absent when the colour is unknown.
+   */
+  colourRarity?: import("../rareColour.js").ColourRarity[];
   /** This plant, here, would advance the tracked achievement (`server/achievements.ts`). */
   achievementAdvance?: import("./achievements.js").AchievementAdvanceDTO;
   /** This species' rarity in the body's region (`shared/speciesRarity.ts`); the DNA badge shows it. */

@@ -4,7 +4,7 @@
 import type { UnknownPlantSlot } from "@shared/unknownPlants";
 import { nextTempUnit, usePressUnit, useTempUnit } from "./useUnits";
 import { codexFirstTitle, codexMarkTitle } from "./codexMark";
-import { ArrivalTrip } from "@shared/systemTriage";
+import { ArrivalTrip, bodyExpectedValue, type TriageRow } from "@shared/systemTriage";
 import { fmtCrRangeShort, fmtCrShort, fmtLsExact } from "@shared/format";
 import { FootfallContext } from "./footfallContext";
 import { RowContext, LiveRun } from "./rowContext";
@@ -237,6 +237,9 @@ export const BodyPane = memo(function BodyPane({
   const unknownSlots = body.unknownPlants ?? [];
   const unlikelyGroups = useMemo(() => groupedSortedMatches(unlikelyMatches, genusOrder), [unlikelyMatches, genusOrder]);
 
+  // "Is this DSS worth it" (1.2.19): the body's expected value from the listed chances, beside the best case.
+  const expected = useMemo(() => bodyExpectedValue(body), [body]);
+
   // The body's first-footfall answer, shared with every species card below (WEBUI-REDESIGN 1.2).
   const bodyFootfall = body.exoPayoutRange
     ? footfallCertainty({
@@ -267,6 +270,14 @@ export const BodyPane = memo(function BodyPane({
                   );
                 })()
               : null}
+            {expected && expected.expectedCredits > 0 ? (
+              <span className="glance-item" title={expectedValueTitle(expected, !!body.state.dssComplete)}>
+                ≈{fmtCrShort(expected.expectedCredits)} <small>exp</small>
+                {expected.risk.mapFirst && !body.state.dssComplete ? (
+                  <span className="price-tag price-tag--map-first">DSS first</span>
+                ) : null}
+              </span>
+            ) : null}
             <span className="glance-item">
               {likelyMatches.length} <small>cand</small> / {body.state.biologicalSignals ?? "?"}{" "}
               <small>bio</small>
@@ -834,4 +845,25 @@ export function UnknownPlantCards({ slots }: { slots: readonly UnknownPlantSlot[
       ))}
     </div>
   );
+}
+
+/** The glance bar's expected-value hover: what the number is, and whether a DSS would settle most of it. */
+export function expectedValueTitle(row: TriageRow, mapped: boolean): string {
+  const scored = row.candidates.filter((c) => c.probability != null).length;
+  const lines = [
+    `Expected value ≈ ${fmtCrShort(row.expectedCredits)} CR: each listed species' chance here × its price` +
+      (row.multiplier === 5 ? " × 5 for first footfall" : "") +
+      `, added up over ${scored} of ${row.candidates.length} listed species.`,
+    "What the body is likely worth; the price range beside it is the best and worst case.",
+  ];
+  if (row.coverage < 1) lines.push(`${row.candidates.length - scored} listed species have no chance yet and add nothing.`);
+  if (row.risk.mapFirst && !mapped && row.risk.topSpecies) {
+    lines.push(
+      `${Math.round(row.risk.concentration * 100)} % of it rests on ${row.risk.topSpecies}, which is less likely than not: ` +
+        "a DSS shows whether its genus is there before you land.",
+    );
+  } else if (!mapped) {
+    lines.push("A DSS names the genera and narrows this.");
+  }
+  return lines.join("\n");
 }

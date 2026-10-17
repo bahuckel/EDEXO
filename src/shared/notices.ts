@@ -63,6 +63,11 @@ export interface NotifyPrefsDTO {
    * 2026-10-09). Off: it goes to the unlikely list like any low row would. On by default.
    */
   codexFirstLowChance: boolean;
+  /**
+   * A candidate here whose colour has been logged in 10 systems or fewer galaxy-wide (EDAstro's codex; 1.2.19). On by
+   * default.
+   */
+  rareColours: boolean;
   /** Points of interest and carriers within a few jumps (owner, 2026-09-30). */
   nearby: NearbyPrefsDTO;
   /** Body features (shared/bodyFeatures.ts): Notable card and notices. All off until chosen. */
@@ -123,6 +128,7 @@ export const DEFAULT_NOTIFY_PREFS: NotifyPrefsDTO = {
   nsp: true,
   codexFirst: true,
   codexFirstLowChance: true,
+  rareColours: true,
   nearby: {
     jumps: 5,
     poiGroups: { ...ALL_POI_OFF },
@@ -165,6 +171,7 @@ export function mergeNotifyPrefs(prev: NotifyPrefsDTO, raw: unknown): NotifyPref
     nsp: bool(r.nsp, prev.nsp),
     codexFirst: bool(r.codexFirst, prev.codexFirst ?? true),
     codexFirstLowChance: bool(r.codexFirstLowChance, prev.codexFirstLowChance ?? true),
+    rareColours: bool(r.rareColours, prev.rareColours ?? true),
     nearby: {
       jumps: Math.min(NEARBY_JUMPS_MAX, Math.max(NEARBY_JUMPS_MIN, jumpsRaw)),
       poiGroups,

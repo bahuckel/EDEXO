@@ -1,7 +1,7 @@
 /**
  * The full species card and its sub-blocks, split out of App.tsx (7.3).
  */
-import { achievementMarkTitle, codexFirstTitle, codexMarkTitle } from "./codexMark";
+import { achievementMarkTitle, codexFirstTitle, codexMarkTitle, rareColourOf, rareColourTitle } from "./codexMark";
 import { STREAMER_MODE } from "./streamerMode";
 import { speciesPhotoVariant } from "./speciesPhotoVariant";
 import { fmtCrExact, fmtCrShort } from "@shared/format";
@@ -262,7 +262,9 @@ export const SpeciesCard = memo(function SpeciesCard({
         .filter(Boolean)
         .join(" — ")}
     >
+      {/* Keyed by the photo: a failed one hid itself and its fallback stayed shown for the next (1.2.19 review). */}
       <img
+        key={heroSrc}
         src={heroSrc}
         alt=""
         className={compact ? "species-img species-img--compact" : "species-img species-img--hero"}
@@ -274,7 +276,7 @@ export const SpeciesCard = memo(function SpeciesCard({
             (ph as HTMLElement).style.display = "flex";
         }}
       />
-      <div className="species-img-ph species-img-ph-fallback" style={{ display: "none" }}>
+      <div key={`ph-${heroSrc}`} className="species-img-ph species-img-ph-fallback" style={{ display: "none" }}>
         Image failed to load
       </div>
     </button>
@@ -316,7 +318,7 @@ export const SpeciesCard = memo(function SpeciesCard({
           className="species-compact-payout-done species-compact-payout-done--others"
           title="Logged on this body by other commanders (Spansh). Not from your journal."
         >
-          Logged by other commanders
+          [OTHER CMDR]
         </span>
       ) : m.loggedBy === "you" ? (
         <span
@@ -444,6 +446,15 @@ export const SpeciesCard = memo(function SpeciesCard({
             aria-label="Nobody has logged it in this region yet"
           >
             [CODEX FIRST]
+          </span>
+        ) : null}
+        {rareColourOf(m).length ? (
+          <span
+            className="species-codex-mark species-codex-mark--rare"
+            title={rareColourTitle(m)}
+            aria-label="A colour logged in few systems galaxy-wide"
+          >
+            [RARE]
           </span>
         ) : null}
         {m.lowChanceWhy ? (

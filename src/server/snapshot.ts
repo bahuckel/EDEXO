@@ -1,4 +1,5 @@
 import { codexFirstCheck, codexFirstDataDate } from "./codexFirst.js";
+import { colourRarity } from "./codexVariantCounts.js";
 import { geologyForBody } from "./geology.js";
 import { eddnLedgerStatus } from "./eddnLedger.js";
 import { unknownPlantSlots } from "../shared/unknownPlants.js";
@@ -688,6 +689,20 @@ function attachCodexRegionNovelty(
 }
 
 /**
+ * How rare the colour each row would grow here is (1.2.19, plan F2): systems it has been logged in, galaxy-wide and in
+ * this region, from EDAstro's codex. The colour is the row's own label, as [CODEX] reads it.
+ */
+function attachColourRarity(matches: SpeciesMatch[], ctx: SpeciesMatchContext | null): void {
+  const root = getProjectRoot();
+  const region = ctx?.regionName?.trim() || null;
+  for (const m of matches) {
+    // predictedColour is set on every row just before (computeBodyUncached).
+    const rarity = colourRarity(root, m.entry.displayName, m.confirmedColour ?? m.predictedColour, region);
+    if (rarity.length) m.colourRarity = rarity;
+  }
+}
+
+/**
  * A [CODEX FIRST] row in the list at 1 % or less (owner, 2026-10-09: "has a slightly red background
  * and a [?] explaining why they are seeing this, even with a very low chance"). Nothing keeps a row
  * for being a first: it stands on the same rules as every row, and the [?] says which one. With the
@@ -883,6 +898,7 @@ function computeBodyCacheSignature(
   store: GameStateStore,
   explorationRec: ExplorationScanRecord | null,
   root: string,
+  db: SpeciesDatabase,
 ): string {
   return JSON.stringify({
     body: b,
@@ -915,6 +931,19 @@ function computeBodyCacheSignature(
     // The tracked achievement's marks move with what is tracked and with every completion.
     achievement: `${store.trackedAchievementId ?? ""}/${store.achievementDone.size}`,
     shared: sharedSignature(),
+    /*
+      1.2.19 review: three inputs read from outside the body. The "worth sampling" marks follow every body's samples
+      (collectionFocus); the first-footfall answer follows the system (populated, colony); the species split reads the
+      system's stars (their classes and distances from arrival) — a new star scan re-ranks a cached body.
+    */
+    focus: [...collectionFocusCached(store.bodies.values(), db, root).keys()].sort().join(","),
+    system: `${store.systemKind(b.systemAddress) ?? ""}/${store.noFirstFootfallInSystem(b.systemAddress)}`,
+    stars: store
+      .liveScansInSystem(b.systemAddress)
+      .filter((r) => !!r.starType)
+      .map((r) => `${r.bodyId}:${r.starType}:${Math.round(r.distanceFromArrivalLs ?? -1)}`)
+      .sort()
+      .join(","),
   });
 }
 
@@ -927,7 +956,7 @@ function computeBody(
   const root = getProjectRoot();
   // Physics, not value: a sold system keeps its gravity, materials, composition and host star.
   const explorationRec = store.physicsExplorationScan(bodyKey(b.systemAddress, b.bodyId));
-  const signature = computeBodyCacheSignature(b, store, explorationRec, root);
+  const signature = computeBodyCacheSignature(b, store, explorationRec, root, db);
   const cached = computeBodyCache.get(b.key);
   if (cached && cached.signature === signature) return cached.value;
 
@@ -1182,6 +1211,7 @@ function computeBodyUncached(
   for (const m of matches) m.predictedColour = predictedColourFor(m.entry, speciesMatchCtx, scanForExo);
   attachCodexNovelty(matches, store);
   attachCodexRegionNovelty(matches, store, speciesMatchCtx, scanForExo);
+  attachColourRarity(matches, speciesMatchCtx);
   explainLowChanceCodexFirst(matches);
   attachAchievementAdvance(matches, store, speciesMatchCtx, scanForExo);
   // Rarity where the body is (owner, 2026-09-27): a species can be common here and rare elsewhere.

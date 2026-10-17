@@ -1,4 +1,5 @@
 import type { AchievementAdvanceDTO, SpeciesMatch } from "@shared/types";
+import { isRareColour, rareColourPhrase } from "@shared/rareColour";
 
 /** The tracked achievement's mark (★): which variants, here, would count toward it. */
 export function achievementMarkTitle(a: AchievementAdvanceDTO): string {
@@ -59,4 +60,15 @@ export function codexMarkTitle(
         : `Neither ${colours.join(" nor ")} is in your codex`;
   const never = m.notInCodex ? " You have never logged this species anywhere." : "";
   return `${what}${where} yet — logging it here fills a new codex entry.${never} From your journals; entries in journals you no longer have count as new.`;
+}
+
+/** The colours of this row that are rare: logged in 10 systems or fewer galaxy-wide. */
+export function rareColourOf(m: Pick<SpeciesMatch, "colourRarity">): NonNullable<SpeciesMatch["colourRarity"]> {
+  return (m.colourRarity ?? []).filter(isRareColour);
+}
+
+/** The [RARE] mark's tooltip: how many systems each rare colour has been logged in, galaxy-wide and here. */
+export function rareColourTitle(m: Pick<SpeciesMatch, "colourRarity" | "entry">): string {
+  const parts = rareColourOf(m).map((r) => `${r.colour} ${m.entry.displayName} has been ${rareColourPhrase(r)}`);
+  return `${parts.join("; ")} (EDAstro's codex). Commanders who send to no tool, and finds since that list, are not counted.`;
 }

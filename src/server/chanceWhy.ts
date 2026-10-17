@@ -21,13 +21,14 @@ import {
   genusPriorFor,
   genusPriorKey,
 } from "./genusPrior.js";
+import { calibrationLine } from "./chanceCalibration.js";
 import { measuredOddsNote } from "./measuredOdds.js";
 import { regionalSpeciesCount } from "./regionSpeciesData.js";
 import { speciesLogScore, TERM_DAMPING } from "./speciesLikelihood.js";
 import { valueForNumericPath, valueForCategoricalPath } from "./exomasteryBodyValues.js";
 import { splitColumnLabel, splitContributions, splitFacts, type SplitInputs } from "./speciesSplit.js";
 
-export type ChanceWhyLine = { label: string; weight: number | null; kind: "genus" | "field" | "measured" | "region" };
+export type ChanceWhyLine = NonNullable<SpeciesMatch["chanceWhy"]>[number];
 
 /** Smallest nudge worth a line: a fifth of a log-odds unit, about ×1.2. */
 const MIN_NUDGE = 0.2;
@@ -211,6 +212,9 @@ export function explainChances(
           kind: "region",
         });
       }
+      // How often rows at this chance came true (1.2.19, F3): the trust in the number, not a reason for it.
+      const calibration = calibrationLine(root, genus, m.presenceProbabilityPercent, !!b.genusHints?.length);
+      if (calibration) lines.push({ label: calibration, weight: null, kind: "calibration" });
       if (lines.length) m.chanceWhy = lines;
     }
   }

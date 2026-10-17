@@ -79,6 +79,24 @@ describe("body sort", () => {
     expect(labels(sortBodies(bs, "profit", null))).toEqual(["3", "2", "1"]);
   });
 
+  it("expected value orders by chance × price, so a likely 4 M body beats an unlikely 19 M one", () => {
+    const withChance = (b: BodyComputed, pct: number, price: number) =>
+      ({
+        ...b,
+        matches: [
+          {
+            entry: { id: "s", displayName: "S", genus: "Stratum" },
+            priceCredits: price,
+            unlikely: false,
+            presenceProbabilityPercent: pct,
+          },
+        ],
+      }) as unknown as BodyComputed;
+    const bs = [withChance(body(1, "1"), 10, 19_000_000), withChance(body(2, "2"), 90, 4_000_000), body(3, "3")];
+    expect(labels(sortBodies(bs, "expected", null))).toEqual(["2", "1", "3"]);
+    expect(labels(sortBodies(bs, "profit", null))).toEqual(["1", "2", "3"]);
+  });
+
   it("closest follows the distances, unknown ones last", () => {
     const prox: ShipProximityDTO = {
       originBodyKey: `${ADDR}:1`,

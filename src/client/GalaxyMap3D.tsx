@@ -8,6 +8,7 @@
  * and Codex drawers, and what to say when the machine cannot draw it.
  */
 import { useInTab, useTabInFront } from "./tabs/TabHost";
+import { CodexGapsList } from "./CodexGapsList";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GalaxyEngine,
@@ -954,6 +955,9 @@ export function GalaxyMap3D() {
   useEffect(() => {
     if (!codexOn || !codexRegion) return;
     let live = true;
+    // The previous region's dots go at once, not when (or if) the new region's answer arrives (1.2.19 review).
+    engine.current?.setMarkers("codex", [], 3);
+    setCodexSystems(new Map());
     // The region map and EDSM spell a few regions differently; the join key settles it.
     const summary = codexRegions?.regions.find((r) => r.joinKey === regionJoinKey(codexRegion));
     const name = summary?.name ?? codexRegion;
@@ -2159,6 +2163,19 @@ export function GalaxyMap3D() {
               </button>
             ))}
           </div>
+          {codexKind === "bio" && codexRegion ? (
+            <CodexGapsList
+              region={codexSummary?.name ?? codexRegion}
+              from={route?.position ?? engine.current?.getShip() ?? null}
+              onPick={(site) => {
+                // Codex mode draws its systems flat (y 0); a listed one is selected so its record opens.
+                const at = { x: site.x, y: 0, z: site.z };
+                engine.current?.flyTo(at, 300);
+                if (codexSystems.has(site.systemAddress))
+                  engine.current?.select({ kind: "marker", layer: "codex", id: site.systemAddress, ...at });
+              }}
+            />
+          ) : null}
           <p className="g3d-menu__sub">Regions — logged of known · click one here or on the map</p>
           {codexRegions ? null : <p className="g3d-panel__note">Reading your codex…</p>}
           <ul className="g3d-menu__rows g3d-codex__regions">

@@ -184,7 +184,8 @@ import { showEdexoNativeFixInfo, logFatal, assertResourceLayout } from "./startu
 import { backfillCommanderPosition } from "./commanderPositionBackfill.js";
 import { fullJumpRange } from "../shared/jumpRange.js";
 import { createGggResearch } from "./gggResearch.js";
-import { createNoticesService, type CodexFirstFind, type NoticesContext } from "./notices.js";
+import { createNoticesService, type CodexFirstFind, type NoticesContext, type RareColourFind } from "./notices.js";
+import { isRareColour } from "../shared/rareColour.js";
 import { communityGoalNoticeText, startCommunityGoalPoller } from "./communityGoals.js";
 import { createBookmarksService } from "./bookmarks.js";
 import { spawn } from "node:child_process";
@@ -914,32 +915,36 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     auto-select moved out of the snapshot.
   */
   const announceCodexFirstIn = (snap: ReturnType<typeof getSnapshot>) => {
-    // [CODEX FIRST] candidates in the system he is in go to the bell, once each (owner, 2026-09-30),
-    // and leave it when the body's candidates no longer hold them (owner, 2026-10-04).
-    if (!snap.journalBoot && store.currentSystemAddress != null && notices.prefs().codexFirst) {
-      const finds: CodexFirstFind[] = [];
-      const evaluated = new Set<string>();
-      for (const b of snap.bodies ?? []) {
-        if (b.state.systemAddress !== store.currentSystemAddress) continue;
-        evaluated.add(b.state.key);
-        for (const m of b.matches ?? []) {
-          if (!m.codexFirst || m.unlikely || !m.codexRegion) continue;
-          finds.push({
-            bodyKey: b.state.key,
-            systemAddress: b.state.systemAddress,
-            system: b.state.starSystem || store.currentSystem || "",
-            body: b.tabLabel || b.state.bodyName,
-            species: m.entry.displayName,
-            speciesId: m.entry.id,
-            colours: m.codexFirstColours ?? [],
-            region: m.codexRegion,
-          });
-        }
-      }
-      if (notices.announceCodexFirst(finds, new Date().toISOString(), evaluated)) {
-        snap.notices = notices.snapshot(store.viewingSystemAddress ?? store.currentSystemAddress ?? null);
+    // [CODEX FIRST] candidates (owner, 2026-09-30) and rare colours (1.2.19) in the system he is in go to the bell, once
+    // each, and leave it when the body's candidates no longer hold them (owner, 2026-10-04). One walk for both.
+    const prefs = notices.prefs();
+    if (snap.journalBoot || store.currentSystemAddress == null || (!prefs.codexFirst && !prefs.rareColours)) return;
+    const firsts: CodexFirstFind[] = [];
+    const rare: RareColourFind[] = [];
+    const evaluated = new Set<string>();
+    for (const b of snap.bodies ?? []) {
+      if (b.state.systemAddress !== store.currentSystemAddress) continue;
+      evaluated.add(b.state.key);
+      const where = {
+        bodyKey: b.state.key,
+        systemAddress: b.state.systemAddress,
+        system: b.state.starSystem || store.currentSystem || "",
+        body: b.tabLabel || b.state.bodyName,
+      };
+      for (const m of b.matches ?? []) {
+        if (m.unlikely) continue;
+        const who = { species: m.entry.displayName, speciesId: m.entry.id };
+        if (m.codexFirst && m.codexRegion)
+          firsts.push({ ...where, ...who, colours: m.codexFirstColours ?? [], region: m.codexRegion });
+        for (const r of (m.colourRarity ?? []).filter(isRareColour)) rare.push({ ...r, ...where, ...who });
       }
     }
+    const at = new Date().toISOString();
+    const changed = [
+      prefs.codexFirst && notices.announceCodexFirst(firsts, at, evaluated),
+      prefs.rareColours && notices.announceRareColours(rare, at, evaluated),
+    ].some(Boolean);
+    if (changed) snap.notices = notices.snapshot(store.viewingSystemAddress ?? store.currentSystemAddress ?? null);
   };
 
   // Guarded: it runs on timers too, and a throw there would end the server process (guarded.ts).
@@ -2101,6 +2106,12 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       void ensureRemoteSystem(systemAddress, starSystem);
     },
     setUiSelectedBodyKey: (key) => store.setUiSelectedBodyKeyFromClient(key),
+    focusUiBody: (key) => {
+      const sep = key.indexOf(":");
+      const systemAddress = Number(key.slice(0, sep));
+      const bodyId = Number(key.slice(sep + 1));
+      if (sep > 0 && Number.isFinite(systemAddress) && Number.isFinite(bodyId)) store.requestUiAutoSelectBody(systemAddress, bodyId);
+    },
     setJournalDirectory: applyNewJournalDirectory,
     setJournalHistoryPreset: async (preset) => {
       if (store.journalHistoryPreset === preset) {

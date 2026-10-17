@@ -21,6 +21,7 @@
  * Kept in `edexo-notices.json` beside the user settings: the unread list, the ids already announced
  * (so the same body never comes back after being read), the records, and the settings.
  */
+import { rareColourPhrase, type ColourRarity } from "../shared/rareColour.js";
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import type { ExplorationScanRecord } from "../shared/types.js";
 import { BODY_FEATURES, bodyFeatures, directParent, featureRecordFromScan, inVoidCross } from "../shared/bodyFeatures.js";
@@ -99,6 +100,16 @@ export interface CodexFirstFind {
   /** The colours that would be firsts; empty when the colour is unknown. */
   colours: string[];
   region: string;
+}
+
+/** A candidate whose colour is logged in few systems galaxy-wide (1.2.19, rare colours). */
+export interface RareColourFind extends ColourRarity {
+  bodyKey: string;
+  systemAddress: number;
+  system: string;
+  body: string;
+  species: string;
+  speciesId: string;
 }
 
 export interface NearbyNsp {
@@ -223,6 +234,12 @@ export interface NoticesService {
    * announced again if the candidate comes back. True when the list changed.
    */
   announceCodexFirst(finds: readonly CodexFirstFind[], at: string, evaluated?: ReadonlySet<string>): boolean;
+  /**
+   * Candidates whose colour is logged in few systems galaxy-wide (1.2.19), from the snapshot of the system the
+   * commander is in: once per body, species and colour, withdrawn like a codex first when the candidate leaves the
+   * list. True when the list changed.
+   */
+  announceRareColours(finds: readonly RareColourFind[], at: string, evaluated?: ReadonlySet<string>): boolean;
   snapshot(systemAddress: number | null): NoticesSnapshotDTO;
   /** Call with each live journal line **before** the store applies it. True when a notice was added. */
   observe(line: Line, ctx: NoticesContext): boolean;
@@ -232,6 +249,10 @@ export interface NoticesService {
   jumpLy(ctx: Pick<NoticesContext, "loadoutJumpLy" | "fullJumpLy">): number | null;
   /** Every type's records, the commander's and EDAstro's (Statistics → Records). */
   records(ctx: NoticesContext): RecordRowDTO[];
+}
+
+function rareColourId(f: RareColourFind): string {
+  return `rarecolour:${f.bodyKey}:${f.speciesId}:${f.colour.toLowerCase()}`;
 }
 
 function codexFirstId(f: CodexFirstFind): string {
@@ -382,6 +403,20 @@ export function createNoticesService(opts: {
     } catch {
       /* best effort: the list is a convenience, the journal is the record */
     }
+  }
+
+  /**
+   * A per-body notice (id `prefix…`) whose body was looked at again (`evaluated`) and is no longer among `keep` leaves
+   * the bell, read or not, and may come back. True when one left.
+   */
+  function withdrawStale(prefix: string, evaluated: ReadonlySet<string>, keep: ReadonlySet<string>): boolean {
+    const before = state.items.length;
+    state.items = state.items.filter((n) => {
+      const gone = n.id.startsWith(prefix) && n.bodyKey != null && evaluated.has(n.bodyKey) && !keep.has(n.id);
+      if (gone) seen.delete(n.id);
+      return !gone;
+    });
+    return state.items.length !== before;
   }
 
   function add(n: NoticeDTO): boolean {
@@ -730,16 +765,7 @@ export function createNoticesService(opts: {
     announceCodexFirst(finds, at, evaluated) {
       if (!state.prefs.codexFirst) return false;
       let added = false;
-      if (evaluated?.size) {
-        const keep = new Set(finds.map(codexFirstId));
-        const before = state.items.length;
-        state.items = state.items.filter((n) => {
-          const gone = n.kind === "codex" && n.id.startsWith("codexfirst:") && n.bodyKey != null && evaluated.has(n.bodyKey) && !keep.has(n.id);
-          if (gone) seen.delete(n.id);
-          return !gone;
-        });
-        added = state.items.length !== before;
-      }
+      if (evaluated?.size) added = withdrawStale("codexfirst:", evaluated, new Set(finds.map(codexFirstId)));
       for (const f of finds) {
         const what = f.colours.length ? `${f.species} (${f.colours.join(" or ")})` : f.species;
         added =
@@ -749,6 +775,27 @@ export function createNoticesService(opts: {
             kind: "codex",
             title: `Codex first possible: ${what}`,
             text: `${f.body} in ${f.system} — nobody has logged it in ${f.region} yet (EDSM)`,
+            system: f.system,
+            systemAddress: f.systemAddress,
+            body: f.body,
+            bodyKey: f.bodyKey,
+          }) || added;
+      }
+      if (added) save();
+      return added;
+    },
+    announceRareColours(finds, at, evaluated) {
+      if (!state.prefs.rareColours) return false;
+      let added = false;
+      if (evaluated?.size) added = withdrawStale("rarecolour:", evaluated, new Set(finds.map(rareColourId)));
+      for (const f of finds) {
+        added =
+          add({
+            id: rareColourId(f),
+            at,
+            kind: "codex",
+            title: `Rare colour possible: ${f.species} (${f.colour})`,
+            text: `${f.body} in ${f.system} — ${rareColourPhrase(f)} (EDAstro)`,
             system: f.system,
             systemAddress: f.systemAddress,
             body: f.body,

@@ -220,6 +220,19 @@ export function codexRegionKeysFromLine(line: {
  * ("Green", "Cyan or Orange", "(unknown)"). With no colour to go on the question becomes "any colour
  * of it here?". Null when nothing is new.
  */
+/**
+ * The colours a row's colour label names: "Green" → ["Green"], "Cyan or Orange" → both, and [] for an unknown colour
+ * ("(unknown)", "(depends on …)", empty). [CODEX], [CODEX FIRST] and [RARE] read the label through this one split.
+ */
+export function colourLabelOptions(colourLabel: string | null | undefined): string[] {
+  const label = (colourLabel ?? "").trim();
+  if (!label || label.startsWith("(")) return [];
+  return label
+    .split(" or ")
+    .map((c) => c.trim())
+    .filter(Boolean);
+}
+
 export function codexNewColoursInRegion(
   logged: ReadonlySet<string>,
   region: string,
@@ -229,14 +242,7 @@ export function codexNewColoursInRegion(
   const r = codexRegionKey(region);
   const species = codexSpeciesKey(gameOrderSpeciesName(displayName));
   if (!r || !species) return null;
-  const label = (colourLabel ?? "").trim();
-  const colours =
-    !label || label.startsWith("(")
-      ? []
-      : label
-          .split(" or ")
-          .map((c) => c.trim())
-          .filter(Boolean);
+  const colours = colourLabelOptions(colourLabel);
   if (colours.length === 0) return logged.has(`${r}|${species}|*`) ? null : [];
   const fresh = colours.filter((c) => !logged.has(`${r}|${species}|${c.toLowerCase()}`));
   return fresh.length ? fresh : null;

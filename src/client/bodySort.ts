@@ -7,6 +7,8 @@
  *   order: bodies already analysed keep their place (he asked for that, 2026-09-26 — the analysed dot
  *   marks them, and sending them to the end hid the next best body in a long strip).
  * - **Alphabetical** — natural order on the tab label, so `1 a` < `1 b` < `2` < `10`.
+ * - **Expected value** (1.2.19) — each listed species' chance × its price × the first-footfall bonus, added up
+ *   (`bodyExpectedValue`): what the body is likely worth, where "Most profitable" is the best case.
  * - **Closest** — from where the ship is (`AppSnapshot.shipProximity`): the arrival star after a
  *   jump, then the body it approached or landed on.
  *
@@ -17,13 +19,15 @@
  */
 import { useMemo, useRef } from "react";
 import type { BodyComputed, ShipProximityDTO } from "@shared/types";
+import { bodyExpectedValue } from "@shared/systemTriage";
 import { payoutHeadline } from "./ExoPayoutRangePanel";
 
-export type BodySortMode = "system" | "profit" | "alpha" | "closest";
+export type BodySortMode = "system" | "profit" | "expected" | "alpha" | "closest";
 
 export const BODY_SORT_OPTIONS: { value: BodySortMode; label: string }[] = [
   { value: "system", label: "System order" },
   { value: "profit", label: "Most profitable" },
+  { value: "expected", label: "Expected value" },
   { value: "alpha", label: "Alphabetical" },
   { value: "closest", label: "Closest" },
 ];
@@ -53,6 +57,11 @@ export function bodyProfitValue(b: BodyComputed): number {
   return b.matches.reduce((m, x) => (x.unlikely ? m : Math.max(m, x.priceCredits ?? 0)), 0);
 }
 
+/** The figure "Expected value" ranks by; 0 for a body with no listed candidates. */
+export function bodyExpectedCredits(b: BodyComputed): number {
+  return bodyExpectedValue(b)?.expectedCredits ?? 0;
+}
+
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
 /** The bodies in the chosen order. "system" leaves the input as it is. */
@@ -65,8 +74,10 @@ export function sortBodies(
   const byName = (a: BodyComputed, b: BodyComputed) => collator.compare(a.tabLabel, b.tabLabel);
   const out = [...bodies];
   if (mode === "alpha") return out.sort(byName);
-  if (mode === "profit") {
-    return out.sort((a, b) => bodyProfitValue(b) - bodyProfitValue(a) || byName(a, b));
+  if (mode === "profit" || mode === "expected") {
+    // Each body's figure once, not per comparison (the expected value rebuilds the body's triage input).
+    const value = new Map(out.map((x) => [x, mode === "profit" ? bodyProfitValue(x) : bodyExpectedCredits(x)]));
+    return out.sort((a, b) => value.get(b)! - value.get(a)! || byName(a, b));
   }
   const dist = proximity?.distanceLsByBodyKey ?? {};
   const d = (b: BodyComputed) => dist[b.state.key] ?? Number.POSITIVE_INFINITY;
@@ -96,14 +107,13 @@ export function useSortedBodies(
         .join(","),
     [bodies],
   );
-  // What the figures are, for "Most profitable": the order follows them when they move, not only on a jump.
-  const valueSig = useMemo(
-    () =>
-      mode === "profit"
-        ? bodies.map((b) => `${b.state.key}=${Math.round(bodyProfitValue(b))}`).join(",")
-        : "",
-    [bodies, mode],
-  );
+  // What the figures are, for "Most profitable" and "Expected value": the order follows them when they move,
+  // not only on a jump.
+  const valueSig = useMemo(() => {
+    if (mode !== "profit" && mode !== "expected") return "";
+    const value = mode === "profit" ? bodyProfitValue : bodyExpectedCredits;
+    return bodies.map((b) => `${b.state.key}=${Math.round(value(b))}`).join(",");
+  }, [bodies, mode]);
   const sig = `${mode}|${systemFocusKey ?? "-"}|${mode === "system" ? "" : (proximity?.originBodyKey ?? "")}|${keySet}|${valueSig}`;
 
   return useMemo(() => {

@@ -26,6 +26,7 @@
  * the thing that was already tried. Leave such rows unscored and let `coverage` say so.
  */
 import type { BodyComputed } from "./types.js";
+import { footfallCertainty, settledMultiplier } from "./footfallValue.js";
 
 /**
  * Median minutes from dropping out of supercruise to touchdown. Measured, 299 landings.
@@ -219,12 +220,20 @@ export function triageRow(body: TriageBodyInput, timing?: TriageTiming | null): 
   let topContribution = 0;
   let topContributor: TriageCandidate | null = null;
 
+  // One species of a genus per body: where a genus' chances add up past 100 % (two Cactoida at 64 % and 76 % after a
+  // DSS, seen 2026-10-17), they are scaled down to 100 % so the genus is not counted more than once.
+  const genusTotal = new Map<string, number>();
+  for (const c of body.candidates)
+    if (c.probability != null && Number.isFinite(c.probability))
+      genusTotal.set(c.genus, (genusTotal.get(c.genus) ?? 0) + c.probability);
+
   for (const c of body.candidates) {
     const price = c.priceCredits ?? 0;
     totalWeight += 1;
     if (c.probability == null || !Number.isFinite(c.probability)) continue;
     scoredWeight += 1;
-    const contribution = c.probability * price * body.multiplier;
+    const share = c.probability / Math.max(1, genusTotal.get(c.genus) ?? 1);
+    const contribution = share * price * body.multiplier;
     expected += contribution;
     if (contribution > topContribution) {
       topContribution = contribution;
@@ -338,7 +347,15 @@ export function triageInputsFromBodies(bodies: BodyComputed[]): TriageBodyInput[
         bodyName: b.tabLabel || b.state.bodyName || b.state.key,
         signalCount: b.state.biologicalSignals ?? null,
         distanceLs: b.mergedScan?.distanceFromArrivalLs ?? null,
-        multiplier: (b.exoPayoutRange?.mult ?? 1) as 1 | 5,
+        // The glance bar's ×5 (payoutHeadline): the settled footfall answer, the server's `mult` only when unknown.
+        multiplier: b.exoPayoutRange
+          ? (settledMultiplier(
+              footfallCertainty({
+                journalWasFootfalled: b.exoPayoutRange.journalWasFootfalled,
+                commanderFirstFootfall: b.exoPayoutRange.commanderFirstFootfall,
+              }),
+            ) ?? b.exoPayoutRange.mult)
+          : 1,
         certain: b.genusCertainty?.status === "certain",
         candidates: shown.map((m) => ({
           speciesId: m.entry.id,
@@ -352,6 +369,18 @@ export function triageInputsFromBodies(bodies: BodyComputed[]): TriageBodyInput[
         })),
       };
     });
+}
+
+/**
+ * One body's expected exobiology value, for the glance bar and the "Expected value" body order (1.2.19,
+ * "is this DSS worth it"). The owner retired the system-wide ranking panel (see {@link triageInputsFromBodies}),
+ * so this is the per-planet form: the same Σ P × price × multiplier, on the screen he is already looking at.
+ * Null when the body has no listed candidates.
+ */
+export function bodyExpectedValue(body: BodyComputed): TriageRow | null {
+  const input = triageInputsFromBodies([body])[0];
+  if (!input || !input.candidates.length) return null;
+  return triageRow(input);
 }
 
 /**
