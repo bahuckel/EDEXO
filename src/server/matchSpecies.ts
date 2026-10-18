@@ -870,6 +870,7 @@ export function speciesMatchesExcludingTempPressure(
       failures.push({
         field: "StarType",
         soft: true,
+        measured: true,
         detail: `Colour star ${ctx.colourStarType} (the brightest in this body's sky): none of the ${never.speciesBodies.toLocaleString("en-US")} bodies in a year of EDDN finds grew under a ${never.cls} colour star, where about ${Math.round(never.expected)} would be expected. ${DEMOTED_NOTE}`,
       });
     }
@@ -892,6 +893,7 @@ export function speciesMatchesExcludingTempPressure(
     failures.push({
       field: "StarType",
       soft: true,
+      measured: true,
       detail: `Only A-type stars can colour this body (${colourStars.join(", ")}), and Stratum has no colour under an A star — only araneamus grows under one. ${DEMOTED_NOTE}`,
     });
   }
@@ -902,6 +904,7 @@ export function speciesMatchesExcludingTempPressure(
     failures.push({
       field: "Never found here",
       soft: true,
+      measured: true,
       detail:
         `${describeExclusion(excluded)}: none of its ${excluded.speciesBodies.toLocaleString("en-US")} bodies in a ` +
         `year of EDDN finds, nor any other confirmed find, grew here, where about ${Math.round(excluded.expected)} ` +

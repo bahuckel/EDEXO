@@ -451,6 +451,12 @@ export interface MatchReason {
    * 1.10). Unset: the field's own card (`server/cardVerdicts.ts`).
    */
   card?: string;
+  /**
+   * On a *failure* reason: a rule measured on a year of finds ("never grew here where about N were expected" — the
+   * colour-star table, the measured exclusions), not a codex list. A confirmed find against it is a rare exception
+   * (outlier-register.json), not a codex line to widen (owner, 2026-10-18: HIP 64848 1 a / 1 b).
+   */
+  measured?: boolean;
 }
 
 export interface SpeciesProvenance {

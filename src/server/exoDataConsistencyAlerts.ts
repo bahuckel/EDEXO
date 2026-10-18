@@ -204,7 +204,15 @@ export function computeExoDataAlertsForBody(input: {
     const entry = resolveSpeciesEntryFromOrganicLock(lock, db);
     if (!entry) continue;
 
-    const mc = speciesMatchesCriteria(entry, mergedScan, planetBand, estRange, speciesMatchCtx ?? undefined);
+    const found = speciesMatchesCriteria(entry, mergedScan, planetBand, estRange, speciesMatchCtx ?? undefined);
+    /*
+      A rule measured on a year of finds ("never grew here", the colour-star table) is not a codex list: a confirmed
+      find against it is a rare exception, and "widen the codex line" would be the wrong advice. Only the codex terms
+      are reported (owner, 2026-10-18: HIP 64848 1 a / 1 b, Stratum laminamus under a G colour star, shown by the app
+      once a DSS names Stratum, still alerted as "listed only as unlikely").
+    */
+    const codexReasons = found.ok ? found.reasons : found.reasons.filter((r) => !r.measured);
+    const mc = found.ok || codexReasons.length === 0 ? { ...found, ok: true } : { ...found, reasons: codexReasons };
     if (!mc.ok) {
       const id = `err-codex-${body.key}-${entry.id}`;
       if (!seenErr.has(id)) {
