@@ -108,13 +108,22 @@ const EXO_NUM_4 = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, max
 const EXO_NUM_6 = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
 
 /** en-US grouping: comma thousands, dot decimal — `1,234,567.89` for large values; preserves precision for small magnitudes. */
+/*
+  The strings already made, by value (2026-10-19: 130 ms of a 15-system first view was Intl formatting, most of it
+  the same profile statistics on every body). Exact — the formatter's own output — and dropped whole at the cap.
+*/
+const exoNumMemo = new Map<number, string>();
+const EXO_NUM_MEMO_MAX = 50_000;
+
 export function formatExomasteryNum(n: number): string {
   if (!Number.isFinite(n)) return "—";
+  const hit = exoNumMemo.get(n);
+  if (hit !== undefined) return hit;
   const abs = Math.abs(n);
-  if (abs === 0) return "0.00";
-  if (abs >= 1) return EXO_NUM_2.format(n);
-  if (abs >= 0.01) return EXO_NUM_4.format(n);
-  return EXO_NUM_6.format(n);
+  const text = abs === 0 ? "0.00" : abs >= 1 ? EXO_NUM_2.format(n) : abs >= 0.01 ? EXO_NUM_4.format(n) : EXO_NUM_6.format(n);
+  if (exoNumMemo.size >= EXO_NUM_MEMO_MAX) exoNumMemo.clear();
+  exoNumMemo.set(n, text);
+  return text;
 }
 
 export function relativePercentDisplay(v: number, mode: number): { pct: number | null; huge: boolean } {

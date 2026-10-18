@@ -169,7 +169,23 @@ export function judgeTierRegionalPresence(
 }
 
 /** The line a commander sees on a species the tier rule marks unlikely (or passes). */
+/*
+  The text per (region, tier, count, need, demoted), built once: the matcher asks for it for every species on every
+  body, and toLocaleString was 284 ms of a 15-system first view (2026-10-19). A few thousand keys at most.
+*/
+const tierRegionDetailMemo = new Map<string, string>();
+
 export function tierRegionDetail(regionName: string, v: TierRegionVerdict, demoted: boolean): string {
+  const key = `${regionName}|${v.tier}|${v.count}|${v.need}|${demoted ? 1 : 0}`;
+  let text = tierRegionDetailMemo.get(key);
+  if (text === undefined) {
+    text = tierRegionDetailText(regionName, v, demoted);
+    tierRegionDetailMemo.set(key, text);
+  }
+  return text;
+}
+
+function tierRegionDetailText(regionName: string, v: TierRegionVerdict, demoted: boolean): string {
   const label = rarityTierInfo(v.tier).label;
   if (!demoted) {
     return `${label}; logged in ${v.count.toLocaleString()} system${v.count === 1 ? "" : "s"} in ${regionName} (EDSM codex).`;

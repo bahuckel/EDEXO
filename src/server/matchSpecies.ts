@@ -307,22 +307,35 @@ export function resolvePlanetTemperatureBand(
   return null;
 }
 
+type ShareRow = { Name?: string; name?: string; Percent?: number; percent?: number };
+/*
+  The gas and material shares per scan array, built once: the matcher reads them for every species on a body, and
+  rebuilding them was most of exclusionValues' 224 ms in a 15-system first view (2026-10-19). Keyed by the array (a
+  scan with new rows is a new key), one map per prefix; callers only read the result.
+*/
+const sharesMemo = { gas_: new WeakMap<object, Record<string, number>>(), mat_: new WeakMap<object, Record<string, number>>() };
+
+/** Name → share in %, keys `prefix` + the name lower-cased without spaces; undefined when the scan lists none. */
+function shares(rows: ShareRow[] | undefined, prefix: "gas_" | "mat_"): Record<string, number> | undefined {
+  if (!Array.isArray(rows) || !rows.length) return undefined;
+  const memo = sharesMemo[prefix];
+  const hit = memo.get(rows);
+  if (hit) return hit;
+  const out: Record<string, number> = {};
+  for (const r of rows) {
+    const name = String(r?.Name ?? r?.name ?? "").toLowerCase().replace(/[^a-z]/g, "");
+    const pct = r?.Percent ?? r?.percent;
+    if (name && typeof pct === "number" && Number.isFinite(pct)) out[prefix + name] = Math.max(out[prefix + name] ?? 0, pct);
+  }
+  memo.set(rows, out);
+  return out;
+}
+
 /** The body values the measured-exclusion rules test, in the units of their table. */
 function exclusionValues(scan: PlanetScan, ctx: SpeciesMatchContext | undefined): ExclusionValues {
   const num = (v: unknown, k = 1): number | undefined =>
     typeof v === "number" && Number.isFinite(v) ? v * k : undefined;
   const metal = scan.composition?.Metal ?? scan.composition?.metal;
-  /** Name → share in %, keys `prefix` + the name lower-cased without spaces; undefined when the scan lists none. */
-  const shares = (rows: { Name?: string; name?: string; Percent?: number; percent?: number }[] | undefined, prefix: string) => {
-    if (!Array.isArray(rows) || !rows.length) return undefined;
-    const out: Record<string, number> = {};
-    for (const r of rows) {
-      const name = String(r?.Name ?? r?.name ?? "").toLowerCase().replace(/[^a-z]/g, "");
-      const pct = r?.Percent ?? r?.percent;
-      if (name && typeof pct === "number" && Number.isFinite(pct)) out[prefix + name] = Math.max(out[prefix + name] ?? 0, pct);
-    }
-    return out;
-  };
   return {
     temp: num(scan.SurfaceTemperature),
     mass: num(scan.MassEM),
