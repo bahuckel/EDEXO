@@ -157,9 +157,20 @@ export function installProfile(
   const samples = profileSampleCount(profile);
 
   let previousSamples: number | null = null;
+  /*
+    The flags a measurement put on the installed profile survive a rebuild unless the new one sets them (1.2.20):
+    `siteOnly` (Sinuous Tubers Blatteum's profile cost a confirmed find) and `observedEnvelope: false` (a year of
+    EDDN bodies is not a range). Without this a rebuild quietly brought the miss back.
+  */
+  type Flags = { siteOnly?: boolean; observedEnvelope?: boolean };
+  const carried: Flags = {};
+  const next = profile as ExomasteryProfileV1 & Flags;
   if (existsSync(path)) {
     try {
-      previousSamples = profileSampleCount(JSON.parse(readFileSync(path, "utf8")));
+      const prev = JSON.parse(readFileSync(path, "utf8")) as ExomasteryProfileV1 & Flags;
+      previousSamples = profileSampleCount(prev);
+      if (prev.siteOnly === true && next.siteOnly === undefined) carried.siteOnly = true;
+      if (prev.observedEnvelope === false && next.observedEnvelope === undefined) carried.observedEnvelope = false;
     } catch {
       // Unparseable file in place: treat as no evidence rather than as a reason to refuse.
       previousSamples = null;
@@ -172,7 +183,7 @@ export function installProfile(
 
   mkdirSync(join(speciesDataDir(), entry.genusDataDir, "exomastery"), { recursive: true });
   // Unchanged apart from its generatedAt stamp: left alone (review F-F7).
-  writeJsonIfChanged(path, `${JSON.stringify(stampAppIdentity(profile, entry), null, 2)}\n`);
+  writeJsonIfChanged(path, `${JSON.stringify({ ...stampAppIdentity(profile, entry), ...carried }, null, 2)}\n`);
   // The profile and file-name memos describe the folder as it was before this write.
   clearExomasteryProfileCache();
 

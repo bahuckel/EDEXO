@@ -122,7 +122,9 @@ for (const { entry, file, label } of jobs) {
   }
   const histograms = buildSpeciesHistograms(samples, edgesFile.edges);
   const displayHistograms = buildDisplayHistograms(samples);
-  const withHist: typeof profile & { histograms?: unknown; displayHistograms?: unknown } = profile;
+  const withHist: typeof profile & { histograms?: unknown; displayHistograms?: unknown; observedEnvelope?: boolean } = profile;
+  // A year of EDDN bodies is where the species was seen, not its range: no observed-temperature envelope (1.2.20).
+  if (flags.has("--species")) withHist.observedEnvelope = false;
   if (Object.keys(histograms).length > 0) withHist.histograms = histograms;
   if (Object.keys(displayHistograms).length > 0) withHist.displayHistograms = displayHistograms;
 

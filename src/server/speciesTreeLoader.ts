@@ -584,6 +584,8 @@ function attachObservedTemperatureEnvelopes(projectRoot: string, species: Specie
     try {
       if (!hasExomasteryProfileFile(projectRoot, entry)) continue;
       const prof = loadExomasteryProfile(projectRoot, entry);
+      // Built from part of the species' range (the EDDN year): where it was seen, not where it can be.
+      if (prof?.observedEnvelope === false) continue;
       const t = prof?.numerics?.["body.surfaceTemperature"];
       if (!t) continue;
       const { min, max, count } = t;

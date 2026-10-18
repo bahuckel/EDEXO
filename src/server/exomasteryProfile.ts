@@ -105,6 +105,18 @@ export interface ExomasteryProfileV1 {
     occurrences: number;
     bodies: number;
   };
+  /**
+   * False on profiles built from part of a species' range (the EDDN year's bodies, 1.2.20): no observed-temperature
+   * envelope from them. Their min / max are where it was seen in a year, not its range — Roseum Anemone's 107 bodies
+   * stopped at 219 K and a confirmed find at 202.9 K was demoted (2026-10-19, 12,000 Spansh DSS bodies).
+   */
+  observedEnvelope?: boolean;
+  /**
+   * True: for the species guide's charts only — the app does not load it at all, so its predictions stay as they
+   * were without it (1.2.20: Sinuous Tubers Blatteum's profile moved a confirmed find on hold-out D under the 1 %
+   * floor). {@link loadExomasteryProfile} answers null.
+   */
+  siteOnly?: boolean;
   numerics: Record<string, ExomasteryNumericRollup>;
   materials: Record<string, ExomasteryNumericRollup>;
   atmosphereComposition: Record<string, ExomasteryNumericRollup>;
@@ -394,8 +406,10 @@ export function loadExomasteryProfile(projectRoot: string, entry: SpeciesEntry):
 
   const fromSub = tryLoadExomasteryFromGenusSubdir(base, entry);
   if (fromSub) {
-    profileCache.set(cacheKey, fromSub);
-    return fromSub;
+    // A guide-only profile is no profile to the app (see siteOnly).
+    const use = fromSub.siteOnly === true ? undefined : fromSub;
+    profileCache.set(cacheKey, use);
+    return use ?? null;
   }
 
   for (const name of exomasteryProfileCandidateFilenames(entry)) {
@@ -406,8 +420,9 @@ export function loadExomasteryProfile(projectRoot: string, entry: SpeciesEntry):
       const j = JSON.parse(raw) as Record<string, unknown>;
       if (profileLooksUsable(j)) {
         const prof = normalizeLoadedProfile(j);
-        profileCache.set(cacheKey, prof);
-        return prof;
+        const use = prof.siteOnly === true ? undefined : prof;
+        profileCache.set(cacheKey, use);
+        return use ?? null;
       }
     } catch {
       /* try next filename */
