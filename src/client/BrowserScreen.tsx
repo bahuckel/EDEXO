@@ -273,6 +273,20 @@ export function BrowserScreen() {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [api, st]);
 
+  // Escape closes the ⋯ menu and the key button's list, like any menu (owner, 2026-10-18).
+  useEffect(() => {
+    if (!menuOpen && !keyMenu) return;
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape") return;
+      setMenuOpen(false);
+      setKeyMenu(false);
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [menuOpen, keyMenu]);
+
   if (!api)
     return (
       <div className="ebr ebr--gate">
