@@ -599,6 +599,18 @@
         background: linear-gradient(135deg, var(--hud), var(--hud-dim) 40%, var(--hud-dim) 60%, var(--hud));
         clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
         box-shadow: 0 14px 34px rgba(0, 0, 0, 0.7);
+        /* Opens like a drawer rather than appearing (owner, 2026-10-18). */
+        transform-origin: top center;
+        animation: menu-drop 0.16s ease-out;
+      }
+      @keyframes menu-drop {
+        from {
+          opacity: 0;
+          transform: translateY(-6px) scaleY(0.96);
+        }
+      }
+      .btn-split-menu button[hidden] {
+        display: none;
       }
       .btn-split-menu button {
         display: flex;
@@ -1881,6 +1893,7 @@
         .emblem::before,
         .lamp.bad,
         #main.ready,
+        .btn-split-menu:not([hidden]),
         .modal {
           animation: none;
         }
@@ -1910,7 +1923,12 @@
         </div>
       </header>
 
-      <div id="splash" class="panel">
+      <!--
+        The splash is the journal merge's progress only (2026-10-18: the launcher opened on it, "—", for the second
+        the service took to answer, then swapped the whole panel in — "the main menu has difficulty loading"). The
+        panel below is static and shows at once; its status card says "Connecting…" until the first answer.
+      -->
+      <div id="splash" class="panel" style="display: none">
         <div class="panel__body">
           <div class="scope" aria-hidden="true"></div>
           <div class="splash-pct" id="splashPct">—</div>
@@ -1919,7 +1937,7 @@
         </div>
       </div>
 
-      <div id="main">
+      <div id="main" class="ready">
         <div class="status-row" id="statusRow">
           <div class="panel">
             <div class="panel__body">
@@ -2056,7 +2074,7 @@
                 <span>Drop other commanders' files here — or your own backup after a reinstall</span>
               </button>
               <!-- Moved here from its own launcher button (owner, 2026-09-29). -->
-              <button type="button" role="menuitem" data-exo-action="import-dump" id="btnImportDump">
+              <button type="button" role="menuitem" data-exo-action="import-dump" id="btnImportDump" hidden>
                 <strong>Import Spansh export</strong>
                 <span>Feed a galaxy_bio.jsonl.gz into the corpus — validate first, then apply</span>
               </button>

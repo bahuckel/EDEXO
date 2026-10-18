@@ -162,6 +162,57 @@
 .appbar-menu--open {
   display: flex;
 }
+/* The dropdown opens like a drawer instead of appearing (owner, 2026-10-18); the wide bar's row never animates. */
+@media (max-width: 1699.98px) and (prefers-reduced-motion: no-preference) {
+  .appbar-menu--open {
+    transform-origin: top right;
+    animation: drawer-drop 0.16s ease-out;
+  }
+  .appbar-menu--left.appbar-menu--open {
+    transform-origin: top left;
+  }
+}
+@keyframes drawer-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scaleY(0.96);
+  }
+}
+@keyframes drawer-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scaleY(0.96);
+  }
+}
+@keyframes drawer-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
+/*
+  Every other menu and drawer opens the same way instead of appearing at once (owner, 2026-10-18: "animate the
+  opening and other parts of the app with drawers that are not animated properly"): the tab strip's +, the
+  browser's ⋯ and key menus, the app's own selects, the Radix popovers (alerts, notices, Notify me), and the galaxy
+  map's drawers, which slide in from their edge. Tooltips are left alone: Radix marks them "delayed-open".
+*/
+@media (prefers-reduced-motion: no-preference) {
+  .tab-strip__menu,
+  .ebr-menu,
+  .ui-select__menu,
+  [data-radix-popper-content-wrapper] > [data-state="open"] {
+    transform-origin: top center;
+    animation: drawer-drop 0.14s ease-out;
+  }
+  .ui-select__menu.is-up {
+    transform-origin: bottom center;
+    animation-name: drawer-rise;
+  }
+  .g3d-drawer,
+  .g3d-codex {
+    animation: drawer-slide 0.18s ease-out;
+  }
+}
 .appbar-menu > * {
   background: var(--menu-warm);
 }
