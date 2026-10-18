@@ -139,6 +139,60 @@ function watchForeground(onName) {
 }
 
 /**
+ * The same watcher, run from a utility process of its own (electron/foregroundHost.cjs) so that starting PowerShell
+ * never holds the main process (2026-10-19: `spawn` took 1,147 ms inside Electron's main process — 17 ms in plain
+ * Node — right after the launcher window was created, so the launcher stayed black and the pages' files, which this
+ * process serves during the boot, waited behind it). Falls back to the in-process watcher when the host cannot start
+ * or ends before reporting anything.
+ *
+ * @param {{ fork: (modulePath: string, args?: string[], opts?: object) => any }} utilityProcess  Electron's
+ * @param {string} hostPath  electron/foregroundHost.cjs
+ * @param {(processName: string, at: { x: number, y: number } | null) => void} onName  as watchForeground
+ * @returns {{ stop: () => void }}
+ */
+function watchForegroundOffMain(utilityProcess, hostPath, onName) {
+  if (process.platform !== "win32") return { stop() {} };
+  let stopped = false;
+  let heard = false;
+  let fallback = null;
+  let host = null;
+  const useFallback = () => {
+    if (!stopped && !fallback) fallback = watchForeground(onName);
+  };
+  try {
+    host = utilityProcess.fork(hostPath, [], { serviceName: "ED Exo Compare foreground watch", stdio: "ignore" });
+  } catch {
+    useFallback();
+    return { stop: () => ((stopped = true), fallback?.stop()) };
+  }
+  host.on("message", (m) => {
+    if (!m || typeof m.name !== "string") return;
+    heard = true;
+    try {
+      onName(m.name, m.at && Number.isFinite(m.at.x) && Number.isFinite(m.at.y) ? { x: m.at.x, y: m.at.y } : null);
+    } catch {
+      /* the listener's failure is its own */
+    }
+  });
+  host.on("exit", () => {
+    host = null;
+    if (!heard) useFallback();
+  });
+  return {
+    stop() {
+      stopped = true;
+      fallback?.stop();
+      try {
+        host?.kill();
+      } catch {
+        /* already gone */
+      }
+      host = null;
+    },
+  };
+}
+
+/**
  * Whether the foreground belongs to the game or to this app (its own windows keep the overlays: the
  * commander looking at the app on a second screen still has the game beside it).
  * @param {string} name @param {readonly string[]} own lower-case process names of this app
@@ -156,4 +210,4 @@ function isGame(name) {
   return String(name || "").toLowerCase() === "elitedangerous64";
 }
 
-module.exports = { watchForeground, isGameOrOwn, isGame, parseForegroundLine };
+module.exports = { watchForeground, watchForegroundOffMain, isGameOrOwn, isGame, parseForegroundLine };

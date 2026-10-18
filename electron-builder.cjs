@@ -83,6 +83,8 @@ module.exports = {
     "electron/tray.cjs",
     "electron/childWindows.cjs",
     "electron/foregroundWatch.cjs",
+    // Forked as a utility process by foregroundWatch.cjs (2026-10-19), not required: list it by hand.
+    "electron/foregroundHost.cjs",
     "electron/windowGuards.cjs",
     "electron/keybinds.cjs",
     "electron/tabWindows.cjs",

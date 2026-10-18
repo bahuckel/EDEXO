@@ -4,8 +4,6 @@
  * 'unsafe-inline' for scripts, takes 100 kB of parse off the HTML, and lets the HTML stay small.
  */
 (function () {
-  const splash = document.getElementById("splash");
-  const main = document.getElementById("main");
   const lamp = document.getElementById("statusLamp");
   const statusTitle = document.getElementById("statusTitle");
   const statusDetail = document.getElementById("statusDetail");
@@ -51,9 +49,8 @@
   const btnPollFromOverlay = document.getElementById("btnPollFromOverlay");
   const radarRadiusRow = document.getElementById("radarRadiusRow");
   const radarRadiusM = document.getElementById("radarRadiusM");
-  const splashPct = document.getElementById("splashPct");
-  const splashBar = document.getElementById("splashBar");
-  const splashMsg = document.getElementById("splashMsg");
+  const statusBoot = document.getElementById("statusBoot");
+  const statusBootFill = document.getElementById("statusBootFill");
 
   let ws;
   let wsOk = false;
@@ -465,23 +462,23 @@
   }
 
   function applyLauncherSnapshotData(data) {
+    // The journal boot's progress stays inside the status card; the panel never leaves (2026-10-19).
     if (data.journalBoot) {
-      splash.style.display = "block";
-      main.classList.remove("ready");
-      if (splashPct && splashBar && splashMsg) {
-        const b = data.journalBoot;
-        const p = Math.max(0, Math.min(100, Number(b.percent) || 0));
-        splashPct.textContent = p + "%";
-        splashBar.style.width = p + "%";
-        splashMsg.textContent = typeof b.message === "string" ? b.message : "Loading…";
+      const b = data.journalBoot;
+      const p = Math.max(0, Math.min(100, Number(b.percent) || 0));
+      lamp.className = "lamp busy";
+      statusTitle.textContent = typeof b.message === "string" ? b.message : "Loading your journals…";
+      statusDetail.textContent = p + "%";
+      if (statusBoot && statusBootFill) {
+        statusBoot.hidden = false;
+        statusBootFill.style.width = p + "%";
       }
       pollDelayMs = 400;
       return;
     }
 
     pollDelayMs = 2500;
-    splash.style.display = "none";
-    main.classList.add("ready");
+    if (statusBoot) statusBoot.hidden = true;
 
     // The feeder's Spansh dump import: Options → Developer tools in the app (off by default since 1.2.20).
     const importDump = document.getElementById("btnImportDump");
@@ -882,8 +879,7 @@
       applyLauncherSnapshotData(data);
     } catch (e) {
       pollDelayMs = 2500;
-      splash.style.display = "none";
-      main.classList.add("ready");
+      if (statusBoot) statusBoot.hidden = true;
       lamp.className = "lamp bad";
       statusTitle.textContent = "Cannot reach ED Exo Compare service";
       statusDetail.textContent = String(e && e.message ? e.message : e);

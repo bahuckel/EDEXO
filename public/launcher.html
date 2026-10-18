@@ -254,42 +254,7 @@
         opacity: 0.8;
       }
 
-      /* ---- splash --------------------------------------------------------------------------- */
-      #splash {
-        text-align: center;
-        padding: 30px 12px 26px;
-      }
-      .scope {
-        position: relative;
-        width: 84px;
-        height: 84px;
-        margin: 0 auto 14px;
-        border-radius: 50%;
-        border: 1px solid var(--hud-dim);
-        box-shadow: inset 0 0 0 1px rgba(255, 138, 31, 0.08), var(--hud-glow);
-        background:
-          radial-gradient(circle, transparent 0 30%, rgba(255, 138, 31, 0.14) 30.5% 31%, transparent 31.5%),
-          radial-gradient(circle, transparent 0 60%, rgba(255, 138, 31, 0.14) 60.5% 61%, transparent 61.5%),
-          linear-gradient(90deg, transparent 49.5%, rgba(255, 138, 31, 0.16) 49.5% 50.5%, transparent 50.5%),
-          linear-gradient(180deg, transparent 49.5%, rgba(255, 138, 31, 0.16) 49.5% 50.5%, transparent 50.5%);
-      }
-      .scope::after {
-        content: "";
-        position: absolute;
-        inset: 1px;
-        border-radius: 50%;
-        background: conic-gradient(from 0deg, transparent 0 72%, rgba(255, 138, 31, 0.05) 80%, rgba(255, 160, 60, 0.45) 100%);
-        animation: sweep 2.2s linear infinite;
-      }
-      .splash-pct {
-        font-size: 1.7rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        color: var(--hud-hi);
-        text-shadow: var(--hud-glow);
-        font-variant-numeric: tabular-nums;
-        margin: 0 0 10px;
-      }
+      /* ---- progress bar (the journal boot, in the status card) ------------------------------- */
       .boot-bar {
         position: relative;
         max-width: 300px;
@@ -311,14 +276,6 @@
         position: absolute;
         inset: 0;
         background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(0, 0, 0, 0.5) calc(10% - 1px) 10%);
-      }
-      .splash-msg {
-        margin: 0;
-        font-size: 0.78rem;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--hud-hi);
-        opacity: 0.8;
       }
 
       /* ---- main: status + actions --------------------------------------------------------------- */
@@ -359,6 +316,23 @@
         color: var(--ed-bad);
         background: var(--ed-bad);
         animation: lampBlink 1.4s ease-in-out infinite;
+      }
+      /* Connecting, or the journal boot in progress: not an error, so not red (2026-10-19). */
+      .lamp.busy {
+        color: var(--hud);
+        background: var(--hud);
+        animation: lampBlink 1.4s ease-in-out infinite;
+      }
+      /*
+        The journal boot's progress inside the status card (2026-10-19): the launcher used to swap its whole panel for
+        a full-panel progress screen during the 3 s cache restore, which read as a black window that then popped back.
+      */
+      .status-boot {
+        max-width: none;
+        margin: 12px 0 0;
+      }
+      .status-boot[hidden] {
+        display: none;
       }
       .status-text {
         font-size: 0.92rem;
@@ -1889,9 +1863,9 @@
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        .scope::after,
         .emblem::before,
         .lamp.bad,
+        .lamp.busy,
         #main.ready,
         .btn-split-menu:not([hidden]),
         .modal {
@@ -1923,20 +1897,6 @@
         </div>
       </header>
 
-      <!--
-        The splash is the journal merge's progress only (2026-10-18: the launcher opened on it, "—", for the second
-        the service took to answer, then swapped the whole panel in — "the main menu has difficulty loading"). The
-        panel below is static and shows at once; its status card says "Connecting…" until the first answer.
-      -->
-      <div id="splash" class="panel" style="display: none">
-        <div class="panel__body">
-          <div class="scope" aria-hidden="true"></div>
-          <div class="splash-pct" id="splashPct">—</div>
-          <div class="boot-bar" aria-hidden="true"><div class="boot-bar-fill" id="splashBar"></div></div>
-          <p class="splash-msg" id="splashMsg">Initialising journal service…</p>
-        </div>
-      </div>
-
       <div id="main" class="ready">
         <div class="status-row" id="statusRow">
           <div class="panel">
@@ -1946,12 +1906,13 @@
                 <span class="panel-aside"><label title="Show where you are and what is unsold"><input type="checkbox" id="toggleLiveStrip" /> Live</label></span>
               </div>
               <div class="status-inner">
-                <div class="lamp bad" id="statusLamp"></div>
+                <div class="lamp busy" id="statusLamp"></div>
                 <div>
                   <div class="status-text" id="statusTitle">Connecting…</div>
                   <div class="status-detail" id="statusDetail"></div>
                 </div>
               </div>
+              <div class="boot-bar status-boot" id="statusBoot" aria-hidden="true" hidden><div class="boot-bar-fill" id="statusBootFill"></div></div>
               <div class="journal-health" id="journalHealth" hidden></div>
               <div class="live-strip" id="liveStrip" hidden>
                 <div class="live-cell live-cell--wide"><span class="k">System</span><span class="v dim" id="lsSystem">—</span></div>

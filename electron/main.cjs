@@ -29,7 +29,7 @@ const { createTrayControl } = require("./tray.cjs");
 const { createKeybinds } = require("./keybinds.cjs");
 const { createTabWindows } = require("./tabWindows.cjs");
 const updater = require("./updater.cjs");
-const { watchForeground, isGameOrOwn, isGame } = require("./foregroundWatch.cjs");
+const { watchForegroundOffMain, isGameOrOwn, isGame } = require("./foregroundWatch.cjs");
 const { guardWindowNavigation, restrictPermissions, isOwnUrl } = require("./windowGuards.cjs");
 const { createBrowserPrefs } = require("./browserPrefs.cjs");
 const { createBrowserBlocker } = require("./browserBlocker.cjs");
@@ -883,7 +883,7 @@ async function start() {
   {
     const own = [path.basename(process.execPath, ".exe").toLowerCase(), "electron"];
     let hideTimer = null;
-    foreground = watchForeground((name, at) => {
+    foreground = watchForegroundOffMain(utilityProcess, path.join(__dirname, "foregroundHost.cjs"), (name, at) => {
       huds.log(`foreground ${name || "(unreadable)"}${at ? ` at ${at.x},${at.y}` : ""}`);
       // The body tabs and Clear the notices take their keys only while Elite or this app (the app
       // window, the launcher; owner, 2026-10-07) is in front (keybinds.cjs); every other program keeps
