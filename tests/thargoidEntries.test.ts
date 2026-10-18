@@ -9,7 +9,8 @@ import { matchDatabaseToScan } from "../src/server/matchSpecies.js";
 import { collectResolvedOrganicLockSpeciesIds } from "../src/server/organicLocks.js";
 import { dssHintsMissingCandidateGenera } from "../src/server/footScannedCatalog.js";
 import { lookupPriceStrict } from "../src/server/priceList.js";
-import type { GenusHint, OrganicGenusLock, PlanetScan, SpeciesDatabase, SpeciesMatch } from "../src/shared/types.js";
+import { computeExoDataAlertsForBody } from "../src/server/exoDataConsistencyAlerts.js";
+import type { BodyExoState, GenusHint, OrganicGenusLock, PlanetScan, SpeciesDatabase, SpeciesMatch } from "../src/shared/types.js";
 
 const db = loadSpeciesDatabase() as unknown as SpeciesDatabase;
 const thargoid = (id: string) => id.startsWith("thargoid_");
@@ -40,6 +41,7 @@ describe("the Thargoid entries", () => {
       "Primary Thargoid Spire",
       "Thargoid Barnacle Matrix",
       "Thargoid Coral Root",
+      "Thargoid Coral Tree",
       "Thargoid Mega Barnacles",
       "Thargoid Spire",
     ]);
@@ -47,6 +49,7 @@ describe("the Thargoid entries", () => {
     const prices = getCachedPriceIndex();
     const price = (n: string) => lookupPriceStrict(prices, n, n);
     expect(price("Thargoid Coral Root")).toBe(1_924_600);
+    expect(price("Thargoid Coral Tree")).toBe(1_896_800);
     expect(price("Thargoid Barnacle Matrix")).toBe(2_313_500);
     expect(price("Thargoid Mega Barnacles")).toBe(2_313_500);
     expect(price("Major Thargoid Spire")).toBe(2_247_100);
@@ -58,8 +61,9 @@ describe("the Thargoid entries", () => {
   });
 
   it("are listed when the DSS names their genus, by the game's symbol or its name", () => {
-    expect(run([{ Genus: "$Codex_Ent_Thargoid_Coral_Name;", Genus_Localised: "" }]).filter(thargoid)).toEqual([
+    expect(run([{ Genus: "$Codex_Ent_Thargoid_Coral_Name;", Genus_Localised: "" }]).filter(thargoid).sort()).toEqual([
       "thargoid_coral_coral_root",
+      "thargoid_coral_coral_tree",
     ]);
     const barnacles = run([{ Genus: "$Codex_Ent_Barnacles_Name;", Genus_Localised: "Barnacles" }]).filter(thargoid);
     expect(barnacles.sort()).toEqual(["thargoid_barnacles_barnacle_matrix", "thargoid_barnacles_mega_barnacles"]);
@@ -80,6 +84,9 @@ describe("the Thargoid entries", () => {
       variantLocalised: "",
     };
     expect(collectResolvedOrganicLockSpeciesIds([coral], db)).toEqual(["thargoid_coral_coral_root"]);
+    // Coral Tree (1.2.20): EDDN carries it by symbol only.
+    const tree = { ...coral, speciesLocalised: "$Codex_Ent_Thargoid_Coral_Tree_Name;", speciesSymbol: "$Codex_Ent_Thargoid_Coral_Tree_Name;" };
+    expect(collectResolvedOrganicLockSpeciesIds([tree], db)).toEqual(["thargoid_coral_coral_tree"]);
     expect(run(null, [coral])).toContain("thargoid_coral_coral_root");
     // "Thargoid Spire" sits inside "Major Thargoid Spire": the exact name wins.
     const spire = (name: string): OrganicGenusLock => ({
@@ -91,5 +98,36 @@ describe("the Thargoid entries", () => {
     });
     expect(collectResolvedOrganicLockSpeciesIds([spire("Major Thargoid Spire")], db)).toEqual(["thargoid_spires_major"]);
     expect(collectResolvedOrganicLockSpeciesIds([spire("Thargoid Spire")], db)).toEqual(["thargoid_spires_spire"]);
+  });
+});
+
+describe("the Thargoid entries' conditions (1.2.20, owner 2026-10-18)", () => {
+  it("carry the sampled bodies' conditions for the guide, keep the short description, and are still never predicted", () => {
+    for (const e of db.species.filter((x) => thargoid(x.id))) {
+      expect(e.description.length).toBeLessThan(200);
+      expect(e.criteria.planetClassAnyOf?.length ?? 0).toBeGreaterThan(0);
+    }
+    expect(run(null).filter(thargoid)).toEqual([]);
+  });
+
+  it("one logged outside the sampled bodies' range raises no codex alert", () => {
+    const hot = { ...body, SurfaceTemperature: 600 } as PlanetScan;
+    const coral: OrganicGenusLock = {
+      genusLocalised: "",
+      genusSymbol: "$Codex_Ent_Thargoid_Coral_Name;",
+      speciesLocalised: "$Codex_Ent_Thargoid_Coral_Tree_Name;",
+      speciesSymbol: "$Codex_Ent_Thargoid_Coral_Tree_Name;",
+      variantLocalised: "",
+    };
+    const tree = db.species.find((e) => e.id === "thargoid_coral_coral_tree")!;
+    const { alerts } = computeExoDataAlertsForBody({
+      body: { key: "1:1", biologicalSignals: 1, genusHints: [], organicGenusLocks: [coral] } as unknown as BodyExoState,
+      mergedScan: hot,
+      matches: [{ entry: tree, reasons: [] } as unknown as SpeciesMatch],
+      speciesMatchCtx: null,
+      db,
+      includeBacterium: true,
+    });
+    expect(alerts.filter((a) => a.speciesEntryId === tree.id)).toEqual([]);
   });
 });

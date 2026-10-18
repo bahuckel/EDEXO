@@ -203,6 +203,8 @@ export function computeExoDataAlertsForBody(input: {
     if (!lockHasOrganicSpeciesIdentity(lock)) continue;
     const entry = resolveSpeciesEntryFromOrganicLock(lock, db);
     if (!entry) continue;
+    // A DSS-only entry's conditions say where it was sampled, not where it may grow (the Thargoid entries, 1.2.20).
+    if (entry.dssOnly) continue;
 
     const found = speciesMatchesCriteria(entry, mergedScan, planetBand, estRange, speciesMatchCtx ?? undefined);
     /*
