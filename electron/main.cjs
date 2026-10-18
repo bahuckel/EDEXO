@@ -13,6 +13,7 @@ const {
   utilityProcess,
 } = require("electron");
 const { startServerChild } = require("./serverChild.cjs");
+const { installStaticShell } = require("./staticShell.cjs");
 const path = require("path");
 const fs = require("fs");
 const { writeFileAtomic } = require("./atomicWrite.cjs");
@@ -707,6 +708,27 @@ async function start() {
     },
   });
   diag?.mark("server started");
+  /*
+    The pages' files from disk while the server's journal boot holds its thread (staticShell.cjs; owner,
+    2026-10-19: the launcher still drew late and an early app window stayed blank). Off again a while after
+    the boot, past the server's 20 s warm-up, so the API never runs through this process for the whole run.
+  */
+  if (runtime.webRoot() && runtime.contentSecurityPolicy()) {
+    const { session } = require("electron");
+    const staticShell = installStaticShell({
+      sessions: [session.defaultSession, session.fromPartition(APP_WINDOW_PARTITION), session.fromPartition("persist:hud")],
+      baseUrl: runtime.getLocalBaseUrl(),
+      webRoot: runtime.webRoot(),
+      csp: runtime.contentSecurityPolicy(),
+      log: (m) => console.warn(`[edexo-compare] ${m}`),
+    });
+    void runtime.booted.then(() => {
+      setTimeout(() => {
+        staticShell.remove();
+        diag?.mark(`static shell off (${staticShell.served()} file(s) served from disk)`);
+      }, 30_000).unref?.();
+    });
+  }
   // Where the HUD layout lives and whether GNOME has a tray, as the server's process found them.
   huds.setLayoutPathResolver(() => runtime.layoutPath());
   if (process.platform === "linux") linuxTrayHost = runtime.linuxTrayHost();

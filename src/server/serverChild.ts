@@ -18,16 +18,18 @@
  *   main -> child   { type: "start", mode, argv }       start the server
  *                   { type: "call", id, method, args }  a runtime method; replied to with "reply"
  *                   { type: "hudReply", id, result | error }
- *   child -> main   { type: "started", baseUrl, layoutPath, gameRunning, backupRunning, linuxTrayHost }
+ *   child -> main   { type: "started", baseUrl, layoutPath, gameRunning, backupRunning, linuxTrayHost, webRoot, csp }
  *                   { type: "failed", message }         the server could not start
- *                   { type: "ready" }                   the journal is read (runtime.ready)
+ *                   { type: "ready" }                   the server listens and the journal boot begins (runtime.ready)
+ *                   { type: "booted" }                  the journal boot is over (runtime.booted)
  *                   { type: "reply", id, result | error }
  *                   { type: "event", name, value }      boxelNext, gameRunning, backupRunning
  *                   { type: "hud", id, method, arg }    a HUD bridge call for main's windows
  *                   { type: "dialog", title, message }  a message box only main can show
  */
 import { setHudBridge, type HudBridge } from "./hudBridge.js";
-import { resolveHudLayoutPath, reapplySpeciesDataDirDiscoveryFromDisk } from "./paths.js";
+import { getProjectRoot, getWebRoot, resolveHudLayoutPath, reapplySpeciesDataDirDiscoveryFromDisk } from "./paths.js";
+import { CONTENT_SECURITY_POLICY } from "./csp.js";
 import { startEdexoFromElectronMode, type EdexoRuntime } from "./edexoBootstrap.js";
 import { linuxProbes } from "./linuxProbes.js";
 
@@ -128,11 +130,15 @@ export function runServerChild(): void {
       gameRunning: runtime.gameRunning(),
       backupRunning: runtime.backupRunning(),
       linuxTrayHost: trayHost,
+      // For main's static shell (electron/staticShell.cjs): the folder and the policy this server serves pages with.
+      webRoot: getWebRoot(getProjectRoot()),
+      csp: CONTENT_SECURITY_POLICY,
     });
     void runtime.ready.then(
       () => post({ type: "ready" }),
       () => {},
     );
+    void runtime.booted.then(() => post({ type: "booted" }));
     runtime.onBoxelNext((name) => post({ type: "event", name: "boxelNext", value: name }));
     runtime.onGameRunning((running) => post({ type: "event", name: "gameRunning", value: running }));
     // Main asks "is a backup running?" inside its quit handlers and cannot wait for an answer there,

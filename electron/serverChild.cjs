@@ -33,12 +33,26 @@ function startServerChild(o) {
   let seq = 0;
   const waiting = new Map();
   const listeners = { boxelNext: new Set(), gameRunning: new Set() };
-  const state = { baseUrl: null, layoutPath: null, gameRunning: null, backupRunning: false, linuxTrayHost: null, exited: false };
+  const state = {
+    baseUrl: null,
+    layoutPath: null,
+    gameRunning: null,
+    backupRunning: false,
+    linuxTrayHost: null,
+    webRoot: null,
+    csp: null,
+    exited: false,
+  };
   let resolveReady;
   let rejectReady;
   const ready = new Promise((res, rej) => {
     resolveReady = res;
     rejectReady = rej;
+  });
+  let resolveBooted;
+  // Resolved on exit too: nothing waiting on it should wait forever.
+  const booted = new Promise((res) => {
+    resolveBooted = res;
   });
   let stopping = false;
 
@@ -52,7 +66,11 @@ function startServerChild(o) {
 
   const runtime = {
     ready,
+    booted,
     getLocalBaseUrl: () => state.baseUrl,
+    /** The folder and the CSP the server serves its pages with (electron/staticShell.cjs); null from an older server. */
+    webRoot: () => state.webRoot,
+    contentSecurityPolicy: () => state.csp,
     layoutPath: () => state.layoutPath,
     linuxTrayHost: () => state.linuxTrayHost,
     gameRunning: () => state.gameRunning,
@@ -112,12 +130,16 @@ function startServerChild(o) {
           gameRunning: m.gameRunning,
           backupRunning: !!m.backupRunning,
           linuxTrayHost: m.linuxTrayHost ?? null,
+          webRoot: typeof m.webRoot === "string" ? m.webRoot : null,
+          csp: typeof m.csp === "string" ? m.csp : null,
         });
         resolveStart(runtime);
       } else if (m.type === "failed") {
         rejectStart(new Error(String(m.message)));
       } else if (m.type === "ready") {
         resolveReady();
+      } else if (m.type === "booted") {
+        resolveBooted();
       } else if (m.type === "reply") {
         const w = waiting.get(m.id);
         if (!w) return;
@@ -144,6 +166,7 @@ function startServerChild(o) {
     });
     child.on("exit", (code) => {
       state.exited = true;
+      resolveBooted();
       for (const w of waiting.values()) w.reject(new Error("The server stopped."));
       waiting.clear();
       if (!started) rejectStart(new Error(`The server process ended before it started (exit ${code}).`));

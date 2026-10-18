@@ -225,6 +225,11 @@ export type { CliOptions } from "./cliOptions.js";
 
 export type EdexoRuntime = {
   ready: Promise<void>;
+  /**
+   * The journal boot is over (cache read or replay, the first push), or failed: the server's thread is free
+   * again. The desktop app serves its pages from disk until then (electron/staticShell.cjs).
+   */
+  booted: Promise<void>;
   shutdown: () => Promise<void>;
   /** A backup is being written: Electron asks before an exit throws it away (backupService.ts). */
   backupRunning: () => boolean;
@@ -2315,6 +2320,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     readyResolve = res;
     readyReject = rej;
   });
+  let bootedResolve!: () => void;
+  const booted = new Promise<void>((res) => {
+    bootedResolve = res;
+  });
 
   /** Must await `listening` immediately — if it rejects before a consumer attaches, devEntry's
    * `unhandledRejection` handler exits the process and Electron shows nothing. */
@@ -2459,7 +2468,9 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         console.info(`Merged ${journalFilesMerged} journal log file(s) (oldest → newest), tailing latest.`);
       }
       scheduleWarmUp();
+      bootedResolve();
     } catch (e) {
+      bootedResolve();
       if (!listeningSettled) {
         readyReject(e);
       } else {
@@ -2520,6 +2531,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
 
   return {
     ready,
+    booted,
     shutdown,
     getLocalBaseUrl: () => `http://127.0.0.1:${port}`,
     openMainAppInBrowser: () => openUrlInBrowser(`http://127.0.0.1:${port}/`),
