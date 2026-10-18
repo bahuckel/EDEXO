@@ -466,6 +466,36 @@ export function MapOptionsModal({
               </InfoPopover>
             </div>
           </FoldPanel>
+          <FoldPanel
+            foldKey="options-developer"
+            defaultOpen={false}
+            className="options-meta-block"
+            title="Developer tools"
+            summary={snap.feederEnabled ? "Data feeder on" : "Off"}
+          >
+            <label className="options-oneline">
+              <input
+                type="checkbox"
+                checked={snap.feederEnabled === true}
+                onChange={(e) => {
+                  void fetch("/api/settings/feeder", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ value: e.target.checked }),
+                  }).catch(() => {});
+                }}
+              />{" "}
+              Data feeder
+              <InfoPopover title="Data feeder" label="What the data feeder is">
+                <p>
+                  The tool the species profiles are built with, from a corpus of sample packs that does not ship with the
+                  app. On: the menu&apos;s <strong>Data feeder</strong> entry (where this computer has a corpus) and the
+                  launcher&apos;s Spansh dump import. The profiles you predict with are already built in; most commanders
+                  never need this.
+                </p>
+              </InfoPopover>
+            </label>
+          </FoldPanel>
           <h4 className="options-group-head" title="What this install runs on, for a bug report">
             About
           </h4>
@@ -488,7 +518,8 @@ export function MapOptionsModal({
             </p>
             <p className="options-journal-line dim">Species DB: {snap.speciesCount}</p>
             <CopyDiagnostics />
-            <FeederCorpusSetting />
+            {/* The feeder's corpus folder: with the feeder (Developer tools), not asked for otherwise (1.2.20). */}
+            {snap.feederEnabled ? <FeederCorpusSetting /> : null}
           </details>
           <button type="button" className="btn-top-danger options-reset-exo" onClick={onResetExobiology}>
             Reset exobiology…

@@ -317,6 +317,7 @@ export function registerSettingsRoutes(
 
   /** The Data value window's "Selling at a fleet carrier (−25 %)" (owner, 2026-10-03). */
   boolSetting("/api/settings/fleet-carrier-sale", () => opts.setSellAtFleetCarrier);
+  boolSetting("/api/settings/feeder", () => opts.setFeederEnabled);
 
   /** ...and "My own carrier (−15 %)" under it (owner, 2026-10-04). */
   boolSetting("/api/settings/fleet-carrier-own", () => opts.setFleetCarrierIsOwn);

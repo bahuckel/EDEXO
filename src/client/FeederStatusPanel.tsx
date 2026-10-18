@@ -19,7 +19,7 @@ import { InfoPopover } from "./ui/Tooltip";
  * is why {@link useFeederStatus} exists separately: the toolbar has to know whether to show the
  * button *before* deciding to open anything.
  */
-export function useFeederStatus(): {
+export function useFeederStatus(enabled = true): {
   status: FeederStatusDTO | null;
   available: boolean;
   refresh: () => void;
@@ -41,6 +41,8 @@ export function useFeederStatus(): {
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 
   useEffect(() => {
+    // Off in Options (the default since 1.2.20): no request, no menu entry appearing a moment after the menu opens.
+    if (!enabled) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -62,9 +64,9 @@ export function useFeederStatus(): {
     return () => {
       cancelled = true;
     };
-  }, [nonce]);
+  }, [nonce, enabled]);
 
-  return { status, available: !failed && status?.available === true, refresh };
+  return { status, available: enabled && !failed && status?.available === true, refresh };
 }
 
 /**

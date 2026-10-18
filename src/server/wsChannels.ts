@@ -59,6 +59,8 @@ const HUD_KEYS = [
 /** What the launcher's `applyLauncherSnapshotData` reads; its live strip polls `/api/status` on its own. */
 const LAUNCHER_KEYS = [
   "port",
+  // The feeder's Spansh import in the Exomastery menu follows this (1.2.20); without it every push hid it again.
+  "feederEnabled",
   "journalBoot",
   "journalDir",
   "journalDirConfiguredOk",

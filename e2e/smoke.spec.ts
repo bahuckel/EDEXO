@@ -931,22 +931,32 @@ test("galaxy 3D: the plan chains the next targets, and a skipped stop leaves it"
   expect(errors).toEqual([]);
 });
 
-test("launcher: Import Spansh export lives in the Exomastery menu", async ({ page }) => {
+test("launcher: Import Spansh export lives in the Exomastery menu, behind the feeder option", async ({ page, request }) => {
   const errors = watchErrors(page);
   await page.addInitScript(() => localStorage.setItem("edexo.launcher.wizardDone", "1"));
-  await page.goto("/launcher.html");
-  await page.waitForTimeout(1500); // the tiles fade in
-  await page.screenshot({ path: `${OUT}/launcher-no-wizard.png`, fullPage: true });
-  // Its own launcher button is gone (owner, 2026-09-29) …
-  await expect(page.locator(".btn#btnImportDump")).toHaveCount(0);
-  // … and the menu item opens the same panel.
-  await page.locator("#btnExomasteryMenu").click();
-  const item = page.locator("#exomasteryMenu").getByRole("menuitem", { name: /Import Spansh export/ });
-  await expect(item).toBeVisible();
-  await page.locator("#exomasteryMenu").screenshot({ path: `${OUT}/launcher-exomastery-menu.png` });
-  await item.click();
-  await expect(page.locator("#importModal")).toHaveClass(/on/);
-  await expect(page.locator("#exomasteryMenu")).toBeHidden();
+  try {
+    await page.goto("/launcher.html");
+    await page.waitForTimeout(1500); // the tiles fade in
+    await page.screenshot({ path: `${OUT}/launcher-no-wizard.png`, fullPage: true });
+    // Its own launcher button is gone (owner, 2026-09-29) …
+    await expect(page.locator(".btn#btnImportDump")).toHaveCount(0);
+    const item = page.locator("#exomasteryMenu").getByRole("menuitem", { name: /Import Spansh export/ });
+    // … and the menu item is the feeder's, hidden until Options → Developer tools → Data feeder (owner, 2026-10-18).
+    await page.locator("#btnExomasteryMenu").click();
+    await expect(page.locator("#exomasteryMenu")).toBeVisible();
+    await expect(item).toBeHidden();
+    expect((await request.post("/api/settings/feeder", { data: { value: true } })).ok()).toBe(true);
+    await page.reload();
+    await page.waitForTimeout(1500);
+    await page.locator("#btnExomasteryMenu").click();
+    await expect(item).toBeVisible();
+    await page.locator("#exomasteryMenu").screenshot({ path: `${OUT}/launcher-exomastery-menu.png` });
+    await item.click();
+    await expect(page.locator("#importModal")).toHaveClass(/on/);
+    await expect(page.locator("#exomasteryMenu")).toBeHidden();
+  } finally {
+    await request.post("/api/settings/feeder", { data: { value: false } });
+  }
   expect(errors).toEqual([]);
 });
 

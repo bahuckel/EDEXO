@@ -193,7 +193,7 @@ game) or as pop-ups if Tab view is off.
   page cache** (faster revisits), **Remember passwords** (encrypted by the operating system, filled in on
   the site it was saved for, with an optional master password asked once per start). A start page with EDSM, EDAstro, Spansh, ED GGG, ED-DSN, Inara and your own links.
 - **Bookmarks** with tags, notes and distances; **Green gas giants** by CMDR Arcanic's cloud ladder;
-  **Data feeder** for your own Spansh Exomastery dumps; a **Session log**.
+  **Data feeder** for your own Spansh Exomastery dumps (Options → Developer tools, off by default); a **Session log**.
 
 ### Galaxy map
 

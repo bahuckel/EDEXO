@@ -19,6 +19,7 @@ export function persistUserPreferences(store: GameStateStore, file: string): voi
           includeExplorationScanDataInDataValue: store.includeExplorationScanDataInDataValue,
           pranavAntalBonus: store.pranavAntalBonus,
           sellAtFleetCarrier: store.sellAtFleetCarrier,
+          feederEnabled: store.feederEnabled,
           fleetCarrierIsOwn: store.fleetCarrierIsOwn,
           exoMapTierPlusMinCr: store.exoMapTierPlusMinCr,
           exoMapTierPlusPlusMinCr: store.exoMapTierPlusPlusMinCr,
@@ -53,6 +54,7 @@ export type PersistedUserPrefs = {
   includeExplorationScanDataInDataValue?: boolean;
   pranavAntalBonus?: boolean;
   sellAtFleetCarrier?: boolean;
+  feederEnabled?: boolean;
   fleetCarrierIsOwn?: boolean;
   exoMapTierPlusMinCr?: number;
   exoMapTierPlusPlusMinCr?: number;
@@ -89,6 +91,7 @@ export function applyPersistedUserPrefs(store: GameStateStore, j: PersistedUserP
   }
   if (typeof j.pranavAntalBonus === "boolean") store.setPranavAntalBonus(j.pranavAntalBonus);
   if (typeof j.sellAtFleetCarrier === "boolean") store.setSellAtFleetCarrier(j.sellAtFleetCarrier);
+  if (typeof j.feederEnabled === "boolean") store.setFeederEnabled(j.feederEnabled);
   if (typeof j.fleetCarrierIsOwn === "boolean") store.setFleetCarrierIsOwn(j.fleetCarrierIsOwn);
   if (typeof j.exoMapTierPlusMinCr === "number" && typeof j.exoMapTierPlusPlusMinCr === "number") {
     store.setExoMapTierThresholds(j.exoMapTierPlusMinCr, j.exoMapTierPlusPlusMinCr);

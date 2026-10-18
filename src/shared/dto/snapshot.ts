@@ -187,6 +187,8 @@ export interface AppSnapshot {
   pranavAntalBonus?: boolean;
   /** Exploration figures are after a fleet carrier's 25 % (Data value toggle). */
   sellAtFleetCarrier?: boolean;
+  /** Options → Developer tools → Data feeder (off by default, 1.2.20). */
+  feederEnabled?: boolean;
   /** ...and the carrier is the commander's own: 15 % instead of 25 % (Data value toggle). */
   fleetCarrierIsOwn?: boolean;
   /** Estimated CR from all merged `Scan` rows (MattG-style formulas; belts excluded). */

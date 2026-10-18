@@ -120,6 +120,8 @@ describe("socket channels: slim snapshots per client kind", () => {
     const out = slimSnapshotForChannel(snap(), "launcher") as unknown as Record<string, unknown>;
     expect(Object.keys(out).sort()).toEqual(
       [
+        // The feeder's Spansh import in the launcher's Exomastery menu follows it (1.2.20).
+        "feederEnabled",
         "journalBoot",
         "journalDir",
         "journalDirConfiguredOk",

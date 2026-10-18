@@ -133,6 +133,8 @@ export interface AppStatusDTO {
   lastJournalEventIso: string | null;
   commanderName: string | null;
   journalBoot: JournalBootProgressDTO | null;
+  /** The launcher hides the feeder's Spansh dump import unless this is on (1.2.20). */
+  feederEnabled?: boolean;
   /**
    * The launcher's live strip, cheap store reads only (no snapshot rebuild): where the commander
    * is and what is unsold. All optional so older status payloads still parse.

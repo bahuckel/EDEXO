@@ -22,7 +22,7 @@ import {
 } from "./ui/icons";
 import { useValueFlash } from "./ui/useValueFlash";
 import { fmtCrExact, fmtCrShort, fmtLy } from "@shared/format";
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, ReactNode } from "react";
+import { lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, ReactNode } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useFdevServerStatus } from "./useFdevServerStatus";
 import type { EncyclopediaSpawnCompare } from "./EncyclopediaModal";
@@ -393,7 +393,7 @@ export const HeaderBar = memo(function HeaderBar({
    * §11.3. The button appears only when this machine actually has a corpus — otherwise it would
    * open an empty modal for every normal install. One fetch, shared with the panel.
    */
-  const feeder = useFeederStatus();
+  const feeder = useFeederStatus(snap.feederEnabled === true);
   // Tab view (tabs/tabStore.ts): these screens open as tabs when it is on, as pop-ups when it is off.
   const [myExoOpen, setMyExoOpen] = useScreenOpen("myExo");
   const [encyclopediaOpen, setEncyclopediaOpen] = useScreenOpen("encyclopedia");
@@ -482,7 +482,8 @@ export const HeaderBar = memo(function HeaderBar({
   useEffect(() => prefetchMenuModals(), []);
   /** Which way the menu opens; the rule is shared with the alerts popover. */
   const [menuSide, setMenuSide] = useState<PopoverSide>("left");
-  useEffect(() => {
+  // Before paint: measured after it, the first frame drew the menu on the old side and it jumped (1.2.20).
+  useLayoutEffect(() => {
     if (!menuOpen) return;
     const wrap = menuRef.current;
     setMenuSide(measurePopoverSide(wrap, wrap?.querySelector<HTMLElement>(".appbar-menu"), 240));

@@ -483,6 +483,10 @@
     splash.style.display = "none";
     main.classList.add("ready");
 
+    // The feeder's Spansh dump import: Options → Developer tools in the app (off by default since 1.2.20).
+    const importDump = document.getElementById("btnImportDump");
+    if (importDump && "feederEnabled" in data) importDump.hidden = data.feederEnabled !== true;
+
     const dirOk = data.journalDirConfiguredOk === true;
     const hasJournal = data.journalFileCount > 0;
     const good = dirOk && wsOk;

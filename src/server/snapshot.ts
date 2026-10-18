@@ -1680,6 +1680,7 @@ export function buildSnapshot(
     pranavAntalBonus: store.pranavAntalBonus,
     sellAtFleetCarrier: store.sellAtFleetCarrier,
     fleetCarrierIsOwn: store.fleetCarrierIsOwn,
+    feederEnabled: store.feederEnabled,
     explorationScanDataValueCredits,
     explorationFssScanCount: exploreBreakdown.fssScanCount,
     onSiteTiming: timingFromSamples(store.landingMinutesSamples, store.samplingMinutesSamples),

@@ -1071,6 +1071,12 @@ export class GameStateStore {
    */
   sellAtFleetCarrier = false;
   /**
+   * The data feeder's entries (the app menu's Data feeder, the launcher's Spansh dump import): off by default (owner,
+   * 2026-10-18: "the feeder is no longer needed… hide it in the options, disabled by default"). A developer tool;
+   * the profiles ship built.
+   */
+  feederEnabled = false;
+  /**
    * The carrier is the commander's own: of the 25 % the sale keeps, 10 % goes into the carrier's bank,
    * which he can take back, so his real cost is 15 % (owner, 2026-10-04).
    */
@@ -1250,6 +1256,10 @@ export class GameStateStore {
 
   setSellAtFleetCarrier(value: boolean): void {
     this.sellAtFleetCarrier = value;
+  }
+
+  setFeederEnabled(value: boolean): void {
+    this.feederEnabled = value;
   }
 
   setFleetCarrierIsOwn(value: boolean): void {

@@ -897,6 +897,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       pollRates: pollRatesDto(store.statusPollMs, store.journalPollMs),
       radarRadius: radarRadiusDto(store.minimapRadiusM),
       live: organicLiveSummary(store),
+      feederEnabled: store.feederEnabled,
     };
   };
 
@@ -2019,6 +2020,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     },
     setSellAtFleetCarrier: (v) => {
       store.setSellAtFleetCarrier(v);
+      persistUserPreferences();
+    },
+    setFeederEnabled: (v) => {
+      store.setFeederEnabled(v);
       persistUserPreferences();
     },
     setFleetCarrierIsOwn: (v) => {
