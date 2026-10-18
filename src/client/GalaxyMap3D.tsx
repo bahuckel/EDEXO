@@ -48,6 +48,8 @@ import {
 } from "./ExpeditionDrawer";
 import { NeutronDrawer } from "./NeutronDrawer";
 import { JumponiumDrawer, jumpLine, type JumpRow } from "./galaxy3d/JumponiumDrawer";
+import { FinderDrawer, FinderHitCard } from "./galaxy3d/FinderDrawer";
+import type { FinderHit, FinderResult } from "@shared/finder";
 import { StationNames, StationsList } from "./galaxy3d/StationsAt";
 import { STATIONS_CHANGED_EVENT, StationsPanel } from "./StationsPanel";
 import { clearStationsAtCache } from "./galaxy3d/StationsAt";
@@ -104,7 +106,8 @@ type Drawer =
   | "expedition"
   | "neutron"
   | "stations"
-  | "jumponium";
+  | "jumponium"
+  | "finder";
 /** A Spansh name hit with its coordinates (`/api/system/spansh-search`). */
 type SpanshFindHit = { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number };
 type MineRow = GalaxyMineDTO["systems"][number];
@@ -177,6 +180,18 @@ export function GalaxyMap3D() {
   // The picked one is kept apart, so its card stays when the list changes or the tab closes (review 1.2.16).
   const [jumpPicked, setJumpPicked] = useState<JumpRow | null>(null);
   const jumpById = useMemo(() => new Map(jumpRows.map((r) => [r.id, r])), [jumpRows]);
+  // The Find systems tab's hits and the references they were measured from (plan-finder-1.2.20), drawn while open;
+  // the picked hit kept apart like the Laboratory's, so its card outlives the list.
+  const [finderHits, setFinderHits] = useState<FinderHit[]>([]);
+  const [finderRefs, setFinderRefs] = useState<FinderResult["references"]>([]);
+  const [finderPicked, setFinderPicked] = useState<FinderHit | null>(null);
+  const finderById = useMemo(() => new Map(finderHits.map((h) => [h.id64, h])), [finderHits]);
+  const onFinderHits = useCallback((hits: FinderHit[], refs: FinderResult["references"]) => {
+    setFinderHits(hits);
+    setFinderRefs(refs);
+  }, []);
+  // "A system" in the finder: the one selected on the map, named when the map can name it.
+  const [finderAround, setFinderAround] = useState<{ name: string; x: number; y: number; z: number } | null>(null);
   const expByKey = useMemo(() => new Map((expField?.boxels ?? []).map((b) => [b.key, b])), [expField]);
   const [mine, setMine] = useState<Map<string, MineRow>>(new Map());
   const [route, setRoute] = useState<GalaxyRouteDTO | null>(null);
@@ -764,6 +779,61 @@ export function GalaxyMap3D() {
     );
     e.setMarkerLayerVisible("jumponium", drawer === "jumponium");
   }, [jumpRows, drawer, stats?.phase]);
+
+  // The Find systems tab: hits in teal (fully scanned brighter), the references they are measured from in gold.
+  useEffect(() => {
+    const e = engine.current;
+    if (!e) return;
+    const on = drawer === "finder";
+    e.setMarkers(
+      "finder",
+      on
+        ? finderHits.map((h) => ({
+            id: h.id64,
+            x: h.x,
+            y: h.y,
+            z: h.z,
+            color: h.fullyScanned ? [0.35, 1, 0.85] : [0.25, 0.8, 0.7],
+            size: 7,
+          }))
+        : [],
+      2,
+    );
+    e.setMarkers(
+      "finder-ref",
+      on ? finderRefs.slice(0, 2000).map((r, i) => ({ id: `ref${i}`, x: r.x, y: r.y, z: r.z, color: [1, 0.78, 0.3], size: 5 })) : [],
+      1,
+    );
+    e.setMarkerLayerVisible("finder", on);
+    e.setMarkerLayerVisible("finder-ref", on);
+  }, [finderHits, finderRefs, drawer, stats?.phase]);
+
+  // What "A system" in the finder searches round: the selection, named by the map when it can.
+  useEffect(() => {
+    if (drawer !== "finder" || !selection || selection.kind === "sector") return;
+    const at = { x: selection.x, y: selection.y, z: selection.z };
+    if (selection.kind === "marker" && selection.layer === "finder") {
+      const h = finderById.get(selection.id) ?? finderPicked;
+      if (h) setFinderAround({ name: h.name, ...at });
+      return;
+    }
+    if (selection.kind !== "index") {
+      setFinderAround({ name: "Selected point", ...at });
+      return;
+    }
+    let alive = true;
+    void fetch(`/api/galaxy/system?i=${selection.ordinal}`)
+      .then((r) => (r.ok ? (r.json() as Promise<{ name?: string }>) : null))
+      .then((d) => {
+        if (alive) setFinderAround({ name: d?.name || "Selected system", ...at });
+      })
+      .catch(() => {
+        if (alive) setFinderAround({ name: "Selected system", ...at });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [selection, drawer, finderById, finderPicked]);
 
   // The commander's layer, with the "waiting at least" threshold: below it a waiting system is grey.
   const waitMinCr = waitMinM * 1_000_000;
@@ -1442,6 +1512,10 @@ export function GalaxyMap3D() {
         </div>
       ) : null;
     }
+    if (selection.layer === "finder") {
+      const h = finderById.get(selection.id) ?? (finderPicked?.id64 === selection.id ? finderPicked : null);
+      return h ? <FinderHitCard h={h} ship={route?.position ?? null} /> : null;
+    }
     if (selection.layer === "expedition") {
       const b = expByKey.get(selection.id);
       return b ? (
@@ -2103,6 +2177,19 @@ export function GalaxyMap3D() {
             const at = { x: r.x, y: r.y, z: r.z };
             engine.current?.flyTo(at, 300);
             engine.current?.select({ kind: "marker", layer: "jumponium", id: r.id, ...at });
+          }}
+        />
+      ) : null}
+
+      {drawer === "finder" ? (
+        <FinderDrawer
+          picked={finderAround}
+          onHits={onFinderHits}
+          onPick={(h) => {
+            setFinderPicked(h);
+            const at = { x: h.x, y: h.y, z: h.z };
+            engine.current?.flyTo(at, 250);
+            engine.current?.select({ kind: "marker", layer: "finder", id: h.id64, ...at });
           }}
         />
       ) : null}

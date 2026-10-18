@@ -160,6 +160,10 @@ export function registerGalaxyRoutes(
     "/my-sectors",
     "/layers",
     "/own",
+    // The system finder reads its own file (finderRoutes.ts), not the bio index.
+    "/finder",
+    "/finder/status",
+    "/finder/download",
   ]);
   /*
     These read only the journal store or the download's status, so they do not keep the map's memory
@@ -167,7 +171,17 @@ export function registerGalaxyRoutes(
     and nothing was ever let go while a map tab was open, in front or not. /mine/system (the bio index)
     reads a registered cache and touches it; /layers is registered above and touches it itself.
   */
-  const JOURNAL_ONLY = new Set(["/index", "/index/download", "/route", "/visited", "/mine", "/my-sectors", "/own"]);
+  const JOURNAL_ONLY = new Set([
+    "/index",
+    "/index/download",
+    "/route",
+    "/visited",
+    "/mine",
+    "/my-sectors",
+    "/own",
+    "/finder/status",
+    "/finder/download",
+  ]);
   app.use("/api/galaxy", (req, _res, next) => {
     if (!JOURNAL_ONLY.has(req.path)) touchGalaxyMemory();
     if (NO_INDEX.has(req.path)) return next();

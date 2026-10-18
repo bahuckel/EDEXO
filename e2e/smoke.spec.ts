@@ -402,6 +402,64 @@ test("galaxy 3D: the game-style menus open and close, each with its help, and th
 });
 
 /*
+  The system finder (plan-finder-1.2.20, owner 2026-10-19): a finder file in the test profile, then the API's answer
+  and the drawer — round a system typed by name, at least one Earth-like world, the colonised left out; a row shows
+  the system's card.
+*/
+test("galaxy 3D: Find systems lists the systems round a picked one and shows a hit's card", async ({ page, request }) => {
+  const errors = watchErrors(page);
+  const dir = path.join(tmpdir(), "edexo-e2e-profile", "galaxy");
+  const file = path.join(dir, "finder.bin");
+  mkdirSync(dir, { recursive: true });
+  const { writeFinder } = await import("../tests/helpers/finderFixture.js");
+  const F = { populated: 1, colonised: 2, fullyScanned: 16 };
+  writeFinder(file, [
+    { id: 101n, name: "E2E Anchor", x: 0, y: 0, z: 0, listed: 3, u8: { planets: 2, stars: 1, flags: F.populated | F.colonised } },
+    { id: 102n, name: "E2E Near ELW", x: 12, y: 1, z: -3, listed: 7, bodyCount: 7, u8: { elw: 1, planets: 6, stars: 1, landable: 3, bio: 1, flags: F.fullyScanned, mainStar: 4 }, starMask: 1 << 4 },
+    { id: 103n, name: "E2E Taken ELW", x: 20, y: 0, z: 0, listed: 5, u8: { elw: 1, planets: 4, stars: 1, flags: F.populated | F.colonised } },
+    { id: 104n, name: "E2E Rocky Only", x: 8, y: 0, z: 2, listed: 4, u8: { rocky: 3, planets: 3, stars: 1 } },
+  ]);
+  try {
+    const api = await request.post("/api/galaxy/finder", {
+      data: { reference: "picked", picked: "E2E Anchor", radiusLy: 50, min: { elw: 1 } },
+    });
+    const j = (await api.json()) as { hits: { name: string; distLy: number }[]; problem: string | null };
+    expect(j.problem).toBeNull();
+    expect(j.hits.map((h) => h.name)).toEqual(["E2E Near ELW"]);
+
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.addInitScript(() => {
+      localStorage.setItem("edexo.filters.galaxy.finder.ref", JSON.stringify("picked"));
+      localStorage.setItem("edexo.filters.galaxy.finder.radius", JSON.stringify(50));
+      localStorage.setItem("edexo.filters.galaxy.finder.min", JSON.stringify({ elw: 1 }));
+    });
+    await page.goto("/?screen=galaxy");
+    type G = { stats: () => { phase: string } };
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __galaxy?: G }).__galaxy?.stats().phase), { timeout: 60_000 })
+      .toBe("ready");
+    await page.getByRole("button", { name: "Find systems", exact: true }).click();
+    const drawer = page.getByTestId("g3d-finder");
+    await drawer.getByLabel("System to search around").fill("E2E Anchor");
+    const row = drawer.locator("tr.is-pickable").filter({ hasText: "E2E Near ELW" });
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await expect(drawer.locator("tr.is-pickable")).toHaveCount(1);
+    await expect(drawer).toContainText("1 system match");
+    await page.screenshot({ path: `${OUT}/galaxy-3d-finder.png` });
+    await row.click();
+    await expect(page.locator(".finder-card")).toContainText("E2E Near ELW");
+    await expect(page.locator(".finder-card")).toContainText("Earth-like world");
+    expect(errors).toEqual([]);
+  } finally {
+    try {
+      rmSync(file, { force: true });
+    } catch {
+      /* the server still has it open (Windows); the profile is a temp folder */
+    }
+  }
+});
+
+/*
   Code review, 2026-10-14: a tab stays mounted behind the others with document.hidden false, and the map's
   route and own-assets polls went on there, keeping the server's map memory from ever being let go.
 */

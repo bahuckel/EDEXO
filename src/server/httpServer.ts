@@ -73,6 +73,7 @@ import { registerSpeciesFilesRoutes } from "./routes/speciesFilesRoutes.js";
 import { registerGalaxyRoutes } from "./routes/galaxyRoutes.js";
 import { registerExpeditionRoutes } from "./routes/expeditionRoutes.js";
 import { registerNeutronRoutes } from "./routes/neutronRoutes.js";
+import { registerFinderRoutes } from "./routes/finderRoutes.js";
 import { registerCarriersPoiRoutes } from "./routes/carriersPoiRoutes.js";
 import { registerJumponiumRoutes } from "./routes/jumponiumRoutes.js";
 import { registerServerStatusRoutes } from "./routes/serverStatusRoutes.js";
@@ -516,6 +517,7 @@ export function createHttpServer(opts: HttpServerOptions): {
   registerGalaxyRoutes(app, opts, routeCtx);
   registerExpeditionRoutes(app, opts, routeCtx);
   registerNeutronRoutes(app, opts, routeCtx);
+  registerFinderRoutes(app, opts, routeCtx);
 
   /**
    * Where the commander is (§10.3).

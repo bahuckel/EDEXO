@@ -1685,3 +1685,133 @@
     transition: none;
   }
 }
+
+/* ---- Find systems (galaxy3d/FinderDrawer.tsx, plan-finder-1.2.20) --------------------------------------- */
+.g3d-finder-drawer .fdb-scroll {
+  max-height: 45vh;
+}
+.g3d-finder-drawer .carriers-table tr.is-pickable {
+  cursor: pointer;
+}
+.g3d-finder-drawer .carriers-table tr.is-pickable:hover td {
+  background: var(--accent-a12);
+}
+.finder-picked__input {
+  width: 100%;
+}
+.finder-radius {
+  align-items: center;
+}
+.finder-radius__range {
+  flex: 1 1 auto;
+  min-width: 8rem;
+}
+.finder-radius__value {
+  min-width: 4.5ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-bright);
+  font-weight: 700;
+}
+.finder-group {
+  margin: 6px 0 0;
+  border-top: 1px solid var(--accent-a12);
+}
+.finder-group__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 2px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.finder-group__head:hover {
+  color: var(--accent-bright);
+}
+.finder-group__count {
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--accent-a35);
+  color: var(--accent-bright);
+  letter-spacing: 0;
+}
+.finder-group__chev {
+  margin-left: auto;
+}
+.finder-steppers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 3px 10px;
+  padding: 2px 0 6px;
+}
+.finder-stepper {
+  display: grid;
+  grid-template-columns: 1fr auto 3.6ch auto;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.finder-stepper.is-on {
+  color: var(--text);
+}
+.finder-stepper.is-on .finder-stepper__value {
+  color: var(--accent-bright);
+  font-weight: 700;
+}
+.finder-stepper button {
+  width: 1.6rem;
+  height: 1.4rem;
+  padding: 0;
+  border: 1px solid var(--accent-a35);
+  background: rgba(5, 4, 10, 0.6);
+  color: var(--accent);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+.finder-stepper button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-bright);
+}
+.finder-stepper button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.finder-stepper__value {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.finder-summary {
+  margin: 8px 0 4px;
+}
+.finder-counts {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+.finder-card__counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 12px;
+  margin: 6px 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+}
+.finder-card__counts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.finder-card__counts b {
+  color: var(--accent-bright);
+  font-variant-numeric: tabular-nums;
+}

@@ -5,7 +5,7 @@
  * itself on hover, and each menu has a [?] for the longer story.
  */
 import type { ReactNode } from "react";
-import { BookOpen, Compass, Crosshair, Eye, Filter, FlaskConical, Layers, Route, Search, type LucideIcon } from "lucide-react";
+import { BookOpen, Compass, Crosshair, Eye, Filter, FlaskConical, Layers, Route, ScanSearch, Search, type LucideIcon } from "lucide-react";
 import { InfoPopover, Tooltip } from "../ui/Tooltip";
 
 export type G3dTabKey =
@@ -19,7 +19,8 @@ export type G3dTabKey =
   | "expedition"
   | "neutron"
   | "stations"
-  | "jumponium";
+  | "jumponium"
+  | "finder";
 
 export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
   { key: "view", label: "View", hint: "View: camera, follow your ship, colours, brightness" },
@@ -65,6 +66,11 @@ export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
     hint: "Stations: the nearest station with the services you pick (repair, refuel, Vista Genomics…), shown on the map",
   },
   {
+    key: "finder",
+    label: "Find systems",
+    hint: "Find systems: round your colonies, a system you pick or every colonised one — by the bodies they have, without the systems already taken",
+  },
+  {
     key: "jumponium",
     label: "Laboratory",
     hint: "Laboratory: the jumponium and AFM refill materials you hold, what they make, and the nearest bodies rich in the ones you pick, shown on the map",
@@ -72,6 +78,11 @@ export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
 ];
 
 export const G3D_HELP: Record<G3dTabKey, string[]> = {
+  finder: [
+    "Systems within the distance you set of a reference: your colonised systems (from your journals), a system you select on the map or type, or every colonised system in the galaxy. The distance runs from 15 to 150 ly in steps of 5; each system is measured from the nearest reference.",
+    "Every filter is a floor — at least this many of a body type, ringed, landable or terraformable bodies, bodies with biology or geology signals (any species: the signal is what counts) — and the stars: the main star's class, or a black hole, neutron star, white dwarf or giant anywhere in it. Hide colonised leaves out every system someone colonised or claimed, Frontier's own inhabited systems, and your own colonies.",
+    "The data is a download of its own: the systems within 150 ly of inhabited space, from Spansh's dump. The counts are the bodies Spansh lists, so a system may hold more than it shows; Fully scanned only keeps the systems whose every body is listed. Colonisation is as of the data's date: a system claimed since may still show.",
+  ],
   jumponium: [
     "Two tabs: Jumponium, the FSD injection materials (Basic +25 %, Standard +50 %, Premium +100 % jump range for one jump), and AFM Refill, the materials that refill an AFMU (Standard and Premium repair faster). Each shows what you hold (from your journals: the game writes the list at every login, the app follows each pick-up, trade and synthesis after it) and how many of each tier that makes.",
     "Below, the nearest landable bodies with the elements you pick. Rich is the top tenth of landable bodies for an element, Top 1 % the best hundredth. Carbon, nickel, chromium and manganese are on most bodies and are not listed. No body carries all five premium jumponium elements: premium always takes two or more bodies.",
@@ -199,6 +210,7 @@ const LUCIDE_TABS: Partial<Record<G3dTabKey, LucideIcon>> = {
   targets: Crosshair,
   expedition: Compass,
   jumponium: FlaskConical,
+  finder: ScanSearch,
 };
 
 export function G3dIcon({ name }: { name: G3dTabKey }) {

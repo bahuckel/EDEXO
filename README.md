@@ -211,6 +211,12 @@ game) or as pop-ups if Tab view is off.
   the nearest landable bodies rich in the elements you pick — any or all of them, rich or the top 1 %, by
   gravity and distance from arrival — from your own scans and the galaxy's top 1 % of landable bodies for each
   of thirteen elements.
+- **Find systems** tab: the systems within 15 to 150 ly of your colonies, of a system you pick or of every
+  colonised system, by what their bodies are — at least so many Earth-like, water or ammonia worlds, gas giants of
+  each class, rocky or icy bodies, ringed, landable (with or without atmosphere) or terraformable bodies, bodies with
+  biology or geology signals — and by the main star or a black hole, neutron star, white dwarf or giant in it.
+  Systems already colonised or claimed are left out; nearest first or most bodies first. Its data is a download of
+  its own: every system within 150 ly of inhabited space, from Spansh's dump.
 - **Neutron** tab: a route through two or more stops by supercharged jumps from neutron star to
   neutron star, with refuel stops at a scoopable star near one, the order optimised if you want, and
   FSD wear per hop learned for each ship. **Fly this route** puts the next stop on the clipboard after
