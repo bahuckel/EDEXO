@@ -42,7 +42,9 @@ describe("the observed-host-star term", () => {
   it("still has something to say about these species on their own", () => {
     // Classes no confirmed body has either (data/exomastery/host-star-seen.json, 2026-10-05: digitos
     // has 34 confirmed bodies round Y dwarfs and biconcavis 4 round A stars, which the profiles missed).
-    expect(hostStarVerdict(species("concha_concha_biconcavis"), "D").kind).toBe("never");
+    // (Biconcavis round D was the first example until 1.2.20 rebuilt its profile from the EDDN year: 559 bodies
+    // round B to Y hosts, so the host star no longer decides where it grows and "never" is withdrawn.)
+    expect(hostStarVerdict(species("stratum_stratum_laminamus"), "B").kind).toBe("never");
     expect(hostStarVerdict(species("fonticulua_fonticulua_digitos"), "B").kind).toBe("never");
     expect(hostStarVerdict(species("fonticulua_fonticulua_digitos"), "Y").kind).toBe("observed");
     expect(hostStarVerdict(species("fonticulua_fonticulua_digitos"), "K").kind).toBe("observed");
