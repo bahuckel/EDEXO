@@ -1235,9 +1235,6 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     },
   });
 
-  // The EDDN collector's codex ledger, when one runs on this machine: fresher [CODEX FIRST] (eddnLedger.ts).
-  startEddnLedgerWatch(getProjectRoot());
-
   /**
    * Contributing discoveries back to Canonn, when the commander has asked for it.
    *
@@ -2324,6 +2321,9 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   const booted = new Promise<void>((res) => {
     bootedResolve = res;
   });
+  // The EDDN collector's codex ledger, when one runs on this machine: fresher [CODEX FIRST] (eddnLedger.ts). After
+  // the journal boot: its first answer is the whole export (43 MB on the owner's PC).
+  startEddnLedgerWatch(getProjectRoot(), booted);
 
   /** Must await `listening` immediately — if it rejects before a consumer attaches, devEntry's
    * `unhandledRejection` handler exits the process and Electron shows nothing. */

@@ -36,21 +36,86 @@ export function ledgerTokenToCodexId(token: string): string {
     .replace(/_name;?$/, "");
 }
 
+/** One string field of a ledger row, unescaped only when it has to be. */
+function field(line: string, re: RegExp): string | null {
+  const m = re.exec(line);
+  if (!m) return null;
+  const raw = m[1]!;
+  if (!raw.includes("\\")) return raw;
+  try {
+    return JSON.parse(`"${raw}"`) as string;
+  } catch {
+    return null;
+  }
+}
+const TOKEN = /"token":"((?:[^"\\]|\\.)*)"/;
+const REGION = /"region":"((?:[^"\\]|\\.)*)"/;
+const CATEGORY = /"category":"((?:[^"\\]|\\.)*)"/;
+/**
+ * Add the plant rows of some whole JSONL lines to `out` as `region|codexId` keys.
+ *
+ * The owner's collector answers with 43 MB and 85,000 rows. Read whole with `text()`, split into lines and parsed
+ * row by row on the server's thread, that was 2.5 s of buffer copying and a 2.3 s garbage-collection stall
+ * (2026-10-19, measured in the desktop app: the launcher's first data waited for it). Lines are walked in place,
+ * rows that are not biology are skipped before anything is built, and only the three fields are read.
+ */
+function addLedgerKeys(text: string, out: Set<string>): void {
+  let at = 0;
+  while (at < text.length) {
+    let end = text.indexOf("\n", at);
+    if (end < 0) end = text.length;
+    if (text.startsWith('{"kind":"codex"', at)) {
+      const line = text.slice(at, end);
+      const category = field(line, CATEGORY);
+      if (category && /biolog/i.test(category)) {
+        const token = field(line, TOKEN);
+        const region = field(line, REGION);
+        if (token && region) out.add(`${regionJoinKey(region)}|${ledgerTokenToCodexId(token)}`);
+      }
+    }
+    at = end + 1;
+  }
+}
+
 /** The ledger's JSONL as `region|codexId` keys for its plant rows. */
 export function parseLedger(text: string): Set<string> {
   const out = new Set<string>();
-  for (const line of text.split("\n")) {
-    if (!line.startsWith('{"kind":"codex"')) continue;
-    let r: { token?: string; region?: string; category?: string };
-    try {
-      r = JSON.parse(line) as typeof r;
-    } catch {
-      continue;
-    }
-    if (!r.token || !r.region || !/biolog/i.test(r.category ?? "")) continue;
-    out.add(`${regionJoinKey(r.region)}|${ledgerTokenToCodexId(r.token)}`);
-  }
+  addLedgerKeys(text, out);
   return out;
+}
+
+const MANIFEST = '{"kind":"manifest"';
+
+function parseLedgerChecked(text: string): Set<string> {
+  if (!text.startsWith(MANIFEST)) throw new Error("not a codex ledger");
+  return parseLedger(text);
+}
+
+/**
+ * Read the ledger as it streams in, one network chunk at a time: no 43 MB string, and the thread is handed back
+ * between chunks. Throws when the answer does not start with the ledger's manifest.
+ */
+async function readLedgerStream(body: ReadableStream<Uint8Array>): Promise<Set<string>> {
+  const out = new Set<string>();
+  const reader = body.getReader();
+  const dec = new TextDecoder();
+  let rest = "";
+  let checked = false;
+  for (;;) {
+    const { done, value } = await reader.read();
+    const text = rest + (done ? dec.decode() : dec.decode(value, { stream: true }));
+    if (!checked && (done || text.length >= MANIFEST.length)) {
+      if (!text.startsWith(MANIFEST)) {
+        await reader.cancel().catch(() => {});
+        throw new Error("not a codex ledger");
+      }
+      checked = true;
+    }
+    const cut = done ? text.length : text.lastIndexOf("\n") + 1;
+    addLedgerKeys(text.slice(0, cut), out);
+    rest = text.slice(cut);
+    if (done) return out;
+  }
 }
 
 /**
@@ -66,11 +131,20 @@ export async function refreshEddnLedger(
   const checkedAt = new Date().toISOString();
   try {
     const url = `${base}/api/export/codex${since ? `?since=${encodeURIComponent(since)}` : ""}`;
-    const r = await fetchImpl(url, { signal: AbortSignal.timeout(4000) });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const text = await r.text();
-    if (!text.startsWith('{"kind":"manifest"')) throw new Error("not a codex ledger");
-    const ids = parseLedger(text);
+    // 4 s for the collector to answer at all; the body itself (tens of MB) gets a minute.
+    const ctl = new AbortController();
+    const answerTimer = setTimeout(() => ctl.abort(), 4000);
+    const bodyTimer = setTimeout(() => ctl.abort(), 60_000);
+    let ids: Set<string>;
+    try {
+      const r = await fetchImpl(url, { signal: ctl.signal });
+      clearTimeout(answerTimer);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      ids = r.body ? await readLedgerStream(r.body) : parseLedgerChecked(await r.text());
+    } finally {
+      clearTimeout(answerTimer);
+      clearTimeout(bodyTimer);
+    }
     setEddnLedgerIds(ids);
     status = { found: true, plantRows: ids.size, since, checkedAt };
   } catch {
@@ -80,10 +154,23 @@ export async function refreshEddnLedger(
   return status;
 }
 
-/** Check now and every half hour; the timer never keeps the process alive. */
-export function startEddnLedgerWatch(projectRoot: string): () => void {
-  void refreshEddnLedger(projectRoot);
-  const t = setInterval(() => void refreshEddnLedger(projectRoot), 30 * 60 * 1000);
-  if (typeof t.unref === "function") t.unref();
-  return () => clearInterval(t);
+/**
+ * Check once `after` settles (the journal boot: the first check downloads the whole export, and the boot is what
+ * every window is waiting for), then every half hour; the timer never keeps the process alive.
+ */
+export function startEddnLedgerWatch(projectRoot: string, after: Promise<unknown> = Promise.resolve()): () => void {
+  let stopped = false;
+  let t: ReturnType<typeof setInterval> | null = null;
+  void after
+    .catch(() => {})
+    .then(() => {
+      if (stopped) return;
+      void refreshEddnLedger(projectRoot);
+      t = setInterval(() => void refreshEddnLedger(projectRoot), 30 * 60 * 1000);
+      if (typeof t.unref === "function") t.unref();
+    });
+  return () => {
+    stopped = true;
+    if (t) clearInterval(t);
+  };
 }
