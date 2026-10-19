@@ -3,12 +3,12 @@
  * docs/perf/build_finder.py writes) and the search — radius from the nearest reference, every filter a floor,
  * the colonised and claimed hidden, sorting, the limit, the time budget.
  */
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { FINDER_FLAG, normaliseFinderQuery, type FinderQuery } from "../src/shared/finder.js";
-import { FinderIndex } from "../src/server/finderIndex.js";
+import { FinderIndex, clearFinderIndex, downloadFinder, finderStatus, loadFinderIndex } from "../src/server/finderIndex.js";
 import { RefGrid, colonisedRefs, findInFinder, searchFinder } from "../src/server/finderSearch.js";
 import { writeFinder, type Sys } from "./helpers/finderFixture.js";
 
@@ -153,6 +153,41 @@ describe("searchFinder", () => {
     const many = Array.from({ length: 300 }, (_, i) => ({ name: `r${i}`, x: 5000 + i, y: 0, z: 0 }));
     const r = await searchFinder(index, q({ min: { elw: 1 } }), [...many, ...home], fast);
     expect(r.hits.map((h) => h.name)).toEqual(["Near ELW", "Far ELW"]);
+  });
+});
+
+describe("downloadFinder", () => {
+  it("replaces a finder file the server has open (an update), and refuses one that is not a finder file", async () => {
+    const before = process.env.EDEXO_USER_DATA_DIR;
+    const ud = mkdtempSync(path.join(tmpdir(), "edexo-finder-ud-"));
+    process.env.EDEXO_USER_DATA_DIR = ud;
+    try {
+      const dirG = path.join(ud, "galaxy");
+      mkdirSync(dirG, { recursive: true });
+      writeFinder(path.join(dirG, "finder.bin"), SYSTEMS.slice(0, 3));
+      const old = loadFinderIndex()!;
+      expect(old.meta.count).toBe(3);
+      await old.block(0); // the shared handle is open now
+
+      const next = path.join(dir, "next.bin");
+      writeFinder(next, SYSTEMS);
+      const bytes = readFileSync(next);
+      const fake = (async () => new Response(bytes, { headers: { "content-length": String(bytes.length) } })) as unknown as typeof fetch;
+      await downloadFinder(() => {}, fake);
+      expect(finderStatus().error).toBeNull();
+      expect(finderStatus().bytes).toBe(bytes.length);
+      expect(loadFinderIndex()!.meta.count).toBe(SYSTEMS.length);
+
+      const junk = (async () => new Response("not a finder file")) as unknown as typeof fetch;
+      await downloadFinder(() => {}, junk);
+      expect(finderStatus().error).toMatch(/not a finder file/);
+      expect(loadFinderIndex()!.meta.count).toBe(SYSTEMS.length); // the good one stays
+    } finally {
+      await clearFinderIndex();
+      if (before === undefined) delete process.env.EDEXO_USER_DATA_DIR;
+      else process.env.EDEXO_USER_DATA_DIR = before;
+      rmSync(ud, { recursive: true, force: true });
+    }
   });
 });
 

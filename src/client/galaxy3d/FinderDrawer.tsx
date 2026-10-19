@@ -166,7 +166,7 @@ export function FinderDrawer({
       ctl.abort();
       window.clearTimeout(t);
     };
-  }, [key, status?.present]);
+  }, [key, status?.present, status?.bytes]);
 
   const hits = useMemo(() => result?.hits ?? [], [result]);
   useEffect(() => onHits(hits, result?.references ?? []), [hits, result, onHits]);
@@ -236,6 +236,24 @@ export function FinderDrawer({
 
       {status?.present ? (
         <div className="g3d-menu__section g3d-menu__section--first">
+          {status.release && status.bytes != null && status.release.bytes !== status.bytes ? (
+            <div className="carriers-fetch finder-update">
+              <button
+                type="button"
+                className="fdb-chip fdb-chip--on"
+                onClick={() => void download()}
+                disabled={downloading}
+                title="A newer build of the finder data is on the release"
+              >
+                {downloading
+                  ? dl?.total
+                    ? `Updating… ${Math.round((100 * dl.done) / dl.total)} %`
+                    : "Updating…"
+                  : `Update the finder data (${MB(status.release.bytes)}${status.release.dump ? `, ${status.release.dump.slice(0, 10)}` : ""})`}
+              </button>
+              {error ? <span className="dim">{error}</span> : null}
+            </div>
+          ) : null}
           <div className="stations-filters">
             <div className="stations-filters__group">
               <span className="stations-filters__label">Around</span>
