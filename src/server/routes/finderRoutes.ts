@@ -87,6 +87,7 @@ export function registerFinderRoutes(app: express.Express, opts: HttpServerOptio
     if (!index) return void res.json(empty("no-data"));
     const dates = { dump: index.meta.dump ?? null, builtAt: index.meta.builtAt ?? null };
 
+    const mine = myColonies();
     let refs: FinderRef[];
     if (q.reference === "colonised") {
       let p = colonisedOf.get(index);
@@ -103,11 +104,10 @@ export function registerFinderRoutes(app: express.Express, opts: HttpServerOptio
         refs = [found];
       } else return void res.json(empty("Pick a system on the map or type its name.", dates));
     } else {
-      refs = myColonies();
+      refs = mine;
       if (!refs.length) return void res.json(empty("Your journals have no colonised systems of yours yet.", dates));
     }
 
-    const mine = myColonies();
     const result = await searchFinder(index, q, refs, {
       knownClaimed: { ids: new Set(), names: new Set(mine.map((c) => c.name.toLowerCase())) },
       precomputedColonised: q.reference === "colonised",

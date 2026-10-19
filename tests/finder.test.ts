@@ -154,6 +154,47 @@ describe("searchFinder", () => {
     const r = await searchFinder(index, q({ min: { elw: 1 } }), [...many, ...home], fast);
     expect(r.hits.map((h) => h.name)).toEqual(["Near ELW", "Far ELW"]);
   });
+
+  it("sends the map at most 2,000 references, spread through the list", async () => {
+    const many = Array.from({ length: 5000 }, (_, i) => ({ name: `r${i}`, x: 5000 + i, y: 0, z: 0 }));
+    const r = await searchFinder(index, q({}), many, fast);
+    expect(r.references).toHaveLength(2000);
+    expect(r.references[0]!.name).toBe("r0");
+    expect(r.references[1999]!.name).toBe("r4997");
+  });
+});
+
+describe("searchFinder over many matches (the kept list's bar)", () => {
+  // 120 systems on a line through one colony, 280 ly long (two blocks or more, so the bar set after the first block
+  // filters the next), no two at the same distance; bodies cycle 1..7, so "most bodies" ties are broken by distance.
+  const line: Sys[] = Array.from({ length: 120 }, (_, i) => ({
+    id: BigInt(100 + i),
+    name: `L${i}`,
+    ...at(i * 2.35 - 140, (i % 3) * 0.5),
+    listed: 1 + ((i * 5) % 7),
+    u8: { planets: 1 },
+  }));
+  const lineFile = path.join(dir, "line.bin");
+  writeFinder(lineFile, line);
+  const lineIndex = FinderIndex.open(lineFile);
+  const dist = (s: Sys) => Math.hypot(s.x, s.y, s.z);
+
+  it("keeps exactly the best `limit` by distance and by bodies, counting every match", async () => {
+    for (const [sort, limit] of [
+      ["distance", 1],
+      ["distance", 3],
+      ["bodies", 1],
+      ["bodies", 3],
+    ] as const) {
+      const r = await searchFinder(lineIndex, q({ sort, limit }), home, fast);
+      const want = [...line]
+        .sort(sort === "bodies" ? (a, b) => b.listed! - a.listed! || dist(a) - dist(b) : (a, b) => dist(a) - dist(b))
+        .slice(0, limit)
+        .map((s) => s.name);
+      expect(r.hits.map((h) => h.name)).toEqual(want);
+      expect(r.matched).toBe(line.length);
+    }
+  });
 });
 
 describe("downloadFinder", () => {

@@ -29,7 +29,7 @@ public static class EdexoFg {
 # Per-monitor aware (-4), so window rectangles are real screen pixels on every monitor.
 [void][EdexoFg]::SetProcessDpiAwarenessContext([IntPtr](-4))
 $lastPid = -1
-$lastAt = 
+$lastAt = ''
 $tick = 0
 while ($true) {
   # The app that started this is gone (crashed, ended in Task Manager): so is this.

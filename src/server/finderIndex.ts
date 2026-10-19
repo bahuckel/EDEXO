@@ -72,13 +72,14 @@ export interface FinderBlock {
 
 /** Unpack one block's columns (exported for tests). */
 export function decodeFinderBlock(raw: Uint8Array, n: number, u8Columns: readonly string[]): FinderBlock {
-  // A copy at offset 0, so every typed view below is aligned whatever buffer zlib handed back.
-  const buf = new Uint8Array(raw.length);
-  buf.set(raw);
-  const ab = buf.buffer;
+  // The typed views need 8-byte alignment: zlib's output for a block is its own buffer at offset 0, used as it is;
+  // anything else (a slice of a pooled buffer) is copied first.
+  const buf = raw.byteOffset % 8 === 0 ? raw : Uint8Array.from(raw);
+  const ab = buf.buffer as ArrayBuffer;
+  const base = buf.byteOffset;
   let at = 0;
   const take = <T>(make: (b: ArrayBuffer, o: number, len: number) => T, size: number): T => {
-    const v = make(ab, at, n);
+    const v = make(ab, base + at, n);
     at += size * n;
     return v;
   };
@@ -106,7 +107,7 @@ export function decodeFinderBlock(raw: Uint8Array, n: number, u8Columns: readonl
     bodyCount,
     distColonised,
     u8,
-    names: () => (names ??= n ? Buffer.from(ab, namesAt, buf.length - namesAt).toString("utf8").split("\n") : []),
+    names: () => (names ??= n ? Buffer.from(ab, base + namesAt, buf.length - namesAt).toString("utf8").split("\n") : []),
     size: buf.length,
   };
 }
@@ -219,6 +220,29 @@ export class FinderIndex {
     })();
     this.pending.set(i, p);
     return p;
+  }
+
+  /**
+   * The blocks `order` names, in that order, with up to `ahead` of them read and unpacked ahead: zlib's pool unpacks
+   * four at once, and one block at a time left three of its threads idle (a full scan took 1.7 s).
+   */
+  async *inOrder(order: readonly number[], ahead = 4): AsyncGenerator<[number, FinderBlock]> {
+    const queue: Promise<FinderBlock>[] = [];
+    let next = 0;
+    for (const i of order) {
+      while (queue.length < ahead && next < order.length) {
+        const p = this.block(order[next++]!);
+        // Read ahead and then not wanted (the caller stopped early): must not end as an unhandled rejection.
+        p.catch(() => {});
+        queue.push(p);
+      }
+      yield [i, await queue.shift()!];
+    }
+  }
+
+  /** Every block number, for a scan of the whole file. */
+  allBlocks(): number[] {
+    return Array.from(this.blocks, (_, i) => i);
   }
 
   /** Drop the decoded blocks and close the file (resolves once it is closed: Windows will not replace an open file). */

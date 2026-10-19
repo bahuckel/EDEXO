@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FINDER_FILTERS,
+  FINDER_GAS_GIANTS,
   FINDER_RADIUS_MAX,
   FINDER_RADIUS_MIN,
   FINDER_RADIUS_STEP,
@@ -48,8 +49,7 @@ const MB = (b: number | null | undefined) => (b ? `${Math.round(b / 1e6).toLocal
 /** A hit's line of counts, only the non-zero ones that tell systems apart. */
 function countsLine(h: FinderHit): string {
   const c = h.counts;
-  const gg =
-    c.gg1 + c.gg2 + c.gg3 + c.gg4 + c.gg5 + c.gg_water_life + c.gg_ammonia_life + c.helium_gg + c.helium_rich;
+  const gg = FINDER_GAS_GIANTS.reduce((s, k) => s + c[k], 0);
   const parts: [string, number][] = [
     ["ELW", c.elw],
     ["WW", c.ww],
@@ -66,6 +66,46 @@ function countsLine(h: FinderHit): string {
     .filter(([, n]) => n > 0)
     .map(([k, n]) => `${k} ${n}`)
     .join(" · ");
+}
+
+/** "Download …" / "Update …", with the download's percentage while it runs. */
+function DataButton({
+  verb,
+  label,
+  busy,
+  progress,
+  onClick,
+  title,
+}: {
+  verb: "Downloading" | "Updating";
+  label: string;
+  busy: boolean;
+  progress: FinderStatusDTO["downloading"] | undefined;
+  onClick: () => void;
+  title?: string;
+}) {
+  return (
+    <button type="button" className="fdb-chip fdb-chip--on" onClick={onClick} disabled={busy} title={title}>
+      {busy
+        ? progress?.total
+          ? `${verb}… ${Math.round((100 * progress.done) / progress.total)} %`
+          : `${verb}…`
+        : label}
+    </button>
+  );
+}
+
+/** A filter group's fold-out header: its name, how many of its filters are on, the chevron. */
+function GroupHead({ name, on, isOpen, onToggle }: { name: string; on: number; isOpen: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" className="finder-group__head" aria-expanded={isOpen} onClick={onToggle}>
+      <span>{name}</span>
+      {on ? <span className="finder-group__count">{on}</span> : null}
+      <span className="finder-group__chev" aria-hidden="true">
+        {isOpen ? "▾" : "▸"}
+      </span>
+    </button>
+  );
 }
 
 export function FinderDrawer({
@@ -217,18 +257,13 @@ export function FinderDrawer({
             and whether someone colonised them, from Spansh&apos;s dump.
           </p>
           <div className="carriers-fetch">
-            <button
-              type="button"
-              className="fdb-chip fdb-chip--on"
+            <DataButton
+              verb="Downloading"
+              label={`Download the search data${status.release ? ` (${MB(status.release.bytes)})` : ""}`}
+              busy={downloading}
+              progress={dl}
               onClick={() => void download()}
-              disabled={downloading}
-            >
-              {downloading
-                ? dl?.total
-                  ? `Downloading… ${Math.round((100 * dl.done) / dl.total)} %`
-                  : "Downloading…"
-                : `Download the search data${status.release ? ` (${MB(status.release.bytes)})` : ""}`}
-            </button>
+            />
           </div>
           {error ? <p className="fdb-empty">{error}</p> : null}
         </div>
@@ -238,19 +273,14 @@ export function FinderDrawer({
         <div className="g3d-menu__section g3d-menu__section--first">
           {status.release && status.bytes != null && status.release.bytes !== status.bytes ? (
             <div className="carriers-fetch finder-update">
-              <button
-                type="button"
-                className="fdb-chip fdb-chip--on"
+              <DataButton
+                verb="Updating"
+                label={`Update the search data (${MB(status.release.bytes)}${status.release.dump ? `, ${status.release.dump.slice(0, 10)}` : ""})`}
+                busy={downloading}
+                progress={dl}
                 onClick={() => void download()}
-                disabled={downloading}
                 title="A newer build of the search data is on the release"
-              >
-                {downloading
-                  ? dl?.total
-                    ? `Updating… ${Math.round((100 * dl.done) / dl.total)} %`
-                    : "Updating…"
-                  : `Update the search data (${MB(status.release.bytes)}${status.release.dump ? `, ${status.release.dump.slice(0, 10)}` : ""})`}
-              </button>
+              />
               {error ? <span className="dim">{error}</span> : null}
             </div>
           ) : null}
@@ -310,18 +340,7 @@ export function FinderDrawer({
             const isOpen = open.includes(g);
             return (
               <div key={g} className="finder-group">
-                <button
-                  type="button"
-                  className="finder-group__head"
-                  aria-expanded={isOpen}
-                  onClick={() => toggleIn(open, setOpen, g)}
-                >
-                  <span>{g}</span>
-                  {on ? <span className="finder-group__count">{on}</span> : null}
-                  <span className="finder-group__chev" aria-hidden="true">
-                    {isOpen ? "▾" : "▸"}
-                  </span>
-                </button>
+                <GroupHead name={g} on={on} isOpen={isOpen} onToggle={() => toggleIn(open, setOpen, g)} />
                 {isOpen ? (
                   <div className="finder-steppers">
                     {defs.map((f) => {
@@ -353,20 +372,12 @@ export function FinderDrawer({
           })}
 
           <div className="finder-group">
-            <button
-              type="button"
-              className="finder-group__head"
-              aria-expanded={open.includes("Stars")}
-              onClick={() => toggleIn(open, setOpen, "Stars")}
-            >
-              <span>Stars</span>
-              {mainStar.length + present.length ? (
-                <span className="finder-group__count">{mainStar.length + present.length}</span>
-              ) : null}
-              <span className="finder-group__chev" aria-hidden="true">
-                {open.includes("Stars") ? "▾" : "▸"}
-              </span>
-            </button>
+            <GroupHead
+              name="Stars"
+              on={mainStar.length + present.length}
+              isOpen={open.includes("Stars")}
+              onToggle={() => toggleIn(open, setOpen, "Stars")}
+            />
             {open.includes("Stars") ? (
               <div className="stations-filters">
                 <div className="stations-filters__group">
@@ -508,14 +519,16 @@ export function FinderDrawer({
   );
 }
 
+/** The card's count labels. Out of the drawer's groups, a gas giant's label needs saying it is one ("Water-based life" alone reads oddly). */
+const CARD_LABEL = new Map(
+  FINDER_FILTERS.map((f) => [f.key as string, f.group === "Gas giants" && f.key !== "water_giant" ? `Gas giant, ${f.label}` : f.label]),
+);
+const starLabel = (k: string) => STAR_CLASSES.find((s) => s.key === k)?.label ?? k;
+
 /** The map's card for a finder hit: every non-zero count, its stars and how complete the listing is. */
 export function FinderHitCard({ h, ship }: { h: FinderHit; ship: { x: number; y: number; z: number } | null }) {
-  // Out of the drawer's groups, a gas giant's label needs saying it is one ("Water-based life" alone reads oddly).
-  const label = new Map(
-    FINDER_FILTERS.map((f) => [f.key as string, f.group === "Gas giants" && f.key !== "water_giant" ? `Gas giant, ${f.label}` : f.label]),
-  );
   const counts = Object.entries(h.counts).filter(([k, n]) => n > 0 && k !== "stars" && k !== "planets");
-  const starLabel = (k: string) => STAR_CLASSES.find((s) => s.key === k)?.label ?? k;
+  const otherStars = h.starsPresent.filter((k) => k !== h.mainStar);
   const fromShip = ship ? Math.hypot(ship.x - h.x, ship.y - h.y, ship.z - h.z) : null;
   return (
     <div className="finder-card">
@@ -534,19 +547,14 @@ export function FinderHitCard({ h, ship }: { h: FinderHit; ship: { x: number; y:
       {h.mainStar || h.starsPresent.length ? (
         <p className="dim">
           {h.mainStar ? `Main star ${starLabel(h.mainStar)}` : ""}
-          {h.starsPresent.filter((k) => k !== h.mainStar).length
-            ? `${h.mainStar ? "; also " : ""}${h.starsPresent
-                .filter((k) => k !== h.mainStar)
-                .map(starLabel)
-                .join(", ")}`
-            : ""}
+          {otherStars.length ? `${h.mainStar ? "; also " : ""}${otherStars.map(starLabel).join(", ")}` : ""}
         </p>
       ) : null}
       {counts.length ? (
         <ul className="finder-card__counts">
           {counts.map(([k, n]) => (
             <li key={k}>
-              <span>{label.get(k) ?? k}</span> <b>{n}</b>
+              <span>{CARD_LABEL.get(k) ?? k}</span> <b>{n}</b>
             </li>
           ))}
         </ul>

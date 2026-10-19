@@ -187,6 +187,11 @@ export function GalaxyMap3D() {
   const [finderRefs, setFinderRefs] = useState<FinderResult["references"]>([]);
   const [finderPicked, setFinderPicked] = useState<FinderHit | null>(null);
   const finderById = useMemo(() => new Map(finderHits.map((h) => [h.id64, h])), [finderHits]);
+  /** A finder marker's hit: from the list, else the picked one when it is that marker. */
+  const finderHitFor = useCallback(
+    (id: string) => finderById.get(id) ?? (finderPicked?.id64 === id ? finderPicked : null),
+    [finderById, finderPicked],
+  );
   const onFinderHits = useCallback((hits: FinderHit[], refs: FinderResult["references"]) => {
     setFinderHits(hits);
     setFinderRefs(refs);
@@ -814,7 +819,7 @@ export function GalaxyMap3D() {
     if (drawer !== "finder" || !selection || selection.kind === "sector") return;
     const at = { x: selection.x, y: selection.y, z: selection.z };
     if (selection.kind === "marker" && selection.layer === "finder") {
-      const h = finderById.get(selection.id) ?? finderPicked;
+      const h = finderHitFor(selection.id);
       if (h) setFinderAround({ name: h.name, ...at });
       return;
     }
@@ -834,7 +839,7 @@ export function GalaxyMap3D() {
     return () => {
       alive = false;
     };
-  }, [selection, drawer, finderById, finderPicked]);
+  }, [selection, drawer, finderHitFor]);
 
   // The commander's layer, with the "waiting at least" threshold: below it a waiting system is grey.
   const waitMinCr = waitMinM * 1_000_000;
@@ -1514,7 +1519,7 @@ export function GalaxyMap3D() {
       ) : null;
     }
     if (selection.layer === "finder") {
-      const h = finderById.get(selection.id) ?? (finderPicked?.id64 === selection.id ? finderPicked : null);
+      const h = finderHitFor(selection.id);
       return h ? <FinderHitCard h={h} ship={route?.position ?? null} /> : null;
     }
     if (selection.layer === "expedition") {
