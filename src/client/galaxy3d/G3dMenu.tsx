@@ -67,8 +67,8 @@ export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
   },
   {
     key: "finder",
-    label: "Find systems",
-    hint: "Find systems: round your colonies, a system you pick or every colonised one — by the bodies they have, without the systems already taken",
+    label: "Colonisation candidate search",
+    hint: "Colonisation candidate search: systems round your colonies, a system you pick or every colonised one — by the bodies they have, without the systems already taken",
   },
   {
     key: "jumponium",

@@ -180,7 +180,8 @@ export function GalaxyMap3D() {
   // The picked one is kept apart, so its card stays when the list changes or the tab closes (review 1.2.16).
   const [jumpPicked, setJumpPicked] = useState<JumpRow | null>(null);
   const jumpById = useMemo(() => new Map(jumpRows.map((r) => [r.id, r])), [jumpRows]);
-  // The Find systems tab's hits and the references they were measured from (plan-finder-1.2.20), drawn while open;
+  // The colonisation candidate search's hits (renamed from Find systems, owner 2026-10-19) and the references they
+  // were measured from (plan-finder-1.2.20), drawn while open;
   // the picked hit kept apart like the Laboratory's, so its card outlives the list.
   const [finderHits, setFinderHits] = useState<FinderHit[]>([]);
   const [finderRefs, setFinderRefs] = useState<FinderResult["references"]>([]);
@@ -780,7 +781,7 @@ export function GalaxyMap3D() {
     e.setMarkerLayerVisible("jumponium", drawer === "jumponium");
   }, [jumpRows, drawer, stats?.phase]);
 
-  // The Find systems tab: hits in teal (fully scanned brighter), the references they are measured from in gold.
+  // The colonisation candidate search: hits in teal (fully scanned brighter), the references they are measured from in gold.
   useEffect(() => {
     const e = engine.current;
     if (!e) return;

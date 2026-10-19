@@ -406,7 +406,7 @@ test("galaxy 3D: the game-style menus open and close, each with its help, and th
   and the drawer — round a system typed by name, at least one Earth-like world, the colonised left out; a row shows
   the system's card.
 */
-test("galaxy 3D: Find systems lists the systems round a picked one and shows a hit's card", async ({ page, request }) => {
+test("galaxy 3D: the colonisation candidate search lists the systems round a picked one and shows a hit's card", async ({ page, request }) => {
   const errors = watchErrors(page);
   const dir = path.join(tmpdir(), "edexo-e2e-profile", "galaxy");
   const file = path.join(dir, "finder.bin");
@@ -438,7 +438,7 @@ test("galaxy 3D: Find systems lists the systems round a picked one and shows a h
     await expect
       .poll(() => page.evaluate(() => (window as unknown as { __galaxy?: G }).__galaxy?.stats().phase), { timeout: 60_000 })
       .toBe("ready");
-    await page.getByRole("button", { name: "Find systems", exact: true }).click();
+    await page.getByRole("button", { name: "Colonisation candidate search", exact: true }).click();
     const drawer = page.getByTestId("g3d-finder");
     await drawer.getByLabel("System to search around").fill("E2E Anchor");
     const row = drawer.locator("tr.is-pickable").filter({ hasText: "E2E Near ELW" });

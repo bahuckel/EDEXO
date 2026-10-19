@@ -82,7 +82,7 @@ export function registerFinderRoutes(app: express.Express, opts: HttpServerOptio
     try {
       index = loadFinderIndex();
     } catch (e) {
-      return void res.json(empty(`The finder data could not be read: ${e instanceof Error ? e.message : String(e)}`));
+      return void res.json(empty(`The search data could not be read: ${e instanceof Error ? e.message : String(e)}`));
     }
     if (!index) return void res.json(empty("no-data"));
     const dates = { dump: index.meta.dump ?? null, builtAt: index.meta.builtAt ?? null };
@@ -99,7 +99,7 @@ export function registerFinderRoutes(app: express.Express, opts: HttpServerOptio
       if (q.pickedAt) refs = [{ name: q.picked || "Picked system", ...q.pickedAt }];
       else if (q.picked) {
         const found = await lookUp(index, q.picked);
-        if (!found) return void res.json(empty(`"${q.picked}" is not in the finder's data or your journals.`, dates));
+        if (!found) return void res.json(empty(`"${q.picked}" is not in the search data or your journals.`, dates));
         refs = [found];
       } else return void res.json(empty("Pick a system on the map or type its name.", dates));
     } else {
@@ -117,7 +117,7 @@ export function registerFinderRoutes(app: express.Express, opts: HttpServerOptio
       const p = refs[0]!;
       const reachable = index.blocks.some((b) => index.blockDist2(b, p.x, p.y, p.z) <= r2);
       if (!reachable)
-        result.problem = `${p.name} is outside the finder's area (systems within ${index.meta.radius ?? 150} ly of inhabited space).`;
+        result.problem = `${p.name} is outside the search's area (systems within ${index.meta.radius ?? 150} ly of inhabited space).`;
     }
     res.json(result);
   });

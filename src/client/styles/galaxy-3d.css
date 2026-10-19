@@ -1686,7 +1686,7 @@
   }
 }
 
-/* ---- Find systems (galaxy3d/FinderDrawer.tsx, plan-finder-1.2.20) --------------------------------------- */
+/* ---- Colonisation candidate search (galaxy3d/FinderDrawer.tsx, plan-finder-1.2.20) --------------------------------------- */
 .g3d-finder-drawer .fdb-scroll {
   max-height: 45vh;
 }

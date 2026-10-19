@@ -1,5 +1,5 @@
 /**
- * The galaxy map's Find systems tab (plan docs/plan-finder-1.2.20.md; owner, 2026-10-19): systems within a radius of
+ * The galaxy map's Colonisation candidate search (plan docs/plan-finder-1.2.20.md; owner, 2026-10-19): systems within a radius of
  * your colonies, a system picked on the map, or every colonised system, filtered by what their bodies are — counts
  * per body type, rings, landable, terraformable, star types, biology and geology — without the systems someone
  * already colonised or claimed. Hard filters, sorted by distance or by bodies; hits drawn on the map while open.
@@ -186,7 +186,7 @@ export function FinderDrawer({
         if (!s) continue;
         if (s.error) throw new Error(s.error);
         if (s.present && !s.downloading) break;
-        if (!s.downloading) throw new Error("The download stopped before the finder data came.");
+        if (!s.downloading) throw new Error("The download stopped before the search data came.");
       }
     } catch (e) {
       if (mounted.current) setError(e instanceof Error ? e.message : String(e));
@@ -208,12 +208,12 @@ export function FinderDrawer({
 
   const dl = status?.downloading;
   return (
-    <aside className="g3d-drawer g3d-menu g3d-plan g3d-finder-drawer" aria-label="Find systems" data-testid="g3d-finder">
-      <MenuHead title="Find systems" help={G3D_HELP.finder} />
+    <aside className="g3d-drawer g3d-menu g3d-plan g3d-finder-drawer" aria-label="Colonisation candidate search" data-testid="g3d-finder">
+      <MenuHead title="Colonisation candidate search" help={G3D_HELP.finder} />
       {status && !status.present ? (
         <div className="g3d-menu__section g3d-menu__section--first">
           <p className="fdb-empty">
-            The finder needs its own data: the systems within 150 ly of inhabited space, with what their bodies are
+            This search needs its own data: the systems within 150 ly of inhabited space, with what their bodies are
             and whether someone colonised them, from Spansh&apos;s dump.
           </p>
           <div className="carriers-fetch">
@@ -227,7 +227,7 @@ export function FinderDrawer({
                 ? dl?.total
                   ? `Downloading… ${Math.round((100 * dl.done) / dl.total)} %`
                   : "Downloading…"
-                : `Download the finder data${status.release ? ` (${MB(status.release.bytes)})` : ""}`}
+                : `Download the search data${status.release ? ` (${MB(status.release.bytes)})` : ""}`}
             </button>
           </div>
           {error ? <p className="fdb-empty">{error}</p> : null}
@@ -243,13 +243,13 @@ export function FinderDrawer({
                 className="fdb-chip fdb-chip--on"
                 onClick={() => void download()}
                 disabled={downloading}
-                title="A newer build of the finder data is on the release"
+                title="A newer build of the search data is on the release"
               >
                 {downloading
                   ? dl?.total
                     ? `Updating… ${Math.round((100 * dl.done) / dl.total)} %`
                     : "Updating…"
-                  : `Update the finder data (${MB(status.release.bytes)}${status.release.dump ? `, ${status.release.dump.slice(0, 10)}` : ""})`}
+                  : `Update the search data (${MB(status.release.bytes)}${status.release.dump ? `, ${status.release.dump.slice(0, 10)}` : ""})`}
               </button>
               {error ? <span className="dim">{error}</span> : null}
             </div>
@@ -502,7 +502,7 @@ export function FinderDrawer({
           ) : null}
         </div>
       ) : status == null ? (
-        <LoadingNote className="fdb-empty" label="Reading the finder data…" />
+        <LoadingNote className="fdb-empty" label="Reading the search data…" />
       ) : null}
     </aside>
   );

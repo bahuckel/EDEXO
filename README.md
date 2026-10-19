@@ -211,7 +211,7 @@ game) or as pop-ups if Tab view is off.
   the nearest landable bodies rich in the elements you pick — any or all of them, rich or the top 1 %, by
   gravity and distance from arrival — from your own scans and the galaxy's top 1 % of landable bodies for each
   of thirteen elements.
-- **Find systems** tab: the systems within 15 to 150 ly of your colonies, of a system you pick or of every
+- **Colonisation candidate search** tab: the systems within 15 to 150 ly of your colonies, of a system you pick or of every
   colonised system, by what their bodies are — at least so many Earth-like, water or ammonia worlds, gas giants of
   each class, rocky or icy bodies, ringed, landable (with or without atmosphere) or terraformable bodies, bodies with
   biology or geology signals — and by the main star or a black hole, neutron star, white dwarf or giant in it.
