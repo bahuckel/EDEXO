@@ -16,8 +16,8 @@ Windows; everything the app saves lives in `%LOCALAPPDATA%\ED Exo Compare\`.
 
 |                                                                                                                |                                                                       |
 | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **[Portable — one file](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.19/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
-| **[Program folder — .zip](https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.2.19-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
+| **[Portable — one file](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.20/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
+| **[Program folder — .zip](https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.2.20-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
 
 Both are the same version and the same code — [all releases](https://github.com/bahuckel/EDEXO-Compare/releases).
 
@@ -25,7 +25,7 @@ The galaxy map's data is a separate download, offered by the map the first time 
 in place by updates: the index (every system with recorded biology, from EDAstro's codex data, about
 260 MB), the stations (15.6 MB), the neutron stars for the route planner (40 MB) and the galaxy's
 richest Laboratory bodies (jumponium and AFM refill materials, 55 MB), with one button that fetches whatever is
-missing or newer.
+missing or newer. The colonisation candidate search has its own (150 MB), fetched from inside its tab.
 
 Windows will say the publisher is unrecognised: the executable is not code-signed, so SmartScreen does
 not know it. "More info" → "Run anyway". GitHub shows each release file's SHA-256 digest, to check a download
@@ -40,10 +40,10 @@ distro, desktop, X11 or Wayland — is the most useful thing you can send.
 
 |                                                                                                                                         |                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.19-zip/EDExoCompare-1.2.19-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
-| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.19-zip/EDExoCompare-1.2.19-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
+| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.20-zip/EDExoCompare-1.2.20-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
+| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.2.20-zip/EDExoCompare-1.2.20-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
 
-**AppImage:** `chmod +x EDExoCompare-1.2.19-x86_64.AppImage`, then run it. It needs FUSE 2:
+**AppImage:** `chmod +x EDExoCompare-1.2.20-x86_64.AppImage`, then run it. It needs FUSE 2:
 
 | Distro                                            | Command                                   |
 | ------------------------------------------------- | ----------------------------------------- |
@@ -54,13 +54,13 @@ distro, desktop, X11 or Wayland — is the most useful thing you can send.
 | openSUSE                                          | `sudo zypper install libfuse2`            |
 | Arch, CachyOS, Manjaro                            | `sudo pacman -S --needed fuse2`           |
 
-Without FUSE, `./EDExoCompare-1.2.19-x86_64.AppImage --appimage-extract-and-run` works too.
+Without FUSE, `./EDExoCompare-1.2.20-x86_64.AppImage --appimage-extract-and-run` works too.
 
 On start the launcher checks your desktop and lists anything the HUD needs that is missing, with the
 install command for your distro: XWayland on a Wayland session, a compositor on a bare window
 manager (the HUD is see-through only with one), the AppIndicator extension for the tray on GNOME.
 
-**Browser build:** `tar xzf EDExoCompare-1.2.19-linux-x64.tar.gz`, then `./edexo-client.sh` in the
+**Browser build:** `tar xzf EDExoCompare-1.2.20-linux-x64.tar.gz`, then `./edexo-client.sh` in the
 folder it makes. Its `README.txt` has the rest.
 
 **Both:** the journals are found inside the game's Proton or Wine prefix — every Steam library
@@ -216,10 +216,12 @@ game) or as pop-ups if Tab view is off.
   each class, rocky or icy bodies, ringed, landable (with or without atmosphere) or terraformable bodies, bodies with
   biology or geology signals — and by the main star or a black hole, neutron star, white dwarf or giant in it.
   Systems already colonised or claimed are left out; nearest first or most bodies first. Its data is a download of
-  its own: every system within 150 ly of inhabited space, from Spansh's dump.
+  its own: the 6.7 million systems within 150 ly of inhabited space, from Spansh's dump. Round one system it
+  answers at once, round all 132,580 colonised systems in a few seconds, in a thread of its own.
 - **Neutron** tab: a route through two or more stops by supercharged jumps from neutron star to
   neutron star, with refuel stops at a scoopable star near one, the order optimised if you want, and
-  FSD wear per hop learned for each ship. **Fly this route** puts the next stop on the clipboard after
+  FSD wear per hop learned for each ship. The supercharge is read from your ship's drive: ×6 with the Mk II
+  SCO drive (the Caspian Explorer's, which other ships with a size 8 slot can fit), ×4 with any other. **Fly this route** puts the next stop on the clipboard after
   each jump and plots again from your ship if you leave the route; **Stop** clears it everywhere.
 - **Next target** and **Plan**: the nearest system above a value you set, and up to 20 more in the
   shortest order. **NavRoute** keeps every route you plot with each system's star class.
