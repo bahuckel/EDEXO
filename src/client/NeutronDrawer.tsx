@@ -27,7 +27,7 @@ interface Ship {
   wearIsDefault: boolean;
   /** This ship's own supercharges, other ships with the same drive, or the default (shared/fsdWear.ts). */
   wearFrom: "ship" | "drive" | "default";
-  /** A supercharge multiplies the range by this: the ship type's (6 for the Caspian, else 4). */
+  /** A supercharge multiplies the range by this: the drive's (6 for the Mk II SCO drive, else 4). */
   boostFactor: number;
   /** The ship type is one the app knows; when not, the commander's own ×4 / ×6 is kept. */
   shipKnown?: boolean;
@@ -132,8 +132,9 @@ export function NeutronDrawer({
   const [range, setRange] = useState("");
   const [tank, setTank] = useState("");
   /*
-    The supercharge (owner, 2026-10-15): the ship type the game writes at login picks it (×6 the Caspian, ×4 the rest);
-    for a ship type the app does not know yet (a game update) it stays at ×4 and the commander's own pick is remembered.
+    The supercharge (owner, 2026-10-15; by the drive since 2026-10-20): the FSD in the ship's Loadout picks it (×6 the
+    Mk II SCO drive, ×4 every other drive), else the ship type; when neither says, it stays at ×4 and the commander's
+    own pick is remembered.
   */
   const [boostPicked, setBoostPicked] = usePersistedState<number | null>("galaxy.neutron.boost", null, isBoost);
   const [boostNow, setBoostNow] = useState<number | null>(null);
@@ -442,7 +443,7 @@ export function NeutronDrawer({
           <div className="g3d-menu__section">
             <MenuRow
               label="Jump range"
-              hint={`Laden, unboosted, as your jumps show it (change it for another ship); a supercharge reaches ${(boost ?? ship?.boostFactor) === 6 ? "six times this (the Caspian's Mk II SCO drive)" : "four times this"}`}
+              hint={`Laden, unboosted, as your jumps show it (change it for another ship); a supercharge reaches ${(boost ?? ship?.boostFactor) === 6 ? "six times this (the Mk II SCO drive)" : "four times this"}`}
             >
               <input
                 className="g3d-input g3d-row__val"
@@ -456,8 +457,8 @@ export function NeutronDrawer({
               label="Supercharge"
               hint={
                 ship?.shipKnown === false
-                  ? "Your ship's type is not one the app knows yet (a game update?): ×4 unless you pick ×6, and your pick is remembered"
-                  : "From your ship's type, as the game writes it at login: ×6 for the Caspian Explorer, ×4 for every other ship. Pick another for a range typed in for another ship"
+                  ? "Neither your ship's drive nor its type is one the app knows yet (a game update?): ×4 unless you pick ×6, and your pick is remembered"
+                  : "From your ship's frame shift drive, as the game writes it at login: ×6 with the Mk II SCO drive (the Caspian Explorer's), ×4 with any other. Pick another for a range typed in for another ship"
               }
             >
               <select
@@ -467,7 +468,7 @@ export function NeutronDrawer({
                 aria-label="Supercharge"
               >
                 <option value="4">×4</option>
-                <option value="6">×6 (Caspian)</option>
+                <option value="6">×6 (Mk II SCO drive)</option>
               </select>
             </MenuRow>
             <MenuRow

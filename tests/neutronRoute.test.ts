@@ -14,6 +14,7 @@ import {
   fsdWearRepair,
   hydrateFsdWear,
   newFsdWear,
+  superchargeFor,
   superchargeForShip,
 } from "../src/shared/fsdWear.js";
 import { parseLivePlan } from "../src/server/neutronLive.js";
@@ -174,18 +175,39 @@ describe("FSD wear from the journal", () => {
 
   /*
     Owner, 2026-10-15: "detects ship from LoadGame Ship ... auto pick 4x, if ship is not recognized (game update) keep at
-    4x but remember the option". The ship type picks it, not the drive module.
+    4x but remember the option". Since 2026-10-20 the drive decides: the Mk II SCO is sold on its own, and the Anaconda
+    Mk II (4.4.2.0) has a size 8 slot. The ship type only while no drive is known.
   */
-  it("picks the supercharge from the ship type: ×6 the Caspian, ×4 every other ship, ×4 and unknown for a new type", () => {
+  it("picks the supercharge from the ship type: ×6 the Caspian, ×4 every other ship, unknown for a new type", () => {
     expect(superchargeForShip("Mandalay")).toBe(4);
     expect(superchargeForShip("PantherMkII")).toBe(4);
+    expect(superchargeForShip("AnacondaMkII")).toBe(4);
     expect(superchargeForShip("Explorer_NX")).toBe(6);
     expect(superchargeForShip("NewShip_2027")).toBeNull();
     expect(superchargeForShip(null)).toBeNull();
+  });
+
+  it("the drive decides over the ship type: ×6 with the Mk II SCO in any ship, ×4 with any other drive", () => {
+    const mk2 = "int_hyperdrive_overcharge_size8_class5_overchargebooster_mkii";
+    expect(superchargeFor("anacondamkii", mk2)).toBe(6);
+    expect(superchargeFor("newship_2027", mk2)).toBe(6);
+    // A Caspian refitted with an ordinary size 8 drive supercharges like any other ship.
+    expect(superchargeFor("explorer_nx", "int_hyperdrive_size8_class3")).toBe(4);
+    expect(superchargeFor("newship_2027", "int_hyperdrive_overcharge_size7_class5")).toBe(4);
+    // No drive known: the ship type, else nothing.
+    expect(superchargeFor("explorer_nx", null)).toBe(6);
+    expect(superchargeFor("newship_2027", null)).toBeNull();
+
     const st = newFsdWear();
     fsdWearLoadout(st, loadout(1, 3, "int_hyperdrive_size5_class5", "mandalay"));
     expect(fsdWearEstimate(st)).toMatchObject({ boostFactor: 4, shipKnown: true, ship: "mandalay" });
-    fsdWearLoadout(st, loadout(1, 4, "int_hyperdrive_size7_class5", "newship_2027"));
+    fsdWearLoadout(st, loadout(1, 4, mk2, "anacondamkii"));
+    expect(fsdWearEstimate(st)).toMatchObject({ boostFactor: 6, shipKnown: true, ship: "anacondamkii" });
+    // A new type with an ordinary drive is known by its drive now: ×4, not the commander's remembered pick.
+    fsdWearLoadout(st, loadout(1, 5, "int_hyperdrive_size7_class5", "newship_2027"));
+    expect(fsdWearEstimate(st)).toMatchObject({ boostFactor: 4, shipKnown: true });
+    // A Loadout with no drive in it and a type the app does not know: neither says.
+    fsdWearLoadout(st, { event: "Loadout", ShipID: 6, Ship: "newship_2028", Modules: [] });
     expect(fsdWearEstimate(st)).toMatchObject({ boostFactor: 4, shipKnown: false });
   });
 

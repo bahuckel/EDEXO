@@ -121,7 +121,7 @@ export const G3D_HELP: Record<G3dTabKey, string[]> = {
     "Your codex, region by region: how many of a region's entries you have logged. Click a region on the map or in the list to see its systems.",
   ],
   neutron: [
-    "A route through two or more systems, jumping from neutron star to neutron star: at one the FSD supercharges and the next jump reaches four times your range (six in a Caspian Explorer: read from the ship you fly).",
+    "A route through two or more systems, jumping from neutron star to neutron star: at one the FSD supercharges and the next jump reaches four times your range (six with the Mk II SCO drive, the Caspian Explorer's: read from the drive you fly).",
     "Your jump range, how many full-range jumps a tank does and the fuel aboard come from your journals; change them for another ship.",
     "Refuel stops are neutron stars with a scoopable star of their own (four in ten): scoop it, then supercharge. Where only normal jumps cross a gap longer than the tank lasts, the route says to scoop on the way.",
     "Every supercharge wears the FSD, by how much depends on the ship and its drive: learned for each ship from its Loadouts (about 1 % until it has three supercharges between two of them). The plan marks where it is expected under 80 %: repair before going on — Carriers → Stations → Repair finds the nearest.",

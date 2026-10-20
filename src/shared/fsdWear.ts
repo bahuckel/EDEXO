@@ -11,8 +11,11 @@
  * takes what other ships with the same drive learned, else DEFAULT_WEAR (the owner's Asp, 1.17 % on three measured),
  * shown as an estimate.
  *
- * The supercharge depends on the ship: the Caspian Explorer (its size 8 Mk II SCO drive) reaches six times the range at
- * a neutron star, every other ship four; read from the ship type (`superchargeForShip`), not the module.
+ * The supercharge depends on the drive: the size 8 Mk II SCO (`…_overchargebooster_mkii`, the Caspian Explorer's)
+ * reaches six times the range at a neutron star, every other drive four. Read from the Loadout's drive
+ * (`superchargeFor`); the ship type (`superchargeForShip`) only while no drive is known. Owner, 2026-10-20: the drive
+ * is sold on its own (44 outfitting lists on EDDN in a few minutes), so another ship with a size 8 slot (the
+ * Anaconda Mk II, 4.4.2.0) can carry it.
  */
 export const DEFAULT_WEAR = 0.0117;
 /** Health is written to six decimals, so a few supercharges between two Loadouts already measure the wear. */
@@ -20,6 +23,8 @@ export const MIN_BOOSTS = 3;
 export const FSD_WARN = 0.8;
 export const NEUTRON_BOOST = 4;
 export const NEUTRON_BOOST_MK2 = 6;
+/** The Mk II SCO drive's module name, part of `int_hyperdrive_overcharge_size8_class5_overchargebooster_mkii`. */
+const MK2_SCO_DRIVE = "overchargebooster_mkii";
 
 export interface ShipFsdWear {
   /** The ship's type (`Loadout.Ship`, e.g. "asp", "explorer_nx") and its FSD module (`Item`). */
@@ -117,22 +122,22 @@ export interface FsdWearEstimate {
   wearIsDefault: boolean;
   boostsSince: number;
   /**
-   * A neutron supercharge multiplies the range by this: the ship type's ({@link superchargeForShip}), 6 for the
-   * Caspian, else 4; 4 for a type not on the list.
+   * A neutron supercharge multiplies the range by this ({@link superchargeFor}): 6 with the Mk II SCO drive, else
+   * 4; 4 when neither the drive nor the ship type says.
    */
   boostFactor: number;
-  /** Whether the ship type is known; when it is not, the planner keeps the commander's own ×4 / ×6. */
+  /** Whether the drive or the ship type said; when neither did, the planner keeps the commander's own ×4 / ×6. */
   shipKnown: boolean;
   ship: string | null;
 }
 
 /**
  * Every ship the game sells, by the type the journal writes (`LoadGame.Ship` / `Loadout.Ship`, lower case), from the
- * shipyards in Spansh's station dump of 2026-10-12 (47) and the Cutter. Suits and SRVs never reach this: they have no
- * Loadout of their own.
+ * shipyards in Spansh's station dump of 2026-10-12 (47) and the Cutter, and the Anaconda Mk II (4.4.2.0, 2026-10-20:
+ * `anacondamkii` in EDDN shipyard lists). Suits and SRVs never reach this: they have no Loadout of their own.
  */
 export const KNOWN_SHIPS: ReadonlySet<string> = new Set([
-  "adder", "anaconda", "asp", "asp_scout", "belugaliner", "cobramkiii", "cobramkiv", "cobramkv", "corsair", "cutter",
+  "adder", "anaconda", "anacondamkii", "asp", "asp_scout", "belugaliner", "cobramkiii", "cobramkiv", "cobramkv", "corsair", "cutter",
   "diamondback", "diamondbackxl", "dolphin", "eagle", "empire_courier", "empire_eagle", "empire_trader", "explorer_nx",
   "federation_corvette", "federation_dropship", "federation_dropship_mkii", "federation_gunship", "ferdelance",
   "hauler", "independant_trader", "krait_light", "krait_mkii", "lakonminer", "mamba", "mandalay", "mediumtransport01",
@@ -149,6 +154,16 @@ export function superchargeForShip(ship: string | null | undefined): number | nu
   const t = ship?.toLowerCase();
   if (!t || !KNOWN_SHIPS.has(t)) return null;
   return t === "explorer_nx" ? NEUTRON_BOOST_MK2 : NEUTRON_BOOST;
+}
+
+/**
+ * The supercharge of a drive, else of the ship type: ×6 for the Mk II SCO drive, ×4 for any other drive; with no drive
+ * known, {@link superchargeForShip}. Null when neither says (the planner then keeps the commander's own pick).
+ */
+export function superchargeFor(ship: string | null | undefined, fsd: string | null | undefined): number | null {
+  const d = fsd?.toLowerCase();
+  if (d && d.includes("hyperdrive")) return d.includes(MK2_SCO_DRIVE) ? NEUTRON_BOOST_MK2 : NEUTRON_BOOST;
+  return superchargeForShip(ship);
 }
 
 export function fsdWearEstimate(st: FsdWearState): FsdWearEstimate {
@@ -177,8 +192,8 @@ export function fsdWearEstimate(st: FsdWearState): FsdWearEstimate {
     wearFrom: from,
     wearIsDefault: from !== "ship",
     boostsSince: s?.boostsSince ?? 0,
-    boostFactor: superchargeForShip(s?.ship) ?? NEUTRON_BOOST,
-    shipKnown: superchargeForShip(s?.ship) != null,
+    boostFactor: superchargeFor(s?.ship, s?.fsd) ?? NEUTRON_BOOST,
+    shipKnown: superchargeFor(s?.ship, s?.fsd) != null,
     ship: s?.ship ?? null,
   };
 }
