@@ -103,6 +103,8 @@ module.exports = {
   ],
   extraResources: [
     { from: "build/app.cjs", to: "edexo/app.cjs" },
+    // The candidate search's worker thread (finderWorkerClient.ts looks for it beside app.cjs).
+    { from: "build/finder-worker.cjs", to: "edexo/finder-worker.cjs" },
     // The EDEXO browser's blocking engine (plan 9.1): outside the asar, a worker thread loads it.
     { from: "build/browser-adblock.cjs", to: "edexo/browser-adblock.cjs" },
     { from: "dist/eb-staging/web", to: "web" },

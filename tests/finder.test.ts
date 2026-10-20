@@ -3,13 +3,27 @@
  * docs/perf/build_finder.py writes) and the search — radius from the nearest reference, every filter a floor,
  * the colonised and claimed hidden, sorting, the limit, the time budget.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { FINDER_FLAG, normaliseFinderQuery, type FinderQuery } from "../src/shared/finder.js";
-import { FinderIndex, clearFinderIndex, downloadFinder, finderStatus, loadFinderIndex } from "../src/server/finderIndex.js";
+import { FINDER_FLAG, normaliseFinderQuery, type FinderQuery, type FinderResult } from "../src/shared/finder.js";
+import {
+  FinderIndex,
+  clearFinderIndex,
+  downloadFinder,
+  finderStatus,
+  loadFinderIndex,
+  onFinderIndexClear,
+} from "../src/server/finderIndex.js";
 import { RefGrid, colonisedRefs, findInFinder, searchFinder } from "../src/server/finderSearch.js";
+import { handleFinderRequest } from "../src/server/finderWorker.js";
+import {
+  findInFinderOffThread,
+  finderWorkerFile,
+  searchFinderOffThread,
+  stopFinderWorker,
+} from "../src/server/finderWorkerClient.js";
 import { writeFinder, type Sys } from "./helpers/finderFixture.js";
 
 const dir = mkdtempSync(path.join(tmpdir(), "edexo-finder-"));
@@ -194,6 +208,66 @@ describe("searchFinder over many matches (the kept list's bar)", () => {
       expect(r.hits.map((h) => h.name)).toEqual(want);
       expect(r.matched).toBe(line.length);
     }
+  });
+});
+
+describe("the search's worker side (finderWorker.ts, finderWorkerClient.ts)", () => {
+  const size = index.size;
+
+  it("reads every colonised system itself for refs: null, and finds what the in-thread search finds", async () => {
+    const refs = await colonisedRefs(index, async () => {});
+    const direct = await searchFinder(index, q({ min: { elw: 1 } }), refs, { ...fast, precomputedColonised: true });
+    const viaHandler = (await handleFinderRequest({
+      op: "search",
+      file,
+      size,
+      q: q({ min: { elw: 1 } }),
+      refs: null,
+      knownClaimedNames: [],
+    })) as FinderResult;
+    expect(viaHandler.hits.map((h) => [h.name, h.reference, h.distLy])).toEqual(
+      direct.hits.map((h) => [h.name, h.reference, h.distLy]),
+    );
+    expect(viaHandler.matched).toBe(direct.matched);
+    expect(await handleFinderRequest({ op: "find", file, size, name: "near elw" })).toMatchObject({ name: "Near ELW" });
+  });
+
+  it("knows the commander's colonies by name as claimed", async () => {
+    const r = (await handleFinderRequest({
+      op: "search",
+      file,
+      size,
+      q: q({ min: { elw: 1 } }),
+      refs: home,
+      knownClaimedNames: ["near elw"],
+    })) as FinderResult;
+    expect(r.hits.map((h) => h.name)).toEqual(["Far ELW"]);
+  });
+
+  it("answers in the server's thread when no worker can run (here: a .ts worker without a loader)", async () => {
+    const r = await searchFinderOffThread({ file, size, q: q({ min: { elw: 1 } }), refs: home, knownClaimedNames: [] });
+    expect(r.hits.map((h) => h.name)).toEqual(["Near ELW", "Far ELW"]);
+    expect(await findInFinderOffThread(file, size, "far elw")).toMatchObject({ name: "Far ELW", x: 140 });
+  });
+
+  it("finds the bundled worker beside the server first, else the source", () => {
+    const d = mkdtempSync(path.join(tmpdir(), "edexo-finder-worker-"));
+    expect(finderWorkerFile(d)).toBeNull();
+    writeFileSync(path.join(d, "finderWorker.ts"), "");
+    expect(finderWorkerFile(d)).toBe(path.join(d, "finderWorker.ts"));
+    writeFileSync(path.join(d, "finder-worker.cjs"), "");
+    expect(finderWorkerFile(d)).toBe(path.join(d, "finder-worker.cjs"));
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it("is stopped with the finder index (before a download replaces the file)", async () => {
+    let stopped = 0;
+    onFinderIndexClear(async () => {
+      stopped++;
+    });
+    await clearFinderIndex();
+    expect(stopped).toBe(1);
+    await stopFinderWorker();
   });
 });
 

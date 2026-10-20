@@ -1,7 +1,7 @@
 /**
  * `/api/galaxy/finder*` — the galaxy map's system finder (plan docs/plan-finder-1.2.20.md): the data file's status
  * and download, and the search. Under /api/galaxy, so a search keeps the map's memory alive like any map request and
- * the decoded blocks go with the map's other caches when it idles.
+ * the search's worker thread (finderWorker.ts) goes with the map's other caches when it idles.
  */
 import type express from "express";
 import { localOnly } from "../lanAuth.js";
@@ -14,13 +14,11 @@ import {
   probeFinderRelease,
   type FinderIndex,
 } from "../finderIndex.js";
-import { colonisedRefs, findInFinder, searchFinder, type FinderRef } from "../finderSearch.js";
+import type { FinderRef } from "../finderSearch.js";
+import { findInFinderOffThread, searchFinderOffThread } from "../finderWorkerClient.js";
 import { normaliseFinderQuery, type FinderQuery, type FinderResult } from "../../shared/finder.js";
 import { id64Boxel } from "../../shared/id64.js";
 import type { HttpServerOptions, RouteContext } from "../httpServer.js";
-
-/** "All colonised" read once per file (every block), then kept with the file. */
-const colonisedOf = new WeakMap<FinderIndex, Promise<FinderRef[]>>();
 
 export function registerFinderRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
   registerGalaxyCache("finder", () => void clearFinderIndex());
@@ -62,7 +60,7 @@ export function registerFinderRoutes(app: express.Express, opts: HttpServerOptio
         if (p) return { name: n, x: p.x, y: p.y, z: p.z };
       }
     }
-    return findInFinder(index, name);
+    return findInFinderOffThread(index.file, index.size, name);
   };
 
   app.post("/api/galaxy/finder", async (req, res) => {
@@ -88,14 +86,10 @@ export function registerFinderRoutes(app: express.Express, opts: HttpServerOptio
     const dates = { dump: index.meta.dump ?? null, builtAt: index.meta.builtAt ?? null };
 
     const mine = myColonies();
-    let refs: FinderRef[];
+    // null: every colonised system, read by the worker from the file itself.
+    let refs: FinderRef[] | null = null;
     if (q.reference === "colonised") {
-      let p = colonisedOf.get(index);
-      if (!p) {
-        p = colonisedRefs(index);
-        colonisedOf.set(index, p);
-      }
-      refs = await p;
+      refs = null;
     } else if (q.reference === "picked") {
       if (q.pickedAt) refs = [{ name: q.picked || "Picked system", ...q.pickedAt }];
       else if (q.picked) {
@@ -108,11 +102,19 @@ export function registerFinderRoutes(app: express.Express, opts: HttpServerOptio
       if (!refs.length) return void res.json(empty("Your journals have no colonised systems of yours yet.", dates));
     }
 
-    const result = await searchFinder(index, q, refs, {
-      knownClaimed: { ids: new Set(), names: new Set(mine.map((c) => c.name.toLowerCase())) },
-      precomputedColonised: q.reference === "colonised",
-    });
-    if (q.reference === "picked" && result.matched === 0) {
+    let result: FinderResult;
+    try {
+      result = await searchFinderOffThread({
+        file: index.file,
+        size: index.size,
+        q,
+        refs,
+        knownClaimedNames: mine.map((c) => c.name.toLowerCase()),
+      });
+    } catch (e) {
+      return void res.json(empty(`The search failed: ${e instanceof Error ? e.message : String(e)}`, dates));
+    }
+    if (q.reference === "picked" && result.matched === 0 && refs) {
       const r2 = q.radiusLy * q.radiusLy;
       const p = refs[0]!;
       const reachable = index.blocks.some((b) => index.blockDist2(b, p.x, p.y, p.z) <= r2);

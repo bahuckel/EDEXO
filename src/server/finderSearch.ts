@@ -173,6 +173,12 @@ export async function searchFinder(
     if (i >= 0) presentMask |= 1 << i;
   }
   const hideMask = FINDER_FLAG.populated | FINDER_FLAG.colonised | FINDER_FLAG.claimed;
+  // Asked only when there is something to ask: an id64 as text per match, or a block's names unpacked, cost a second
+  // over a 150 ly search round every colony.
+  const claimedIds = opts.knownClaimed?.ids ?? new Set<string>();
+  const claimedNames = opts.knownClaimed?.names ?? new Set<string>();
+  const checkIds = q.hideClaimed && claimedIds.size > 0;
+  const checkNames = q.hideClaimed && claimedNames.size > 0;
 
   // Blocks within reach of some reference: each reference against each block's box for a handful of references;
   // for many ("all colonised", 132,000) a grid lookup from the block's centre with the box's half-diagonal added.
@@ -238,10 +244,10 @@ export async function searchFinder(
         near = dc > 0 && dc <= rCenti ? { ref: null, d: dc / 100 } : null;
       } else near = grid.nearest(b.x[j]!, b.y[j]!, b.z[j]!);
       if (!near) continue;
-      if (q.hideClaimed && opts.knownClaimed) {
+      if (checkIds && claimedIds.has(String(b.id64[j]))) continue;
+      if (checkNames) {
         names ??= b.names();
-        if (opts.knownClaimed.ids.has(String(b.id64[j])) || opts.knownClaimed.names.has(names[j]!.toLowerCase()))
-          continue;
+        if (claimedNames.has(names[j]!.toLowerCase())) continue;
       }
       matched++;
       const listed = b.listed[j]!;

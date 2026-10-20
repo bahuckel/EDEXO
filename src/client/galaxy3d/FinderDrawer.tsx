@@ -199,7 +199,8 @@ export function FinderDrawer({
             setError(e instanceof Error ? e.message : String(e));
         })
         .finally(() => {
-          if (mounted.current) setBusy(false);
+          // An aborted search was replaced by a newer one, which owns `busy` now.
+          if (mounted.current && !ctl.signal.aborted) setBusy(false);
         });
     }, 350);
     return () => {
@@ -469,8 +470,16 @@ export function FinderDrawer({
 
           {error ? <p className="fdb-empty">{error}</p> : null}
           {result?.problem ? <p className="fdb-empty">{result.problem}</p> : null}
-          {result == null && busy ? <LoadingNote className="fdb-empty" label="Searching…" /> : null}
-          {result && !result.problem ? (
+          {/* Every search shows it is running, not only the first: a new search over an old list only dimmed the
+              list, and "All colonised" reads the whole file (owner, 2026-10-19: "it needs some loading indicator"). */}
+          {busy ? (
+            <LoadingNote
+              className="fdb-empty"
+              label={reference === "colonised" ? "Searching round every colonised system…" : "Searching…"}
+              detail={reference === "colonised" ? " The whole search data is read; a few seconds." : undefined}
+            />
+          ) : null}
+          {result && !result.problem && !busy ? (
             <p className="dim tiny finder-summary">
               {result.matched.toLocaleString("en-US")} system{result.matched === 1 ? "" : "s"} match
               {result.matched > hits.length ? ` (showing ${hits.length})` : ""}

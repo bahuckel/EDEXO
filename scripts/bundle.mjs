@@ -51,6 +51,21 @@ await esbuild.build({
 });
 console.info("Wrote build/browser-adblock.cjs");
 
+/*
+  The Colonisation candidate search's worker thread (src/server/finderWorker.ts, 2026-10-19): its own file beside
+  app.cjs, which finderWorkerClient.ts starts with `new Worker`. Without it the search runs in the server's thread.
+*/
+await esbuild.build({
+  entryPoints: ["src/server/finderWorker.ts"],
+  bundle: true,
+  platform: "node",
+  target: "node22",
+  format: "cjs",
+  outfile: "build/finder-worker.cjs",
+  logLevel: "info",
+});
+console.info("Wrote build/finder-worker.cjs");
+
 /**
  * Start the thing we just built and wait for it to say it is listening.
  *

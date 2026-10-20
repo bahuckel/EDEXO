@@ -11,7 +11,18 @@
  * blocks. A block unpacks to columns: u64 id64, f32 x, y, z, u32 star mask, u16 listed bodies, u16 body count
  * (0xFFFF unknown), one u8 column per `meta.u8Columns`, then the names joined by "\n".
  */
-import { closeSync, createWriteStream, existsSync, mkdirSync, openSync, readSync, renameSync, rmSync, statSync } from "node:fs";
+import {
+  closeSync,
+  createWriteStream,
+  existsSync,
+  fstatSync,
+  mkdirSync,
+  openSync,
+  readSync,
+  renameSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { open as openAsync, type FileHandle } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -70,6 +81,16 @@ export interface FinderBlock {
   size: number;
 }
 
+/**
+ * A block's unpacked size, from its gzip trailer (ISIZE, the last four bytes): zlib's output buffer is made that size,
+ * once. With zlib's default 16 KB chunks a full scan made ~32,000 buffers and glued them together; in the desktop
+ * app's server (an Electron utility process) making buffers is slow (finderWorker.ts has the measurements).
+ */
+export function unpackedSize(comp: Buffer): number {
+  // +16: a buffer filled to the last byte makes zlib start a second one of the same size to look for more.
+  return comp.length >= 4 ? Math.max(64, comp.readUInt32LE(comp.length - 4) + 16) : 64;
+}
+
 /** Unpack one block's columns (exported for tests). */
 export function decodeFinderBlock(raw: Uint8Array, n: number, u8Columns: readonly string[]): FinderBlock {
   // The typed views need 8-byte alignment: zlib's output for a block is its own buffer at offset 0, used as it is;
@@ -108,7 +129,8 @@ export function decodeFinderBlock(raw: Uint8Array, n: number, u8Columns: readonl
     distColonised,
     u8,
     names: () => (names ??= n ? Buffer.from(ab, base + namesAt, buf.length - namesAt).toString("utf8").split("\n") : []),
-    size: buf.length,
+    // What the block holds in memory: the whole buffer it sits in, not only the bytes used.
+    size: Math.max(buf.length, ab.byteLength),
   };
 }
 
@@ -124,6 +146,8 @@ export class FinderIndex {
   constructor(
     readonly file: string,
     head: Buffer,
+    /** The file's size when opened (with the path, which file this is: a download replaces it). */
+    readonly size = 0,
   ) {
     if (head.length < 16 || head.toString("latin1", 0, 8) !== MAGIC) throw new Error("not a finder file");
     const version = head.readUInt32LE(8);
@@ -164,7 +188,7 @@ export class FinderIndex {
       const count = lead.readUInt32LE(at);
       const whole = Buffer.alloc(headLen + count * BLOCK_ENTRY);
       readSync(fd, whole, 0, whole.length, 0);
-      return new FinderIndex(file, whole);
+      return new FinderIndex(file, whole, fstatSync(fd).size);
     } finally {
       closeSync(fd);
     }
@@ -203,9 +227,10 @@ export class FinderIndex {
       try {
         this.handle ??= openAsync(this.file, "r");
         const fh = await this.handle;
-        const comp = Buffer.alloc(ref.bytes);
+        const comp = Buffer.allocUnsafe(ref.bytes);
         await fh.read(comp, 0, ref.bytes, ref.offset);
-        const blk = decodeFinderBlock(await gunzip(comp), ref.count, this.meta.u8Columns);
+        const raw = await gunzip(comp, { chunkSize: unpackedSize(comp) });
+        const blk = decodeFinderBlock(raw, ref.count, this.meta.u8Columns);
         this.cache.set(i, blk);
         this.cacheBytes += blk.size;
         for (const [k, v] of this.cache) {
@@ -280,11 +305,17 @@ export function loadFinderIndex(): FinderIndex | null {
   return cached;
 }
 
-export function clearFinderIndex(): Promise<void> {
+/** Others holding the file open (the search's worker thread, finderWorkerClient.ts), closed with it. */
+const clearHooks = new Set<() => Promise<void>>();
+export function onFinderIndexClear(hook: () => Promise<void>): void {
+  clearHooks.add(hook);
+}
+
+export async function clearFinderIndex(): Promise<void> {
   const closing = cached?.clearCache() ?? Promise.resolve();
   cached = null;
   cachedKey = "";
-  return closing;
+  await Promise.all([closing, ...[...clearHooks].map((h) => h().catch(() => {}))]);
 }
 
 export function finderUserFilePath(): string {
