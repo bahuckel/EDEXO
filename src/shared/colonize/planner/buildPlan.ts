@@ -349,6 +349,8 @@ export function buildLogisticsPlan(args: {
         marketId: station.marketId,
         isPlanetaryOrGround: station.isPlanetaryOrGround,
         stationType: station.stationType ?? null,
+        pad: station.pad ?? null,
+        arrivalLs: station.arrivalLs ?? null,
         bodyName: station.bodyName ?? null,
         recentShop: isRecentShopStation(shopHistory, station.systemName, station.stationName),
         boughtBefore: hasBoughtFromStation(shopHistory, station.systemName, station.stationName),

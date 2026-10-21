@@ -222,6 +222,7 @@ function ingestMaterialListing(
         isPlanetaryOrGround: planetary,
         stationType: hit.stationType ?? null,
         pad: hit.pad ?? null,
+        arrivalLs: hit.arrivalLs ?? null,
         bodyName: hit.bodyName ?? null,
         offers: new Map(),
       };
@@ -232,6 +233,7 @@ function ingestMaterialListing(
     st.isPlanetaryOrGround = st.isPlanetaryOrGround || planetary;
     if (!st.stationType && hit.stationType) st.stationType = hit.stationType;
     if (!st.pad && hit.pad) st.pad = hit.pad;
+    if (st.arrivalLs == null && hit.arrivalLs != null) st.arrivalLs = hit.arrivalLs;
     if (!st.bodyName && hit.bodyName) st.bodyName = hit.bodyName;
     const supply = effectiveListingSupply(hit);
     if (supply <= 0) continue;

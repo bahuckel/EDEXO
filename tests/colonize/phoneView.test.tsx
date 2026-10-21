@@ -52,6 +52,9 @@ const trip = (n: number, station: string) => ({
       systemName: "Laso UF-E d12-16",
       stationName: station,
       distanceLy: 14,
+      stationType: "Coriolis Starport",
+      pad: "L",
+      arrivalLs: 1234,
       buys: [{ commodityId: "titanium", label: "Titanium", buyTons: 80, buyPrice: 100, forDepots: ["Kraepelin City"], stillNeedTotal: 0 }],
       deliverTo: ["Kraepelin City"],
       cargoLoaded: 80,
@@ -117,6 +120,8 @@ describe("Colonize on a phone", () => {
     // Trip 1 was ticked on the PC: trip 2 is next.
     expect(text).toContain("Next trip · 2 of 2");
     expect(text).toContain("Second Seller");
+    // The stop's facts from EDEXO's stations index (1.3.0): pad and distance from the star.
+    expect(text).toContain("Coriolis Starport · L pad · 1,234 ls from the star");
     expect(text).toContain("Docked at your site");
     expect(text).toContain("Kraepelin City");
     expect(text).toContain("your colony");

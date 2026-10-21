@@ -15,7 +15,9 @@ import { resolveColonizeDataDir } from "../paths.js";
 import { closeColonizeUiState, colonizeUiState } from "./uiState";
 import { refreshColonizeHud, setColonizeHudSource } from "./hudSummary";
 import { ColonizeStore } from "./colonizeStore";
-import { flushSystemCoordsCache, loadSystemCoordsCache } from "./galaxySystemCoords";
+import { flushSystemCoordsCache, loadSystemCoordsCache, setLocalSystemCoords } from "./galaxySystemCoords";
+import { setLocalStationFacts } from "./localStationFacts";
+import type { LocalGalaxy } from "./localGalaxy";
 import { buyIndexHandlers } from "./ipc/buyIndexHandlers";
 import { checkoutHandlers } from "./ipc/checkoutHandlers";
 import { debugHandlers } from "./ipc/debugHandlers";
@@ -36,6 +38,8 @@ export type ColonizeServiceDeps = {
   push: ColonizePush;
   /** The commander's claimed systems (EDEXO's journal store). */
   ownColonies?: () => OwnColony[];
+  /** EDEXO's own coordinates and station facts, before EDSM and Spansh (localGalaxy.ts). */
+  localGalaxy?: LocalGalaxy;
 };
 
 export type ColonizeService = {
@@ -93,6 +97,8 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
     }
   });
   setMaterialBuyScanPush(deps.push);
+  setLocalSystemCoords(deps.localGalaxy ? (name) => deps.localGalaxy!.systemCoords(name) : null);
+  setLocalStationFacts(deps.localGalaxy ? (sys, st) => deps.localGalaxy!.stationFacts(sys, st) : null);
   setColonizeHudSource(() => ({ snap: store.getSnapshot(), ui: colonizeUiState().all() }));
 
   const ctx: IpcContext = { store, push: deps.push, buyIndex: materialBuyIndex, userDataDir: dataDir };
@@ -128,6 +134,8 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
       inara.stop();
       setMaterialBuyScanPush(null);
       setColonizeHudSource(null);
+      setLocalSystemCoords(null);
+      setLocalStationFacts(null);
       try {
         await buyIndex?.flush();
       } catch {

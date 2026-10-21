@@ -23,6 +23,8 @@ export type PlannerStation = {
   isPlanetaryOrGround: boolean;
   stationType?: string | null;
   pad?: string | null;
+  /** Light seconds from the arrival star, when EDEXO's stations index knows. */
+  arrivalLs?: number | null;
   bodyName?: string | null;
   offers: Map<string, { label: string; supply: number; buyPrice: number | null }>;
 };
@@ -62,6 +64,9 @@ export type TripStop = {
   isPlanetaryOrGround?: boolean;
   bodyName?: string | null;
   stationType?: string | null;
+  /** Largest pad (L, M, S) and light seconds from the arrival star, when known (1.3.0). */
+  pad?: string | null;
+  arrivalLs?: number | null;
   recentShop?: boolean;
   boughtBefore?: boolean;
   /** Ly from construction/colonization system to this seller. */

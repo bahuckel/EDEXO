@@ -1,4 +1,5 @@
 import { buyStationHitMatchesNeed } from "../../shared/colonize/buyStationHitMatch";
+import { withLocalStationFacts } from "./localStationFacts";
 import { commodityIdsEquivalent, commodityNeedMatchesLabel } from "../../shared/colonize/commodityKey";
 import { isConstructionDepotStation, type ConstructionDepotRef } from "../../shared/colonize/constructionDepot";
 import type {
@@ -246,7 +247,7 @@ export function materialBuyHitsForNeed(args: {
     tryLookup(part.needId, part.needLabel);
   }
 
-  return sortMaterialBuyHitsBySearchDistance([...byKey.values()], constructionRefs, distanceBySystem);
+  return sortMaterialBuyHitsBySearchDistance([...byKey.values()].map(withLocalStationFacts), constructionRefs, distanceBySystem);
 }
 
 function journalCommoditiesForShop(rec: JournalShopRecord): Map<string, string> {

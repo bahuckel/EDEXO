@@ -386,6 +386,52 @@ export class StationsIndex {
     for (let i = first; i < first + count; i++) if (this.padAt(i) > 0) out.push(this.row(i, bestS, bestD));
     return out;
   }
+
+  private byName: Map<string, number> | null = null;
+
+  /**
+   * A system by name, any case (Colonize, 1.3.0: coordinates and station facts before asking EDSM or Spansh): its
+   * record number, or -1. The name map is built on the first call, one pass over the system records.
+   */
+  systemIndex(name: string): number {
+    if (!this.byName) {
+      const m = new Map<string, number>();
+      for (let s = 0; s < this.systemCount; s++) {
+        const k = this.str(this.buf.readUInt32LE(this.sysAt + s * SYS + 12)).toLowerCase();
+        if (!m.has(k)) m.set(k, s);
+      }
+      this.byName = m;
+    }
+    return this.byName.get(name.trim().toLowerCase()) ?? -1;
+  }
+
+  /** A system's coordinates and name as the dump spells it, by name in any case; null when not in the index. */
+  system(name: string): { name: string; x: number; y: number; z: number } | null {
+    const s = this.systemIndex(name);
+    if (s < 0) return null;
+    const so = this.sysAt + s * SYS;
+    return {
+      name: this.str(this.buf.readUInt32LE(so + 12)),
+      x: this.buf.readFloatLE(so),
+      y: this.buf.readFloatLE(so + 4),
+      z: this.buf.readFloatLE(so + 8),
+    };
+  }
+
+  /** One station by its system's and its own name, any case: type, pad, distance from the arrival star. */
+  station(systemName: string, stationName: string): StationRow | null {
+    const s = this.systemIndex(systemName);
+    if (s < 0) return null;
+    const so = this.sysAt + s * SYS;
+    const first = this.buf.readUInt32LE(so + 16);
+    const count = this.buf.readUInt16LE(so + 20);
+    const want = stationName.trim().toLowerCase();
+    for (let i = first; i < first + count; i++) {
+      const raw = this.str(this.buf.readUInt32LE(this.stAt + i * ST + 16));
+      if (raw.toLowerCase() === want || displayStationName(raw).toLowerCase() === want) return this.row(i, s, 0);
+    }
+    return null;
+  }
 }
 
 function userGalaxyDir(): string {

@@ -349,3 +349,19 @@ describe("colonisation ships", () => {
     ]);
   });
 });
+
+describe("looking up by name (Colonize, 1.3.0)", () => {
+  const idx = new StationsIndex(encode(SYSTEMS));
+  it("finds a system in any case, with its coordinates and its own spelling", () => {
+    expect(idx.system("middle")).toEqual({ name: "Middle", x: 50, y: 0, z: 0 });
+    expect(idx.system("  FAR ")?.x).toBe(200);
+    expect(idx.system("Nowhere")).toBeNull();
+  });
+  it("finds a station by its system and its name: type, pad, distance from the arrival star", () => {
+    const r = idx.station("MIDDLE", "middle port")!;
+    expect([r.name, r.type, r.pad, r.distanceLs]).toEqual(["Middle Port", "Coriolis Starport", "L", 9000]);
+    expect(idx.station("Near", "Near Outpost")?.pad).toBe("M");
+    expect(idx.station("Near", "Middle Port")).toBeNull();
+    expect(idx.station("Nowhere", "Near Outpost")).toBeNull();
+  });
+});

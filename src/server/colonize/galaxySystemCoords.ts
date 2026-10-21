@@ -49,6 +49,18 @@ const spanshNameCache = new TtlCache<string, string>({
   ttlMs: SPANSH_NAME_CACHE_TTL_MS,
 });
 
+/**
+ * EDEXO's own data, asked before EDSM and Spansh (1.3.0, localGalaxy.ts): the journal's star positions and the
+ * stations index. Set by the Colonize service while it runs; null in tests and before it starts.
+ */
+let localCoords: ((name: string) => Coords | null) | null = null;
+export function setLocalSystemCoords(fn: ((name: string) => Coords | null) | null): void {
+  localCoords = fn;
+}
+
+/** How many systems the last look-ups placed from EDEXO's data and how many needed the network (tests, probes). */
+export const coordLookupCounts = { local: 0, network: 0 };
+
 let coordsFilePath: string | null = null;
 let coordsLoad: Promise<void> | null = null;
 let coordsDirty = false;
@@ -316,7 +328,7 @@ export async function resolveCoordMapForSystems(names: string[]): Promise<Map<st
 
   const out = new Map<string, Coords>();
   const shared: Array<Promise<void>> = [];
-  const mine: Array<[string, string]> = [];
+  let mine: Array<[string, string]> = [];
   for (const [norm, label] of labelByNorm) {
     const cached = cachedCoords(norm);
     if (cached !== undefined) {
@@ -335,7 +347,25 @@ export async function resolveCoordMapForSystems(names: string[]): Promise<Map<st
     mine.push([norm, label]);
   }
 
+  if (mine.length && localCoords) {
+    const ask = localCoords;
+    mine = mine.filter(([norm, label]) => {
+      let c: Coords | null = null;
+      try {
+        c = ask(label);
+      } catch {
+        /* the local data could not be read: the network answers */
+      }
+      if (!c || !isCoords(c)) return true;
+      rememberCoords(norm, c);
+      out.set(norm, c);
+      coordLookupCounts.local++;
+      return false;
+    });
+  }
+
   if (mine.length) {
+    coordLookupCounts.network += mine.length;
     const settle = new Map<string, (c: Coords | null) => void>();
     for (const [norm] of mine) {
       coordInflight.set(norm, new Promise<Coords | null>((resolve) => settle.set(norm, resolve)));

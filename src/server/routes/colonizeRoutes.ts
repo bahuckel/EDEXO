@@ -20,6 +20,7 @@ import { colonizeService, colonizeServiceRunning } from "../colonize/colonizeSer
 import type { ColonizeHandlers } from "../colonize/ipc/handlerTypes";
 import { colonizeUiState } from "../colonize/uiState";
 import { refreshColonizeHud } from "../colonize/hudSummary";
+import { localGalaxyFrom } from "../colonize/localGalaxy";
 
 /** What a paired phone or tablet may call: reads of what the server already holds, nothing else. */
 export const COLONIZE_LAN_READ: ReadonlySet<keyof ColonizeHandlers> = new Set<keyof ColonizeHandlers>([
@@ -45,10 +46,12 @@ export function colonizeMethodAccess(name: string): "unknown" | "lan" | "local" 
 }
 
 export function registerColonizeRoutes(app: express.Express, opts: HttpServerOptions, ctx: RouteContext): void {
+  const localGalaxy = localGalaxyFrom(opts);
   const service = () =>
     colonizeService({
       journalDir: () => opts.getJournalDir?.() ?? DEFAULT_JOURNAL_DIR,
       push: <K extends keyof ColonizeEvents>(event: K, payload: ColonizeEvents[K]) => ctx.pushColonize(event, payload),
+      localGalaxy,
       ownColonies: () =>
         (opts.getJournalStore?.()?.ownAssets.colonies ?? []).map((c) => ({ name: c.name, systemAddress: c.addr, claimedAt: c.at })),
     });

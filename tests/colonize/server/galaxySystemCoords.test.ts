@@ -90,6 +90,37 @@ describe("resolveCoordMapForSystems", () => {
     expect(spansh[0]!.url).toContain("New%20Colony");
   });
 
+  it("asks EDEXO's own data first, and the network only for what it does not know", async () => {
+    const calls = stubNetwork({ edsmKnows: () => true });
+    const mod = await load();
+    const local: Record<string, [number, number, number]> = { "kraepelin home": [1, 2, 3], "hammond hub": [4, 5, 6] };
+    mod.setLocalSystemCoords((name) => local[name.toLowerCase()] ?? null);
+    const out = await mod.resolveCoordMapForSystems(["Kraepelin Home", "HAMMOND HUB", "Far Away"]);
+    expect(out.get("kraepelin home")).toEqual([1, 2, 3]);
+    expect(out.get("hammond hub")).toEqual([4, 5, 6]);
+    expect(out.get("far away")).toEqual(coordsOf("Far Away"));
+    const edsm = calls.filter((c) => c.host === "edsm");
+    expect(edsm).toHaveLength(1);
+    expect(edsm[0]!.url).toContain("Far%20Away");
+    expect(edsm[0]!.url).not.toContain("Kraepelin");
+    expect(mod.coordLookupCounts).toEqual({ local: 2, network: 1 });
+    // Answered locally once: cached, so the next look-up asks nobody.
+    mod.setLocalSystemCoords(null);
+    const before = calls.length;
+    expect((await mod.resolveCoordMapForSystems(["kraepelin home"])).get("kraepelin home")).toEqual([1, 2, 3]);
+    expect(calls.length).toBe(before);
+  });
+
+  it("goes to the network when the local data throws", async () => {
+    const calls = stubNetwork({ edsmKnows: () => true });
+    const mod = await load();
+    mod.setLocalSystemCoords(() => {
+      throw new Error("unreadable");
+    });
+    expect((await mod.resolveCoordMapForSystems(["Alpha"])).size).toBe(1);
+    expect(calls.some((c) => c.host === "edsm")).toBe(true);
+  });
+
   it("remembers a miss for a while instead of asking again", async () => {
     const calls = stubNetwork({ edsmKnows: () => false });
     const { resolveCoordMapForSystems } = await load();

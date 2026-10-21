@@ -17,6 +17,8 @@ export type MaterialBuyStationHit = {
   pad?: string | null;
   /** Orbiting body or planet the station is built on (Spansh `body_name`). */
   bodyName?: string | null;
+  /** Light seconds from the arrival star (EDEXO's stations index, 1.3.0). */
+  arrivalLs?: number | null;
   marketUpdatedAt?: string | null;
   /** When this row was last confirmed (live search or cache write). */
   foundAtIso: string;

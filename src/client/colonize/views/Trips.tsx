@@ -37,6 +37,8 @@ const t = (n: number) => `${Math.round(n).toLocaleString("en-US")} t`;
 function stopFacts(s: TripStop): string {
   const bits = [formatHopLy(s.distanceLy)];
   if (s.stationType) bits.push(s.stationType);
+  if (s.pad) bits.push(`${s.pad} pad`);
+  if (s.arrivalLs != null) bits.push(`${Math.round(s.arrivalLs).toLocaleString("en-US")} ls from the star`);
   if (s.isPlanetaryOrGround) bits.push("planet port");
   if (s.boughtBefore) bits.push("bought here before");
   return bits.filter(Boolean).join(" · ");
