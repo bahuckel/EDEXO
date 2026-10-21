@@ -1,0 +1,8 @@
+{
+  "_comment": "Lowercase keys = drafts/typos; values = Frontier-style names (cargo / engineering wiki). Used by merge script + hint lookups.",
+  "symmetric keys": "Open Symmetric Keys",
+  "galvanizing alloys": "Galvanising Alloys",
+  "oxygen cannisters": "Oxygen Canisters",
+  "fertilizer": "Agronomic Treatment",
+  "fertiliser": "Agronomic Treatment"
+}

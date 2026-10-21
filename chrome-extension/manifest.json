@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Edexo Colonize — Inara scrape",
+  "version": "0.3.0",
+  "description": "Save Inara commodity buy-search results to a JSON file for ED EXO Colonize.",
+  "permissions": ["storage", "downloads"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Edexo Inara scrape",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://inara.cz/elite/commodities*", "https://inara.cz/elite/commodities/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,222 @@
+[
+ {
+  "label": "Advanced Catalysers",
+  "symbol": "$advancedcatalysers_name;"
+ },
+ {
+  "label": "Agri-Medicines",
+  "symbol": "$agriculturalmedicines_name;"
+ },
+ {
+  "label": "Aluminium",
+  "symbol": "$aluminium_name;"
+ },
+ {
+  "label": "Animal Meat",
+  "symbol": "$animalmeat_name;"
+ },
+ {
+  "label": "Auto-Fabricators",
+  "symbol": "$autofabricators_name;"
+ },
+ {
+  "label": "Basic Medicines",
+  "symbol": "$basicmedicines_name;"
+ },
+ {
+  "label": "Battle Weapons",
+  "symbol": "$battleweapons_name;"
+ },
+ {
+  "label": "Beer",
+  "symbol": "$beer_name;"
+ },
+ {
+  "label": "Bioreducing Lichen",
+  "symbol": "$bioreducinglichen_name;"
+ },
+ {
+  "label": "Biowaste",
+  "symbol": "$biowaste_name;"
+ },
+ {
+  "label": "Building Fabricators",
+  "symbol": "$buildingfabricators_name;"
+ },
+ {
+  "label": "CMM Composite",
+  "symbol": "$cmmcomposite_name;"
+ },
+ {
+  "label": "Ceramic Composites",
+  "symbol": "$ceramiccomposites_name;"
+ },
+ {
+  "label": "Coffee",
+  "symbol": "$coffee_name;"
+ },
+ {
+  "label": "Combat Stabilisers",
+  "symbol": "$combatstabilisers_name;"
+ },
+ {
+  "label": "Computer Components",
+  "symbol": "$computercomponents_name;"
+ },
+ {
+  "label": "Copper",
+  "symbol": "$copper_name;"
+ },
+ {
+  "label": "Crop Harvesters",
+  "symbol": "$cropharvesters_name;"
+ },
+ {
+  "label": "Emergency Power Cells",
+  "symbol": "$emergencypowercells_name;"
+ },
+ {
+  "label": "Evacuation Shelter",
+  "symbol": "$evacuationshelter_name;"
+ },
+ {
+  "label": "Fish",
+  "symbol": "$fish_name;"
+ },
+ {
+  "label": "Food Cartridges",
+  "symbol": "$foodcartridges_name;"
+ },
+ {
+  "label": "Fruit and Vegetables",
+  "symbol": "$fruitandvegetables_name;"
+ },
+ {
+  "label": "Geological Equipment",
+  "symbol": "$geologicalequipment_name;"
+ },
+ {
+  "label": "Grain",
+  "symbol": "$grain_name;"
+ },
+ {
+  "label": "H.E. Suits",
+  "symbol": "$hazardousenvironmentsuits_name;"
+ },
+ {
+  "label": "Insulating Membrane",
+  "symbol": "$insulatingmembrane_name;"
+ },
+ {
+  "label": "Land Enrichment Systems",
+  "symbol": "$terrainenrichmentsystems_name;"
+ },
+ {
+  "label": "Liquid oxygen",
+  "symbol": "$liquidoxygen_name;"
+ },
+ {
+  "label": "Liquor",
+  "symbol": "$liquor_name;"
+ },
+ {
+  "label": "Medical Diagnostic Equipment",
+  "symbol": "$medicaldiagnosticequipment_name;"
+ },
+ {
+  "label": "Micro Controllers",
+  "symbol": "$microcontrollers_name;"
+ },
+ {
+  "label": "Microbial Furnaces",
+  "symbol": "$heliostaticfurnaces_name;"
+ },
+ {
+  "label": "Military Grade Fabrics",
+  "symbol": "$militarygradefabrics_name;"
+ },
+ {
+  "label": "Mineral Extractors",
+  "symbol": "$mineralextractors_name;"
+ },
+ {
+  "label": "Muon Imager",
+  "symbol": "$mutomimager_name;"
+ },
+ {
+  "label": "Non-Lethal Weapons",
+  "symbol": "$nonlethalweapons_name;"
+ },
+ {
+  "label": "Pesticides",
+  "symbol": "$pesticides_name;"
+ },
+ {
+  "label": "Polymers",
+  "symbol": "$polymers_name;"
+ },
+ {
+  "label": "Power Generators",
+  "symbol": "$powergenerators_name;"
+ },
+ {
+  "label": "Reactive Armour",
+  "symbol": "$reactivearmour_name;"
+ },
+ {
+  "label": "Resonating Separators",
+  "symbol": "$resonatingseparators_name;"
+ },
+ {
+  "label": "Robotics",
+  "symbol": "$robotics_name;"
+ },
+ {
+  "label": "Semiconductors",
+  "symbol": "$semiconductors_name;"
+ },
+ {
+  "label": "Steel",
+  "symbol": "$steel_name;"
+ },
+ {
+  "label": "Structural Regulators",
+  "symbol": "$structuralregulators_name;"
+ },
+ {
+  "label": "Superconductors",
+  "symbol": "$superconductors_name;"
+ },
+ {
+  "label": "Surface Stabilisers",
+  "symbol": "$surfacestabilisers_name;"
+ },
+ {
+  "label": "Survival Equipment",
+  "symbol": "$survivalequipment_name;"
+ },
+ {
+  "label": "Tea",
+  "symbol": "$tea_name;"
+ },
+ {
+  "label": "Thermal Cooling Units",
+  "symbol": "$thermalcoolingunits_name;"
+ },
+ {
+  "label": "Titanium",
+  "symbol": "$titanium_name;"
+ },
+ {
+  "label": "Water",
+  "symbol": "$water_name;"
+ },
+ {
+  "label": "Water Purifiers",
+  "symbol": "$waterpurifiers_name;"
+ },
+ {
+  "label": "Wine",
+  "symbol": "$wine_name;"
+ }
+]

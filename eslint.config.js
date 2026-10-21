@@ -96,6 +96,14 @@ export default tseslint.config(
     },
   },
   {
+    // The Inara helper Chrome extension (MV3, moved from EDEXO-Colonize at 1.3.0): browser + extension globals.
+    files: ["chrome-extension/**/*.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: { ...globals.browser, ...globals.webextensions },
+    },
+  },
+  {
     // The HUD overlays' plain browser script (no bundler): browser globals, plus the `module` check
     // it does at the bottom so tests can require it. Same leniency as src for throwaway catches.
     files: ["public/**/*.js"],
