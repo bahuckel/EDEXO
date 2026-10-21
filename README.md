@@ -470,6 +470,11 @@ Built on these communities' work, none of them affiliated with this project:
 
 Full attribution in [NOTICE.md](NOTICE.md).
 
+## Support
+
+EDEXO is free and stays free. If it helps you, you can [buy me a coffee](https://ko-fi.com/bahuckel) —
+entirely optional; nothing in the app is behind it.
+
 ## Licence
 
 Three parts, three licences:

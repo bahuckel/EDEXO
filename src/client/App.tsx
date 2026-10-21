@@ -1,4 +1,5 @@
 import { TabHost, TabSlot, useScreenOpen } from "./tabs/TabHost";
+import { STREAMER_MODE } from "./streamerMode";
 import { tabStore } from "./tabs/tabStore";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { NotableBodyInfo } from "@shared/types";
@@ -194,6 +195,15 @@ const AppLegalFooter = memo(function AppLegalFooter() {
         <a href="https://bahuckel.com/projects/edexo-compare" target="_blank" rel="noopener noreferrer">
           bahuckel.com/projects/edexo-compare
         </a>
+        {/* The owner's Ko-fi (2026-10-21): last, and never in the streamer view, which asks nothing of a stream. */}
+        {STREAMER_MODE ? null : (
+          <>
+            <span className="app-legal-footer-sep dim">·</span>
+            <a className="app-legal-footer-coffee" href="https://ko-fi.com/bahuckel" target="_blank" rel="noopener noreferrer">
+              Buy me a coffee
+            </a>
+          </>
+        )}
       </div>
     </footer>
   );

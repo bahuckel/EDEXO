@@ -185,7 +185,10 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
         ) : null}
       </main>
       <footer className="cz-small cz-dim" style={{ padding: "16px 24px", textAlign: "center" }}>
-        EDEXO is not affiliated with Frontier Developments.
+        EDEXO is not affiliated with Frontier Developments. ·{" "}
+        <a href="https://ko-fi.com/bahuckel" target="_blank" rel="noreferrer">
+          Buy me a coffee
+        </a>
       </footer>
     </div>
   );

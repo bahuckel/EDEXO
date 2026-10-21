@@ -103,6 +103,9 @@ test("app: the Privacy Policy and Terms open from the footer, served by the app 
     await expect(tab.locator("link[rel=stylesheet]")).toHaveCount(1);
     await tab.close();
   }
+  // The owner's Ko-fi, last in the row.
+  await expect(page.locator(".app-legal-footer-links a").last()).toHaveText("Buy me a coffee");
+  await expect(page.locator(".app-legal-footer-links a").last()).toHaveAttribute("href", "https://ko-fi.com/bahuckel");
   expect(errors).toEqual([]);
 });
 
@@ -110,6 +113,7 @@ test("launcher: renders with the live strip", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto("/launcher.html");
   await expect(page.getByText("Open Compare", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Buy me a coffee" })).toHaveAttribute("href", "https://ko-fi.com/bahuckel");
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${OUT}/launcher.png`, fullPage: true });
   expect(errors).toEqual([]);
@@ -120,6 +124,7 @@ test("colonize: the window opens on the plan, every tab draws, and the launcher 
   await page.goto("/launcher.html");
   await expect(page.getByText("Open Colonize")).toBeVisible();
   await page.goto("/?screen=colonize");
+  await expect(page.getByRole("link", { name: "Buy me a coffee" })).toHaveAttribute("href", "https://ko-fi.com/bahuckel");
   // The fixture journal has no construction site: the plan says how to get one.
   await expect(page.getByRole("heading", { name: "Your sites" })).toBeVisible();
   await expect(page.getByText("none building")).toBeVisible();
@@ -1284,6 +1289,7 @@ test("streamer view: the app with nothing to click", async ({ page }) => {
   expect(await page.evaluate(() => getComputedStyle(document.querySelector(".app-shell")!).pointerEvents)).toBe("none");
   // Nothing a viewer needs: the legal footer and the Live / FDev dots.
   await expect(page.locator(".app-legal-footer")).toBeHidden();
+  await expect(page.locator(".app-legal-footer-coffee")).toHaveCount(0); // asks nothing of a stream
   await expect(page.locator(".appbar-status").first()).toBeHidden();
   await page.screenshot({ path: `${OUT}/streamer-view.png` });
   expect(errors).toEqual([]);

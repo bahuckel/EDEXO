@@ -772,6 +772,21 @@
         overflow-wrap: anywhere;
         user-select: all;
       }
+      .foot-coffee-row {
+        margin: 10px 0 0;
+        text-align: center;
+        font-size: 0.6rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .foot-coffee {
+        color: var(--hud-hi);
+        text-decoration: none;
+      }
+      .foot-coffee:hover,
+      .foot-coffee:focus-visible {
+        text-decoration: underline;
+      }
       .foot {
         margin-top: 22px;
         display: flex;
@@ -2102,6 +2117,10 @@
           <span>EDEXO · exobiology routing</span>
           <span>Local server · WebSocket live link</span>
         </div>
+        <!-- The owner's Ko-fi (2026-10-21), on a line of its own; opens in the browser (windowGuards.cjs). -->
+        <p class="foot-coffee-row">
+          <a class="foot-coffee" href="https://ko-fi.com/bahuckel" target="_blank" rel="noopener noreferrer">Buy me a coffee</a>
+        </p>
       </div>
     </div>
 

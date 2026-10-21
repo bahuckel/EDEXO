@@ -687,3 +687,8 @@ button.data-value-pill.data-value-pill--clickable:active {
   color: #7dd3fc;
   border-color: rgba(125, 211, 252, 0.5);
 }
+
+/* The Ko-fi link (owner, 2026-10-21): the last of the footer links, in the accent colour. */
+.app-legal-footer a.app-legal-footer-coffee {
+  color: var(--hud-hi);
+}
