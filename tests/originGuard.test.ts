@@ -91,16 +91,16 @@ describe("Host and Origin", () => {
   it("checks Host for this PC's own requests only; other devices may use any name, same-origin", () => {
     const req = (from: string, host: string, origin?: string) =>
       ({ socket: { remoteAddress: from }, headers: { host, ...(origin ? { origin } : {}) } }) as unknown as http.IncomingMessage;
-    const lan = (h: string) => h === "192.168.0.6";
+    const lan = (h: string) => h === "192.0.2.10";
     const o = { checkOrigin: true };
-    expect(requestOriginIsAllowed(req("127.0.0.1", "192.168.0.6:7111", "http://192.168.0.6:7111"), lan, o)).toBe(true);
+    expect(requestOriginIsAllowed(req("127.0.0.1", "192.0.2.10:7111", "http://192.0.2.10:7111"), lan, o)).toBe(true);
     expect(requestOriginIsAllowed(req("127.0.0.1", "[::1]:7111"), lan, o)).toBe(true);
     expect(requestOriginIsAllowed(req("127.0.0.1", "10.0.0.9:7111"), lan, { checkOrigin: false })).toBe(false);
     // A phone on a public URL or a DDNS name: its own name, same-origin.
     expect(requestOriginIsAllowed(req("203.0.113.5", "my.ddns.example:7111", "http://my.ddns.example:7111"), lan, o)).toBe(true);
     // ...but not another site's page posting from that phone.
     expect(requestOriginIsAllowed(req("203.0.113.5", "my.ddns.example:7111", "https://evil.example"), lan, o)).toBe(false);
-    expect(requestOriginIsAllowed(req("192.168.0.20", "192.168.0.6:7111", "null"), lan, o)).toBe(false);
+    expect(requestOriginIsAllowed(req("192.0.2.20", "192.0.2.10:7111", "null"), lan, o)).toBe(false);
   });
 });
 
@@ -113,7 +113,7 @@ describe("localOnly", () => {
       localOnly({ socket: { remoteAddress: addr } } as never, res, () => (passed = true));
       return { status, passed };
     };
-    expect(run("192.168.0.20")).toEqual({ status: 403, passed: false });
+    expect(run("192.0.2.20")).toEqual({ status: 403, passed: false });
     expect(run("::ffff:127.0.0.1")).toEqual({ status: 0, passed: true });
   });
 });
