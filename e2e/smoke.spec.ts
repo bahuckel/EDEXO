@@ -166,6 +166,27 @@ test("colonize: Compare's shell — its app bar, and Compare's screens as tabs k
   // Back home: the Colonize tab.
   await page.locator(".tab-strip__tab", { hasText: "Colonize" }).first().click();
   await expect(page.getByRole("heading", { name: "Your sites" })).toBeVisible();
+  // Its tray is a full row under the app bar, and the footer sits at the window's bottom (owner, 2026-10-22).
+  const widths = await page.evaluate(() => [
+    document.querySelector(".header-tray--app")?.getBoundingClientRect().width ?? 0,
+    document.querySelector(".top > .appbar")?.getBoundingClientRect().width ?? 0,
+  ]);
+  expect(widths[0]).toBeGreaterThan(widths[1] - 2);
+  for (const w of [1280, 1600]) {
+    await page.setViewportSize({ width: w, height: 1400 });
+    const gap = await page.evaluate(() => {
+      const f = document.querySelector(".app-legal-footer")!.getBoundingClientRect();
+      return Math.max(innerHeight, document.documentElement.scrollHeight) - (f.bottom + scrollY);
+    });
+    expect(gap, `footer gap at ${w}px`).toBeLessThan(40);
+  }
+  // Options: what applies to Colonize, none of Compare's exobiology.
+  await openFromMenu(page, "Options");
+  await expect(page.locator(".options-group-head", { hasText: "Look" })).toBeVisible();
+  await expect(page.locator(".options-group-head", { hasText: "Exobiology" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reset exobiology…" })).toHaveCount(0);
+  await expect(page.getByText("System map + and ++ marks")).toHaveCount(0);
+  await page.getByRole("button", { name: "Close" }).first().click();
   expect(errors).toEqual([]);
 });
 

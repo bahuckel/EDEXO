@@ -162,7 +162,8 @@
     margin-top: 0;
   }
   .top > .header-edsm-map-note,
-  .top > .header-commander-away {
+  .top > .header-commander-away,
+  .top > .header-tray--app {
     grid-column: 1 / -1;
   }
 }

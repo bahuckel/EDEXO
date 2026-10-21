@@ -63,8 +63,23 @@ body::before {
   padding: 0.75rem 1.25rem 2rem;
 }
 
+/* The footer at the window's bottom when the page is shorter than the window (owner, 2026-10-22: "not on the
+ * bottom of the window"); a long page pushes it down as before. The tab strip / title bar sits above the shell. */
+html:not([data-streamer]) .app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+html.tab-view:not([data-streamer]) .app-shell,
+html.custom-title-bar:not([data-streamer]) .app-shell {
+  min-height: calc(100vh - var(--tab-strip-h));
+}
+.app-legal-footer-spacer {
+  flex: 1 0 2rem;
+}
+
 .app-legal-footer {
-  margin-top: 2rem;
   padding: 1rem 0 0;
   border-top: var(--border);
   display: flex;

@@ -160,13 +160,18 @@ export function MapOptionsModal({
   plusPlusMinCr,
   onResetExobiology,
   onClose,
+  app = "compare",
 }: {
   snap: AppSnapshot;
   plusMinCr: number;
   plusPlusMinCr: number;
   onResetExobiology: () => void;
   onClose: () => void;
+  /** Colonize (1.3.0) keeps what is the same app-wide — look, notices, online data, devices, journals, about — and
+   *  leaves out Compare's own: map marks, the snapshot stamp, exobiology and the developer tools. */
+  app?: "compare" | "colonize";
 }) {
+  const compare = app === "compare";
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
   const toast = useToast();
   const [optPlus, setOptPlus] = useState(plusMinCr);
@@ -280,6 +285,8 @@ export function MapOptionsModal({
             Look
           </h4>
           <ColourSchemePanel />
+          {compare ? (
+          <>
           {/*
             The mechanism here predates this session and is not being changed — only its presentation
             (A5). Two paragraphs explained what a <strong>+</strong> means before either slider was
@@ -357,15 +364,21 @@ export function MapOptionsModal({
             </div>
           </FoldPanel>
           <SnapshotStampPanel prefs={snap.photoStamp} />
+          </>
+          ) : null}
           <h4 className="options-group-head" title="What the app tells you about, on the bell and the Notices HUD">
             Notifications
           </h4>
           <NotifyPanel />
-          <h4 className="options-group-head" title="Which species are worth sampling, and the predictions the app missed">
-            Exobiology
-          </h4>
-          <CollectionFocusPanel />
-          <ExoMissLogPanel outliers={snap.exoOutliers} />
+          {compare ? (
+            <>
+              <h4 className="options-group-head" title="Which species are worth sampling, and the predictions the app missed">
+                Exobiology
+              </h4>
+              <CollectionFocusPanel />
+              <ExoMissLogPanel outliers={snap.exoOutliers} />
+            </>
+          ) : null}
           <h4 className="options-group-head" title="What the app fetches from EDSM, and what it sends to EDSM, Canonn and EDDN under your name">
             Online data
           </h4>
@@ -477,6 +490,7 @@ export function MapOptionsModal({
               </InfoPopover>
             </div>
           </FoldPanel>
+          {compare ? (
           <FoldPanel
             foldKey="options-developer"
             defaultOpen={false}
@@ -507,6 +521,7 @@ export function MapOptionsModal({
               </InfoPopover>
             </label>
           </FoldPanel>
+          ) : null}
           <h4 className="options-group-head" title="What this install runs on, for a bug report">
             About
           </h4>
@@ -527,14 +542,16 @@ export function MapOptionsModal({
                 <span className="tab"> · merged {snap.journalFileCount} log file(s)</span>
               ) : null}
             </p>
-            <p className="options-journal-line dim">Species DB: {snap.speciesCount}</p>
+            {compare ? <p className="options-journal-line dim">Species DB: {snap.speciesCount}</p> : null}
             <CopyDiagnostics />
             {/* The feeder's corpus folder: with the feeder (Developer tools), not asked for otherwise (1.2.20). */}
-            {snap.feederEnabled ? <FeederCorpusSetting /> : null}
+            {compare && snap.feederEnabled ? <FeederCorpusSetting /> : null}
           </details>
-          <button type="button" className="btn-top-danger options-reset-exo" onClick={onResetExobiology}>
-            Reset exobiology…
-          </button>
+          {compare ? (
+            <button type="button" className="btn-top-danger options-reset-exo" onClick={onResetExobiology}>
+              Reset exobiology…
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

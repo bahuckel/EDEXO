@@ -1097,6 +1097,7 @@ export const HeaderBar = memo(function HeaderBar({
             plusPlusMinCr={snap.exoMapTierPlusPlusMinCr}
             onResetExobiology={resetExobiology}
             onClose={() => setOptionsOpen(false)}
+            app={app}
           />
         </Suspense>
       ) : null}

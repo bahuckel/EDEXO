@@ -174,7 +174,10 @@ export const AppLegalFooter = memo(function AppLegalFooter() {
     it. Same-origin links work offline, over the LAN and on a phone, and always match this version.
   */
   return (
-    <footer className="app-legal-footer">
+    <>
+      {/* Takes the window's leftover height, so the footer sits at the bottom of a short page (owner, 2026-10-22). */}
+      <div className="app-legal-footer-spacer" aria-hidden="true" />
+      <footer className="app-legal-footer">
       <p className="app-legal-footer-note dim">
         EDEXO is owned and operated by Bahuckel™. Independent fan software using local Elite
         Dangerous journal data — not affiliated with Frontier Developments. <em>Elite Dangerous</em> and
@@ -205,7 +208,8 @@ export const AppLegalFooter = memo(function AppLegalFooter() {
           </>
         )}
       </div>
-    </footer>
+      </footer>
+    </>
   );
 });
 
