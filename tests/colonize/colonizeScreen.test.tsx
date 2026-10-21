@@ -101,6 +101,15 @@ vi.mock("../../src/client/colonize/api", () => {
 });
 
 // The server's copy of settings and progress has its own test (uiStateSync.test.ts): here there is none.
+// Compare's shell (C3): its live snapshot, and its app bar reduced to the tray Colonize hands it.
+vi.mock("../../src/client/useLiveSnapshot", async (orig) => ({
+  ...(await orig<typeof import("../../src/client/useLiveSnapshot")>()),
+  useLiveSnapshot: () => ({ snapshot: { commanderName: "Smoke", bodies: [] }, connected: true }),
+}));
+vi.mock("../../src/client/HeaderBar", () => ({
+  HeaderBar: ({ trayContent }: { trayContent?: unknown }) => <header data-testid="shell-bar">{trayContent as never}</header>,
+}));
+
 vi.mock("../../src/client/colonize/uiStateSync", () => ({
   loadColonizeUiState: () => Promise.resolve("local"),
   onRemoteUiState: () => () => {},

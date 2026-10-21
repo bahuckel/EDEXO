@@ -146,6 +146,29 @@ test("colonize: the window opens on the plan, every tab draws, and the launcher 
   expect(errors).toEqual([]);
 });
 
+test("colonize: Compare's shell — its app bar, and Compare's screens as tabs kept apart from Compare's", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto("/?screen=colonize");
+  await page.evaluate(() => localStorage.removeItem("edexo.colonize.tabs"));
+  await page.reload();
+  await expect(page.locator(".appbar-wordmark")).toContainText("Colonize");
+  await expect(page.getByRole("heading", { name: "Your sites" })).toBeVisible();
+  await page.getByRole("button", { name: "Open a screen in a tab" }).click();
+  await expect(page.getByRole("menuitem", { name: "System map" })).toHaveCount(0);
+  await page.getByRole("menuitem", { name: /^Encyclopedia/ }).click();
+  await expect(page.locator(".tab-strip__tab", { hasText: "Encyclopedia" })).toBeVisible();
+  // Compare's Encyclopedia itself, working inside Colonize.
+  await expect(page.locator(".encyclopedia-panel").getByText(/Aleoida|Bacterium|Stratum/).first()).toBeVisible({ timeout: 30_000 });
+  const tabs = await page.evaluate(() => [localStorage.getItem("edexo.colonize.tabs"), localStorage.getItem("edexo.tabs")]);
+  expect(JSON.parse(tabs[0] ?? "{}").tabs).toContain("encyclopedia");
+  expect(JSON.parse(tabs[1] ?? "{\"tabs\":[]}").tabs ?? []).not.toContain("encyclopedia");
+  await page.screenshot({ path: `${OUT}/colonize-shell-tab.png` });
+  // Back home: the Colonize tab.
+  await page.locator(".tab-strip__tab", { hasText: "Colonize" }).first().click();
+  await expect(page.getByRole("heading", { name: "Your sites" })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("colonize: its own launcher menu, remembered apart from Compare's, and a streamer view", async ({ page, request }) => {
   const errors = watchErrors(page);
   await page.goto("/launcher.html");

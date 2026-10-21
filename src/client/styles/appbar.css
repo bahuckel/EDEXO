@@ -71,6 +71,15 @@
   text-shadow: 0 0 10px var(--accent-glow);
   white-space: nowrap;
 }
+/* Which of the two apps on this shell (1.3.0): "EDEXO Compare", "EDEXO Colonize". */
+.appbar-wordmark__app {
+  margin-left: 0.35em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: none;
+}
 
 /* The search brings its own "Return to commander" / "Load bodies from EDSM" buttons. Its default
    `flex: 1 1 100%` basis dropped them onto their own line and made the app bar 107 px tall. Given

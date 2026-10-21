@@ -167,7 +167,7 @@ function BioEmptyState({ snap }: { snap: AppSnapshot }) {
 }
 
 /** Memo: static, and the app shell re-renders on every push. */
-const AppLegalFooter = memo(function AppLegalFooter() {
+export const AppLegalFooter = memo(function AppLegalFooter() {
   /*
     The privacy policy and terms ship with the app (public/legal/) and are served by its own server
     (owner, 2026-09-29): they were on edexo.bahuckel.com, served from this PC, and went dead (530) with

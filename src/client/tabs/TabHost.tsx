@@ -16,8 +16,7 @@ import {
   useTabSelector,
   useTabState,
   type TabFront,
-  type TabKind,
-} from "./tabStore";
+  type TabKind, HOME_TAB_LABEL, TAB_APP } from "./tabStore";
 import { UI_COMMAND_EVENT } from "../useLiveSnapshot";
 import { tabListKeyDown } from "../ui/Tabs";
 import { MENU_ITEM, useMenuButton } from "../ui/Menu";
@@ -223,7 +222,8 @@ function AddMenu() {
       </button>
       {open ? (
         <ul className="tab-strip__menu" {...menu.menuProps}>
-          {TAB_SCREENS.map((s) => (
+          {/* The system map belongs to Compare's main screen (App.tsx draws it): Colonize lists the rest. */}
+          {TAB_SCREENS.filter((s) => TAB_APP === "compare" || s.kind !== "systemMap").map((s) => (
             <li key={s.kind} role="none">
               <button
                 type="button"
@@ -288,7 +288,7 @@ export function TabStrip() {
         if (d && d.from !== WINDOW_KEY) tabStore.receive(d.kind, d.from);
       }}
     >
-      {IS_DETACHED ? null : <TabButton front="main" label="Main" active={st.active === "main"} index={-1} />}
+      {IS_DETACHED ? null : <TabButton front="main" label={HOME_TAB_LABEL} active={st.active === "main"} index={-1} />}
       {st.tabs.map((k, i) => (
         <TabButton key={k} front={k} label={labelOf(k)} active={st.active === k} index={i} />
       ))}

@@ -8,6 +8,12 @@ import { useEffect, useState } from "react";
 import "./colonize.css";
 import { depotDisplayLabel } from "../../shared/colonize/depotLabel";
 import { colonizeReadOnly, useColonizeAppState } from "./api";
+import { AppLegalFooter } from "../App";
+import { HeaderBar } from "../HeaderBar";
+import { HexSignals } from "../HexSignals";
+import { TabHost } from "../tabs/TabHost";
+import { UiFeedbackProvider } from "../ui/feedback";
+import { useLiveSnapshot } from "../useLiveSnapshot";
 import { STREAMER_MODE } from "../streamerMode";
 import { PhoneView } from "./views/PhoneView";
 import { loadColonizeUiState, onRemoteUiState } from "./uiStateSync";
@@ -82,12 +88,18 @@ function PcScreen() {
     setRemote(false);
     setGen((g) => g + 1);
   };
+  // Compare's shell (owner, 2026-10-22: "the same quality and feel"): its feedback (toasts, confirms) and background.
   return (
-    <AppStateProvider key={gen}>
-      <ColonizeApp remoteChange={remote ? redraw : null} />
-    </AppStateProvider>
+    <UiFeedbackProvider>
+      <HexSignals />
+      <AppStateProvider key={gen}>
+        <ColonizeApp remoteChange={remote ? redraw : null} />
+      </AppStateProvider>
+    </UiFeedbackProvider>
   );
 }
+
+const noop = () => undefined;
 
 function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
   const m = useColonize();
@@ -113,17 +125,12 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
     ? { k: "Docked", v: dockedSite ? depotDisplayLabel(dockedSite) : docked.stationName, sub: docked.starSystem ?? "" }
     : { k: "You", v: snap?.navContext.starSystem ?? app.state.currentSystem ?? "…", sub: "" };
   const sellers = m.stations.checkoutBundle?.plans.reduce((n, p) => n + (p.catalogStations?.length ?? 0), 0) ?? 0;
+  // Compare's snapshot drives the shared shell (app bar, status, CMDR, notices, the screens in the tab strip).
+  const live = useLiveSnapshot();
 
-  return (
-    <div className="cz">
-      <header className="cz-head">
-        <div className="cz-brand">
-          <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-            <path d="M14 2 25 8.5v11L14 26 3 19.5v-11Z" fill="none" stroke="var(--hud)" strokeWidth="2" />
-            <path d="M14 8v12M9 11l5-3 5 3" fill="none" stroke="var(--hud-hi)" strokeWidth="1.6" />
-          </svg>
-          EDEXO <span className="cz-brand__tag">COLONIZE</span>
-        </div>
+  /* Colonize's tray, under the shared app bar: where the ship is, the hold, carriers, sellers, the site finder. */
+  const tray = (
+      <div className="cz cz-tray">
         <div className="cz-chips">
           <span className={`cz-chip${docked?.stationName ? " cz-chip--info" : ""}`}>
             <span className="cz-chip__k">{where.k}</span>
@@ -156,7 +163,31 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
             Find colony sites <span aria-hidden="true">›</span>
           </a>
         </div>
-      </header>
+      </div>
+  );
+
+  if (!live.snapshot) {
+    return (
+      <div className="app-shell">
+        <div className="panel load">Connecting to journal service…</div>
+        <AppLegalFooter />
+      </div>
+    );
+  }
+
+  return (
+    <TabHost>
+    <div className="app-shell">
+      <HeaderBar
+        app="colonize"
+        snap={live.snapshot}
+        connected={live.connected}
+        encyclopediaSpawnCompare={null}
+        onOpenSystemMap={noop}
+        trayContent={tray}
+        trayLabel="where you are, the hold, your carriers and the sellers known"
+      />
+      <div className="cz cz--in-shell">
       <nav className="cz-tabs" role="tablist" aria-label="Colonize sections">
         {TABS.map((t) => (
           <button
@@ -205,13 +236,10 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
           </p>
         ) : null}
       </main>
-      <footer className="cz-small cz-dim" style={{ padding: "16px 24px", textAlign: "center" }}>
-        EDEXO is not affiliated with Frontier Developments. ·{" "}
-        <a href="https://ko-fi.com/bahuckel" target="_blank" rel="noreferrer">
-          Buy me a coffee
-        </a>
-      </footer>
+      </div>
+      <AppLegalFooter />
     </div>
+    </TabHost>
   );
 }
 

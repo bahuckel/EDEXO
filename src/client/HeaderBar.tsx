@@ -331,6 +331,11 @@ function afmuNote(j: AppSnapshot["jumponium"]): string {
   return ` An AFMU is fitted: it repairs the FSD in flight.${made ? ` AFM refills you can make: ${made}.` : ""}`;
 }
 
+/**
+ * The app bar, its tray and every screen tab — shared by the two apps on this shell (1.3.0, owner 2026-10-22):
+ * Compare (`app` "compare", the default: unchanged) and Colonize, which brings its own tray (`trayContent`) and has
+ * no system search, system cards or route/fuel/data tray of Compare's.
+ */
 export const HeaderBar = memo(function HeaderBar({
   snap,
   connected,
@@ -339,6 +344,9 @@ export const HeaderBar = memo(function HeaderBar({
   onGoToBioBody,
   encyclopediaSpawnCompare,
   onOpenSystemMap,
+  app = "compare",
+  trayContent,
+  trayLabel,
 }: {
   snap: AppSnapshot;
   connected: boolean;
@@ -347,7 +355,13 @@ export const HeaderBar = memo(function HeaderBar({
   onGoToBioBody?: (bodyKey: string) => void;
   encyclopediaSpawnCompare: EncyclopediaSpawnCompare | null;
   onOpenSystemMap: () => void;
+  app?: "compare" | "colonize";
+  /** Colonize: what its tray shows (the hold, the next stop, sites building) instead of Compare's. */
+  trayContent?: ReactNode;
+  /** The tray toggle's words, e.g. "the hold, next stop and sites". */
+  trayLabel?: string;
 }) {
+  const compare = app === "compare";
   const confirm = useConfirm();
   const toast = useToast();
   const scanDataOn = snap.includeExplorationScanDataInDataValue === true;
@@ -627,13 +641,17 @@ export const HeaderBar = memo(function HeaderBar({
       <div className="appbar">
         <div className="appbar-left">
           <img src="/edexo-icon-124.webp" alt="" className="appbar-mark" width={24} height={24} />
-          <span className="appbar-wordmark logo">ED EXO COMPARE</span>
+          <span className="appbar-wordmark logo">
+            EDEXO <span className="appbar-wordmark__app">{compare ? "Compare" : "Colonize"}</span>
+          </span>
         </div>
 
         <div className="appbar-centre">
-          <div className="appbar-search">
-            <JournalSystemSearch snap={snap} onGoToBioBody={onGoToBioBody} />
-          </div>
+          {compare ? (
+            <div className="appbar-search">
+              <JournalSystemSearch snap={snap} onGoToBioBody={onGoToBioBody} />
+            </div>
+          ) : null}
         </div>
 
         <div className="appbar-right">
@@ -696,11 +714,7 @@ export const HeaderBar = memo(function HeaderBar({
               </div>
             </div>
             <Tooltip
-              text={
-                trayOpen
-                  ? "Hide the route, fuel and data value tray"
-                  : "Show the route, fuel and data value tray"
-              }
+              text={`${trayOpen ? "Hide" : "Show"} ${compare ? "the route, fuel and data value tray" : `the tray: ${trayLabel ?? "this app's facts"}`}`}
             >
               <button
                 type="button"
@@ -708,7 +722,7 @@ export const HeaderBar = memo(function HeaderBar({
                 onClick={() => setTrayOpen((v) => !v)}
                 aria-expanded={trayOpen}
                 aria-controls="header-tray"
-                aria-label="Route, fuel and data value"
+                aria-label={compare ? "Route, fuel and data value" : (trayLabel ?? "Tray")}
               >
                 <IconChevronDown />
               </button>
@@ -717,7 +731,9 @@ export const HeaderBar = memo(function HeaderBar({
         </div>
       </div>
 
-      {snap.edsmMapSupplementForViewingSystem ? (
+      {!compare ? (trayOpen ? <div className="header-tray header-tray--app" id="header-tray">{trayContent}</div> : null) : null}
+
+      {compare && snap.edsmMapSupplementForViewingSystem ? (
         <p className="header-edsm-map-note dim">
           System map uses public galaxy data, EDSM or Spansh (no journal <code>Scan</code> for this system
           yet).
@@ -725,13 +741,15 @@ export const HeaderBar = memo(function HeaderBar({
       ) : null}
 
       {/* The System card, star cards and notable bodies — SystemCard.tsx (Discord batch O-E2). */}
-      <SystemCardRow
-        snap={snap}
-        onOpenSystemMap={onOpenSystemMap}
-        onNotableClick={openNotableQuick}
-      />
+      {compare ? (
+        <SystemCardRow
+          snap={snap}
+          onOpenSystemMap={onOpenSystemMap}
+          onNotableClick={openNotableQuick}
+        />
+      ) : null}
 
-      {trayOpen ? (
+      {compare && trayOpen ? (
         <div className="header-data-value-row header-tray" id="header-tray">
           <button
             type="button"
@@ -931,7 +949,8 @@ export const HeaderBar = memo(function HeaderBar({
         </div>
       ) : null}
 
-      {snap.viewingSystemAddress != null &&
+      {compare &&
+      snap.viewingSystemAddress != null &&
       snap.currentSystemAddress != null &&
       snap.viewingSystemAddress !== snap.currentSystemAddress ? (
         <p className="sub-live dim header-commander-away">

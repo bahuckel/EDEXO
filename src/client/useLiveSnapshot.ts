@@ -30,7 +30,9 @@ const IPC_UI_COMMANDS: boolean = (() => {
       };
     }
   ).edexoElectron;
-  if (!e?.tabs || typeof e.onUiCommand !== "function" || new URLSearchParams(location.search).has("tabwin")) return false;
+  const q = new URLSearchParams(location.search);
+  // Electron sends them to Compare's window only; Colonize (its own app on this shell) takes the socket's copy.
+  if (!e?.tabs || typeof e.onUiCommand !== "function" || q.has("tabwin") || q.get("screen") === "colonize") return false;
   e.onUiCommand((cmd) => {
     const got = typeof cmd.sentAt === "number" ? Date.now() - cmd.sentAt : -1;
     window.dispatchEvent(new CustomEvent(UI_COMMAND_EVENT, { detail: cmd }));

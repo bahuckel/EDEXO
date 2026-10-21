@@ -75,11 +75,19 @@ export interface TabState {
 const LS_ON = "edexo.tabView";
 
 const params = typeof location !== "undefined" ? new URLSearchParams(location.search) : new URLSearchParams();
+/**
+ * Which app this page is (1.3.0, owner 2026-10-22): Compare and Colonize are two apps on one shell. Each keeps its own
+ * open tabs; only Compare's join the desktop app's window registry (drag a tab out, focus it elsewhere).
+ */
+export const TAB_APP: "compare" | "colonize" = params.get("screen") === "colonize" ? "colonize" : "compare";
+/** The home tab's label: the app's own main screen. */
+export const HOME_TAB_LABEL = TAB_APP === "colonize" ? "Colonize" : "Main";
 /** This window's key: "main" for the app window, else the detached window's (`?tabwin=`). */
 export const WINDOW_KEY = params.get("tabwin") ?? "main";
 /** A window a tab was dragged out into: no Main tab, and it closes with its last tab. */
 export const IS_DETACHED = WINDOW_KEY !== "main";
-const LS_TABS = IS_DETACHED ? `edexo.tabs.${WINDOW_KEY}` : "edexo.tabs";
+const LS_TABS_BASE = TAB_APP === "colonize" ? "edexo.colonize.tabs" : "edexo.tabs";
+const LS_TABS = IS_DETACHED ? `${LS_TABS_BASE}.${WINDOW_KEY}` : LS_TABS_BASE;
 
 interface TabBridge {
   report(tabs: readonly string[]): void;
@@ -98,9 +106,9 @@ interface TabBridge {
     ) => void,
   ): () => void;
 }
-/** The desktop app's window bridge (electron/preload.cjs `tabs`); null in a browser. */
+/** The desktop app's window bridge (electron/preload.cjs `tabs`); null in a browser, and for Colonize (see TAB_APP). */
 export const TAB_BRIDGE: TabBridge | null =
-  typeof window !== "undefined"
+  typeof window !== "undefined" && TAB_APP === "compare"
     ? ((window as unknown as { edexoElectron?: { tabs?: TabBridge } }).edexoElectron?.tabs ?? null)
     : null;
 /** Which tabs every other window holds (from the main process). */

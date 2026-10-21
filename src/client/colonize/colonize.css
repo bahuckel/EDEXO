@@ -538,3 +538,21 @@ html[data-streamer-bg="transparent"] .cz-head {
     max-width: none;
   }
 }
+
+/* Inside Compare's shell (1.3.0, C3): the shell gives the background, the font and the footer. */
+.cz.cz--in-shell,
+.cz.cz-tray {
+  min-height: 0;
+  display: block;
+  background: transparent;
+  font-family: inherit;
+}
+.cz.cz-tray {
+  display: flex;
+  flex-direction: row; /* not the .cz root's column: the chips' width basis would become their height */
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 8px 0 4px;
+}
