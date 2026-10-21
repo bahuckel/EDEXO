@@ -137,14 +137,12 @@ function createHudWindows(deps) {
   let focusAway = false;
   let hideUnfocused = true;
   /*
-    Whether Elite runs, as last told (null: not known yet). Unlike `gameAway` the hotkey does not clear
-    it. "Hide when Elite is not in front" only means something while there is an Elite to be in front:
-    with the game closed and the HUD shown by hand, it hid the HUD whenever anything else was clicked
-    (owner, 2026-10-02: "appears-disappears", hud-events.log).
+    Shown only while Elite, the launcher or an app window is in front, whether the game runs or not (owner,
+    2026-10-21: "HUD should be visible only when Elite or the Launcher/In-app GUI are in focus"). From 2026-10-02
+    to 1.2.20 a HUD shown by hand with the game closed stayed up over every other window; that exception is gone.
+    The hotkey still shows them at once and forgets the away state, until the next window change.
   */
-  let gameRunning = null;
-  const hiddenNow = () =>
-    !moving && (hudHidden || gameAway || (hideUnfocused && focusAway && gameRunning !== false));
+  const hiddenNow = () => !moving && (hudHidden || gameAway || (hideUnfocused && focusAway));
   /*
     A window whose page has nothing to show right now ("Only when relevant", guild tester report,
     2026-09-30): hidden and left out of the stack, so the others close up. The page says so through
@@ -1095,13 +1093,7 @@ function createHudWindows(deps) {
    */
   function setGameAway(away) {
     const next = away === true;
-    // Recorded even when the away state already says so: the hotkey may have cleared that.
-    const wasRunning = gameRunning;
-    gameRunning = !next;
-    if (gameAway === next) {
-      if (wasRunning !== gameRunning) applyAway();
-      return;
-    }
+    if (gameAway === next) return;
     hudLog(`game ${next ? "not running" : "running"}`);
     gameAway = next;
     applyAway();
