@@ -342,6 +342,8 @@ export function applyJournalObject(state: JournalState, j: Record<string, unknow
     }
   }
   if (ev === "Loadout" && setShipCargoCapacity(state, j.CargoCapacity)) changed = true;
+  // A claim changes whose colonies the sites are in (EDEXO's ownAssets keeps them): worth a redraw.
+  if (ev === "ColonisationSystemClaim" || ev === "ColonisationSystemClaimRelease") changed = true;
   if (ev === "Cargo") {
     const vessel = j.Vessel;
     if (vessel === "Ship") {

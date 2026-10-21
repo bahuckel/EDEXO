@@ -87,6 +87,8 @@ describe("the routes and the socket", () => {
       getCommanderPosition: () => null,
       getCommanderSystem: () => null,
       getJournalDir: () => journalDir,
+      getJournalStore: () =>
+        ({ ownAssets: { colonies: [{ name: "Swoilz KI-E b4-9", addr: 20464042518049, at: "2026-05-15T19:04:23Z" }] } }) as never,
     });
     await listening;
     const port = (server.address() as AddressInfo).port;
@@ -117,6 +119,10 @@ describe("the routes and the socket", () => {
       const j = (await r.json()) as { ok: boolean; result: { journalDir: string; activeDepots: unknown[] } };
       expect(j.ok).toBe(true);
       expect(j.result.journalDir).toBe(journalDir);
+      // The commander's colonies come from EDEXO's journal store (shared/ownAssets.ts).
+      expect((j.result as unknown as { ownColonies: unknown }).ownColonies).toEqual([
+        { name: "Swoilz KI-E b4-9", systemAddress: 20464042518049, claimedAt: "2026-05-15T19:04:23Z" },
+      ]);
       expect(colonizeServiceRunning()).toBe(true);
 
       // The background start ends with a snapshot push (debounced ~0.9 s).

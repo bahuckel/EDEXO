@@ -30,7 +30,10 @@ const site: DepotSnapshot = {
   contributionProgressHistory: [],
 };
 
+const elsewhere: DepotSnapshot = { ...site, marketId: "3950000002", starSystem: "Other Colony", systemAddress: 2, constructionSiteLabel: "Their Port", stationName: "Orbital Construction Site: Their Port" };
+
 const snapshot = {
+  ownColonies: [{ name: "Smoke Colony", systemAddress: 1, claimedAt: "2026-05-15T19:04:23Z" }],
   journalDir: "journals",
   journalDirConfigured: true,
   edsmApiKeyPresent: false,
@@ -49,7 +52,7 @@ const snapshot = {
     },
   ],
   liveJournalPath: null,
-  activeDepots: [site],
+  activeDepots: [site, elsewhere],
   completedDepots: [],
   archivedDepots: [],
   liveDocked: { marketId: site.marketId, stationName: site.stationName!, starSystem: "Smoke Colony", timestamp: "2026-10-20T10:00:00Z" },
@@ -138,6 +141,14 @@ describe("the Colonize window", () => {
     expect(text).toContain("Docked at your site");
     expect(text).toMatch(/Deliver\s*Steel/);
     expect(text).toContain("300 t");
+    // Whose system each site is in, and the colonies with what was built there.
+    expect(host.querySelector("[aria-label='Hammond Port']")?.textContent).toContain("your colony");
+    expect(host.querySelector("[aria-label='Their Port']")?.textContent).toContain("helping");
+    const colonies = host.querySelector("[data-testid='colonies']")?.textContent ?? "";
+    expect(colonies).toContain("Your colonies (1)");
+    expect(colonies).toContain("Smoke Colony");
+    expect(colonies).toContain("claimed 2026-05-15");
+    expect(colonies).toContain("1 building");
     // Aluminium is delivered in full, so it is not among the needs.
     expect(host.querySelector("[aria-label='Hammond Port'] .cz-list")?.textContent).not.toContain("Aluminium");
   });

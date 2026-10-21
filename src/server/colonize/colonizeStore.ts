@@ -1,7 +1,7 @@
 import { promises as fs, watchFile, unwatchFile } from "node:fs";
 import path from "node:path";
 import { normalizeConstructionProgress } from "../../shared/colonize/constructionProgress";
-import type { ColonizeSnapshot, DepotSnapshot, DockMarketBrief } from "../../shared/colonize/types";
+import type { ColonizeSnapshot, DepotSnapshot, DockMarketBrief, OwnColony } from "../../shared/colonize/types";
 import { isConstructionDepotStation } from "../../shared/colonize/constructionDepot";
 import {
   applyMarketJsonToJournalShop,
@@ -47,6 +47,8 @@ export type ColonizeStoreDeps = {
   journalDir: () => string;
   /** EDEXO's EDSM API key (Options), for wing cargo; null when none is saved. */
   edsmApiKey: () => string | null;
+  /** The systems the commander claimed, from EDEXO's journal store (shared/ownAssets.ts). */
+  ownColonies?: () => OwnColony[];
 };
 
 /** A journal file as a key for `reached`: one spelling per file whatever the caller passed. */
@@ -394,6 +396,7 @@ export class ColonizeStore {
     }
 
     return {
+      ownColonies: this.deps.ownColonies?.() ?? [],
       journalDir,
       journalDirConfigured: true,
       edsmApiKeyPresent: Boolean(this.deps.edsmApiKey()),

@@ -19,6 +19,7 @@ function snap(over: Partial<ColonizeSnapshot> = {}): ColonizeSnapshot {
     wingRoster: [],
     carriers: [],
     lastError: null,
+    ownColonies: [],
     ...over,
   } as ColonizeSnapshot;
 }
@@ -36,6 +37,11 @@ describe("colonizeSnapshotNotifySig", () => {
     );
     expect(after).not.toBe(before);
     expect(colonizeSnapshotNotifySig(snap({ carriers: [carrier] }))).not.toBe(colonizeSnapshotNotifySig(snap()));
+  });
+
+  it("changes when a system is claimed", () => {
+    const claimed = snap({ ownColonies: [{ name: "Swoilz KI-E b4-9", systemAddress: 20464042518049, claimedAt: "2026-05-15T19:04:23Z" }] });
+    expect(colonizeSnapshotNotifySig(claimed)).not.toBe(colonizeSnapshotNotifySig(snap()));
   });
 
   it("changes when the replay finishes", () => {

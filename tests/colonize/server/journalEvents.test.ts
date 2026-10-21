@@ -127,6 +127,12 @@ describe("applyJournalLine", () => {
     expect(state.shipCargoByName.get("steel")?.count).toBe(96);
   });
 
+  it("counts a system claim as a change, so the window redraws whose colonies the sites are in", () => {
+    const state = createJournalState();
+    expect(applyJournalLine(state, JSON.stringify({ event: "ColonisationSystemClaim", timestamp: "2026-05-15T19:04:23Z", StarSystem: "X", SystemAddress: 1 }))).toBe(true);
+    expect(applyJournalLine(state, JSON.stringify({ event: "ColonisationSystemClaimRelease", timestamp: "2026-05-16T19:04:23Z", StarSystem: "X", SystemAddress: 1 }))).toBe(true);
+  });
+
   it("takes the hold's size from Loadout and keeps it through Cargo events, which carry none", () => {
     const state = createJournalState();
     replay(state);

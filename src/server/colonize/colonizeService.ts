@@ -9,6 +9,7 @@
  * Everything that runs on its own (the background start, the folder watch, the scans) is guarded: a failure is
  * logged, never thrown into the server process, which would close the desktop app.
  */
+import type { OwnColony } from "../../shared/colonize/types";
 import { readEdsmCredentials } from "../edsmCredentials.js";
 import { resolveColonizeDataDir } from "../paths.js";
 import { closeColonizeUiState, colonizeUiState } from "./uiState";
@@ -33,6 +34,8 @@ export type ColonizeServiceDeps = {
   journalDir: () => string;
   /** To every open Colonize window. */
   push: ColonizePush;
+  /** The commander's claimed systems (EDEXO's journal store). */
+  ownColonies?: () => OwnColony[];
 };
 
 export type ColonizeService = {
@@ -68,6 +71,7 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
   const store = new ColonizeStore(dataDir, {
     journalDir: deps.journalDir,
     edsmApiKey: () => readEdsmCredentials()?.apiKey ?? null,
+    ownColonies: deps.ownColonies,
   });
   let buyIndex: MaterialBuyIndex | null = null;
   const materialBuyIndex = (): MaterialBuyIndex => (buyIndex ??= getMaterialBuyIndex(dataDir));

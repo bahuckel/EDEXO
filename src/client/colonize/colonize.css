@@ -505,3 +505,8 @@
     padding-inline: 16px;
   }
 }
+
+/* A site in one of the commander's own colonies (ownColony.ts). */
+.cz-own {
+  color: var(--hud-hi);
+}

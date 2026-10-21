@@ -34,5 +34,6 @@ export function colonizeSnapshotNotifySig(s: ColonizeSnapshot): string {
       (c) => `${c.carrierId}:${c.lastEventIso ?? ""}:${c.reportedTons ?? ""}:${c.name ?? ""}`,
     ),
     le: s.lastError,
+    oc: s.ownColonies.map((c) => c.systemAddress),
   });
 }

@@ -49,6 +49,8 @@ export function registerColonizeRoutes(app: express.Express, opts: HttpServerOpt
     colonizeService({
       journalDir: () => opts.getJournalDir?.() ?? DEFAULT_JOURNAL_DIR,
       push: <K extends keyof ColonizeEvents>(event: K, payload: ColonizeEvents[K]) => ctx.pushColonize(event, payload),
+      ownColonies: () =>
+        (opts.getJournalStore?.()?.ownAssets.colonies ?? []).map((c) => ({ name: c.name, systemAddress: c.addr, claimedAt: c.at })),
     });
 
   app.get("/api/colonize/status", (_req, res) => {

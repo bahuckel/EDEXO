@@ -206,7 +206,12 @@ export type WingRosterEntry = {
   lastSeenIso: string;
 };
 
+/** A system the commander claimed (journal `ColonisationSystemClaim`, kept by EDEXO: shared/ownAssets.ts). */
+export type OwnColony = { name: string; systemAddress: number; claimedAt: string };
+
 export type ColonizeSnapshot = {
+  /** The commander's colonies: what is built there is his own; a site elsewhere is helping someone else. */
+  ownColonies: OwnColony[];
   journalDir: string;
   journalDirConfigured: boolean;
   /** Stored locally for future Inara commander/events integration (not used for market search). */

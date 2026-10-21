@@ -4,7 +4,8 @@
  */
 import { useState } from "react";
 import { depotDisplayLabel } from "../../../shared/colonize/depotLabel";
-import type { DepotSnapshot, ResourceRow } from "../../../shared/colonize/types";
+import { colonyOf } from "../../../shared/colonize/ownColony";
+import type { DepotSnapshot, OwnColony, ResourceRow } from "../../../shared/colonize/types";
 import type { ColonizeModel } from "../useColonize";
 
 const left = (r: ResourceRow) => Math.max(0, r.required - r.provided);
@@ -49,6 +50,7 @@ export function SitesColumn({ m }: { m: ColonizeModel }) {
           </div>
         </details>
       ) : null}
+      <ColoniesFold m={m} />
       {away.length ? (
         <details className="cz-fold">
           <summary>
@@ -74,6 +76,57 @@ export function SitesColumn({ m }: { m: ColonizeModel }) {
   );
 }
 
+/**
+ * The systems the commander claimed (owner, 2026-10-21: "own sites from colonies"), each with what was built there.
+ * Known from the journal's `ColonisationSystemClaim`, so a claim made before the journals on this PC is missing.
+ */
+function ColoniesFold({ m }: { m: ColonizeModel }) {
+  const colonies = m.snap?.ownColonies ?? [];
+  if (!colonies.length) return null;
+  const count = (list: DepotSnapshot[] | undefined, c: OwnColony) => (list ?? []).filter((d) => colonyOf(d, [c])).length;
+  return (
+    <details className="cz-fold" data-testid="colonies">
+      <summary>
+        <span>Your colonies ({colonies.length})</span>
+        <span aria-hidden="true">▸</span>
+      </summary>
+      <ul className="cz-list">
+        {colonies.map((c) => {
+          const building = count(m.snap?.activeDepots, c);
+          const done = count(m.snap?.completedDepots, c);
+          return (
+            <li key={c.systemAddress}>
+              <span>
+                <b>{c.name}</b>
+                <div className="cz-small cz-dim">claimed {c.claimedAt.slice(0, 10)}</div>
+              </span>
+              <span className="cz-small cz-dim cz-num">
+                {building ? <span style={{ color: "var(--hud-hi)" }}>{building} building</span> : null}
+                {building && done ? " · " : null}
+                {done ? `${done} finished` : null}
+                {!building && !done ? "nothing built yet" : null}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
+  );
+}
+
+/** "Your colony" on a site in a claimed system; "helping" on one elsewhere, once the claims are known at all. */
+function Whose({ d, colonies }: { d: DepotSnapshot; colonies: OwnColony[] }) {
+  if (!colonies.length || !d.starSystem) return null;
+  return colonyOf(d, colonies) ? (
+    <span className="cz-own"> · your colony</span>
+  ) : (
+    <span className="cz-dim" title="A system another commander claimed: you are helping build it">
+      {" "}
+      · helping
+    </span>
+  );
+}
+
 function SiteCard({ d, m, compact = false }: { d: DepotSnapshot; m: ColonizeModel; compact?: boolean }) {
   const t = siteTotals(d);
   const needs = d.resources.filter((r) => left(r) > 0).sort((a, b) => left(b) - left(a));
@@ -87,6 +140,7 @@ function SiteCard({ d, m, compact = false }: { d: DepotSnapshot; m: ColonizeMode
           <div style={{ fontWeight: 700, fontSize: 17 }}>{depotDisplayLabel(d)}</div>
           <div className="cz-small cz-dim">
             {d.starSystem ?? "System not known yet"}
+            <Whose d={d} colonies={m.snap?.ownColonies ?? []} />
             {docked ? <span style={{ color: "var(--ok)" }}> · docked here</span> : null}
           </div>
         </div>
