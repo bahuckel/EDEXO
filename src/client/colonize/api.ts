@@ -16,6 +16,16 @@ import {
   type ColonizeListeners,
 } from "../../shared/colonize/ipc/contract";
 
+/**
+ * A paired phone or tablet: the page came from an address other than this PC's own, so the server lets it read and
+ * not save (lanAuth.ts `localOnly`). `&phone=1` asks for the same view on the PC.
+ */
+export function colonizeReadOnly(loc: Pick<Location, "hostname" | "search"> = window.location): boolean {
+  if (new URLSearchParams(loc.search).get("phone") === "1") return true;
+  const h = loc.hostname.toLowerCase();
+  return !(h === "localhost" || h.endsWith(".localhost") || h === "127.0.0.1" || h === "[::1]" || h === "::1");
+}
+
 /** A request the server answered with a failure (not a method's own `{ ok: false }`, which comes back as a value). */
 export class ColonizeRequestError extends Error {}
 

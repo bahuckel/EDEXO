@@ -177,7 +177,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
         {docked && !dockedAtSite && plan ? <BuyHerePanel m={m} plan={plan} /> : null}
 
         {trips.length ? (
-          <NextTripCard m={m} trips={trips} completed={completedLineIds} onToggle={toggleTripLine} onBan={m.stations.ban} />
+          <NextTripCard trips={trips} completed={completedLineIds} onToggle={toggleTripLine} onBan={m.stations.ban} />
         ) : null}
 
         {missing.length ? (
@@ -223,7 +223,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
           </div>
         ) : null}
 
-        {trips.length > 1 ? <TripList m={m} trips={trips} completed={completedLineIds} onToggle={toggleTripLine} onBan={m.stations.ban} /> : null}
+        {trips.length > 1 ? <TripList trips={trips} completed={completedLineIds} onToggle={toggleTripLine} onBan={m.stations.ban} /> : null}
 
         {!trips.length && !listingsLoading ? (
           <div className="cz-panel cz-stack">

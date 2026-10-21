@@ -22,6 +22,7 @@ import {
   EXO_MAP_CR_STEP,
   EXO_MAP_PLUS_SLIDER_MAX,
   secondScreenUrl,
+  colonizeScreenUrl,
 } from "./lsPrefs";
 import {
   CanonnUploadPanel,
@@ -413,11 +414,21 @@ export function MapOptionsModal({
                     </p>
                   </InfoPopover>
                 </span>
+                <span className="options-lan-head">
+                  Colonize
+                  <InfoPopover title="Colonize on a phone" label="What Colonize shows on a phone">
+                    <p>
+                      Your construction sites, the hold and the haul plan made on this PC, with its ticks, as they
+                      change. Read-only: plans, ticks and settings are made in Colonize here.
+                    </p>
+                  </InfoPopover>
+                </span>
                 {snap.lanUrls.map((u) => (
                   <Fragment key={u}>
                     <span className="options-lan-addr">{lanHost(u)}</span>
                     <CopyLanUrlButton url={u} label="Copy" />
                     <CopyLanUrlButton url={secondScreenUrl(u)} label="Copy" />
+                    <CopyLanUrlButton url={colonizeScreenUrl(u)} label="Copy" />
                   </Fragment>
                 ))}
               </div>

@@ -7,7 +7,8 @@
 import { useEffect, useState } from "react";
 import "./colonize.css";
 import { depotDisplayLabel } from "../../shared/colonize/depotLabel";
-import { useColonizeAppState } from "./api";
+import { colonizeReadOnly, useColonizeAppState } from "./api";
+import { PhoneView } from "./views/PhoneView";
 import { loadColonizeUiState, onRemoteUiState } from "./uiStateSync";
 import { LoadingNote } from "../ui/Loading";
 import { AppStateProvider } from "./state/AppStateContext";
@@ -41,6 +42,20 @@ function readTab(): Tab {
  * not in front; in front, a note offers to, so nothing moves under the commander's cursor.
  */
 export function ColonizeScreen() {
+  return colonizeReadOnly() ? <PhoneScreen /> : <PcScreen />;
+}
+
+/** A paired phone or tablet: the read-only view (PhoneView.tsx), on the server's copy of the plan. */
+function PhoneScreen() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    document.title = "Colonize — ED Exo Compare";
+    void loadColonizeUiState({ readOnly: true }).finally(() => setReady(true));
+  }, []);
+  return ready ? <PhoneView /> : <LoadingNote className="screen-loading" />;
+}
+
+function PcScreen() {
   const [ready, setReady] = useState(false);
   const [gen, setGen] = useState(0);
   const [remote, setRemote] = useState(false);

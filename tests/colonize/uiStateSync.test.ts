@@ -84,6 +84,21 @@ describe("loading the server's copy", () => {
   });
 });
 
+describe("read-only (a paired phone)", () => {
+  it("takes the server's copy even before any window saved, uploads nothing and saves nothing", async () => {
+    localStorage.setItem(TRIPS, "phone's own");
+    localStorage.setItem(BANS, "phone's bans");
+    serve({ values: { [TRIPS]: "pc ticks" }, seeded: false });
+    const { sync, storage } = await fresh();
+    expect(await sync.loadColonizeUiState({ readOnly: true })).toBe("server");
+    expect(localStorage.getItem(TRIPS)).toBe("pc ticks");
+    expect(localStorage.getItem(BANS)).toBeNull();
+    storage.storageSet(TRIPS, "changed here");
+    await new Promise((r) => setTimeout(r, 400));
+    expect(calls.filter((c) => c.method === "PUT")).toHaveLength(0);
+  });
+});
+
 describe("saving", () => {
   it("sends listed keys batched, never caches, and skips unchanged values", async () => {
     serve({ values: { [PARTY]: "p" }, seeded: true });

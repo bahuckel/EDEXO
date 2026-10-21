@@ -4,14 +4,14 @@ import type { HaulTrip, TripStop } from "../../../shared/colonize/logisticsPlann
 import { formatHopLy } from "../../../shared/colonize/systemDistanceLy";
 import { formatPrice } from "../../../shared/colonize/formatPrice";
 import { tripBuyLineId, tripDeliverLineId } from "../../../shared/colonize/tripPlanProgress";
-import type { ColonizeModel } from "../useColonize";
 
 type TripProps = {
-  m: ColonizeModel;
   trips: HaulTrip[];
   completed: Set<string>;
   onToggle: (lineId: string) => void;
   onBan: (systemName: string, stationName: string) => void;
+  /** A paired phone: the ticks are shown, not changed, and nothing writes. */
+  readOnly?: boolean;
 };
 
 /** Every line of a trip that can be ticked: its buys, and each site's delivery. */
@@ -50,7 +50,7 @@ async function copy(text: string) {
   }
 }
 
-export function NextTripCard({ trips, completed, onToggle, onBan }: TripProps) {
+export function NextTripCard({ trips, completed, onToggle, onBan, readOnly = false }: TripProps) {
   const next = trips.find((tr) => !tripDone(tr, completed));
   const [copied, setCopied] = useState<string | null>(null);
   if (!next) {
@@ -83,9 +83,11 @@ export function NextTripCard({ trips, completed, onToggle, onBan }: TripProps) {
               <div className="cz-small cz-dim">Buy at</div>
               <div className="cz-row" style={{ alignItems: "center" }}>
                 <span className="cz-big">{s.stationName}</span>
-                <button type="button" className="cz-btn cz-btn--quiet cz-small" onClick={() => onBan(s.systemName, s.stationName)}>
-                  Never use this station
-                </button>
+                {readOnly ? null : (
+                  <button type="button" className="cz-btn cz-btn--quiet cz-small" onClick={() => onBan(s.systemName, s.stationName)}>
+                    Never use this station
+                  </button>
+                )}
               </div>
               <div style={{ color: "var(--text-dim)" }}>
                 {s.systemName} · {stopFacts(s)}
@@ -118,7 +120,14 @@ export function NextTripCard({ trips, completed, onToggle, onBan }: TripProps) {
                           </td>
                           <td className="r cz-dim">{b.buyPrice != null ? `${formatPrice(b.buyPrice)} cr` : ""}</td>
                           <td>
-                            <input type="checkbox" checked={done} onChange={() => onToggle(id)} aria-label={`${b.label} bought`} style={{ accentColor: "var(--ok)" }} />
+                            <input
+                              type="checkbox"
+                              checked={done}
+                              disabled={readOnly}
+                              onChange={() => onToggle(id)}
+                              aria-label={`${b.label} bought`}
+                              style={{ accentColor: "var(--ok)" }}
+                            />
                           </td>
                         </tr>
                       );
@@ -143,6 +152,7 @@ export function NextTripCard({ trips, completed, onToggle, onBan }: TripProps) {
           )}
         </div>
       </div>
+      {readOnly ? null : (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
         {copyTarget ? (
           <button
@@ -161,11 +171,12 @@ export function NextTripCard({ trips, completed, onToggle, onBan }: TripProps) {
           Mark trip done
         </button>
       </div>
+      )}
     </article>
   );
 }
 
-export function TripList({ trips, completed, onToggle }: TripProps) {
+export function TripList({ trips, completed, onToggle, readOnly = false }: TripProps) {
   const [all, setAll] = useState(false);
   const next = trips.find((tr) => !tripDone(tr, completed));
   const rest = trips.filter((tr) => tr !== next);
@@ -174,7 +185,7 @@ export function TripList({ trips, completed, onToggle }: TripProps) {
     <div className="cz-trips">
       <div className="cz-row" style={{ padding: "12px 16px" }}>
         <h3 className="cz-h3">After that</h3>
-        <span className="cz-small cz-dim">tick a trip you did out of order</span>
+        {readOnly ? null : <span className="cz-small cz-dim">tick a trip you did out of order</span>}
       </div>
       {shown.map((tr) => {
         const done = tripDone(tr, completed);
@@ -184,7 +195,7 @@ export function TripList({ trips, completed, onToggle }: TripProps) {
         return (
           <div key={tr.tripNumber} className={`cz-trip${done ? " cz-trip--done" : ""}`}>
             <label style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 340px" }}>
-              <input type="checkbox" checked={done} onChange={() => setTrip(tr, completed, !done, onToggle)} />
+              <input type="checkbox" checked={done} disabled={readOnly} onChange={() => setTrip(tr, completed, !done, onToggle)} />
               <span className="cz-trip__n">{tr.tripNumber}</span>
               <b>{buy?.stationName ?? "—"}</b>
               <span className="cz-small cz-dim">{buy ? formatHopLy(buy.distanceLy) : ""}</span>

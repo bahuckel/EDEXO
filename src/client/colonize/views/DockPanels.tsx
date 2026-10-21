@@ -83,7 +83,7 @@ export function BuyHerePanel({ m, plan }: { m: ColonizeModel; plan: LogisticsPla
   );
 }
 
-export function DeliverHerePanel({ m, site }: { m: ColonizeModel; site: DepotSnapshot }) {
+export function DeliverHerePanel({ m, site }: { m: Pick<ColonizeModel, "shipCargoByKey">; site: DepotSnapshot }) {
   const rows = site.resources
     .map((r) => {
       const need = Math.max(0, r.required - r.provided);

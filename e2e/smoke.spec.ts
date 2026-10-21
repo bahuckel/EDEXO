@@ -146,6 +146,27 @@ test("colonize: the window opens on the plan, every tab draws, and the launcher 
   expect(errors).toEqual([]);
 });
 
+test("colonize: the phone view reads only what a LAN device may, and fits a phone", async ({ page }) => {
+  const errors = watchErrors(page);
+  const asked: string[] = [];
+  page.on("request", (r) => {
+    const u = new URL(r.url());
+    if (u.pathname.startsWith("/api/colonize/")) asked.push(`${r.method()} ${u.pathname}`);
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/?screen=colonize&phone=1");
+  await expect(page.getByText("Phone view: what the PC knows")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your sites" })).toBeVisible();
+  await expect(page.getByRole("tab")).toHaveCount(0);
+  await page.waitForTimeout(1500);
+  // Nothing a paired phone would be refused (routes/colonizeRoutes.ts COLONIZE_LAN_READ, GET ui-state).
+  expect(asked.length).toBeGreaterThan(0);
+  for (const a of asked) expect(["POST /api/colonize/rpc/getSnapshot", "GET /api/colonize/ui-state"], a).toContain(a);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: `${OUT}/colonize-phone.png`, fullPage: true });
+  expect(errors).toEqual([]);
+});
+
 test("colonize: settings live on the server, so two windows with their own storage agree", async ({ browser }) => {
   // Two contexts = two browsers' storage, like the app window and a browser tab.
   const a = await (await browser.newContext()).newPage();

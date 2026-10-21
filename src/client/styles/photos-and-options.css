@@ -417,7 +417,7 @@
 ------------------------------------------------------------------------------------------------ */
 .options-lan {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 0.3rem 0.6rem;
   align-items: center;
   margin: 0.35rem 0 0;

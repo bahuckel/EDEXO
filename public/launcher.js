@@ -430,6 +430,10 @@
           pu.pathname = "/hud-overlay.html";
           pu.searchParams.set("phone", "1");
           modalLanUrlList.appendChild(makeUrlRow(pu.toString(), "PHONE HUD"));
+          /* Colonize on a phone (1.3.0): read-only there, the PC's sites and haul plan. */
+          var cu = new URL(u);
+          cu.searchParams.set("screen", "colonize");
+          modalLanUrlList.appendChild(makeUrlRow(cu.toString(), "PHONE COLONIZE"));
         } catch (e) {}
       });
     }

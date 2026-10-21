@@ -94,6 +94,7 @@ vi.mock("../../src/client/colonize/api", () => {
   );
   return {
     colonizeApi: api,
+    colonizeReadOnly: () => false, // the PC's window (the phone's has phoneView.test.tsx)
     ColonizeRequestError: class extends Error {},
     useColonizeAppState: () => ({ state: { commanderName: "Smoke", currentSystem: "Smoke Colony" }, connected: true }),
   };

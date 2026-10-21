@@ -13,9 +13,18 @@ export const EXO_MAP_CR_STEP = 50_000;
 export const EXO_MAP_PLUS_SLIDER_MAX = EXO_MAP_CR_MAX - EXO_MAP_CR_STEP;
 
 export function secondScreenUrl(lanUrl: string): string {
+  return withScreen(lanUrl, "triage");
+}
+
+/** Colonize on a phone (1.3.0): the same LAN address and key; the page is read-only there (PhoneView.tsx). */
+export function colonizeScreenUrl(lanUrl: string): string {
+  return withScreen(lanUrl, "colonize");
+}
+
+function withScreen(lanUrl: string, screen: string): string {
   try {
     const u = new URL(lanUrl);
-    u.searchParams.set("screen", "triage");
+    u.searchParams.set("screen", screen);
     return u.toString();
   } catch {
     return lanUrl;

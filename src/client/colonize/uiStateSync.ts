@@ -68,8 +68,11 @@ let loaded: Promise<"server" | "local"> | null = null;
 /**
  * Copies the server's values in (or seeds the server), then turns on saving. "local" when the server could not be
  * asked: the window then runs on this browser's storage alone and saves nothing to the server.
+ *
+ * `readOnly` (a paired phone or tablet, which the server lets read but not save): the server's copy always wins, the
+ * browser's own is never uploaded, and nothing is saved; other windows' saves still come down.
  */
-export function loadColonizeUiState(): Promise<"server" | "local"> {
+export function loadColonizeUiState(opts: { readOnly?: boolean } = {}): Promise<"server" | "local"> {
   return (loaded ??= (async () => {
     let values: Record<string, unknown>;
     let seeded: boolean;
@@ -88,14 +91,16 @@ export function loadColonizeUiState(): Promise<"server" | "local"> {
     for (const key of COLONIZE_SYNCED_KEYS) {
       const server = values[key];
       if (typeof server === "string") storageSetLocal(key, server);
-      else if (seeded) storageSetLocal(key, null);
+      else if (seeded || opts.readOnly) storageSetLocal(key, null);
       else {
         const local = storageGet(key);
         if (local != null) upload[key] = local;
       }
     }
-    if (Object.keys(upload).length) await put(upload);
-    setColonizeStorageSink(queue);
+    if (!opts.readOnly) {
+      if (Object.keys(upload).length) await put(upload);
+      setColonizeStorageSink(queue);
+    }
     colonizeApi.onUiState(({ set, from }) => {
       if (from === COLONIZE_WINDOW_ID) return;
       const keys = Object.keys(set) as ColonizeSyncedKey[];

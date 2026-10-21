@@ -18,7 +18,10 @@ function siteTotals(d: DepotSnapshot) {
   return { required, remaining, pct: Math.max(0, Math.min(100, pct)) };
 }
 
-export function SitesColumn({ m }: { m: ColonizeModel }) {
+/** What the column needs of the model; the phone view (PhoneView.tsx) passes a read-only one. */
+type SitesModel = Pick<ColonizeModel, "snap" | "setDepotRefPin" | "setArchived"> & { ui: Pick<ColonizeModel["ui"], "depotRefPins"> };
+
+export function SitesColumn({ m, readOnly = false }: { m: SitesModel; readOnly?: boolean }) {
   const snap = m.snap;
   const active = snap?.activeDepots ?? [];
   const done = snap?.completedDepots ?? [];
@@ -35,7 +38,7 @@ export function SitesColumn({ m }: { m: ColonizeModel }) {
         </span>
       </div>
       {active.map((d) => (
-        <SiteCard key={d.marketId} d={d} m={m} />
+        <SiteCard key={d.marketId} d={d} m={m} readOnly={readOnly} />
       ))}
       {done.length ? (
         <details className="cz-fold">
@@ -45,13 +48,13 @@ export function SitesColumn({ m }: { m: ColonizeModel }) {
           </summary>
           <div className="cz-stack">
             {done.map((d) => (
-              <SiteCard key={d.marketId} d={d} m={m} compact />
+              <SiteCard key={d.marketId} d={d} m={m} compact readOnly={readOnly} />
             ))}
           </div>
         </details>
       ) : null}
       <ColoniesFold m={m} />
-      {away.length ? (
+      {away.length && !readOnly ? (
         <details className="cz-fold">
           <summary>
             <span>Put away ({away.length})</span>
@@ -80,7 +83,7 @@ export function SitesColumn({ m }: { m: ColonizeModel }) {
  * The systems the commander claimed (owner, 2026-10-21: "own sites from colonies"), each with what was built there.
  * Known from the journal's `ColonisationSystemClaim`, so a claim made before the journals on this PC is missing.
  */
-function ColoniesFold({ m }: { m: ColonizeModel }) {
+function ColoniesFold({ m }: { m: SitesModel }) {
   const colonies = m.snap?.ownColonies ?? [];
   if (!colonies.length) return null;
   const count = (list: DepotSnapshot[] | undefined, c: OwnColony) => (list ?? []).filter((d) => colonyOf(d, [c])).length;
@@ -127,7 +130,7 @@ function Whose({ d, colonies }: { d: DepotSnapshot; colonies: OwnColony[] }) {
   );
 }
 
-function SiteCard({ d, m, compact = false }: { d: DepotSnapshot; m: ColonizeModel; compact?: boolean }) {
+function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapshot; m: SitesModel; compact?: boolean; readOnly?: boolean }) {
   const t = siteTotals(d);
   const needs = d.resources.filter((r) => left(r) > 0).sort((a, b) => left(b) - left(a));
   const docked = m.snap?.liveDocked?.marketId === d.marketId;
@@ -182,6 +185,7 @@ function SiteCard({ d, m, compact = false }: { d: DepotSnapshot; m: ColonizeMode
                 </li>
               ))}
             </ul>
+            {readOnly ? null : (
             <form
               className="cz-row"
               style={{ alignItems: "center", justifyContent: "flex-start" }}
@@ -202,9 +206,12 @@ function SiteCard({ d, m, compact = false }: { d: DepotSnapshot; m: ColonizeMode
                 onBlur={() => m.setDepotRefPin(d.marketId, hub.trim())}
               />
             </form>
-            <button type="button" className="cz-btn" style={{ alignSelf: "flex-start" }} onClick={() => m.setArchived(d.marketId, true)}>
-              Put this site away
-            </button>
+            )}
+            {readOnly ? null : (
+              <button type="button" className="cz-btn" style={{ alignSelf: "flex-start" }} onClick={() => m.setArchived(d.marketId, true)}>
+                Put this site away
+              </button>
+            )}
           </div>
         </details>
       ) : null}
