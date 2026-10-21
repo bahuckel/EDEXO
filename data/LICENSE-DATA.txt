@@ -3,7 +3,9 @@ ED Exo Compare data - Creative Commons BY-NC-SA 3.0
 
 ED Exo Compare is licensed in three parts:
 
-  * the source code         - MIT, see LICENSE;
+  * the source code         - PolyForm Noncommercial 1.0.0 with additional
+                              permissions, since 1.3.0 (MIT up to 1.2.20),
+                              see LICENSE;
   * the data (this notice)  - Creative Commons Attribution-NonCommercial-
                               ShareAlike 3.0 (CC BY-NC-SA 3.0);
   * the species photographs - screenshots of Elite Dangerous: the game and its

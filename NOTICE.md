@@ -1,8 +1,10 @@
 # Notice, credits and third-party material
 
-EDEXO-Compare is MIT licensed. **The MIT licence covers the source code and the data this project
-produced itself. It does not cover the species photographs, and it does not cover Elite Dangerous
-game content.** See "Species photographs" below, which is the part still being resolved.
+EDEXO-Compare's source code is licensed under the PolyForm Noncommercial License 1.0.0 with two additional
+permissions (streams and videos; donations without paywalls), since 1.3.0 — see [LICENSE](LICENSE); releases up to
+1.2.20 were MIT and stay so. The data is CC BY-NC-SA 3.0 ([`data/LICENSE-DATA.txt`](data/LICENSE-DATA.txt)).
+**Neither covers the species photographs, and neither covers Elite Dangerous game content.** See "Species
+photographs" below, which is the part still being resolved.
 
 ---
 
@@ -132,7 +134,7 @@ longer be reached, so naming some and not others would be worse than naming none
 `data/species/<genus>/<genus>_photos/` holds 180 images of Elite Dangerous exobiology (each also
 present as a cropped card and thumbnail, so 540 files). **150 of them were contributed by commanders
 of the Bahuckel clan and by the Stellar Exobiologists Guild**; the remaining 30 are sourced from the ED-DSN community, are **not covered by
-this project's MIT licence** and are not this project's to sublicense.
+this project's licences** and are not this project's to sublicense.
 
 ### Telling them apart, in the app and on disk
 
@@ -143,7 +145,7 @@ There is no unlabelled image.
 | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`Photo by Bahuckel — CMDR <name>`**                          | Contributed. That commander took it themselves, in their own game, and gave it to this project knowingly — either the project owner's own, or a commander who photographed a species for the project or offered an existing shot in support of it. |
 | **`Photo by Stellar Exobiologists Guild`**                     | Contributed by the guild, whose commanders took them in their own game and gave them to this project knowingly.                                                                                                                                    |
-| **`Photo from: https://ed-dsn.net/ and its respective owner`** | Sourced from the ED-DSN community. Not this project's, not MIT, and here with ED-DSN's agreement while replacements are photographed.                                                                                                              |
+| **`Photo from: https://ed-dsn.net/ and its respective owner`** | Sourced from the ED-DSN community. Not this project's, not under its licences, and here with ED-DSN's agreement while replacements are photographed.                                                                                                              |
 
 A named commander under an image is therefore a positive statement about where it came from and that
 its author agreed to it being here. The ED-DSN line is the standing default, applied to anything not

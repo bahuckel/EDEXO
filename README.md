@@ -474,7 +474,13 @@ Full attribution in [NOTICE.md](NOTICE.md).
 
 Three parts, three licences:
 
-- **Code — MIT.** See [LICENSE](LICENSE).
+- **Code — [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0), since
+  1.3.0.** Use it, change it, fork it, make your own builds — for anything non-commercial — and keep the
+  `Required Notice` line from [LICENSE](LICENSE) with every copy. Selling it, or any part of it, or using it
+  to make money is not allowed. Two additional permissions, in [LICENSE](LICENSE): **streamers and video
+  makers** may show the app and its HUD in monetised content with no licence step and no credit needed, and
+  a non-commercial fork may **take donations** as long as nothing is put behind a payment. Releases up to
+  and including 1.2.20 were MIT, and copies of them stay MIT.
 - **Data — [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/).** The `data/`
   folder and the data tables generated into the code: credit the sources, no commercial use, share
   alike. Part of it is derived from [EDAstro](https://edastro.com)'s content, which carries this
@@ -484,9 +490,9 @@ Three parts, three licences:
 - **Photographs — Frontier's.** They are screenshots of Elite Dangerous; the game and its artwork
   belong to Frontier Developments and are under Frontier's terms, not either licence here.
 
-If you use the code in something of your own, a credit and a link back — "based on EDEXO-Compare by
-Bahuckel, https://bahuckel.com/projects/edexo-compare" — is appreciated; for the code it is a request,
-not a term. For the data, credit is part of the licence.
+If you build on the code, the `Required Notice` line is part of the licence; a link back as well —
+"based on EDEXO-Compare by Bahuckel, https://bahuckel.com/projects/edexo-compare" — is appreciated. For the
+data, credit is part of the licence too.
 
 **Every photograph in the app is labelled with where it came from**, and the label is the answer:
 
