@@ -1,4 +1,5 @@
 import { STATION_TONE_COUNT } from "./mergeCheckoutPlans";
+import { storageGet, storageSet } from "./storage";
 
 const STATION_TONE_REGISTRY_KEY = "edexo-colonize-station-tones-v6";
 
@@ -31,7 +32,7 @@ function migrateOrderFromAssignments(assignments: Record<string, number>): strin
 
 export function loadStationToneRegistry(): StationToneRegistry {
   try {
-    const raw = localStorage.getItem(STATION_TONE_REGISTRY_KEY);
+    const raw = storageGet(STATION_TONE_REGISTRY_KEY);
     if (!raw) return emptyStationToneRegistry();
     const parsed = JSON.parse(raw) as Partial<StationToneRegistry>;
     if (!parsed || typeof parsed.assignments !== "object" || parsed.assignments == null) {
@@ -49,7 +50,7 @@ export function loadStationToneRegistry(): StationToneRegistry {
 
 export function saveStationToneRegistry(registry: StationToneRegistry): void {
   try {
-    localStorage.setItem(STATION_TONE_REGISTRY_KEY, JSON.stringify(registry));
+    storageSet(STATION_TONE_REGISTRY_KEY, JSON.stringify(registry));
   } catch {
     /* */
   }

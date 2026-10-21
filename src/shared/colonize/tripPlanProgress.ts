@@ -1,6 +1,7 @@
 import { depotDisplayLabel } from "./depotLabel";
 import type { DepotSnapshot } from "./types";
 import type { HaulTrip, LogisticsPlan } from "./logisticsPlanner";
+import { storageGet, storageSet, storageRemove } from "./storage";
 
 /**
  * v3 since S-8: delivery lines are keyed by the site's market id, not its label. A v2 snapshot is
@@ -361,8 +362,8 @@ let tripSnapshotCache: TripPlanSnapshot | null | undefined;
 export function loadTripPlanSnapshot(): TripPlanSnapshot | null {
   if (tripSnapshotCache !== undefined) return tripSnapshotCache;
   try {
-    const raw = localStorage.getItem(TRIP_PLAN_SNAPSHOT_KEY);
-    const legacy = raw ? null : localStorage.getItem(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
+    const raw = storageGet(TRIP_PLAN_SNAPSHOT_KEY);
+    const legacy = raw ? null : storageGet(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
     const body = raw ?? legacy;
     tripSnapshotCache = body
       ? migrateTripPlanSnapshot(JSON.parse(body) as Record<string, unknown>, legacy != null)
@@ -377,13 +378,13 @@ function saveTripPlanSnapshot(snapshot: TripPlanSnapshot | null): void {
   tripSnapshotCache = snapshot;
   try {
     if (!snapshot) {
-      localStorage.removeItem(TRIP_PLAN_SNAPSHOT_KEY);
-      localStorage.removeItem(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
+      storageRemove(TRIP_PLAN_SNAPSHOT_KEY);
+      storageRemove(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
       return;
     }
-    localStorage.setItem(TRIP_PLAN_SNAPSHOT_KEY, JSON.stringify(snapshot));
+    storageSet(TRIP_PLAN_SNAPSHOT_KEY, JSON.stringify(snapshot));
     /** Written in the new shape; the old one would otherwise be read again after a v3 clear. */
-    if (!snapshot.legacyDepotLabels) localStorage.removeItem(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
+    if (!snapshot.legacyDepotLabels) storageRemove(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
   } catch {
     /* */
   }

@@ -1,12 +1,13 @@
-/** The wing manifest the commander keeps (who hauls what), in this browser's storage until P5 moves it server-side. */
+/** The wing manifest the commander keeps (who hauls what), kept on the server (uiStateKeys.ts). */
 import { parseWingMembers } from "../../../shared/colonize/storageValidation";
 import type { WingMember } from "../../../shared/colonize/wingManifest";
+import { storageGet, storageSet } from "../../../shared/colonize/storage";
 
 const WING_STORAGE_KEY = "edexo-colonize-wing-manifest-v1";
 
 export function loadWingManifest(): WingMember[] {
   try {
-    const raw = localStorage.getItem(WING_STORAGE_KEY);
+    const raw = storageGet(WING_STORAGE_KEY);
     if (!raw) return [];
     return parseWingMembers(JSON.parse(raw) as unknown);
   } catch {
@@ -16,7 +17,7 @@ export function loadWingManifest(): WingMember[] {
 
 export function saveWingManifest(members: WingMember[]): void {
   try {
-    localStorage.setItem(WING_STORAGE_KEY, JSON.stringify(members));
+    storageSet(WING_STORAGE_KEY, JSON.stringify(members));
   } catch {
     /* storage full or blocked: the manifest lives for this session */
   }

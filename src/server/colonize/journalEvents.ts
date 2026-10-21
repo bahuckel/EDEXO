@@ -192,6 +192,17 @@ export function ownedCarrierStocks(state: JournalState): CarrierStock[] {
   return out.sort((a, b) => a.carrierId.localeCompare(b.carrierId));
 }
 
+/**
+ * The hold's size, from `Loadout.CargoCapacity` (every ship swap, refit and game start writes one). Zero racks
+ * reads as unknown, as before, so the window asks rather than planning trips of 0 t. True when it changed.
+ */
+export function setShipCargoCapacity(state: JournalState, capacity: unknown): boolean {
+  const cap = typeof capacity === "number" && Number.isFinite(capacity) && capacity > 0 ? capacity : null;
+  if (cap === state.shipCargoCapacity) return false;
+  state.shipCargoCapacity = cap;
+  return true;
+}
+
 /** Returns true when the hold actually differs, so an unchanged Cargo event costs no redraw. */
 export function replaceShipCargo(
   state: JournalState,
@@ -200,16 +211,13 @@ export function replaceShipCargo(
   capacity?: number | null,
 ): boolean {
   const next = inventoryToMap(inv);
-  const cap = capacity != null && Number.isFinite(capacity) && capacity > 0 ? capacity : null;
   const adopt = (): true => {
     state.shipCargoByName = next;
     state.shipCargoTimestamp = ts;
     return true;
   };
-  if (cap !== state.shipCargoCapacity) {
-    state.shipCargoCapacity = cap;
-    return adopt();
-  }
+  // The game's Cargo event carries no capacity (Loadout does: setShipCargoCapacity), so only a given one counts.
+  if (capacity != null && setShipCargoCapacity(state, capacity)) return adopt();
   if (ts !== state.shipCargoTimestamp) return adopt();
   if (next.size !== state.shipCargoByName.size) return adopt();
   for (const [k, v] of next) {
@@ -333,6 +341,7 @@ export function applyJournalObject(state: JournalState, j: Record<string, unknow
       changed = true;
     }
   }
+  if (ev === "Loadout" && setShipCargoCapacity(state, j.CargoCapacity)) changed = true;
   if (ev === "Cargo") {
     const vessel = j.Vessel;
     if (vessel === "Ship") {

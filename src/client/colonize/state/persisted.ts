@@ -10,6 +10,8 @@
  * the parser cannot absorb; the old key is then simply ignored and the default applies.
  * `LEGACY_KEYS` lists keys previous versions wrote, so they can be cleaned up.
  */
+import { storageGet, storageRemove, storageSet } from "../../../shared/colonize/storage";
+
 export const STORAGE_KEYS = {
   appMode: "edexo-colonize-app-mode-v1",
   basket: "edexo-colonize-basket-v2",
@@ -36,27 +38,16 @@ export const LEGACY_KEYS = {
  * the app runs with defaults rather than not running.
  */
 export function readRaw(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
+  return storageGet(key);
 }
 
+/** Through shared/colonize/storage.ts, so a key that lives on the server (uiStateKeys.ts) reaches it. */
 export function writeRaw(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    /* Storage unavailable or full — the session continues without persistence. */
-  }
+  storageSet(key, value);
 }
 
 export function removeRaw(key: string): void {
-  try {
-    localStorage.removeItem(key);
-  } catch {
-    /* As above. */
-  }
+  storageRemove(key);
 }
 
 /** Read and parse, falling back whenever the value is absent, corrupt or the wrong shape. */

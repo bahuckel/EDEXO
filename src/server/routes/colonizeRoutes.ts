@@ -18,6 +18,7 @@ import { localOnly } from "../lanAuth.js";
 import { COLONIZE_INVOKE, type ColonizeEvents } from "../../shared/colonize/ipc/contract";
 import { colonizeService, colonizeServiceRunning } from "../colonize/colonizeService";
 import type { ColonizeHandlers } from "../colonize/ipc/handlerTypes";
+import { colonizeUiState } from "../colonize/uiState";
 
 /** What a paired phone or tablet may call: reads of what the server already holds, nothing else. */
 export const COLONIZE_LAN_READ: ReadonlySet<keyof ColonizeHandlers> = new Set<keyof ColonizeHandlers>([
@@ -51,6 +52,22 @@ export function registerColonizeRoutes(app: express.Express, opts: HttpServerOpt
 
   app.get("/api/colonize/status", (_req, res) => {
     res.json({ ok: true, running: colonizeServiceRunning() });
+  });
+
+  /*
+    The window's settings and progress (phase 5, uiState.ts). Not part of the service: reading them starts no journal
+    reader. A paired phone may read them; saving is for the PC, like every other write here.
+  */
+  app.get("/api/colonize/ui-state", (_req, res) => {
+    const state = colonizeUiState();
+    res.json({ ok: true, values: state.all(), seeded: state.seeded });
+  });
+  app.put("/api/colonize/ui-state", localOnly, (req, res) => {
+    const body = (req.body ?? {}) as { set?: unknown; from?: unknown };
+    const set = colonizeUiState().apply(body.set);
+    const from = typeof body.from === "string" ? body.from.slice(0, 64) : null;
+    if (Object.keys(set).length) ctx.pushColonize("onUiState", { set, from } satisfies ColonizeEvents["onUiState"]);
+    res.json({ ok: true, changed: Object.keys(set).length });
   });
 
   app.post(

@@ -96,6 +96,12 @@ vi.mock("../../src/client/colonize/api", () => {
   };
 });
 
+// The server's copy of settings and progress has its own test (uiStateSync.test.ts): here there is none.
+vi.mock("../../src/client/colonize/uiStateSync", () => ({
+  loadColonizeUiState: () => Promise.resolve("local"),
+  onRemoteUiState: () => () => {},
+}));
+
 const { ColonizeScreen } = await import("../../src/client/colonize/ColonizeScreen");
 
 let host: HTMLDivElement;

@@ -9,6 +9,7 @@
 import { resourceNeedId } from "./commodityKey";
 import { parseMarketId } from "./marketId";
 import { toLy, type Ly } from "./systemDistanceLy";
+import { storageGet, storageSet } from "./storage";
 
 /** A carrier callsign: three letters or digits, a dash, three more — "K7Q-N2T". */
 const CALLSIGN_RE = /^[A-Z0-9]{3}-[A-Z0-9]{3}$/;
@@ -125,7 +126,7 @@ const PARTY_KEY = "edexo-colonize-trade-party-v1";
 
 export function loadTradeParty(): PartyMember[] {
   try {
-    const raw = localStorage.getItem(PARTY_KEY);
+    const raw = storageGet(PARTY_KEY);
     if (!raw) return [];
     const j = JSON.parse(raw) as unknown;
     if (!Array.isArray(j)) return [];
@@ -144,7 +145,7 @@ export function loadTradeParty(): PartyMember[] {
 
 export function saveTradeParty(members: PartyMember[]): void {
   try {
-    localStorage.setItem(PARTY_KEY, JSON.stringify(members));
+    storageSet(PARTY_KEY, JSON.stringify(members));
   } catch {
     /* storage full or blocked: the party lasts for this session only */
   }

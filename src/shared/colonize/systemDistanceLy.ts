@@ -1,4 +1,5 @@
 import { normSystemName } from "./stationFilter";
+import { storageGet, storageSet, storageRemove } from "./storage";
 
 /** 3D straight-line distance in ly (Elite galaxy coords). */
 export function distanceLy3d(a: [number, number, number], b: [number, number, number]): number {
@@ -118,7 +119,7 @@ export function sanitizeGalaxyDistanceMap(map: Record<string, number>): Record<s
 
 export function loadGalaxyDistanceCache(): Record<string, number> {
   try {
-    const raw = localStorage.getItem(GALAXY_DIST_CACHE_KEY);
+    const raw = storageGet(GALAXY_DIST_CACHE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") return {};
@@ -130,7 +131,7 @@ export function loadGalaxyDistanceCache(): Record<string, number> {
 
 export function saveGalaxyDistanceCache(map: Record<string, number>): void {
   try {
-    localStorage.setItem(GALAXY_DIST_CACHE_KEY, JSON.stringify(sanitizeGalaxyDistanceMap(map)));
+    storageSet(GALAXY_DIST_CACHE_KEY, JSON.stringify(sanitizeGalaxyDistanceMap(map)));
   } catch {
     /* */
   }
@@ -138,7 +139,7 @@ export function saveGalaxyDistanceCache(map: Record<string, number>): void {
 
 export function clearGalaxyDistanceCache(): void {
   try {
-    localStorage.removeItem(GALAXY_DIST_CACHE_KEY);
+    storageRemove(GALAXY_DIST_CACHE_KEY);
   } catch {
     /* */
   }

@@ -1,4 +1,5 @@
 import { normSystemName, stationNamesMatch } from "./stationFilter";
+import { storageGet, storageSet } from "./storage";
 
 export type BannedStation = {
   systemName: string;
@@ -14,7 +15,7 @@ function stationBanKey(systemName: string, stationName: string): string {
 
 export function loadBannedStations(): BannedStation[] {
   try {
-    const raw = localStorage.getItem(BANNED_STATIONS_KEY);
+    const raw = storageGet(BANNED_STATIONS_KEY);
     if (!raw) return [];
     const j = JSON.parse(raw) as unknown;
     if (!Array.isArray(j)) return [];
@@ -31,7 +32,7 @@ export function loadBannedStations(): BannedStation[] {
 
 function saveBannedStations(entries: BannedStation[]): void {
   try {
-    localStorage.setItem(BANNED_STATIONS_KEY, JSON.stringify(entries));
+    storageSet(BANNED_STATIONS_KEY, JSON.stringify(entries));
   } catch {
     /* */
   }

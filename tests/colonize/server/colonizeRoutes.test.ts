@@ -15,9 +15,16 @@ import { COLONIZE_EVENTS, COLONIZE_INVOKE } from "../../../src/shared/colonize/i
 import type { AppSnapshot } from "../../../src/shared/types.js";
 
 const journalDir = mkdtempSync(path.join(tmpdir(), "colonize-routes-j-"));
+// Its own user-data folder: the saved settings (ui-state.json) must start empty on every run.
+const savedUserData = process.env.EDEXO_USER_DATA_DIR;
+const userData = mkdtempSync(path.join(tmpdir(), "colonize-routes-u-"));
+process.env.EDEXO_USER_DATA_DIR = userData;
 afterAll(async () => {
   await stopColonizeService();
+  if (savedUserData === undefined) delete process.env.EDEXO_USER_DATA_DIR;
+  else process.env.EDEXO_USER_DATA_DIR = savedUserData;
   rmSync(journalDir, { recursive: true, force: true });
+  rmSync(userData, { recursive: true, force: true });
 });
 
 describe("the Colonize contract", () => {
@@ -56,7 +63,7 @@ describe("the Colonize contract", () => {
         "syncWingCargoFromEdsm",
       ].sort(),
     );
-    expect(Object.keys(COLONIZE_EVENTS).sort()).toEqual(["onInaraImport", "onMaterialBuyScanStatus", "onUpdate"]);
+    expect(Object.keys(COLONIZE_EVENTS).sort()).toEqual(["onInaraImport", "onMaterialBuyScanStatus", "onUiState", "onUpdate"]);
   });
 
   it("lets a paired phone read, and keeps writes, network look-ups and files to the PC", () => {
@@ -120,6 +127,22 @@ describe("the routes and the socket", () => {
       const state = colonize.filter((m) => m.type === "state" && m.channel === "colonize").at(-1);
       expect(Object.keys((state?.payload as object) ?? {}).sort()).toEqual(expect.arrayContaining(["commanderName", "port"]));
       expect((state?.payload as Record<string, unknown>).bodies).toBeUndefined();
+
+      // Settings and progress (phase 5): saved, read back, pushed to the other windows with who saved them.
+      const TRIPS = "edexo-colonize-trip-plan-snapshot-v3";
+      const ui0 = (await (await fetch(`${base}/api/colonize/ui-state`)).json()) as { ok: boolean; values: object; seeded: boolean };
+      expect(ui0).toEqual({ ok: true, values: {}, seeded: false });
+      const put = await fetch(`${base}/api/colonize/ui-state`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ set: { [TRIPS]: "ticks", "not-a-key": "x" }, from: "w1" }),
+      });
+      expect(await put.json()).toEqual({ ok: true, changed: 1 });
+      const ui1 = (await (await fetch(`${base}/api/colonize/ui-state`)).json()) as { values: object; seeded: boolean };
+      expect(ui1).toMatchObject({ values: { [TRIPS]: "ticks" }, seeded: true });
+      for (let i = 0; i < 20 && !colonize.some((m) => m.event === "onUiState"); i++) await new Promise((r) => setTimeout(r, 50));
+      expect(colonize.find((m) => m.event === "onUiState")?.payload).toEqual({ set: { [TRIPS]: "ticks" }, from: "w1" });
+      expect(app.some((m) => m.event === "onUiState")).toBe(false);
     } finally {
       for (const ws of sockets) ws.close();
       await new Promise((r) => server.close(() => r(null)));

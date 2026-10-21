@@ -455,7 +455,6 @@ export class ColonizeStore {
     if (this.journal.shipCargoByName.size > 0) {
       this.journal.shipCargoByName = new Map();
       this.journal.shipCargoTimestamp = null;
-      this.journal.shipCargoCapacity = null;
       this.bumpVolatile();
     }
   }

@@ -1,5 +1,6 @@
 import type { BasketCheckoutBundle, BasketCheckoutResult } from "./types";
 import { parseSavedCheckout } from "./storageValidation";
+import { storageGet, storageSet, storageRemove } from "./storage";
 
 const LAST_CHECKOUT_KEY = "edexo-colonize-last-checkout-v1";
 
@@ -15,7 +16,7 @@ let savedCheckoutCache: SavedCheckout | null | undefined;
 export function loadSavedCheckout(): SavedCheckout | null {
   if (savedCheckoutCache !== undefined) return savedCheckoutCache;
   try {
-    const raw = localStorage.getItem(LAST_CHECKOUT_KEY);
+    const raw = storageGet(LAST_CHECKOUT_KEY);
     const j = raw ? parseSavedCheckout(JSON.parse(raw)) : null;
     savedCheckoutCache = j;
   } catch {
@@ -28,7 +29,7 @@ function saveCheckoutSnapshot(result: BasketCheckoutResult | null, bundle: Baske
   try {
     const payload: SavedCheckout = { savedAt: new Date().toISOString(), result, bundle };
     savedCheckoutCache = payload;
-    localStorage.setItem(LAST_CHECKOUT_KEY, JSON.stringify(payload));
+    storageSet(LAST_CHECKOUT_KEY, JSON.stringify(payload));
   } catch {
     /* */
   }
@@ -37,7 +38,7 @@ function saveCheckoutSnapshot(result: BasketCheckoutResult | null, bundle: Baske
 export function clearSavedCheckout(): void {
   savedCheckoutCache = null;
   try {
-    localStorage.removeItem(LAST_CHECKOUT_KEY);
+    storageRemove(LAST_CHECKOUT_KEY);
   } catch {
     /* */
   }

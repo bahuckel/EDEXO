@@ -66,11 +66,12 @@ const SESSION: Record<string, unknown>[] = [
   },
   { event: "WingJoin", timestamp: "2026-09-01T10:07:00Z", Others: ["Alpha", "Bravo"] },
   { event: "WingAdd", timestamp: "2026-09-01T10:08:00Z", Name: "Charlie" },
+  // The hold's size is in Loadout; the game's Cargo event has no capacity field.
+  { event: "Loadout", timestamp: "2026-09-01T10:08:30Z", Ship: "type9", CargoCapacity: 256 },
   {
     event: "Cargo",
     timestamp: "2026-09-01T10:09:00Z",
     Vessel: "Ship",
-    Capacity: 256,
     Count: 96,
     Inventory: [{ Name: "steel", Name_Localised: "Steel", Count: 96 }],
   },
@@ -124,6 +125,21 @@ describe("applyJournalLine", () => {
     replay(state);
     expect(state.shipCargoCapacity).toBe(256);
     expect(state.shipCargoByName.get("steel")?.count).toBe(96);
+  });
+
+  it("takes the hold's size from Loadout and keeps it through Cargo events, which carry none", () => {
+    const state = createJournalState();
+    replay(state);
+    applyJournalLine(
+      state,
+      JSON.stringify({ event: "Cargo", timestamp: "2026-09-01T11:00:00Z", Vessel: "Ship", Count: 0, Inventory: [] }),
+    );
+    expect(state.shipCargoCapacity).toBe(256);
+    // A refit (or a ship swap) writes a new Loadout; a ship with no racks reads as unknown.
+    applyJournalLine(state, JSON.stringify({ event: "Loadout", timestamp: "2026-09-01T12:00:00Z", Ship: "mandalay", CargoCapacity: 80 }));
+    expect(state.shipCargoCapacity).toBe(80);
+    applyJournalLine(state, JSON.stringify({ event: "Loadout", timestamp: "2026-09-01T13:00:00Z", Ship: "mandalay", CargoCapacity: 0 }));
+    expect(state.shipCargoCapacity).toBeNull();
   });
 });
 
@@ -238,7 +254,6 @@ describe("persistGen — what the store has to write to disk (PERF-M3)", () => {
         event: "Cargo",
         timestamp: "2026-09-02T10:00:00Z",
         Vessel: "Ship",
-        Capacity: 256,
         Count: 100,
         Inventory: [{ Name: "steel", Name_Localised: "Steel", Count: 100 }],
       },

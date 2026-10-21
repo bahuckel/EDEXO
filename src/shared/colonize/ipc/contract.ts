@@ -16,6 +16,7 @@
  * Window chrome, the journal folder and the EDSM key are EDEXO's own, so they are not here; a
  * file or folder the commander picks is picked in the window and handed over as a path or text.
  */
+import type { ColonizeUiStateChange } from "../uiStateKeys";
 import type { ClearBuyDataScope } from "../buyIndexClear";
 import type {
   BuyIndexStationMaterial,
@@ -77,6 +78,7 @@ export const COLONIZE_EVENTS = {
   onUpdate: "colonize:update",
   onMaterialBuyScanStatus: "colonize:materialBuyScanStatus",
   onInaraImport: "colonize:inaraImport",
+  onUiState: "colonize:uiState",
 } as const satisfies Record<keyof ColonizeEvents, string>;
 
 type Fail = { ok: false; err: string };
@@ -261,6 +263,8 @@ export type ColonizeEvents = {
   onUpdate: ColonizeSnapshot;
   onMaterialBuyScanStatus: MaterialBuyScanStatus;
   onInaraImport: InaraImportOutcome;
+  /** Another window saved settings or progress (uiStateKeys.ts); `from` names it, so it can skip its own echo. */
+  onUiState: ColonizeUiStateChange;
 };
 
 export type ColonizeListeners = {

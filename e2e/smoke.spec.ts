@@ -141,6 +141,39 @@ test("colonize: the window opens on the plan, every tab draws, and the launcher 
   expect(errors).toEqual([]);
 });
 
+test("colonize: settings live on the server, so two windows with their own storage agree", async ({ browser }) => {
+  // Two contexts = two browsers' storage, like the app window and a browser tab.
+  const a = await (await browser.newContext()).newPage();
+  const b = await (await browser.newContext()).newPage();
+  const errors = [...watchErrors(a), ...watchErrors(b)];
+  const spansh = (p: typeof a) => p.getByRole("checkbox", { name: "Ask Spansh in the background" });
+  await a.goto("/?screen=colonize");
+  await a.getByRole("tab", { name: "Sources" }).click();
+  await expect(spansh(a)).toBeVisible();
+  const before = await spansh(a).isChecked();
+  await b.goto("/?screen=colonize");
+  await b.getByRole("tab", { name: "Sources" }).click();
+  await expect(spansh(b)).toBeChecked({ checked: before });
+
+  await spansh(b).click();
+  await expect(spansh(b)).toBeChecked({ checked: !before });
+  // The other window hears it: redrawn at once when not in front, else it offers to.
+  const show = a.getByRole("button", { name: "Show the changes" });
+  await expect(async () => {
+    if (await show.isVisible()) await show.click();
+    await expect(spansh(a)).toBeChecked({ checked: !before, timeout: 500 });
+  }).toPass({ timeout: 10_000 });
+  // And a window opened later starts from it.
+  const c = await (await browser.newContext()).newPage();
+  await c.goto("/?screen=colonize");
+  await c.getByRole("tab", { name: "Sources" }).click();
+  await expect(spansh(c)).toBeChecked({ checked: !before });
+  // Put it back for the other tests.
+  await spansh(c).click();
+  await expect(spansh(c)).toBeChecked({ checked: before });
+  expect(errors).toEqual([]);
+});
+
 test("launcher: the HUD menu warns when Elite is set to fullscreen", async ({ page }) => {
   /*
     The warning has to be *rendered*, not merely computed. An always-on-top window cannot draw over

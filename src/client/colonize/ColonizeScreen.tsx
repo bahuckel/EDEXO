@@ -8,6 +8,8 @@ import { useEffect, useState } from "react";
 import "./colonize.css";
 import { depotDisplayLabel } from "../../shared/colonize/depotLabel";
 import { useColonizeAppState } from "./api";
+import { loadColonizeUiState, onRemoteUiState } from "./uiStateSync";
+import { LoadingNote } from "../ui/Loading";
 import { AppStateProvider } from "./state/AppStateContext";
 import { useColonize } from "./useColonize";
 import { PlanView } from "./views/PlanView";
@@ -33,15 +35,40 @@ function readTab(): Tab {
   }
 }
 
+/**
+ * Draws once the server's copy of the settings and progress is in this browser (uiStateSync.ts), so the first paint
+ * already has the trip ticks another window made. Another window's later saves redraw the window at once when it is
+ * not in front; in front, a note offers to, so nothing moves under the commander's cursor.
+ */
 export function ColonizeScreen() {
+  const [ready, setReady] = useState(false);
+  const [gen, setGen] = useState(0);
+  const [remote, setRemote] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void loadColonizeUiState().finally(() => live && setReady(true));
+    const off = onRemoteUiState(() => {
+      if (document.hasFocus()) setRemote(true);
+      else setGen((g) => g + 1);
+    });
+    return () => {
+      live = false;
+      off();
+    };
+  }, []);
+  if (!ready) return <LoadingNote className="screen-loading" />;
+  const redraw = () => {
+    setRemote(false);
+    setGen((g) => g + 1);
+  };
   return (
-    <AppStateProvider>
-      <ColonizeApp />
+    <AppStateProvider key={gen}>
+      <ColonizeApp remoteChange={remote ? redraw : null} />
     </AppStateProvider>
   );
 }
 
-function ColonizeApp() {
+function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
   const m = useColonize();
   const app = useColonizeAppState();
   const [tab, setTabState] = useState<Tab>(readTab);
@@ -126,6 +153,16 @@ function ColonizeApp() {
           </button>
         ))}
       </nav>
+      {remoteChange ? (
+        <div className="cz-main" style={{ paddingBottom: 0 }}>
+          <div className="cz-note cz-note--info" role="status">
+            <span className="cz-note__text">Another window changed your plan or settings.</span>
+            <button type="button" className="cz-btn" onClick={remoteChange}>
+              Show the changes
+            </button>
+          </div>
+        </div>
+      ) : null}
       {m.inaraNotice ? (
         <div className="cz-main" style={{ paddingBottom: 0 }}>
           <div className="cz-note cz-note--info" role="status">

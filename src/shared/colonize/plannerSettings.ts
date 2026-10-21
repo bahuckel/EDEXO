@@ -1,3 +1,4 @@
+import { storageGet, storageSet } from "./storage";
 const PLANNER_SETTINGS_KEY = "edexo-colonize-planner-settings-v1";
 
 export type PlannerSettings = {
@@ -23,7 +24,7 @@ function defaultPlannerSettings(): PlannerSettings {
 
 export function loadPlannerSettings(): PlannerSettings {
   try {
-    const raw = localStorage.getItem(PLANNER_SETTINGS_KEY);
+    const raw = storageGet(PLANNER_SETTINGS_KEY);
     if (!raw) return defaultPlannerSettings();
     const j = JSON.parse(raw) as Partial<PlannerSettings>;
     return {
@@ -38,7 +39,7 @@ export function loadPlannerSettings(): PlannerSettings {
 
 export function savePlannerSettings(settings: PlannerSettings): void {
   try {
-    localStorage.setItem(PLANNER_SETTINGS_KEY, JSON.stringify(settings));
+    storageSet(PLANNER_SETTINGS_KEY, JSON.stringify(settings));
   } catch {
     /* */
   }

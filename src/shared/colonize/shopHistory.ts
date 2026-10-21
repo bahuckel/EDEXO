@@ -1,4 +1,5 @@
 import { commodityNeedMatchesLabel } from "./commodityKey";
+import { storageGet, storageSet, storageRemove } from "./storage";
 
 export type ShopHistoryCachedOffer = {
   commodityId: string;
@@ -50,7 +51,7 @@ function stationsMatch(a: string, b: string): boolean {
 
 export function loadShopHistory(): ShopHistoryEntry[] {
   try {
-    const raw = localStorage.getItem(SHOP_HISTORY_KEY);
+    const raw = storageGet(SHOP_HISTORY_KEY);
     if (!raw) return [];
     const j = JSON.parse(raw) as unknown;
     if (!Array.isArray(j)) return [];
@@ -67,7 +68,7 @@ export function loadShopHistory(): ShopHistoryEntry[] {
 
 export function saveShopHistory(entries: ShopHistoryEntry[]): void {
   try {
-    localStorage.setItem(SHOP_HISTORY_KEY, JSON.stringify(entries.slice(0, MAX_ENTRIES)));
+    storageSet(SHOP_HISTORY_KEY, JSON.stringify(entries.slice(0, MAX_ENTRIES)));
   } catch {
     /* */
   }
@@ -76,7 +77,7 @@ export function saveShopHistory(entries: ShopHistoryEntry[]): void {
 export function clearShopHistory(): void {
   saveShopHistory([]);
   try {
-    localStorage.removeItem(SHOP_HISTORY_KEY);
+    storageRemove(SHOP_HISTORY_KEY);
   } catch {
     /* */
   }

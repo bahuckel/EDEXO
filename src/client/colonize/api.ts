@@ -121,6 +121,7 @@ const listen: ColonizeListeners = {
   onUpdate: (fn) => on("onUpdate", fn),
   onMaterialBuyScanStatus: (fn) => on("onMaterialBuyScanStatus", fn),
   onInaraImport: (fn) => on("onInaraImport", fn),
+  onUiState: (fn) => on("onUiState", fn),
 };
 
 /** What the Colonize window's components call: every contract method, every push. */

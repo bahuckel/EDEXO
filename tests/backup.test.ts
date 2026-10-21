@@ -104,9 +104,11 @@ describe("what goes in", () => {
     expect(appDataExclusion("edexo-browser.json", s)).toBeNull();
     expect(appDataExclusion("edexo-predictions.json.before-smoke-removal.bak", s)).toMatch(/old copy/);
     expect(appDataExclusion("restore-pending/x.json", s)).toMatch(/restore/);
+    expect(appDataExclusion("colonize/spansh-debug-last.json", s)).toMatch(/cache/);
+    expect(appDataExclusion("colonize/system-coords.json", s)).toMatch(/cache/);
   });
   it("keeps the commander's own data, and anything it does not know", () => {
-    for (const f of ["edexo-foot-scanned.json", "edexo-predictions.json", "shared-exomastery/x.json", "species-fixes/a.json", "something-new.json"]) {
+    for (const f of ["edexo-foot-scanned.json", "edexo-predictions.json", "shared-exomastery/x.json", "species-fixes/a.json", "something-new.json", "colonize/edexo-colonize-state.json", "colonize/ui-state.json", "colonize/material-buy-index.json"]) {
       expect(appDataExclusion(f, s)).toBeNull();
     }
     expect(appDataExclusion("edexo-compare-edsm-key.json", { ...s, includeKeys: true })).toBeNull();

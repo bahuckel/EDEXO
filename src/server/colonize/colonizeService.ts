@@ -11,6 +11,7 @@
  */
 import { readEdsmCredentials } from "../edsmCredentials.js";
 import { resolveColonizeDataDir } from "../paths.js";
+import { closeColonizeUiState } from "./uiState";
 import { ColonizeStore } from "./colonizeStore";
 import { flushSystemCoordsCache, loadSystemCoordsCache } from "./galaxySystemCoords";
 import { buyIndexHandlers } from "./ipc/buyIndexHandlers";
@@ -135,6 +136,7 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
 /** Stop it if it runs (server shutdown, tests). */
 export async function stopColonizeService(): Promise<void> {
   await running?.stop();
+  closeColonizeUiState();
 }
 
 /** Whether a Colonize window ever started it this run. */
