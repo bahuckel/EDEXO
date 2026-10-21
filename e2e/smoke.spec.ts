@@ -1278,7 +1278,7 @@ test("options: opens on the settings, the install facts folded at the bottom wit
   const box = page.locator(".options-diagnostics-text");
   await expect(box).toBeVisible();
   const text = await box.inputValue();
-  expect(text).toContain("ED Exo Compare");
+  expect(text).toContain("EDEXO");
   expect(text).toContain("Journals:");
   // Nothing of the commander's: no LAN key, no home folder.
   expect(text).not.toMatch(/[?&]k=[^…]/);

@@ -19,6 +19,14 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const EXE_NAME = "EDExoCompare.exe";
+/**
+ * Every name this app's exe has or may have (1.3.0, the EDEXO rename): today's, first, and the one a later release
+ * may switch to. A copy running under either can update itself, and the swap (update-apply.ps1) takes a zip holding
+ * either, so the exe can be renamed in a release after 1.3.0 without stranding the copies that know only one name.
+ * Copies before 1.3.0 know only EDExoCompare.exe: a release that renames the exe must still carry that file for them.
+ */
+const EXE_NAMES = [EXE_NAME, "EDEXO.exe"];
+const isAppExe = (file) => EXE_NAMES.some((n) => n.toLowerCase() === path.basename(file).toLowerCase());
 
 /**
  * "portable" | "zip" | "appimage" | null for this copy.
@@ -31,7 +39,7 @@ function selfUpdateForm(o) {
   if (platform === "win32") {
     if (env.PORTABLE_EXECUTABLE_FILE) return "portable";
     const exe = o.execPath || process.execPath;
-    return path.basename(exe).toLowerCase() === EXE_NAME.toLowerCase() ? "zip" : null;
+    return isAppExe(exe) ? "zip" : null;
   }
   if (platform === "linux" && env.APPIMAGE) return "appimage";
   return null;
@@ -56,7 +64,7 @@ function removeOldCopy(form, env = process.env, execPath = process.execPath) {
   try {
     if (!fs.existsSync(old)) return;
     if (form === "zip") {
-      if (!fs.existsSync(path.join(old, EXE_NAME))) return;
+      if (!EXE_NAMES.some((n) => fs.existsSync(path.join(old, n)))) return;
       fs.rmSync(old, { recursive: true, force: true });
     } else {
       fs.rmSync(old, { force: true });
@@ -102,6 +110,8 @@ function installOnQuit(staged, o) {
     target,
     "-Staged",
     staged.file,
+    // The running copy's exe name: started again if the update fails, and preferred in the new zip.
+    ...(o.form === "zip" ? ["-Exe", path.basename(o.execPath || process.execPath)] : []),
     "-Start",
     o.start === false ? "0" : "1",
     "-Log",
@@ -127,4 +137,4 @@ function installOnQuit(staged, o) {
   return { how: "helper" };
 }
 
-module.exports = { selfUpdateForm, updateTarget, removeOldCopy, installOnQuit, EXE_NAME };
+module.exports = { selfUpdateForm, updateTarget, removeOldCopy, installOnQuit, EXE_NAME, EXE_NAMES };

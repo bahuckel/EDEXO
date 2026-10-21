@@ -58,6 +58,8 @@ describe("which copies can update themselves", () => {
     expect(updater.selfUpdateForm({ isPackaged: true, platform: "win32", env: { PORTABLE_EXECUTABLE_FILE: "C:\\a\\EDExoCompare.exe" } })).toBe("portable");
     expect(updater.selfUpdateForm({ isPackaged: true, platform: "win32", env: {}, execPath: "D:\\Games\\ED Exo Compare 1.2.9\\EDExoCompare.exe" })).toBe("zip");
     expect(updater.selfUpdateForm({ isPackaged: true, platform: "win32", env: {}, execPath: "C:\\x\\electron.exe" })).toBeNull();
+    // 1.3.0 knows the name a later release may give the exe.
+    expect(updater.selfUpdateForm({ isPackaged: true, platform: "win32", env: {}, execPath: "D:\\Games\\EDEXO 1.4.0\\EDEXO.exe" })).toBe("zip");
     expect(updater.selfUpdateForm({ isPackaged: true, platform: "linux", env: { APPIMAGE: "/home/a/EDExo.AppImage" } })).toBe("appimage");
     expect(updater.selfUpdateForm({ isPackaged: true, platform: "darwin", env: {} })).toBeNull();
   });
@@ -171,6 +173,57 @@ describe.runIf(win && process.env.EDEXO_SWAP_TESTS === "1")("the swap on Windows
       await new Promise((r) => setTimeout(r, 300));
     }
   }, 90_000);
+
+  it("folder: takes a zip whose exe has the later name, EDEXO.exe, and the next start clears the old folder", async () => {
+    const program = path.join(dir, "ED Exo Compare 1.3.0");
+    mkdirSync(program);
+    writeFileSync(path.join(program, "EDExoCompare.exe"), "old exe");
+    const src = path.join(dir, "src", "EDEXO 9.9.9");
+    mkdirSync(src, { recursive: true });
+    writeFileSync(path.join(src, "EDEXO.exe"), "renamed exe");
+    const zip = path.join(dir, "EDEXO-9.9.9-win-x64.zip");
+    zipFolder(src, zip);
+    updater.installOnQuit(
+      { form: "zip", file: zip, version: "9.9.9" },
+      { form: "zip", scriptPath: SCRIPT, logPath: path.join(dir, "update.log"), pids: [], execPath: path.join(program, "EDExoCompare.exe"), env: {}, start: false },
+    );
+    await waitFor(() => logOf().includes("update: installed") || logOf().includes("update: FAILED"));
+    expect(logOf()).toContain("update: installed");
+    expect(readFileSync(path.join(program, "EDEXO.exe"), "utf8")).toBe("renamed exe");
+    expect(existsSync(path.join(program, "EDExoCompare.exe"))).toBe(false);
+    // The renamed copy, started next, removes the folder the swap moved aside.
+    updater.removeOldCopy("zip", {}, path.join(program, "EDEXO.exe"));
+    expect(existsSync(program + ".old")).toBe(false);
+  }, 60_000);
+
+  /*
+    The update chain across the EDEXO rename (1.3.0): a 1.2.x copy installs 1.3.0 with ITS OWN swap script, the one it
+    shipped with. So the 1.2.20 script, taken from git, must take a 1.3.0 zip: one folder inside, now "EDEXO <v>",
+    holding EDExoCompare.exe (the exe keeps its name in 1.3.0 for exactly this reason).
+  */
+  it("folder: the 1.2.20 swap script installs a 1.3.0-shaped zip (the update chain across the rename)", async () => {
+    const old = spawnSync("git", ["show", "6e536f3:electron/update-apply.ps1"] /* "Release 1.2.20" */, { encoding: "utf8", windowsHide: true });
+    expect(old.status, String(old.stderr)).toBe(0);
+    const oldScript = path.join(dir, "update-apply-1.2.20.ps1");
+    writeFileSync(oldScript, old.stdout);
+    const program = path.join(dir, "ED Exo Compare 1.2.20");
+    mkdirSync(program);
+    writeFileSync(path.join(program, "EDExoCompare.exe"), "1.2.20 exe");
+    const src = path.join(dir, "src", "EDEXO 1.3.0");
+    mkdirSync(path.join(src, "resources"), { recursive: true });
+    writeFileSync(path.join(src, "EDExoCompare.exe"), "1.3.0 exe");
+    writeFileSync(path.join(src, "resources", "app.txt"), "1.3.0");
+    const zip = path.join(dir, "EDExoCompare-1.3.0-win-x64.zip");
+    zipFolder(src, zip);
+    updater.installOnQuit(
+      { form: "zip", file: zip, version: "1.3.0" },
+      { form: "zip", scriptPath: oldScript, logPath: path.join(dir, "update.log"), pids: [], execPath: path.join(program, "EDExoCompare.exe"), env: {}, start: false },
+    );
+    await waitFor(() => logOf().includes("update: installed") || logOf().includes("update: FAILED"));
+    expect(logOf()).toContain("update: installed");
+    expect(readFileSync(path.join(program, "EDExoCompare.exe"), "utf8")).toBe("1.3.0 exe");
+    expect(readFileSync(path.join(program, "resources", "app.txt"), "utf8")).toBe("1.3.0");
+  }, 60_000);
 
   it("folder: a zip without the program leaves the old folder exactly as it was", async () => {
     const program = path.join(dir, "ED Exo Compare 1.2.9");

@@ -20,7 +20,8 @@ import { copyDataTree } from "./packagedData.mjs";
 
 const version = JSON.parse(readFileSync("package.json", "utf8")).version;
 const target = process.env.EDEXO_PKG_TARGET ?? "node22-linux-x64";
-const folder = `ED Exo Compare ${version}`;
+// The folder inside the tarball (EDEXO since 1.3.0; "ED Exo Compare <version>" before). Asset names stay.
+const folder = `EDEXO ${version}`;
 const outRoot = join("dist", "linux");
 const outDir = join(outRoot, folder);
 const tarball = join(outRoot, `EDExoCompare-${version}-linux-x64.tar.gz`);
@@ -46,7 +47,7 @@ cpSync("data/LICENSE-DATA.txt", join(outDir, "LICENSE-DATA.txt"));
   `web/` and `data/` are; `exec` so the terminal's Ctrl+C reaches the server itself.
 */
 const sh = (binary, what) => `#!/usr/bin/env bash
-# ED Exo Compare — ${what}
+# EDEXO — ${what}
 # Flags pass through: --local (this PC only), --port <n>, --lan.
 set -euo pipefail
 here="$(dirname "$(readlink -f "$0")")"
@@ -64,7 +65,7 @@ writeFileSync(
   { encoding: "utf8" },
 );
 
-const readme = `ED Exo Compare ${version} — Linux (browser UI)
+const readme = `EDEXO ${version} — Linux (browser UI)
 
 UNTESTED: the first Linux release, not yet tried on a real desktop with the game running. What
 worked and what did not (distro, desktop, X11 or Wayland) is welcome as a GitHub issue:

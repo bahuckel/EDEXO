@@ -25,7 +25,7 @@ const SHUTDOWN_WAIT_MS = 8000;
  */
 function startServerChild(o) {
   const child = o.utilityProcess.fork(o.bundle, [], {
-    serviceName: "ED Exo Compare server",
+    serviceName: "EDEXO server",
     env: { ...process.env, EDEXO_SERVER_CHILD: "1" },
     stdio: "inherit",
   });

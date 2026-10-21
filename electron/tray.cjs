@@ -37,7 +37,7 @@ function createTrayControl(deps) {
         },
       },
       { type: "separator" },
-      { label: "Quit ED Exo Compare", click: () => app.quit() },
+      { label: "Quit EDEXO", click: () => app.quit() },
     ]);
   }
   function refreshTrayMenu() {
@@ -54,7 +54,7 @@ function createTrayControl(deps) {
       let img = iconImage && !iconImage.isEmpty() ? iconImage : nativeImage.createEmpty();
       if (!img.isEmpty() && process.platform === "win32") img = img.resize({ width: 16, height: 16 });
       tray = new Tray(img);
-      tray.setToolTip("ED Exo Compare");
+      tray.setToolTip("EDEXO");
       tray.setContextMenu(buildTrayMenu());
       tray.on("click", showLauncher);
       tray.on("double-click", showLauncher);

@@ -70,7 +70,7 @@ describe("buildDiagnosticsText", () => {
   const t = buildDiagnosticsText(base, HOME);
 
   it("says what support needs", () => {
-    expect(t).toContain("ED Exo Compare 1.2.11 — diagnostics, 2026-10-02 18:10 UTC");
+    expect(t).toContain("EDEXO 1.2.11 — diagnostics, 2026-10-02 18:10 UTC");
     expect(t).toContain("Build: zip, Electron 38.1.0");
     expect(t).toContain("Journal folder: found (default) ~\\Saved Games");
     expect(t).toContain("Journals: 295 merged, history all");

@@ -13,7 +13,7 @@ export function JournalBootScreen({ boot, connected }: { boot: JournalBootProgre
             <span className="journal-boot__orb-ring" />
             <span className="journal-boot__orb-core" />
           </div>
-          <h1 className="journal-boot__title">ED Exo Compare</h1>
+          <h1 className="journal-boot__title">EDEXO</h1>
           <p className="journal-boot__subtitle">Loading journal data</p>
         </div>
 

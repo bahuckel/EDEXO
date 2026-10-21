@@ -1,7 +1,7 @@
-ED Exo Compare data - Creative Commons BY-NC-SA 3.0
-===================================================
+EDEXO data - Creative Commons BY-NC-SA 3.0
+==========================================
 
-ED Exo Compare is licensed in three parts:
+EDEXO (formerly ED Exo Compare) is licensed in three parts:
 
   * the source code         - PolyForm Noncommercial 1.0.0 with additional
                               permissions, since 1.3.0 (MIT up to 1.2.20),
@@ -30,7 +30,7 @@ THE LICENCE
 The data is licensed under CC BY-NC-SA 3.0:
 https://creativecommons.org/licenses/by-nc-sa/3.0/
 In short:
-  * Attribution - credit ED Exo Compare and the sources named below and in
+  * Attribution - credit EDEXO and the sources named below and in
     NOTICE.md, and link to the licence.
   * NonCommercial - you may not use it for commercial purposes.
   * ShareAlike - anything you build from it must be licensed under the same

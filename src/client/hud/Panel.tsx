@@ -111,10 +111,10 @@ function Credit({ bottom }: { bottom: boolean }) {
     <section
       id="hudCredit"
       className={"hud-section hud-section--credit" + (bottom ? " hud-section--credit-bottom" : "")}
-      aria-label="HUD Overlay by EDEXO-Compare"
+      aria-label="HUD Overlay by EDEXO"
     >
       <div className="hud-head">
-        <span className="hud-title">HUD Overlay by EDEXO-Compare</span>
+        <span className="hud-title">HUD Overlay by EDEXO</span>
       </div>
     </section>
   );

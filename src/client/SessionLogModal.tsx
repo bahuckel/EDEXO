@@ -16,7 +16,7 @@ function sessionLogMarkdown(log: SessionLogDTO): string {
   };
   const cr = fmtCrExact;
   const lines: string[] = [];
-  lines.push(`# ED Exo Compare — session ${log.startedIso.slice(0, 10)}`);
+  lines.push(`# EDEXO — session ${log.startedIso.slice(0, 10)}`);
   lines.push("");
   lines.push(
     `Systems ${log.systems.length} · landings ${log.landings.length} · first footfalls ${log.firstFootfalls} · species analysed ${log.samples.length} · analysed value ${cr(log.creditsAnalysed)} · sold ${cr(log.creditsSold)}`,

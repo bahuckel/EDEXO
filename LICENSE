@@ -1,8 +1,8 @@
-EDEXO-Compare licence
+EDEXO licence
 
 Required Notice: Copyright (c) 2026 bahuckel (https://bahuckel.com/projects/edexo-compare)
 
-From version 1.3.0, the source code of EDEXO-Compare is licensed under the
+From version 1.3.0, the source code of EDEXO (formerly EDEXO-Compare) is licensed under the
 PolyForm Noncommercial License 1.0.0, printed in full at the end of this file,
 together with the additional permissions below.
 
@@ -17,7 +17,7 @@ later.
 
 ADDITIONAL PERMISSIONS - granted by the licensor on top of the PolyForm terms.
 
-1. Streams and videos. Running EDEXO-Compare while you play, and showing it,
+1. Streams and videos. Running EDEXO while you play, and showing it,
    its HUD overlays or anything it displays in a live stream, a recorded video,
    a screenshot or any other content, is a permitted purpose, whether or not
    that content earns money (ads, subscriptions, sponsorships, donations). No
@@ -31,7 +31,7 @@ ADDITIONAL PERMISSIONS - granted by the licensor on top of the PolyForm terms.
 
 SCOPE — read this before relying on the licence.
 
-This licence covers the source code of EDEXO-Compare. It does NOT cover:
+This licence covers the source code of EDEXO. It does NOT cover:
 
   * the data - the data/ folder and the data tables generated into the code -
     which is licensed under Creative Commons BY-NC-SA 3.0 (non-commercial,

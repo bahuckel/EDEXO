@@ -76,7 +76,7 @@ cpSync(join("dist", "web"), join(staging, "web"), { recursive: true });
 copyDataTree(join(staging, "data"));
 mergeDataOverlays(join(staging, "data"));
 
-const readme = `ED Exo Compare — Windows Electron build (single portable + unpacked folder)
+const readme = `EDEXO — Windows Electron build (single portable + unpacked folder)
 
 Output: dist/electron-out/
 - EDExoCompare.exe — portable launcher (journal + HUD). Default: binds 0.0.0.0:7111 (LAN + this PC).

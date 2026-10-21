@@ -100,7 +100,7 @@ function createTabWindows(d) {
       minHeight: 420,
       backgroundColor: "#050507",
       autoHideMenuBar: true,
-      title: "ED Exo Compare",
+      title: "EDEXO",
       icon: d.icon,
       ...(custom
         ? {

@@ -887,7 +887,7 @@
       pollDelayMs = 2500;
       if (statusBoot) statusBoot.hidden = true;
       lamp.className = "lamp bad";
-      statusTitle.textContent = "Cannot reach ED Exo Compare service";
+      statusTitle.textContent = "Cannot reach the EDEXO service";
       statusDetail.textContent = String(e && e.message ? e.message : e);
       if (modalLocalUrlList) modalLocalUrlList.innerHTML = "";
       if (modalLanUrlList) modalLanUrlList.innerHTML = "";
@@ -2443,7 +2443,7 @@
       syncHudPrefs();
     });
   }
-  /* "HUD Overlay by EDEXO-Compare" (owner, 2026-10-09): off unless chosen, at the top or the bottom. */
+  /* "HUD Overlay by EDEXO" (owner, 2026-10-09; "by EDEXO-Compare" until 1.3.0): off unless chosen, at the top or the bottom. */
   var hudCredit = document.getElementById("hudCredit");
   if (hudCredit) {
     hudCredit.addEventListener("change", function () {

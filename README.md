@@ -1,4 +1,4 @@
-# EDEXO-Compare
+# EDEXO
 
 Companion app for Elite Dangerous that predicts the exobiology on a planet from an FSS scan alone.
 
@@ -6,6 +6,10 @@ It reads your local journal folder, merges every `Journal.*.log` into one pictur
 have visited, and — for any body with a biological signal — narrows the codex down to the species
 that can actually live there, with payout ranges, first-footfall tracking, a system map and a
 species encyclopedia.
+
+Since 1.3.0 it also does colonisation: **Colonize** follows your construction sites from the journal and plans the
+hauling (where to buy, trip by trip), with a HUD section and a read-only phone view. The app was called
+EDEXO-Compare until 1.3.0; "Compare" is now its exobiology half.
 
 Made by Bahuckel (CMDR FALrenica). Not affiliated with Frontier Developments.
 
@@ -496,7 +500,7 @@ Three parts, three licences:
   belong to Frontier Developments and are under Frontier's terms, not either licence here.
 
 If you build on the code, the `Required Notice` line is part of the licence; a link back as well —
-"based on EDEXO-Compare by Bahuckel, https://bahuckel.com/projects/edexo-compare" — is appreciated. For the
+"based on EDEXO by Bahuckel, https://bahuckel.com/projects/edexo-compare" — is appreciated. For the
 data, credit is part of the licence too.
 
 **Every photograph in the app is labelled with where it came from**, and the label is the answer:

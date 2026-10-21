@@ -160,7 +160,7 @@ function watchForegroundOffMain(utilityProcess, hostPath, onName) {
     if (!stopped && !fallback) fallback = watchForeground(onName);
   };
   try {
-    host = utilityProcess.fork(hostPath, [], { serviceName: "ED Exo Compare foreground watch", stdio: "ignore" });
+    host = utilityProcess.fork(hostPath, [], { serviceName: "EDEXO foreground watch", stdio: "ignore" });
   } catch {
     useFallback();
     return { stop: () => ((stopped = true), fallback?.stop()) };

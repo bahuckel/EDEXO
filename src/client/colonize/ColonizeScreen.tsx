@@ -49,7 +49,7 @@ export function ColonizeScreen() {
 function PhoneScreen() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    document.title = "Colonize — ED Exo Compare";
+    document.title = "Colonize — EDEXO";
     void loadColonizeUiState({ readOnly: true }).finally(() => setReady(true));
   }, []);
   return ready ? <PhoneView /> : <LoadingNote className="screen-loading" />;
@@ -96,7 +96,7 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
     }
   };
   useEffect(() => {
-    document.title = "Colonize — ED Exo Compare";
+    document.title = "Colonize — EDEXO";
   }, []);
 
   const snap = m.snap;

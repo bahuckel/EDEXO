@@ -23,7 +23,7 @@ const SEARCH_ENGINES = {
 
 /** The start page's cards (owner, 2026-10-13); his own come after them. */
 const DEFAULT_LINKS = [
-  { name: "ED Exo Compare", url: "https://bahuckel.com/projects/edexo-compare" },
+  { name: "EDEXO", url: "https://bahuckel.com/projects/edexo-compare" },
   { name: "EDSM", url: "https://www.edsm.net" },
   { name: "EDAstro", url: "https://edastro.com" },
   { name: "Spansh", url: "https://spansh.co.uk" },

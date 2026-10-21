@@ -15,11 +15,20 @@ param(
   [ValidateSet("portable", "zip")][string]$Mode,
   [string]$Target,
   [string]$Staged,
+  # The running copy's exe (folder form): started again if the update fails.
   [string]$Exe = "EDExoCompare.exe",
   [int]$Start = 1,
   [string]$Log = ""
 )
 $ErrorActionPreference = "Stop"
+
+# The names this app's exe has or may have, the running one first (1.3.0, the EDEXO rename): a later release may
+# name its exe EDEXO.exe, and this copy must still take it. Kept in step with EXE_NAMES in updater.cjs.
+$Names = @($Exe, "EDExoCompare.exe", "EDEXO.exe") | Select-Object -Unique
+function ExeIn([string]$Dir) {
+  foreach ($n in $Names) { if (Test-Path -LiteralPath (Join-Path $Dir $n)) { return $n } }
+  return $null
+}
 
 function Say([string]$m) {
   if ($Log) { try { Add-Content -LiteralPath $Log -Value ("{0:u} {1}" -f (Get-Date).ToUniversalTime(), $m) } catch {} }
@@ -77,8 +86,9 @@ try {
     [System.IO.Compression.ZipFile]::ExtractToDirectory($Staged, $unz)
     # The zip holds one folder, "ED Exo Compare <version>"; its contents are the program.
     $inner = @(Get-ChildItem -LiteralPath $unz -Directory)
-    $src = if ($inner.Count -eq 1 -and -not (Test-Path -LiteralPath (Join-Path $unz $Exe))) { $inner[0].FullName } else { $unz }
-    if (-not (Test-Path -LiteralPath (Join-Path $src $Exe))) { throw "the zip has no $Exe" }
+    $src = if ($inner.Count -eq 1 -and -not (ExeIn $unz)) { $inner[0].FullName } else { $unz }
+    $newExe = ExeIn $src
+    if (-not $newExe) { throw ("the zip has no " + ($Names -join " or ")) }
     Move-Item -LiteralPath $src -Destination $new
     if (Test-Path -LiteralPath $unz) { Remove-Item -LiteralPath $unz -Recurse -Force -ErrorAction SilentlyContinue }
     $renamed = $false
@@ -103,7 +113,7 @@ try {
       }
       Remove-Item -LiteralPath $new -Recurse -Force -ErrorAction SilentlyContinue
     }
-    $run = Join-Path $Target $Exe
+    $run = Join-Path $Target $newExe
   }
   Say "update: installed"
 } catch {

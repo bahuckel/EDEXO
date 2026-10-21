@@ -1141,7 +1141,7 @@ export function SnapshotStampPanel({ prefs }: { prefs: AppSnapshot["photoStamp"]
       help={
         <p>
           The camera on <strong>Exo-signals</strong>, <strong>Candidate species</strong> and the{" "}
-          <strong>system map</strong> copies that panel as an image with the ED Exo Compare stamp under it;
+          <strong>system map</strong> copies that panel as an image with the EDEXO stamp under it;
           Shift+click saves a PNG instead. These add lines beside the stamp.
         </p>
       }

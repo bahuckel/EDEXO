@@ -320,7 +320,7 @@ export function GalaxyMap3D() {
   // Its own window names itself; as a tab (Tab view) the app window keeps its title.
   const inTab = useInTab() != null;
   useEffect(() => {
-    if (!inTab) document.title = "Galaxy map — ED Exo Compare";
+    if (!inTab) document.title = "Galaxy map — EDEXO";
   }, [inTab]);
 
   useEffect(() => {

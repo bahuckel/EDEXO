@@ -33,7 +33,7 @@ if (winCodesign && !usePfx) {
   );
 }
 
-const copyright = process.env.EDEXO_COPYRIGHT || "Copyright © Bahuckel — ED Exo Compare";
+const copyright = process.env.EDEXO_COPYRIGHT || "Copyright © Bahuckel — EDEXO";
 
 const win = {
   target: [{ target: "portable", arch: ["x64"] }],

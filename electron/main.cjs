@@ -306,7 +306,7 @@ function attachAppPageLinks(win, base, iconForChild) {
           minHeight: WINDOW_MIN.galaxy.h,
           backgroundColor: "#050507",
           autoHideMenuBar: true,
-          title: "Galaxy map — ED Exo Compare",
+          title: "Galaxy map — EDEXO",
           icon: iconForChild,
         },
       };
@@ -365,7 +365,7 @@ function openAppUiWindow(iconForChild) {
     minHeight: WINDOW_MIN.app.h,
     backgroundColor: "#050507",
     autoHideMenuBar: true,
-    title: "ED Exo Compare",
+    title: "EDEXO",
     icon: iconForChild,
     ...(customTitleBar
       ? { titleBarStyle: "hidden", titleBarOverlay: { color: "#07060a", symbolColor: "#f0a050", height: 34 } }
@@ -432,7 +432,7 @@ function openColonizeWindow(iconForChild) {
     minHeight: WINDOW_MIN.colonize.h,
     backgroundColor: "#07060a",
     autoHideMenuBar: true,
-    title: "Colonize — ED Exo Compare",
+    title: "Colonize — EDEXO",
     icon: iconForChild,
     webPreferences: {
       spellcheck: false,
@@ -709,7 +709,7 @@ async function start() {
       `__dirname=${__dirname}`,
     ].join("\n");
     try {
-      dialog.showErrorBox("ED Exo Compare — missing server bundle", detail);
+      dialog.showErrorBox("EDEXO — missing server bundle", detail);
     } catch {
       /* ignore */
     }
@@ -771,7 +771,7 @@ async function start() {
       huds.log(`server process ended (exit ${code})`);
       try {
         dialog.showErrorBox(
-          "ED Exo Compare — the server stopped",
+          "EDEXO — the server stopped",
           `The part of the app that reads your journals stopped unexpectedly (exit ${code}). The app will close; start it again.`,
         );
       } catch {
@@ -990,7 +990,7 @@ async function start() {
       if (!closeToTrayExplained) {
         closeToTrayExplained = true;
         trayControl.notify(
-          "ED Exo Compare is still running",
+          "EDEXO is still running",
           "It is in the tray (the arrow next to the clock). Click its icon to bring the launcher back, or right-click it to quit.",
         );
       }
@@ -1176,7 +1176,7 @@ app.whenReady().then(() => {
           `\n\nPort ${port} is in use — often EDExoCompare-*-CLI.exe or another copy of this app. ` +
           `Close that copy, or start this one on a different port with --port <number>.`;
       }
-      dialog.showErrorBox("ED Exo Compare — startup failed", msg);
+      dialog.showErrorBox("EDEXO — startup failed", msg);
     } catch {
       /* ignore */
     }

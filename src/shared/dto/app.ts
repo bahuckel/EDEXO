@@ -238,7 +238,7 @@ export interface HudPrefsDTO {
   relevant?: boolean;
   /** HUD type (owner, 2026-10-04): Original (default), Title Background, Elite Style. */
   hudType?: "original" | "title" | "elite";
-  /** "HUD Overlay by EDEXO-Compare" above or below each HUD (owner, 2026-10-09); off by default. */
+  /** "HUD Overlay by EDEXO" above or below each HUD (owner, 2026-10-09); off by default. */
   credit?: "off" | "top" | "bottom";
   /** "Next boxel" line under the Next jump HUD (plan 2.7). */
   nextBoxel?: boolean;

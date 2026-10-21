@@ -1,6 +1,6 @@
 /**
  * Branded panel snapshots (owner, 2026-09-26): a camera on Exo-signals, Candidate species and the
- * system map turns that panel into a PNG with the ED Exo Compare stamp under it — for Discord, for
+ * system map turns that panel into a PNG with the EDEXO stamp under it — for Discord, for
  * a codex log, for a friend.
  *
  * The stamp is not optional. What goes beside it is: commander name, system name and a timestamp,
@@ -154,7 +154,7 @@ export async function renderBrandedSnapshot(el: HTMLElement, stamp: SnapshotStam
   g.textBaseline = "middle";
   g.fillStyle = accent;
   g.font = `700 ${15 * scale}px ${font}`;
-  g.fillText("ED EXO COMPARE", x, midY - 8 * scale);
+  g.fillText("EDEXO", x, midY - 8 * scale);
   g.fillStyle = dim;
   g.font = `400 ${11 * scale}px ${font}`;
   g.fillText("by CMDR FALrenica · bahuckel.com/projects/edexo-compare", x, midY + 9 * scale);

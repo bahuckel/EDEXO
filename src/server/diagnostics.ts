@@ -126,7 +126,7 @@ const onOff = (b: boolean) => (b ? "on" : "off");
 export function buildDiagnosticsText(d: DiagnosticsInput, home?: string): string {
   const lines: string[] = [];
   lines.push(
-    `ED Exo Compare ${d.version} — diagnostics, ${d.now.toISOString().replace("T", " ").slice(0, 16)} UTC`,
+    `EDEXO ${d.version} — diagnostics, ${d.now.toISOString().replace("T", " ").slice(0, 16)} UTC`,
   );
   lines.push(
     `Build: ${d.form}${d.electron ? `, Electron ${d.electron}` : ""}, Node ${d.node}`,

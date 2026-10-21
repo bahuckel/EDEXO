@@ -1,6 +1,6 @@
 # Notice, credits and third-party material
 
-EDEXO-Compare's source code is licensed under the PolyForm Noncommercial License 1.0.0 with two additional
+EDEXO's source code (EDEXO-Compare until 1.3.0) is licensed under the PolyForm Noncommercial License 1.0.0 with two additional
 permissions (streams and videos; donations without paywalls), since 1.3.0 — see [LICENSE](LICENSE); releases up to
 1.2.20 were MIT and stay so. The data is CC BY-NC-SA 3.0 ([`data/LICENSE-DATA.txt`](data/LICENSE-DATA.txt)).
 **Neither covers the species photographs, and neither covers Elite Dangerous game content.** See "Species

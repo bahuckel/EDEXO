@@ -176,7 +176,7 @@ const AppLegalFooter = memo(function AppLegalFooter() {
   return (
     <footer className="app-legal-footer">
       <p className="app-legal-footer-note dim">
-        ED Exo Compare is owned and operated by Bahuckel™. Independent fan software using local Elite
+        EDEXO is owned and operated by Bahuckel™. Independent fan software using local Elite
         Dangerous journal data — not affiliated with Frontier Developments. <em>Elite Dangerous</em> and
         related marks belong to Frontier; all rights reserved by their owners.
       </p>

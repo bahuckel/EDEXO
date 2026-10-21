@@ -10,14 +10,14 @@ export function showEdexoNativeFixInfo(message: string): boolean {
   // The server's own process has no `dialog`: the main process shows it (serverChild.ts).
   const port = (process as unknown as { parentPort?: { postMessage(m: unknown): void } }).parentPort;
   if (process.env.EDEXO_SERVER_CHILD === "1" && port) {
-    port.postMessage({ type: "dialog", title: "ED Exo Compare — Fix", message });
+    port.postMessage({ type: "dialog", title: "EDEXO — Fix", message });
     return true;
   }
   try {
     const electron = require("electron") as typeof import("electron");
     electron.dialog.showMessageBoxSync({
       type: "info",
-      title: "ED Exo Compare — Fix",
+      title: "EDEXO — Fix",
       message,
     });
     return true;
@@ -77,7 +77,7 @@ export function assertResourceLayout(): void {
   }
   if (missing.length) {
     const lines = [
-      "ED Exo Compare — cannot start.",
+      "EDEXO — cannot start.",
       ...missing,
       "",
       'Keep "web" and "data" next to the app; species live in data/species/<genus>/.',

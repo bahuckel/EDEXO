@@ -122,12 +122,12 @@ export function loadOrCreateLanKey(file: string): string {
 }
 
 const UNAUTHORIZED_HTML = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ED Exo Compare — access key required</title>
+<title>EDEXO — access key required</title>
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0a0d;color:#e8e2da;font:15px/1.5 system-ui,sans-serif}
 main{max-width:30rem;padding:1.5rem;border:1px solid rgba(255,106,26,.35);border-radius:10px;background:#12121a}
 h1{margin:0 0 .6rem;font-size:1.1rem;color:#ff6a1a}p{margin:.6rem 0}code{color:#ffb27a}</style>
 <main><h1>Access key required</h1>
-<p>This ED Exo Compare is running on a local network. Devices other than the host PC need the
+<p>This EDEXO is running on a local network. Devices other than the host PC need the
 access key that the launcher shows under <strong>Network settings &rarr; LAN</strong>.</p>
 <p>Open the full link from there — it ends in <code>?k=…</code> — and this device stays paired.</p></main>`;
 

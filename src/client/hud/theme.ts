@@ -130,7 +130,7 @@ export function readOpacity(): number {
   return clampNum(pref("edexoHudOpacity", "0.45"), 0.1, 1, 0.45);
 }
 /*
-  "HUD Overlay by EDEXO-Compare" (owner, 2026-10-09/10): off unless chosen, at the top or the bottom of the
+  "HUD Overlay by EDEXO" (owner, 2026-10-09/10; "by EDEXO-Compare" until 1.3.0): off unless chosen, at the top or the bottom of the
   panel, shown "like the other titles": a section of its own with a section title and nothing under it, so
   every HUD type draws it as it draws theirs. The panel (Panel.tsx) places it from this.
 */
