@@ -108,6 +108,11 @@ type Drawer =
   | "stations"
   | "jumponium"
   | "finder";
+/** `&drawer=finder` opens the map on a drawer (Colonize's "Find colony sites" link); only the ones a link may name. */
+function drawerFromUrl(): Drawer {
+  const d = new URLSearchParams(window.location.search).get("drawer");
+  return d === "finder" || d === "stations" || d === "neutron" ? d : "none";
+}
 /** A Spansh name hit with its coordinates (`/api/system/spansh-search`). */
 type SpanshFindHit = { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number };
 type MineRow = GalaxyMineDTO["systems"][number];
@@ -201,7 +206,7 @@ export function GalaxyMap3D() {
   const expByKey = useMemo(() => new Map((expField?.boxels ?? []).map((b) => [b.key, b])), [expField]);
   const [mine, setMine] = useState<Map<string, MineRow>>(new Map());
   const [route, setRoute] = useState<GalaxyRouteDTO | null>(null);
-  const [drawer, setDrawer] = useState<Drawer>("none");
+  const [drawer, setDrawer] = useState<Drawer>(drawerFromUrl);
   const codexOn = drawer === "codex";
   const [codexKind, setCodexKind] = useState<CodexMapKind>("bio");
   const [codexRegions, setCodexRegions] = useState<CodexMapRegionsDTO | null>(null);

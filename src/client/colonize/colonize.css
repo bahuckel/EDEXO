@@ -1,0 +1,507 @@
+/*
+ * The Colonize window (1.3.0). Its own class names (`cz-`), EDEXO's tokens (public/tokens.css, styles/tokens.css),
+ * so the colour scheme and the font follow the rest of the app and nothing here reaches the main window.
+ * Cockpit rule: orange = normal, blue (--ok) = done / information, yellow (--warn) = caution, red (--danger) = warning.
+ */
+.cz {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--hud-font);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.cz button,
+.cz input,
+.cz select {
+  font: inherit;
+}
+.cz button {
+  cursor: pointer;
+}
+.cz a:not(.cz-btn) {
+  color: var(--hud-hi);
+  text-underline-offset: 3px;
+}
+.cz a:not(.cz-btn):hover {
+  color: var(--text);
+}
+.cz :focus-visible {
+  outline: 2px solid var(--hud-hi);
+  outline-offset: 2px;
+}
+.cz-dim {
+  color: var(--text-faint);
+}
+.cz-small {
+  font-size: 13px;
+}
+.cz-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- header + tabs ------------------------------------------------------------------------------------------ */
+.cz-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 12px 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--hud-faint);
+}
+.cz-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: 18px;
+}
+.cz-brand__tag {
+  padding: 2px 10px;
+  border: 1px solid var(--hud);
+  border-radius: 999px;
+  color: var(--hud);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.cz-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1 1 520px;
+}
+.cz-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--hud-faint);
+  border-radius: 8px;
+  color: var(--text);
+}
+.cz-chip__k {
+  color: var(--text-faint);
+  font-size: 13px;
+}
+.cz-chip--info {
+  background: rgba(79, 208, 255, 0.1);
+  border-color: var(--ok-dim);
+  color: var(--ok-soft);
+}
+.cz-chip--off {
+  color: var(--text-faint);
+}
+.cz-head__right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.cz-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--hud-faint);
+}
+.cz-tab {
+  padding: 12px 18px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-faint);
+}
+.cz-tab[aria-selected="true"] {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--hud);
+}
+.cz-tab__count {
+  margin-left: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--hud-ghost);
+  color: var(--hud-hi);
+  font-size: 12px;
+}
+
+/* ---- layout ------------------------------------------------------------------------------------------------- */
+.cz-main {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.cz-cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+.cz-side {
+  flex: 1 1 320px;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cz-wide {
+  flex: 999 1 560px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.cz-h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+}
+.cz-h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.cz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cz-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ---- surfaces ----------------------------------------------------------------------------------------------- */
+.cz-panel {
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 138, 31, 0.18);
+  border-radius: 12px;
+}
+.cz-panel--hot {
+  border-color: var(--hud);
+  background: linear-gradient(var(--target-warm), var(--panel));
+}
+.cz-panel--info {
+  border-color: var(--ok);
+  background: linear-gradient(#0d1418, var(--panel));
+}
+.cz-eyebrow {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--hud);
+  text-transform: uppercase;
+}
+.cz-panel--info .cz-eyebrow {
+  color: var(--ok);
+}
+.cz-big {
+  font-size: 22px;
+  font-weight: 700;
+}
+.cz-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid;
+}
+.cz-note--warn {
+  background: rgba(255, 210, 63, 0.07);
+  border-color: rgba(255, 210, 63, 0.5);
+  color: var(--warn-soft);
+}
+.cz-note--bad {
+  background: rgba(255, 90, 60, 0.08);
+  border-color: rgba(255, 90, 60, 0.55);
+  color: var(--danger-faint);
+}
+.cz-note--info {
+  background: rgba(79, 208, 255, 0.07);
+  border-color: var(--ok-dim);
+  color: var(--ok-soft);
+}
+.cz-note__text {
+  flex: 1 1 300px;
+}
+
+/* ---- controls ----------------------------------------------------------------------------------------------- */
+.cz-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(255, 138, 31, 0.55);
+  border-radius: 8px;
+  text-decoration: none;
+}
+.cz-btn:hover {
+  background: var(--hud-ghost);
+}
+.cz-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.cz-btn--primary {
+  background: var(--hud);
+  color: var(--ink);
+  border-color: var(--hud);
+  font-weight: 700;
+}
+.cz-btn--primary:hover {
+  background: var(--hud-hi);
+}
+.cz-btn--warn {
+  color: var(--warn-soft);
+  border-color: rgba(255, 210, 63, 0.6);
+}
+.cz-btn--bad {
+  color: var(--danger-soft);
+  border-color: rgba(255, 90, 60, 0.55);
+}
+.cz-btn--quiet {
+  border-color: transparent;
+  color: var(--hud-hi);
+  padding-inline: 6px;
+}
+.cz-iconbtn {
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1px solid rgba(255, 138, 31, 0.35);
+  border-radius: 8px;
+  color: var(--hud-hi);
+}
+.cz-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 138, 31, 0.18);
+  border-radius: 10px;
+}
+.cz-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border-radius: 8px;
+}
+.cz-input,
+.cz-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255, 138, 31, 0.35);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.cz-input--big {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 17px;
+  border-color: var(--hud);
+  border-radius: 10px;
+}
+.cz-toggle {
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--hud-faint);
+  border-radius: 8px;
+  color: var(--text-faint);
+}
+.cz-toggle[aria-pressed="true"] {
+  background: rgba(255, 138, 31, 0.14);
+  border-color: var(--hud);
+  color: var(--text);
+}
+.cz-seg {
+  display: inline-flex;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--hud-faint);
+  border-radius: 10px;
+}
+.cz-seg button {
+  padding: 8px 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--text-faint);
+}
+.cz-seg button[aria-selected="true"] {
+  background: rgba(255, 138, 31, 0.16);
+  color: var(--text);
+  font-weight: 600;
+}
+.cz-check {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.cz-check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--hud);
+}
+
+/* ---- sites -------------------------------------------------------------------------------------------------- */
+.cz-site {
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 138, 31, 0.18);
+  border-radius: 12px;
+}
+.cz-site--docked {
+  border-color: var(--ok);
+}
+.cz-bar {
+  height: 8px;
+  margin: 10px 0 6px;
+  background: var(--hud-ghost);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cz-bar__fill {
+  height: 100%;
+  background: var(--hud);
+  border-radius: 4px;
+}
+.cz-bar__fill--done {
+  background: var(--ok);
+}
+.cz-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cz-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cz-fold > summary {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 138, 31, 0.18);
+  border-radius: 10px;
+  color: var(--text-dim);
+  cursor: pointer;
+  list-style: none;
+}
+.cz-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.cz-fold[open] > summary {
+  margin-bottom: 10px;
+}
+
+/* ---- tables ------------------------------------------------------------------------------------------------- */
+.cz-table-wrap {
+  overflow-x: auto;
+}
+.cz-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.cz-table th {
+  padding: 6px 8px;
+  color: var(--text-faint);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+.cz-table td {
+  padding: 8px;
+  border-top: 1px solid rgba(255, 138, 31, 0.12);
+  vertical-align: top;
+}
+.cz-table .r {
+  text-align: right;
+}
+.cz-table tr.is-picked td {
+  background: var(--hud-ghost);
+}
+.cz-table tr.is-done td {
+  color: var(--text-faint);
+}
+.cz-pick {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text);
+  text-align: left;
+  font-weight: 600;
+}
+.cz-pick:hover {
+  color: var(--hud-hi);
+}
+
+/* ---- trips -------------------------------------------------------------------------------------------------- */
+.cz-trips {
+  background: var(--panel);
+  border: 1px solid rgba(255, 138, 31, 0.18);
+  border-radius: 10px;
+}
+.cz-trip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255, 138, 31, 0.08);
+}
+.cz-trip input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ok);
+}
+.cz-trip--done {
+  color: var(--text-faint);
+}
+.cz-trip__n {
+  width: 28px;
+  color: var(--text-faint);
+}
+.cz-done-mark {
+  color: var(--ok);
+}
+
+@media (max-width: 640px) {
+  .cz-main {
+    padding: 16px;
+  }
+  .cz-head,
+  .cz-tabs {
+    padding-inline: 16px;
+  }
+}

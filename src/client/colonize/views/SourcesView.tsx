@@ -1,0 +1,494 @@
+/**
+ * Where the cargo comes from: your carriers, trade-party carriers, seller data (Spansh scans, Inara imports),
+ * the stations you never want, the markets you have bought at, and forgetting saved sellers.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { carrierDisplayName, type CarrierStock } from "../../../shared/colonize/carrierStock";
+import type { ClearBuyDataScope } from "../../../shared/colonize/buyIndexClear";
+import { formatHopLy } from "../../../shared/colonize/systemDistanceLy";
+import { formatPrice } from "../../../shared/colonize/formatPrice";
+import { IDLE_MATERIAL_BUY_SCAN_STATUS } from "../../../shared/colonize/materialBuyScanStatus";
+import {
+  addPartyMember,
+  loadTradeParty,
+  normalizeCallsign,
+  ordersForNeeds,
+  removePartyMember,
+  saveTradeParty,
+  type PartyCarrier,
+  type PartyMember,
+} from "../../../shared/colonize/tradeParty";
+import type { ColonizeModel } from "../useColonize";
+
+const t = (n: number) => `${Math.round(n).toLocaleString("en-US")} t`;
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+export function SourcesView({ m }: { m: ColonizeModel }) {
+  return (
+    <div className="cz-grid">
+      <CarriersPanel m={m} />
+      <TradePartyPanel m={m} />
+      <SellerDataPanel m={m} />
+      <InaraPanel m={m} />
+      <BansPanel m={m} />
+      <HistoryPanel m={m} />
+      <ForgetPanel m={m} />
+    </div>
+  );
+}
+
+/* ---- your carriers ---------------------------------------------------------------------------------------------- */
+
+function CarriersPanel({ m }: { m: ColonizeModel }) {
+  return (
+    <section className="cz-panel cz-stack" aria-labelledby="cz-car-h">
+      <div>
+        <h2 id="cz-car-h" className="cz-h2">
+          Your carriers
+        </h2>
+        <p className="cz-small cz-dim" style={{ margin: 0 }}>
+          What the journal saw moving on and off them. Switch one on and the plan counts its cargo as already bought.
+        </p>
+      </div>
+      {m.carriers.length ? (
+        m.carriers.map((c) => <CarrierCard key={c.carrierId} c={c} on={m.haulingCarrierIds.has(c.carrierId)} toggle={() => m.toggleCarrier(c.carrierId)} />)
+      ) : (
+        <p className="cz-dim" style={{ margin: 0 }}>
+          No carrier of yours in the journal yet. Dock at it once and it shows here.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function CarrierCard({ c, on, toggle }: { c: CarrierStock; on: boolean; toggle: () => void }) {
+  const lines = Object.entries(c.tonsByCommodity)
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1]);
+  const total = lines.reduce((a, [, n]) => a + n, 0);
+  return (
+    <div className="cz-site">
+      <div className="cz-row" style={{ alignItems: "center" }}>
+        <div>
+          <b>{carrierDisplayName(c)}</b>
+          <div className="cz-small cz-dim">
+            {c.callsign}
+            {c.kind === "squadron" ? " · squadron carrier" : ""}
+          </div>
+        </div>
+        <label className="cz-check">
+          <input type="checkbox" checked={on} onChange={toggle} />
+          <span>Use its cargo</span>
+        </label>
+      </div>
+      <div className="cz-small" style={{ color: "var(--text-dim)", margin: "6px 0" }}>
+        {c.reportedTons != null ? `${t(c.reportedTons)} of cargo aboard` : `${t(total)} seen moving`}
+        {c.capacityTons ? ` · holds ${t(c.capacityTons)}` : ""}
+      </div>
+      {lines.length ? (
+        <details>
+          <summary className="cz-small" style={{ cursor: "pointer", color: "var(--hud-hi)" }}>
+            {lines.length} commodities
+          </summary>
+          <ul className="cz-list cz-num" style={{ marginTop: 6 }}>
+            {lines.map(([id, n]) => (
+              <li key={id}>
+                <span>{c.labels[id] ?? id}</span>
+                <span className="cz-dim">{t(n)}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+/* ---- trade party: other commanders' carriers, by callsign ---------------------------------------------------------- */
+
+const PARTY_POLL_MS = 5 * 60_000;
+
+function TradePartyPanel({ m }: { m: ColonizeModel }) {
+  const [members, setMembers] = useState<PartyMember[]>(() => loadTradeParty());
+  const [carriers, setCarriers] = useState<Map<string, PartyCarrier>>(new Map());
+  const [callsign, setCallsign] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const near = m.constructionSiteRefs[0]?.trim() || m.homeSystem || undefined;
+  const needIds = useMemo(() => new Set((m.summary?.rows ?? []).map((r) => r.id)), [m.summary]);
+
+  const save = (next: PartyMember[]) => {
+    setMembers(next);
+    saveTradeParty(next);
+  };
+  const callsigns = members.map((x) => x.callsign).join(",");
+  const lookUp = useCallback(async () => {
+    if (!callsigns) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await m.api.lookUpPartyCarriers({ callsigns: callsigns.split(","), referenceSystem: near });
+      if (res.ok) setCarriers(new Map(res.carriers.map((c) => [c.callsign, c])));
+      else setError(res.err);
+    } catch (e) {
+      setError(errText(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [m.api, callsigns, near]);
+  useEffect(() => {
+    void lookUp();
+    const id = window.setInterval(() => void lookUp(), PARTY_POLL_MS);
+    return () => clearInterval(id);
+  }, [lookUp]);
+
+  const valid = normalizeCallsign(callsign) != null;
+  return (
+    <section className="cz-panel cz-stack" aria-labelledby="cz-party-h">
+      <div className="cz-row">
+        <div>
+          <h2 id="cz-party-h" className="cz-h2">
+            Trade party
+          </h2>
+          <p className="cz-small cz-dim" style={{ margin: 0 }}>
+            Friends' carriers by callsign: where they are and what they sell, from Spansh (about 15 minutes behind).
+          </p>
+        </div>
+        {members.length ? (
+          <button type="button" className="cz-btn cz-btn--quiet" disabled={busy} onClick={() => void lookUp()}>
+            {busy ? "Looking…" : "Look again"}
+          </button>
+        ) : null}
+      </div>
+      <form
+        className="cz-row"
+        style={{ justifyContent: "flex-start", alignItems: "center", gap: 8 }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!valid) return;
+          save(addPartyMember(members, callsign, note));
+          setCallsign("");
+          setNote("");
+        }}
+      >
+        <input className="cz-input" style={{ width: 110 }} aria-label="Callsign" placeholder="ABC-123" value={callsign} onChange={(e) => setCallsign(e.target.value)} />
+        <input className="cz-input" style={{ flex: "1 1 140px" }} aria-label="Note" placeholder="whose it is (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+        <button type="submit" className="cz-btn" disabled={!valid}>
+          Add
+        </button>
+      </form>
+      {error ? <p className="cz-note cz-note--bad">{error}</p> : null}
+      {members.map((p) => {
+        const c = carriers.get(p.callsign);
+        const forUs = c ? ordersForNeeds(c, needIds) : [];
+        return (
+          <div key={p.callsign} className="cz-site">
+            <div className="cz-row" style={{ alignItems: "center" }}>
+              <div>
+                <b>{p.callsign}</b>
+                {p.note ? <span className="cz-dim"> · {p.note}</span> : null}
+                <div className="cz-small cz-dim">
+                  {!c ? "looking…" : !c.found ? "Spansh has never seen this carrier" : `${c.systemName ?? "somewhere"}${c.systemName ? ` · ${formatHopLy(c.distanceLy)}` : ""}`}
+                </div>
+              </div>
+              <button type="button" className="cz-btn cz-btn--quiet cz-small" onClick={() => save(removePartyMember(members, p.callsign))}>
+                Remove
+              </button>
+            </div>
+            {forUs.length ? (
+              <ul className="cz-list cz-num" style={{ marginTop: 6 }}>
+                {forUs.map((o) => (
+                  <li key={o.commodityId}>
+                    <span>
+                      <b>{o.label}</b>
+                    </span>
+                    <span className="cz-dim">
+                      {t(o.tons)}
+                      {o.price != null ? ` · ${formatPrice(o.price)} cr` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : c?.found ? (
+              <div className="cz-small cz-dim" style={{ marginTop: 4 }}>
+                {c.selling.length ? `Sells ${c.selling.length} things, none your sites need.` : "Sells nothing right now."}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+/* ---- seller data: Spansh scans ---------------------------------------------------------------------------------- */
+
+function SellerDataPanel({ m }: { m: ColonizeModel }) {
+  const s = m.materialBuyScanStatus ?? IDLE_MATERIAL_BUY_SCAN_STATUS;
+  const running = [s.active, s.passive].find((q) => q.phase !== "idle");
+  const ps = m.plannerSettings;
+  return (
+    <section className="cz-panel cz-stack" aria-labelledby="cz-seller-h">
+      <div>
+        <h2 id="cz-seller-h" className="cz-h2">
+          Seller data
+        </h2>
+        <p className="cz-small cz-dim" style={{ margin: 0 }}>
+          Sellers come from Spansh, your Inara imports and every market you dock at; the plan uses all of them.
+        </p>
+      </div>
+      <div className="cz-note cz-note--info" role="status" style={{ margin: 0 }}>
+        {running
+          ? `${running.phase === "queued" ? "Waiting to look" : "Looking"} for ${running.commodityLabel ?? "sellers"}${running.referenceSystem ? ` near ${running.referenceSystem}` : ""}${running.total ? ` · ${running.done} of ${running.total}` : ""}`
+          : s.passivePaused
+            ? "Background look paused while a plan is being built."
+            : "Not looking right now."}
+      </div>
+      {s.lastError ? <p className="cz-note cz-note--warn">{s.lastError}</p> : null}
+      <label className="cz-check">
+        <input
+          type="checkbox"
+          checked={ps.liveSpanshScans}
+          onChange={(e) => m.setPlannerSettings({ ...ps, liveSpanshScans: e.target.checked })}
+        />
+        <span>Ask Spansh in the background</span>
+      </label>
+      <label className="cz-field">
+        <span>Stop after this many seller systems per material</span>
+        <input
+          className="cz-input"
+          inputMode="numeric"
+          style={{ width: 90 }}
+          placeholder="no limit"
+          value={ps.maxSystemsPerMaterial}
+          onChange={(e) => m.setPlannerSettings({ ...ps, maxSystemsPerMaterial: e.target.value.replace(/[^\d]/g, "") })}
+        />
+      </label>
+      <div>
+        <button type="button" className="cz-btn cz-btn--primary" disabled={m.stations.lookingBusy} onClick={m.stations.lookNow}>
+          {m.stations.lookingBusy ? "Looking…" : "Look for sellers now"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/* ---- Inara imports ---------------------------------------------------------------------------------------------- */
+
+function InaraPanel({ m }: { m: ColonizeModel }) {
+  const [dir, setDir] = useState<{ dir: string; defaultDir: string } | null>(null);
+  const [draft, setDraft] = useState("");
+  const [msg, setMsg] = useState<{ bad: boolean; text: string } | null>(null);
+  const file = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    void m.api
+      .getInaraImportDir()
+      .then((r) => {
+        setDir(r);
+        setDraft(r.dir);
+      })
+      .catch(() => {});
+  }, [m.api]);
+
+  const setFolder = async (value: string | null) => {
+    try {
+      const r = await m.api.setInaraImportDir(value);
+      if (!r.ok) setMsg({ bad: true, text: r.err });
+      else {
+        setDir(r);
+        setDraft(r.dir);
+        setMsg({ bad: false, text: "Folder saved." });
+      }
+    } catch (e) {
+      setMsg({ bad: true, text: errText(e) });
+    }
+  };
+  const importFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const done: string[] = [];
+    for (const f of Array.from(files)) {
+      try {
+        const r = await m.api.importInaraFile({ fileName: f.name, text: await f.text() });
+        done.push(r.ok ? `${r.commodityLabel} near ${r.nearSystem}: ${r.merged} sellers saved` : `${f.name}: ${r.err}`);
+      } catch (e) {
+        done.push(`${f.name}: ${errText(e)}`);
+      }
+    }
+    setMsg({ bad: false, text: done.join(" · ") });
+    if (file.current) file.current.value = "";
+  };
+
+  return (
+    <section className="cz-panel cz-stack" aria-labelledby="cz-inara-h">
+      <div>
+        <h2 id="cz-inara-h" className="cz-h2">
+          Inara imports
+        </h2>
+        <p className="cz-small cz-dim" style={{ margin: 0 }}>
+          The browser extension saves Inara's commodity search into this folder; files dropped there are read on their own.
+        </p>
+      </div>
+      <form
+        className="cz-row"
+        style={{ justifyContent: "flex-start", alignItems: "center", gap: 8 }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void setFolder(draft.trim() || null);
+        }}
+      >
+        <input className="cz-input" style={{ flex: "1 1 260px" }} aria-label="Import folder" value={draft} onChange={(e) => setDraft(e.target.value)} />
+        <button type="submit" className="cz-btn" disabled={!dir || draft.trim() === dir.dir}>
+          Save
+        </button>
+        {dir && dir.dir !== dir.defaultDir ? (
+          <button type="button" className="cz-btn cz-btn--quiet" onClick={() => void setFolder(null)}>
+            Use default
+          </button>
+        ) : null}
+      </form>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button type="button" className="cz-btn" onClick={() => void m.api.openInaraImportDir().catch(() => {})}>
+          Open folder
+        </button>
+        <button type="button" className="cz-btn" onClick={() => file.current?.click()}>
+          Import a file…
+        </button>
+        <input ref={file} type="file" accept=".json,.html,.htm,.txt" multiple hidden onChange={(e) => void importFiles(e.target.files)} />
+      </div>
+      {msg ? <p className={`cz-note ${msg.bad ? "cz-note--bad" : "cz-note--info"}`}>{msg.text}</p> : null}
+    </section>
+  );
+}
+
+/* ---- stations you never want ------------------------------------------------------------------------------------ */
+
+function BansPanel({ m }: { m: ColonizeModel }) {
+  return (
+    <section className="cz-panel cz-stack" aria-labelledby="cz-bans-h">
+      <h2 id="cz-bans-h" className="cz-h2">
+        Never use
+      </h2>
+      {m.bannedStations.length ? (
+        <ul className="cz-list">
+          {m.bannedStations.map((b) => (
+            <li key={`${b.systemName}|${b.stationName}`}>
+              <span>
+                <b>{b.stationName}</b> <span className="cz-small cz-dim">{b.systemName}</span>
+              </span>
+              <button type="button" className="cz-btn cz-btn--quiet cz-small" onClick={() => m.stations.unban(b.systemName, b.stationName)}>
+                Allow again
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="cz-dim" style={{ margin: 0 }}>
+          No station banned. “Never use this station” on a trip or in Search puts one here.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/* ---- markets you bought at ------------------------------------------------------------------------------------- */
+
+function HistoryPanel({ m }: { m: ColonizeModel }) {
+  const [all, setAll] = useState(false);
+  const rows = useMemo(() => [...m.shopHistory].sort((a, b) => b.visitedAt.localeCompare(a.visitedAt)), [m.shopHistory]);
+  const shown = all ? rows : rows.slice(0, 10);
+  return (
+    <section className="cz-panel cz-stack" aria-labelledby="cz-hist-h">
+      <div>
+        <h2 id="cz-hist-h" className="cz-h2">
+          Markets you docked at
+        </h2>
+        <p className="cz-small cz-dim" style={{ margin: 0 }}>
+          From the journal. The plan prefers these when their prices are still fresh.
+        </p>
+      </div>
+      {rows.length ? (
+        <ul className="cz-list">
+          {shown.map((h) => (
+            <li key={`${h.systemName}|${h.stationName}`}>
+              <span>
+                <b>{h.stationName}</b> <span className="cz-small cz-dim">{h.systemName}</span>
+              </span>
+              <span className="cz-small cz-dim cz-num">
+                {h.constructionDistanceLy != null ? `${formatHopLy(h.constructionDistanceLy)} · ` : ""}
+                {h.purchases?.length ? `bought ${h.purchases.length}× · ` : ""}
+                {h.visitedAt.slice(0, 10)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="cz-dim" style={{ margin: 0 }}>
+          None yet.
+        </p>
+      )}
+      {rows.length > 10 ? (
+        <button type="button" className="cz-btn cz-btn--quiet" style={{ alignSelf: "flex-start" }} onClick={() => setAll(!all)}>
+          {all ? "Show fewer" : `Show all ${rows.length}`}
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
+/* ---- forgetting saved sellers ---------------------------------------------------------------------------------- */
+
+const SCOPES: { scope: ClearBuyDataScope; label: string; what: string }[] = [
+  { scope: "spansh", label: "Spansh results", what: "Sellers saved from Spansh. The plan asks again." },
+  { scope: "inara", label: "Inara imports", what: "Sellers from imported Inara files." },
+  { scope: "visited", label: "Markets you docked at", what: "Your station history and its saved prices." },
+  { scope: "all", label: "Everything", what: "All of the above, and the saved plan." },
+];
+
+function ForgetPanel({ m }: { m: ColonizeModel }) {
+  const [armed, setArmed] = useState<ClearBuyDataScope | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  return (
+    <details className="cz-fold" style={{ alignSelf: "start" }}>
+      <summary>
+        <span>Forget saved sellers</span>
+        <span aria-hidden="true">▸</span>
+      </summary>
+      <div className="cz-stack" style={{ marginTop: 10 }}>
+        {SCOPES.map((s) => (
+          <div key={s.scope} className="cz-row" style={{ alignItems: "center" }}>
+            <span>
+              <b>{s.label}</b>
+              <div className="cz-small cz-dim">{s.what}</div>
+            </span>
+            {armed === s.scope ? (
+              <span style={{ display: "flex", gap: 6 }}>
+                <button
+                  type="button"
+                  className="cz-btn cz-btn--bad"
+                  onClick={() => {
+                    setArmed(null);
+                    void m
+                      .clearSavedBuyData(s.scope)
+                      .then((r) => setMsg(r.ok ? `Forgot ${s.label.toLowerCase()}.` : r.err))
+                      .catch((e: unknown) => setMsg(errText(e)));
+                  }}
+                >
+                  Forget
+                </button>
+                <button type="button" className="cz-btn cz-btn--quiet" onClick={() => setArmed(null)}>
+                  Keep
+                </button>
+              </span>
+            ) : (
+              <button type="button" className="cz-btn cz-btn--warn" onClick={() => setArmed(s.scope)}>
+                Forget…
+              </button>
+            )}
+          </div>
+        ))}
+        {msg ? <p className="cz-note cz-note--info">{msg}</p> : null}
+      </div>
+    </details>
+  );
+}

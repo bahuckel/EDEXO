@@ -105,6 +105,12 @@ contextBridge.exposeInMainWorld("edexoElectron", {
    * @returns {Promise<{ opened: boolean; focused?: boolean; error?: string }>}
    */
   openAppWindow: () => ipcRenderer.invoke("edexo:open-app-window"),
+  /**
+   * The Colonize window (1.3.0), beside the app window. Brings it forward when it is open.
+   *
+   * @returns {Promise<{ opened: boolean; focused?: boolean; error?: string }>}
+   */
+  openColonizeWindow: () => ipcRenderer.invoke("edexo:open-colonize-window"),
   /** @returns {Promise<{ opened: boolean; paths?: string[] }>} */
   getFootOverlayOpen: () => ipcRenderer.invoke("edexo:foot-overlay-state"),
   /** @returns {Promise<{ paths: string[] }>} */

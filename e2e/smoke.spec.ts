@@ -109,9 +109,35 @@ test("app: the Privacy Policy and Terms open from the footer, served by the app 
 test("launcher: renders with the live strip", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto("/launcher.html");
-  await expect(page.getByText("Open exobiology UI")).toBeVisible();
+  await expect(page.getByText("Open Compare", { exact: true })).toBeVisible();
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${OUT}/launcher.png`, fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+test("colonize: the window opens on the plan, every tab draws, and the launcher offers it", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto("/launcher.html");
+  await expect(page.getByText("Open Colonize")).toBeVisible();
+  await page.goto("/?screen=colonize");
+  // The fixture journal has no construction site: the plan says how to get one.
+  await expect(page.getByRole("heading", { name: "Your sites" })).toBeVisible();
+  await expect(page.getByText("none building")).toBeVisible();
+  await page.screenshot({ path: `${OUT}/colonize-plan.png`, fullPage: true });
+  for (const [tab, text] of [
+    ["Search", "A comma means"],
+    ["Sources", "Trade party"],
+    ["Wing", "Who hauls what"],
+  ] as const) {
+    await page.getByRole("tab", { name: tab }).click();
+    await expect(page.getByText(text).first()).toBeVisible();
+  }
+  // Search reads only what is saved: a fresh profile has nothing, and says so.
+  await page.getByRole("tab", { name: "Search" }).click();
+  await page.getByRole("searchbox").fill("Steel");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page.getByText("Nothing saved matches")).toBeVisible();
+  await page.screenshot({ path: `${OUT}/colonize-search.png`, fullPage: true });
   expect(errors).toEqual([]);
 });
 

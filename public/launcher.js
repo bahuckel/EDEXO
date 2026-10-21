@@ -34,6 +34,8 @@
   const mainUiMenu = document.getElementById("mainUiMenu");
   const mainUiSplit = document.getElementById("mainUiSplit");
   const btnMainUiSub = document.getElementById("btnMainUiSub");
+  const btnColonize = document.getElementById("btnColonize");
+  const btnColonizeSub = document.getElementById("btnColonizeSub");
   const btnOptions = document.getElementById("btnOptions");
   const modal = document.getElementById("modal");
   const journalInput = document.getElementById("journalInput");
@@ -117,7 +119,7 @@
   var LS_SEC_PUBLIC = "edexo.launcher.sec.public";
   var LS_REVEAL_LAN = "edexo.launcher.reveal.lan";
   var LS_REVEAL_PUBLIC = "edexo.launcher.reveal.public";
-  /* Where "Open exobiology UI" opens. Defaults to the browser, per the owner. */
+  /* Where "Open Compare" (and "Open Colonize") opens. Defaults to the browser, per the owner. */
   var LS_OPEN_MODE = "edexo.launcher.openMode";
   var lastPort = 7111;
   var lastConnectData = null;
@@ -1392,7 +1394,7 @@
   }
 
   /*
-    Where "Open exobiology UI" opens (owner's launcher request).
+    Where "Open Compare" opens (owner's launcher request), and "Open Colonize" with it.
 
     Three destinations, one remembered choice, browser by default. The old button navigated
     this window to the app, which left no way back to the launcher short of restarting it. That
@@ -1421,6 +1423,10 @@
 
   function applyOpenMode(mode) {
     btnMainUiSub.textContent = OPEN_MODES[mode].sub;
+    if (btnColonizeSub) {
+      btnColonizeSub.textContent =
+        "Your construction sites and the haul plan · " + (mode === "window" ? "in an app window" : "in your browser");
+    }
     var items = mainUiMenu.querySelectorAll("button[data-open-mode]");
     for (var i = 0; i < items.length; i++) {
       items[i].setAttribute("aria-current", items[i].dataset.openMode === mode ? "true" : "false");
@@ -1524,9 +1530,46 @@
       });
   }
 
+  /* Colonize (1.3.0): a window of its own beside Compare, or the browser; phone view has no Colonize page yet. */
+  function openColonize() {
+    var bridge = window.edexoElectron;
+    var failed = function (e) {
+      launcherActionMsg.className = "msg-launcher err";
+      launcherActionMsg.textContent = "Could not open Colonize" + (e ? ": " + String(e && e.message ? e.message : e) : ".");
+    };
+    if (readOpenMode() === "window") {
+      if (bridge && typeof bridge.openColonizeWindow === "function") {
+        bridge.openColonizeWindow().then(function (r) {
+          if (!r || !r.opened) failed(r && r.error);
+        }, failed);
+      } else {
+        window.open("/?screen=colonize", "_blank", "noopener");
+      }
+      return;
+    }
+    launcherActionMsg.className = "msg-launcher";
+    launcherActionMsg.textContent = "";
+    fetch(apiUrl("/api/ui/open-external"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ view: "colonize" }),
+    })
+      .then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok || !j.ok) throw new Error((j && j.error) || r.statusText);
+        });
+      })
+      .catch(function (e) {
+        window.open("/?screen=colonize", "_blank", "noopener");
+        launcherActionMsg.className = "msg-launcher";
+        launcherActionMsg.textContent = "Opened in a new tab (" + String(e && e.message ? e.message : e) + ")";
+      });
+  }
+
   applyOpenMode(readOpenMode());
   loadSavedOpenMode();
   btnMainUi.addEventListener("click", openChosenUi);
+  if (btnColonize) btnColonize.addEventListener("click", openColonize);
   btnMainUiMenu.addEventListener("click", function (ev) {
     ev.stopPropagation();
     var open = mainUiMenu.hidden;

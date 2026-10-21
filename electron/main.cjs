@@ -279,6 +279,64 @@ async function carryAppStorageOver(win) {
 /** The galaxy map's window while it is open (one at a time; see childWindows.cjs). */
 let galaxyWindow = null;
 
+/**
+ * The links of an app page window (the app window, the Colonize window).
+ *
+ * Links out of the app (Spansh, EDSM, the site) go to the commander's browser; the app's own pages
+ * may still open in a window of their own, as they did when the UI ran in the launcher.
+ */
+function attachAppPageLinks(win, base, iconForChild) {
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith(`${base}/`) || url === base) {
+      if (childWindowKind(url) !== "galaxy") return { action: "allow" };
+      // One map window: a second click brings the open one forward instead of loading another.
+      if (galaxyWindow && !galaxyWindow.isDestroyed()) {
+        if (galaxyWindow.isMinimized()) galaxyWindow.restore();
+        galaxyWindow.show();
+        galaxyWindow.focus();
+        return { action: "deny" };
+      }
+      const saved = readWindowState("galaxy");
+      const area = screen.getDisplayMatching(win.getBounds()).workArea;
+      return {
+        action: "allow",
+        overrideBrowserWindowOptions: {
+          ...galaxyWindowBounds(saved, area),
+          minWidth: WINDOW_MIN.galaxy.w,
+          minHeight: WINDOW_MIN.galaxy.h,
+          backgroundColor: "#050507",
+          autoHideMenuBar: true,
+          title: "Galaxy map — ED Exo Compare",
+          icon: iconForChild,
+        },
+      };
+    }
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+    return { action: "deny" };
+  });
+  /*
+    Every page window the app opens keeps the app's bridge (it inherits the preload), so none may wander off: its
+    links out go to the commander's browser and it never navigates to another site (1.2.19 review: a target=_blank
+    link on the privacy page opened an outside site in a window that still had the bridge).
+  */
+  win.webContents.on("will-navigate", (e, url) => {
+    if (isOwnUrl(url, ownBase)) return;
+    e.preventDefault();
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+  });
+  win.webContents.on("did-create-window", (child, { url }) => {
+    guardWindowNavigation(child, ownBase, shell);
+    if (childWindowKind(url) !== "galaxy") return;
+    galaxyWindow = child;
+    if (readWindowState("galaxy")?.maximized) child.maximize();
+    trackWindowState("galaxy", child);
+    enableZoom(child);
+    child.on("closed", () => {
+      if (galaxyWindow === child) galaxyWindow = null;
+    });
+  });
+}
+
 function openAppUiWindow(iconForChild) {
   if (!runtime) return { opened: false, error: "Server not ready yet." };
   if (appUiWindow && !appUiWindow.isDestroyed()) {
@@ -334,59 +392,7 @@ function openAppUiWindow(iconForChild) {
   if (saved?.maximized) win.maximize();
   trackWindowState("app", win);
   enableZoom(win);
-  /*
-    Links out of the app (Spansh, EDSM, the site) go to the commander's browser; the app's own pages
-    may still open in a window of their own, as they did when the UI ran in the launcher.
-  */
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith(`${base}/`) || url === base) {
-      if (childWindowKind(url) !== "galaxy") return { action: "allow" };
-      // One map window: a second click brings the open one forward instead of loading another.
-      if (galaxyWindow && !galaxyWindow.isDestroyed()) {
-        if (galaxyWindow.isMinimized()) galaxyWindow.restore();
-        galaxyWindow.show();
-        galaxyWindow.focus();
-        return { action: "deny" };
-      }
-      const saved = readWindowState("galaxy");
-      const area = screen.getDisplayMatching(win.getBounds()).workArea;
-      return {
-        action: "allow",
-        overrideBrowserWindowOptions: {
-          ...galaxyWindowBounds(saved, area),
-          minWidth: WINDOW_MIN.galaxy.w,
-          minHeight: WINDOW_MIN.galaxy.h,
-          backgroundColor: "#050507",
-          autoHideMenuBar: true,
-          title: "Galaxy map — ED Exo Compare",
-          icon: iconForChild,
-        },
-      };
-    }
-    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
-    return { action: "deny" };
-  });
-  /*
-    Every page window the app opens keeps the app's bridge (it inherits the preload), so none may wander off: its
-    links out go to the commander's browser and it never navigates to another site (1.2.19 review: a target=_blank
-    link on the privacy page opened an outside site in a window that still had the bridge).
-  */
-  win.webContents.on("will-navigate", (e, url) => {
-    if (isOwnUrl(url, ownBase)) return;
-    e.preventDefault();
-    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
-  });
-  win.webContents.on("did-create-window", (child, { url }) => {
-    guardWindowNavigation(child, ownBase, shell);
-    if (childWindowKind(url) !== "galaxy") return;
-    galaxyWindow = child;
-    if (readWindowState("galaxy")?.maximized) child.maximize();
-    trackWindowState("galaxy", child);
-    enableZoom(child);
-    child.on("closed", () => {
-      if (galaxyWindow === child) galaxyWindow = null;
-    });
-  });
+  attachAppPageLinks(win, base, iconForChild);
   win.webContents.once("did-finish-load", () => void carryAppStorageOver(win));
   win.on("closed", () => {
     if (appUiWindow === win) appUiWindow = null;
@@ -394,6 +400,58 @@ function openAppUiWindow(iconForChild) {
   void win.loadURL(`${base}/`);
   // The windows its tabs were dragged out into last time.
   win.webContents.once("did-finish-load", () => tabWindows.restore());
+  return { opened: true, focused: false };
+}
+
+/** The Colonize window while it is open (1.3.0): one at a time, beside the app window, never instead of it. */
+let colonizeWindow = null;
+
+/**
+ * Colonize (1.3.0, owner 2026-10-18): the launcher's second button, a window of its own with its own main page
+ * (`?screen=colonize`). Same server, same journal reader, same session as the app window, so the colour scheme and
+ * the HUD's "an app window is in front" rule (hudWindows.cjs) count it too. The ordinary frame: its header is not a
+ * tab strip to drag by.
+ */
+function openColonizeWindow(iconForChild) {
+  if (!runtime) return { opened: false, error: "Server not ready yet." };
+  if (colonizeWindow && !colonizeWindow.isDestroyed()) {
+    if (colonizeWindow.isMinimized()) colonizeWindow.restore();
+    colonizeWindow.show();
+    colonizeWindow.focus();
+    return { opened: true, focused: true };
+  }
+  const base = runtime.getLocalBaseUrl();
+  const saved = readWindowState("colonize");
+  const area = screen.getPrimaryDisplay().workArea;
+  const preloadPath = path.join(__dirname, "preload.cjs");
+  const win = new BrowserWindow({
+    width: saved?.width ?? Math.min(1400, Math.round(area.width * 0.85)),
+    height: saved?.height ?? Math.min(920, Math.round(area.height * 0.9)),
+    ...(saved ? { x: saved.x, y: saved.y } : {}),
+    minWidth: WINDOW_MIN.colonize.w,
+    minHeight: WINDOW_MIN.colonize.h,
+    backgroundColor: "#07060a",
+    autoHideMenuBar: true,
+    title: "Colonize — ED Exo Compare",
+    icon: iconForChild,
+    webPreferences: {
+      spellcheck: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+      partition: APP_WINDOW_PARTITION,
+      preload: fs.existsSync(preloadPath) ? preloadPath : undefined,
+    },
+  });
+  colonizeWindow = win;
+  diag?.watchWindow(win, "colonize");
+  if (saved?.maximized) win.maximize();
+  trackWindowState("colonize", win);
+  enableZoom(win);
+  attachAppPageLinks(win, base, iconForChild);
+  win.on("closed", () => {
+    if (colonizeWindow === win) colonizeWindow = null;
+  });
+  void win.loadURL(`${base}/?screen=colonize`);
   return { opened: true, focused: false };
 }
 
@@ -453,6 +511,7 @@ function registerFootOverlayIpc(iconForChild) {
   ipcMain.handle("edexo:hud-overlay-state", () => ({ paths: huds.paths() }));
 
   ipcMain.handle("edexo:open-app-window", () => openAppUiWindow(iconForChild));
+  ipcMain.handle("edexo:open-colonize-window", () => openColonizeWindow(iconForChild));
 
   ipcMain.handle("edexo:get-tray-pref", () => ({ enabled: closeToTray(), ...trayAvailability() }));
   ipcMain.handle("edexo:set-tray-pref", (_evt, opts) => {

@@ -34,11 +34,14 @@ const GalaxyMapScreen = lazy(() => import("./GalaxyMapScreen").then((m) => ({ de
  * carries three.js, so the main app never downloads it.
  */
 const GalaxyMap3D = lazy(() => import("./GalaxyMap3D").then((m) => ({ default: m.GalaxyMap3D })));
+/** `?screen=colonize`: the Colonize window (1.3.0, docs/plan-colonize-integration.md). Lazy like the others. */
+const ColonizeScreen = lazy(() => import("./colonize/ColonizeScreen").then((m) => ({ default: m.ColonizeScreen })));
 
 const screen = new URLSearchParams(window.location.search).get("screen");
 const wantsSecondScreen = screen === "triage";
 const wantsMap = screen === "map";
 const wants3d = screen === "galaxy";
+const wantsColonize = screen === "colonize";
 
 /** The streamer view, drawn afresh whenever the streamer changes a setting in the app. */
 function StreamerApp() {
@@ -55,7 +58,11 @@ function StreamerApp() {
 if (!STREAMER_MODE && !screen) startUiMirrorSource();
 
 createRoot(document.getElementById("root")!).render(
-  wants3d ? (
+  wantsColonize ? (
+    <Suspense fallback={<LoadingNote className="screen-loading" />}>
+      <ColonizeScreen />
+    </Suspense>
+  ) : wants3d ? (
     <Suspense fallback={<LoadingNote className="screen-loading" />}>
       <GalaxyMap3D />
     </Suspense>

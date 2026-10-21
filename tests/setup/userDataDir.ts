@@ -25,3 +25,9 @@ import { tmpdir } from "node:os";
 if (!process.env.EDEXO_USER_DATA_DIR?.trim()) {
   process.env.EDEXO_USER_DATA_DIR = mkdtempSync(join(tmpdir(), "edexo-test-userdata-"));
 }
+/*
+  Colonize's Inara import watches a folder in Documents and one in Downloads, and moves what it imports into
+  `imported/`. Without these a test would watch, and move files in, the commander's own folders.
+*/
+if (!process.env.EDEXO_DOCUMENTS_DIR?.trim()) process.env.EDEXO_DOCUMENTS_DIR = join(process.env.EDEXO_USER_DATA_DIR, "documents");
+if (!process.env.EDEXO_DOWNLOADS_DIR?.trim()) process.env.EDEXO_DOWNLOADS_DIR = join(process.env.EDEXO_USER_DATA_DIR, "downloads");

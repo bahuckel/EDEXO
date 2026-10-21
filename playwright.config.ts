@@ -62,6 +62,9 @@ export default defineConfig({
       EDEXO_ELITE_OPTIONS_DIR: fixtureEliteOptions,
       EDEXO_DISABLE_JOURNAL_CACHE: "1",
       EDEXO_USER_DATA_DIR: e2eUserData,
+      // Colonize's Inara folders, which default to the commander's own Documents and Downloads.
+      EDEXO_DOCUMENTS_DIR: path.join(e2eUserData, "documents"),
+      EDEXO_DOWNLOADS_DIR: path.join(e2eUserData, "downloads"),
     },
   },
 });

@@ -50,6 +50,8 @@ export default defineConfig({
       ED_JOURNAL_DIR: journal,
       EDEXO_DISABLE_JOURNAL_CACHE: "1",
       EDEXO_USER_DATA_DIR: userData,
+      EDEXO_DOCUMENTS_DIR: path.join(userData, "documents"),
+      EDEXO_DOWNLOADS_DIR: path.join(userData, "downloads"),
     },
   },
 });
