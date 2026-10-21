@@ -27,7 +27,7 @@ import {
   replaceShipCargo,
   type JournalState,
 } from "./journalEvents";
-import { journalWindowCutoffUtcMs, listJournalFilesChronological } from "./journalFs";
+import { journalWindowCutoffUtcMs, listJournalFilesChronological, readJournalEvents } from "./journalFs";
 import { readJournalFromOffset, type JournalLineAt } from "../journalWatcher.js";
 import { onJournalReread, onLiveJournalLine } from "../journalTap.js";
 import type { JournalLine } from "../../shared/types.js";
@@ -69,7 +69,15 @@ type StateFileV3 = {
   v: 3;
   depots: Record<string, DepotInternal>;
   journalShops?: Record<string, JournalShopRecord>;
+  /** The journal folder whose whole history was read once for construction sites (`scanJournalHistory`). */
+  historyScannedDir?: string;
 };
+
+/**
+ * What the one-time history pass reads: the two construction events, and the docking and jumps that say which
+ * system a site is in. Nothing else: cargo, markets, wings and carriers before the 7-day window are stale.
+ */
+const HISTORY_EVENTS = ["ColonisationConstructionDepot", "ColonisationContribution", "Docked", "Location", "FSDJump", "CarrierJump"];
 
 export class ColonizeStore {
   /**
@@ -79,6 +87,7 @@ export class ColonizeStore {
   private readonly journal: JournalState = createJournalState();
   private readonly statePath: string;
   private lastError: string | null = null;
+  private historyScannedDir: string | null = null;
   private notify: (() => void) | null = null;
   /**
    * Following EDEXO's journal reading (journalTap.ts) instead of a tail of its own. `reached`: per file, the byte
@@ -305,6 +314,8 @@ export class ColonizeStore {
       }
       if (v === 3) this.loadJournalShopsFromState(raw as Record<string, unknown>);
       else this.journal.journalShops.clear();
+      const scanned = (raw as { historyScannedDir?: unknown }).historyScannedDir;
+      this.historyScannedDir = typeof scanned === "string" ? scanned : null;
     } else {
       /**
        * A version this build does not understand — most likely a newer one after a downgrade.
@@ -587,8 +598,36 @@ export class ColonizeStore {
     }
   }
 
+  /**
+   * Once per journal folder (owner, 2026-10-21): the construction sites in every journal before the 7-day window,
+   * so a site last visited weeks ago is there on the first start instead of after the next dock. Read before the
+   * window, whose reset then clears what the old docking left behind (where the ship is docked, the system).
+   * True when it ran to the end; the folder is remembered only after the window read succeeds too.
+   */
+  private async scanJournalHistory(dir: string, minMs: number): Promise<boolean> {
+    try {
+      const all = await listJournalFilesChronological(dir, null);
+      const inWindow = new Set(await listJournalFilesChronological(dir, minMs));
+      for (const file of all) {
+        if (inWindow.has(file)) continue;
+        await readJournalEvents(file, HISTORY_EVENTS, (j) => this.applyLine(j as JournalLine));
+        await new Promise<void>((resolve) => setImmediate(resolve));
+      }
+      return true;
+    } catch (e) {
+      console.error("[colonize] journal history read failed:", e);
+      return false;
+    }
+  }
+
   private async replayJournalWindowInner(): Promise<void> {
     this.lastError = null;
+    const historyDir = this.getJournalDir();
+    const scanHistory = this.historyScannedDir !== historyDir;
+    // The old docking would otherwise say which carrier the ship is on; the window reset below clears the rest.
+    const dockedCarrier = this.journal.dockedCarrierId;
+    const historyRead = scanHistory && (await this.scanJournalHistory(historyDir, journalWindowCutoffUtcMs()));
+    this.journal.dockedCarrierId = dockedCarrier;
     this.journal.shipCargoByName.clear();
     this.journal.shipCargoTimestamp = null;
     this.journal.shipCargoCapacity = null;
@@ -641,6 +680,7 @@ export class ColonizeStore {
       const rec = this.journal.journalShops.get(id);
       if (rec && items?.length) rec.marketItems = items;
     }
+    if (historyRead && !this.lastError) this.historyScannedDir = historyDir;
     this.bump();
   }
 
@@ -777,7 +817,12 @@ export class ColonizeStore {
   async persistState(): Promise<void> {
     const run = this.persistQueue.then(async () => {
       const journalShops = compactJournalShopsForPersist(this.journal.journalShops);
-      const payload: StateFileV3 = { v: 3, depots: this.journal.depots, journalShops };
+      const payload: StateFileV3 = {
+        v: 3,
+        depots: this.journal.depots,
+        journalShops,
+        ...(this.historyScannedDir ? { historyScannedDir: this.historyScannedDir } : {}),
+      };
       await writeJsonAtomic(this.statePath, payload, false);
     });
     this.persistQueue = run.then(

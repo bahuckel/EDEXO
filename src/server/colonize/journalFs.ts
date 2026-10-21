@@ -69,3 +69,26 @@ export async function listJournalFilesChronological(
     })
     .map((r) => r.p);
 }
+
+/**
+ * The lines of one journal whose event is one of `events`, parsed, in order. For the one-time history pass
+ * (colonizeStore.ts `scanJournalHistory`): the text is matched before parsing, so years of journals cost a read and
+ * a substring search, not a JSON.parse per line. The game writes `"event":"Name"` with no space.
+ */
+export async function readJournalEvents(
+  file: string,
+  events: readonly string[],
+  onLine: (j: Record<string, unknown>) => void,
+): Promise<void> {
+  const needles = events.map((e) => `"event":"${e}`);
+  const text = await fs.readFile(file, "utf8");
+  for (const line of text.split("\n")) {
+    if (!needles.some((n) => line.includes(n))) continue;
+    try {
+      const j = JSON.parse(line) as unknown;
+      if (j && typeof j === "object" && !Array.isArray(j)) onLine(j as Record<string, unknown>);
+    } catch {
+      /* a torn last line, or not JSON: skip it */
+    }
+  }
+}
