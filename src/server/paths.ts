@@ -51,6 +51,23 @@ export function resolveUserSettingsJsonPath(): string {
 }
 
 /**
+ * Colonize's own files (1.3.0, moved in from EDEXO-Colonize): its depot state, the buy index, the system
+ * coordinates cache and the Inara import settings, in a folder of their own beside the user settings.
+ */
+export function resolveColonizeDataDir(): string {
+  const dir = join(dirname(resolveUserSettingsJsonPath()), "colonize");
+  if (!ensuredDirs.has(dir)) {
+    try {
+      mkdirSync(dir, { recursive: true });
+      ensuredDirs.add(dir);
+    } catch {
+      /* the first write reports it */
+    }
+  }
+  return dir;
+}
+
+/**
  * LAN access key (see lanAuth.ts). Its own file, next to the user settings: a key does not belong
  * in a settings JSON that gets pasted into bug reports, and deleting just this file re-pairs every
  * device without losing preferences.

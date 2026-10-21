@@ -12,11 +12,25 @@ import { lazyDetailOf } from "./lazyMatchDetail.js";
 import type { AppSnapshot, BodyComputed } from "../shared/types.js";
 import { footfallCertainty, type FootfallCertainty } from "../shared/footfallValue.js";
 
-export type WsChannel = "app" | "hud" | "launcher";
+/** `colonize`: a Colonize window (1.3.0) — its own events, and only the few app fields its header shows. */
+export type WsChannel = "app" | "hud" | "launcher" | "colonize";
 
 export function parseWsChannel(v: unknown): WsChannel | null {
-  return v === "app" || v === "hud" || v === "launcher" ? v : null;
+  return v === "app" || v === "hud" || v === "launcher" || v === "colonize" ? v : null;
 }
+
+/** What a Colonize window reads off the app's state: the connection, the boot, where the ship is. */
+const COLONIZE_KEYS = [
+  "port",
+  "mode",
+  "journalBoot",
+  "journalDir",
+  "commanderName",
+  "currentSystem",
+  "currentSystemAddress",
+  "currentRegion",
+  "lastJournalEventIso",
+] as const satisfies readonly (keyof AppSnapshot)[];
 
 /** Everything the HUD (`src/client/hud/`) reads off the snapshot (`d.<key>`), plus the bodies it looks up. */
 const HUD_KEYS = [
@@ -248,7 +262,8 @@ export function slimSnapshotForChannel(snap: AppSnapshot, channel: WsChannel): P
     };
   }
   const out: Record<string, unknown> = {};
-  const keys: readonly (keyof AppSnapshot)[] = channel === "hud" ? HUD_KEYS : LAUNCHER_KEYS;
+  const keys: readonly (keyof AppSnapshot)[] =
+    channel === "hud" ? HUD_KEYS : channel === "colonize" ? COLONIZE_KEYS : LAUNCHER_KEYS;
   for (const k of keys) out[k] = snap[k];
   if (channel === "hud") {
     out.bodies = (snap.bodies ?? []).map(slimBodyForHud);

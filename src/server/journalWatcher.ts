@@ -1,6 +1,5 @@
 import { promises as fs, unwatchFile, watchFile } from "node:fs";
 import path from "node:path";
-import { StringDecoder } from "node:string_decoder";
 import type { JournalLine } from "../shared/types.js";
 import { JOURNAL_POLL_DEFAULT_MS, clampJournalPollMs } from "../shared/pollRates.js";
 
@@ -98,6 +97,39 @@ const REPLAY_SLICE_MS = 25;
 const REPLAY_CHECK_EVERY = 200;
 
 const nextTurn = (): Promise<void> => new Promise((r) => setImmediate(r));
+
+/** Where a live line ends in its journal: the byte just past its newline. */
+export type JournalLineAt = { path: string; end: number };
+
+/**
+ * The live tail's lines, split on the newline BYTE (0x0A) rather than after decoding: every line's end offset is
+ * exact, so a reader that caught up on the same file by itself (Colonize, 2026-10-21) can tell a line it already
+ * read from a new one. A newline byte never sits inside a multi-byte UTF-8 character, so splitting first and
+ * decoding each whole line keeps "ā" and "ö" intact across reads without a StringDecoder (plan 2.4, O-19).
+ * `leftover` holds the bytes after the last newline; `chunkStart` is the file offset of `chunk`'s first byte.
+ */
+function processLineBytes(
+  chunk: Buffer,
+  chunkStart: number,
+  leftover: { bytes: Buffer },
+  filePath: string,
+  onLine: (j: JournalLine, at: JournalLineAt) => void,
+): void {
+  const data = leftover.bytes.length ? Buffer.concat([leftover.bytes, chunk]) : chunk;
+  const dataStart = chunkStart - leftover.bytes.length;
+  let from = 0;
+  for (let nl = data.indexOf(0x0a, from); nl >= 0; nl = data.indexOf(0x0a, from)) {
+    const t = data.toString("utf8", from, nl).trim();
+    from = nl + 1;
+    if (!t.startsWith("{")) continue;
+    try {
+      onLine(JSON.parse(t) as JournalLine, { path: filePath, end: dataStart + from });
+    } catch {
+      /* ignore */
+    }
+  }
+  leftover.bytes = Buffer.from(data.subarray(from));
+}
 
 async function processLines(
   chunk: string,
@@ -229,7 +261,8 @@ export type JournalWatcherHandle = {
  */
 export function startJournalWatcher(
   journalDir: string,
-  onLiveLine: (j: JournalLine) => void,
+  /** Each live line, with where it ends in its file (see {@link JournalLineAt}). */
+  onLiveLine: (j: JournalLine, at: JournalLineAt) => void,
   /** Resolves with where the tail must start in the newest journal (see JournalTailSeed). */
   resyncAllJournalFiles: () => Promise<JournalTailSeed | null | void>,
   /** After a full replay, pass latest file path + size so the first poll tails instead of replaying again. */
@@ -247,13 +280,8 @@ export function startJournalWatcher(
 ): JournalWatcherHandle {
   let currentPath: string | null = seed?.path != null ? path.resolve(seed.path) : null;
   let position = seed?.size ?? 0;
-  const leftover = { buf: "" };
-  /*
-    One decoder for the tail, so a read that ends inside a multi-byte character ("ā", "ö" in a name)
-    keeps its first bytes for the next read instead of turning both halves into U+FFFD (plan 2.4,
-    O-19). Replaced wherever the line buffer is dropped.
-  */
-  let decoder = new StringDecoder("utf8");
+  /** The tail's bytes after its last newline (see processLineBytes). Emptied wherever the tail restarts. */
+  const leftover = { bytes: Buffer.alloc(0) };
   let tailing = false;
   let resyncing = false;
   /** Detects when the filtered file set changes while the newest path stays the same (rolling cutoff). */
@@ -322,8 +350,7 @@ export function startJournalWatcher(
       const st = await fs.stat(currentPath);
       if (st.size < position) {
         position = 0;
-        leftover.buf = "";
-        decoder = new StringDecoder("utf8");
+        leftover.bytes = Buffer.alloc(0);
       }
       if (st.size <= position) return;
 
@@ -335,9 +362,9 @@ export function startJournalWatcher(
         // A rotation started a resync while this read was waiting: the store it would feed has been
         // reset, and the replay reads these lines itself (combined plan 1.2).
         if (resyncing || closed) return;
-        const data = decoder.write(buf.subarray(0, bytesRead));
+        const start = position;
         position += bytesRead;
-        await processLines(data, leftover, onLiveLine);
+        processLineBytes(buf.subarray(0, bytesRead), start, leftover, currentPath, onLiveLine);
       } finally {
         await fh.close();
       }
@@ -362,8 +389,7 @@ export function startJournalWatcher(
     try {
       currentPath = latest;
       position = 0;
-      leftover.buf = "";
-      decoder = new StringDecoder("utf8");
+      leftover.bytes = Buffer.alloc(0);
       position = await tailStartAfterResync(await resyncAllJournalFiles(), latest);
       lastListIdentity = identity;
     } catch (e) {

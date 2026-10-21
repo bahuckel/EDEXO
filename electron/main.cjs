@@ -678,6 +678,21 @@ async function start() {
     discovery above now runs there, before its server starts.
   */
   const mode = detectMode();
+  /*
+    Colonize's Inara folders (1.3.0): Windows' own Documents and Downloads, which can be moved and which the
+    server's process cannot ask Electron for. A value already set (a test, a dev run) is kept.
+  */
+  for (const [env, kind] of [
+    ["EDEXO_DOCUMENTS_DIR", "documents"],
+    ["EDEXO_DOWNLOADS_DIR", "downloads"],
+  ]) {
+    if (process.env[env]) continue;
+    try {
+      process.env[env] = app.getPath(kind);
+    } catch {
+      /* the server falls back to the home folder's */
+    }
+  }
   runtime = await startServerChild({
     utilityProcess,
     bundle,

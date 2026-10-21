@@ -74,6 +74,7 @@ import { registerGalaxyRoutes } from "./routes/galaxyRoutes.js";
 import { registerExpeditionRoutes } from "./routes/expeditionRoutes.js";
 import { registerNeutronRoutes } from "./routes/neutronRoutes.js";
 import { registerFinderRoutes } from "./routes/finderRoutes.js";
+import { registerColonizeRoutes } from "./routes/colonizeRoutes.js";
 import { registerCarriersPoiRoutes } from "./routes/carriersPoiRoutes.js";
 import { registerJumponiumRoutes } from "./routes/jumponiumRoutes.js";
 import { registerServerStatusRoutes } from "./routes/serverStatusRoutes.js";
@@ -427,6 +428,8 @@ export interface HttpServerOptions {
 export interface RouteContext {
   root: string;
   webRoot: string;
+  /** An event to every Colonize window (`colonize` sockets), as `{ type: "colonize", event, payload }`. */
+  pushColonize: (event: string, payload: unknown) => void;
 }
 
 export function createHttpServer(opts: HttpServerOptions): {
@@ -474,7 +477,22 @@ export function createHttpServer(opts: HttpServerOptions): {
   }
   const root = getProjectRoot();
   const webRoot = getWebRoot(root);
-  const routeCtx: RouteContext = { root, webRoot };
+  /*
+    Colonize's pushes (1.3.0): the depot snapshot, the buy-index scan status, an Inara import, to the sockets that
+    said they are a Colonize window. Declared before the routes so they can hold it; the socket set fills later.
+  */
+  const pushColonize = (event: string, payload: unknown) => {
+    const msg = JSON.stringify({ type: "colonize", event, payload });
+    for (const ws of clients) {
+      if (ws.readyState !== ws.OPEN || channelOf.get(ws) !== "colonize") continue;
+      try {
+        ws.send(msg);
+      } catch {
+        clients.delete(ws);
+      }
+    }
+  };
+  const routeCtx: RouteContext = { root, webRoot, pushColonize };
 
   /**
    * First middleware on purpose: an unpaired LAN client must not reach a route handler, and must
@@ -510,6 +528,8 @@ export function createHttpServer(opts: HttpServerOptions): {
   app.use("/api/feeder/import", express.json({ limit: "8mb" }));
   // The streamer view's settings mirror (uiMirror.ts): every edexo.* setting of the app at once.
   app.use("/api/ui/mirror", express.json({ limit: "512kb" }));
+  // Colonize's checkout plans carry market snapshots (colonizeRoutes.ts).
+  app.use("/api/colonize", express.json({ limit: "8mb" }));
   app.use(express.json({ limit: "48kb" }));
 
   registerSpeciesFilesRoutes(app, opts, routeCtx);
@@ -518,6 +538,7 @@ export function createHttpServer(opts: HttpServerOptions): {
   registerExpeditionRoutes(app, opts, routeCtx);
   registerNeutronRoutes(app, opts, routeCtx);
   registerFinderRoutes(app, opts, routeCtx);
+  registerColonizeRoutes(app, opts, routeCtx);
 
   /**
    * Where the commander is (§10.3).

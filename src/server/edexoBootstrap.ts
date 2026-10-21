@@ -49,10 +49,13 @@ import {
   readJournalFull,
   readJournalFromOffset,
   listJournalFilesChronological,
+  type JournalLineAt,
   type JournalListFilterOpts,
   type JournalTailSeed,
   type JournalWatcherHandle,
 } from "./journalWatcher.js";
+import { emitJournalReread, emitLiveJournalLine } from "./journalTap.js";
+import { stopColonizeService } from "./colonize/colonizeService";
 import { scanJournalsForStatistics } from "./statisticsScan.js";
 import { createHttpServer, getLanIPv4s } from "./httpServer.js";
 import { describeUserDataMigration, migrateLegacyUserData } from "./userDataMigration.js";
@@ -1347,8 +1350,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     return sideFiles;
   }
 
-  function createLiveJournalLine(): (line: JournalLine) => void {
-    return (line: JournalLine) => {
+  function createLiveJournalLine(): (line: JournalLine, at: JournalLineAt) => void {
+    return (line: JournalLine, at: JournalLineAt) => {
+      // Colonize and any other follower first (journalTap.ts): a failure below must not cost them the line.
+      emitLiveJournalLine(line, at);
       try {
         // Before the store applies it: a body the store already has is a re-scan, not a find.
         notices.observe(line, noticesContext);
@@ -1464,6 +1469,11 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       .then((): JournalTailSeed | null =>
         journalPath !== null ? { path: journalPath, size: journalSeedBytes } : null,
       )
+      .then((seed) => {
+        // Lines read this way never reach the live tail: followers catch up on the files themselves.
+        emitJournalReread();
+        return seed;
+      })
       .finally(() => {
         if (resyncInFlight?.run === run) resyncInFlight = null;
       });
@@ -2522,6 +2532,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     if (speciesPollFallback) unwatchFile(speciesDataWatchRoot, onSpeciesTreeOrPricesChange);
     if (existsSync(priceListPath)) unwatchFile(priceListPath, onSpeciesTreeOrPricesChange);
     if (watcher) await watcher.close();
+    // Colonize, if a window started it: its depot state and buy index are saved on a debounce.
+    await stopColonizeService().catch((e) => console.error("[colonize] stop failed:", e));
     // Open sockets (a phone, a browser tab) would otherwise hold the close until the app ends the process.
     closeConnections();
     await new Promise<void>((res) => {
