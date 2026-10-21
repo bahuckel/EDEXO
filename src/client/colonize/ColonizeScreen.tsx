@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import "./colonize.css";
 import { depotDisplayLabel } from "../../shared/colonize/depotLabel";
 import { colonizeReadOnly, useColonizeAppState } from "./api";
+import { STREAMER_MODE } from "../streamerMode";
 import { PhoneView } from "./views/PhoneView";
 import { loadColonizeUiState, onRemoteUiState } from "./uiStateSync";
 import { LoadingNote } from "../ui/Loading";
@@ -42,17 +43,22 @@ function readTab(): Tab {
  * not in front; in front, a note offers to, so nothing moves under the commander's cursor.
  */
 export function ColonizeScreen() {
+  if (STREAMER_MODE) return <PhoneScreen streamer />;
   return colonizeReadOnly() ? <PhoneScreen /> : <PcScreen />;
 }
 
-/** A paired phone or tablet: the read-only view (PhoneView.tsx), on the server's copy of the plan. */
-function PhoneScreen() {
+/**
+ * A paired phone or tablet, or the streamer view (`&view=stream`, owner 2026-10-22: an OBS Browser source on this PC):
+ * the read-only view (PhoneView.tsx) on the server's copy of the plan. The streamer view saves nothing either, so the
+ * stream never changes the commander's settings.
+ */
+function PhoneScreen({ streamer = false }: { streamer?: boolean }) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    document.title = "Colonize — EDEXO";
+    document.title = streamer ? "Colonize — EDEXO streamer view" : "Colonize — EDEXO";
     void loadColonizeUiState({ readOnly: true }).finally(() => setReady(true));
-  }, []);
-  return ready ? <PhoneView /> : <LoadingNote className="screen-loading" />;
+  }, [streamer]);
+  return ready ? <PhoneView streamer={streamer} /> : <LoadingNote className="screen-loading" />;
 }
 
 function PcScreen() {

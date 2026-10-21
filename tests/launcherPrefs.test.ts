@@ -7,7 +7,9 @@ import { describe, expect, it } from "vitest";
 import {
   isLauncherOpenMode,
   launcherPrefsPath,
+  readColonizeOpenMode,
   readLauncherOpenMode,
+  writeColonizeOpenMode,
   writeLauncherOpenMode,
 } from "../src/server/launcherPrefs.js";
 
@@ -18,6 +20,16 @@ describe("launcher prefs", () => {
     writeLauncherOpenMode("window");
     expect(readLauncherOpenMode()).toBe("window");
     writeLauncherOpenMode("phone");
+    expect(readLauncherOpenMode()).toBe("phone");
+    rmSync(launcherPrefsPath(), { force: true });
+  });
+
+  it("keeps Colonize's choice apart from Compare's (owner, 2026-10-22)", () => {
+    rmSync(launcherPrefsPath(), { force: true });
+    writeLauncherOpenMode("phone");
+    expect(readColonizeOpenMode()).toBeNull();
+    writeColonizeOpenMode("window");
+    expect(readColonizeOpenMode()).toBe("window");
     expect(readLauncherOpenMode()).toBe("phone");
     rmSync(launcherPrefsPath(), { force: true });
   });

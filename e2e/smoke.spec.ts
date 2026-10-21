@@ -146,6 +146,46 @@ test("colonize: the window opens on the plan, every tab draws, and the launcher 
   expect(errors).toEqual([]);
 });
 
+test("colonize: its own launcher menu, remembered apart from Compare's, and a streamer view", async ({ page, request }) => {
+  const errors = watchErrors(page);
+  await page.goto("/launcher.html");
+  await page.evaluate(() => {
+    localStorage.setItem("edexo.launcher.wizardDone", "1");
+    localStorage.removeItem("edexo.launcher.colonizeOpenMode");
+  });
+  await page.reload();
+  const done = page.getByRole("button", { name: "Done", exact: true });
+  if (await done.isVisible().catch(() => false)) await done.click();
+  await page.locator("#btnColonizeMenu").click();
+  await page.locator('#colonizeMenu button[data-colonize-mode="phone"]').click();
+  await expect(page.locator("#btnColonizeSub")).toContainText("Phone view");
+  // Compare's choice is untouched, and the server remembers each.
+  await expect(page.locator("#btnMainUiSub")).not.toContainText("Phone view");
+  await expect.poll(async () => (await (await request.get("/api/launcher/open-mode?app=colonize")).json()).mode).toBe("phone");
+  expect((await (await request.get("/api/launcher/open-mode")).json()).mode).not.toBe("phone");
+  // Put it back for the other tests.
+  await page.locator("#btnColonizeMenu").click();
+  await page.locator('#colonizeMenu button[data-colonize-mode="browser"]').click();
+
+  // The streamer view: the plan read-only, nothing to click, no Ko-fi.
+  const stream = await page.context().newPage();
+  const asked: string[] = [];
+  stream.on("request", (r) => {
+    const u = new URL(r.url());
+    if (u.pathname.startsWith("/api/colonize/")) asked.push(`${r.method()} ${u.pathname}`);
+  });
+  await stream.goto("/?screen=colonize&view=stream");
+  await expect(stream.getByRole("heading", { name: "Your sites" })).toBeVisible();
+  await expect(stream.locator("html")).toHaveAttribute("data-streamer", "1");
+  await expect(stream.getByText("Buy me a coffee")).toHaveCount(0);
+  await expect(stream.getByText("Phone view: what the PC knows")).toHaveCount(0);
+  expect(await stream.evaluate(() => getComputedStyle(document.querySelector(".cz")!).pointerEvents)).toBe("none");
+  await stream.waitForTimeout(1000);
+  for (const a of asked) expect(["POST /api/colonize/rpc/getSnapshot", "GET /api/colonize/ui-state"], a).toContain(a);
+  await stream.close();
+  expect(errors).toEqual([]);
+});
+
 test("colonize: the phone view reads only what a LAN device may, and fits a phone", async ({ page }) => {
   const errors = watchErrors(page);
   const asked: string[] = [];

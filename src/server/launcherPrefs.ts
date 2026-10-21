@@ -36,6 +36,20 @@ export function writeLauncherOpenMode(mode: LauncherOpenMode): void {
   writeLauncherPref("openMode", mode);
 }
 
+/** Where "Open Colonize" opens: its own choice, not Compare's (owner, 2026-10-22). Null when never saved. */
+export function readColonizeOpenMode(): LauncherOpenMode | null {
+  try {
+    const v = (JSON.parse(readFileSync(launcherPrefsPath(), "utf8")) as { colonizeOpenMode?: unknown }).colonizeOpenMode;
+    return isLauncherOpenMode(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeColonizeOpenMode(mode: LauncherOpenMode): void {
+  writeLauncherPref("colonizeOpenMode", mode);
+}
+
 /*
   Written to a temp file and renamed (combined plan 1.7): a half-written file used to read as empty,
   and an empty file means "no LAN choice saved", which an existing install resolves to on. An

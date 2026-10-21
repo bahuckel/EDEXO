@@ -33,7 +33,8 @@ function carriersSwitchedOn(): Set<string> {
   }
 }
 
-export function PhoneView() {
+/** `streamer`: the same, for an OBS Browser source (no note, no Ko-fi, nothing to click, two columns when wide). */
+export function PhoneView({ streamer = false }: { streamer?: boolean }) {
   const { snap } = useColonizeSnapshot(colonizeApi);
   // Another window saved (a tick on the PC): the plan is read again from storage.
   const [gen, setGen] = useState(0);
@@ -73,7 +74,7 @@ export function PhoneView() {
   const sitesModel = { snap, ui: { depotRefPins: {} }, setDepotRefPin: noop, setArchived: noop };
 
   return (
-    <div className="cz cz--phone">
+    <div className={streamer ? "cz cz--stream" : "cz cz--phone"}>
       <header className="cz-head">
         <div className="cz-brand">
           <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
@@ -94,9 +95,11 @@ export function PhoneView() {
         </div>
       </header>
       <main className="cz-main cz-stack" style={{ gap: 20 }}>
-        <p className="cz-note cz-note--info" style={{ margin: 0 }}>
-          Phone view: what the PC knows, as it changes. Ticks, plans and settings are made in Colonize on the PC.
-        </p>
+        {streamer ? null : (
+          <p className="cz-note cz-note--info" style={{ margin: 0 }}>
+            Phone view: what the PC knows, as it changes. Ticks, plans and settings are made in Colonize on the PC.
+          </p>
+        )}
         {dockedSite ? <DeliverHerePanel m={{ shipCargoByKey }} site={dockedSite} /> : null}
         {trips.length ? (
           <>
@@ -110,12 +113,14 @@ export function PhoneView() {
         ) : null}
         <SitesColumn m={sitesModel} readOnly />
       </main>
-      <footer className="cz-small cz-dim" style={{ padding: "16px 24px", textAlign: "center" }}>
-        EDEXO is not affiliated with Frontier Developments. ·{" "}
-        <a href="https://ko-fi.com/bahuckel" target="_blank" rel="noreferrer">
-          Buy me a coffee
-        </a>
-      </footer>
+      {streamer ? null : (
+        <footer className="cz-small cz-dim" style={{ padding: "16px 24px", textAlign: "center" }}>
+          EDEXO is not affiliated with Frontier Developments. ·{" "}
+          <a href="https://ko-fi.com/bahuckel" target="_blank" rel="noreferrer">
+            Buy me a coffee
+          </a>
+        </footer>
+      )}
     </div>
   );
 }

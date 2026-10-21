@@ -1965,7 +1965,7 @@
               id="btnMainUiMenu"
               aria-haspopup="true"
               aria-expanded="false"
-              aria-label="Choose where Compare and Colonize open"
+              aria-label="Choose where Compare opens"
             >
               <span aria-hidden="true">▾</span>
             </button>
@@ -1991,15 +1991,45 @@
           </div>
 
           <!--
-            Colonize (1.3.0, owner 2026-10-18): the second window, beside Compare, opened where the menu above says.
-            Phone view has no Colonize page yet, so it opens in the browser then.
+            Colonize (1.3.0, owner 2026-10-18): the second app, beside Compare. Its own choice of where it opens
+            (owner, 2026-10-22), remembered apart from Compare's: browser, app window, phone view, streamer view.
           -->
-          <button type="button" class="btn btn-exomastery btn--wide" id="btnColonize">
-            <span class="btn-lines">
-              <strong>Open Colonize</strong>
-              <span class="subline" id="btnColonizeSub">Your construction sites and the haul plan · in your browser</span>
-            </span>
-          </button>
+          <div class="btn-split" id="colonizeSplit">
+            <button type="button" class="btn btn-exomastery btn-split-main" id="btnColonize">
+              <span class="btn-lines">
+                <strong>Open Colonize</strong>
+                <span class="subline" id="btnColonizeSub">Your construction sites and the haul plan · in your browser</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-exomastery btn-split-arrow"
+              id="btnColonizeMenu"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-label="Choose where Colonize opens"
+            >
+              <span aria-hidden="true">▾</span>
+            </button>
+            <div class="btn-split-menu" id="colonizeMenu" role="menu" hidden>
+              <button type="button" role="menuitem" data-colonize-mode="browser">
+                <strong>In your browser</strong>
+                <span>Your default browser, on this PC</span>
+              </button>
+              <button type="button" role="menuitem" data-colonize-mode="window">
+                <strong>App window</strong>
+                <span>Its own window — the launcher stays open</span>
+              </button>
+              <button type="button" role="menuitem" data-colonize-mode="phone">
+                <strong>Phone view</strong>
+                <span>Read-only: the sites, the plan and its ticks, sized for a phone or tablet</span>
+              </button>
+              <button type="button" role="menuitem" id="btnColonizeStreamLink">
+                <strong>Streamer view</strong>
+                <span>Opens it, and copies the link for OBS (Browser source): the plan, nothing clickable</span>
+              </button>
+            </div>
+          </div>
           <button type="button" class="btn btn-exomastery" id="btnOverlayMenu">
             <span class="glyph" aria-hidden="true">
               <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="1.5" /><path d="M3 9h18M8 21h8M12 17v4" /></svg>

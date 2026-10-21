@@ -1398,7 +1398,7 @@
   }
 
   /*
-    Where "Open Compare" opens (owner's launcher request), and "Open Colonize" with it.
+    Where "Open Compare" opens (owner's launcher request). Colonize has its own choice (COLONIZE_MODES below).
 
     Three destinations, one remembered choice, browser by default. The old button navigated
     this window to the app, which left no way back to the launcher short of restarting it. That
@@ -1427,10 +1427,6 @@
 
   function applyOpenMode(mode) {
     btnMainUiSub.textContent = OPEN_MODES[mode].sub;
-    if (btnColonizeSub) {
-      btnColonizeSub.textContent =
-        "Your construction sites and the haul plan · " + (mode === "window" ? "in an app window" : "in your browser");
-    }
     var items = mainUiMenu.querySelectorAll("button[data-open-mode]");
     for (var i = 0; i < items.length; i++) {
       items[i].setAttribute("aria-current", items[i].dataset.openMode === mode ? "true" : "false");
@@ -1534,14 +1530,90 @@
       });
   }
 
-  /* Colonize (1.3.0): a window of its own beside Compare, or the browser; phone view has no Colonize page yet. */
+  /*
+    Where "Open Colonize" opens: its own choice, remembered apart from Compare's (owner, 2026-10-22: choosing Phone for
+    Compare opened Compare's phone view, then Colonize had to be clicked again). Same three destinations; the streamer
+    view is an action in its menu, as Compare's is.
+  */
+  var LS_COLONIZE_OPEN_MODE = "edexo.launcher.colonizeOpenMode";
+  var COLONIZE_MODES = {
+    browser: { sub: "Your construction sites and the haul plan · in your browser", view: "colonize", page: "/?screen=colonize" },
+    window: { sub: "Your construction sites and the haul plan · in an app window", view: null, page: "/?screen=colonize" },
+    phone: { sub: "Phone view — read-only sites and plan", view: "colonize-phone", page: "/?screen=colonize&phone=1" },
+  };
+  var colonizeSplit = document.getElementById("colonizeSplit");
+  var btnColonizeMenu = document.getElementById("btnColonizeMenu");
+  var colonizeMenu = document.getElementById("colonizeMenu");
+
+  function readColonizeOpenMode() {
+    try {
+      var v = localStorage.getItem(LS_COLONIZE_OPEN_MODE);
+      if (v && COLONIZE_MODES[v]) return v;
+    } catch (e) {
+      /* private window, or storage disabled — the default is still correct */
+    }
+    return "browser";
+  }
+
+  function applyColonizeOpenMode(mode) {
+    if (btnColonizeSub) btnColonizeSub.textContent = COLONIZE_MODES[mode].sub;
+    if (!colonizeMenu) return;
+    var items = colonizeMenu.querySelectorAll("button[data-colonize-mode]");
+    for (var i = 0; i < items.length; i++) {
+      items[i].setAttribute("aria-current", items[i].dataset.colonizeMode === mode ? "true" : "false");
+    }
+  }
+
+  function setColonizeOpenMode(mode) {
+    try {
+      localStorage.setItem(LS_COLONIZE_OPEN_MODE, mode);
+    } catch (e) {
+      /* the choice still applies for this session */
+    }
+    applyColonizeOpenMode(mode);
+    fetch(apiUrl("/api/launcher/open-mode?app=colonize"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: mode }),
+    }).catch(function () {
+      /* localStorage still has it */
+    });
+  }
+
+  /* The choice saved in user data wins; a server without it (or none saved yet) keeps this profile's. */
+  function loadSavedColonizeOpenMode() {
+    fetch(apiUrl("/api/launcher/open-mode?app=colonize"))
+      .then(function (r) {
+        return r.ok ? r.json() : null;
+      })
+      .then(function (j) {
+        if (!j || !j.mode || !COLONIZE_MODES[j.mode]) return;
+        try {
+          localStorage.setItem(LS_COLONIZE_OPEN_MODE, j.mode);
+        } catch (e) {
+          /* fine */
+        }
+        applyColonizeOpenMode(j.mode);
+      })
+      .catch(function () {
+        /* offline server: the local choice stands */
+      });
+  }
+
+  function closeColonizeMenu() {
+    if (!colonizeMenu) return;
+    colonizeMenu.hidden = true;
+    if (btnColonizeMenu) btnColonizeMenu.setAttribute("aria-expanded", "false");
+  }
+
   function openColonize() {
     var bridge = window.edexoElectron;
+    var mode = readColonizeOpenMode();
     var failed = function (e) {
       launcherActionMsg.className = "msg-launcher err";
       launcherActionMsg.textContent = "Could not open Colonize" + (e ? ": " + String(e && e.message ? e.message : e) : ".");
     };
-    if (readOpenMode() === "window") {
+    if (mode === "window") {
       if (bridge && typeof bridge.openColonizeWindow === "function") {
         bridge.openColonizeWindow().then(function (r) {
           if (!r || !r.opened) failed(r && r.error);
@@ -1556,7 +1628,7 @@
     fetch(apiUrl("/api/ui/open-external"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ view: "colonize" }),
+      body: JSON.stringify({ view: COLONIZE_MODES[mode].view }),
     })
       .then(function (r) {
         return r.json().then(function (j) {
@@ -1564,7 +1636,7 @@
         });
       })
       .catch(function (e) {
-        window.open("/?screen=colonize", "_blank", "noopener");
+        window.open(COLONIZE_MODES[mode].page, "_blank", "noopener");
         launcherActionMsg.className = "msg-launcher";
         launcherActionMsg.textContent = "Opened in a new tab (" + String(e && e.message ? e.message : e) + ")";
       });
@@ -1572,8 +1644,59 @@
 
   applyOpenMode(readOpenMode());
   loadSavedOpenMode();
+  applyColonizeOpenMode(readColonizeOpenMode());
+  loadSavedColonizeOpenMode();
   btnMainUi.addEventListener("click", openChosenUi);
   if (btnColonize) btnColonize.addEventListener("click", openColonize);
+  if (btnColonizeMenu && colonizeMenu) {
+    btnColonizeMenu.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      var open = colonizeMenu.hidden;
+      colonizeMenu.hidden = !open;
+      btnColonizeMenu.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    colonizeMenu.addEventListener("click", function (ev) {
+      var item = ev.target.closest("button[data-colonize-mode]");
+      if (!item) return;
+      setColonizeOpenMode(item.dataset.colonizeMode);
+      closeColonizeMenu();
+    });
+    document.addEventListener("click", function (ev) {
+      if (!colonizeMenu.hidden && !colonizeSplit.contains(ev.target)) closeColonizeMenu();
+    });
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape" && !colonizeMenu.hidden) closeColonizeMenu();
+    });
+  }
+  /* Colonize's streamer view: the plan for an OBS Browser source, nothing clickable (owner, 2026-10-22). */
+  var btnColonizeStreamLink = document.getElementById("btnColonizeStreamLink");
+  if (btnColonizeStreamLink) btnColonizeStreamLink.addEventListener("click", function () {
+    closeColonizeMenu();
+    var url = "http://127.0.0.1:" + (lastPort || 7111) + "/?screen=colonize&view=stream";
+    var say = function (copied) {
+      launcherActionMsg.className = "msg-launcher";
+      launcherActionMsg.textContent =
+        (copied ? "Copied: " : "Colonize streamer view: ") + url +
+        " — in OBS add a Browser source with this URL. It follows your sites, the hold and the plan's ticks." +
+        " Add &zoom=1.25 to scale it, &bg=transparent to drop the backdrop.";
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () { say(true); }, function () { say(false); });
+    } else {
+      say(false);
+    }
+    fetch(apiUrl("/api/ui/open-external"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ view: "colonize-stream" }),
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error(String(r.status));
+      })
+      .catch(function () {
+        window.open("/?screen=colonize&view=stream", "_blank", "noopener");
+      });
+  });
   btnMainUiMenu.addEventListener("click", function (ev) {
     ev.stopPropagation();
     var open = mainUiMenu.hidden;

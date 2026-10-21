@@ -1,4 +1,6 @@
 import type { SpanshSystemHit } from "./spanshSystemHydration.js";
+/** What `/api/ui/open-external` may open in the browser: this app's own pages, never a URL. */
+export type AppView = "app" | "phone" | "stream" | "colonize" | "colonize-phone" | "colonize-stream";
 import type { GreenGiantVerdict } from "../shared/greenGasGiant.js";
 import type { OwnGreenGiant } from "./galaxyLayers.js";
 import type { SavedBoxelsService } from "./savedBoxels.js";
@@ -62,7 +64,9 @@ import type { JournalScan } from "./statisticsScan.js";
 import type { PredictionQualityDTO } from "../shared/dto/predictions.js";
 import {
   isLauncherOpenMode,
+  readColonizeOpenMode,
   readLauncherOpenMode,
+  writeColonizeOpenMode,
   writeLanAccess,
   writeLauncherOpenMode,
 } from "./launcherPrefs.js";
@@ -320,7 +324,7 @@ export interface HttpServerOptions {
    * Loopback only, for the same reason as the miss log: the window opens on the PC running the
    * app, so a phone pressing this would open something on a screen it cannot see.
    */
-  openAppView?: (view: "app" | "phone" | "stream" | "colonize") => { ok: boolean; error?: string };
+  openAppView?: (view: AppView) => { ok: boolean; error?: string };
   /**
    * POST /api/settings/open-miss-log — hand `edexo-outliers.jsonl` to the desktop.
    *
@@ -715,8 +719,10 @@ export function createHttpServer(opts: HttpServerOptions): {
    * answer was no on 72 of 79 profiles and nothing in the app said so.
    */
   /** Where the launcher opens the UI — saved in user data so a rebuilt exe keeps it (launcherPrefs.ts). */
-  app.get("/api/launcher/open-mode", (_req, res) => {
-    res.json({ ok: true, mode: readLauncherOpenMode() });
+  /* `?app=colonize`: Colonize's own choice (owner, 2026-10-22); without it, Compare's. */
+  const colonizeApp = (req: express.Request) => req.query.app === "colonize";
+  app.get("/api/launcher/open-mode", (req, res) => {
+    res.json({ ok: true, mode: colonizeApp(req) ? readColonizeOpenMode() : readLauncherOpenMode() });
   });
 
   app.post("/api/launcher/open-mode", (req, res) => {
@@ -726,7 +732,8 @@ export function createHttpServer(opts: HttpServerOptions): {
       return;
     }
     try {
-      writeLauncherOpenMode(mode);
+      if (colonizeApp(req)) writeColonizeOpenMode(mode);
+      else writeLauncherOpenMode(mode);
       res.json({ ok: true, mode });
     } catch (e) {
       res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });

@@ -2070,7 +2070,11 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
             ? `http://127.0.0.1:${port}/?view=stream`
             : view === "colonize"
               ? `http://127.0.0.1:${port}/?screen=colonize`
-              : `http://127.0.0.1:${port}/`;
+              : view === "colonize-phone"
+                ? `http://127.0.0.1:${port}/?screen=colonize&phone=1`
+                : view === "colonize-stream"
+                  ? `http://127.0.0.1:${port}/?screen=colonize&view=stream`
+                  : `http://127.0.0.1:${port}/`;
       openUrlInBrowser(url);
       return { ok: true };
     },
