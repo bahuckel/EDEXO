@@ -379,6 +379,16 @@ test("hud: the merged overlay shows every section", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("hud: the Colonize section starts Colonize and says when nothing is being built", async ({ page }) => {
+  const errors = watchErrors(page);
+  const started = page.waitForRequest((r) => r.url().includes("/api/colonize/rpc/getSnapshot") && r.method() === "POST");
+  await page.goto("/colonize-overlay.html");
+  await started;
+  // The fixture journal has no construction site.
+  await expect(page.locator('[data-section="colonize"] [data-f="none"]')).toContainText("No site being built");
+  expect(errors).toEqual([]);
+});
+
 /*
   The 3D galaxy map (G1, docs/galaxy-plan-28092026.md): the whole index loads, region names are
   placed, and moving close to Sol swaps the overview for precise tiles there.
@@ -1185,7 +1195,7 @@ test("phone hud: chips and the portrait layout", async ({ page }) => {
   const errors = watchErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/hud-overlay.html?phone=1");
-  await expect(page.locator(".phone-chip:not(.phone-chip--fs)")).toHaveCount(8);
+  await expect(page.locator(".phone-chip:not(.phone-chip--fs)")).toHaveCount(9); // one per section, Colonize the 9th (1.3.0)
   await expect(page.locator(".phone-chip--fs")).toHaveCount(1);
   await expect(page.locator("body")).toHaveClass(/phone/);
   await page.screenshot({ path: `${OUT}/hud-phone.png`, fullPage: true });

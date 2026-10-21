@@ -56,6 +56,7 @@ function snap(): AppSnapshot {
     speciesCount: 108,
     canonnUpload: { enabled: false },
     edsmAutoFetch: { enabled: false },
+    colonizeHud: { sites: [], moreSites: 0, deliver: null, next: null, hold: { used: 0, capacity: null } },
   } as unknown as AppSnapshot;
 }
 
@@ -138,6 +139,7 @@ describe("socket channels: slim snapshots per client kind", () => {
     const out = slimSnapshotForChannel(snap(), "hud") as unknown as AppSnapshot;
     expect(out.jumpTarget?.starSystem).toBe("A");
     expect(out.currentRegion?.name).toBe("Inner Orion Spur");
+    expect(out.colonizeHud).toEqual({ sites: [], moreSites: 0, deliver: null, next: null, hold: { used: 0, capacity: null } });
     expect((out as unknown as Record<string, unknown>).journalSystems).toBeUndefined();
     expect((out as unknown as Record<string, unknown>).speciesCount).toBeUndefined();
     expect(out.bodies).toHaveLength(2);

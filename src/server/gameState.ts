@@ -1324,7 +1324,7 @@ export class GameStateStore {
     if (r.tiltMode === "turn" || r.tiltMode === "slant") out.tiltMode = r.tiltMode;
     if (typeof r.slant === "number" && Number.isFinite(r.slant)) out.slant = Math.min(15, Math.max(-15, r.slant));
     if (Array.isArray(r.sections)) {
-      const known = ["jump", "fss", "candidates", "distance", "datavalue", "achievement", "notable", "notices"];
+      const known = ["jump", "fss", "candidates", "distance", "datavalue", "achievement", "notable", "notices", "colonize"];
       out.sections = [];
       for (const n of r.sections) {
         if (typeof n === "string" && known.includes(n) && !out.sections.includes(n)) out.sections.push(n);

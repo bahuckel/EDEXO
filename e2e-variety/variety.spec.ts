@@ -127,6 +127,7 @@ test("every HUD overlay page mounts its sections from the hud/ modules", async (
     ["/notable-overlay.html", 1],
     ["/notices-overlay.html", 1],
     ["/jump-overlay.html", 1],
+    ["/colonize-overlay.html", 1],
     ["/hud-overlay.html", 6],
   ];
   for (const [url, sections] of pages) {

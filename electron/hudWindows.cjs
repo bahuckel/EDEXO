@@ -14,7 +14,7 @@ const path = require("path");
 const fs = require("fs");
 const { writeFileAtomic } = require("./atomicWrite.cjs");
 
-const MAX_HUD_OVERLAYS = 8; // was 3; the owner wants every HUD selectable at once
+const MAX_HUD_OVERLAYS = 9; // was 3; the owner wants every HUD selectable at once (9th: Colonize, 1.3.0)
 const HUD_STACK_GAP = 6;
 /** Ctrl+Alt+H hides and shows every HUD window at once (menus, screenshots), checked free by the owner. */
 const HUD_TOGGLE_SHORTCUT = "Control+Alt+H";

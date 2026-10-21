@@ -1,4 +1,5 @@
 import { codexFirstCheck, codexFirstDataDate } from "./codexFirst.js";
+import { getColonizeHud } from "./colonize/hudSummary";
 import { colourRarity } from "./codexVariantCounts.js";
 import { geologyForBody } from "./geology.js";
 import { eddnLedgerStatus } from "./eddnLedger.js";
@@ -1649,6 +1650,7 @@ export function buildSnapshot(
     speciesCount: db.species.length,
     lastJournalEventIso: store.lastEventIso,
     organicDataValueCredits,
+    colonizeHud: getColonizeHud(),
     organicPendingSampleCount,
     organicPendingLines,
     fssAllBodiesFoundNoBio,

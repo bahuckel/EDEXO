@@ -209,7 +209,8 @@ function collectTripLineIds(trip: HaulTrip): string[] {
   return ids;
 }
 
-function isTripFullyComplete(trip: HaulTrip, completed: Set<string>): boolean {
+/** Every line of the trip (its buys, its deliveries) is done; a trip with no lines counts as done. */
+export function isTripFullyComplete(trip: HaulTrip, completed: Set<string>): boolean {
   const ids = collectTripLineIds(trip);
   if (!ids.length) return true;
   return ids.every((id) => completed.has(id));
@@ -356,15 +357,22 @@ function migrateTripPlanSnapshot(parsed: Record<string, unknown>, legacyDepotLab
   };
 }
 
-/** In-memory copy — re-parsing a multi-hundred-KB JSON on every panel mount stalls tab switches. */
+/**
+ * In-memory copy — re-parsing a multi-hundred-KB JSON on every panel mount stalls tab switches. Kept with the text it
+ * was parsed from: another window's ticks arrive as new text in storage (uiStateSync.ts), and must not be hidden by
+ * this copy. A save still waiting in the debounce below is newer than storage, so it wins.
+ */
 let tripSnapshotCache: TripPlanSnapshot | null | undefined;
+let tripSnapshotCacheText: string | null | undefined;
 
 export function loadTripPlanSnapshot(): TripPlanSnapshot | null {
-  if (tripSnapshotCache !== undefined) return tripSnapshotCache;
+  if (pendingTripSave !== undefined) return tripSnapshotCache ?? null;
   try {
     const raw = storageGet(TRIP_PLAN_SNAPSHOT_KEY);
     const legacy = raw ? null : storageGet(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
     const body = raw ?? legacy;
+    if (tripSnapshotCache !== undefined && body === tripSnapshotCacheText) return tripSnapshotCache;
+    tripSnapshotCacheText = body;
     tripSnapshotCache = body
       ? migrateTripPlanSnapshot(JSON.parse(body) as Record<string, unknown>, legacy != null)
       : null;
@@ -376,13 +384,14 @@ export function loadTripPlanSnapshot(): TripPlanSnapshot | null {
 
 function saveTripPlanSnapshot(snapshot: TripPlanSnapshot | null): void {
   tripSnapshotCache = snapshot;
+  tripSnapshotCacheText = snapshot ? JSON.stringify(snapshot) : null;
   try {
     if (!snapshot) {
       storageRemove(TRIP_PLAN_SNAPSHOT_KEY);
       storageRemove(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
       return;
     }
-    storageSet(TRIP_PLAN_SNAPSHOT_KEY, JSON.stringify(snapshot));
+    storageSet(TRIP_PLAN_SNAPSHOT_KEY, tripSnapshotCacheText!);
     /** Written in the new shape; the old one would otherwise be read again after a v3 clear. */
     if (!snapshot.legacyDepotLabels) storageRemove(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
   } catch {

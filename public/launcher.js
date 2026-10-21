@@ -1813,8 +1813,9 @@
     "/achievement-overlay.html": "achievement",
     "/notable-overlay.html": "notable",
     "/notices-overlay.html": "notices",
+    "/colonize-overlay.html": "colonize",
   };
-  var HUD_SECTION_ORDER = ["jump", "fss", "candidates", "distance", "datavalue", "achievement", "notable", "notices"];
+  var HUD_SECTION_ORDER = ["jump", "fss", "candidates", "distance", "datavalue", "achievement", "notable", "colonize", "notices"];
   var HUD_SECTION_LABEL = {
     jump: "Next jump",
     fss: "Discovery scan",
@@ -1824,6 +1825,7 @@
     achievement: "Achievement",
     notable: "Notable planets",
     notices: "Notices",
+    colonize: "Colonize",
   };
   var HUD_PATH_BY_SECTION = {};
   Object.keys(HUD_SECTION_BY_PATH).forEach(function (p) {
@@ -2702,6 +2704,8 @@
   if (ovNotable) ovNotable.addEventListener("click", function () { void pickOverlay("/notable-overlay.html", HUD_W, 160); });
   var ovNotices = document.getElementById("ovNotices");
   if (ovNotices) ovNotices.addEventListener("click", function () { void pickOverlay("/notices-overlay.html", HUD_W, 140); });
+  var ovColonize = document.getElementById("ovColonize");
+  if (ovColonize) ovColonize.addEventListener("click", function () { void pickOverlay("/colonize-overlay.html", HUD_W, 260); });
 
   /* ------------------------------------------------------------------------------ backups */
   var backupModal = document.getElementById("backupModal");

@@ -56,6 +56,7 @@ import {
 } from "./journalWatcher.js";
 import { emitJournalReread, emitLiveJournalLine } from "./journalTap.js";
 import { stopColonizeService } from "./colonize/colonizeService";
+import { onColonizeHudChange } from "./colonize/hudSummary";
 import { scanJournalsForStatistics } from "./statisticsScan.js";
 import { createHttpServer, getLanIPv4s } from "./httpServer.js";
 import { describeUserDataMigration, migrateLegacyUserData } from "./userDataMigration.js";
@@ -1000,6 +1001,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     bootMergeLastFlush = t;
     pushFlush();
   };
+  // The HUD's Colonize section follows the Colonize store and its saved plan, not the journal store.
+  const offColonizeHud = onColonizeHudChange(push);
 
   let watcher: JournalWatcherHandle | null = null;
   let footStatusPollTimer: ReturnType<typeof setInterval> | null = null;
@@ -2535,6 +2538,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     if (existsSync(priceListPath)) unwatchFile(priceListPath, onSpeciesTreeOrPricesChange);
     if (watcher) await watcher.close();
     // Colonize, if a window started it: its depot state and buy index are saved on a debounce.
+    offColonizeHud();
     await stopColonizeService().catch((e) => console.error("[colonize] stop failed:", e));
     // Open sockets (a phone, a browser tab) would otherwise hold the close until the app ends the process.
     closeConnections();

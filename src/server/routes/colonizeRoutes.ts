@@ -19,6 +19,7 @@ import { COLONIZE_INVOKE, type ColonizeEvents } from "../../shared/colonize/ipc/
 import { colonizeService, colonizeServiceRunning } from "../colonize/colonizeService";
 import type { ColonizeHandlers } from "../colonize/ipc/handlerTypes";
 import { colonizeUiState } from "../colonize/uiState";
+import { refreshColonizeHud } from "../colonize/hudSummary";
 
 /** What a paired phone or tablet may call: reads of what the server already holds, nothing else. */
 export const COLONIZE_LAN_READ: ReadonlySet<keyof ColonizeHandlers> = new Set<keyof ColonizeHandlers>([
@@ -66,7 +67,10 @@ export function registerColonizeRoutes(app: express.Express, opts: HttpServerOpt
     const body = (req.body ?? {}) as { set?: unknown; from?: unknown };
     const set = colonizeUiState().apply(body.set);
     const from = typeof body.from === "string" ? body.from.slice(0, 64) : null;
-    if (Object.keys(set).length) ctx.pushColonize("onUiState", { set, from } satisfies ColonizeEvents["onUiState"]);
+    if (Object.keys(set).length) {
+      ctx.pushColonize("onUiState", { set, from } satisfies ColonizeEvents["onUiState"]);
+      refreshColonizeHud(); // the trip ticks and the hold override are in here
+    }
     res.json({ ok: true, changed: Object.keys(set).length });
   });
 

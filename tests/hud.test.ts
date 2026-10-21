@@ -667,3 +667,68 @@ describe("HUD placing frame", () => {
     }
   });
 });
+
+describe("HUD Colonize (1.3.0)", () => {
+  const hud = {
+    sites: [
+      { marketId: "1", label: "Alpha Port", system: "Smoke Colony", pct: 52, leftTons: 8280, docked: true },
+      { marketId: "2", label: "Bravo Dock", system: "Smoke Colony", pct: 8, leftTons: 3700, docked: false },
+    ],
+    moreSites: 1,
+    deliver: { site: "Alpha Port", lines: [{ label: "Steel", tons: 300 }] },
+    next: {
+      trip: 2,
+      trips: 5,
+      station: "Seller One",
+      system: "Seller System",
+      distanceLy: 12.4,
+      here: false,
+      buys: [
+        { label: "Steel", tons: 200, done: true },
+        { label: "Titanium", tons: 80, done: false },
+      ],
+      deliverTo: ["Alpha Port"],
+    },
+    hold: { used: 300, capacity: 784 },
+  };
+  const f = (k: string) => document.querySelector(`[data-section="colonize"] [data-f="${k}"]`);
+
+  it("shows the sites, what to unload here, the next stop and the hold", async () => {
+    window.localStorage.clear();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}")));
+    const HUD = await loadHud();
+    HUD.mount(["colonize"], { noTimers: true });
+    HUD.render({ colonizeHud: hud });
+    expect(f("status")?.textContent).toBe("Docked at site");
+    expect(f("sites")?.textContent).toContain("Alpha Port");
+    expect(f("sites")?.textContent).toContain("52% · 8,280 t left");
+    expect(f("sites")?.textContent).toContain("+1 more");
+    expect(f("deliver")?.textContent).toContain("Steel");
+    expect(f("deliver")?.textContent).toContain("300 t");
+    expect(f("next")?.textContent).toContain("Next · trip 2 of 5");
+    expect(f("next")?.textContent).toContain("Seller One");
+    expect(f("next")?.textContent).toContain("✓ Steel");
+    expect(f("next")?.textContent).toContain("Then to Alpha Port");
+    expect(f("hold")?.textContent).toContain("300 / 784 t");
+    // It asks the server to start Colonize, once, however often it is drawn.
+    HUD.render({ colonizeHud: { ...hud, hold: { used: 310, capacity: 784 } } });
+    HUD.render({ colonizeHud: null });
+    expect((fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter((c) => String(c[0]).includes("/api/colonize/rpc/getSnapshot"))).toHaveLength(1);
+    vi.unstubAllGlobals();
+  });
+
+  it("says when nothing is built, and steps aside under 'only when relevant'", async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem("edexoHudRelevant", "1");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}")));
+    const HUD = await loadHud();
+    HUD.mount(["colonize"], { noTimers: true });
+    HUD.render({ colonizeHud: null });
+    expect(f("none")?.textContent).toContain("No site being built");
+    expect(document.querySelector('[data-section="colonize"]')!.classList.contains("hud-section--idle")).toBe(true);
+    HUD.render({ colonizeHud: { ...hud, deliver: null, next: { ...hud.next, here: true } } });
+    expect(document.querySelector('[data-section="colonize"]')!.classList.contains("hud-section--idle")).toBe(false);
+    expect(f("status")?.textContent).toBe("Buy here");
+    vi.unstubAllGlobals();
+  });
+});

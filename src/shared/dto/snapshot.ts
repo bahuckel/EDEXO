@@ -1,4 +1,5 @@
 import type { NspOutlookDTO } from "../nspOutlook.js";
+import type { ColonizeHudDTO } from "../colonize/hud.js";
 import type { JournalHistoryPreset } from "../journalHistoryPreset.js";
 import type { TriageTiming } from "../systemTriage.js";
 import type {
@@ -105,6 +106,8 @@ export interface AppSnapshot {
    * using `price-list.json`, with 5× total on first-footfall bodies (1× base payout + 4× first-footfall bonus).
    */
   organicDataValueCredits: number;
+  /** The HUD's Colonize section (1.3.0, colonize/hudSummary.ts): null while Colonize is not running or nothing is built. */
+  colonizeHud?: ColonizeHudDTO | null;
   /** Rows included in `organicDataValueCredits` (pending sales). */
   organicPendingSampleCount: number;
   /** Per-sample breakdown for the data value modal (unsold completes in journal). */

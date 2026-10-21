@@ -54,6 +54,7 @@ export default defineConfig({
           "achievement-overlay",
           "notable-overlay",
           "notices-overlay",
+          "colonize-overlay",
         ].map((n) => [n, path.resolve(__dirname, "src/client", `${n}.html`)]),
       ),
       output: {

@@ -11,7 +11,8 @@
  */
 import { readEdsmCredentials } from "../edsmCredentials.js";
 import { resolveColonizeDataDir } from "../paths.js";
-import { closeColonizeUiState } from "./uiState";
+import { closeColonizeUiState, colonizeUiState } from "./uiState";
+import { refreshColonizeHud, setColonizeHudSource } from "./hudSummary";
 import { ColonizeStore } from "./colonizeStore";
 import { flushSystemCoordsCache, loadSystemCoordsCache } from "./galaxySystemCoords";
 import { buyIndexHandlers } from "./ipc/buyIndexHandlers";
@@ -82,11 +83,13 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
       if (sig === lastNotifySig) return;
       lastNotifySig = sig;
       deps.push("onUpdate", snap);
+      refreshColonizeHud();
     } catch (e) {
       console.error("[colonize] snapshot push failed (skipped):", e);
     }
   });
   setMaterialBuyScanPush(deps.push);
+  setColonizeHudSource(() => ({ snap: store.getSnapshot(), ui: colonizeUiState().all() }));
 
   const ctx: IpcContext = { store, push: deps.push, buyIndex: materialBuyIndex, userDataDir: dataDir };
   const inara = createInaraWatchControl(ctx);
@@ -120,6 +123,7 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
       if (running === service) running = null;
       inara.stop();
       setMaterialBuyScanPush(null);
+      setColonizeHudSource(null);
       try {
         await buyIndex?.flush();
       } catch {

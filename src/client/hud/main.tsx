@@ -35,6 +35,7 @@ import { fss } from "./sections/fss";
 import { jump, starKind } from "./sections/jump";
 import { notable } from "./sections/notable";
 import { notices } from "./sections/notices";
+import { colonize } from "./sections/colonize";
 
 export const SECTIONS: Record<string, HudSection> = {
   jump,
@@ -45,6 +46,7 @@ export const SECTIONS: Record<string, HudSection> = {
   achievement,
   notable,
   notices,
+  colonize,
 };
 export const ORDER = [
   "jump",
@@ -54,6 +56,7 @@ export const ORDER = [
   "datavalue",
   "achievement",
   "notable",
+  "colonize",
   "notices",
 ];
 export { RELEVANT_HOLD_MS };
