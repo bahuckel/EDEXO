@@ -474,6 +474,13 @@ Built on these communities' work, none of them affiliated with this project:
 
 Full attribution in [NOTICE.md](NOTICE.md).
 
+## Inara helper for Colonize (Chrome, optional)
+
+Colonize finds sellers through Spansh on its own. To add Inara's buy searches too, load the helper in
+[`chrome-extension/`](chrome-extension/): Chrome → `chrome://extensions` → Developer mode → **Load unpacked** →
+that folder. On an Inara buy search (Colonize's **Inara** button opens one), use **EDEXO Colonize: → Scrape info**
+in Inara's top bar; the result lands in `Downloads\EdexoColonize\inara`, which Colonize reads by itself.
+
 ## Support
 
 EDEXO is free and stays free. If it helps you, you can [buy me a coffee](https://ko-fi.com/bahuckel) —
