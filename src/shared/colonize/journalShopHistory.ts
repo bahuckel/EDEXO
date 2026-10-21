@@ -50,15 +50,16 @@ function marketJsonToOffers(j: Record<string, unknown>): ShopHistoryCachedOffer[
     const name = typeof r.Name === "string" ? r.Name : "";
     const nl = typeof r.Name_Localised === "string" ? r.Name_Localised : name;
     const stock = typeof r.Stock === "number" ? r.Stock : 0;
-    const sellPrice = typeof r.SellPrice === "number" ? r.SellPrice : null;
-    if (stock <= 0 || sellPrice == null) continue;
+    // BuyPrice is what the commander pays (it goes with Stock); SellPrice is what the market pays him (with Demand).
+    const buyPrice = typeof r.BuyPrice === "number" && r.BuyPrice > 0 ? r.BuyPrice : null;
+    if (stock <= 0 || buyPrice == null) continue;
     const id = commodityMergeBucket(name) || commodityMergeBucket(nl);
     if (!id) continue;
     out.push({
       commodityId: id,
       label: (nl || name).trim() || name,
       supply: stock,
-      buyPrice: sellPrice,
+      buyPrice,
     });
   }
   return out;
@@ -175,9 +176,11 @@ export function applyJournalMarketLine(
     (typeof j.StarSystem === "string" ? j.StarSystem.trim() : "") || fallbackStarSystem?.trim() || "";
   if (!marketId || !stationName || !starSystem) return;
 
-  const visitedAt = typeof j.timestamp === "string" ? j.timestamp : new Date().toISOString();
+  const seenAt = typeof j.timestamp === "string" ? j.timestamp : new Date().toISOString();
   const stationType = typeof j.StationType === "string" ? j.StationType : null;
   const prev = shops.get(marketId);
+  // The latest visit wins: the whole history is read once, then the last week again at every start.
+  const visitedAt = prev?.visitedAt && prev.visitedAt > seenAt ? prev.visitedAt : seenAt;
   /**
    * Spread the previous record: `marketItems` and `constructionDistanceLy` are attached
    * from Market.json and by the planner, and rebuilding from only `purchases` threw them
@@ -223,6 +226,8 @@ export function applyJournalMarketBuyLine(
     shops.set(marketId, rec);
   }
   if (!rec) return;
+  // Read once from the whole history and again with every start's last week: one purchase, one row.
+  if (rec.purchases.some((p) => p.boughtAt === boughtAt && p.commodityId === comm.id && p.count === count)) return;
 
   rec.purchases.push({
     commodityId: comm.id,
@@ -231,7 +236,7 @@ export function applyJournalMarketBuyLine(
     buyPrice,
     boughtAt,
   });
-  rec.visitedAt = boughtAt;
+  if (boughtAt > rec.visitedAt) rec.visitedAt = boughtAt;
 }
 
 function journalShopToHistoryEntry(rec: JournalShopRecord): ShopHistoryEntry {

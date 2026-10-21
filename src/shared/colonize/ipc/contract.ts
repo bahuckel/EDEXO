@@ -71,6 +71,7 @@ export const COLONIZE_INVOKE = {
   openInaraImportDir: "colonize:openInaraImportDir",
   importInaraFile: "colonize:importInaraFile",
   clearSavedBuyData: "colonize:clearSavedBuyData",
+  askSpanshForMaterials: "colonize:askSpanshForMaterials",
 } as const satisfies Record<keyof ColonizeInvoke, string>;
 
 /** Pushes from main → listener method → channel. */
@@ -203,6 +204,8 @@ export type ColonizeInvoke = {
     items: CheckoutBasketItemPayload[];
     maxSystemsPerMaterial?: number | null;
     constructionDepots?: ConstructionDepotRef[];
+    /** "Look for sellers now": look even when every material already has a seller. */
+    force?: boolean;
   }) => Promise<{ ok: true; scheduled: boolean; atCap: boolean; allFound: boolean } | Fail>;
   syncWingCargoFromEdsm: (payload: {
     roster: { commanderName: string; lastSeenIso: string }[];
@@ -256,6 +259,8 @@ export type ColonizeInvoke = {
   /** A scrape file the commander picked in the window, as its name and text. */
   importInaraFile: (payload: { fileName: string; text: string }) => Promise<InaraImportOutcome | Fail>;
   clearSavedBuyData: (payload?: { scope?: ClearBuyDataScope }) => Promise<{ ok: true; scope: ClearBuyDataScope } | Fail>;
+  /** Search → Ask Spansh: sellers of each commodity asked for, near a system, saved with the others. */
+  askSpanshForMaterials: (payload: { query: string; referenceSystem: string }) => Promise<{ ok: true; saved: number } | Fail>;
 };
 
 /** Every push from main, by listener method → payload. */

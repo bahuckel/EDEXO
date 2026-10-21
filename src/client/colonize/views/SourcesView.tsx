@@ -54,7 +54,8 @@ function CarriersPanel({ m }: { m: ColonizeModel }) {
         m.carriers.map((c) => <CarrierCard key={c.carrierId} c={c} on={m.haulingCarrierIds.has(c.carrierId)} toggle={() => m.toggleCarrier(c.carrierId)} />)
       ) : (
         <p className="cz-dim" style={{ margin: 0 }}>
-          No carrier of yours in the journal yet. Dock at it once and it shows here.
+          No carrier of yours in the journal yet. The game names your carrier each time you load in, and when you open its
+          management screen.
         </p>
       )}
     </section>

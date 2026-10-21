@@ -184,6 +184,6 @@ describe("the Colonize window", () => {
     act(() => input.form!.requestSubmit());
     await settle();
     expect(called).toContain("searchBuyIndexStationsForMaterials");
-    expect(host.textContent).toContain("Nothing saved matches");
+    expect(host.textContent).toContain("Nothing in your journal or the saved sellers matches");
   });
 });

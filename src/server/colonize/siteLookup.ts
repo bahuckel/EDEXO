@@ -11,6 +11,7 @@ import {
 import { normSystemName } from "../../shared/colonize/stationFilter";
 import { TtlCache } from "../../shared/colonize/ttlCache";
 import { fetchJson, HttpStatusError, ravenGate, spanshGate } from "./httpGate";
+import { resolveSpanshReferenceSystem } from "./galaxySystemCoords";
 
 const SPANSH_STATIONS_SEARCH = "https://spansh.co.uk/api/stations/search";
 const SEARCH_SIZE = 25;
@@ -34,7 +35,8 @@ export async function searchConstructionSites(
     filters: { name: { value: q }, type: { value: [...CONSTRUCTION_DEPOT_TYPES] } },
     size: SEARCH_SIZE,
   };
-  if (referenceSystem?.trim()) body.reference_system = referenceSystem.trim();
+  // Spansh matches reference_system by its own spelling: the journal's casing can differ.
+  if (referenceSystem?.trim()) body.reference_system = await resolveSpanshReferenceSystem(referenceSystem.trim());
   return parseConstructionSiteHits(
     await fetchJson(spanshGate, SPANSH_STATIONS_SEARCH, { timeoutMs: TIMEOUT_MS, body }),
   );

@@ -141,7 +141,7 @@ test("colonize: the window opens on the plan, every tab draws, and the launcher 
   await page.getByRole("tab", { name: "Search" }).click();
   await page.getByRole("searchbox").fill("Steel");
   await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page.getByText("Nothing saved matches")).toBeVisible();
+  await expect(page.getByText("Nothing in your journal or the saved sellers matches")).toBeVisible();
   await page.screenshot({ path: `${OUT}/colonize-search.png`, fullPage: true });
   expect(errors).toEqual([]);
 });

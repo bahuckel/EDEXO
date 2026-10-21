@@ -31,6 +31,7 @@ describe("the Colonize contract", () => {
   it("names exactly these methods and events (the window's client is built from the same list)", () => {
     expect(Object.keys(COLONIZE_INVOKE).sort()).toEqual(
       [
+        "askSpanshForMaterials",
         "checkoutBasket",
         "checkoutBasketMulti",
         "clearSavedBuyData",

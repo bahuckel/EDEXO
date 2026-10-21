@@ -109,6 +109,11 @@ export type JournalState = {
    */
   carriers: Record<string, CarrierStock>;
   confirmedCarrierIds: Set<string>;
+  /**
+   * `CargoTransfer` lines already counted (timestamp + transfers): the whole history is read once and the last week
+   * again at every start, and a transfer counted twice would double the carrier's stock.
+   */
+  carrierTransferKeys: Set<string>;
   /** The carrier we are docked at, since `CargoTransfer` names no carrier of its own. */
   dockedCarrierId: string | null;
   mutationGen: number;
@@ -137,6 +142,7 @@ export function createJournalState(): JournalState {
     wingRoster: [],
     carriers: {},
     confirmedCarrierIds: new Set(),
+    carrierTransferKeys: new Set(),
     dockedCarrierId: null,
     mutationGen: 0,
     persistGen: 0,
@@ -434,7 +440,26 @@ export function applyJournalObject(state: JournalState, j: Record<string, unknow
         state.confirmedCarrierIds.add(id);
         changed = true;
       }
-      if (ev === "CarrierStats" ? applyCarrierStats(c, j) : applyCarrierBuy(c, j)) changed = true;
+      const ts = typeof j.timestamp === "string" ? j.timestamp : "";
+      if (ev === "CarrierBuy") {
+        if (applyCarrierBuy(c, j)) changed = true;
+      } else if (!(ts && c.statsAt && ts < c.statsAt)) {
+        if (applyCarrierStats(c, j)) changed = true;
+        if (ts) c.statsAt = ts;
+      }
+    }
+  }
+  /**
+   * The game writes `CarrierLocation` for the commander's own carrier at every load (owner, 2026-10-22: his carrier was
+   * "not found" because only CarrierStats, written when carrier management is opened, confirmed one). A squadron's
+   * carrier says so in `CarrierType`; a line without the field is taken as his, as ownAssets.ts does.
+   */
+  if (ev === "CarrierLocation" && (j.CarrierType == null || j.CarrierType === "FleetCarrier")) {
+    const id = parseMarketId(j.CarrierID);
+    if (id && !state.confirmedCarrierIds.has(id)) {
+      carrierSlot(state, id);
+      state.confirmedCarrierIds.add(id);
+      changed = true;
     }
   }
 
@@ -446,7 +471,11 @@ export function applyJournalObject(state: JournalState, j: Record<string, unknow
     const id = state.dockedCarrierId;
     if (id) {
       const ts = typeof j.timestamp === "string" ? j.timestamp : null;
-      if (applyCargoTransfer(carrierSlot(state, id), j.Transfers, ts)) changed = true;
+      const key = `${id}|${ts ?? ""}|${JSON.stringify(j.Transfers ?? null)}`;
+      if (!state.carrierTransferKeys.has(key)) {
+        state.carrierTransferKeys.add(key);
+        if (applyCargoTransfer(carrierSlot(state, id), j.Transfers, ts)) changed = true;
+      }
     }
   }
 
@@ -467,6 +496,12 @@ export function applyJournalObject(state: JournalState, j: Record<string, unknow
       stationType.includes("carrier") ? mid : null;
     if (nextDockedCarrier !== state.dockedCarrierId) {
       state.dockedCarrierId = nextDockedCarrier;
+      changed = true;
+    }
+    // Docked at one of his own carriers: its callsign is the station's name, until a CarrierStats names it.
+    const own = nextDockedCarrier && state.confirmedCarrierIds.has(nextDockedCarrier) ? state.carriers[nextDockedCarrier] : null;
+    if (own && !own.callsign && /^[A-Z0-9]{3}-[A-Z0-9]{3}$/i.test(station.trim())) {
+      own.callsign = station.trim().toUpperCase();
       changed = true;
     }
 

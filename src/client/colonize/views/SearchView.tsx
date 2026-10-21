@@ -29,7 +29,7 @@ export function SearchView({ m }: { m: ColonizeModel }) {
   const [picked, setPicked] = useState<BuyIndexStationResult | null>(null);
   const [pickedSite, setPickedSite] = useState<ConstructionSiteHit | null>(null);
   const api = m.api;
-  const near = m.constructionSiteRefs[0]?.trim() || m.homeSystem;
+  const near = m.constructionSiteRefs[0]?.trim() || m.homeSystem || m.snap?.navContext.starSystem || "";
 
   const run = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -54,6 +54,32 @@ export function SearchView({ m }: { m: ColonizeModel }) {
           m.setSearchDistanceTargets([...new Set(res.stations.map((s) => s.systemName))]);
         } else setError(res.err);
         setSites(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Commodity mode: Spansh's sellers near a site (or where the ship is), saved with the rest, then searched again. */
+  const askSpanshForCommodity = async () => {
+    const q = query.trim();
+    if (!q || !near) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await api.askSpanshForMaterials({ query: q, referenceSystem: near });
+      if (!res.ok) {
+        setError(res.err);
+        return;
+      }
+      setNotice(res.saved ? `Spansh: ${res.saved.toLocaleString("en-US")} sellers near ${near} saved.` : `Spansh knows no seller of that near ${near}.`);
+      const again = await api.searchBuyIndexStationsForMaterials({ query: q });
+      if (again.ok) {
+        setStations(again.stations);
+        m.setSearchDistanceTargets([...new Set(again.stations.map((s) => s.systemName))]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -122,10 +148,22 @@ export function SearchView({ m }: { m: ColonizeModel }) {
             Ask Spansh for its markets
           </button>
         ) : null}
+        {kind === "commodity" ? (
+          <button
+            type="button"
+            className="cz-btn"
+            disabled={busy || !query.trim() || !near}
+            title={near ? undefined : "No system to search near yet: a site, or one jump"}
+            onClick={() => void askSpanshForCommodity()}
+          >
+            {near ? `Ask Spansh near ${near}` : "Ask Spansh"}
+          </button>
+        ) : null}
       </form>
       {kind === "commodity" ? (
         <p className="cz-small cz-dim" style={{ margin: 0 }}>
-          A comma means “sells all of them”. From what is saved: Spansh results, your Inara imports, markets you docked at.
+          A comma means “sells all of them”. Your journal first (where you bought it, where you docked), then saved
+          Spansh results and Inara imports.
         </p>
       ) : null}
       {error ? <p className="cz-note cz-note--bad" role="alert">{error}</p> : null}
@@ -158,7 +196,11 @@ export function SearchView({ m }: { m: ColonizeModel }) {
                           <button type="button" className="cz-pick" onClick={() => setPicked(s)}>
                             {s.stationName}
                           </button>
-                          <div className="cz-small cz-dim">{s.systemName}</div>
+                          <div className="cz-small cz-dim">
+                            {s.systemName}
+                            {s.boughtCount ? <span className="cz-own">{` · bought here ${s.boughtCount}×`}</span> : null}
+                            {!s.boughtCount && s.lastVisitIso ? ` · docked ${s.lastVisitIso.slice(0, 10)}` : null}
+                          </div>
                         </td>
                         <td className="r">{formatHopLy(m.systemDistanceLy[s.systemName.toLowerCase()] ?? s.minDistanceLy)}</td>
                         <td className="r">{s.materialCount}</td>
@@ -173,7 +215,7 @@ export function SearchView({ m }: { m: ColonizeModel }) {
               </div>
             ) : (
               <p style={{ padding: 16, margin: 0 }} className="cz-dim">
-                Nothing saved matches. {kind === "system" ? "Ask Spansh for its markets." : "The plan's “Look for sellers now” asks Spansh."}
+                Nothing in your journal or the saved sellers matches. {kind === "system" ? "Ask Spansh for its markets." : near ? `Ask Spansh near ${near}.` : ""}
               </p>
             )}
           </section>

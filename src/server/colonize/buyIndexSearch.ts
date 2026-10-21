@@ -87,10 +87,17 @@ function searchJournalStationsForMaterials(
     const commodities = journalCommoditiesForShop(rec);
     if (!shopSellsAllNeeds(commodities, needs)) continue;
     const k = stationKey(rec.marketId, rec.starSystem, rec.stationName);
-    stations.set(k, journalStationFromRec(rec, commodities));
+    const boughtCount = rec.purchases.filter((p) => needs.some((n) => commodityIdsEquivalent(p.commodityId, n.needId))).length;
+    stations.set(k, { ...journalStationFromRec(rec, commodities), boughtCount, lastVisitIso: rec.visitedAt });
   }
 
   return [...stations.values()].sort(sortStationsByHop);
+}
+
+/** His own history first (owner, 2026-10-22): where he bought it, then where he docked, then the rest by distance. */
+function sortStationsJournalFirst(a: BuyIndexStationResult, b: BuyIndexStationResult): number {
+  const rank = (s: BuyIndexStationResult) => ((s.boughtCount ?? 0) > 0 ? 0 : s.lastVisitIso ? 1 : 2);
+  return rank(a) - rank(b) || (b.boughtCount ?? 0) - (a.boughtCount ?? 0) || sortStationsByHop(a, b);
 }
 
 function searchJournalSystemsForMaterial(
@@ -303,9 +310,11 @@ function mergeStationResults(a: BuyIndexStationResult[], b: BuyIndexStationResul
       bodyName: prev.bodyName ?? row.bodyName,
       stationType: prev.stationType ?? row.stationType,
       isPlanetaryOrGround: prev.isPlanetaryOrGround || row.isPlanetaryOrGround,
+      boughtCount: Math.max(prev.boughtCount ?? 0, row.boughtCount ?? 0) || undefined,
+      lastVisitIso: [prev.lastVisitIso, row.lastVisitIso].filter(Boolean).sort().at(-1) ?? null,
     });
   }
-  return [...map.values()].sort(sortStationsByHop);
+  return [...map.values()].sort(sortStationsJournalFirst);
 }
 
 function searchJournalStationsInSystem(shops: JournalShopRecord[], systemQuery: string): BuyIndexStationResult[] {

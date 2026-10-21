@@ -29,6 +29,8 @@ export type CarrierStock = {
   reportedTons: number | null;
   capacityTons: number | null;
   lastEventIso: string | null;
+  /** When the last `CarrierStats` was written: an older one (the history read after a restart) never wins. */
+  statsAt?: string | null;
 };
 
 export function emptyCarrierStock(carrierId: string): CarrierStock {

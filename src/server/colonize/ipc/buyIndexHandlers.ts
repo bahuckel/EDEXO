@@ -11,6 +11,9 @@ import {
 } from "../buyIndexSearch";
 import { deleteInaraImportJsonFiles, ensureInaraImportDir, watchedInaraImportDirs } from "../inaraImport";
 import { cancelPassiveMaterialBuyScan } from "../materialBuyScanner";
+import { scanAndPersistMaterialHits } from "../spanshCheckout";
+import { spanshSearchError } from "../spanshStationBuySearch";
+import { materialNeedsFromQuery } from "../../../shared/colonize/buyIndexSearchQuery";
 import { spanshDebugJsonPath } from "./debugHandlers";
 import { errMessage, type ColonizeHandlers, type IpcContext } from "./handlerTypes";
 import { asRecord, trimmedString } from "./payload";
@@ -55,6 +58,34 @@ export function buyIndexHandlers({ store, buyIndex, userDataDir }: IpcContext) {
       return withIndex((index) => ({
         stations: searchBuyIndexStationsForMaterials(index, store.getJournalShopRecords(), q, systemName || undefined),
       }));
+    },
+
+    askSpanshForMaterials: async (payload) => {
+      const p = asRecord(payload);
+      const query = trimmedString(p.query);
+      const referenceSystem = trimmedString(p.referenceSystem);
+      if (!query) return { ok: false as const, err: "Enter a commodity." };
+      if (!referenceSystem) return { ok: false as const, err: "No system to search near: build a site or jump once." };
+      try {
+        const index = buyIndex();
+        await index.load();
+        let saved = 0;
+        for (const need of materialNeedsFromQuery(query)) {
+          if (!need.needId) continue;
+          saved += await scanAndPersistMaterialHits({
+            index,
+            referenceSystem,
+            item: { id: need.needId, name: need.needLabel, nameLocalised: need.needLabel, quantityTons: 1 },
+            constructionDepots: store.getSnapshot().activeDepots.map((d) => ({ marketId: d.marketId, systemName: d.starSystem ?? "", stationName: d.stationName ?? "" })),
+          });
+        }
+        await index.flush();
+        const why = spanshSearchError();
+        if (!saved && why) return { ok: false as const, err: why };
+        return { ok: true as const, saved };
+      } catch (e) {
+        return { ok: false as const, err: errMessage(e) };
+      }
     },
 
     searchBuyIndexMaterialStations: async (payload) => {

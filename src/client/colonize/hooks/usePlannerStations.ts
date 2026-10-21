@@ -188,6 +188,7 @@ export function usePlannerStations(args: {
             items,
             maxSystemsPerMaterial: parseMaxSystemsPerMaterial(plannerSettings.maxSystemsPerMaterial),
             constructionDepots: f.constructionDepots,
+            force: opts.force === true,
           });
           if (scan.ok && (scan.atCap || scan.allFound)) {
             startTransition(() => {

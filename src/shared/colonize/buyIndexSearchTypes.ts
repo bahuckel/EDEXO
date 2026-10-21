@@ -18,6 +18,9 @@ export type BuyIndexStationResult = {
   isPlanetaryOrGround: boolean;
   materialCount: number;
   minDistanceLy: Ly;
+  /** From his journal (2026-10-22): times he bought what was searched here, and his last visit. */
+  boughtCount?: number;
+  lastVisitIso?: string | null;
 };
 
 export type BuyIndexStationMaterial = {

@@ -28,6 +28,7 @@ import {
   type JournalState,
 } from "./journalEvents";
 import { journalWindowCutoffUtcMs, listJournalFilesChronological, readJournalEvents } from "./journalFs";
+import { emptyCarrierStock, type CarrierStock } from "../../shared/colonize/carrierStock";
 import { readJournalFromOffset, type JournalLineAt } from "../journalWatcher.js";
 import { onJournalReread, onLiveJournalLine } from "../journalTap.js";
 import type { JournalLine } from "../../shared/types.js";
@@ -73,13 +74,40 @@ type StateFileV3 = {
   journalShops?: Record<string, JournalShopRecord>;
   /** The journal folder whose whole history was read once for construction sites (`scanJournalHistory`). */
   historyScannedDir?: string;
+  /** Which version of that read it was: a newer build that reads more events reads the history once more. */
+  historyScannedVersion?: number;
+  /** His own carriers, confirmed and with what the journal saw them carry (they outlive the 7-day window). */
+  carriers?: Record<string, CarrierStock>;
+  confirmedCarrierIds?: string[];
+  carrierTransferKeys?: string[];
 };
+
+/** Bump when HISTORY_EVENTS reads more: every journal folder is read once more on the next start. */
+const HISTORY_VERSION = 2;
+/** Transfers remembered so none is counted twice; the oldest go first past this (years of hauling fit). */
+const CARRIER_TRANSFER_KEYS_MAX = 50_000;
 
 /**
  * What the one-time history pass reads: the two construction events, and the docking and jumps that say which
  * system a site is in. Nothing else: cargo, markets, wings and carriers before the 7-day window are stale.
  */
-const HISTORY_EVENTS = ["ColonisationConstructionDepot", "ColonisationContribution", "Docked", "Location", "FSDJump", "CarrierJump"];
+const HISTORY_EVENTS = [
+  // v1: construction sites and where they are
+  "ColonisationConstructionDepot",
+  "ColonisationContribution",
+  "Docked",
+  "Location",
+  "FSDJump",
+  "CarrierJump",
+  // v2 (owner, 2026-10-22): markets he docked at and bought from, for Search and the plan; his carrier and its cargo
+  "Market",
+  "MarketBuy",
+  "Undocked",
+  "CarrierStats",
+  "CarrierBuy",
+  "CarrierLocation",
+  "CargoTransfer",
+];
 
 export class ColonizeStore {
   /**
@@ -90,6 +118,7 @@ export class ColonizeStore {
   private readonly statePath: string;
   private lastError: string | null = null;
   private historyScannedDir: string | null = null;
+  private historyScannedVersion = 0;
   private notify: (() => void) | null = null;
   /**
    * Following EDEXO's journal reading (journalTap.ts) instead of a tail of its own. `reached`: per file, the byte
@@ -275,6 +304,25 @@ export class ColonizeStore {
     }
   }
 
+  private loadCarriersFromState(raw: StateFileV3): void {
+    const carriers = raw.carriers && typeof raw.carriers === "object" ? raw.carriers : {};
+    for (const [id, c] of Object.entries(carriers)) {
+      if (!c || typeof c !== "object" || typeof c.carrierId !== "string") continue;
+      this.journal.carriers[id] = {
+        ...emptyCarrierStock(id),
+        ...c,
+        tonsByCommodity: { ...(c.tonsByCommodity ?? {}) },
+        labels: { ...(c.labels ?? {}) },
+      };
+    }
+    for (const id of Array.isArray(raw.confirmedCarrierIds) ? raw.confirmedCarrierIds : []) {
+      if (typeof id === "string" && this.journal.carriers[id]) this.journal.confirmedCarrierIds.add(id);
+    }
+    for (const k of Array.isArray(raw.carrierTransferKeys) ? raw.carrierTransferKeys : []) {
+      if (typeof k === "string") this.journal.carrierTransferKeys.add(k);
+    }
+  }
+
   private loadJournalShopsFromState(raw: Record<string, unknown>): void {
     this.journal.journalShops.clear();
     const shopsRaw = raw.journalShops;
@@ -318,6 +366,9 @@ export class ColonizeStore {
       else this.journal.journalShops.clear();
       const scanned = (raw as { historyScannedDir?: unknown }).historyScannedDir;
       this.historyScannedDir = typeof scanned === "string" ? scanned : null;
+      const version = (raw as { historyScannedVersion?: unknown }).historyScannedVersion;
+      this.historyScannedVersion = typeof version === "number" ? version : this.historyScannedDir ? 1 : 0;
+      this.loadCarriersFromState(raw as StateFileV3);
     } else {
       /**
        * A version this build does not understand — most likely a newer one after a downgrade.
@@ -626,7 +677,7 @@ export class ColonizeStore {
   private async replayJournalWindowInner(): Promise<void> {
     this.lastError = null;
     const historyDir = this.getJournalDir();
-    const scanHistory = this.historyScannedDir !== historyDir;
+    const scanHistory = this.historyScannedDir !== historyDir || this.historyScannedVersion < HISTORY_VERSION;
     // The old docking would otherwise say which carrier the ship is on; the window reset below clears the rest.
     const dockedCarrier = this.journal.dockedCarrierId;
     const historyRead = scanHistory && (await this.scanJournalHistory(historyDir, journalWindowCutoffUtcMs()));
@@ -640,11 +691,11 @@ export class ColonizeStore {
     this.journal.liveDocked = null;
     this.journal.lastDockedEconomy = null;
     this.journal.wingRoster = [];
-    const savedMarketItems = new Map<string, JournalShopRecord["marketItems"]>();
-    for (const [id, rec] of this.journal.journalShops) {
-      if (rec.marketItems?.length) savedMarketItems.set(id, rec.marketItems);
-    }
-    this.journal.journalShops.clear();
+    /*
+      The shops (markets visited, purchases) are kept, not cleared: they come from the whole history and the saved
+      state, and the week read again below only adds to them (purchases are recorded once; owner, 2026-10-22: Search
+      found nothing because they were wiped at every start).
+    */
     this.journal.mutationGen++;
     const dir = this.getJournalDir();
     const minMs = journalWindowCutoffUtcMs();
@@ -679,11 +730,10 @@ export class ColonizeStore {
     } catch (e) {
       this.lastError = e instanceof Error ? e.message : String(e);
     }
-    for (const [id, items] of savedMarketItems) {
-      const rec = this.journal.journalShops.get(id);
-      if (rec && items?.length) rec.marketItems = items;
+    if (historyRead && !this.lastError) {
+      this.historyScannedDir = historyDir;
+      this.historyScannedVersion = HISTORY_VERSION;
     }
-    if (historyRead && !this.lastError) this.historyScannedDir = historyDir;
     this.bump();
   }
 
@@ -824,7 +874,10 @@ export class ColonizeStore {
         v: 3,
         depots: this.journal.depots,
         journalShops,
-        ...(this.historyScannedDir ? { historyScannedDir: this.historyScannedDir } : {}),
+        ...(this.historyScannedDir ? { historyScannedDir: this.historyScannedDir, historyScannedVersion: this.historyScannedVersion } : {}),
+        carriers: this.journal.carriers,
+        confirmedCarrierIds: [...this.journal.confirmedCarrierIds],
+        carrierTransferKeys: [...this.journal.carrierTransferKeys].slice(-CARRIER_TRANSFER_KEYS_MAX),
       };
       await writeJsonAtomic(this.statePath, payload, false);
     });

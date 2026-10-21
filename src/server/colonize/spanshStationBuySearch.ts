@@ -132,6 +132,15 @@ export function pickSpanshCommodityFromSearchResults(
  *
  * Pages are merged and de-duplicated by market id, then station identity.
  */
+/**
+ * Why the last station search came back empty, when it was not "Spansh has nothing": an outage, a throttle, no
+ * network. Cleared by the next answer. The Search tab shows it instead of "nothing found" (owner, 2026-10-22).
+ */
+let lastSpanshSearchError: string | null = null;
+export function spanshSearchError(): string | null {
+  return lastSpanshSearchError;
+}
+
 export async function searchSpanshBuyStations(args: {
   referenceSystem: string;
   commodityFilterName: string;
@@ -193,9 +202,12 @@ export async function searchSpanshBuyStations(args: {
         searchCache.set(ckey, null);
         return null;
       }
+      lastSpanshSearchError =
+        e instanceof HttpStatusError ? `Spansh answered ${e.status}.` : `Spansh could not be reached (${e instanceof Error ? e.message : String(e)}).`;
       break;
     }
 
+    lastSpanshSearchError = null;
     sawAnyResponse = true;
     const rows = Array.isArray(data.results) ? data.results : [];
     if (typeof data.count === "number" && data.count > total) total = data.count;

@@ -25,7 +25,8 @@ export function marketStockMap(items: unknown): Map<string, { stock: number; buy
     if (stock <= 0) continue;
     const bucket = commodityMergeBucket(nl) || commodityMergeBucket(n);
     if (!bucket) continue;
-    const buyPrice = typeof r.SellPrice === "number" ? r.SellPrice : null;
+    // BuyPrice is what the commander pays (with Stock); SellPrice is what the market pays (with Demand).
+    const buyPrice = typeof r.BuyPrice === "number" && r.BuyPrice > 0 ? r.BuyPrice : null;
     if (buyPrice == null) continue;
     const prev = m.get(bucket);
     if (!prev || stock > prev.stock) m.set(bucket, { stock, buyPrice });

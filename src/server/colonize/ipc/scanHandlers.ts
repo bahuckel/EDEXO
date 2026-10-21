@@ -82,11 +82,12 @@ export function scanHandlers({ store, buyIndex }: IpcContext) {
         const index = buyIndex();
         await index.load();
         const rows = itemRows(items);
-        if (index.allMaterialsHaveBuyStations(referenceSystems, rows, constructionDepots)) {
+        const force = p.force === true;
+        if (!force && index.allMaterialsHaveBuyStations(referenceSystems, rows, constructionDepots)) {
           cancelPassiveMaterialBuyScan();
           return { ok: true as const, scheduled: false, atCap: true, allFound: true };
         }
-        if (maxSystems != null && index.allMaterialsAtSystemCap(referenceSystems, rows, maxSystems, constructionDepots)) {
+        if (!force && maxSystems != null && index.allMaterialsAtSystemCap(referenceSystems, rows, maxSystems, constructionDepots)) {
           cancelPassiveMaterialBuyScan();
           return { ok: true as const, scheduled: false, atCap: true, allFound: false };
         }
