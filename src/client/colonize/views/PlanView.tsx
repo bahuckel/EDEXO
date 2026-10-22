@@ -122,7 +122,9 @@ export function PlanView({ m }: { m: ColonizeModel }) {
   ];
   const near = m.constructionSiteRefs[0]?.trim() || m.homeSystem;
   const trips = displayPlan?.trips ?? [];
-  const totalTons = plan?.totalRemainingTons ?? 0;
+  // What the listed trips carry, and what is left after them when the plan stopped at its trip limit (a small hold).
+  const totalTons = trips.reduce((a, tr) => a + tr.loadTons, 0);
+  const afterTons = plan?.afterTripsTons ?? 0;
 
   if (!activeDepots?.length) {
     return (
@@ -191,6 +193,16 @@ export function PlanView({ m }: { m: ColonizeModel }) {
           <NextTripCard trips={trips} completed={completedLineIds} onToggle={toggleTripLine} onBan={m.stations.ban} />
         ) : null}
 
+        {afterTons > 0 ? (
+          <div className="cz-note cz-note--info" role="status">
+            <span className="cz-note__text">
+              Your hold takes {Math.round(m.capacity ?? 0).toLocaleString("en-US")} t, so the plan lists the first {trips.length} trips;{" "}
+              {Math.round(afterTons).toLocaleString("en-US")} t more come after them. Switching on a carrier with cargo, or a
+              bigger hold, cuts that down.
+            </span>
+          </div>
+        ) : null}
+
         {missing.length ? (
           <div className="cz-note cz-note--warn" role="status">
             <span className="cz-note__tag">No seller</span>
@@ -226,7 +238,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
                       href={inaraCommoditySearchUrl(item.label, near)}
                       target="_blank"
                       rel="noreferrer"
-                      title="Inara's sellers of this, in the EDEXO Browser; Read into Colonize there saves them"
+                      title="Inara's sellers of this, in the EDEXO Browser; the EDEXO pop-up there reads them into Colonize"
                       onClick={(e) => {
                         if (openInEdexoBrowser(e.currentTarget.href)) e.preventDefault();
                       }}

@@ -254,7 +254,7 @@ export const CUSTOM_TITLE_BAR =
 function TitleBar() {
   return (
     <div className="tab-strip tab-strip--title">
-      <span className="tab-strip__title">EDEXO</span>
+      <span className="tab-strip__title">EDEXO {HOME_TAB_LABEL}</span>
       <span className="tab-strip__drag" aria-hidden="true" />
     </div>
   );

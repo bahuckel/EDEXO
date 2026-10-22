@@ -39,7 +39,7 @@ const COSMETIC_WORLD = 1077;
  */
 const PASSWORD_WORLD = 1078;
 /**
- * The script world "Read into Colonize" reads an Inara page in (1.3.0, C5): its own, like the others, so the page
+ * The script world the Inara pop-up ("EDEXO — Read") lives and reads in (1.3.0, C5): its own, like the others, so the page
  * cannot see or change what is read.
  */
 const INARA_WORLD = 1079;
@@ -257,7 +257,7 @@ function resolveTyped(text, searchUrl) {
 }
 
 /**
- * Inara's commodity search (owner, 2026-10-22: "Inara inside the EDEXO Browser"): the only pages "Read into Colonize"
+ * Inara's commodity search (owner, 2026-10-22: "Inara inside the EDEXO Browser"): the only pages the EDEXO pop-up
  * reads. https only, inara.cz or www.inara.cz, the /elite/commodities/ path.
  */
 function isInaraCommodityPage(url) {
@@ -270,7 +270,7 @@ function isInaraCommodityPage(url) {
 }
 
 /**
- * What "Read into Colonize" takes from the Inara page the commander has open, as it is on screen: the results table,
+ * What "EDEXO — Read" takes from the Inara page the commander has open, as it is on screen: the results table,
  * the near-star box and the commodity picked in the form. Nothing is fetched, clicked or changed.
  */
 function inaraReadScript() {
@@ -281,6 +281,66 @@ function inaraReadScript() {
   const pick = document.querySelector('select[name="pa1[]"]');
   const commodities = pick ? Array.from(pick.selectedOptions || []).map((o) => (o.textContent || "").trim()).filter(Boolean) : [];
   return { table: table ? table.outerHTML : "", near: near ? String(near.value || "").trim() : "", commodities };
+})()`;
+}
+
+/**
+ * The pop-up on an Inara commodity search opened from EDEXO (owner, 2026-10-22: "put a pop-up in the page, EDEXO
+ * themed, with Read and Cancel"). Drawn in its own shadow root, so the page's styles neither reach nor read it; its
+ * buttons report as a console line that starts with the nonce the main process made for this page (only this world
+ * knows it). `__edexoInaraSay(text, ok)` puts the result in it.
+ */
+function inaraOfferScript(nonce) {
+  return `(() => {
+  const N = ${JSON.stringify(nonce)};
+  const say = (m) => console.log(N + JSON.stringify(m));
+  document.getElementById("edexo-inara-offer")?.remove();
+  const host = document.createElement("div");
+  host.id = "edexo-inara-offer";
+  host.style.cssText = "position:fixed;right:20px;bottom:20px;z-index:2147483647";
+  const root = host.attachShadow({ mode: "closed" });
+  root.innerHTML = \`<style>
+    .box{width:340px;padding:14px 16px;background:#0e0b0a;color:#ffe6cf;border:1px solid #ff8a1f;
+      font:14px/1.4 Bahnschrift,"Segoe UI",system-ui,sans-serif;box-shadow:0 18px 48px rgba(0,0,0,.7);
+      clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
+    .h{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#ff8a1f;margin-bottom:8px;
+      padding-bottom:6px;background:linear-gradient(90deg,#ff8a1f 0 34%,rgba(255,138,31,.22) 70%,transparent) bottom left/100% 1px no-repeat}
+    .h b{color:#ffb060}
+    .t{margin:0 0 12px}.t.ok{color:#9fe4ff}.t.bad{color:#ff9c88}
+    .r{display:flex;gap:8px;justify-content:flex-end}
+    button{font:700 12px Bahnschrift,"Segoe UI",sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;
+      padding:8px 14px;border:1px solid #ffb060;color:#ffe6cf;background:rgba(14,12,10,.94);
+      clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+    button.go{background:linear-gradient(180deg,#ffb060,#ff8a1f 60%,#f2760f);color:#07060a}
+    button:disabled{opacity:.5;cursor:default}
+  </style>
+  <div class="box" role="dialog" aria-label="EDEXO Colonize">
+    <div class="h">EDEXO <b>Colonize</b></div>
+    <p class="t">Read the sellers this search shows into Colonize? Only this page is read.</p>
+    <div class="r"><button type="button" class="no">Cancel</button><button type="button" class="go">EDEXO — Read</button></div>
+  </div>\`;
+  const text = root.querySelector(".t");
+  const go = root.querySelector(".go");
+  const no = root.querySelector(".no");
+  go.addEventListener("click", () => {
+    go.disabled = true;
+    text.className = "t";
+    text.textContent = "Reading…";
+    say({ t: "read" });
+  });
+  no.addEventListener("click", () => {
+    host.remove();
+    say({ t: "cancel" });
+  });
+  globalThis.__edexoInaraSay = (msg, ok) => {
+    text.className = ok ? "t ok" : "t bad";
+    text.textContent = String(msg);
+    if (ok) {
+      go.remove();
+      no.textContent = "Close";
+    } else go.disabled = false;
+  };
+  (document.body || document.documentElement).appendChild(host);
 })()`;
 }
 
@@ -618,6 +678,7 @@ function createBrowserTabs(o) {
     wc.on("console-message", (details, _level, legacyMessage) => {
       const message = typeof details?.message === "string" ? details.message : legacyMessage;
       onPageConsole(t, wc, message, details?.frame);
+      onInaraConsole(t, wc, message, details?.frame);
     });
     wc.on("did-navigate", (_e, url) => {
       t.url = url;
@@ -657,6 +718,7 @@ function createBrowserTabs(o) {
     wc.on("dom-ready", () => {
       const url = wc.getURL();
       watchPasswords(t, wc, url);
+      offerInara(t, wc, url);
       if (!o.prefs.site(domainOf(url) ?? "").blocking) return;
       const css = o.blocker.cosmetics(url);
       if (css) void wc.insertCSS(css, { cssOrigin: "user" }).catch(() => {});
@@ -790,6 +852,66 @@ function createBrowserTabs(o) {
     void wc
       .executeJavaScriptInIsolatedWorld(PASSWORD_WORLD, [{ code: passwordCaptureScript(nonce) }])
       .catch(() => {});
+  }
+
+  /** A tab opened from EDEXO's Inara links (`openInara`): each commodity search it loads gets the pop-up. */
+  function offerInara(t, wc, url) {
+    t.inara = null;
+    if (!t.fromApp || !isInaraCommodityPage(url)) return;
+    const nonce = `${randomBytes(16).toString("hex")}:`;
+    t.inara = { nonce };
+    void wc.executeJavaScriptInIsolatedWorld(INARA_WORLD, [{ code: inaraOfferScript(nonce) }]).catch(() => {});
+  }
+
+  /** What "EDEXO — Read" takes: the page's results table, its near star and the commodity picked, as shown. */
+  async function readInaraPage(t) {
+    const wci = t?.view?.webContents;
+    if (!t || t.startPage || !wci || wci.isDestroyed()) return { error: "No page open." };
+    const url = wci.getURL();
+    if (!isInaraCommodityPage(url)) return { error: "Not an Inara commodity search page." };
+    const r = await wci.executeJavaScriptInIsolatedWorld(INARA_WORLD, [{ code: inaraReadScript() }]).catch(() => null);
+    const table = typeof r?.table === "string" ? r.table : "";
+    if (!table) return { error: "No results on this page yet: run the search on Inara first." };
+    if (table.length > INARA_TABLE_MAX) return { error: "The results table is too large to read." };
+    const commodities = Array.isArray(r?.commodities)
+      ? r.commodities.filter((c) => typeof c === "string" && c.length <= 80).slice(0, 10)
+      : [];
+    const near = typeof r?.near === "string" ? r.near.slice(0, 120) : "";
+    return { ok: true, url, table, near, commodities };
+  }
+
+  /** The pop-up's text, in the page. */
+  function inaraSay(t, text, ok) {
+    const wci = t?.view?.webContents;
+    if (!wci || wci.isDestroyed() || !t.inara) return;
+    const code = `globalThis.__edexoInaraSay?.(${JSON.stringify(String(text).slice(0, 300))}, ${ok ? "true" : "false"})`;
+    void wci.executeJavaScriptInIsolatedWorld(INARA_WORLD, [{ code }]).catch(() => {});
+  }
+
+  /**
+   * The pop-up's buttons: a console line with this page's Inara nonce, from the top frame. Read: the page is read
+   * and handed to the app window, which saves the sellers and answers with `inaraResult`.
+   */
+  function onInaraConsole(t, wc, message, frame) {
+    const inara = t.inara;
+    if (!inara || typeof message !== "string" || !message.startsWith(inara.nonce)) return;
+    if (frame && frame.parent) return;
+    let m;
+    try {
+      m = JSON.parse(message.slice(inara.nonce.length));
+    } catch {
+      return;
+    }
+    if (m?.t === "cancel") {
+      t.inara = null;
+      return;
+    }
+    if (m?.t !== "read") return;
+    void readInaraPage(t).then((r) => {
+      if (r.error) return inaraSay(t, r.error, false);
+      if (!host || host.isDestroyed()) return inaraSay(t, "Open EDEXO's Browser tab to read pages into Colonize.", false);
+      host.webContents.send("edexo:browser-event", { type: "inaraRead", data: { id: t.id, read: r } });
+    });
   }
 
   /**
@@ -983,6 +1105,9 @@ function createBrowserTabs(o) {
       pw: null,
       pwField: false,
       pwPrompt: null,
+      // Opened from EDEXO's Inara links: its Inara commodity searches get the pop-up (offerInara).
+      fromApp: false,
+      inara: null,
     };
     tabs.set(t.id, t);
     const i = after != null ? order.indexOf(after) : -1;
@@ -1324,21 +1449,21 @@ function createBrowserTabs(o) {
       case "passwordNeverRemove":
         o.prefs.removePasswordNever(String(a?.origin ?? ""));
         return { ok: true, state: state() };
-      case "readInara": {
-        // Only when asked, only the page open in that tab, only Inara's commodity search (1.3.0, C5).
-        const wci = t?.view?.webContents;
-        if (!t || t.startPage || !wci || wci.isDestroyed()) return { error: "No page open." };
-        const url = wci.getURL();
+      case "openInara": {
+        // Colonize's Inara links (1.3.0, C5): Inara's commodity search only, in a tab that offers the pop-up.
+        if (!o.blocker.status().ready) return { error: "The blocklists are not there yet." };
+        const url = typeof a?.url === "string" ? a.url : "";
         if (!isInaraCommodityPage(url)) return { error: "Not an Inara commodity search page." };
-        const r = await wci.executeJavaScriptInIsolatedWorld(INARA_WORLD, [{ code: inaraReadScript() }]).catch(() => null);
-        const table = typeof r?.table === "string" ? r.table : "";
-        if (!table) return { error: "No results table on this page yet: run the search on Inara first." };
-        if (table.length > INARA_TABLE_MAX) return { error: "The results table is too large to read." };
-        const commodities = Array.isArray(r?.commodities)
-          ? r.commodities.filter((c) => typeof c === "string" && c.length <= 80).slice(0, 10)
-          : [];
-        const near = typeof r?.near === "string" ? r.near.slice(0, 120) : "";
-        return { ok: true, url, table, near, commodities };
+        const nid = openTab(url);
+        const nt = nid != null ? tabs.get(nid) : null;
+        if (nt) nt.fromApp = true;
+        return { id: nid };
+      }
+      case "inaraResult": {
+        // The app window saved (or could not save) what the pop-up read: its answer goes in the pop-up.
+        if (!t) return { error: "No such page." };
+        inaraSay(t, typeof a?.text === "string" ? a.text : "", a?.ok === true);
+        return { ok: true };
       }
       default:
         return { error: "Unknown call." };
@@ -1384,6 +1509,7 @@ module.exports = {
   createBrowserTabs,
   isInaraCommodityPage,
   inaraReadScript,
+  inaraOfferScript,
   resolveTyped,
   isLocalHost,
   chromeUserAgent,

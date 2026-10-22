@@ -3,12 +3,22 @@ import { execFile, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 
 /** Avoid the `open` npm package — its ESM `import.meta.url` breaks esbuild+cjs bundles. */
+/**
+ * `cmd /c start` arguments for a URL. Quoted and verbatim: unquoted, cmd cut the address at its first `&` and ran the
+ * rest as a command (owner, 2026-10-22: the Colonize streamer view opened `?screen=colonize`, its `&view=stream` lost).
+ * A `"` cannot be quoted for cmd, so it goes in percent-encoded, which every browser reads the same.
+ */
+export function winStartArgs(url: string): string {
+  return `/d /c start "" "${url.replace(/"/g, "%22")}"`;
+}
+
 export function openUrlInBrowser(url: string): void {
   if (process.platform === "win32") {
-    spawn("cmd", ["/c", "start", "", url], {
+    spawn("cmd", [winStartArgs(url)], {
       detached: true,
       stdio: "ignore",
       windowsHide: true,
+      windowsVerbatimArguments: true,
     }).unref();
     return;
   }

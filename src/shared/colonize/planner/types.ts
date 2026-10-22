@@ -110,6 +110,8 @@ export type LogisticsPlan = {
   dockBuys: TripBuyLine[];
   /** Batch buy station key per commodity — aligns buy cards with trip routing. */
   buyStationKeyByCommodityId?: Record<string, string>;
+  /** Tons still to haul after the last planned trip, when the plan stopped at its trip limit (a small hold). */
+  afterTripsTons?: number;
 };
 
 /** Rank / distance from the buy-stations list (lower rank = nearer recommendation). */

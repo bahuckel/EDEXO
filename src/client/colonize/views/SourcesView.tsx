@@ -318,8 +318,8 @@ function InaraPanel({ m }: { m: ColonizeModel }) {
     <Panel k="inara" title="Inara">
       <div className="cz-stack">
       <p className="cz-lead">
-        Inara's commodity search opens in the EDEXO Browser. Run the search there, then “Read into Colonize” on its
-        toolbar saves the sellers that page shows. Only the page you opened is read; nothing is fetched behind your back.
+        Inara's commodity search opens in the EDEXO Browser. Run the search there, then “EDEXO — Read” in the pop-up on
+        the page saves the sellers it shows. Only the page you opened is read; nothing is fetched behind your back.
       </p>
       <div className="cz-actions">
         {needs.slice(0, 3).map((r) => (

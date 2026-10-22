@@ -207,9 +207,22 @@ test("colonize: its own launcher menu, remembered apart from Compare's, and a st
   await page.reload();
   const done = page.getByRole("button", { name: "Done", exact: true });
   if (await done.isVisible().catch(() => false)) await done.click();
+  // Choosing opens it (owner, 2026-10-22): the server's "open in the browser" is answered here, so no browser opens.
+  const opened: string[] = [];
+  await page.route("**/api/ui/open-external", async (r) => {
+    opened.push(String((r.request().postDataJSON() as { view?: string }).view));
+    await r.fulfill({ json: { ok: true } });
+  });
+  // One order in both menus: the app window (the default) first, then the browser.
+  for (const menu of ["#mainUiMenu button[data-open-mode]", "#colonizeMenu button[data-colonize-mode]"]) {
+    await expect(page.locator(menu).first()).toContainText("App window");
+    await expect(page.locator(menu).nth(1)).toContainText("In your browser");
+  }
+  await expect(page.locator("#btnColonizeSub")).toContainText("in an app window");
   await page.locator("#btnColonizeMenu").click();
   await page.locator('#colonizeMenu button[data-colonize-mode="phone"]').click();
   await expect(page.locator("#btnColonizeSub")).toContainText("Phone view");
+  await expect.poll(() => opened).toEqual(["colonize-phone"]);
   // Compare's choice is untouched, and the server remembers each.
   await expect(page.locator("#btnMainUiSub")).not.toContainText("Phone view");
   await expect.poll(async () => (await (await request.get("/api/launcher/open-mode?app=colonize")).json()).mode).toBe("phone");
@@ -217,6 +230,7 @@ test("colonize: its own launcher menu, remembered apart from Compare's, and a st
   // Put it back for the other tests.
   await page.locator("#btnColonizeMenu").click();
   await page.locator('#colonizeMenu button[data-colonize-mode="browser"]').click();
+  await expect.poll(() => opened).toEqual(["colonize-phone", "colonize"]);
 
   // The streamer view: the plan read-only, nothing to click, no Ko-fi.
   const stream = await page.context().newPage();
@@ -664,10 +678,10 @@ test("galaxy 3D: behind another tab the map stops asking; back in front it reads
     .toBe("ready");
   await expect.poll(() => asked.includes("/api/galaxy/own")).toBe(true);
 
-  await page.getByRole("tab", { name: "Main" }).click();
+  await page.getByRole("tab", { name: "Compare" }).click();
   // The switch has to have happened (rendered, effects run) before the jump: 54 ms after the click the map was still
   // listening on a busy machine (2026-10-17), the same on the committed code — a race in the test, not the app.
-  await expect(page.getByRole("tab", { name: "Main" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Compare" })).toHaveAttribute("aria-selected", "true");
   await page.waitForTimeout(300);
   asked.length = 0;
   // A jump read from the journal asks the map for the route at once, when it is in front.

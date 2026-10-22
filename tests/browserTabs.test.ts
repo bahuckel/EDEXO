@@ -1173,48 +1173,71 @@ describe("closing the app (owner, 2026-10-16: \"Cannot read properties of undefi
   });
 });
 
-describe("Read into Colonize (1.3.0, C5; owner 2026-10-22: Inara inside the EDEXO Browser)", () => {
+describe("Inara's pop-up (1.3.0, C5; owner 2026-10-22: a pop-up in the page, EDEXO — Read and Cancel)", () => {
   const INARA = "https://inara.cz/elite/commodities/?formbrief=1&pi1=1&pa1%5B%5D=140&ps1=Sol";
-  const open = async (t: ReturnType<typeof setup>, url: string) => {
+  const TABLE = { table: '<table id="DataTables_Table_0"></table>', near: "Sol", commodities: ["CMM Composite"] };
+  const fromApp = async (t: ReturnType<typeof setup>, url = INARA) => {
     await t.call({ op: "start" });
-    const { id } = (await t.call({ op: "open", text: url })) as { id: number };
-    return { id, wc: FakeView.made[FakeView.made.length - 1]!.webContents };
+    const r = (await t.call({ op: "openInara", url })) as { id?: number; error?: string };
+    return { ...r, wc: FakeView.made[FakeView.made.length - 1]?.webContents };
   };
+  const nonceOf = (wc: FakeContents) => {
+    const code = wc.isolated.filter((x) => x.world === 1079).at(-1)?.code ?? "";
+    return /const N = "([0-9a-f]+:)"/.exec(code)?.[1] ?? "";
+  };
+  const say = (wc: FakeContents, message: string, parent: unknown = null) =>
+    wc.emit("console-message", { message, frame: { parent } }, 0, message, 1, "");
 
-  it("reads only Inara's commodity search, in its own script world, as the page shows it", async () => {
+  it("opens only Inara's commodity search, and offers the pop-up on each search page it loads", async () => {
     const t = setup();
-    const { id, wc } = await open(t, INARA);
-    (wc as unknown as { dom: unknown }).dom = { table: "<table id=\"DataTables_Table_0\"></table>", near: "Sol", commodities: ["CMM Composite"] };
-    expect(await t.call({ op: "readInara", id })).toEqual({
-      ok: true,
-      url: INARA,
-      table: "<table id=\"DataTables_Table_0\"></table>",
-      near: "Sol",
-      commodities: ["CMM Composite"],
-    });
-    expect(wc.isolated.at(-1)!.world).toBe(1079);
-    expect(wc.isolated.at(-1)!.code).toContain("DataTables_Table_0");
+    expect((await fromApp(t, "https://inara.cz/elite/stations/")).error).toBe("Not an Inara commodity search page.");
+    const { id, wc } = await fromApp(t);
+    expect(typeof id).toBe("number");
+    wc!.emit("dom-ready");
+    expect(nonceOf(wc!)).toMatch(/^[0-9a-f]{32}:$/);
+    expect(wc!.isolated.filter((x) => x.world === 1079).at(-1)!.code).toContain("EDEXO — Read");
   });
 
-  it("refuses any other page, the start page, and a page without results", async () => {
+  it("offers nothing on a tab the commander opened himself", async () => {
     const t = setup();
-    const other = await open(t, "https://inara.cz/elite/stations/");
-    expect(await t.call({ op: "readInara", id: other.id })).toEqual({ error: "Not an Inara commodity search page." });
-    const lookalike = await open(t, "https://inara.cz.example.com/elite/commodities/");
-    expect(await t.call({ op: "readInara", id: lookalike.id })).toEqual({ error: "Not an Inara commodity search page." });
-    expect(other.wc.isolated.some((x) => x.world === 1079)).toBe(false);
-    const { id: blank } = (await t.call({ op: "open" })) as { id: number };
-    expect(await t.call({ op: "readInara", id: blank })).toEqual({ error: "No page open." });
-    const empty = await open(t, INARA);
-    (empty.wc as unknown as { dom: unknown }).dom = { table: "", near: "", commodities: [] };
-    expect(await t.call({ op: "readInara", id: empty.id })).toEqual({
-      error: "No results table on this page yet: run the search on Inara first.",
-    });
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: INARA });
+    const wc = FakeView.made[FakeView.made.length - 1]!.webContents;
+    wc.emit("dom-ready");
+    expect(wc.isolated.some((x) => x.world === 1079)).toBe(false);
+  });
+
+  it("Read: reads the page and hands it to the app window; another nonce or a frame is ignored", async () => {
+    const t = setup();
+    const { id, wc } = await fromApp(t);
+    wc!.dom = TABLE as never;
+    wc!.emit("dom-ready");
+    const n = nonceOf(wc!);
+    const events = () => t.appWin.webContents.sent.filter(([ch]) => ch === "edexo:browser-event").map(([, v]) => v);
+    say(wc!, `${"0".repeat(32)}:{"t":"read"}`);
+    say(wc!, `${n}{"t":"read"}`, {});
+    await new Promise((r) => setTimeout(r, 0));
+    expect(events()).toEqual([]);
+    say(wc!, `${n}{"t":"read"}`);
+    await vi.waitFor(() => expect(events()).toHaveLength(1));
+    expect(events()[0]).toEqual({ type: "inaraRead", data: { id, read: { ok: true, url: INARA, ...TABLE } } });
+  });
+
+  it("puts the app's answer in the pop-up, and an empty page's reason without asking the app", async () => {
+    const t = setup();
+    const { id, wc } = await fromApp(t);
+    wc!.dom = { table: "", near: "", commodities: [] } as never;
+    wc!.emit("dom-ready");
+    say(wc!, `${nonceOf(wc!)}{"t":"read"}`);
+    const inPopup = () => wc!.isolated.filter((x) => x.world === 1079).at(-1)!.code;
+    await vi.waitFor(() => expect(inPopup()).toContain("No results on this page yet: run the search on Inara first."));
+    await t.call({ op: "inaraResult", id, ok: true, text: "CMM Composite: 12 sellers read into Colonize." });
+    expect(inPopup()).toBe('globalThis.__edexoInaraSay?.("CMM Composite: 12 sellers read into Colonize.", true)');
   });
 
   it("is refused from a browsed page", async () => {
     const t = setup();
-    const { id, wc } = await open(t, INARA);
-    expect(await t.tabs.handle({ sender: wc }, { op: "readInara", id })).toEqual({ error: "Not allowed." });
+    const { wc } = await fromApp(t);
+    expect(await t.tabs.handle({ sender: wc! }, { op: "openInara", url: INARA })).toEqual({ error: "Not allowed." });
   });
 });

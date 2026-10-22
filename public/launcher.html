@@ -1956,7 +1956,7 @@
             <button type="button" class="btn btn-split-main" id="btnMainUi">
               <span class="btn-lines">
                 <strong id="btnMainUiTitle">Open Compare</strong>
-                <span class="subline" id="btnMainUiSub">In your browser</span>
+                <span class="subline" id="btnMainUiSub">In an app window</span>
               </span>
             </button>
             <button
@@ -1970,13 +1970,14 @@
               <span aria-hidden="true">▾</span>
             </button>
             <div class="btn-split-menu" id="mainUiMenu" role="menu" hidden>
-              <button type="button" role="menuitem" data-open-mode="browser">
-                <strong>In your browser</strong>
-                <span>Your default browser, on this PC</span>
-              </button>
+              <!-- Both apps' menus in one order (owner, 2026-10-22): the app window (the default) first, then the browser. -->
               <button type="button" role="menuitem" data-open-mode="window">
                 <strong>App window</strong>
                 <span>Its own window — the launcher stays open</span>
+              </button>
+              <button type="button" role="menuitem" data-open-mode="browser">
+                <strong>In your browser</strong>
+                <span>Your default browser, on this PC</span>
               </button>
               <button type="button" role="menuitem" data-open-mode="phone">
                 <strong>Phone view</strong>
@@ -1998,7 +1999,7 @@
             <button type="button" class="btn btn-exomastery btn-split-main" id="btnColonize">
               <span class="btn-lines">
                 <strong>Open Colonize</strong>
-                <span class="subline" id="btnColonizeSub">Your construction sites and the haul plan · in your browser</span>
+                <span class="subline" id="btnColonizeSub">Your construction sites and the haul plan · in an app window</span>
               </span>
             </button>
             <button
@@ -2012,13 +2013,13 @@
               <span aria-hidden="true">▾</span>
             </button>
             <div class="btn-split-menu" id="colonizeMenu" role="menu" hidden>
-              <button type="button" role="menuitem" data-colonize-mode="browser">
-                <strong>In your browser</strong>
-                <span>Your default browser, on this PC</span>
-              </button>
               <button type="button" role="menuitem" data-colonize-mode="window">
                 <strong>App window</strong>
                 <span>Its own window — the launcher stays open</span>
+              </button>
+              <button type="button" role="menuitem" data-colonize-mode="browser">
+                <strong>In your browser</strong>
+                <span>Your default browser, on this PC</span>
               </button>
               <button type="button" role="menuitem" data-colonize-mode="phone">
                 <strong>Phone view</strong>

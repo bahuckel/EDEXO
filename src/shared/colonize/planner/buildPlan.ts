@@ -490,15 +490,21 @@ export function buildLogisticsPlan(args: {
    * trip loop only asks whether a preferred station exists, so those materials were left out
    * of both missing lists and simply vanished from the UI. Anything still outstanding that
    * nothing reported is reported here.
+   *
+   * Not when the loop stopped at MAX_TRIPS (owner, 2026-10-22: an 80 t hold listed every material as "sellers are
+   * known, but none fits" while the trips bought them): what is left then is simply beyond the planned trips.
    */
-  for (const [id, need] of needs) {
-    if (need.tons <= 0.01) continue;
-    if (missingBuyIndexed.some((m) => m.id === id)) continue;
-    if (missingTripEligible.some((m) => m.id === id)) continue;
-    missingTripEligible.push({ id, label: need.label, quantityTons: need.tons });
+  const capped = tripNumber >= MAX_TRIPS && totalNeedTons(needs) > 0.01;
+  if (!capped) {
+    for (const [id, need] of needs) {
+      if (need.tons <= 0.01) continue;
+      if (missingBuyIndexed.some((m) => m.id === id)) continue;
+      if (missingTripEligible.some((m) => m.id === id)) continue;
+      missingTripEligible.push({ id, label: need.label, quantityTons: need.tons });
+    }
   }
 
-  if (tripNumber >= MAX_TRIPS && totalNeedTons(needs) > 0.01) {
+  if (capped) {
     warnings.push(
       `Plan stopped at ${MAX_TRIPS} trips with ${Math.round(totalNeedTons(needs)).toLocaleString()} t still outstanding — raise cargo capacity or narrow the active sites.`,
     );
@@ -516,5 +522,6 @@ export function buildLogisticsPlan(args: {
     missingTripEligible,
     dockBuys,
     buyStationKeyByCommodityId: Object.fromEntries(preferredBuyStationByCommodity),
+    afterTripsTons: capped ? totalNeedTons(needs) : 0,
   };
 }

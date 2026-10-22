@@ -48,5 +48,5 @@ export function applyStreamerMode(): void {
     if (!("obsstudio" in window)) root.dataset.streamerBgPreview = "1";
   }
   if (o.zoom !== null) root.style.setProperty("zoom", String(o.zoom));
-  document.title = "EDEXO — streamer view";
+  document.title = "EDEXO Compare — streamer view";
 }

@@ -365,7 +365,7 @@ function openAppUiWindow(iconForChild) {
     minHeight: WINDOW_MIN.app.h,
     backgroundColor: "#050507",
     autoHideMenuBar: true,
-    title: "EDEXO",
+    title: "EDEXO Compare",
     icon: iconForChild,
     ...(customTitleBar
       ? { titleBarStyle: "hidden", titleBarOverlay: { color: "#07060a", symbolColor: "#f0a050", height: 34 } }
@@ -409,8 +409,9 @@ let colonizeWindow = null;
 /**
  * Colonize (1.3.0, owner 2026-10-18): the launcher's second button, a window of its own with its own main page
  * (`?screen=colonize`). Same server, same journal reader, same session as the app window, so the colour scheme and
- * the HUD's "an app window is in front" rule (hudWindows.cjs) count it too. The ordinary frame: its header is not a
- * tab strip to drag by.
+ * the HUD's "an app window is in front" rule (hudWindows.cjs) count it too. Compare's frame since 1.3.0 (owner,
+ * 2026-10-22: "the same style as Compare's"): no Windows caption, the tab strip is the bar, Windows' buttons drawn in
+ * EDEXO's colours over it.
  */
 function openColonizeWindow(iconForChild) {
   if (!runtime) return { opened: false, error: "Server not ready yet." };
@@ -424,6 +425,7 @@ function openColonizeWindow(iconForChild) {
   const saved = readWindowState("colonize");
   const area = screen.getPrimaryDisplay().workArea;
   const preloadPath = path.join(__dirname, "preload.cjs");
+  const customTitleBar = process.platform === "win32";
   const win = new BrowserWindow({
     width: saved?.width ?? Math.min(1400, Math.round(area.width * 0.85)),
     height: saved?.height ?? Math.min(920, Math.round(area.height * 0.9)),
@@ -432,9 +434,13 @@ function openColonizeWindow(iconForChild) {
     minHeight: WINDOW_MIN.colonize.h,
     backgroundColor: "#07060a",
     autoHideMenuBar: true,
-    title: "Colonize — EDEXO",
+    title: "EDEXO Colonize",
     icon: iconForChild,
+    ...(customTitleBar
+      ? { titleBarStyle: "hidden", titleBarOverlay: { color: "#07060a", symbolColor: "#f0a050", height: 34 } }
+      : {}),
     webPreferences: {
+      additionalArguments: customTitleBar ? ["--edexo-custom-titlebar"] : [],
       spellcheck: false,
       contextIsolation: true,
       nodeIntegration: false,

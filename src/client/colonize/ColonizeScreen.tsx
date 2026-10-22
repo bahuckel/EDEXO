@@ -62,7 +62,7 @@ export function ColonizeScreen() {
 function PhoneScreen({ streamer = false }: { streamer?: boolean }) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    document.title = streamer ? "Colonize — EDEXO streamer view" : "Colonize — EDEXO";
+    document.title = streamer ? "EDEXO Colonize — streamer view" : "EDEXO Colonize";
     void loadColonizeUiState({ readOnly: true }).finally(() => setReady(true));
   }, [streamer]);
   return ready ? <PhoneView streamer={streamer} /> : <LoadingNote className="screen-loading" />;
@@ -115,7 +115,7 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
     }
   };
   useEffect(() => {
-    document.title = "Colonize — EDEXO";
+    document.title = "EDEXO Colonize";
   }, []);
 
   const snap = m.snap;

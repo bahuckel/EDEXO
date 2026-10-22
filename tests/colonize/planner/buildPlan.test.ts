@@ -105,6 +105,21 @@ describe("buildLogisticsPlan", () => {
     expect([...deliveredTo].sort()).toEqual(["Site A", "Site B"]);
   });
 
+  it("with a small hold, stops at the trip limit and says what is left, without calling it unsellable (owner, 2026-10-22)", () => {
+    const p = plan({
+      activeDepots: [depot("a", "Site A", [row("Steel", 9_000), row("Aluminium", 3_000)])],
+      cargoCapacity: 80,
+      buyListings: [
+        listing("steel", "Steel", 9_000, [hit()]),
+        listing("aluminium", "Aluminium", 3_000, [hit({ spanshCommodity: "Aluminium" })]),
+      ],
+    });
+    expect(p.trips.length).toBe(80);
+    expect(p.missingTripEligible).toEqual([]);
+    expect(p.missingBuyIndexed).toEqual([]);
+    expect(p.afterTripsTons).toBe(12_000 - 80 * 80);
+  });
+
   it("never loads more than the hold takes in one trip", () => {
     const p = plan({
       activeDepots: [depot("a", "Site A", [row("Steel", 500)])],

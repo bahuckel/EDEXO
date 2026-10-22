@@ -1,9 +1,9 @@
 /**
  * Inara in the EDEXO Browser (1.3.0, C5; owner 2026-10-22): Colonize's Inara links open Inara's commodity search in
- * the app's own Browser tab, and "Read into Colonize" on that page takes the sellers it shows into the saved sellers,
- * as an Inara import. Only the page the commander opened, only when asked: nothing is fetched or crawled
- * (electron/browserTabs.cjs `readInara`). Where there is no EDEXO Browser (a system browser, a phone), the links open
- * a normal browser tab as before.
+ * the app's own Browser tab, and an EDEXO pop-up on that page ("EDEXO — Read" / "Cancel") takes the sellers it shows
+ * into the saved sellers, as an Inara import. Only the page the commander opened, only when asked: nothing is fetched
+ * or crawled (electron/browserTabs.cjs `openInara`, `inaraOfferScript`). Where there is no EDEXO Browser (a system
+ * browser, a phone), the links open a normal browser tab as before.
  */
 import { inaraCommodityNormForPa1 } from "../../shared/colonize/inaraCommodityIds";
 import { parseInaraBuyResultsHtml } from "../../shared/colonize/inaraScrapeParse";
@@ -11,14 +11,10 @@ import { INARA_INDEX_REF, type InaraImportFile } from "../../shared/colonize/ina
 import { BROWSER_AVAILABLE, tabStore } from "../tabs/tabStore";
 import { colonizeApi } from "./api";
 
-/** What the main process read from the page (browserTabs.cjs readInara). */
+/** What the main process read from the page (browserTabs.cjs readInaraPage). */
 export type InaraPageRead = { url: string; table: string; near: string; commodities: string[] };
 
-type Bridge = { readInara?: (id: number) => Promise<({ ok: true } & InaraPageRead) | { error: string }> };
-const bridge = (): Bridge | null =>
-  (window as unknown as { edexoElectron?: { browser?: Bridge } }).edexoElectron?.browser ?? null;
-
-/** Inara's commodity search, the only page "Read into Colonize" reads (the main process checks it again). */
+/** Inara's commodity search, the only page the pop-up reads (the main process checks it again). */
 export function isInaraCommodityPage(url: string | null | undefined): boolean {
   try {
     const u = new URL(String(url));
@@ -61,13 +57,9 @@ export function inaraImportFromPage(read: InaraPageRead, now = new Date()): Inar
   };
 }
 
-/** Reads the Inara page open in browser tab `id` into the saved sellers; the line to show the commander. */
-export async function readInaraIntoColonize(id: number): Promise<{ ok: boolean; text: string }> {
-  const b = bridge();
-  if (!b?.readInara) return { ok: false, text: "Reading pages needs the desktop app." };
-  const r = await b.readInara(id);
-  if ("error" in r) return { ok: false, text: r.error };
-  const doc = inaraImportFromPage(r);
+/** What an Inara pop-up's "EDEXO — Read" took, saved with the sellers as an Inara import; the line to show. */
+export async function importInaraRead(read: InaraPageRead): Promise<{ ok: boolean; text: string }> {
+  const doc = inaraImportFromPage(read);
   if ("err" in doc) return { ok: false, text: doc.err };
   const res = await colonizeApi.importInaraFile({ fileName: "inara-browser.json", text: JSON.stringify(doc) });
   if (!res.ok) return { ok: false, text: res.err };

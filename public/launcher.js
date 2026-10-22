@@ -1422,7 +1422,8 @@
     } catch (e) {
       /* private window, or storage disabled — the default is still correct */
     }
-    return "browser";
+    // The app window by default (owner, 2026-10-22: "in-app, default on top"); it was the browser.
+    return "window";
   }
 
   function applyOpenMode(mode) {
@@ -1461,7 +1462,7 @@
         if (!j || !j.mode || !OPEN_MODES[j.mode]) {
           // Nothing saved yet: carry this profile's choice over once, so an upgrade keeps it.
           var local = readOpenMode();
-          if (j && j.ok && local !== "browser") setOpenMode(local);
+          if (j && j.ok && local !== "window") setOpenMode(local);
           return;
         }
         try {
@@ -1552,7 +1553,7 @@
     } catch (e) {
       /* private window, or storage disabled — the default is still correct */
     }
-    return "browser";
+    return "window";
   }
 
   function applyColonizeOpenMode(mode) {
@@ -1660,6 +1661,8 @@
       if (!item) return;
       setColonizeOpenMode(item.dataset.colonizeMode);
       closeColonizeMenu();
+      // As Compare's menu: choosing is also asking for it (owner, 2026-10-22).
+      openColonize();
     });
     document.addEventListener("click", function (ev) {
       if (!colonizeMenu.hidden && !colonizeSplit.contains(ev.target)) closeColonizeMenu();

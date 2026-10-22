@@ -81,7 +81,7 @@ const params = typeof location !== "undefined" ? new URLSearchParams(location.se
  */
 export const TAB_APP: "compare" | "colonize" = params.get("screen") === "colonize" ? "colonize" : "compare";
 /** The home tab's label: the app's own main screen. */
-export const HOME_TAB_LABEL = TAB_APP === "colonize" ? "Colonize" : "Main";
+export const HOME_TAB_LABEL = TAB_APP === "colonize" ? "Colonize" : "Compare";
 /** This window's key: "main" for the app window, else the detached window's (`?tabwin=`). */
 export const WINDOW_KEY = params.get("tabwin") ?? "main";
 /** A window a tab was dragged out into: no Main tab, and it closes with its last tab. */

@@ -12,12 +12,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEve
 import { IconKey } from "./ui/icons";
 import { UnlockLoginsChip } from "./BrowserMasterPassword";
 import { BrowserPrivacyPanel } from "./BrowserPrivacyPanel";
-import {
-  isInaraCommodityPage,
-  onBrowserUrlRequest,
-  readInaraIntoColonize,
-  takePendingBrowserUrl,
-} from "./colonize/inaraBrowser";
+import { importInaraRead, onBrowserUrlRequest, takePendingBrowserUrl, type InaraPageRead } from "./colonize/inaraBrowser";
 import "./styles/browser.css";
 
 interface BrowserTab {
@@ -108,7 +103,16 @@ export interface BrowserBridge {
   masterLock(): Promise<WithState>;
   masterSet(password: string, current?: string): Promise<WithState>;
   masterRemove(current: string): Promise<WithState>;
-  on(cb: (m: { type: "state"; state: BrowserState } | { type: "event"; event: string }) => void): () => void;
+  /** Colonize's Inara links: the commodity search in a tab whose page offers "EDEXO — Read" (1.3.0, C5). */
+  openInara?(url: string): Promise<{ id?: number; error?: string }>;
+  inaraResult?(id: number, ok: boolean, text: string): Promise<unknown>;
+  on(
+    cb: (
+      m:
+        | { type: "state"; state: BrowserState }
+        | { type: "event"; event: string; data?: { id: number; read: InaraPageRead } },
+    ) => void,
+  ): () => void;
 }
 
 const bridge = (): BrowserBridge | null =>
@@ -135,7 +139,6 @@ export function BrowserScreen() {
   const [failure, setFailure] = useState<string | null>(null);
   const [keyMenu, setKeyMenu] = useState(false);
   const [pwNote, setPwNote] = useState<string | null>(null);
-  const [inaraBusy, setInaraBusy] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   /*
     While a menu covers the page: a still of it in its place (owner, 2026-10-17: the page vanished behind every menu).
@@ -160,28 +163,29 @@ export function BrowserScreen() {
   const openPending = useCallback(() => {
     if (!api || !readyRef.current) return;
     const url = takePendingBrowserUrl();
-    if (url) void api.open(url).catch(() => {});
+    if (url) void (api.openInara ? api.openInara(url) : api.open(url)).catch(() => {});
   }, [api]);
   useEffect(() => {
     if (ready) openPending();
   }, [ready, openPending]);
   useEffect(() => onBrowserUrlRequest(openPending), [openPending]);
 
-  /** "Read into Colonize" on Inara's commodity search: the sellers it shows, saved as an Inara import. */
-  const readInara = () => {
-    if (!tab || inaraBusy) return;
-    setInaraBusy(true);
-    void readInaraIntoColonize(tab.id)
-      .then((r) => setPwNote(r.text))
-      .catch((e: unknown) => setPwNote(e instanceof Error ? e.message : String(e)))
-      .finally(() => setInaraBusy(false));
-  };
 
   useEffect(() => {
     if (!api) return;
     const off = api.on((m) => {
       if (m.type === "state") setSt(m.state);
       else if (m.event === "focusAddress") addressRef.current?.focus();
+      else if (m.event === "inaraRead" && m.data) {
+        // An Inara pop-up's "EDEXO — Read": the sellers saved, and the answer in the pop-up and on the note bar.
+        const { id, read } = m.data;
+        void importInaraRead(read)
+          .catch((e: unknown) => ({ ok: false, text: e instanceof Error ? e.message : String(e) }))
+          .then((r) => {
+            setPwNote(r.text);
+            void api.inaraResult?.(id, r.ok, r.text);
+          });
+      }
     });
     sentRef.current = "";
     void api
@@ -557,17 +561,6 @@ export function BrowserScreen() {
               </div>
             ) : null}
           </div>
-        ) : null}
-        {tab && !tab.startPage && isInaraCommodityPage(tab.url) ? (
-          <button
-            type="button"
-            className="ebr-chip is-on"
-            disabled={inaraBusy || tab.loading}
-            title="Save the sellers this Inara page shows into Colonize, as an Inara import. Only this page, only now."
-            onClick={readInara}
-          >
-            {inaraBusy ? "Reading…" : "Read into Colonize"}
-          </button>
         ) : null}
         {tab && !tab.startPage && !tab.logins.length && tab.loginsLocked > 0 ? (
           <UnlockLoginsChip
