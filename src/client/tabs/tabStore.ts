@@ -82,10 +82,10 @@ const params = typeof location !== "undefined" ? new URLSearchParams(location.se
 export const TAB_APP: "compare" | "colonize" = params.get("screen") === "colonize" ? "colonize" : "compare";
 /** The home tab's label: the app's own main screen. */
 export const HOME_TAB_LABEL = TAB_APP === "colonize" ? "Colonize" : "Compare";
-/** This window's key: "main" for the app window, else the detached window's (`?tabwin=`). */
-export const WINDOW_KEY = params.get("tabwin") ?? "main";
-/** A window a tab was dragged out into: no Main tab, and it closes with its last tab. */
-export const IS_DETACHED = WINDOW_KEY !== "main";
+/** A window a tab was dragged out into (`?tabwin=`): no home tab, and it closes with its last tab. */
+export const IS_DETACHED = params.has("tabwin");
+/** This window's key in the desktop app's registry: "main" (Compare), "colonize", or the detached window's. */
+export const WINDOW_KEY = params.get("tabwin") ?? (TAB_APP === "colonize" ? "colonize" : "main");
 const LS_TABS_BASE = TAB_APP === "colonize" ? "edexo.colonize.tabs" : "edexo.tabs";
 const LS_TABS = IS_DETACHED ? `${LS_TABS_BASE}.${WINDOW_KEY}` : LS_TABS_BASE;
 
@@ -106,11 +106,16 @@ interface TabBridge {
     ) => void,
   ): () => void;
 }
-/** The desktop app's window bridge (electron/preload.cjs `tabs`); null in a browser, and for Colonize (see TAB_APP). */
+/** The desktop app's window bridge (electron/preload.cjs `tabs`); null in a browser. Compare's and Colonize's windows. */
 export const TAB_BRIDGE: TabBridge | null =
-  typeof window !== "undefined" && TAB_APP === "compare"
+  typeof window !== "undefined"
     ? ((window as unknown as { edexoElectron?: { tabs?: TabBridge } }).edexoElectron?.tabs ?? null)
     : null;
+
+/** Screens this window can show: Colonize has no system map (it follows Compare's chosen body). */
+export function screenFitsHere(kind: TabKind): boolean {
+  return TAB_APP === "compare" || kind !== "systemMap";
+}
 /** Which tabs every other window holds (from the main process). */
 let elsewhere: Record<string, string[]> = {};
 
@@ -187,7 +192,7 @@ function commit(next: TabState): void {
 }
 
 /** The window holding `kind` when it is not this one. */
-const heldElsewhere = (kind: TabKind): boolean =>
+export const heldElsewhere = (kind: TabKind): boolean =>
   Object.entries(elsewhere).some(([k, tabs]) => k !== WINDOW_KEY && tabs.includes(kind));
 
 function subscribe(l: () => void): () => void {
@@ -232,7 +237,8 @@ export const tabStore = {
   },
   /** A tab dropped here from another window: take it, and tell the window it came from. */
   receive(kind: TabKind, from: string): void {
-    if (from === WINDOW_KEY) return;
+    // A screen this window cannot show stays where it was (the window it came from is not told it moved).
+    if (from === WINDOW_KEY || !screenFitsHere(kind)) return;
     tabStore.adopt(kind);
     TAB_BRIDGE?.moved({ kind, from });
   },

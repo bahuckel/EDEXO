@@ -449,6 +449,8 @@ function openColonizeWindow(iconForChild) {
     },
   });
   colonizeWindow = win;
+  // Its tabs move to and from Compare's windows (owner, 2026-10-22).
+  tabWindows.attachColonize(win);
   diag?.watchWindow(win, "colonize");
   if (saved?.maximized) win.maximize();
   trackWindowState("colonize", win);

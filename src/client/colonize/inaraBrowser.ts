@@ -8,7 +8,7 @@
 import { inaraCommodityNormForPa1 } from "../../shared/colonize/inaraCommodityIds";
 import { parseInaraBuyResultsHtml } from "../../shared/colonize/inaraScrapeParse";
 import { INARA_INDEX_REF, type InaraImportFile } from "../../shared/colonize/inaraImportTypes";
-import { BROWSER_AVAILABLE, tabStore } from "../tabs/tabStore";
+import { BROWSER_AVAILABLE, heldElsewhere, tabStore } from "../tabs/tabStore";
 import { colonizeApi } from "./api";
 
 /** What the main process read from the page (browserTabs.cjs readInaraPage). */
@@ -93,6 +93,18 @@ export function onBrowserUrlRequest(cb: () => void): () => void {
  */
 export function openInEdexoBrowser(url: string): boolean {
   if (!BROWSER_AVAILABLE || !tabStore.get().on) return false;
+  /*
+    The browser is on screen in the other app's window (one Browser tab across Compare and Colonize): the page opens
+    there, and that window comes forward (owner, 2026-10-22: the Browser opened in Compare; the address was kept here,
+    where no Browser tab took it).
+  */
+  const b = (window as unknown as { edexoElectron?: { browser?: { openInara?: (u: string) => Promise<unknown> } } }).edexoElectron
+    ?.browser;
+  if (!tabStore.get().tabs.includes("browser") && heldElsewhere("browser") && b?.openInara) {
+    void b.openInara(url).catch(() => {});
+    tabStore.open("browser");
+    return true;
+  }
   pending = url;
   tabStore.open("browser");
   window.dispatchEvent(new Event(OPEN_EVENT));

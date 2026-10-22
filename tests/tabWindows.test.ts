@@ -10,6 +10,7 @@ const require = createRequire(import.meta.url);
 const { createTabWindows } = require("../electron/tabWindows.cjs") as {
   createTabWindows: (d: unknown) => {
     attachMain(w: unknown): void;
+    attachColonize(w: unknown): void;
     freeze(): void;
     restore(): void;
     sendToMain(cmd: unknown): void;
@@ -129,6 +130,29 @@ describe("tab windows", () => {
     on.get("edexo:tab-window-empty")!({ sender: win.webContents });
     expect(win.destroyed).toBe(true);
     expect(states().tabWindows).toEqual([]);
+  });
+
+  it("moves tabs between Compare's and Colonize's windows; closing Colonize leaves the others (owner, 2026-10-22)", async () => {
+    const { tw, main, on, handle } = setup();
+    const colonize = new FakeWindow({});
+    tw.attachColonize(colonize);
+    // Colonize holds the Encyclopedia: opening it from Compare brings Colonize's window forward.
+    on.get("edexo:tabs-report")!({ sender: colonize.webContents }, ["encyclopedia"]);
+    expect(main.webContents.sent.at(-1)).toEqual(["edexo:tab-registry", { colonize: ["encyclopedia"] }]);
+    expect(await handle.get("edexo:tab-focus")!({ sender: main.webContents }, "encyclopedia")).toBe(true);
+    expect(colonize.focused).toBe(true);
+    // Dropped on Compare's strip: Colonize lets go of it.
+    on.get("edexo:tab-moved")!({ sender: main.webContents }, { kind: "encyclopedia", from: "colonize" });
+    expect(colonize.webContents.sent).toContainEqual(["edexo:tab-remove", "encyclopedia"]);
+    // Dragged out of Colonize into space: a detached window, and Colonize lets go.
+    await handle.get("edexo:tab-detach")!({ sender: colonize.webContents }, { kind: "galaxy", x: 10, y: 10 });
+    const det = FakeWindow.made.at(-1)!;
+    expect(det.webContents.url).toMatch(/\?tabwin=w[0-9a-z]+&open=galaxy$/);
+    expect(colonize.webContents.sent).toContainEqual(["edexo:tab-remove", "galaxy"]);
+    // Colonize closes: it leaves the registry, and the detached window stays.
+    colonize.close();
+    expect(main.webContents.sent.at(-1)).toEqual(["edexo:tab-registry", {}]);
+    expect(det.destroyed).toBe(false);
   });
 
   it("closing the app window closes its detached windows but keeps them listed; they come back", async () => {
