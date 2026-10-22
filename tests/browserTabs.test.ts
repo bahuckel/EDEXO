@@ -1172,3 +1172,49 @@ describe("closing the app (owner, 2026-10-16: \"Cannot read properties of undefi
     expect(FakeView.made.length).toBe(before);
   });
 });
+
+describe("Read into Colonize (1.3.0, C5; owner 2026-10-22: Inara inside the EDEXO Browser)", () => {
+  const INARA = "https://inara.cz/elite/commodities/?formbrief=1&pi1=1&pa1%5B%5D=140&ps1=Sol";
+  const open = async (t: ReturnType<typeof setup>, url: string) => {
+    await t.call({ op: "start" });
+    const { id } = (await t.call({ op: "open", text: url })) as { id: number };
+    return { id, wc: FakeView.made[FakeView.made.length - 1]!.webContents };
+  };
+
+  it("reads only Inara's commodity search, in its own script world, as the page shows it", async () => {
+    const t = setup();
+    const { id, wc } = await open(t, INARA);
+    (wc as unknown as { dom: unknown }).dom = { table: "<table id=\"DataTables_Table_0\"></table>", near: "Sol", commodities: ["CMM Composite"] };
+    expect(await t.call({ op: "readInara", id })).toEqual({
+      ok: true,
+      url: INARA,
+      table: "<table id=\"DataTables_Table_0\"></table>",
+      near: "Sol",
+      commodities: ["CMM Composite"],
+    });
+    expect(wc.isolated.at(-1)!.world).toBe(1079);
+    expect(wc.isolated.at(-1)!.code).toContain("DataTables_Table_0");
+  });
+
+  it("refuses any other page, the start page, and a page without results", async () => {
+    const t = setup();
+    const other = await open(t, "https://inara.cz/elite/stations/");
+    expect(await t.call({ op: "readInara", id: other.id })).toEqual({ error: "Not an Inara commodity search page." });
+    const lookalike = await open(t, "https://inara.cz.example.com/elite/commodities/");
+    expect(await t.call({ op: "readInara", id: lookalike.id })).toEqual({ error: "Not an Inara commodity search page." });
+    expect(other.wc.isolated.some((x) => x.world === 1079)).toBe(false);
+    const { id: blank } = (await t.call({ op: "open" })) as { id: number };
+    expect(await t.call({ op: "readInara", id: blank })).toEqual({ error: "No page open." });
+    const empty = await open(t, INARA);
+    (empty.wc as unknown as { dom: unknown }).dom = { table: "", near: "", commodities: [] };
+    expect(await t.call({ op: "readInara", id: empty.id })).toEqual({
+      error: "No results table on this page yet: run the search on Inara first.",
+    });
+  });
+
+  it("is refused from a browsed page", async () => {
+    const t = setup();
+    const { id, wc } = await open(t, INARA);
+    expect(await t.tabs.handle({ sender: wc }, { op: "readInara", id })).toEqual({ error: "Not allowed." });
+  });
+});

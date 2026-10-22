@@ -269,6 +269,12 @@ const INARA_PA1_BY_NORM: Record<string, number> = {
   mutomimager: 119,
 };
 
+/** The commodity (as its normalised key, e.g. "cmmcomposites") for an Inara id in an address's `pa1[]`. */
+export function inaraCommodityNormForPa1(pa1: number): string | null {
+  for (const [norm, id] of Object.entries(INARA_PA1_BY_NORM)) if (id === pa1) return norm;
+  return null;
+}
+
 export function inaraCommodityPa1(commodityLabel: string): number | null {
   const nk = commodityNormKey(commodityLabel);
   if (!nk) return null;

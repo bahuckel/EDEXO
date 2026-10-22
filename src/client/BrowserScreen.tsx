@@ -12,6 +12,12 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEve
 import { IconKey } from "./ui/icons";
 import { UnlockLoginsChip } from "./BrowserMasterPassword";
 import { BrowserPrivacyPanel } from "./BrowserPrivacyPanel";
+import {
+  isInaraCommodityPage,
+  onBrowserUrlRequest,
+  readInaraIntoColonize,
+  takePendingBrowserUrl,
+} from "./colonize/inaraBrowser";
 import "./styles/browser.css";
 
 interface BrowserTab {
@@ -129,6 +135,7 @@ export function BrowserScreen() {
   const [failure, setFailure] = useState<string | null>(null);
   const [keyMenu, setKeyMenu] = useState(false);
   const [pwNote, setPwNote] = useState<string | null>(null);
+  const [inaraBusy, setInaraBusy] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   /*
     While a menu covers the page: a still of it in its place (owner, 2026-10-17: the page vanished behind every menu).
@@ -142,6 +149,33 @@ export function BrowserScreen() {
 
   const tab = st?.tabs.find((t) => t.id === st.active) ?? null;
   const pageShown = !!tab && !tab.startPage && !tab.error;
+
+  /*
+    An address another screen asked for (Colonize's Inara links, colonize/inaraBrowser.ts): opened in a new page once
+    the browser is ready, so a first run still waiting for its blocklists opens it when they are in.
+  */
+  const ready = !!st?.blocker.ready;
+  const readyRef = useRef(false);
+  readyRef.current = ready;
+  const openPending = useCallback(() => {
+    if (!api || !readyRef.current) return;
+    const url = takePendingBrowserUrl();
+    if (url) void api.open(url).catch(() => {});
+  }, [api]);
+  useEffect(() => {
+    if (ready) openPending();
+  }, [ready, openPending]);
+  useEffect(() => onBrowserUrlRequest(openPending), [openPending]);
+
+  /** "Read into Colonize" on Inara's commodity search: the sellers it shows, saved as an Inara import. */
+  const readInara = () => {
+    if (!tab || inaraBusy) return;
+    setInaraBusy(true);
+    void readInaraIntoColonize(tab.id)
+      .then((r) => setPwNote(r.text))
+      .catch((e: unknown) => setPwNote(e instanceof Error ? e.message : String(e)))
+      .finally(() => setInaraBusy(false));
+  };
 
   useEffect(() => {
     if (!api) return;
@@ -523,6 +557,17 @@ export function BrowserScreen() {
               </div>
             ) : null}
           </div>
+        ) : null}
+        {tab && !tab.startPage && isInaraCommodityPage(tab.url) ? (
+          <button
+            type="button"
+            className="ebr-chip is-on"
+            disabled={inaraBusy || tab.loading}
+            title="Save the sellers this Inara page shows into Colonize, as an Inara import. Only this page, only now."
+            onClick={readInara}
+          >
+            {inaraBusy ? "Reading…" : "Read into Colonize"}
+          </button>
         ) : null}
         {tab && !tab.startPage && !tab.logins.length && tab.loginsLocked > 0 ? (
           <UnlockLoginsChip

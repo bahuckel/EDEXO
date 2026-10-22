@@ -38,6 +38,13 @@ const COSMETIC_WORLD = 1077;
  * page can neither read the nonce its reports carry nor see the password a fill puts in.
  */
 const PASSWORD_WORLD = 1078;
+/**
+ * The script world "Read into Colonize" reads an Inara page in (1.3.0, C5): its own, like the others, so the page
+ * cannot see or change what is read.
+ */
+const INARA_WORLD = 1079;
+/** The most of an Inara results table taken across (a full commodity search is a few hundred kB). */
+const INARA_TABLE_MAX = 4_000_000;
 /** A captured login waits this long for Save / Never / Not now, then the password is dropped from memory. */
 const PASSWORD_PROMPT_MS = 10 * 60 * 1000;
 /*
@@ -247,6 +254,34 @@ function resolveTyped(text, searchUrl) {
       return httpUrl(`https://${t}`)?.href ?? searchUrl(t);
   }
   return searchUrl(t);
+}
+
+/**
+ * Inara's commodity search (owner, 2026-10-22: "Inara inside the EDEXO Browser"): the only pages "Read into Colonize"
+ * reads. https only, inara.cz or www.inara.cz, the /elite/commodities/ path.
+ */
+function isInaraCommodityPage(url) {
+  try {
+    const u = new URL(String(url));
+    return u.protocol === "https:" && /^(www\.)?inara\.cz$/i.test(u.hostname) && /^\/elite\/commodities\/?$/i.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * What "Read into Colonize" takes from the Inara page the commander has open, as it is on screen: the results table,
+ * the near-star box and the commodity picked in the form. Nothing is fetched, clicked or changed.
+ */
+function inaraReadScript() {
+  return `(() => {
+  const table = document.querySelector("#DataTables_Table_0") ||
+    document.querySelector("table.dataTable, table.tablesortercollapsed, table.tablesorter");
+  const near = document.querySelector('input[name="ps1"]');
+  const pick = document.querySelector('select[name="pa1[]"]');
+  const commodities = pick ? Array.from(pick.selectedOptions || []).map((o) => (o.textContent || "").trim()).filter(Boolean) : [];
+  return { table: table ? table.outerHTML : "", near: near ? String(near.value || "").trim() : "", commodities };
+})()`;
 }
 
 function chromeUserAgent() {
@@ -1289,6 +1324,22 @@ function createBrowserTabs(o) {
       case "passwordNeverRemove":
         o.prefs.removePasswordNever(String(a?.origin ?? ""));
         return { ok: true, state: state() };
+      case "readInara": {
+        // Only when asked, only the page open in that tab, only Inara's commodity search (1.3.0, C5).
+        const wci = t?.view?.webContents;
+        if (!t || t.startPage || !wci || wci.isDestroyed()) return { error: "No page open." };
+        const url = wci.getURL();
+        if (!isInaraCommodityPage(url)) return { error: "Not an Inara commodity search page." };
+        const r = await wci.executeJavaScriptInIsolatedWorld(INARA_WORLD, [{ code: inaraReadScript() }]).catch(() => null);
+        const table = typeof r?.table === "string" ? r.table : "";
+        if (!table) return { error: "No results table on this page yet: run the search on Inara first." };
+        if (table.length > INARA_TABLE_MAX) return { error: "The results table is too large to read." };
+        const commodities = Array.isArray(r?.commodities)
+          ? r.commodities.filter((c) => typeof c === "string" && c.length <= 80).slice(0, 10)
+          : [];
+        const near = typeof r?.near === "string" ? r.near.slice(0, 120) : "";
+        return { ok: true, url, table, near, commodities };
+      }
       default:
         return { error: "Unknown call." };
     }
@@ -1331,6 +1382,8 @@ function createBrowserTabs(o) {
 
 module.exports = {
   createBrowserTabs,
+  isInaraCommodityPage,
+  inaraReadScript,
   resolveTyped,
   isLocalHost,
   chromeUserAgent,

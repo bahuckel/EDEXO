@@ -183,6 +183,8 @@ contextBridge.exposeInMainWorld("edexoElectron", {
     passwordAnswer: (id, answer) => browserCall({ op: "passwordAnswer", id, answer }),
     /** Fills a saved login into the tab's page; the password never comes to this side. */
     passwordFill: (id, username) => browserCall({ op: "passwordFill", id, username }),
+    /** Colonize (1.3.0): the Inara commodity search open in tab `id`, read as it shows (browserTabs.cjs readInara). */
+    readInara: (id) => browserCall({ op: "readInara", id }),
     passwordDelete: (origin, username) => browserCall({ op: "passwordDelete", origin, username }),
     passwordDeleteAll: () => browserCall({ op: "passwordDeleteAll" }),
     passwordNeverRemove: (origin) => browserCall({ op: "passwordNeverRemove", origin }),

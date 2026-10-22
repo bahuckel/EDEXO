@@ -19,6 +19,7 @@ import { useLogisticsPlan } from "../planner/hooks/useLogisticsPlan";
 import { usePlannerCheckouts } from "../planner/hooks/usePlannerCheckouts";
 import { usePlannerSystemCoords } from "../planner/hooks/usePlannerSystemCoords";
 import { colonizeApi } from "../api";
+import { openInEdexoBrowser } from "../inaraBrowser";
 import type { ColonizeModel } from "../useColonize";
 import { Select, type SelectOption } from "../../ui/Select";
 import { BuyHerePanel, DeliverHerePanel } from "./DockPanels";
@@ -220,7 +221,16 @@ export function PlanView({ m }: { m: ColonizeModel }) {
                     >
                       Saved sellers
                     </button>
-                    <a className={BTN_WARN} href={inaraCommoditySearchUrl(item.label, near)} target="_blank" rel="noreferrer">
+                    <a
+                      className={BTN_WARN}
+                      href={inaraCommoditySearchUrl(item.label, near)}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Inara's sellers of this, in the EDEXO Browser; Read into Colonize there saves them"
+                      onClick={(e) => {
+                        if (openInEdexoBrowser(e.currentTarget.href)) e.preventDefault();
+                      }}
+                    >
                       Inara
                     </a>
                   </span>

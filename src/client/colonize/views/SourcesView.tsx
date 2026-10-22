@@ -18,6 +18,8 @@ import {
   type PartyCarrier,
   type PartyMember,
 } from "../../../shared/colonize/tradeParty";
+import { inaraCommoditySearchUrl } from "../../../shared/colonize/inaraLinks";
+import { openInEdexoBrowser } from "../inaraBrowser";
 import type { ColonizeModel } from "../useColonize";
 import { BTN, BTN_BAD, BTN_GO, BTN_LINK, BTN_WARN, Panel } from "./ui";
 
@@ -267,6 +269,9 @@ function SellerDataPanel({ m }: { m: ColonizeModel }) {
 /* ---- Inara imports ---------------------------------------------------------------------------------------------- */
 
 function InaraPanel({ m }: { m: ColonizeModel }) {
+  // The biggest needs first, for the quick links (summary rows are in the plan's order).
+  const needs = useMemo(() => [...(m.summary?.rows ?? [])].sort((a, b) => b.totalTonsNeeded - a.totalTonsNeeded), [m.summary]);
+  const near = m.constructionSiteRefs[0]?.trim() || m.homeSystem || m.snap?.navContext.starSystem || "";
   const [dir, setDir] = useState<{ dir: string; defaultDir: string } | null>(null);
   const [draft, setDraft] = useState("");
   const [msg, setMsg] = useState<{ bad: boolean; text: string } | null>(null);
@@ -310,11 +315,42 @@ function InaraPanel({ m }: { m: ColonizeModel }) {
   };
 
   return (
-    <Panel k="inara" title="Inara imports">
+    <Panel k="inara" title="Inara">
       <div className="cz-stack">
       <p className="cz-lead">
-        The browser extension saves Inara's commodity search into this folder; files dropped there are read on their own.
+        Inara's commodity search opens in the EDEXO Browser. Run the search there, then “Read into Colonize” on its
+        toolbar saves the sellers that page shows. Only the page you opened is read; nothing is fetched behind your back.
       </p>
+      <div className="cz-actions">
+        {needs.slice(0, 3).map((r) => (
+          <a
+            key={r.id}
+            className={BTN}
+            href={inaraCommoditySearchUrl(r.label, near)}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => {
+              if (openInEdexoBrowser(e.currentTarget.href)) e.preventDefault();
+            }}
+          >
+            Inara: {r.label}
+          </a>
+        ))}
+        {!needs.length ? (
+          <a
+            className={BTN}
+            href={inaraCommoditySearchUrl("", near)}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => {
+              if (openInEdexoBrowser(e.currentTarget.href)) e.preventDefault();
+            }}
+          >
+            Open Inara's commodity search
+          </a>
+        ) : null}
+      </div>
+      <p className="cz-lead">Files from the Inara browser extension, or saved by hand, are read from this folder:</p>
       <form
         className="cz-row"
         style={{ justifyContent: "flex-start", alignItems: "center", gap: 8 }}

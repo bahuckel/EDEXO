@@ -137,6 +137,13 @@ test("colonize: the window opens on the plan, every tab draws, and the launcher 
     await page.getByRole("tab", { name: tab }).click();
     await expect(page.getByText(text).first()).toBeVisible();
   }
+  // Inara (C5): its commodity search, a plain link where there is no EDEXO Browser (a system browser like this one).
+  await page.getByRole("tab", { name: "Sources" }).click();
+  await expect(page.getByRole("link", { name: "Open Inara's commodity search" })).toHaveAttribute(
+    "href",
+    /^https:\/\/inara\.cz\/elite\/commodities\/\?/,
+  );
+  await expect(page.getByRole("link", { name: "Open Inara's commodity search" })).toHaveAttribute("target", "_blank");
   // Search reads only what is saved: a fresh profile has nothing, and says so.
   await page.getByRole("tab", { name: "Search" }).click();
   await page.getByRole("searchbox").fill("Steel");
