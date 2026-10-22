@@ -136,9 +136,13 @@ export function pickSpanshCommodityFromSearchResults(
  * Why the last station search came back empty, when it was not "Spansh has nothing": an outage, a throttle, no
  * network. Cleared by the next answer. The Search tab shows it instead of "nothing found" (owner, 2026-10-22).
  */
-let lastSpanshSearchError: string | null = null;
-export function spanshSearchError(): string | null {
-  return lastSpanshSearchError;
+let lastSpanshSearchError: { message: string; at: number } | null = null;
+/**
+ * The last failure, when it happened at or after `sinceMs` (review 1.3.0: a cached answer fetches nothing, so an older
+ * failure, or a background scan's, read as this search's).
+ */
+export function spanshSearchErrorSince(sinceMs: number): string | null {
+  return lastSpanshSearchError && lastSpanshSearchError.at >= sinceMs ? lastSpanshSearchError.message : null;
 }
 
 export async function searchSpanshBuyStations(args: {
@@ -202,8 +206,11 @@ export async function searchSpanshBuyStations(args: {
         searchCache.set(ckey, null);
         return null;
       }
-      lastSpanshSearchError =
-        e instanceof HttpStatusError ? `Spansh answered ${e.status}.` : `Spansh could not be reached (${e instanceof Error ? e.message : String(e)}).`;
+      lastSpanshSearchError = {
+        message:
+          e instanceof HttpStatusError ? `Spansh answered ${e.status}.` : `Spansh could not be reached (${e instanceof Error ? e.message : String(e)}).`,
+        at: Date.now(),
+      };
       break;
     }
 

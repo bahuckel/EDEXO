@@ -433,6 +433,15 @@
 .ebr-page--error {
   text-align: center;
 }
+/* The other app's window has the browser (1.3.0): this covers the box until "Bring it here". */
+.ebr-page--elsewhere {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  max-width: none;
+  text-align: center;
+  background: var(--bg);
+}
 .ebr-page__row {
   display: flex;
   justify-content: center;

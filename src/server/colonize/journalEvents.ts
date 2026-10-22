@@ -472,9 +472,13 @@ export function applyJournalObject(state: JournalState, j: Record<string, unknow
     if (id) {
       const ts = typeof j.timestamp === "string" ? j.timestamp : null;
       const key = `${id}|${ts ?? ""}|${JSON.stringify(j.Transfers ?? null)}`;
-      if (!state.carrierTransferKeys.has(key)) {
+      const c = carrierSlot(state, id);
+      // Older than the newest one counted: counted already (the keys need only cover lines from that same second).
+      const older = !!ts && !!c.transfersThrough && ts < c.transfersThrough;
+      if (!older && !state.carrierTransferKeys.has(key)) {
         state.carrierTransferKeys.add(key);
-        if (applyCargoTransfer(carrierSlot(state, id), j.Transfers, ts)) changed = true;
+        if (applyCargoTransfer(c, j.Transfers, ts)) changed = true;
+        if (ts && (!c.transfersThrough || ts > c.transfersThrough)) c.transfersThrough = ts;
       }
     }
   }

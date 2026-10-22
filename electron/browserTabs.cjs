@@ -45,6 +45,8 @@ const PASSWORD_WORLD = 1078;
 const INARA_WORLD = 1079;
 /** The most of an Inara results table taken across (a full commodity search is a few hundred kB). */
 const INARA_TABLE_MAX = 4_000_000;
+/** A pop-up's Read the app window has not answered by then: the pop-up says so instead of "Reading…" for ever. */
+const INARA_ANSWER_MS = 15_000;
 /** A captured login waits this long for Save / Never / Not now, then the password is dropped from memory. */
 const PASSWORD_PROMPT_MS = 10 * 60 * 1000;
 /*
@@ -910,6 +912,11 @@ function createBrowserTabs(o) {
     void readInaraPage(t).then((r) => {
       if (r.error) return inaraSay(t, r.error, false);
       if (!host || host.isDestroyed()) return inaraSay(t, "Open EDEXO's Browser tab to read pages into Colonize.", false);
+      clearTimeout(t.inaraWait);
+      t.inaraWait = setTimeout(
+        () => inaraSay(t, "EDEXO did not answer. Open the Browser tab in EDEXO and press Read again.", false),
+        INARA_ANSWER_MS,
+      );
       host.webContents.send("edexo:browser-event", { type: "inaraRead", data: { id: t.id, read: r } });
     });
   }
@@ -1108,6 +1115,7 @@ function createBrowserTabs(o) {
       // Opened from EDEXO's Inara links: its Inara commodity searches get the pop-up (offerInara).
       fromApp: false,
       inara: null,
+      inaraWait: undefined,
     };
     tabs.set(t.id, t);
     const i = after != null ? order.indexOf(after) : -1;
@@ -1124,6 +1132,7 @@ function createBrowserTabs(o) {
     const t = tabs.get(id);
     if (!t) return;
     for (const x of t.passTimers.splice(0)) clearTimeout(x);
+    clearTimeout(t.inaraWait);
     dropPrompt(t);
     if (fullscreen?.id === id) leaveFullscreen();
     tabs.delete(id);
@@ -1163,6 +1172,7 @@ function createBrowserTabs(o) {
     leaveFullscreen();
     for (const t of tabs.values()) {
       for (const x of t.passTimers.splice(0)) clearTimeout(x);
+      clearTimeout(t.inaraWait);
       dropPrompt(t);
       if (!t.view) continue;
       try {
@@ -1209,6 +1219,8 @@ function createBrowserTabs(o) {
         // The Browser tab is on screen in this window: its pages come here, the engine is read.
         clearTimeout(detachTimer);
         detachTimer = null;
+        // The window that had them (Compare and Colonize can both have a Browser tab) is told, so it says so.
+        if (host && host !== win && !host.isDestroyed()) host.webContents.send("edexo:browser-event", { type: "elsewhere" });
         adopt(win);
         if (!cleared) {
           cleared = true;
@@ -1251,7 +1263,14 @@ function createBrowserTabs(o) {
         }
       }
       case "bounds": {
-        if (win !== host) adopt(win);
+        /*
+          Only "start" (a Browser tab opened in that window) moves the pages: a box from another window that still has
+          a Browser tab open took them back on its next resize, and the two windows took turns (review 1.3.0).
+        */
+        if (win !== host) {
+          if (host && !host.isDestroyed()) return { ok: true, elsewhere: true };
+          adopt(win);
+        }
         const r = a?.rect;
         bounds =
           r && num(r.x) != null && num(r.y) != null && num(r.width) > 0 && num(r.height) > 0
@@ -1462,6 +1481,7 @@ function createBrowserTabs(o) {
       case "inaraResult": {
         // The app window saved (or could not save) what the pop-up read: its answer goes in the pop-up.
         if (!t) return { error: "No such page." };
+        clearTimeout(t.inaraWait);
         inaraSay(t, typeof a?.text === "string" ? a.text : "", a?.ok === true);
         return { ok: true };
       }

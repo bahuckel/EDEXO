@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 
 /** Avoid the `open` npm package — its ESM `import.meta.url` breaks esbuild+cjs bundles. */
 /**
- * `cmd /c start` arguments for a URL. Quoted and verbatim: unquoted, cmd cut the address at its first `&` and ran the
+ * `cmd /c start` arguments for a URL or a file. Quoted and verbatim: unquoted, cmd cut the address at its first `&` and ran the
  * rest as a command (owner, 2026-10-22: the Colonize streamer view opened `?screen=colonize`, its `&view=stream` lost).
  * A `"` cannot be quoted for cmd, so it goes in percent-encoded, which every browser reads the same.
  */
@@ -43,11 +43,12 @@ export function openUrlInBrowser(url: string): void {
 export function openLocalFile(file: string): void {
   if (process.platform === "win32") {
     // The empty string is `start`'s title argument. Without it a quoted path is taken *as* the
-    // title and nothing opens.
-    spawn("cmd", ["/c", "start", "", file], {
+    // title and nothing opens. Quoted and verbatim as an address is (winStartArgs): `C:\R&D` was cut at the `&`.
+    spawn("cmd", [winStartArgs(file)], {
       detached: true,
       stdio: "ignore",
       windowsHide: true,
+      windowsVerbatimArguments: true,
     }).unref();
     return;
   }

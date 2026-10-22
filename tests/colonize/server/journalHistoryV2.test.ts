@@ -50,6 +50,27 @@ describe("journal lines", () => {
     expect(ownedCarrierStocks(s)[0]).toMatchObject({ name: "NEW NAME", reportedTons: 900 });
   });
 
+  it("never counts an older transfer again, even after its remembered key was let go (review 1.3.0)", () => {
+    const s = createJournalState();
+    apply(s, { timestamp: iso(20), event: "CarrierLocation", CarrierType: "FleetCarrier", CarrierID: CARRIER, StarSystem: "Here", SystemAddress: 2 });
+    apply(s, { timestamp: iso(20, 1), event: "Docked", StationName: "K7Q-1HT", StationType: "FleetCarrier", MarketID: CARRIER, StarSystem: "Here" });
+    const old = { timestamp: iso(20, 2), event: "CargoTransfer", Transfers: [{ Type: "steel", Count: 100, Direction: "tocarrier" }] };
+    const newer = { timestamp: iso(2), event: "CargoTransfer", Transfers: [{ Type: "steel", Count: 50, Direction: "tocarrier" }] };
+    apply(s, old);
+    apply(s, newer);
+    // The saved state keeps only the newest keys (colonizeStore trims the oldest); the whole history is read again.
+    const [oldest] = s.carrierTransferKeys;
+    s.carrierTransferKeys.delete(oldest!);
+    apply(s, old);
+    apply(s, newer);
+    expect(ownedCarrierStocks(s)[0]!.tonsByCommodity.steel).toBe(150);
+    // A second transfer in the same second as the newest one still counts once.
+    const same = { ...newer, Transfers: [{ Type: "steel", Count: 7, Direction: "tocarrier" }] };
+    apply(s, same);
+    apply(s, same);
+    expect(ownedCarrierStocks(s)[0]!.tonsByCommodity.steel).toBe(157);
+  });
+
   it("records a purchase once, keeps the latest visit, and reads Market.json's buy price", () => {
     const s = createJournalState();
     apply(s, { timestamp: iso(3), event: "Market", MarketID: 128, StationName: "Hammond Hub", StarSystem: "Laso", StationType: "Coriolis" });

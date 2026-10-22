@@ -11,6 +11,9 @@ describe("winStartArgs", () => {
       '/d /c start "" "http://127.0.0.1:7111/?screen=colonize&view=stream"',
     );
   });
+  it("quotes a folder with & in it the same way (Open folder)", () => {
+    expect(winStartArgs("C:\\R&D\\inara")).toBe('/d /c start "" "C:\\R&D\\inara"');
+  });
   it("cannot be broken out of with a quote", () => {
     expect(winStartArgs('https://x.example/?q="&calc')).toBe('/d /c start "" "https://x.example/?q=%22&calc"');
   });

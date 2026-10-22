@@ -745,6 +745,25 @@ describe("review 1.2.16", () => {
     expect(tab.error?.httpFallback).toBe("http://old.example/");
   });
 
+  it("moves the pages only on start, tells the window that had them, and ignores its later boxes (review 1.3.0)", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    await t.call({ op: "open", text: "https://edsm.net/" });
+    await t.call({ op: "bounds", rect: { x: 0, y: 90, width: 900, height: 600 } });
+    expect(t.appWin.children).toHaveLength(1);
+    // Colonize's Browser tab opens: the pages go there, and Compare's window hears it.
+    await t.tabs.handle({ sender: t.appWin2.webContents }, { op: "start" });
+    expect(t.appWin2.children).toHaveLength(1);
+    expect(t.appWin.webContents.sent).toContainEqual(["edexo:browser-event", { type: "elsewhere" }]);
+    // Compare's window resizes: its box no longer takes the pages back.
+    expect(await t.call({ op: "bounds", rect: { x: 0, y: 90, width: 800, height: 500 } })).toEqual({ ok: true, elsewhere: true });
+    expect(t.appWin.children).toHaveLength(0);
+    expect(t.appWin2.children).toHaveLength(1);
+    // "Bring it here" is a start: back again.
+    await t.call({ op: "start" });
+    expect(t.appWin.children).toHaveLength(1);
+  });
+
   it("ignores a stop from a window that no longer holds the pages", async () => {
     vi.useFakeTimers();
     const t = setup();
@@ -1233,6 +1252,18 @@ describe("Inara's pop-up (1.3.0, C5; owner 2026-10-22: a pop-up in the page, EDE
     await vi.waitFor(() => expect(inPopup()).toContain("No results on this page yet: run the search on Inara first."));
     await t.call({ op: "inaraResult", id, ok: true, text: "CMM Composite: 12 sellers read into Colonize." });
     expect(inPopup()).toBe('globalThis.__edexoInaraSay?.("CMM Composite: 12 sellers read into Colonize.", true)');
+  });
+
+  it("says so in the pop-up when the app does not answer a Read", async () => {
+    vi.useFakeTimers();
+    const t = setup();
+    const { wc } = await fromApp(t);
+    wc!.dom = TABLE as never;
+    wc!.emit("dom-ready");
+    say(wc!, `${nonceOf(wc!)}{"t":"read"}`);
+    await vi.advanceTimersByTimeAsync(16_000);
+    expect(wc!.isolated.filter((x) => x.world === 1079).at(-1)!.code).toContain("EDEXO did not answer");
+    vi.useRealTimers();
   });
 
   it("is refused from a browsed page", async () => {

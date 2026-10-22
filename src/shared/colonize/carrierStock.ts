@@ -31,6 +31,11 @@ export type CarrierStock = {
   lastEventIso: string | null;
   /** When the last `CarrierStats` was written: an older one (the history read after a restart) never wins. */
   statsAt?: string | null;
+  /**
+   * The newest `CargoTransfer` counted into `tonsByCommodity`: an older one is never counted again, so the remembered
+   * transfer keys only need to cover the newest second (review 1.3.0: trimming them let a full re-read count twice).
+   */
+  transfersThrough?: string | null;
 };
 
 export function emptyCarrierStock(carrierId: string): CarrierStock {

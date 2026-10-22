@@ -139,6 +139,8 @@ export function BrowserScreen() {
   const [failure, setFailure] = useState<string | null>(null);
   const [keyMenu, setKeyMenu] = useState(false);
   const [pwNote, setPwNote] = useState<string | null>(null);
+  // The other app's window took the browser (Compare and Colonize can both have a Browser tab).
+  const [elsewhere, setElsewhere] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   /*
     While a menu covers the page: a still of it in its place (owner, 2026-10-17: the page vanished behind every menu).
@@ -176,6 +178,7 @@ export function BrowserScreen() {
     const off = api.on((m) => {
       if (m.type === "state") setSt(m.state);
       else if (m.event === "focusAddress") addressRef.current?.focus();
+      else if (m.event === "elsewhere") setElsewhere(true);
       else if (m.event === "inaraRead" && m.data) {
         // An Inara pop-up's "EDEXO — Read": the sellers saved, and the answer in the pop-up and on the note bar.
         const { id, read } = m.data;
@@ -692,6 +695,26 @@ export function BrowserScreen() {
         </div>
       ) : null}
       <div className="ebr-box" ref={boxRef}>
+        {elsewhere ? (
+          <div className="ebr-page ebr-page--elsewhere">
+            <h2>The browser is open in the other EDEXO window</h2>
+            <p className="dim">One browser serves Compare and Colonize; its pages show in one window at a time.</p>
+            <button
+              type="button"
+              className="btn-confirm-go"
+              onClick={() =>
+                void api.start().then((s) => {
+                  setSt(s);
+                  setElsewhere(false);
+                  sentRef.current = "";
+                  place();
+                })
+              }
+            >
+              Bring it here
+            </button>
+          </div>
+        ) : null}
         {still ? <img className="ebr-still" src={still} alt="" aria-hidden="true" /> : null}
         {tab?.error ? (
           <div className="ebr-page ebr-page--error">

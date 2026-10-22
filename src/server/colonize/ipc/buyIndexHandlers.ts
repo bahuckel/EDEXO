@@ -12,7 +12,7 @@ import {
 import { deleteInaraImportJsonFiles, ensureInaraImportDir, watchedInaraImportDirs } from "../inaraImport";
 import { cancelPassiveMaterialBuyScan } from "../materialBuyScanner";
 import { scanAndPersistMaterialHits } from "../spanshCheckout";
-import { spanshSearchError } from "../spanshStationBuySearch";
+import { spanshSearchErrorSince } from "../spanshStationBuySearch";
 import { materialNeedsFromQuery } from "../../../shared/colonize/buyIndexSearchQuery";
 import { spanshDebugJsonPath } from "./debugHandlers";
 import { errMessage, type ColonizeHandlers, type IpcContext } from "./handlerTypes";
@@ -67,6 +67,7 @@ export function buyIndexHandlers({ store, buyIndex, userDataDir }: IpcContext) {
       if (!query) return { ok: false as const, err: "Enter a commodity." };
       if (!referenceSystem) return { ok: false as const, err: "No system to search near: build a site or jump once." };
       try {
+        const started = Date.now();
         const index = buyIndex();
         await index.load();
         let saved = 0;
@@ -80,7 +81,7 @@ export function buyIndexHandlers({ store, buyIndex, userDataDir }: IpcContext) {
           });
         }
         await index.flush();
-        const why = spanshSearchError();
+        const why = spanshSearchErrorSince(started);
         if (!saved && why) return { ok: false as const, err: why };
         return { ok: true as const, saved };
       } catch (e) {
