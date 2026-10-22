@@ -248,6 +248,9 @@ export function buildLogisticsPlan(args: {
   const deliverSystem = primaryDeliverSystem(args.activeDepots);
   const depotStates = buildDepotNeedStates(args.activeDepots, args.wing);
   const trips: HaulTrip[] = [];
+  // What the plan has bought off each shelf, and whose preferred seller ran dry: across every trip (packing.ts).
+  const supplyLeft = new Map<string, number>();
+  const exhausted = new Set<string>();
 
   let tripNumber = 0;
   /** Hard stop so a pathological plan cannot loop; hitting it is reported, not silent. */
@@ -287,6 +290,8 @@ export function buildLogisticsPlan(args: {
     const routeCtx: PackRouteContext = {
       primaryPreferred: preferredBuyStationByCommodity,
       committedSystems,
+      supplyLeft,
+      exhausted,
     };
 
     const pickArgs: PickBuyStationArgs = {
@@ -334,7 +339,7 @@ export function buildLogisticsPlan(args: {
     const ensureActiveStop = (station: PlannerStation) => {
       if (active.stop && active.station?.key === station.key) return;
       flushActiveStop();
-      if (hasPrimaryNeedAtStation(station, needs, preferredBuyStationByCommodity)) {
+      if (hasPrimaryNeedAtStation(station, needs, preferredBuyStationByCommodity, exhausted)) {
         committedSystems.add(normSystemName(station.systemName));
       }
       const constructionLy = toLy(station.distanceLy);

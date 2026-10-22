@@ -142,12 +142,51 @@ export function buildPreferredBuyStationByCommodity(
   return out;
 }
 
+/** What a station still has of a commodity: its offer, less what the plan already bought there. */
+export function supplyAt(station: PlannerStation, commodityId: string, ctx?: PackRouteContext): number {
+  const offer = station.offers.get(commodityId);
+  if (!offer) return 0;
+  return ctx?.supplyLeft?.get(`${station.key}|${commodityId}`) ?? offer.supply;
+}
+
+/**
+ * How a station would fill `freeTons`: its sellable lines biggest first, as packAtStation buys them. `lines` is how
+ * many commodities that takes - fewer is better (owner, 2026-10-22: "fewer commodities, bigger batches first").
+ */
+export function stationFillPlan(
+  station: PlannerStation,
+  proof: ListingProof,
+  needs: Map<string, PlannerNeed>,
+  freeTons: number,
+  routeCtx?: PackRouteContext,
+): { fill: number; lines: number } {
+  const sizes: number[] = [];
+  for (const [id, need] of needs) {
+    if (need.tons <= 0) continue;
+    if (routeCtx && !canPackCommodityAtStation(id, station, routeCtx)) continue;
+    if (!stationSellsCommodity(proof, station.key, id)) continue;
+    const supply = supplyAt(station, id, routeCtx);
+    if (supply <= 0) continue;
+    sizes.push(Math.min(need.tons, supply));
+  }
+  sizes.sort((a, b) => b - a);
+  let fill = 0;
+  let lines = 0;
+  for (const s of sizes) {
+    if (fill >= freeTons - 0.01) break;
+    fill += Math.min(s, freeTons - fill);
+    lines += 1;
+  }
+  return { fill, lines };
+}
+
 export function canPackCommodityAtStation(
   commodityId: string,
   station: PlannerStation,
   ctx: PackRouteContext,
 ): boolean {
   if (ctx.primaryPreferred.get(commodityId) === station.key) return true;
+  if (ctx.exhausted?.has(commodityId)) return true;
   return ctx.committedSystems.has(normSystemName(station.systemName));
 }
 
@@ -155,10 +194,13 @@ export function hasPrimaryNeedAtStation(
   station: PlannerStation,
   needs: Map<string, PlannerNeed>,
   primaryPreferred: Map<string, string>,
+  exhausted?: Set<string>,
 ): boolean {
   for (const [id, need] of needs) {
     if (need.tons <= 0) continue;
     if (primaryPreferred.get(id) === station.key) return true;
+    // Its preferred seller ran out: a station that sells it takes that seller's place.
+    if (exhausted?.has(id) && station.offers.has(id)) return true;
   }
   return false;
 }
@@ -175,9 +217,9 @@ export function countCompletableAtStation(
     if (need.tons <= 0) continue;
     if (!canPackCommodityAtStation(id, station, ctx)) continue;
     if (!stationSellsCommodity(proof, station.key, id)) continue;
-    const offer = station.offers.get(id);
-    if (!offer || offer.supply <= 0) continue;
-    const buy = Math.min(need.tons, offer.supply, freeTons);
+    const supply = supplyAt(station, id, ctx);
+    if (supply <= 0) continue;
+    const buy = Math.min(need.tons, supply, freeTons);
     if (buy >= need.tons - 0.01) count += 1;
   }
   return count;
@@ -190,16 +232,7 @@ export function stationFillTons(
   freeTons: number,
   routeCtx?: PackRouteContext,
 ): number {
-  let fill = 0;
-  for (const [id, need] of needs) {
-    if (need.tons <= 0) continue;
-    if (routeCtx && !canPackCommodityAtStation(id, station, routeCtx)) continue;
-    if (!stationSellsCommodity(proof, station.key, id)) continue;
-    const offer = station.offers.get(id);
-    if (!offer || offer.supply <= 0) continue;
-    fill += Math.min(need.tons, offer.supply, freeTons);
-  }
-  return fill;
+  return stationFillPlan(station, proof, needs, freeTons, routeCtx).fill;
 }
 
 export function stationInHistory(history: ShopHistoryEntry[], station: PlannerStation): boolean {
@@ -271,7 +304,7 @@ export function stationEligible(
   const fill = stationFillTons(station, proof, needs, freeTons, routeCtx);
   if (fill <= 0) return false;
   if (!routeCtx) return true;
-  if (hasPrimaryNeedAtStation(station, needs, routeCtx.primaryPreferred)) return true;
+  if (hasPrimaryNeedAtStation(station, needs, routeCtx.primaryPreferred, routeCtx.exhausted)) return true;
   return routeCtx.committedSystems.has(normSystemName(station.systemName));
 }
 

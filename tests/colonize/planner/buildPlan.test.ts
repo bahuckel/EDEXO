@@ -120,6 +120,33 @@ describe("buildLogisticsPlan", () => {
     expect(p.afterTripsTons).toBe(12_000 - 80 * 80);
   });
 
+  it("fills each trip from the biggest batches, and a small shelf only once (owner, 2026-10-22)", () => {
+    // A colony market in the site's own system with 5 t of each of eight things, and a seller 20 ly out with plenty.
+    const small = ["Water", "Beer", "Tea", "Wine", "Coffee", "Fish", "Liquor", "Tobacco"];
+    const near = (label: string) =>
+      hit({ systemName: SITE_SYSTEM, stationName: "Beer Gateway", marketId: "7", distanceLy: 0, supply: 5, spanshCommodity: label });
+    const far = (label: string) => hit({ systemName: SELLER_TWO, stationName: "Big Depot", marketId: "8", distanceLy: 20, supply: 50_000, spanshCommodity: label });
+    const p = plan({
+      activeDepots: [depot("a", "Site A", small.map((l) => row(l, 400)))],
+      cargoCapacity: 80,
+      systemDistanceLy: distances([
+        [SITE_SYSTEM, SITE_SYSTEM, 0],
+        [SITE_SYSTEM, SELLER_TWO, 20],
+      ]),
+      buyListings: small.map((l) => listing(l.toLowerCase(), l, 400, [near(l), far(l)])),
+    });
+    const buys = p.trips.map((t) => t.stops.filter((s) => s.kind === "buy").flatMap((s) => s.buys.map((b) => `${s.stationName}:${b.buyTons}`)));
+    // 8 × 400 t over an 80 t hold: 40 full trips, no more.
+    expect(p.trips).toHaveLength(40);
+    expect(p.trips.every((t) => t.loadTons === 80)).toBe(true);
+    // The shelf of 5 t is bought at most once per commodity: 40 t from Beer Gateway in the whole plan.
+    const fromSmall = p.trips.flatMap((t) => t.stops).filter((s) => s.stationName === "Beer Gateway").flatMap((s) => s.buys);
+    expect(fromSmall.reduce((a, b) => a + b.buyTons, 0)).toBeLessThanOrEqual(40);
+    // Big batches: most trips carry one commodity.
+    const single = buys.filter((b) => b.length === 1).length;
+    expect(single, JSON.stringify(buys.slice(0, 6))).toBeGreaterThanOrEqual(30);
+  });
+
   it("never loads more than the hold takes in one trip", () => {
     const p = plan({
       activeDepots: [depot("a", "Site A", [row("Steel", 500)])],

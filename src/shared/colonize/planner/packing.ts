@@ -1,5 +1,5 @@
 import { recordTripAllocation } from "./needs";
-import { canPackCommodityAtStation } from "./stationFacts";
+import { canPackCommodityAtStation, supplyAt } from "./stationFacts";
 import { stationSellsCommodity } from "./stationKeys";
 import type {
   ListingProof,
@@ -27,11 +27,17 @@ export function packAtStation(
     if (routeCtx && !canPackCommodityAtStation(id, station, routeCtx)) continue;
     if (!stationSellsCommodity(proof, station.key, id)) continue;
     const offer = station.offers.get(id);
-    if (!offer || offer.supply <= 0) continue;
-    const buy = Math.min(need.tons, offer.supply, maxTons);
+    const supply = supplyAt(station, id, routeCtx);
+    if (!offer || supply <= 0) continue;
+    const buy = Math.min(need.tons, supply, maxTons);
     if (buy <= 0) continue;
+    /*
+      The biggest batch first, so a trip carries as few commodities as it can (owner, 2026-10-22: "fill trips with
+      fewer commodities, starting from bigger batches"); finishing a material only breaks a tie. It was the other way
+      round: every material that could be finished went first, so a hold filled with 5 t of 16 things.
+    */
     const completes = buy >= need.tons - 0.01;
-    const score = (completes ? 1_000_000_000 : 0) + buy + need.tons * 0.001;
+    const score = buy * 1000 + (completes ? 1 : 0) + need.tons * 0.000001;
     candidates.push({
       id,
       score,
@@ -52,12 +58,16 @@ export function packAtStation(
     if (used >= maxTons) break;
     const need = needs.get(c.id);
     if (!need || need.tons <= 0) continue;
-    const offer = station.offers.get(c.id)!;
-    const buy = Math.min(need.tons, offer.supply, maxTons - used);
+    const buy = Math.min(need.tons, supplyAt(station, c.id, routeCtx), maxTons - used);
     if (buy <= 0) continue;
     const line: PackLine = { ...c.line, buyTons: buy };
     need.tons -= buy;
     used += buy;
+    if (routeCtx?.supplyLeft) {
+      const left = supplyAt(station, c.id, routeCtx) - buy;
+      routeCtx.supplyLeft.set(`${station.key}|${c.id}`, left);
+      if (left <= 0.01 && routeCtx.primaryPreferred.get(c.id) === station.key) routeCtx.exhausted?.add(c.id);
+    }
     if (alloc) {
       const allocatedTo = recordTripAllocation(
         alloc.tripAllocation,

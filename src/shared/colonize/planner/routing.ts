@@ -15,7 +15,7 @@ import {
   countCompletableAtStation,
   hasPrimaryNeedAtStation,
   stationEligible,
-  stationFillTons,
+  stationFillPlan,
   stationInHistory,
   stationLy,
 } from "./stationFacts";
@@ -57,10 +57,10 @@ export function pickNextBuyStation(args: PickBuyStationArgs): PlannerStation | n
       continue;
     }
 
-    const packTons = stationFillTons(st, args.proof, args.needs, args.freeTons, args.routeCtx);
+    const { fill: packTons, lines } = stationFillPlan(st, args.proof, args.needs, args.freeTons, args.routeCtx);
     if (packTons <= 0) continue;
 
-    const isPrimary = hasPrimaryNeedAtStation(st, args.needs, args.routeCtx.primaryPreferred);
+    const isPrimary = hasPrimaryNeedAtStation(st, args.needs, args.routeCtx.primaryPreferred, args.routeCtx.exhausted);
     const sys = normSystemName(st.systemName);
     const isOpportunisticSweep = !isPrimary && args.routeCtx.committedSystems.has(sys);
 
@@ -72,14 +72,20 @@ export function pickNextBuyStation(args: PickBuyStationArgs): PlannerStation | n
         ? ly
         : legLy({ systemName: args.lastStopSystem, ly: args.lastStopLy }, { systemName: st.systemName, ly }, args.systemCoords);
 
-    let score = completable * 500_000_000 + packTons * 1_000_000;
+    /*
+      The fewest trips, from the biggest batches (owner, 2026-10-22): a station that fills the hold wins, and of those
+      the one that does it with the fewest commodities (each extra line costs as much as 40 t of fill). Distance and a
+      finished material break ties. It used to be finished materials first (5e8 each), which sent an 80 t hold to a
+      colony market with 5 t of 16 things, 80 trips running.
+    */
+    let score = packTons * 1_000_000 - lines * 40_000_000 + completable * 1_000_000;
     if (dockedHere && args.lastStopLy == null) score += 2_000_000_000;
     if (isOpportunisticSweep) {
       score += 400_000_000;
-      score -= hop * 20_000;
+      score -= hop * 200_000;
     } else if (isPrimary) {
-      score -= ly * 20_000;
-      score -= hop * 5_000;
+      score -= ly * 200_000;
+      score -= hop * 50_000;
     }
     /**
      * Familiarity is a preference between comparable stations, not a trump card.
@@ -92,9 +98,9 @@ export function pickNextBuyStation(args: PickBuyStationArgs): PlannerStation | n
      * out, including when the distance is unknown.
      */
     const familiarity = hasBoughtFromStation(args.history, st.systemName, st.stationName)
-      ? 600_000_000
+      ? 30_000_000
       : isRecentShopStation(args.history, st.systemName, st.stationName)
-        ? 250_000_000
+        ? 12_000_000
         : 0;
     if (familiarity > 0) score += familiarity / (1 + Math.max(0, ly) / 25);
 

@@ -136,6 +136,13 @@ export type MaterialBuyStationFilter = {
 export type PackRouteContext = {
   primaryPreferred: Map<string, string>;
   committedSystems: Set<string>;
+  /**
+   * What each station has left on the shelf as the plan buys (`${station.key}|${commodityId}`): a market with 5 t of
+   * a commodity sells it once, not on every trip (owner, 2026-10-22: 80 trips of 5 t of 16 things at one station).
+   */
+  supplyLeft?: Map<string, number>;
+  /** Commodities whose preferred seller ran out: any seller of them may be used from then on. */
+  exhausted?: Set<string>;
 };
 
 /** stationKey → commodity ids that listing data proves are sold there. */
