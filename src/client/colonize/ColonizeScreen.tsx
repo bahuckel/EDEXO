@@ -161,7 +161,13 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
         <div className="cz-head__right">
           {!app.connected ? <span className="cz-small cz-warn">Reconnecting…</span> : null}
           {snap?.replayBusy ? <span className="cz-small cz-dim">Reading your journals…</span> : null}
-          <span className="cz-small cz-dim">{sellers ? `${sellers} sellers known` : "No sellers known yet"}</span>
+          <span className="cz-small cz-dim">
+            {/* The markets in the journal count too: the plan buys there first (2026-10-22: "No sellers known yet" over
+                a plan buying at them). */}
+            {[sellers ? `${sellers} sellers saved` : "", m.shopHistory.length ? `${m.shopHistory.length} markets in your journal` : ""]
+              .filter(Boolean)
+              .join(" · ") || "No sellers known yet"}
+          </span>
           <a className={BTN_GO} href="/?screen=galaxy&drawer=finder" target="_blank" rel="noreferrer">
             Find colony sites <span aria-hidden="true">›</span>
           </a>
