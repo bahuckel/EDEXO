@@ -10,6 +10,7 @@ import { formatHopLy } from "../../../shared/colonize/systemDistanceLy";
 import { formatPrice } from "../../../shared/colonize/formatPrice";
 import { commodityMergeBucket } from "../../../shared/colonize/commodityKey";
 import type { ColonizeModel } from "../useColonize";
+import { BTN, BTN_BAD, BTN_GO, Fact, Panel } from "./ui";
 
 type Kind = "commodity" | "system" | "site";
 const KINDS: { k: Kind; label: string; hint: string }[] = [
@@ -115,12 +116,13 @@ export function SearchView({ m }: { m: ColonizeModel }) {
   return (
     <div className="cz-stack" style={{ gap: 18 }}>
       <form className="cz-row" style={{ alignItems: "center", justifyContent: "flex-start", gap: 12 }} onSubmit={run}>
-        <div className="cz-seg" role="tablist" aria-label="Search for">
+        <div className="cz-kinds" role="tablist" aria-label="Search for">
           {KINDS.map((x) => (
             <button
               key={x.k}
               type="button"
               role="tab"
+              className={`tab${kind === x.k ? " on" : ""}`}
               aria-selected={kind === x.k}
               onClick={() => {
                 setKind(x.k);
@@ -140,18 +142,18 @@ export function SearchView({ m }: { m: ColonizeModel }) {
           </span>
           <input className="cz-input cz-input--big" type="search" value={query} placeholder={hint} onChange={(e) => setQuery(e.target.value)} />
         </label>
-        <button type="submit" className="cz-btn cz-btn--primary" disabled={busy || !query.trim()}>
+        <button type="submit" className={BTN_GO} disabled={busy || !query.trim()}>
           {busy ? "Searching…" : "Search"}
         </button>
         {kind === "system" ? (
-          <button type="button" className="cz-btn" disabled={busy || !query.trim()} onClick={() => void askSpanshForSystem()}>
+          <button type="button" className={BTN} disabled={busy || !query.trim()} onClick={() => void askSpanshForSystem()}>
             Ask Spansh for its markets
           </button>
         ) : null}
         {kind === "commodity" ? (
           <button
             type="button"
-            className="cz-btn"
+            className={BTN}
             disabled={busy || !query.trim() || !near}
             title={near ? undefined : "No system to search near yet: a site, or one jump"}
             onClick={() => void askSpanshForCommodity()}
@@ -171,7 +173,13 @@ export function SearchView({ m }: { m: ColonizeModel }) {
 
       <div className="cz-cols">
         {stations ? (
-          <section className="cz-wide cz-panel" aria-label="Stations" style={{ padding: 0 }}>
+          <div className="cz-wide">
+          <Panel
+            k="search-stations"
+            title="Stations"
+            className="cz-panel--flush"
+            aside={<span className="cz-aside-note">{stations.length ? `${stations.length} found` : "none found"}</span>}
+          >
             {stations.length ? (
               <div className="cz-table-wrap">
                 <table className="cz-table">
@@ -214,16 +222,23 @@ export function SearchView({ m }: { m: ColonizeModel }) {
                 </table>
               </div>
             ) : (
-              <p style={{ padding: 16, margin: 0 }} className="cz-dim">
+              <p className="cz-dim cz-pad">
                 Nothing in your journal or the saved sellers matches. {kind === "system" ? "Ask Spansh for its markets." : near ? `Ask Spansh near ${near}.` : ""}
               </p>
             )}
-          </section>
+          </Panel>
+          </div>
         ) : null}
         {picked ? <StationMarket m={m} station={picked} query={kind === "commodity" ? query : ""} /> : null}
 
         {sites ? (
-          <section className="cz-wide cz-panel" aria-label="Construction sites" style={{ padding: 0 }}>
+          <div className="cz-wide">
+          <Panel
+            k="search-sites"
+            title="Construction sites"
+            className="cz-panel--flush"
+            aside={<span className="cz-aside-note">{sites.length ? `${sites.length} found` : "none found"}</span>}
+          >
             {sites.length ? (
               <div className="cz-table-wrap">
                 <table className="cz-table">
@@ -255,11 +270,10 @@ export function SearchView({ m }: { m: ColonizeModel }) {
                 </table>
               </div>
             ) : (
-              <p style={{ padding: 16, margin: 0 }} className="cz-dim">
-                Spansh knows no construction site by that name.
-              </p>
+              <p className="cz-dim cz-pad">Spansh knows no construction site by that name.</p>
             )}
-          </section>
+          </Panel>
+          </div>
         ) : null}
         {pickedSite ? <SiteNeedsPanel m={m} site={pickedSite} /> : null}
       </div>
@@ -293,15 +307,20 @@ function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIn
   }, [rows, needed, asked]);
   const [copied, setCopied] = useState(false);
   return (
-    <aside className="cz-side cz-panel cz-panel--hot" aria-label={station.stationName} style={{ maxWidth: 440 }}>
-      <div>
-        <h2 className="cz-h2">{station.stationName}</h2>
-        <div className="cz-small cz-dim">
-          {station.systemName}
-          {station.stationType ? ` · ${station.stationType}` : ""}
-          {station.bodyName ? ` · ${station.bodyName}` : ""}
-        </div>
+    <aside className="cz-side cz-side--wide" aria-label={station.stationName}>
+      <Panel k="search-market" tone="hot" title={station.stationName}>
+      <div className="cz-stack">
+      <div className="cz-small cz-dim">
+        {station.systemName}
+        {station.stationType ? ` · ${station.stationType}` : ""}
+        {station.bodyName ? ` · ${station.bodyName}` : ""}
       </div>
+      {station.boughtCount || station.lastVisitIso ? (
+        <div className="facts cz-facts">
+          {station.boughtCount ? <Fact k="Bought here" v={`${station.boughtCount}×`} tone="open" /> : null}
+          {station.lastVisitIso ? <Fact k="Docked" v={station.lastVisitIso.slice(0, 10)} /> : null}
+        </div>
+      ) : null}
       {error ? <p className="cz-note cz-note--bad">{error}</p> : null}
       {!rows && !error ? <p className="cz-dim">Reading its market…</p> : null}
       {rows ? (
@@ -309,7 +328,7 @@ function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIn
           {sorted.map((r) => {
             const hot = asked.has(r.commodityId) || needed.has(r.commodityId);
             return (
-              <li key={r.commodityId} style={hot ? { padding: "5px 8px", background: "var(--hud-ghost)", borderRadius: 6 } : { padding: "5px 8px" }}>
+              <li key={r.commodityId} className={hot ? "cz-li cz-li--hot" : "cz-li"}>
                 <span>{hot ? <b>{r.label}</b> : r.label}</span>
                 <span className="cz-dim">
                   {r.supply != null ? `${r.supply.toLocaleString("en-US")} t` : ""}
@@ -320,10 +339,10 @@ function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIn
           })}
         </ul>
       ) : null}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div className="cz-actions">
         <button
           type="button"
-          className="cz-btn cz-btn--primary"
+          className={BTN_GO}
           onClick={() => {
             void navigator.clipboard?.writeText(station.systemName).catch(() => {});
             setCopied(true);
@@ -332,10 +351,12 @@ function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIn
         >
           {copied ? "Copied" : "Copy system name"}
         </button>
-        <button type="button" className="cz-btn cz-btn--bad" onClick={() => m.stations.ban(station.systemName, station.stationName)}>
+        <button type="button" className={BTN_BAD} onClick={() => m.stations.ban(station.systemName, station.stationName)}>
           Never use this station
         </button>
       </div>
+      </div>
+      </Panel>
     </aside>
   );
 }
@@ -355,11 +376,10 @@ function SiteNeedsPanel({ m, site }: { m: ColonizeModel; site: ConstructionSiteH
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   }
   return (
-    <aside className="cz-side cz-panel cz-panel--hot" aria-label={site.name} style={{ maxWidth: 440 }}>
-      <div>
-        <h2 className="cz-h2">{site.name}</h2>
-        <div className="cz-small cz-dim">{site.systemName}</div>
-      </div>
+    <aside className="cz-side cz-side--wide" aria-label={site.name}>
+      <Panel k="search-site" tone="hot" title={site.name}>
+      <div className="cz-stack">
+      <div className="cz-small cz-dim">{site.systemName}</div>
       {error ? <p className="cz-note cz-note--bad">{error}</p> : null}
       {!needs && !error ? <p className="cz-dim">Asking Raven Colonial…</p> : null}
       {needs && !needs.found ? (
@@ -373,7 +393,7 @@ function SiteNeedsPanel({ m, site }: { m: ColonizeModel; site: ConstructionSiteH
           <div>
             <b>{needs.buildName}</b> <span className="cz-dim">· {needs.buildType}</span>
           </div>
-          <div style={{ color: "var(--text-dim)" }}>
+          <div className="cz-soft">
             {needs.complete
               ? "Finished."
               : `${needs.remainingTons.toLocaleString("en-US")} t still to deliver${needs.totalTons ? ` of ${needs.totalTons.toLocaleString("en-US")} t` : ""}.`}
@@ -395,6 +415,8 @@ function SiteNeedsPanel({ m, site }: { m: ColonizeModel; site: ConstructionSiteH
         </a>
         , where commanders register their projects.
       </p>
+      </div>
+      </Panel>
     </aside>
   );
 }

@@ -6,6 +6,8 @@ import { useMemo, useState } from "react";
 import { pickWingColor, type WingCargoClaim, type WingMember } from "../../../shared/colonize/wingManifest";
 import { depotDisplayLabel } from "../../../shared/colonize/depotLabel";
 import type { ColonizeModel } from "../useColonize";
+import { Select } from "../../ui/Select";
+import { BTN, BTN_LINK, Panel } from "./ui";
 
 const t = (n: number) => `${Math.round(n).toLocaleString("en-US")} t`;
 
@@ -31,22 +33,21 @@ export function WingView({ m }: { m: ColonizeModel }) {
   return (
     <div className="cz-cols">
       <div className="cz-wide cz-stack">
-        <section className="cz-panel cz-stack" aria-labelledby="cz-wing-h">
-          <div className="cz-row">
-            <div>
-              <h2 id="cz-wing-h" className="cz-h2">
-                Your wing
-              </h2>
-              <p className="cz-small cz-dim" style={{ margin: 0 }}>
-                {roster.length
-                  ? `${roster.length} in your wing per the journal. Cargo comes from EDSM for commanders who share it.`
-                  : "Nobody in your wing per the journal. Add a commander by hand to split the hauling."}
-              </p>
-            </div>
-            <button type="button" className="cz-btn" disabled={m.wingBusy || !roster.length} onClick={() => void m.syncWing()}>
+        <Panel
+          k="wing"
+          title="Your wing"
+          aside={
+            <button type="button" className={BTN} disabled={m.wingBusy || !roster.length} onClick={() => void m.syncWing()}>
               {m.wingBusy ? "Asking EDSM…" : "Ask EDSM again"}
             </button>
-          </div>
+          }
+        >
+          <div className="cz-stack">
+          <p className="cz-lead">
+            {roster.length
+              ? `${roster.length} in your wing per the journal. Cargo comes from EDSM for commanders who share it.`
+              : "Nobody in your wing per the journal. Add a commander by hand to split the hauling."}
+          </p>
           {m.wingNotes.length ? (
             <ul className="cz-note cz-note--info" style={{ margin: 0, paddingLeft: 28 }}>
               {m.wingNotes.map((n) => (
@@ -68,11 +69,12 @@ export function WingView({ m }: { m: ColonizeModel }) {
             }}
           >
             <input className="cz-input" aria-label="Commander name" placeholder="Commander name" value={name} onChange={(e) => setName(e.target.value)} />
-            <button type="submit" className="cz-btn" disabled={!name.trim()}>
+            <button type="submit" className={BTN} disabled={!name.trim()}>
               Add commander
             </button>
           </form>
-        </section>
+          </div>
+        </Panel>
         {members.map((w) => (
           <MemberCard
             key={w.id}
@@ -84,10 +86,8 @@ export function WingView({ m }: { m: ColonizeModel }) {
         ))}
       </div>
 
-      <aside className="cz-side cz-panel cz-stack" aria-labelledby="cz-split-h">
-        <h2 id="cz-split-h" className="cz-h2">
-          Who hauls what
-        </h2>
+      <aside className="cz-side">
+        <Panel k="wing-split" title="Who hauls what">
         {needs.length ? (
           <ul className="cz-list cz-num">
             {needs.map((r) => {
@@ -97,7 +97,7 @@ export function WingView({ m }: { m: ColonizeModel }) {
                 <li key={r.id}>
                   <span>{r.label}</span>
                   <span>
-                    {c > 0 ? <span style={{ color: "var(--ok)" }}>{t(c)} claimed · </span> : null}
+                    {c > 0 ? <span className="cz-ok">{t(c)} claimed · </span> : null}
                     <span className={open > 0 ? undefined : "cz-dim"}>{open > 0 ? `${t(open)} open` : "covered"}</span>
                   </span>
                 </li>
@@ -109,6 +109,7 @@ export function WingView({ m }: { m: ColonizeModel }) {
             Nothing needed: no site is building.
           </p>
         )}
+        </Panel>
       </aside>
     </div>
   );
@@ -141,13 +142,13 @@ function MemberCard({
   };
   const total = w.claims.reduce((a, c) => a + c.tons, 0);
   return (
-    <article className="cz-panel cz-stack" style={{ borderLeft: `3px solid ${w.color}` }} aria-label={w.name}>
+    <article className="panel cz-card cz-member cz-stack" style={{ borderLeftColor: w.color }} aria-label={w.name}>
       <div className="cz-row" style={{ alignItems: "center" }}>
         <div>
-          <b style={{ fontSize: 17 }}>{w.name}</b>
+          <b className="cz-site__name">{w.name}</b>
           <div className="cz-small cz-dim">{w.claims.length ? `hauling ${t(total)}` : "hauling nothing yet"}</div>
         </div>
-        <button type="button" className="cz-btn cz-btn--quiet cz-small" onClick={onRemove}>
+        <button type="button" className={BTN_LINK} onClick={onRemove}>
           Remove
         </button>
       </div>
@@ -158,26 +159,17 @@ function MemberCard({
               <span>{c.label}</span>
               <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {sites.length > 1 ? (
-                  <select
-                    className="cz-select cz-small"
-                    aria-label={`${c.label} for`}
+                  <Select
+                    ariaLabel={`${c.label} for`}
                     value={c.targetDepotMarketId ?? ""}
-                    onChange={(e) =>
-                      setClaims(w.claims.map((x) => (x.commodityId === c.commodityId ? { ...x, targetDepotMarketId: e.target.value || null } : x)))
-                    }
-                  >
-                    <option value="">any site</option>
-                    {sites.map((d) => (
-                      <option key={d.marketId} value={d.marketId}>
-                        {depotDisplayLabel(d)}
-                      </option>
-                    ))}
-                  </select>
+                    options={[{ value: "", label: "any site" }, ...sites.map((d) => ({ value: d.marketId, label: depotDisplayLabel(d) }))]}
+                    onChange={(v) => setClaims(w.claims.map((x) => (x.commodityId === c.commodityId ? { ...x, targetDepotMarketId: v || null } : x)))}
+                  />
                 ) : null}
                 <span className="cz-dim">{t(c.tons)}</span>
                 <button
                   type="button"
-                  className="cz-iconbtn"
+                  className="btn-top-neutral cz-x"
                   aria-label={`Drop ${c.label}`}
                   onClick={() => setClaims(w.claims.filter((x) => x.commodityId !== c.commodityId))}
                 >
@@ -197,16 +189,14 @@ function MemberCard({
             add();
           }}
         >
-          <select className="cz-select" aria-label="Commodity" value={pick} onChange={(e) => setPick(e.target.value)}>
-            <option value="">Hauls…</option>
-            {needs.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.label}
-              </option>
-            ))}
-          </select>
+          <Select
+            ariaLabel="Commodity"
+            value={pick}
+            options={[{ value: "", label: "Hauls…" }, ...needs.map((r) => ({ value: r.id, label: r.label }))]}
+            onChange={(v) => setPick(v)}
+          />
           <input className="cz-input" style={{ width: 90 }} inputMode="numeric" aria-label="Tons" placeholder="tons" value={tons} onChange={(e) => setTons(e.target.value.replace(/[^\d]/g, ""))} />
-          <button type="submit" className="cz-btn" disabled={!pick || !tons}>
+          <button type="submit" className={BTN} disabled={!pick || !tons}>
             Claim
           </button>
         </form>

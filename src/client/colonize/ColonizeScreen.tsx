@@ -24,6 +24,7 @@ import { PlanView } from "./views/PlanView";
 import { SearchView } from "./views/SearchView";
 import { SourcesView } from "./views/SourcesView";
 import { WingView } from "./views/WingView";
+import { BTN, BTN_GO, BTN_LINK } from "./views/ui";
 
 type Tab = "plan" | "search" | "sources" | "wing";
 const TABS: { key: Tab; label: string }[] = [
@@ -134,8 +135,8 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
         <div className="cz-chips">
           <span className={`cz-chip${docked?.stationName ? " cz-chip--info" : ""}`}>
             <span className="cz-chip__k">{where.k}</span>
-            <b>{where.v}</b>
-            {where.sub ? <span className="cz-chip__k">{where.sub}</span> : null}
+            <b className="cz-chip__v">{where.v}</b>
+            {where.sub ? <span className="cz-chip__s">{where.sub}</span> : null}
           </span>
           <HoldChip m={m} />
           {m.carriers.map((c) => {
@@ -150,16 +151,18 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
                 title={on ? "Its stock counts as yours in the plan" : "Click to count its stock in the plan"}
                 onClick={() => m.toggleCarrier(c.carrierId)}
               >
-                {on ? "✓ " : ""}Carrier {c.callsign || c.name} · {tons.toLocaleString("en-US")} t
+                <span className="cz-chip__k">{on ? "✓ Carrier" : "Carrier"}</span>
+                <b className="cz-chip__v">{c.callsign || c.name}</b>
+                <span className="cz-chip__s">{tons.toLocaleString("en-US")} t</span>
               </button>
             );
           })}
         </div>
         <div className="cz-head__right">
-          {!app.connected ? <span className="cz-small" style={{ color: "var(--warn)" }}>Reconnecting…</span> : null}
+          {!app.connected ? <span className="cz-small cz-warn">Reconnecting…</span> : null}
           {snap?.replayBusy ? <span className="cz-small cz-dim">Reading your journals…</span> : null}
           <span className="cz-small cz-dim">{sellers ? `${sellers} sellers known` : "No sellers known yet"}</span>
-          <a className="cz-btn" href="/?screen=galaxy&drawer=finder" target="_blank" rel="noreferrer">
+          <a className={BTN_GO} href="/?screen=galaxy&drawer=finder" target="_blank" rel="noreferrer">
             Find colony sites <span aria-hidden="true">›</span>
           </a>
         </div>
@@ -194,7 +197,7 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
             key={t.key}
             type="button"
             role="tab"
-            className="cz-tab"
+            className={`tab${tab === t.key ? " on" : ""}`}
             aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
           >
@@ -206,20 +209,20 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
         ))}
       </nav>
       {remoteChange ? (
-        <div className="cz-main" style={{ paddingBottom: 0 }}>
+        <div className="cz-main cz-main--note">
           <div className="cz-note cz-note--info" role="status">
             <span className="cz-note__text">Another window changed your plan or settings.</span>
-            <button type="button" className="cz-btn" onClick={remoteChange}>
+            <button type="button" className={BTN} onClick={remoteChange}>
               Show the changes
             </button>
           </div>
         </div>
       ) : null}
       {m.inaraNotice ? (
-        <div className="cz-main" style={{ paddingBottom: 0 }}>
+        <div className="cz-main cz-main--note">
           <div className="cz-note cz-note--info" role="status">
             <span className="cz-note__text">{m.inaraNotice}</span>
-            <button type="button" className="cz-btn cz-btn--quiet" onClick={m.dismissInaraNotice}>
+            <button type="button" className={BTN_LINK} onClick={m.dismissInaraNotice}>
               Dismiss
             </button>
           </div>
@@ -287,7 +290,7 @@ function HoldChip({ m }: { m: ReturnType<typeof useColonize> }) {
       }}
     >
       <span className="cz-chip__k">Hold</span>
-      <b className="cz-num">
+      <b className="cz-chip__v cz-num">
         {m.cargoOnHand.toLocaleString("en-US")} / {m.capacity != null ? `${m.capacity.toLocaleString("en-US")} t` : "? t"}
       </b>
     </button>

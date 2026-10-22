@@ -4,6 +4,7 @@ import type { HaulTrip, TripStop } from "../../../shared/colonize/logisticsPlann
 import { formatHopLy } from "../../../shared/colonize/systemDistanceLy";
 import { formatPrice } from "../../../shared/colonize/formatPrice";
 import { tripBuyLineId, tripDeliverLineId } from "../../../shared/colonize/tripPlanProgress";
+import { BTN, BTN_GO, BTN_LINK, Panel } from "./ui";
 
 type TripProps = {
   trips: HaulTrip[];
@@ -57,10 +58,9 @@ export function NextTripCard({ trips, completed, onToggle, onBan, readOnly = fal
   const [copied, setCopied] = useState<string | null>(null);
   if (!next) {
     return (
-      <div className="cz-panel cz-panel--info">
-        <p className="cz-eyebrow">All planned trips done</p>
+      <Panel k="next-trip" tone="info" title="All planned trips done">
         <p style={{ margin: 0 }}>Every trip in the plan is ticked. New trips appear as the sites report what they still need.</p>
-      </div>
+      </Panel>
     );
   }
   const buyStops = next.stops.filter((s) => s.kind === "buy" && s.buys.length);
@@ -68,113 +68,112 @@ export function NextTripCard({ trips, completed, onToggle, onBan, readOnly = fal
   const firstOpen = buyStops.find((s) => s.buys.some((b) => !completed.has(tripBuyLineId(next.tripNumber, s.stopIndex, b.commodityId))));
   const copyTarget = firstOpen ?? deliverStops[0];
   return (
-    <article className="cz-panel cz-panel--hot cz-stack" aria-labelledby="cz-next-h" style={{ gap: 14 }}>
-      <div className="cz-row">
-        <h3 id="cz-next-h" className="cz-eyebrow">
-          Next trip · {next.tripNumber} of {trips.length}
-        </h3>
-        <span className="cz-small cz-dim">
+    <Panel
+      k="next-trip"
+      tone="hot"
+      title={`Next trip · ${next.tripNumber} of ${trips.length}`}
+      aside={
+        <span className="cz-aside-note">
           loads {t(next.loadTons)} of {t(next.capacity)}
           {next.buyRouteLy > 0 ? ` · about ${Math.round(next.buyRouteLy)} ly of buying` : ""}
         </span>
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 20 }}>
-        <div style={{ flex: "1 1 340px" }} className="cz-stack">
-          {buyStops.map((s) => (
-            <div key={s.stopIndex}>
-              <div className="cz-small cz-dim">Buy at</div>
-              <div className="cz-row" style={{ alignItems: "center" }}>
-                <span className="cz-big">{s.stationName}</span>
-                {readOnly ? null : (
-                  <button type="button" className="cz-btn cz-btn--quiet cz-small" onClick={() => onBan(s.systemName, s.stationName)}>
-                    Never use this station
-                  </button>
-                )}
-              </div>
-              <div style={{ color: "var(--text-dim)" }}>
-                {s.systemName} · {stopFacts(s)}
-              </div>
-              <div className="cz-table-wrap">
-                <table className="cz-table" style={{ marginTop: 8 }}>
-                  <thead>
-                    <tr>
-                      <th scope="col">Buy</th>
-                      <th scope="col" className="r">
-                        Tons
-                      </th>
-                      <th scope="col" className="r">
-                        Price
-                      </th>
-                      <th scope="col">
-                        <span className="cz-small">Done</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {s.buys.map((b) => {
-                      const id = tripBuyLineId(next.tripNumber, s.stopIndex, b.commodityId);
-                      const done = completed.has(id);
-                      return (
-                        <tr key={id} className={done ? "is-done" : undefined}>
-                          <td>{b.label}</td>
-                          <td className="r" style={{ fontWeight: 700 }}>
-                            {t(b.buyTons)}
-                          </td>
-                          <td className="r cz-dim">{b.buyPrice != null ? `${formatPrice(b.buyPrice)} cr` : ""}</td>
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={done}
-                              disabled={readOnly}
-                              onChange={() => onToggle(id)}
-                              aria-label={`${b.label} bought`}
-                              style={{ accentColor: "var(--ok)" }}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{ flex: "0 1 280px", paddingLeft: 20, borderLeft: "1px solid var(--hud-faint)" }} className="cz-stack">
-          <div className="cz-small cz-dim">Then deliver to</div>
-          {deliverStops.flatMap((s) =>
-            (s.deliveries ?? []).map((d) => (
-              <div key={`${s.stopIndex}-${d.depotMarketId}`}>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>{d.depotLabel}</div>
-                <div className="cz-small" style={{ color: "var(--text-dim)" }}>
-                  {d.systemName} · {d.materials.map((x) => `${x.label} ${t(x.tons)}`).join(", ")}
+      }
+    >
+      <div className="cz-stack" style={{ gap: 14 }}>
+        <div className="cz-next">
+          <div className="cz-stack">
+            {buyStops.map((s) => (
+              <div key={s.stopIndex}>
+                <div className="cz-label">Buy at</div>
+                <div className="cz-row" style={{ alignItems: "center" }}>
+                  <span className="cz-big">{s.stationName}</span>
+                  {readOnly ? null : (
+                    <button type="button" className={BTN_LINK} onClick={() => onBan(s.systemName, s.stationName)}>
+                      Never use this station
+                    </button>
+                  )}
+                </div>
+                <div className="cz-soft">
+                  {s.systemName} · {stopFacts(s)}
+                </div>
+                <div className="cz-table-wrap">
+                  <table className="cz-table" style={{ marginTop: 8 }}>
+                    <thead>
+                      <tr>
+                        <th scope="col">Buy</th>
+                        <th scope="col" className="r">
+                          Tons
+                        </th>
+                        <th scope="col" className="r">
+                          Price
+                        </th>
+                        <th scope="col">Done</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {s.buys.map((b) => {
+                        const id = tripBuyLineId(next.tripNumber, s.stopIndex, b.commodityId);
+                        const done = completed.has(id);
+                        return (
+                          <tr key={id} className={done ? "is-done" : undefined}>
+                            <td>{b.label}</td>
+                            <td className={`r cz-strong${done ? "" : " cz-hi"}`}>{t(b.buyTons)}</td>
+                            <td className="r cz-dim">{b.buyPrice != null ? `${formatPrice(b.buyPrice)} cr` : ""}</td>
+                            <td>
+                              <input
+                                type="checkbox"
+                                className="cz-tick"
+                                checked={done}
+                                disabled={readOnly}
+                                onChange={() => onToggle(id)}
+                                aria-label={`${b.label} bought`}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            )),
-          )}
+            ))}
+          </div>
+          <div className="cz-next__then cz-stack">
+            <div className="cz-label">Then deliver to</div>
+            {deliverStops.flatMap((s) =>
+              (s.deliveries ?? []).map((d) => (
+                <div key={`${s.stopIndex}-${d.depotMarketId}`}>
+                  <div className="cz-site__name">{d.depotLabel}</div>
+                  <div className="cz-small cz-soft">
+                    {d.systemName} · {d.materials.map((x) => `${x.label} ${t(x.tons)}`).join(", ")}
+                  </div>
+                </div>
+              )),
+            )}
+          </div>
         </div>
+        {readOnly ? null : (
+          <div className="cz-actions">
+            {copyTarget ? (
+              <button
+                type="button"
+                className={BTN_GO}
+                onClick={() => {
+                  void copy(copyTarget.systemName);
+                  setCopied(copyTarget.systemName);
+                  window.setTimeout(() => setCopied(null), 1800);
+                }}
+              >
+                {copied === copyTarget.systemName ? "Copied" : `Copy “${copyTarget.systemName}”`}
+              </button>
+            ) : null}
+            <button type="button" className={BTN} onClick={() => setTrip(next, completed, true, onToggle)}>
+              Mark trip done
+            </button>
+          </div>
+        )}
       </div>
-      {readOnly ? null : (
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-        {copyTarget ? (
-          <button
-            type="button"
-            className="cz-btn cz-btn--primary"
-            onClick={() => {
-              void copy(copyTarget.systemName);
-              setCopied(copyTarget.systemName);
-              window.setTimeout(() => setCopied(null), 1800);
-            }}
-          >
-            {copied === copyTarget.systemName ? "Copied" : `Copy “${copyTarget.systemName}”`}
-          </button>
-        ) : null}
-        <button type="button" className="cz-btn" onClick={() => setTrip(next, completed, true, onToggle)}>
-          Mark trip done
-        </button>
-      </div>
-      )}
-    </article>
+    </Panel>
   );
 }
 
@@ -184,11 +183,12 @@ export function TripList({ trips, completed, onToggle, readOnly = false }: TripP
   const rest = trips.filter((tr) => tr !== next);
   const shown = all ? rest : rest.slice(0, 8);
   return (
-    <div className="cz-trips">
-      <div className="cz-row" style={{ padding: "12px 16px" }}>
-        <h3 className="cz-h3">After that</h3>
-        {readOnly ? null : <span className="cz-small cz-dim">tick a trip you did out of order</span>}
-      </div>
+    <Panel
+      k="trips"
+      title="After that"
+      className="cz-panel--flush"
+      aside={readOnly ? undefined : <span className="cz-aside-note">tick a trip you did out of order</span>}
+    >
       {shown.map((tr) => {
         const done = tripDone(tr, completed);
         const buy = tr.stops.find((s) => s.kind === "buy" && s.buys.length);
@@ -196,22 +196,24 @@ export function TripList({ trips, completed, onToggle, readOnly = false }: TripP
         const sites = [...new Set(tr.stops.flatMap((s) => (s.deliveries ?? []).map((d) => d.depotLabel)))];
         return (
           <div key={tr.tripNumber} className={`cz-trip${done ? " cz-trip--done" : ""}`}>
-            <label style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 340px" }}>
-              <input type="checkbox" checked={done} disabled={readOnly} onChange={() => setTrip(tr, completed, !done, onToggle)} />
+            <label className="cz-trip__main">
+              <input type="checkbox" className="cz-tick" checked={done} disabled={readOnly} onChange={() => setTrip(tr, completed, !done, onToggle)} />
               <span className="cz-trip__n">{tr.tripNumber}</span>
               <b>{buy?.stationName ?? "—"}</b>
               <span className="cz-small cz-dim">{buy ? formatHopLy(buy.distanceLy) : ""}</span>
             </label>
-            <span style={{ flex: "1 1 240px", color: done ? undefined : "var(--text-dim)" }}>{buys.join(" · ")}</span>
-            <span className="cz-small cz-dim">{sites.length ? `→ ${sites.join(", ")}` : ""}</span>
+            <span className="cz-trip__buys">{buys.join(" · ")}</span>
+            <span className="cz-trip__to">{sites.length ? `→ ${sites.join(", ")}` : ""}</span>
           </div>
         );
       })}
       {rest.length > 8 ? (
-        <button type="button" className="cz-btn cz-btn--quiet" style={{ margin: "8px 10px" }} onClick={() => setAll(!all)}>
-          {all ? "Show fewer" : `Show all ${rest.length} trips`}
-        </button>
+        <div className="cz-trip">
+          <button type="button" className={BTN} onClick={() => setAll(!all)}>
+            {all ? "Show fewer" : `Show all ${rest.length} trips`}
+          </button>
+        </div>
       ) : null}
-    </div>
+    </Panel>
   );
 }

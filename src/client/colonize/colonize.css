@@ -1,237 +1,305 @@
 /*
- * The Colonize window (1.3.0). Its own class names (`cz-`), EDEXO's tokens (public/tokens.css, styles/tokens.css),
- * so the colour scheme and the font follow the rest of the app and nothing here reaches the main window.
- * Cockpit rule: orange = normal, blue (--ok) = done / information, yellow (--warn) = caution, red (--danger) = warning.
+ * Colonize (1.3.0) on Compare's parts (C4, owner 2026-10-22: "the same quality and feel"). The panels are Compare's
+ * fold panels, the buttons and tabs Compare's, the number boxes Compare's fact tiles (views/ui.tsx); this file holds
+ * Colonize's layout and the few pieces Compare has no part for, drawn in Compare's language: square, chamfered,
+ * uppercase labels, hairline rules. Cockpit rule: orange = normal, blue (--ok) = done / information, yellow (--warn) =
+ * caution, red (--danger) = warning.
  */
 .cz {
-  min-height: 100vh;
-  /* The footer (Ko-fi) sits at the bottom of the window when the page is short (owner, 2026-10-22). */
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--hud-font);
-  font-size: 15px;
-  line-height: 1.45;
-}
-.cz > .cz-main {
-  flex: 1 0 auto;
-}
-.cz button,
-.cz input,
-.cz select {
-  font: inherit;
-}
-.cz button {
-  cursor: pointer;
-}
-.cz a:not(.cz-btn) {
-  color: var(--hud-hi);
-  text-underline-offset: 3px;
-}
-.cz a:not(.cz-btn):hover {
   color: var(--text);
 }
 .cz :focus-visible {
-  outline: 2px solid var(--hud-hi);
+  outline: 1px solid var(--accent);
   outline-offset: 2px;
+}
+.cz a:not([class]) {
+  color: var(--accent-bright);
+  text-underline-offset: 3px;
+}
+.cz a:not([class]):hover {
+  color: var(--text);
 }
 .cz-dim {
   color: var(--text-faint);
 }
+.cz-soft {
+  color: var(--text-dim);
+}
+.cz-hi {
+  color: var(--accent-bright);
+}
+.cz-ok {
+  color: var(--ok);
+}
+.cz-warn {
+  color: var(--warn);
+}
+.cz-own {
+  color: var(--accent-bright);
+}
 .cz-small {
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 .cz-num {
   font-variant-numeric: tabular-nums;
 }
+.cz-strong {
+  font-weight: 700;
+}
+.cz-big {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+/* Compare's label: small, uppercase, spaced. */
+.cz-label {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.cz-lead {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+}
+.cz-aside-note {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
 
-/* ---- header + tabs ------------------------------------------------------------------------------------------ */
-.cz-head {
+/* ---- the tray (HeaderBar trayContent) and the sub-tabs ------------------------------------------------------- */
+.cz.cz--in-shell {
+  display: block;
+}
+.cz.cz-tray {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 20px;
-  padding: 12px 24px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--hud-faint);
-}
-.cz-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  font-size: 18px;
-}
-.cz-brand__tag {
-  padding: 2px 10px;
-  border: 1px solid var(--hud);
-  border-radius: 999px;
-  color: var(--hud);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.5rem 0 0.15rem;
 }
 .cz-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  flex: 1 1 520px;
+  align-items: stretch;
+  gap: 0.5rem;
 }
+/* Compare's tray cards (DATA VALUE, D-SCAN): a framed box, the label in orange caps, the value bold. */
 .cz-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: var(--surface);
-  border: 1px solid var(--hud-faint);
-  border-radius: 8px;
+  gap: 0.6rem;
+  min-height: 2.6rem;
+  padding: 0 0.85rem;
+  font: inherit;
   color: var(--text);
+  background: rgba(var(--shade-glass-rgb), 0.85);
+  border: 1px solid var(--accent-dim);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  white-space: nowrap;
+}
+button.cz-chip {
+  cursor: pointer;
+}
+button.cz-chip:hover {
+  border-color: var(--accent);
 }
 .cz-chip__k {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.cz-chip__v {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+.cz-chip__s {
+  font-size: var(--fs-sm);
   color: var(--text-faint);
-  font-size: 13px;
 }
 .cz-chip--info {
-  background: rgba(79, 208, 255, 0.1);
-  border-color: var(--ok-dim);
-  color: var(--ok-soft);
+  border-color: rgba(79, 208, 255, 0.55);
+  background: rgba(79, 208, 255, 0.06);
+}
+.cz-chip--info .cz-chip__k {
+  color: var(--ok);
 }
 .cz-chip--off {
+  border-color: rgba(var(--peach-rgb), 0.2);
+}
+.cz-chip--off .cz-chip__k,
+.cz-chip--off .cz-chip__v {
   color: var(--text-faint);
+}
+.cz-chip .cz-input {
+  width: 5.5rem;
 }
 .cz-head__right {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 0.6rem;
 }
-.cz-tabs {
+.cz-tabs,
+.cz-kinds {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 0 24px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--hud-faint);
+  align-items: center;
+  gap: 0.4rem;
 }
-.cz-tab {
-  padding: 12px 18px;
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  color: var(--text-faint);
+.cz-tabs {
+  margin: 0.9rem 0 0.75rem;
 }
-.cz-tab[aria-selected="true"] {
-  color: var(--text);
-  font-weight: 600;
-  border-bottom-color: var(--hud);
+/* Compare's tab chips: framed when off, the orange fill when on. */
+.cz-tabs .tab,
+.cz-kinds .tab {
+  margin: 0;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 1rem;
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: rgba(var(--shade-glass-rgb), 0.85);
+  border: 1px solid var(--accent-dim);
+}
+.cz-tabs .tab.on,
+.cz-kinds .tab.on {
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+  color: var(--ink, #07060a);
+  border-color: var(--accent-bright);
+}
+.cz-tabs .tab:not(.on):hover,
+.cz-kinds .tab:not(.on):hover {
+  border-color: var(--accent);
+  color: var(--accent-bright);
 }
 .cz-tab__count {
-  margin-left: 6px;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: var(--hud-ghost);
-  color: var(--hud-hi);
-  font-size: 12px;
+  padding: 0 0.35rem;
+  border: 1px solid currentColor;
+  font-size: var(--fs-2xs);
 }
 
-/* ---- layout ------------------------------------------------------------------------------------------------- */
+/* ---- layout --------------------------------------------------------------------------------------------------- */
 .cz-main {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 24px;
   box-sizing: border-box;
+}
+.cz-main--note {
+  margin-bottom: 0.75rem;
 }
 .cz-cols {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 1rem;
   align-items: flex-start;
 }
 .cz-side {
   flex: 1 1 320px;
-  max-width: 420px;
+  max-width: 26rem;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 1rem;
+  min-width: 0;
+}
+.cz-side--wide {
+  max-width: 28rem;
 }
 .cz-wide {
   flex: 999 1 560px;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
 }
 .cz-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 20px;
+  gap: 1rem;
   align-items: start;
-}
-.cz-h2 {
-  margin: 0;
-  font-size: 20px;
-  letter-spacing: 0.04em;
-}
-.cz-h3 {
-  margin: 0;
-  font-size: 15px;
 }
 .cz-row {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.5rem;
 }
 .cz-stack {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.65rem;
+}
+.cz-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cz-pad {
+  margin: 0;
+  padding: 0.85rem 1rem;
 }
 
-/* ---- surfaces ----------------------------------------------------------------------------------------------- */
-.cz-panel {
-  padding: 16px;
-  background: var(--panel);
-  border: 1px solid rgba(255, 138, 31, 0.18);
-  border-radius: 12px;
-}
-.cz-panel--hot {
-  border-color: var(--hud);
-  background: linear-gradient(var(--target-warm), var(--panel));
-}
-.cz-panel--info {
-  border-color: var(--ok);
-  background: linear-gradient(#0d1418, var(--panel));
-}
-.cz-eyebrow {
+/* ---- panels: Compare's fold panel (views/ui.tsx Panel) ---------------------------------------------------------- */
+.cz .cz-panel {
   margin: 0;
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  color: var(--hud);
-  text-transform: uppercase;
 }
-.cz-panel--info .cz-eyebrow {
+.cz .cz-panel--hot {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(var(--shade-rgb), 0.55), var(--panel) 45%);
+}
+.cz .cz-panel--info {
+  border-color: rgba(79, 208, 255, 0.6);
+  background: linear-gradient(180deg, rgba(79, 208, 255, 0.07), var(--panel) 45%);
+}
+.cz .cz-panel--info .fold-title {
   color: var(--ok);
+  text-shadow: 0 0 8px rgba(79, 208, 255, 0.3);
 }
-.cz-big {
-  font-size: 22px;
-  font-weight: 700;
+.cz .cz-panel--info .fold-chevron {
+  border-color: var(--ok);
 }
+.cz .cz-panel--flush > .fold-body > .fold-inner {
+  padding: 0;
+}
+.cz .cz-panel--quiet .fold-title {
+  color: var(--text-faint);
+  text-shadow: none;
+}
+
+/* Compare's fact tiles (layout.css .facts / .fact), two across in a narrow column; "hot" is what is left to do. */
+.cz-facts {
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+}
+.cz-fact--hot {
+  color: var(--accent-bright);
+  border-color: var(--accent-dim);
+}
+
+/* ---- notes: Compare's banners, square ------------------------------------------------------------------------- */
 .cz-note {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 0.75rem;
   align-items: center;
-  padding: 12px 16px;
-  border-radius: 10px;
+  margin: 0;
+  padding: 0.7rem 1rem;
   border: 1px solid;
 }
 .cz-note--warn {
-  background: rgba(255, 210, 63, 0.07);
-  border-color: rgba(255, 210, 63, 0.5);
+  background: rgba(255, 210, 63, 0.06);
+  border-color: rgba(255, 210, 63, 0.55);
   color: var(--warn-soft);
 }
 .cz-note--bad {
@@ -240,161 +308,157 @@
   color: var(--danger-faint);
 }
 .cz-note--info {
-  background: rgba(79, 208, 255, 0.07);
-  border-color: var(--ok-dim);
+  background: rgba(79, 208, 255, 0.06);
+  border-color: rgba(79, 208, 255, 0.5);
   color: var(--ok-soft);
 }
 .cz-note__text {
   flex: 1 1 300px;
 }
+.cz-note__tag {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--warn);
+}
 
-/* ---- controls ----------------------------------------------------------------------------------------------- */
-.cz-btn {
+/* ---- controls: Compare's buttons (btn-top-neutral, btn-confirm-go, btn-top-toggle) plus two tones ------------- */
+.cz .btn-top-neutral,
+.cz .btn-confirm-go {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid rgba(255, 138, 31, 0.55);
-  border-radius: 8px;
+  gap: 0.35rem;
   text-decoration: none;
 }
-.cz-btn:hover {
-  background: var(--hud-ghost);
+.cz .btn-top-neutral:disabled,
+.cz .btn-confirm-go:disabled,
+.cz .btn-top-toggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+  filter: none;
 }
-.cz-btn:disabled {
+.cz .cz-btn--warn {
+  color: var(--warn-soft);
+  border-color: rgba(255, 210, 63, 0.6);
+  box-shadow: none;
+}
+.cz .cz-btn--bad {
+  color: var(--danger-soft);
+  border-color: rgba(255, 90, 60, 0.6);
+  box-shadow: none;
+}
+/* The small text action, like Compare's "Copy" beside a panel title. */
+.cz-link {
+  padding: 0.2rem 0.3rem;
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.cz-link:hover {
+  color: var(--accent-bright);
+}
+.cz-link:disabled {
   opacity: 0.5;
   cursor: default;
 }
-.cz-btn--primary {
-  background: var(--hud);
-  color: var(--ink);
-  border-color: var(--hud);
-  font-weight: 700;
+/* On / off like Compare's candidate toggles: off is the outline; on is filled with a lit dot. */
+.cz .btn-top-toggle--on {
+  background: var(--accent-a22);
+  color: var(--accent-bright);
+  border-color: var(--accent);
 }
-.cz-btn--primary:hover {
-  background: var(--hud-hi);
+.cz .btn-top-toggle--on::before {
+  content: "\25CF\00A0";
+  color: var(--accent-bright);
 }
-.cz-btn--warn {
-  color: var(--warn-soft);
-  border-color: rgba(255, 210, 63, 0.6);
-}
-.cz-btn--bad {
-  color: var(--danger-soft);
-  border-color: rgba(255, 90, 60, 0.55);
-}
-.cz-btn--quiet {
-  border-color: transparent;
-  color: var(--hud-hi);
-  padding-inline: 6px;
-}
-.cz-iconbtn {
-  width: 36px;
-  height: 36px;
-  display: inline-grid;
-  place-items: center;
-  background: var(--surface);
-  border: 1px solid rgba(255, 138, 31, 0.35);
-  border-radius: 8px;
-  color: var(--hud-hi);
+.cz-x {
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  justify-content: center;
 }
 .cz-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px;
-  background: var(--panel);
-  border: 1px solid rgba(255, 138, 31, 0.18);
-  border-radius: 10px;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
 }
 .cz-field {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: var(--surface);
-  border-radius: 8px;
+  gap: 0.45rem;
 }
-.cz-input,
-.cz-select {
-  background: var(--bg);
+.cz-input {
+  font: inherit;
   color: var(--text);
-  border: 1px solid rgba(255, 138, 31, 0.35);
-  border-radius: 6px;
-  padding: 4px 8px;
+  background: var(--bg);
+  border: 1px solid var(--accent-dim);
+  padding: 0.35rem 0.6rem;
+  clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+}
+.cz-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: inset 0 0 12px var(--accent-a12);
 }
 .cz-input--big {
   flex: 1;
-  padding: 10px 14px;
-  font-size: 17px;
-  border-color: var(--hud);
-  border-radius: 10px;
-}
-.cz-toggle {
-  padding: 6px 12px;
-  background: var(--surface);
-  border: 1px solid var(--hud-faint);
-  border-radius: 8px;
-  color: var(--text-faint);
-}
-.cz-toggle[aria-pressed="true"] {
-  background: rgba(255, 138, 31, 0.14);
-  border-color: var(--hud);
-  color: var(--text);
-}
-.cz-seg {
-  display: inline-flex;
-  padding: 4px;
-  background: var(--panel);
-  border: 1px solid var(--hud-faint);
-  border-radius: 10px;
-}
-.cz-seg button {
-  padding: 8px 16px;
-  background: transparent;
-  border: 0;
-  border-radius: 7px;
-  color: var(--text-faint);
-}
-.cz-seg button[aria-selected="true"] {
-  background: rgba(255, 138, 31, 0.16);
-  color: var(--text);
-  font-weight: 600;
+  padding: 0.55rem 0.8rem;
+  font-size: var(--fs-lg);
+  border-color: var(--accent);
 }
 .cz-check {
   display: inline-flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 0.6rem;
 }
-.cz-check input {
+.cz-check input,
+.cz-tick {
   width: 18px;
   height: 18px;
-  margin-top: 2px;
-  accent-color: var(--hud);
+  margin: 2px 0 0;
+  accent-color: var(--ok);
 }
 
-/* ---- sites -------------------------------------------------------------------------------------------------- */
+/* ---- sites ---------------------------------------------------------------------------------------------------- */
+.cz-sites {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
 .cz-site {
-  padding: 16px;
-  background: var(--panel);
-  border: 1px solid rgba(255, 138, 31, 0.18);
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.cz-site + .cz-site {
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--accent-a15);
 }
 .cz-site--docked {
-  border-color: var(--ok);
+  margin: 0 -1rem;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(90deg, rgba(79, 208, 255, 0.08), transparent);
+  box-shadow: inset 3px 0 0 var(--ok);
+}
+.cz-site__name {
+  font-size: var(--fs-xl);
+  font-weight: 700;
 }
 .cz-bar {
-  height: 8px;
-  margin: 10px 0 6px;
-  background: var(--hud-ghost);
-  border-radius: 4px;
-  overflow: hidden;
+  height: 6px;
+  background: var(--accent-a12);
 }
 .cz-bar__fill {
   height: 100%;
-  background: var(--hud);
-  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent-bright));
 }
 .cz-bar__fill--done {
   background: var(--ok);
@@ -405,32 +469,87 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.25rem;
 }
 .cz-list li {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 0.75rem;
 }
-.cz-fold > summary {
+.cz-li {
+  padding: 0.3rem 0.5rem;
+}
+.cz-li--hot {
+  background: linear-gradient(90deg, rgba(var(--shade-row-rgb), 0.95), rgba(var(--shade-row-2-rgb), 0.35));
+}
+/* A fold inside a panel: Compare's chevron and an uppercase label, no frame of its own. */
+.cz-fold > summary,
+.cz-more > summary {
   display: flex;
-  justify-content: space-between;
-  padding: 12px 14px;
-  background: var(--panel);
-  border: 1px solid rgba(255, 138, 31, 0.18);
-  border-radius: 10px;
-  color: var(--text-dim);
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border-top: 1px solid var(--accent-a15);
   cursor: pointer;
   list-style: none;
 }
-.cz-fold > summary::-webkit-details-marker {
+.cz-more > summary {
+  padding: 0.2rem 0;
+  border-top: 0;
+  color: var(--accent-bright);
+}
+.cz-fold > summary::-webkit-details-marker,
+.cz-more > summary::-webkit-details-marker {
   display: none;
 }
+.cz-fold > summary::before,
+.cz-more > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--accent);
+  border-bottom: 1.5px solid var(--accent);
+  transform: rotate(-45deg);
+  transition: transform var(--fold-ms, 260ms) var(--fold-ease, ease);
+}
+.cz-fold[open] > summary::before,
+.cz-more[open] > summary::before {
+  transform: rotate(45deg);
+}
 .cz-fold[open] > summary {
-  margin-bottom: 10px;
+  margin-bottom: 0.5rem;
 }
 
-/* ---- tables ------------------------------------------------------------------------------------------------- */
+/* ---- cards inside a panel (carriers, trade party, wing) ------------------------------------------------------ */
+.cz-card {
+  padding: 0.7rem 0.85rem;
+  background: rgba(var(--shade-glass-rgb), 0.75);
+  border: 1px solid rgba(var(--peach-rgb), 0.18);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+}
+.cz-card--on {
+  border-color: rgba(79, 208, 255, 0.55);
+  background: rgba(79, 208, 255, 0.05);
+}
+.cz-member {
+  margin: 0;
+  border-left-width: 3px;
+}
+.cz-member form .ui-select {
+  width: auto;
+  min-width: 12rem;
+}
+/* Forget saved sellers: the words take the row, the button keeps to the right. */
+.cz-panel--quiet .cz-row > span:first-child {
+  flex: 1 1 12rem;
+}
+
+/* ---- tables --------------------------------------------------------------------------------------------------- */
 .cz-table-wrap {
   overflow-x: auto;
 }
@@ -440,84 +559,163 @@
   font-variant-numeric: tabular-nums;
 }
 .cz-table th {
-  padding: 6px 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--text-faint);
-  font-size: 13px;
-  font-weight: 500;
   text-align: left;
 }
 .cz-table td {
-  padding: 8px;
-  border-top: 1px solid rgba(255, 138, 31, 0.12);
+  padding: 0.55rem 0.6rem;
+  border-top: 1px solid var(--accent-a12);
   vertical-align: top;
+}
+.cz-table th:first-child,
+.cz-table td:first-child {
+  padding-left: 0;
+}
+.cz-panel--flush .cz-table th:first-child,
+.cz-panel--flush .cz-table td:first-child {
+  padding-left: 1rem;
+}
+.cz-table--big {
+  font-size: var(--fs-lg);
 }
 .cz-table .r {
   text-align: right;
 }
 .cz-table tr.is-picked td {
-  background: var(--hud-ghost);
+  background: linear-gradient(90deg, rgba(var(--shade-row-rgb), 0.95), rgba(var(--shade-row-2-rgb), 0.35));
+}
+.cz-table tr.is-picked td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 .cz-table tr.is-done td {
   color: var(--text-faint);
 }
 .cz-pick {
-  background: none;
-  border: 0;
   padding: 0;
+  font: inherit;
+  font-weight: 700;
   color: var(--text);
   text-align: left;
-  font-weight: 600;
+  background: none;
+  border: 0;
+  cursor: pointer;
 }
 .cz-pick:hover {
-  color: var(--hud-hi);
-}
-
-/* ---- trips -------------------------------------------------------------------------------------------------- */
-.cz-trips {
-  background: var(--panel);
-  border: 1px solid rgba(255, 138, 31, 0.18);
-  border-radius: 10px;
-}
-.cz-trip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  padding: 10px 16px;
-  border-top: 1px solid rgba(255, 138, 31, 0.08);
-}
-.cz-trip input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--ok);
-}
-.cz-trip--done {
-  color: var(--text-faint);
-}
-.cz-trip__n {
-  width: 28px;
-  color: var(--text-faint);
+  color: var(--accent-bright);
 }
 .cz-done-mark {
   color: var(--ok);
 }
 
+/* ---- the next trip and the trips after it --------------------------------------------------------------------- */
+.cz-next {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+.cz-next > :first-child {
+  flex: 1 1 340px;
+  min-width: 0;
+}
+.cz-next__then {
+  flex: 0 1 280px;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--accent-a22);
+}
+.cz-trip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--accent-a10);
+}
+.cz-trip:first-child {
+  border-top: 0;
+}
+.cz-trip__main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 340px;
+  min-width: 0;
+}
+.cz-trip__n {
+  width: 1.75rem;
+  color: var(--text-faint);
+}
+.cz-trip__buys {
+  flex: 1 1 240px;
+  color: var(--text-dim);
+}
+.cz-trip__to {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.cz-trip--done,
+.cz-trip--done .cz-trip__buys {
+  color: var(--text-faint);
+}
+
+/* ---- the phone and streamer views (PhoneView.tsx): Compare's app bar, cut down ------------------------------- */
+/* Compare's wordmark, kept at every width (Compare's own drops it under 1000 px for the search). */
+.cz-mark {
+  font-size: var(--fs-md);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  color: var(--accent-bright);
+  text-shadow: 0 0 10px var(--accent-glow);
+  white-space: nowrap;
+}
+.cz-mark b {
+  margin-left: 0.35em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: none;
+}
+.cz--phone .cz-head,
+.cz--stream .cz-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--accent-dim);
+  background: linear-gradient(180deg, rgba(var(--shade-rgb), 0.5), rgba(var(--tint-14-11-10), 0.92) 70%);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+.cz--phone .cz-main,
+.cz--stream .cz-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.cz--phone .cz-side,
+.cz--stream .cz-side {
+  max-width: none;
+}
 @media (max-width: 640px) {
-  .cz-main {
-    padding: 16px;
+  .cz--phone.app-shell {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
-  .cz-head,
-  .cz-tabs {
-    padding-inline: 16px;
+  .cz-chip {
+    min-height: 2.3rem;
   }
 }
 
-/* A site in one of the commander's own colonies (ownColony.ts). */
-.cz-own {
-  color: var(--hud-hi);
-}
-
-/* The streamer view (`&view=stream`, PhoneView.tsx): nothing to click, the backdrop optional, two columns when wide. */
+/* The streamer view (`&view=stream`): nothing to click, the backdrop optional, two columns when wide. */
 html[data-streamer] .cz {
   pointer-events: none;
   user-select: none;
@@ -535,24 +733,5 @@ html[data-streamer-bg="transparent"] .cz-head {
   .cz--stream .cz-main > .cz-side {
     grid-column: 2;
     grid-row: 1 / span 4;
-    max-width: none;
   }
-}
-
-/* Inside Compare's shell (1.3.0, C3): the shell gives the background, the font and the footer. */
-.cz.cz--in-shell,
-.cz.cz-tray {
-  min-height: 0;
-  display: block;
-  background: transparent;
-  font-family: inherit;
-}
-.cz.cz-tray {
-  display: flex;
-  flex-direction: row; /* not the .cz root's column: the chips' width basis would become their height */
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 16px;
-  padding: 8px 0 4px;
 }

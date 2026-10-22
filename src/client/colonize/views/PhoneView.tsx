@@ -16,6 +16,7 @@ import { commodityMergeBucket } from "../../../shared/colonize/commodityKey";
 import { depotDisplayLabel } from "../../../shared/colonize/depotLabel";
 import { storageGet } from "../../../shared/colonize/storage";
 import { loadTripPlanSnapshot, syncTripLineCompletions } from "../../../shared/colonize/tripPlanProgress";
+import { AppLegalFooter } from "../../App";
 import { DeliverHerePanel } from "./DockPanels";
 import { SitesColumn } from "./SitesColumn";
 import { NextTripCard, TripList } from "./Trips";
@@ -74,27 +75,24 @@ export function PhoneView({ streamer = false }: { streamer?: boolean }) {
   const sitesModel = { snap, ui: { depotRefPins: {} }, setDepotRefPin: noop, setArchived: noop };
 
   return (
-    <div className={streamer ? "cz cz--stream" : "cz cz--phone"}>
+    <div className={`app-shell cz ${streamer ? "cz--stream" : "cz--phone"}`}>
+      {/* Compare's app bar, as much of it as a read-only view has: the wordmark and the tray's two facts. */}
       <header className="cz-head">
-        <div className="cz-brand">
-          <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-            <path d="M14 2 25 8.5v11L14 26 3 19.5v-11Z" fill="none" stroke="var(--hud)" strokeWidth="2" />
-            <path d="M14 8v12M9 11l5-3 5 3" fill="none" stroke="var(--hud-hi)" strokeWidth="1.6" />
-          </svg>
-          EDEXO <span className="cz-brand__tag">COLONIZE</span>
-        </div>
+        <span className="cz-mark">
+          EDEXO<b>Colonize</b>
+        </span>
         <div className="cz-chips">
           <span className={`cz-chip${docked?.stationName ? " cz-chip--info" : ""}`} data-testid="phone-where">
             <span className="cz-chip__k">{docked?.stationName ? "Docked" : "You"}</span>
-            <b>{dockedSite ? depotDisplayLabel(dockedSite) : (docked?.stationName ?? snap?.navContext.starSystem ?? "…")}</b>
+            <b className="cz-chip__v">{dockedSite ? depotDisplayLabel(dockedSite) : (docked?.stationName ?? snap?.navContext.starSystem ?? "…")}</b>
           </span>
           <span className="cz-chip" data-testid="phone-hold">
             <span className="cz-chip__k">Hold</span>
-            <b>{`${Math.round(used).toLocaleString("en-US")} / ${capacity != null ? t(capacity) : "? t"}`}</b>
+            <b className="cz-chip__v">{`${Math.round(used).toLocaleString("en-US")} / ${capacity != null ? t(capacity) : "? t"}`}</b>
           </span>
         </div>
       </header>
-      <main className="cz-main cz-stack" style={{ gap: 20 }}>
+      <main className="cz-main cz-stack">
         {streamer ? null : (
           <p className="cz-note cz-note--info" style={{ margin: 0 }}>
             Phone view: what the PC knows, as it changes. Ticks, plans and settings are made in Colonize on the PC.
@@ -113,14 +111,7 @@ export function PhoneView({ streamer = false }: { streamer?: boolean }) {
         ) : null}
         <SitesColumn m={sitesModel} readOnly />
       </main>
-      {streamer ? null : (
-        <footer className="cz-small cz-dim" style={{ padding: "16px 24px", textAlign: "center" }}>
-          EDEXO is not affiliated with Frontier Developments. ·{" "}
-          <a href="https://ko-fi.com/bahuckel" target="_blank" rel="noreferrer">
-            Buy me a coffee
-          </a>
-        </footer>
-      )}
+      {streamer ? null : <AppLegalFooter />}
     </div>
   );
 }

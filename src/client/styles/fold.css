@@ -40,6 +40,14 @@
   border: 0;
   cursor: pointer;
 }
+/* A fold head that is also a heading (FoldPanel `heading`): the heading takes the toggle's place in the row. */
+.fold-heading {
+  flex: 1 1 auto;
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  font: inherit;
+}
 .fold-toggle:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 4px;

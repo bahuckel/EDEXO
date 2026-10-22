@@ -20,9 +20,11 @@ import { usePlannerCheckouts } from "../planner/hooks/usePlannerCheckouts";
 import { usePlannerSystemCoords } from "../planner/hooks/usePlannerSystemCoords";
 import { colonizeApi } from "../api";
 import type { ColonizeModel } from "../useColonize";
+import { Select, type SelectOption } from "../../ui/Select";
 import { BuyHerePanel, DeliverHerePanel } from "./DockPanels";
 import { SitesColumn } from "./SitesColumn";
 import { NextTripCard, TripList } from "./Trips";
+import { BTN, BTN_GO, BTN_LINK, BTN_WARN, Panel } from "./ui";
 
 export function PlanView({ m }: { m: ColonizeModel }) {
   const snap = m.snap;
@@ -125,17 +127,18 @@ export function PlanView({ m }: { m: ColonizeModel }) {
     return (
       <div className="cz-cols">
         <SitesColumn m={m} />
-        <section className="cz-wide cz-panel">
-          <h2 className="cz-h2">Nothing to haul yet</h2>
-          <p>
-            A construction site appears here once you dock at it or deliver to it: the game writes it to your journal, and
-            this window follows your journals from the last seven days.
-          </p>
-          <p className="cz-dim">
-            Looking for where to build? <a href="/?screen=galaxy&amp;drawer=finder" target="_blank" rel="noreferrer">Find colony sites</a>{" "}
-            on the galaxy map: systems near your colonies with the bodies you want, not yet taken.
-          </p>
-        </section>
+        <div className="cz-wide">
+          <Panel k="plan-empty" title="Nothing to haul yet">
+            <p style={{ marginTop: 0 }}>
+              A construction site appears here once you dock at it or deliver to it: the game writes it to your journal, and
+              this window follows your journals from the last seven days.
+            </p>
+            <p className="cz-dim" style={{ marginBottom: 0 }}>
+              Looking for where to build? <a href="/?screen=galaxy&amp;drawer=finder" target="_blank" rel="noreferrer">Find colony sites</a>{" "}
+              on the galaxy map: systems near your colonies with the bodies you want, not yet taken.
+            </p>
+          </Panel>
+        </div>
       </div>
     );
   }
@@ -143,26 +146,33 @@ export function PlanView({ m }: { m: ColonizeModel }) {
   return (
     <div className="cz-cols">
       <SitesColumn m={m} />
-      <section className="cz-wide" aria-labelledby="cz-plan-h">
-        <div className="cz-row">
-          <h2 id="cz-plan-h" className="cz-h2">
-            Haul plan
-          </h2>
-          <span style={{ color: "var(--text-dim)" }}>
-            {trips.length
-              ? `${trips.length} trip${trips.length === 1 ? "" : "s"} · ${Math.round(totalTons).toLocaleString("en-US")} t`
-              : listingsLoading || m.stations.busy
-                ? "Working it out…"
-                : "No trips yet"}
-          </span>
-        </div>
-
-        <PlanFilters m={m} />
+      <div className="cz-wide">
+        <Panel
+          k="plan"
+          title="Haul plan"
+          aside={
+            <span className="cz-aside-note">
+              {trips.length
+                ? `${trips.length} trip${trips.length === 1 ? "" : "s"} · ${Math.round(totalTons).toLocaleString("en-US")} t`
+                : listingsLoading || m.stations.busy
+                  ? "Working it out…"
+                  : "No trips yet"}
+            </span>
+          }
+          help={
+            <p>
+              The plan fills your hold from the sellers known (your journal first, then Spansh and Inara), within what you allow
+              below, and updates as you buy, deliver and dock.
+            </p>
+          }
+        >
+          <PlanFilters m={m} />
+        </Panel>
 
         {m.stations.error ? (
           <div className="cz-note cz-note--bad" role="alert">
             <span className="cz-note__text">{m.stations.error}</span>
-            <button type="button" className="cz-btn cz-btn--quiet" onClick={m.stations.clearError}>
+            <button type="button" className={BTN_LINK} onClick={m.stations.clearError}>
               Dismiss
             </button>
           </div>
@@ -182,10 +192,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
 
         {missing.length ? (
           <div className="cz-note cz-note--warn" role="status">
-            <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 2 19 18H1Z" fill="none" stroke="var(--warn)" strokeWidth="1.6" />
-              <path d="M10 8v4M10 14.5v.5" stroke="var(--warn)" strokeWidth="1.8" />
-            </svg>
+            <span className="cz-note__tag">No seller</span>
             <div className="cz-note__text cz-stack" style={{ gap: 8 }}>
               {missing.map((item) => (
                 <div key={`${item.why}-${item.id}`} className="cz-row" style={{ alignItems: "center" }}>
@@ -195,10 +202,10 @@ export function PlanView({ m }: { m: ColonizeModel }) {
                       ? "no seller known nearby."
                       : "sellers are known, but none fits what the plan may use (pad, distance, planet ports)."}
                   </span>
-                  <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <span className="cz-actions">
                     <button
                       type="button"
-                      className="cz-btn cz-btn--warn"
+                      className={BTN_WARN}
                       disabled={m.stations.fetchingMissingId === item.id || localFetchingId === item.id}
                       onClick={() => void m.stations.findMissing(item)}
                     >
@@ -206,14 +213,14 @@ export function PlanView({ m }: { m: ColonizeModel }) {
                     </button>
                     <button
                       type="button"
-                      className="cz-btn cz-btn--warn"
+                      className={BTN_WARN}
                       disabled={localFetchingId === item.id}
                       title="Look through the sellers already saved, further out"
                       onClick={() => void fetchMissingMaterialLocally(item)}
                     >
                       Saved sellers
                     </button>
-                    <a className="cz-btn cz-btn--warn" href={inaraCommoditySearchUrl(item.label, near)} target="_blank" rel="noreferrer">
+                    <a className={BTN_WARN} href={inaraCommoditySearchUrl(item.label, near)} target="_blank" rel="noreferrer">
                       Inara
                     </a>
                   </span>
@@ -226,21 +233,23 @@ export function PlanView({ m }: { m: ColonizeModel }) {
         {trips.length > 1 ? <TripList trips={trips} completed={completedLineIds} onToggle={toggleTripLine} onBan={m.stations.ban} /> : null}
 
         {!trips.length && !listingsLoading ? (
-          <div className="cz-panel cz-stack">
-            <p style={{ margin: 0 }}>
-              {checkouts.length
-                ? "The sellers known do not fit what the plan may use. Loosen the filters above, or look for more sellers."
-                : "No sellers known yet for what your sites need."}
-            </p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button type="button" className="cz-btn cz-btn--primary" disabled={m.stations.lookingBusy} onClick={m.stations.lookNow}>
-                {m.stations.lookingBusy ? "Looking…" : "Look on Spansh now"}
-              </button>
-              <button type="button" className="cz-btn" disabled={m.stations.busy} onClick={m.stations.reloadSaved}>
-                Use saved sellers
-              </button>
+          <Panel k="plan-no-trips" title="No trips yet">
+            <div className="cz-stack">
+              <p style={{ margin: 0 }}>
+                {checkouts.length
+                  ? "The sellers known do not fit what the plan may use. Loosen the filters above, or look for more sellers."
+                  : "No sellers known yet for what your sites need."}
+              </p>
+              <div className="cz-actions">
+                <button type="button" className={BTN_GO} disabled={m.stations.lookingBusy} onClick={m.stations.lookNow}>
+                  {m.stations.lookingBusy ? "Looking…" : "Look on Spansh now"}
+                </button>
+                <button type="button" className={BTN} disabled={m.stations.busy} onClick={m.stations.reloadSaved}>
+                  Use saved sellers
+                </button>
+              </div>
             </div>
-          </div>
+          </Panel>
         ) : null}
 
         <p className="cz-small cz-dim" style={{ margin: 0 }}>
@@ -248,20 +257,20 @@ export function PlanView({ m }: { m: ColonizeModel }) {
           {m.stations.lookingBusy ? "Looking for more sellers now. " : ""}
           The plan updates as you buy, deliver and dock.
         </p>
-      </section>
+      </div>
     </div>
   );
 }
 
-const PADS: { v: MinLandingPad; label: string }[] = [
-  { v: "L", label: "L" },
-  { v: "M", label: "M" },
-  { v: "any", label: "Any" },
+const PADS: SelectOption<MinLandingPad>[] = [
+  { value: "L", label: "L" },
+  { value: "M", label: "M" },
+  { value: "any", label: "Any" },
 ];
-const ORDERS: { v: CheckoutRoutingMode; label: string }[] = [
-  { v: "fewest_stops", label: "Fewest stops" },
-  { v: "nearest", label: "Nearest" },
-  { v: "cheapest", label: "Cheapest" },
+const ORDERS: SelectOption<CheckoutRoutingMode>[] = [
+  { value: "fewest_stops", label: "Fewest stops" },
+  { value: "nearest", label: "Nearest" },
+  { value: "cheapest", label: "Cheapest" },
 ];
 
 /** What the plan may use, on the plan itself (they were the checkout dialog's in EDEXO-Colonize). */
@@ -270,25 +279,17 @@ function PlanFilters({ m }: { m: ColonizeModel }) {
   const set = (patch: Partial<typeof f>) => m.setFilters({ ...f, ...patch });
   return (
     <div className="cz-filters" role="group" aria-label="What the plan may use">
-      <label className="cz-field">
-        Pad
-        <select
-          className="cz-select"
+      <span className="cz-field">
+        <span className="cz-label">Pad</span>
+        <Select<MinLandingPad>
+          ariaLabel="Landing pad"
           value={f.minLandingPad ?? "any"}
-          onChange={(e) => {
-            const v = e.target.value as MinLandingPad;
-            set({ minLandingPad: v, largePadOnly: v === "L" });
-          }}
-        >
-          {PADS.map((p) => (
-            <option key={p.v} value={p.v}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          options={PADS}
+          onChange={(v) => set({ minLandingPad: v, largePadOnly: v === "L" })}
+        />
+      </span>
       <label className="cz-field">
-        Within
+        <span className="cz-label">Within</span>
         <input
           className="cz-input"
           inputMode="numeric"
@@ -297,11 +298,15 @@ function PlanFilters({ m }: { m: ColonizeModel }) {
           placeholder="any"
           onChange={(e) => set({ maxDistanceLy: e.target.value.replace(/[^\d.]/g, "") })}
         />
-        ly
+        <span className="cz-dim">ly</span>
       </label>
+      <span className="cz-field">
+        <span className="cz-label">Order</span>
+        <Select<CheckoutRoutingMode> ariaLabel="Order" value={m.routingMode} options={ORDERS} onChange={(v) => m.setRoutingMode(v)} />
+      </span>
       <button
         type="button"
-        className="cz-toggle"
+        className={`btn-top-toggle cz-toggle${f.showPlanetary ? " btn-top-toggle--on" : ""}`}
         aria-pressed={f.showPlanetary}
         title="Surface ports and settlements"
         onClick={() => set({ showPlanetary: !f.showPlanetary, includePlanetaryAndGround: !f.showPlanetary })}
@@ -310,24 +315,14 @@ function PlanFilters({ m }: { m: ColonizeModel }) {
       </button>
       <button
         type="button"
-        className="cz-toggle"
+        className={`btn-top-toggle cz-toggle${!f.excludeFleetCarriers ? " btn-top-toggle--on" : ""}`}
         aria-pressed={!f.excludeFleetCarriers}
         title="Other commanders' fleet carriers that sell what you need"
         onClick={() => set({ excludeFleetCarriers: !f.excludeFleetCarriers })}
       >
         Carriers that sell
       </button>
-      <label className="cz-field">
-        Order
-        <select className="cz-select" value={m.routingMode} onChange={(e) => m.setRoutingMode(e.target.value as CheckoutRoutingMode)}>
-          {ORDERS.map((o) => (
-            <option key={o.v} value={o.v}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button type="button" className="cz-btn" disabled={m.stations.lookingBusy} onClick={m.stations.lookNow} style={{ marginLeft: "auto" }}>
+      <button type="button" className={BTN} disabled={m.stations.lookingBusy} onClick={m.stations.lookNow} style={{ marginLeft: "auto" }}>
         {m.stations.lookingBusy ? "Looking…" : "Look for sellers now"}
       </button>
     </div>

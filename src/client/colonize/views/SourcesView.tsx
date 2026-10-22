@@ -19,6 +19,7 @@ import {
   type PartyMember,
 } from "../../../shared/colonize/tradeParty";
 import type { ColonizeModel } from "../useColonize";
+import { BTN, BTN_BAD, BTN_GO, BTN_LINK, BTN_WARN, Panel } from "./ui";
 
 const t = (n: number) => `${Math.round(n).toLocaleString("en-US")} t`;
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -41,15 +42,11 @@ export function SourcesView({ m }: { m: ColonizeModel }) {
 
 function CarriersPanel({ m }: { m: ColonizeModel }) {
   return (
-    <section className="cz-panel cz-stack" aria-labelledby="cz-car-h">
-      <div>
-        <h2 id="cz-car-h" className="cz-h2">
-          Your carriers
-        </h2>
-        <p className="cz-small cz-dim" style={{ margin: 0 }}>
-          What the journal saw moving on and off them. Switch one on and the plan counts its cargo as already bought.
-        </p>
-      </div>
+    <Panel k="carriers" title="Your carriers" aside={<span className="cz-aside-note">{m.carriers.length || "none"}</span>}>
+      <div className="cz-stack">
+      <p className="cz-lead">
+        What the journal saw moving on and off them. Switch one on and the plan counts its cargo as already bought.
+      </p>
       {m.carriers.length ? (
         m.carriers.map((c) => <CarrierCard key={c.carrierId} c={c} on={m.haulingCarrierIds.has(c.carrierId)} toggle={() => m.toggleCarrier(c.carrierId)} />)
       ) : (
@@ -58,7 +55,8 @@ function CarriersPanel({ m }: { m: ColonizeModel }) {
           management screen.
         </p>
       )}
-    </section>
+      </div>
+    </Panel>
   );
 }
 
@@ -68,7 +66,7 @@ function CarrierCard({ c, on, toggle }: { c: CarrierStock; on: boolean; toggle: 
     .sort((a, b) => b[1] - a[1]);
   const total = lines.reduce((a, [, n]) => a + n, 0);
   return (
-    <div className="cz-site">
+    <div className={`cz-card${on ? " cz-card--on" : ""}`}>
       <div className="cz-row" style={{ alignItems: "center" }}>
         <div>
           <b>{carrierDisplayName(c)}</b>
@@ -82,15 +80,13 @@ function CarrierCard({ c, on, toggle }: { c: CarrierStock; on: boolean; toggle: 
           <span>Use its cargo</span>
         </label>
       </div>
-      <div className="cz-small" style={{ color: "var(--text-dim)", margin: "6px 0" }}>
+      <div className="cz-small cz-soft" style={{ margin: "6px 0" }}>
         {c.reportedTons != null ? `${t(c.reportedTons)} of cargo aboard` : `${t(total)} seen moving`}
         {c.capacityTons ? ` · holds ${t(c.capacityTons)}` : ""}
       </div>
       {lines.length ? (
-        <details>
-          <summary className="cz-small" style={{ cursor: "pointer", color: "var(--hud-hi)" }}>
-            {lines.length} commodities
-          </summary>
+        <details className="cz-more">
+          <summary className="cz-more-summary">{lines.length} commodities</summary>
           <ul className="cz-list cz-num" style={{ marginTop: 6 }}>
             {lines.map(([id, n]) => (
               <li key={id}>
@@ -146,22 +142,19 @@ function TradePartyPanel({ m }: { m: ColonizeModel }) {
 
   const valid = normalizeCallsign(callsign) != null;
   return (
-    <section className="cz-panel cz-stack" aria-labelledby="cz-party-h">
-      <div className="cz-row">
-        <div>
-          <h2 id="cz-party-h" className="cz-h2">
-            Trade party
-          </h2>
-          <p className="cz-small cz-dim" style={{ margin: 0 }}>
-            Friends' carriers by callsign: where they are and what they sell, from Spansh (about 15 minutes behind).
-          </p>
-        </div>
-        {members.length ? (
-          <button type="button" className="cz-btn cz-btn--quiet" disabled={busy} onClick={() => void lookUp()}>
+    <Panel
+      k="party"
+      title="Trade party"
+      aside={
+        members.length ? (
+          <button type="button" className={BTN_LINK} disabled={busy} onClick={() => void lookUp()}>
             {busy ? "Looking…" : "Look again"}
           </button>
-        ) : null}
-      </div>
+        ) : undefined
+      }
+    >
+      <div className="cz-stack">
+      <p className="cz-lead">Friends' carriers by callsign: where they are and what they sell, from Spansh (about 15 minutes behind).</p>
       <form
         className="cz-row"
         style={{ justifyContent: "flex-start", alignItems: "center", gap: 8 }}
@@ -175,7 +168,7 @@ function TradePartyPanel({ m }: { m: ColonizeModel }) {
       >
         <input className="cz-input" style={{ width: 110 }} aria-label="Callsign" placeholder="ABC-123" value={callsign} onChange={(e) => setCallsign(e.target.value)} />
         <input className="cz-input" style={{ flex: "1 1 140px" }} aria-label="Note" placeholder="whose it is (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
-        <button type="submit" className="cz-btn" disabled={!valid}>
+        <button type="submit" className={BTN} disabled={!valid}>
           Add
         </button>
       </form>
@@ -184,7 +177,7 @@ function TradePartyPanel({ m }: { m: ColonizeModel }) {
         const c = carriers.get(p.callsign);
         const forUs = c ? ordersForNeeds(c, needIds) : [];
         return (
-          <div key={p.callsign} className="cz-site">
+          <div key={p.callsign} className="cz-card">
             <div className="cz-row" style={{ alignItems: "center" }}>
               <div>
                 <b>{p.callsign}</b>
@@ -193,7 +186,7 @@ function TradePartyPanel({ m }: { m: ColonizeModel }) {
                   {!c ? "looking…" : !c.found ? "Spansh has never seen this carrier" : `${c.systemName ?? "somewhere"}${c.systemName ? ` · ${formatHopLy(c.distanceLy)}` : ""}`}
                 </div>
               </div>
-              <button type="button" className="cz-btn cz-btn--quiet cz-small" onClick={() => save(removePartyMember(members, p.callsign))}>
+              <button type="button" className={BTN_LINK} onClick={() => save(removePartyMember(members, p.callsign))}>
                 Remove
               </button>
             </div>
@@ -219,7 +212,8 @@ function TradePartyPanel({ m }: { m: ColonizeModel }) {
           </div>
         );
       })}
-    </section>
+      </div>
+    </Panel>
   );
 }
 
@@ -230,15 +224,9 @@ function SellerDataPanel({ m }: { m: ColonizeModel }) {
   const running = [s.active, s.passive].find((q) => q.phase !== "idle");
   const ps = m.plannerSettings;
   return (
-    <section className="cz-panel cz-stack" aria-labelledby="cz-seller-h">
-      <div>
-        <h2 id="cz-seller-h" className="cz-h2">
-          Seller data
-        </h2>
-        <p className="cz-small cz-dim" style={{ margin: 0 }}>
-          Sellers come from Spansh, your Inara imports and every market you dock at; the plan uses all of them.
-        </p>
-      </div>
+    <Panel k="seller-data" title="Seller data">
+      <div className="cz-stack">
+      <p className="cz-lead">Sellers come from every market you dock at, Spansh and your Inara imports; the plan uses all of them.</p>
       <div className="cz-note cz-note--info" role="status" style={{ margin: 0 }}>
         {running
           ? `${running.phase === "queued" ? "Waiting to look" : "Looking"} for ${running.commodityLabel ?? "sellers"}${running.referenceSystem ? ` near ${running.referenceSystem}` : ""}${running.total ? ` · ${running.done} of ${running.total}` : ""}`
@@ -256,7 +244,7 @@ function SellerDataPanel({ m }: { m: ColonizeModel }) {
         <span>Ask Spansh in the background</span>
       </label>
       <label className="cz-field">
-        <span>Stop after this many seller systems per material</span>
+        <span className="cz-soft">Stop after this many seller systems per material</span>
         <input
           className="cz-input"
           inputMode="numeric"
@@ -267,11 +255,12 @@ function SellerDataPanel({ m }: { m: ColonizeModel }) {
         />
       </label>
       <div>
-        <button type="button" className="cz-btn cz-btn--primary" disabled={m.stations.lookingBusy} onClick={m.stations.lookNow}>
+        <button type="button" className={BTN_GO} disabled={m.stations.lookingBusy} onClick={m.stations.lookNow}>
           {m.stations.lookingBusy ? "Looking…" : "Look for sellers now"}
         </button>
       </div>
-    </section>
+      </div>
+    </Panel>
   );
 }
 
@@ -321,15 +310,11 @@ function InaraPanel({ m }: { m: ColonizeModel }) {
   };
 
   return (
-    <section className="cz-panel cz-stack" aria-labelledby="cz-inara-h">
-      <div>
-        <h2 id="cz-inara-h" className="cz-h2">
-          Inara imports
-        </h2>
-        <p className="cz-small cz-dim" style={{ margin: 0 }}>
-          The browser extension saves Inara's commodity search into this folder; files dropped there are read on their own.
-        </p>
-      </div>
+    <Panel k="inara" title="Inara imports">
+      <div className="cz-stack">
+      <p className="cz-lead">
+        The browser extension saves Inara's commodity search into this folder; files dropped there are read on their own.
+      </p>
       <form
         className="cz-row"
         style={{ justifyContent: "flex-start", alignItems: "center", gap: 8 }}
@@ -339,26 +324,27 @@ function InaraPanel({ m }: { m: ColonizeModel }) {
         }}
       >
         <input className="cz-input" style={{ flex: "1 1 260px" }} aria-label="Import folder" value={draft} onChange={(e) => setDraft(e.target.value)} />
-        <button type="submit" className="cz-btn" disabled={!dir || draft.trim() === dir.dir}>
+        <button type="submit" className={BTN} disabled={!dir || draft.trim() === dir.dir}>
           Save
         </button>
         {dir && dir.dir !== dir.defaultDir ? (
-          <button type="button" className="cz-btn cz-btn--quiet" onClick={() => void setFolder(null)}>
+          <button type="button" className={BTN_LINK} onClick={() => void setFolder(null)}>
             Use default
           </button>
         ) : null}
       </form>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button type="button" className="cz-btn" onClick={() => void m.api.openInaraImportDir().catch(() => {})}>
+      <div className="cz-actions">
+        <button type="button" className={BTN} onClick={() => void m.api.openInaraImportDir().catch(() => {})}>
           Open folder
         </button>
-        <button type="button" className="cz-btn" onClick={() => file.current?.click()}>
+        <button type="button" className={BTN} onClick={() => file.current?.click()}>
           Import a file…
         </button>
         <input ref={file} type="file" accept=".json,.html,.htm,.txt" multiple hidden onChange={(e) => void importFiles(e.target.files)} />
       </div>
       {msg ? <p className={`cz-note ${msg.bad ? "cz-note--bad" : "cz-note--info"}`}>{msg.text}</p> : null}
-    </section>
+      </div>
+    </Panel>
   );
 }
 
@@ -366,10 +352,7 @@ function InaraPanel({ m }: { m: ColonizeModel }) {
 
 function BansPanel({ m }: { m: ColonizeModel }) {
   return (
-    <section className="cz-panel cz-stack" aria-labelledby="cz-bans-h">
-      <h2 id="cz-bans-h" className="cz-h2">
-        Never use
-      </h2>
+    <Panel k="bans" title="Never use" aside={<span className="cz-aside-note">{m.bannedStations.length || "none"}</span>}>
       {m.bannedStations.length ? (
         <ul className="cz-list">
           {m.bannedStations.map((b) => (
@@ -377,7 +360,7 @@ function BansPanel({ m }: { m: ColonizeModel }) {
               <span>
                 <b>{b.stationName}</b> <span className="cz-small cz-dim">{b.systemName}</span>
               </span>
-              <button type="button" className="cz-btn cz-btn--quiet cz-small" onClick={() => m.stations.unban(b.systemName, b.stationName)}>
+              <button type="button" className={BTN_LINK} onClick={() => m.stations.unban(b.systemName, b.stationName)}>
                 Allow again
               </button>
             </li>
@@ -388,7 +371,7 @@ function BansPanel({ m }: { m: ColonizeModel }) {
           No station banned. “Never use this station” on a trip or in Search puts one here.
         </p>
       )}
-    </section>
+    </Panel>
   );
 }
 
@@ -399,15 +382,9 @@ function HistoryPanel({ m }: { m: ColonizeModel }) {
   const rows = useMemo(() => [...m.shopHistory].sort((a, b) => b.visitedAt.localeCompare(a.visitedAt)), [m.shopHistory]);
   const shown = all ? rows : rows.slice(0, 10);
   return (
-    <section className="cz-panel cz-stack" aria-labelledby="cz-hist-h">
-      <div>
-        <h2 id="cz-hist-h" className="cz-h2">
-          Markets you docked at
-        </h2>
-        <p className="cz-small cz-dim" style={{ margin: 0 }}>
-          From the journal. The plan prefers these when their prices are still fresh.
-        </p>
-      </div>
+    <Panel k="history" title="Markets you docked at" aside={<span className="cz-aside-note">{rows.length || "none"}</span>}>
+      <div className="cz-stack">
+      <p className="cz-lead">From the journal. The plan prefers these when their prices are still fresh.</p>
       {rows.length ? (
         <ul className="cz-list">
           {shown.map((h) => (
@@ -429,11 +406,12 @@ function HistoryPanel({ m }: { m: ColonizeModel }) {
         </p>
       )}
       {rows.length > 10 ? (
-        <button type="button" className="cz-btn cz-btn--quiet" style={{ alignSelf: "flex-start" }} onClick={() => setAll(!all)}>
+        <button type="button" className={BTN} style={{ alignSelf: "flex-start" }} onClick={() => setAll(!all)}>
           {all ? "Show fewer" : `Show all ${rows.length}`}
         </button>
       ) : null}
-    </section>
+      </div>
+    </Panel>
   );
 }
 
@@ -450,12 +428,8 @@ function ForgetPanel({ m }: { m: ColonizeModel }) {
   const [armed, setArmed] = useState<ClearBuyDataScope | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   return (
-    <details className="cz-fold" style={{ alignSelf: "start" }}>
-      <summary>
-        <span>Forget saved sellers</span>
-        <span aria-hidden="true">▸</span>
-      </summary>
-      <div className="cz-stack" style={{ marginTop: 10 }}>
+    <Panel k="forget" title="Forget saved sellers" className="cz-panel--quiet">
+      <div className="cz-stack">
         {SCOPES.map((s) => (
           <div key={s.scope} className="cz-row" style={{ alignItems: "center" }}>
             <span>
@@ -466,7 +440,7 @@ function ForgetPanel({ m }: { m: ColonizeModel }) {
               <span style={{ display: "flex", gap: 6 }}>
                 <button
                   type="button"
-                  className="cz-btn cz-btn--bad"
+                  className={BTN_BAD}
                   onClick={() => {
                     setArmed(null);
                     void m
@@ -477,12 +451,12 @@ function ForgetPanel({ m }: { m: ColonizeModel }) {
                 >
                   Forget
                 </button>
-                <button type="button" className="cz-btn cz-btn--quiet" onClick={() => setArmed(null)}>
+                <button type="button" className={BTN_LINK} onClick={() => setArmed(null)}>
                   Keep
                 </button>
               </span>
             ) : (
-              <button type="button" className="cz-btn cz-btn--warn" onClick={() => setArmed(s.scope)}>
+              <button type="button" className={BTN_WARN} onClick={() => setArmed(s.scope)}>
                 Forget…
               </button>
             )}
@@ -490,6 +464,6 @@ function ForgetPanel({ m }: { m: ColonizeModel }) {
         ))}
         {msg ? <p className="cz-note cz-note--info">{msg}</p> : null}
       </div>
-    </details>
+    </Panel>
   );
 }
