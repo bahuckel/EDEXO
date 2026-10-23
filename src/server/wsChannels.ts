@@ -69,6 +69,8 @@ const HUD_KEYS = [
   "notableBodies",
   "notices",
   "colonizeHud",
+  // The Ship section (discuss item 32): the ship's damage part by part.
+  "shipDamage",
 ] as const satisfies readonly (keyof AppSnapshot)[];
 
 /** What the launcher's `applyLauncherSnapshotData` reads; its live strip polls `/api/status` on its own. */

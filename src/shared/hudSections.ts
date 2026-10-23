@@ -13,6 +13,7 @@ export const HUD_SECTION_KEYS = [
   "achievement",
   "notable",
   "colonize",
+  "ship",
   "notices",
 ] as const;
 

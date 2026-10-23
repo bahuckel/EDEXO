@@ -14,6 +14,7 @@ import type { ColonizeModel } from "../useColonize";
 import { BTN, BTN_LINK, Panel } from "./ui";
 import { MaterialRows } from "./MaterialList";
 import { SiteRulesForm } from "./SiteRules";
+import { CreditsFold } from "./CreditsFold";
 
 /** What the column needs of the model; the phone view (PhoneView.tsx) passes a read-only one. */
 type SitesModel = Pick<ColonizeModel, "snap" | "setDepotRefPin" | "setArchived" | "setProject" | "setHudFollow" | "shipCargoByKey"> & {
@@ -52,6 +53,7 @@ export function SitesColumn({ m, readOnly = false }: { m: SitesModel; readOnly?:
           ) : (
             <p className="cz-lead">No site is being built. Dock at a construction site and it appears here.</p>
           )}
+          <CreditsFold systems={snap?.creditsBySystem ?? []} />
           {done.length ? (
             <details className="cz-fold">
               <summary>

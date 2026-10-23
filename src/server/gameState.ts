@@ -85,6 +85,16 @@ import {
 } from "../shared/fsdWear.js";
 import { hydrateOwnAssets, newOwnAssets, ownAssetsLine, type OwnAssetsState } from "../shared/ownAssets.js";
 import { JUMPONIUM_EVENTS, hydrateJumponium, jumponiumLine, newJumponium, type JumponiumState } from "../shared/jumponium.js";
+import {
+  hydrateShipDamage,
+  newShipDamage,
+  shipDamageAfmu,
+  shipDamageForget,
+  shipDamageHull,
+  shipDamageLoadout,
+  shipDamageRepair,
+  type ShipDamageState,
+} from "../shared/shipDamage.js";
 import { emptyJumpRange, jumpRangeJump, jumpRangeLoadout, type JumpRangeState } from "../shared/jumpRange.js";
 import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
 import { JOURNAL_MERGE_CACHE_FORMAT } from "./journalMergePayload.js";
@@ -538,6 +548,8 @@ export class GameStateStore {
   fsdFuel: FsdFuelState = emptyFsdFuel();
   /** The FSD's health from Loadout and its wear per neutron supercharge (shared/fsdWear.ts, plan 8.4). */
   fsdWear: FsdWearState = newFsdWear();
+  /** The ship's damage part by part, for the HUD's Ship section (shared/shipDamage.ts, discuss item 32). */
+  shipDamage: ShipDamageState = newShipDamage();
   /** The commander's own fleet carrier and colonised systems (shared/ownAssets.ts), for the map's badges. */
   ownAssets: OwnAssetsState = newOwnAssets();
   /** Raw materials aboard and the FSD injections made (shared/jumponium.ts). */
@@ -1473,6 +1485,7 @@ export class GameStateStore {
     this.jumpRange = emptyJumpRange();
     this.fsdFuel = emptyFsdFuel();
     this.fsdWear = newFsdWear();
+    this.shipDamage = newShipDamage();
     this.ownAssets = newOwnAssets();
     this.jumponium = newJumponium();
     this.liveStatusFuelMainT = null;
@@ -1964,7 +1977,14 @@ export class GameStateStore {
       // The hold, for the fuel model's jump mass (fsdFuel.ts cargoT); another ship's or after a death: unknown.
       if (event === "Cargo") fsdFuelCargo(this.fsdFuel, line as Record<string, unknown>);
       if (event === "ShipyardSwap" || event === "ShipyardNew" || event === "Died") this.fsdFuel.cargoT = null;
-      if (event === "Repair" || event === "RepairAll") fsdWearRepair(this.fsdWear, line as Record<string, unknown>);
+      if (event === "Repair" || event === "RepairAll") {
+        fsdWearRepair(this.fsdWear, line as Record<string, unknown>);
+        shipDamageRepair(this.shipDamage, line as Record<string, unknown>);
+      }
+      // The Ship HUD (shared/shipDamage.ts): the hull live, the AFMU's mends; another ship or a rebuy until its Loadout.
+      if (event === "HullDamage") shipDamageHull(this.shipDamage, line as Record<string, unknown>);
+      if (event === "AfmuRepairs") shipDamageAfmu(this.shipDamage, line as Record<string, unknown>);
+      if (event === "ShipyardSwap" || event === "ShipyardNew" || event === "Died") shipDamageForget(this.shipDamage);
       // Supercharged at a neutron star or white dwarf: the next jump only (the fuel pump costs it as such).
       if (event === "JetConeBoost") {
         const b = (line as Record<string, unknown>).BoostValue;
@@ -2108,6 +2128,7 @@ export class GameStateStore {
     const shipId = (line as Record<string, unknown>).ShipID;
     fsdFuelLoadout(this.fsdFuel, line as Record<string, unknown>);
     fsdWearLoadout(this.fsdWear, line as Record<string, unknown>);
+    shipDamageLoadout(this.shipDamage, line as Record<string, unknown>);
     jumpRangeLoadout(
       this.jumpRange,
       typeof shipId === "number" ? shipId : null,
@@ -3535,6 +3556,7 @@ export class GameStateStore {
       jumpRange: structuredClone(this.jumpRange),
       fsdFuel: structuredClone(this.fsdFuel),
       fsdWear: structuredClone(this.fsdWear),
+      shipDamage: structuredClone(this.shipDamage),
       ownAssets: structuredClone(this.ownAssets),
       jumponium: structuredClone(this.jumponium),
     };
@@ -3716,6 +3738,7 @@ export class GameStateStore {
       };
     }
     this.fsdWear = hydrateFsdWear(data.fsdWear);
+    this.shipDamage = hydrateShipDamage(data.shipDamage);
     this.ownAssets = hydrateOwnAssets(data.ownAssets);
     this.jumponium = hydrateJumponium(data.jumponium);
     const ljd = data.lastFsdJumpDistLy;

@@ -158,7 +158,8 @@ describe("the store across restarts", () => {
     expect(store.getJournalShopRecords().find((r) => r.marketId === "128")?.purchases).toHaveLength(1);
     await store.shutdown();
     store = null;
-    expect(JSON.parse(readFileSync(path.join(dataDir, "edexo-colonize-state.json"), "utf8")).historyScannedVersion).toBe(2);
+    // 3 since the delivery ledger (credits by week, 2026-10-23): every older version reads the history once more.
+    expect(JSON.parse(readFileSync(path.join(dataDir, "edexo-colonize-state.json"), "utf8")).historyScannedVersion).toBe(3);
   });
 });
 

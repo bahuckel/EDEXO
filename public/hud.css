@@ -1631,3 +1631,59 @@ html.hud-type--elite .row--scan:not(.row--taken) .lbl::before {
   border-color: var(--hud);
   box-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
 }
+
+/* Ship (sections/ship.tsx, discuss item 32): a drawn outline, each part coloured by its health. */
+.ship-view {
+  display: block;
+  width: 100%;
+  max-width: 15rem;
+  margin: 0.2rem auto 0.3rem;
+}
+.ship-hull {
+  fill: rgba(255, 138, 31, 0.06);
+  stroke: var(--hud);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.ship-part {
+  fill: var(--hud-dim);
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 0.6;
+}
+.ship-hull.ship--warn {
+  stroke: var(--warn);
+}
+.ship-hull.ship--bad {
+  stroke: var(--danger);
+}
+.ship-part.ship--ok {
+  fill: var(--hud);
+}
+.ship-part.ship--warn {
+  fill: var(--warn);
+}
+.ship-part.ship--bad {
+  fill: var(--danger);
+}
+.ship-part.ship--unknown {
+  fill: transparent;
+  stroke: var(--hud-dim);
+}
+.ship-hull-label {
+  fill: var(--hud-hi);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ship-row--warn .v {
+  color: var(--warn);
+}
+.ship-row--bad .v,
+.ship-row--bad .k {
+  color: var(--danger);
+}
+/* The internals as one block under the core modules: present, not louder than them. */
+.ship-part.ship-block {
+  fill-opacity: 0.28;
+  stroke-opacity: 0.8;
+}

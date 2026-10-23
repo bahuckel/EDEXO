@@ -1651,6 +1651,7 @@ export function buildSnapshot(
     lastJournalEventIso: store.lastEventIso,
     organicDataValueCredits,
     colonizeHud: getColonizeHud(),
+    shipDamage: store.shipDamage.loadoutAt ? store.shipDamage : null,
     organicPendingSampleCount,
     organicPendingLines,
     fssAllBodiesFoundNoBio,

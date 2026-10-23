@@ -29,7 +29,14 @@ export type DepotInternal = {
   engaged: boolean;
   /** User hid this project — listed under Archived until restored. */
   userArchived: boolean;
+  /**
+   * Each of your deliveries here, as the journal wrote it (discuss item 33, owner 2026-10-23: credits per system by
+   * week). `contributions` keeps only running totals; this keeps when. Filled from the whole history once.
+   */
+  ledger?: ContributionLedgerEntry[];
 };
+
+export type ContributionLedgerEntry = { at: string; commodityId: string; tons: number };
 
 export function emptyDepot(marketId: string): DepotInternal {
   return {
@@ -120,6 +127,13 @@ export function recordContribution(
 ): void {
   const bucket = commodityMergeBucket(name) || commodityMergeBucket(nameLocalised);
   if (!bucket || amount <= 0) return;
+  // The ledger keeps every delivery once, whatever order the history and the week's replay bring them in.
+  if (timestamp) {
+    const ledger = (d.ledger ??= []);
+    if (!ledger.some((e) => e.at === timestamp && e.commodityId === bucket && e.tons === amount)) {
+      ledger.push({ at: timestamp, commodityId: bucket, tons: amount });
+    }
+  }
   let cur = d.contributions.find((c) => c.commodityId === bucket);
   /**
    * `totalTons` is a running sum, so a replayed event must not be added twice.

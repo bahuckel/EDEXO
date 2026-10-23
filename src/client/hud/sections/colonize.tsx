@@ -169,6 +169,16 @@ function Colonize({ d }: { d: HudSnapshot }) {
             </span>
             <span className="v">{`${target.pct}% · ${t(target.leftTons)} left`}</span>
           </div>
+          {/* This game week in its system (discuss item 33): paid to you, and the difference after what the cargo cost. */}
+          {target.week && target.week.paid > 0 ? (
+            <div className="row">
+              <span className="k">This week</span>
+              <span className="v">
+                {`+${credits(target.week.paid)}`}
+                <small>{` net ${credits(target.week.paid - target.week.spent)}`}</small>
+              </span>
+            </div>
+          ) : null}
           {needs.open.slice(0, limit).map((n) => (
             <NeedRow key={n.commodityId || n.label} n={n} />
           ))}
@@ -203,6 +213,13 @@ function Colonize({ d }: { d: HudSnapshot }) {
       </div>
     </>
   );
+}
+
+/** Credits short for the HUD: 1.25 M cr, 840 k cr. */
+function credits(n: number): string {
+  const a = Math.abs(n);
+  const v = a >= 1e9 ? `${(a / 1e9).toFixed(2)} B` : a >= 1e6 ? `${(a / 1e6).toFixed(2)} M` : a >= 1e4 ? `${Math.round(a / 1e3)} k` : `${Math.round(a)}`;
+  return `${n < 0 ? "−" : ""}${v} cr`;
 }
 
 export const colonize: HudSection = {

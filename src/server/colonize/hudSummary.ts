@@ -8,6 +8,7 @@
  * `onColonizeHudChange` lets the app push the HUD when it changes.
  */
 import { carrierAvailability, carrierHaulIds, mergeAvailability, shipCargoByKey, type CarrierStock } from "../../shared/colonize/carrierStock";
+import { weekStart } from "../../shared/colonize/creditsByWeek";
 import { resolveCargoCapacity } from "../../shared/colonize/cargoCapacityOverride";
 import { depotDisplayLabel } from "../../shared/colonize/depotLabel";
 import type { ColonizeHudDTO, ColonizeHudLine } from "../../shared/colonize/hud";
@@ -180,9 +181,19 @@ export function buildColonizeHud(
       aboard: m.aboard,
       done: m.done,
     })),
+    week: weekFor(snap, targetSite.starSystem),
   };
 
   return { sites, moreSites: Math.max(0, active.length - MAX_SITES), deliver, next, target, plan: planState, hold };
+}
+
+/** This game week's credits in a system (creditsByWeek.ts), when the commander delivered there this week. */
+function weekFor(snap: ColonizeSnapshot, system: string | null): { paid: number; spent: number; tons: number } | null {
+  if (!system) return null;
+  const s = snap.creditsBySystem?.find((x) => x.system === system);
+  const w = s?.weeks[0];
+  if (!w || w.week !== new Date(weekStart(Date.now())).toISOString()) return null;
+  return { paid: Math.round(w.paid), spent: Math.round(w.spent), tons: w.tons };
 }
 
 /* ---- the copy the snapshot reads ----------------------------------------------------------------------------- */

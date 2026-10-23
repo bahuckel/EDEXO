@@ -741,3 +741,34 @@
   flex: 0 0 auto;
   white-space: nowrap;
 }
+
+/* Credits by week (CreditsFold.tsx): a system, then a line a week - week, paid, spent, net. */
+.cz-credits + .cz-credits {
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--accent-a10);
+}
+.cz-credits__list {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+/* The week on its own line, its three figures under it: the Sites column is as narrow as a phone. */
+.cz-credits__row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 0.7rem;
+  align-items: baseline;
+  padding: 0.2rem 0;
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--accent-a10);
+}
+.cz-credits__row > .cz-num {
+  text-align: right;
+  white-space: nowrap;
+}
+.cz-credits__week {
+  grid-column: 1 / -1;
+}

@@ -1,4 +1,6 @@
 import { promises as fs, watchFile, unwatchFile } from "node:fs";
+import { creditsBySystem, type SystemCredits } from "../../shared/colonize/creditsByWeek";
+import { commodityMergeBucket } from "../../shared/colonize/commodityKey";
 import path from "node:path";
 import { normalizeConstructionProgress } from "../../shared/colonize/constructionProgress";
 import type { ColonizeSnapshot, DepotSnapshot, DockMarketBrief, OwnColony } from "../../shared/colonize/types";
@@ -83,7 +85,8 @@ type StateFileV3 = {
 };
 
 /** Bump when HISTORY_EVENTS reads more: every journal folder is read once more on the next start. */
-const HISTORY_VERSION = 2;
+/** 3 (2026-10-23): the delivery ledger (credits by week) needs every ColonisationContribution read once. */
+const HISTORY_VERSION = 3;
 /** Transfers remembered so none is counted twice; the oldest go first past this (years of hauling fit). */
 const CARRIER_TRANSFER_KEYS_MAX = 50_000;
 
@@ -146,6 +149,9 @@ export class ColonizeStore {
   private depotSnapCacheGen = -1;
   private depotSnapCache: DepotSnapshot[] = [];
   private shopHistoryCacheGen = -1;
+  /** Credits by week, worked out again only when the journal state changed. */
+  private creditsCacheGen = -1;
+  private creditsCache: SystemCredits[] = [];
   private shopHistoryCache: ColonizeSnapshot["journalShopHistory"] = [];
   /** Other CMDRs in wing from journal `WingJoin`; cleared on `WingLeave`. */
   private readonly cargoWatchListener = (): void => {
@@ -274,6 +280,12 @@ export class ColonizeStore {
       contributionProgressHistory: Array.isArray(d.contributionProgressHistory)
         ? d.contributionProgressHistory
         : [],
+      ledger: Array.isArray(d.ledger)
+        ? d.ledger.filter(
+            (e): e is { at: string; commodityId: string; tons: number } =>
+              !!e && typeof e.at === "string" && typeof e.commodityId === "string" && typeof e.tons === "number",
+          )
+        : undefined,
     };
   }
 
@@ -476,11 +488,33 @@ export class ColonizeStore {
       shipCargoCapacity: this.journal.shipCargoCapacity,
       dockMarket: this.journal.dockMarket,
       journalShopHistory: this.shopHistoryCache,
+      creditsBySystem: this.credits(engaged.map((d) => d.marketId)),
       replayBusy: this.replayBusy,
       wingRoster: [...this.journal.wingRoster],
       carriers: ownedCarrierStocks(this.journal),
       lastError: this.lastError,
     };
+  }
+
+  /** Credits per system by week, from the sites' delivery ledgers and the commander's purchases (creditsByWeek.ts). */
+  private credits(marketIds: string[]): SystemCredits[] {
+    if (this.creditsCacheGen === this.journal.mutationGen) return this.creditsCache;
+    const sites = marketIds
+      .map((id) => this.journal.depots[id])
+      .filter((d): d is DepotInternal => !!d && !!d.ledger?.length)
+      .map((d) => ({
+        starSystem: d.starSystem,
+        payments: new Map(
+          d.resources
+            .map((r) => [commodityMergeBucket(r.name) || commodityMergeBucket(r.nameLocalised), r.payment ?? 0] as const)
+            .filter(([id]) => !!id),
+        ),
+        ledger: d.ledger ?? [],
+      }));
+    const purchases = [...this.journal.journalShops.values()].flatMap((s) => s.purchases);
+    this.creditsCache = creditsBySystem(sites, purchases);
+    this.creditsCacheGen = this.journal.mutationGen;
+    return this.creditsCache;
   }
 
   setDepotArchived(marketId: string, archived: boolean): void {

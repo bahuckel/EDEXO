@@ -55,6 +55,7 @@ export default defineConfig({
           "notable-overlay",
           "notices-overlay",
           "colonize-overlay",
+          "ship-overlay",
         ].map((n) => [n, path.resolve(__dirname, "src/client", `${n}.html`)]),
       ),
       output: {

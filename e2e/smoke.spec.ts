@@ -609,6 +609,51 @@ test("hud: Colonize draws the next stop and the site with bars, finished lines o
 });
 
 /*
+  The Ship HUD (discuss item 32): the outline with each part coloured by its health, the damaged parts worst first, the
+  everyday wear summed up, nothing wider than the HUD. The fixture journal's ship is whole, so the state is mocked.
+*/
+test("hud: Ship draws the outline and lists the damaged parts, worst first", async ({ page }) => {
+  const errors = watchErrors(page);
+  const part = (slot: string, item: string, label: string, group: string, health: number) => ({ slot, item, label, group, health });
+  const shipDamage = {
+    ship: "mandalay",
+    shipName: "Ze Zoom",
+    shipIdent: "FA-01",
+    hull: 0.62,
+    hullAt: new Date().toISOString(),
+    loadoutAt: new Date(Date.now() - 20 * 60_000).toISOString(),
+    parts: [
+      part("PowerPlant", "int_powerplant_size5_class5", "Power plant 5A", "core", 0.98),
+      part("FrameShiftDrive", "int_hyperdrive_size5_class5", "FSD 5A", "core", 0.71),
+      part("MainEngines", "int_engine_size5_class5", "Thrusters 5A", "core", 0.44),
+      part("Radar", "int_sensors_size5_class5", "Sensors 5A", "core", 0.99),
+      part("MediumHardpoint1", "hpt_beamlaser_gimbal_medium", "Beam laser (M)", "hardpoint", 0.9),
+      part("MediumHardpoint2", "hpt_beamlaser_gimbal_medium", "Beam laser (M)", "hardpoint", 1),
+      part("TinyHardpoint1", "hpt_plasmapointdefence_turret_tiny", "Point defence", "utility", 0.97),
+      part("Slot01_Size5", "int_fuelscoop_size5_class5", "Fuel scoop 5A", "optional", 0.88),
+    ],
+  };
+  const payload = { port: 7119, shipDamage };
+  await page.setViewportSize({ width: 420, height: 700 });
+  await page.route(/\/api\/state\?channel=hud/, (r) => r.fulfill({ json: payload }));
+  await page.routeWebSocket(/channel=hud/, (ws) => {
+    ws.onMessage(() => {});
+    setTimeout(() => ws.send(JSON.stringify({ type: "state", payload })), 300);
+  });
+  await page.goto("/ship-overlay.html");
+  const sec = page.locator('[data-section="ship"]');
+  await expect(sec).toContainText("Ze Zoom");
+  await expect(sec).toContainText("hull 62%");
+  await expect(sec.locator(".row .k")).toHaveText(["Thrusters 5A", "FSD 5A", "Fuel scoop 5A", "Beam laser (M)"]);
+  await expect(sec).toContainText("3 lightly worn");
+  await expect(sec.locator(".ship-part.ship--bad")).toHaveCount(1);
+  await expect(sec.locator(".ship-part.ship--warn")).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `${OUT}/hud-ship.png`, fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+/*
   The 3D galaxy map (G1, docs/galaxy-plan-28092026.md): the whole index loads, region names are
   placed, and moving close to Sol swaps the overview for precise tiles there.
 */
@@ -1414,7 +1459,7 @@ test("phone hud: chips and the portrait layout", async ({ page }) => {
   const errors = watchErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/hud-overlay.html?phone=1");
-  await expect(page.locator(".phone-chip:not(.phone-chip--fs)")).toHaveCount(9); // one per section, Colonize the 9th (1.3.0)
+  await expect(page.locator(".phone-chip:not(.phone-chip--fs)")).toHaveCount(10); // one per section: Colonize the 9th (1.3.0), Ship the 10th
   await expect(page.locator(".phone-chip--fs")).toHaveCount(1);
   await expect(page.locator("body")).toHaveClass(/phone/);
   await page.screenshot({ path: `${OUT}/hud-phone.png`, fullPage: true });

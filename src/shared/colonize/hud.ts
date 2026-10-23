@@ -52,6 +52,8 @@ export type ColonizeHudDTO = {
     pct: number;
     leftTons: number;
     needs: ColonizeHudNeed[];
+    /** This game week in the site's system (discuss item 33): paid to you, spent on that cargo, tons delivered. */
+    week?: { paid: number; spent: number; tons: number } | null;
   } | null;
   /**
    * The saved plan: none yet, every trip done, made for sites that are no longer all being built ("stale": the

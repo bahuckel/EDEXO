@@ -7,6 +7,7 @@ import type { SurfaceMark } from "./surfaceMarksFile.js";
 
 import type { FsdFuelState } from "../shared/fsdFuel.js";
 import type { FsdWearState } from "../shared/fsdWear.js";
+import type { ShipDamageState } from "../shared/shipDamage.js";
 import type { OwnAssetsState } from "../shared/ownAssets.js";
 import type { JumponiumState } from "../shared/jumponium.js";
 import type { JumpRangeState } from "../shared/jumpRange.js";
@@ -114,8 +115,10 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
       and their recipes as used (shared/jumponium.ts).
   37: `jumponium` grows the Laboratory: AFM refills made and learned ("afm:<tier>") and the AFMUs fitted from
       `Loadout` (a full re-read finds them in the journals).
+  38: `shipDamage` — the ship's damage part by part from Loadout, HullDamage, AfmuRepairs and repairs, for the HUD's
+      Ship section (shared/shipDamage.ts, discuss item 32; a full re-read finds the last Loadout).
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 37;
+export const JOURNAL_MERGE_CACHE_FORMAT = 38;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {
@@ -227,6 +230,8 @@ export type JournalMergeCachePayload = {
   fsdFuel?: FsdFuelState;
   /** The FSD's health and wear per supercharge (shared/fsdWear.ts, plan 8.4). */
   fsdWear?: FsdWearState;
+  /** The ship's damage part by part, for the HUD's Ship section (shared/shipDamage.ts, discuss item 32). */
+  shipDamage?: ShipDamageState;
   /** The commander's own fleet carrier and colonised systems (shared/ownAssets.ts). */
   ownAssets?: OwnAssetsState;
   /** Raw materials aboard and FSD injections made (shared/jumponium.ts). */

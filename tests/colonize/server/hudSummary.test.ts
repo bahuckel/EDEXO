@@ -236,4 +236,12 @@ describe("the HUD's Colonize data", () => {
     expect(done.plan).toBe("done");
     expect(done.next).toBeNull();
   });
+
+  it("gives this game week's credits in the followed site's system, and nothing from an older week", async () => {
+    const { weekStart } = await import("../../../src/shared/colonize/creditsByWeek");
+    const now = new Date(weekStart(Date.now())).toISOString();
+    const credits = (week: string) => [{ system: "Smoke Colony", weeks: [{ week, tons: 80, paid: 400_000, spent: 32_000, unpricedTons: 0 }], total: { tons: 80, paid: 400_000, spent: 32_000, unpricedTons: 0 } }];
+    expect(buildColonizeHud(snap({ creditsBySystem: credits(now) } as never), {})!.target!.week).toEqual({ paid: 400_000, spent: 32_000, tons: 80 });
+    expect(buildColonizeHud(snap({ creditsBySystem: credits("2020-01-02T07:00:00.000Z") } as never), {})!.target!.week).toBeNull();
+  });
 });

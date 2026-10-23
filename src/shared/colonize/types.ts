@@ -1,4 +1,5 @@
 import type { Ly } from "./systemDistanceLy";
+import type { SystemCredits } from "./creditsByWeek";
 import type { CarrierStock } from "./carrierStock";
 import type { ConstructionDepotRef } from "./constructionDepot";
 import type { MaterialBuyListing } from "./materialBuyIndexTypes";
@@ -247,5 +248,7 @@ export type ColonizeSnapshot = {
   journalShopHistory: ShopHistoryEntry[];
   /** True while the startup / rotation journal replay is running (UI busy strip). */
   replayBusy: boolean;
+  /** Credits per system by the game's week: paid to you, and spent on what you delivered (creditsByWeek.ts). */
+  creditsBySystem?: SystemCredits[];
   lastError: string | null;
 };

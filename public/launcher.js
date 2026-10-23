@@ -1944,8 +1944,9 @@
     "/notable-overlay.html": "notable",
     "/notices-overlay.html": "notices",
     "/colonize-overlay.html": "colonize",
+    "/ship-overlay.html": "ship",
   };
-  var HUD_SECTION_ORDER = ["jump", "fss", "candidates", "distance", "datavalue", "achievement", "notable", "colonize", "notices"];
+  var HUD_SECTION_ORDER = ["jump", "fss", "candidates", "distance", "datavalue", "achievement", "notable", "colonize", "ship", "notices"];
   var HUD_SECTION_LABEL = {
     jump: "Next jump",
     fss: "Discovery scan",
@@ -1956,6 +1957,7 @@
     notable: "Notable planets",
     notices: "Notices",
     colonize: "Colonize",
+    ship: "Ship",
   };
   var HUD_PATH_BY_SECTION = {};
   Object.keys(HUD_SECTION_BY_PATH).forEach(function (p) {
@@ -2863,6 +2865,8 @@
   if (ovNotices) ovNotices.addEventListener("click", function () { void pickOverlay("/notices-overlay.html", HUD_W, 140); });
   var ovColonize = document.getElementById("ovColonize");
   if (ovColonize) ovColonize.addEventListener("click", function () { void pickOverlay("/colonize-overlay.html", HUD_W, 260); });
+  var ovShip = document.getElementById("ovShip");
+  if (ovShip) ovShip.addEventListener("click", function () { void pickOverlay("/ship-overlay.html", HUD_W, 300); });
 
   /* ------------------------------------------------------------------------------ backups */
   var backupModal = document.getElementById("backupModal");
