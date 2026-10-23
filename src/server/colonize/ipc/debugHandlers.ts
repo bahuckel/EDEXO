@@ -1,5 +1,5 @@
-/** The Options panel's Spansh system dump: fetch, preview, and the whole file for the window to copy or save. */
-import { existsSync, promises as fs } from "node:fs";
+/** The Options panel's Spansh system dump: fetch it, save it whole to a temp file, and hand the window a preview. */
+import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { SpanshSystemDebugClientResult } from "../../../shared/colonize/spanshSystemDebugTypes";
@@ -94,16 +94,6 @@ export function debugHandlers({ store, buyIndex }: IpcContext) {
           fullJsonBytes: 0,
           tempJsonPath: null,
         };
-      }
-    },
-
-    getDebugJson: async () => {
-      const tempPath = spanshDebugJsonPath();
-      if (!existsSync(tempPath)) return { ok: false as const, err: "No debug JSON on disk. Fetch a system first." };
-      try {
-        return { ok: true as const, json: await fs.readFile(tempPath, "utf8") };
-      } catch (e) {
-        return { ok: false as const, err: errMessage(e) };
       }
     },
   } satisfies Partial<ColonizeHandlers>;

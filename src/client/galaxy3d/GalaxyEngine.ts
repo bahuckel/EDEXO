@@ -100,7 +100,6 @@ export type {
   EngineOptions,
   EngineStats,
   HoverInfo,
-  LabelKind,
   MarkerItem,
   Selection,
 } from "./engineTypes";

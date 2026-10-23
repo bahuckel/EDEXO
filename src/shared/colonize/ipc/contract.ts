@@ -18,11 +18,7 @@
  */
 import type { ColonizeUiStateChange } from "../uiStateKeys";
 import type { ClearBuyDataScope } from "../buyIndexClear";
-import type {
-  BuyIndexStationMaterial,
-  BuyIndexStationResult,
-  BuyIndexSystemResult,
-} from "../buyIndexSearchTypes";
+import type { BuyIndexStationMaterial, BuyIndexStationResult } from "../buyIndexSearchTypes";
 import type { ConstructionDepotRef } from "../constructionDepot";
 import type { SystemCoordsByNorm } from "../galaxyDistanceCompute";
 import type { MaterialBuyListing } from "../materialBuyIndexTypes";
@@ -30,57 +26,49 @@ import type { MaterialBuyScanStatus } from "../materialBuyScanStatus";
 import type { ConstructionSiteHit, SiteNeeds } from "../siteLookup";
 import type { PartyCarrier } from "../tradeParty";
 import type { SpanshSystemDebugClientResult } from "../spanshSystemDebugTypes";
-import type {
-  BasketCheckoutBundle,
-  BasketCheckoutResult,
-  CheckoutRoutingMode,
-  ColonizeSnapshot,
-  SupplyMarketRow,
-} from "../types";
+import type { BasketCheckoutBundle, CheckoutRoutingMode, ColonizeSnapshot, SupplyMarketRow } from "../types";
 import type { WingMember } from "../wingManifest";
 
-/** Request/response method → channel. The strings are what the two processes agree on. */
+/**
+ * Every request method, as a key list: the client builds its object from these keys and the server routes only
+ * these names. `satisfies` keeps the list and `ColonizeInvoke` equal both ways. (They used to map to Electron
+ * channel strings, which nothing read any more but still shipped in the client bundle.)
+ */
 export const COLONIZE_INVOKE = {
-  getSnapshot: "colonize:getSnapshot",
-  replayWeek: "colonize:replayWeek",
-  readMarketSupplyBrief: "colonize:readMarketSupplyBrief",
-  debugSpanshSystem: "colonize:debugSpanshSystem",
-  getDebugJson: "colonize:getDebugJson",
-  setDepotArchived: "colonize:setDepotArchived",
-  checkoutBasket: "colonize:checkoutBasket",
-  checkoutBasketMulti: "colonize:checkoutBasketMulti",
-  setBasketBlocksPassive: "colonize:setBasketBlocksPassive",
-  scheduleActiveBasketScan: "colonize:scheduleActiveBasketScan",
-  plannerMaterialsAtCap: "colonize:plannerMaterialsAtCap",
-  schedulePlannerMaterialScan: "colonize:schedulePlannerMaterialScan",
-  syncWingCargoFromEdsm: "colonize:syncWingCargoFromEdsm",
-  getMaterialBuyScanStatus: "colonize:getMaterialBuyScanStatus",
-  resolveSystemDistances: "colonize:resolveSystemDistances",
-  resolveSystemCoords: "colonize:resolveSystemCoords",
-  searchConstructionSites: "colonize:searchConstructionSites",
-  lookupSiteNeeds: "colonize:lookupSiteNeeds",
-  lookUpPartyCarriers: "colonize:lookUpPartyCarriers",
-  searchBuyIndexMaterial: "colonize:searchBuyIndexMaterial",
-  searchBuyIndexSystem: "colonize:searchBuyIndexSystem",
-  searchBuyIndexMaterialStations: "colonize:searchBuyIndexMaterialStations",
-  searchBuyIndexStationsForMaterials: "colonize:searchBuyIndexStationsForMaterials",
-  getBuyIndexStationCatalog: "colonize:getBuyIndexStationCatalog",
-  getDepotMaterialListings: "colonize:getDepotMaterialListings",
-  getInaraImportDir: "colonize:getInaraImportDir",
-  setInaraImportDir: "colonize:setInaraImportDir",
-  openInaraImportDir: "colonize:openInaraImportDir",
-  importInaraFile: "colonize:importInaraFile",
-  clearSavedBuyData: "colonize:clearSavedBuyData",
-  askSpanshForMaterials: "colonize:askSpanshForMaterials",
-} as const satisfies Record<keyof ColonizeInvoke, string>;
+  getSnapshot: true,
+  readMarketSupplyBrief: true,
+  debugSpanshSystem: true,
+  setDepotArchived: true,
+  checkoutBasketMulti: true,
+  scheduleActiveBasketScan: true,
+  plannerMaterialsAtCap: true,
+  schedulePlannerMaterialScan: true,
+  syncWingCargoFromEdsm: true,
+  getMaterialBuyScanStatus: true,
+  resolveSystemDistances: true,
+  resolveSystemCoords: true,
+  searchConstructionSites: true,
+  lookupSiteNeeds: true,
+  lookUpPartyCarriers: true,
+  searchBuyIndexSystem: true,
+  searchBuyIndexStationsForMaterials: true,
+  getBuyIndexStationCatalog: true,
+  getDepotMaterialListings: true,
+  getInaraImportDir: true,
+  setInaraImportDir: true,
+  openInaraImportDir: true,
+  importInaraFile: true,
+  clearSavedBuyData: true,
+  askSpanshForMaterials: true,
+} as const satisfies Record<keyof ColonizeInvoke, true>;
 
-/** Pushes from main → listener method → channel. */
+/** Every push, by listener method (keys only, as above). */
 export const COLONIZE_EVENTS = {
-  onUpdate: "colonize:update",
-  onMaterialBuyScanStatus: "colonize:materialBuyScanStatus",
-  onInaraImport: "colonize:inaraImport",
-  onUiState: "colonize:uiState",
-} as const satisfies Record<keyof ColonizeEvents, string>;
+  onUpdate: true,
+  onMaterialBuyScanStatus: true,
+  onInaraImport: true,
+  onUiState: true,
+} as const satisfies Record<keyof ColonizeEvents, true>;
 
 type Fail = { ok: false; err: string };
 
@@ -125,11 +113,6 @@ export type CheckoutFiltersPayload = {
   }[];
 };
 
-export type CheckoutBasketResponse =
-  | { ok: true; result: BasketCheckoutResult; bundle?: undefined }
-  | { ok: true; bundle: BasketCheckoutBundle; result?: undefined }
-  | Fail;
-
 export type InaraImportOutcome =
   | {
       ok: true;
@@ -146,7 +129,6 @@ type InaraDirResponse = { ok: true; dir: string; defaultDir: string };
 /** Every request the window can make, as the window sees it. */
 export type ColonizeInvoke = {
   getSnapshot: () => Promise<ColonizeSnapshot>;
-  replayWeek: () => Promise<ColonizeSnapshot>;
   setDepotArchived: (marketId: string, archived: boolean) => Promise<ColonizeSnapshot>;
   /** Reads Market.json from the configured journal folder; the caller does not choose it. */
   readMarketSupplyBrief: () => Promise<MarketSupplyBriefResponse>;
@@ -155,27 +137,6 @@ export type ColonizeInvoke = {
     includeStationMarkets?: boolean;
     stationNameFilter?: string;
   }) => Promise<SpanshSystemDebugClientResult>;
-  /** The last Spansh system debug fetch, whole; the window copies or saves it. */
-  getDebugJson: () => Promise<{ ok: true; json: string } | Fail>;
-  checkoutBasket: (payload: {
-    referenceSystem?: string;
-    journalDir?: string | null;
-    includePlanetaryAndGround?: boolean;
-    filters?: CheckoutFiltersPayload;
-    routingMode?: CheckoutRoutingMode;
-    skipCache?: boolean;
-    forceLiveScan?: boolean;
-    /** Default true — serve from persisted buy index (instant). Set false or forceLiveScan for live Spansh. */
-    cacheOnly?: boolean;
-    perDepot?: boolean;
-    depotPlans?: {
-      depotLabel: string;
-      referenceSystem: string;
-      constructionSiteSystem?: string;
-      items: CheckoutBasketItemPayload[];
-    }[];
-    items?: CheckoutBasketItemPayload[];
-  }) => Promise<CheckoutBasketResponse>;
   /** One IPC for all construction refs — main runs the per-ref loop with yields. */
   checkoutBasketMulti: (payload: {
     referenceSystems: string[];
@@ -188,7 +149,6 @@ export type ColonizeInvoke = {
     cacheOnly?: boolean;
     items: CheckoutBasketItemPayload[];
   }) => Promise<{ ok: true; bundle: BasketCheckoutBundle } | Fail>;
-  setBasketBlocksPassive: (payload: { block: boolean }) => Promise<{ ok: true }>;
   scheduleActiveBasketScan: (payload: {
     referenceSystem: string;
     items: CheckoutBasketItemPayload[];
@@ -230,12 +190,7 @@ export type ColonizeInvoke = {
     callsigns: string[];
     referenceSystem?: string;
   }) => Promise<{ ok: true; carriers: PartyCarrier[] } | Fail>;
-  searchBuyIndexMaterial: (payload: { query: string }) => Promise<{ ok: true; systems: BuyIndexSystemResult[] } | Fail>;
   searchBuyIndexSystem: (payload: { query: string }) => Promise<{ ok: true; stations: BuyIndexStationResult[] } | Fail>;
-  searchBuyIndexMaterialStations: (payload: {
-    systemName: string;
-    materialQuery: string;
-  }) => Promise<{ ok: true; stations: BuyIndexStationResult[] } | Fail>;
   searchBuyIndexStationsForMaterials: (payload: {
     query: string;
     systemName?: string;

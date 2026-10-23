@@ -5,7 +5,6 @@ import type { BannedStation } from "../../../../shared/colonize/stationBans";
 import type { MinLandingPad, StationKindFilter } from "../../../../shared/colonize/stationFilter";
 import { formatHopLy } from "../../../../shared/colonize/systemDistanceLy";
 import {
-  adoptLegacyDepotIds,
   createTripPlanSnapshot,
   loadTripPlanSnapshot,
   planRefreshFingerprint,
@@ -95,18 +94,6 @@ export function useLogisticsPlan({
     // trips would keep showing stations that no longer exist.
     if (!loadTripPlanSnapshot()) setTripSnapshot(null);
   }, [buyIndexRefreshToken]);
-
-  /**
-   * S-8: a snapshot saved before sites were keyed by market id names them by label. Resolve it
-   * once the sites have arrived, carry the manual ticks across, and save it in the new shape.
-   */
-  useEffect(() => {
-    if (!tripSnapshot?.legacyDepotLabels || !activeDepots?.length) return;
-    const adopted = adoptLegacyDepotIds(tripSnapshot, activeDepots);
-    tripSnapshotRef.current = adopted;
-    scheduleSaveTripPlanSnapshot(adopted);
-    setTripSnapshot(adopted);
-  }, [tripSnapshot, activeDepots]);
 
   const checkoutsSig = useMemo(
     () =>

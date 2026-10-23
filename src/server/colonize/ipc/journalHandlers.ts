@@ -9,11 +9,6 @@ export function journalHandlers({ store }: IpcContext) {
   return {
     getSnapshot: () => store.getSnapshot(),
 
-    replayWeek: async () => {
-      await store.restartTail();
-      return store.getSnapshot();
-    },
-
     /**
      * A bad id changes nothing but still answers with the snapshot. It used to answer `undefined`,
      * which the renderer — promised a snapshot — would have stored as its whole state.

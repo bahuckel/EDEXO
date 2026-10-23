@@ -19,7 +19,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { gunzip, gunzipSync } from "node:zlib";
-import { loadBioIndex, type BioIndex } from "./bioIndex.js";
+import type { BioIndex } from "./bioIndex.js";
 import { getProjectRoot } from "./paths.js";
 import { galaxyIndexFilePath } from "./galaxyIndexFiles.js";
 import { BODY_TRAITS, STAR_CLASSES } from "../shared/galaxyTraits.js";
@@ -103,12 +103,6 @@ export function clearSystemTraits(): void {
   countsCache = null;
   pending = null;
   generation++;
-}
-
-/** Test seam. */
-export function setSystemTraitsForTest(t: SystemTraits | null | undefined): void {
-  cached = t;
-  countsCache = null;
 }
 
 export interface GalaxyFilter {
@@ -208,9 +202,4 @@ export function systemTraitCounts(traits: SystemTraits): { main: number[]; stars
   }
   countsCache = { main, stars, bodies };
   return countsCache;
-}
-
-/** The index the map plots, for the route. */
-export function galaxyFilterIndex(): BioIndex | null {
-  return loadBioIndex();
 }

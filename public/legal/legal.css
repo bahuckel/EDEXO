@@ -161,21 +161,6 @@ a:hover {
   margin-bottom: 1rem;
 }
 
-.site-legal-callout {
-  margin: 0 0 1.25rem;
-  padding: 0.85rem 1rem;
-  background: rgba(12, 10, 8, 0.75);
-  border: 1px solid rgba(255, 122, 36, 0.22);
-  border-radius: var(--radius-md);
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--muted);
-}
-
-.site-legal-callout p {
-  margin: 0;
-}
-
 .site-main .legal-box {
   margin: 1rem 0;
   padding: 0.75rem 0.9rem;

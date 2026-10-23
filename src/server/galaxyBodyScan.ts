@@ -515,12 +515,6 @@ export function galaxyRegions(): GalaxyRegionsDTO {
   });
 }
 
-/** Test seam. */
-export function clearGalaxyRegionsCache(): void {
-  regionsCache = null;
-  regionNamesCache = null;
-}
-
 /**
  * A galaxy-wide-looking sample for the map: one system per sector cell.
  *

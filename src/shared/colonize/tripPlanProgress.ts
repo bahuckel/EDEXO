@@ -1,16 +1,10 @@
-import { depotDisplayLabel } from "./depotLabel";
 import type { DepotSnapshot } from "./types";
 import type { HaulTrip, LogisticsPlan } from "./logisticsPlanner";
 import { storageGet, storageSet, storageRemove } from "./storage";
 import { KEY_TRIP_PLAN } from "./uiStateKeys";
 
-/**
- * v3 since S-8: delivery lines are keyed by the site's market id, not its label. A v2 snapshot is
- * still read, flagged `legacyDepotLabels`, and converted by `adoptLegacyDepotIds` once the sites
- * are known; the v2 key is removed on the first v3 save.
- */
+/** v3 since S-8: delivery lines are keyed by the site's market id, not its label. */
 const TRIP_PLAN_SNAPSHOT_KEY = KEY_TRIP_PLAN;
-const LEGACY_TRIP_PLAN_SNAPSHOT_KEY = "edexo-colonize-trip-plan-snapshot-v2";
 
 export type ContributionBaseline = Record<string, Record<string, number>>;
 
@@ -21,8 +15,6 @@ export type TripPlanSnapshot = {
   /** User-toggled ○/✓ only — not cargo/contribution auto-detect. */
   manualCompletedLineIds: string[];
   createdAt: string;
-  /** Read from a v2 snapshot: deliveries name sites by label only. See `adoptLegacyDepotIds`. */
-  legacyDepotLabels?: boolean;
   /**
    * The ticks of the last plans this one replaced, newest first (at most EARLIER_PLANS). The same key builds the same
    * plan, so going back to it (a filter switched off and on again, the other ship) brings its ticks back instead of
@@ -53,47 +45,7 @@ export function tripDeliverLineId(
 }
 
 /**
- * Convert a v2 snapshot, whose deliveries name sites by label, once the sites are known.
- *
- * A label is resolved to the first site that carries it — exactly what v2 itself did, so a plan
- * made before the upgrade keeps meaning what it meant. Manual ticks are carried across to the new
- * line ids, so nothing the commander ticked is lost. A label no active site carries any more (the
- * site finished) keeps an empty id: its lines stay distinct, and nothing can auto-complete them.
- */
-export function adoptLegacyDepotIds(snapshot: TripPlanSnapshot, depots: DepotSnapshot[]): TripPlanSnapshot {
-  if (!snapshot.legacyDepotLabels) return snapshot;
-  const idByLabel = new Map<string, string>();
-  for (const d of depots) {
-    const label = depotDisplayLabel(d);
-    if (!idByLabel.has(label)) idByLabel.set(label, d.marketId);
-  }
-  const manual = new Set(snapshot.manualCompletedLineIds);
-  const trips = snapshot.plan.trips.map((trip) => ({
-    ...trip,
-    stops: trip.stops.map((stop) =>
-      stop.deliveries
-        ? {
-            ...stop,
-            deliveries: stop.deliveries.map((depot) => {
-              const marketId = depot.depotMarketId || idByLabel.get(depot.depotLabel) || "";
-              for (const m of depot.materials) {
-                const v2Id = `t${trip.tripNumber}-s${stop.stopIndex}-d-${depot.depotLabel}-${m.commodityId}`;
-                if (!manual.delete(v2Id)) continue;
-                manual.add(tripDeliverLineId(trip.tripNumber, stop.stopIndex, marketId, m.commodityId));
-              }
-              return { ...depot, depotMarketId: marketId };
-            }),
-          }
-        : stop,
-    ),
-  }));
-  const adopted: TripPlanSnapshot = { ...snapshot, plan: { ...snapshot.plan, trips }, manualCompletedLineIds: [...manual] };
-  delete adopted.legacyDepotLabels;
-  return adopted;
-}
-
-/**
- * Changes when the haul plan should be regenerated — deliveries (provided) do not affect this.
+ * Changes when the haul plan should be regenerated — including deliveries (what is left), see planLeftFingerprint.
  *
  * `constraintsSig` carries whatever else changes the shape of a plan: landing-pad and
  * distance filters, banned stations, wing claims, the docked station. Without it a filter
@@ -106,7 +58,27 @@ export function planRefreshFingerprint(
   checkoutsSig: string,
   constraintsSig = "",
 ): string {
-  return `${planDepotFingerprint(depots)}|cap:${capacity ?? ""}|co:${checkoutsSig}|cn:${constraintsSig}`;
+  return `${planDepotFingerprint(depots)}|cap:${capacity ?? ""}|co:${checkoutsSig}|cn:${constraintsSig}|left:${planLeftFingerprint(depots)}`;
+}
+
+/**
+ * What every site still needs. In the key since 2026-10-23 (owner: "make it automatically detect if a trip was done
+ * out of order ... recalculate what's left and show a new order list based on what was completed"): a delivery to
+ * any site, in any order, by the commander or a wingmate, makes a new plan from what is left, numbered from trip 1.
+ * Before, only the requirements were in the key, so a trip hauled out of order stayed listed until ticked by hand.
+ * Kept last in the key: the HUD tells a plan made for other sites by the part before "|cap:".
+ */
+function planLeftFingerprint(depots: DepotSnapshot[]): string {
+  return depots
+    .map((d) => {
+      const left = d.resources
+        .map((r) => `${r.name}:${Math.max(0, r.required - r.provided)}`)
+        .sort()
+        .join(",");
+      return `${d.marketId}|${left}`;
+    })
+    .sort()
+    .join(";");
 }
 
 /**
@@ -447,13 +419,13 @@ export function tripBuyProgress(
 export function parseTripPlanSnapshot(text: string | null | undefined): TripPlanSnapshot | null {
   if (!text) return null;
   try {
-    return migrateTripPlanSnapshot(JSON.parse(text) as Record<string, unknown>, false);
+    return snapshotFromParsed(JSON.parse(text) as Record<string, unknown>);
   } catch {
     return null;
   }
 }
 
-function migrateTripPlanSnapshot(parsed: Record<string, unknown>, legacyDepotLabels: boolean): TripPlanSnapshot | null {
+function snapshotFromParsed(parsed: Record<string, unknown>): TripPlanSnapshot | null {
   if (!parsed || typeof parsed !== "object") return null;
   const plan = parsed.plan as LogisticsPlan | undefined;
   const planRefreshKey = parsed.planRefreshKey;
@@ -468,7 +440,6 @@ function migrateTripPlanSnapshot(parsed: Record<string, unknown>, legacyDepotLab
     baselineContributions: (parsed.baselineContributions as ContributionBaseline) ?? collectContributionBaseline([]),
     manualCompletedLineIds: manual,
     createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : new Date().toISOString(),
-    ...(legacyDepotLabels ? { legacyDepotLabels: true } : {}),
     ...(parseEarlier(parsed.earlier) ? { earlier: parseEarlier(parsed.earlier) } : {}),
   };
 }
@@ -484,14 +455,10 @@ let tripSnapshotCacheText: string | null | undefined;
 export function loadTripPlanSnapshot(): TripPlanSnapshot | null {
   if (pendingTripSave !== undefined) return tripSnapshotCache ?? null;
   try {
-    const raw = storageGet(TRIP_PLAN_SNAPSHOT_KEY);
-    const legacy = raw ? null : storageGet(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
-    const body = raw ?? legacy;
+    const body = storageGet(TRIP_PLAN_SNAPSHOT_KEY);
     if (tripSnapshotCache !== undefined && body === tripSnapshotCacheText) return tripSnapshotCache;
     tripSnapshotCacheText = body;
-    tripSnapshotCache = body
-      ? migrateTripPlanSnapshot(JSON.parse(body) as Record<string, unknown>, legacy != null)
-      : null;
+    tripSnapshotCache = body ? snapshotFromParsed(JSON.parse(body) as Record<string, unknown>) : null;
   } catch {
     tripSnapshotCache = null;
   }
@@ -504,12 +471,9 @@ function saveTripPlanSnapshot(snapshot: TripPlanSnapshot | null): void {
   try {
     if (!snapshot) {
       storageRemove(TRIP_PLAN_SNAPSHOT_KEY);
-      storageRemove(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
       return;
     }
     storageSet(TRIP_PLAN_SNAPSHOT_KEY, tripSnapshotCacheText!);
-    /** Written in the new shape; the old one would otherwise be read again after a v3 clear. */
-    if (!snapshot.legacyDepotLabels) storageRemove(LEGACY_TRIP_PLAN_SNAPSHOT_KEY);
   } catch {
     /* */
   }

@@ -8,7 +8,6 @@
  *
  * The `-vN` suffix is the schema version. Bump it when the stored shape changes in a way
  * the parser cannot absorb; the old key is then simply ignored and the default applies.
- * `LEGACY_KEYS` lists keys previous versions wrote, so they can be cleaned up.
  */
 import { storageGet, storageRemove, storageSet, storageSetLocal } from "../../../shared/colonize/storage";
 import {
@@ -24,12 +23,6 @@ export const STORAGE_KEYS = {
   depotRefPins: KEY_DEPOT_REF_PINS,
   /** Which carriers the commander has switched on for hauling, by CarrierID. */
   carrierHaul: KEY_CARRIER_HAUL,
-} as const;
-
-/** Written by earlier versions. Read once for migration, then removed. */
-export const LEGACY_KEYS = {
-  /** Per-depot pinned hub, one key per market id: `edexo-colonize-depot-ref-<marketId>`. */
-  depotRefPrefix: "edexo-colonize-depot-ref-",
 } as const;
 
 /**
@@ -88,35 +81,5 @@ export function writeJson(key: string, value: unknown): void {
     writeRaw(key, JSON.stringify(value));
   } catch {
     /* A value that cannot be serialised is a programming error, not a user-facing one. */
-  }
-}
-
-/** All per-depot pin keys an older build left behind, so they can be folded into one record. */
-export function readLegacyDepotRefPins(): Record<string, string> {
-  const out: Record<string, string> = {};
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key?.startsWith(LEGACY_KEYS.depotRefPrefix)) continue;
-      const marketId = key.slice(LEGACY_KEYS.depotRefPrefix.length);
-      const value = readRaw(key)?.trim();
-      if (marketId && value) out[marketId] = value;
-    }
-  } catch {
-    return out;
-  }
-  return out;
-}
-
-export function clearLegacyDepotRefPins(): void {
-  try {
-    const stale: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(LEGACY_KEYS.depotRefPrefix)) stale.push(key);
-    }
-    for (const key of stale) removeRaw(key);
-  } catch {
-    /* Leaving the old keys behind is harmless; they are simply ignored. */
   }
 }

@@ -133,7 +133,6 @@
 }
 
 /* ---- chips and pills: square the corners, keep the colours ---------------------------------------- */
-.exo-pill,
 .tab {
   border-radius: 0 !important;
   clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
@@ -249,9 +248,6 @@ input[type="text"]:focus {
 
 /* ---- sell range: square, and the ×5 tag on the price's centre line ------------------------------- */
 .exo-payout-range-panel.exo-payout-range-panel--clickable,
-.exo-pill--footfall-full,
-.exo-payout-v2-greenbox,
-.exo-pill--grid,
 .body-detail-callout,
 .genus-notes-pill,
 .tabs-strip-host-card,
@@ -996,9 +992,6 @@ input[type="text"]:focus {
 }
 .header-route-num {
   color: var(--accent-bright);
-}
-.header-tray .exo-pill {
-  clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
 }
 
 /* modal tables and cards: tracked heads, hairline rows, warm tiles */

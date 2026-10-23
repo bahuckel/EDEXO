@@ -87,32 +87,16 @@ function parseGalaxyDistancePairKey(key: string): { from: string; to: string } |
   return { from, to };
 }
 
-/** True when map entry is a construction→seller pair (not a legacy flat seller key). */
+/** True when a map entry is a construction→seller pair. */
 function isGalaxyDistancePairKey(key: string): boolean {
   return key.includes(GALAXY_DISTANCE_PAIR_SEP);
 }
 
-function legacyGalaxyDistancePairKey(fromSystem: string, toSystem: string): string {
-  return `${normSystemName(fromSystem)}\0${normSystemName(toSystem)}`;
-}
-
-/** Keep pair-key Ly only; migrate legacy NUL-separated keys to `::`. */
+/** Keep pair-key Ly only. */
 export function sanitizeGalaxyDistanceMap(map: Record<string, number>): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [k, d] of Object.entries(map)) {
-    if (!isKnownLy(d)) continue;
-    if (isGalaxyDistancePairKey(k)) {
-      out[k] = d;
-      continue;
-    }
-    if (k.includes("\0")) {
-      const parts = k.split("\0");
-      if (parts.length === 2 && parts[0] && parts[1]) {
-        const nk = galaxyDistancePairKey(parts[0], parts[1]);
-        const prev = out[nk];
-        if (prev == null || d < prev) out[nk] = d;
-      }
-    }
+    if (isKnownLy(d) && isGalaxyDistancePairKey(k)) out[k] = d;
   }
   return out;
 }
@@ -156,13 +140,8 @@ export function lookupGalaxyDistanceLy(
   if (!sellN) return null;
 
   if (constructionRef?.trim()) {
-    for (const pair of [
-      galaxyDistancePairKey(constructionRef, systemName),
-      legacyGalaxyDistancePairKey(constructionRef, systemName),
-    ]) {
-      const pd = distanceBySystem[pair];
-      if (isKnownLy(pd)) return pd!;
-    }
+    const pd = distanceBySystem[galaxyDistancePairKey(constructionRef, systemName)];
+    if (isKnownLy(pd)) return pd!;
     /**
      * The caller asked how far this seller is from one specific site. Falling through to
      * the scan below answered a different question — the distance from whichever other
@@ -176,14 +155,7 @@ export function lookupGalaxyDistanceLy(
   let best: number | null = null;
   for (const [k, d] of Object.entries(distanceBySystem)) {
     if (!isKnownLy(d)) continue;
-    let toN: string | null = null;
-    const parsed = parseGalaxyDistancePairKey(k);
-    if (parsed) toN = parsed.to;
-    else if (k.includes("\0")) {
-      const parts = k.split("\0");
-      if (parts.length === 2) toN = parts[1]!;
-    }
-    if (!toN || toN !== sellN) continue;
+    if (parseGalaxyDistancePairKey(k)?.to !== sellN) continue;
     if (best == null || d! < best) best = d!;
   }
   return best;

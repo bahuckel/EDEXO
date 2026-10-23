@@ -74,7 +74,7 @@ function parseRoutingMode(v: unknown): CheckoutRoutingMode {
     : "fewest_stops";
 }
 
-/** Shared payload parsing for checkoutBasket / checkoutBasketMulti. */
+/** Payload parsing for checkoutBasketMulti. */
 export function parseCheckoutRequest(p: Record<string, unknown>) {
   const journalDir = typeof p.journalDir === "string" && p.journalDir.trim() ? p.journalDir.trim() : null;
   const filtersRaw = p.filters && typeof p.filters === "object" ? (p.filters as Record<string, unknown>) : {};

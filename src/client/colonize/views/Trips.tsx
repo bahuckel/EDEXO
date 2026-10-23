@@ -168,18 +168,13 @@ export function NextTripCard({ trips, completed, onToggle, onBan, readOnly = fal
   );
 }
 
-export function TripList({ trips, completed, onToggle, readOnly = false }: TripProps) {
+export function TripList({ trips, completed }: TripProps) {
   const [all, setAll] = useState(false);
   const next = trips.find((tr) => !tripDone(tr, completed));
   const rest = trips.filter((tr) => tr !== next);
   const shown = all ? rest : rest.slice(0, 8);
   return (
-    <Panel
-      k="trips"
-      title="After that"
-      className="cz-panel--flush"
-      aside={readOnly ? undefined : <span className="cz-aside-note">tick a trip you did out of order</span>}
-    >
+    <Panel k="trips" title="After that" className="cz-panel--flush">
       {shown.map((tr) => {
         const done = tripDone(tr, completed);
         const buy = tr.stops.find((s) => s.kind === "buy" && s.buys.length);
@@ -187,12 +182,15 @@ export function TripList({ trips, completed, onToggle, readOnly = false }: TripP
         const sites = [...new Set(tr.stops.flatMap((s) => (s.deliveries ?? []).map((d) => d.depotLabel)))];
         return (
           <div key={tr.tripNumber} className={`cz-trip${done ? " cz-trip--done" : ""}`}>
-            <label className="cz-trip__main">
-              <input type="checkbox" className="cz-tick" checked={done} disabled={readOnly} onChange={() => setTrip(tr, completed, !done, onToggle)} />
+            {/*
+              No tick here (owner, 2026-10-23): a trip hauled out of order shows in the sites' deliveries, and the plan is
+              made again from what is left (planRefreshFingerprint), so it simply leaves the list.
+            */}
+            <div className="cz-trip__main">
               <span className="cz-trip__n">{tr.tripNumber}</span>
               <b>{buy?.stationName ?? "—"}</b>
               <span className="cz-small cz-dim">{buy ? formatHopLy(buy.distanceLy) : ""}</span>
-            </label>
+            </div>
             <span className="cz-trip__buys">{buys.join(" · ")}</span>
             <span className="cz-trip__to">{sites.length ? `→ ${sites.join(", ")}` : ""}</span>
           </div>

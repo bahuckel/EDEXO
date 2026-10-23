@@ -4,8 +4,6 @@ import type { ClearBuyDataScope } from "../../../shared/colonize/buyIndexClear";
 import { INARA_INDEX_REF } from "../../../shared/colonize/inaraImportTypes";
 import {
   getBuyIndexStationCatalog as getMergedStationCatalog,
-  searchBuyIndexMaterial,
-  searchBuyIndexMaterialStations,
   searchBuyIndexStationsForMaterials,
   searchBuyIndexSystem,
 } from "../buyIndexSearch";
@@ -38,12 +36,6 @@ export function buyIndexHandlers({ store, buyIndex, userDataDir }: IpcContext) {
   };
 
   return {
-    searchBuyIndexMaterial: async (payload) => {
-      const q = trimmedString(asRecord(payload).query);
-      if (!q) return { ok: false as const, err: "Enter a material name." };
-      return withIndex((index) => ({ systems: searchBuyIndexMaterial(index, store.getJournalShopRecords(), q) }));
-    },
-
     searchBuyIndexSystem: async (payload) => {
       const q = trimmedString(asRecord(payload).query);
       if (!q) return { ok: false as const, err: "Enter a system name." };
@@ -87,17 +79,6 @@ export function buyIndexHandlers({ store, buyIndex, userDataDir }: IpcContext) {
       } catch (e) {
         return { ok: false as const, err: errMessage(e) };
       }
-    },
-
-    searchBuyIndexMaterialStations: async (payload) => {
-      if (!payload || typeof payload !== "object") return { ok: false as const, err: "Invalid payload." };
-      const p = asRecord(payload);
-      const systemName = trimmedString(p.systemName);
-      const materialQuery = trimmedString(p.materialQuery);
-      if (!systemName || !materialQuery) return { ok: false as const, err: "System and material required." };
-      return withIndex((index) => ({
-        stations: searchBuyIndexMaterialStations(index, store.getJournalShopRecords(), systemName, materialQuery),
-      }));
     },
 
     getBuyIndexStationCatalog: async (payload) => {

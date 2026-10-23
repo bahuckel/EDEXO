@@ -1,14 +1,6 @@
 import type { Ly } from "./systemDistanceLy";
 import type { MaterialBuyStationHit } from "./materialBuyIndexTypes";
 
-export type BuyIndexSystemResult = {
-  systemName: string;
-  stationCount: number;
-  minDistanceLy: Ly;
-  bestBuyPrice: number | null;
-  resolvedLabel: string;
-};
-
 export type BuyIndexStationResult = {
   systemName: string;
   stationName: string;

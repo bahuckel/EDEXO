@@ -748,8 +748,8 @@ export class ColonizeStore {
   }
 
   /**
-   * Serialised: `replayWeek` or `chooseJournalDir` during the startup replay used to
-   * run two passes over the same journals at once, and every contribution landed twice.
+   * Serialised: in EDEXO-Colonize a "re-read journals" or a folder change during the startup replay
+   * ran two passes over the same journals at once, and every contribution landed twice.
    */
   async restartTail(): Promise<void> {
     const run = this.restartChain.then(

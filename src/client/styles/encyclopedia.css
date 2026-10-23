@@ -508,37 +508,6 @@
   font-size: var(--fs-2xs);
 }
 
-/* Encyclopedia exomastery deviation tiers (match server `deviationToTier`) */
-.exo-ency-tier--blue {
-  border-left-color: #5aa7ff;
-  background: rgba(60, 130, 255, 0.08);
-}
-
-.exo-ency-tier--green {
-  border-left-color: #52c962;
-  background: rgba(60, 200, 90, 0.09);
-}
-
-.exo-ency-tier--yellow {
-  border-left-color: #e6c84a;
-  background: rgba(220, 190, 60, 0.1);
-}
-
-.exo-ency-tier--orange {
-  border-left-color: #f0a038;
-  background: rgba(240, 140, 50, 0.1);
-}
-
-.exo-ency-tier--red {
-  border-left-color: #ff5a4a;
-  background: rgba(240, 70, 60, 0.12);
-}
-
-.exo-ency-tier--neutral {
-  border-left-color: rgba(255, 255, 255, 0.15);
-  background: rgba(0, 0, 0, 0.18);
-}
-
 /* ==== field-guide cards (owner, 2026-09-29: after the website's species page) =====================
    Photo on top, description, conditions vs the body, where it was found, mode charts with the body
    marked. FieldGuide.tsx + EncyclopediaModal.tsx. */

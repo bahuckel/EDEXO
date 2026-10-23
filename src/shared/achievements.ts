@@ -70,8 +70,6 @@ export function achievementStep(done: number, total: number): AchievementStep {
   return done >= g ? 3 : done >= s ? 2 : done >= b ? 1 : 0;
 }
 
-export const STEP_NAMES = ["", "Bronze", "Silver", "Gold"] as const;
-
 export function slug(s: string): string {
   return s
     .toLowerCase()

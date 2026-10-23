@@ -318,10 +318,6 @@ export async function clearFinderIndex(): Promise<void> {
   await Promise.all([closing, ...[...clearHooks].map((h) => h().catch(() => {}))]);
 }
 
-export function finderUserFilePath(): string {
-  return path.join(userGalaxyDir(), FINDER_FILE);
-}
-
 export interface FinderStatus {
   present: boolean;
   systems: number | null;

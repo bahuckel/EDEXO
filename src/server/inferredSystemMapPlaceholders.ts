@@ -166,7 +166,7 @@ function buildShortLabelToBodyId(recs: ExplorationScanRecord[], starSystemName: 
 /**
  * Stub Scan records for FSS-tagged bodies not yet present in merged exploration (no `Scan` line).
  */
-export function stubExplorationRecordsFromFss(
+function stubExplorationRecordsFromFss(
   store: GameStateStore,
   focusSystemAddress: number,
   starSystemName: string,

@@ -173,6 +173,15 @@ test("colonize: Compare's shell — its app bar, and Compare's screens as tabs k
   // Back home: the Colonize tab.
   await page.locator(".tab-strip__tab", { hasText: "Colonize" }).first().click();
   await expect(page.getByRole("heading", { name: "Your sites" })).toBeVisible();
+  // "Find colony sites" opens the galaxy map in a tab on its finder drawer, not a new window (owner, 2026-10-23).
+  const popups: string[] = [];
+  page.context().on("page", (p) => popups.push(p.url()));
+  await page.getByRole("link", { name: /Find colony sites/ }).first().click();
+  await expect(page.locator(".tab-strip__tab", { hasText: "Galaxy" })).toBeVisible();
+  await expect(page.getByTestId("g3d-finder")).toBeVisible({ timeout: 60_000 });
+  expect(popups).toEqual([]);
+  await page.locator(".tab-strip__tab", { hasText: "Colonize" }).first().click();
+  await expect(page.getByRole("heading", { name: "Your sites" })).toBeVisible();
   // Its tray is a full row under the app bar, and the footer sits at the window's bottom (owner, 2026-10-22).
   const widths = await page.evaluate(() => [
     document.querySelector(".header-tray--app")?.getBoundingClientRect().width ?? 0,

@@ -3,7 +3,7 @@ import path from "node:path";
 import { backupUnreadableJson, writeJsonAtomic } from "./jsonFs";
 import { buyStationHitMatchesNeed } from "../../shared/colonize/buyStationHitMatch";
 import { commodityIdsEquivalent, commodityNeedMatchesLabel, commodityNormKey } from "../../shared/colonize/commodityKey";
-import type { BuyIndexStationMaterial, BuyIndexStationResult, BuyIndexSystemResult } from "../../shared/colonize/buyIndexSearchTypes";
+import type { BuyIndexStationMaterial, BuyIndexStationResult } from "../../shared/colonize/buyIndexSearchTypes";
 import { materialNeedsFromQuery } from "../../shared/colonize/buyIndexSearchQuery";
 import { orderHitsByDijkstraReach } from "../../shared/colonize/dijkstraStationReach";
 import { constructionHopLy, lyOrLast, nearerLy, type Ly } from "../../shared/colonize/systemDistanceLy";
@@ -13,7 +13,7 @@ import { hasBuyStationWithinLy } from "../../shared/colonize/buyStationNearby";
 import { LIVE_SCAN_NEARBY_LY, normSystemName } from "../../shared/colonize/stationFilter";
 import { buyStationPlaceKey, dedupeBuyStationHits, mergeBuyStationHits } from "../../shared/colonize/buyStationMerge";
 import { pruneBuyIndexBySources } from "../../shared/colonize/buyIndexClear";
-import { sortStationsByHop, sortSystemsByHop } from "../../shared/colonize/buyIndexSort";
+import { sortStationsByHop } from "../../shared/colonize/buyIndexSort";
 import type { CheckoutOfferSource } from "../../shared/colonize/types";
 import type { MaterialBuyIndexFile, MaterialBuyIndexRow, MaterialBuyStationHit } from "../../shared/colonize/materialBuyIndexTypes";
 
@@ -610,47 +610,6 @@ export class MaterialBuyIndex {
 
   allRowsForReference(referenceSystem: string): MaterialBuyIndexRow[] {
     return this.snapshotFor(referenceSystem).rows;
-  }
-
-  /** Systems with saved sellers for a material (or comma-separated AND list). */
-  searchSystemsForMaterial(query: string): BuyIndexSystemResult[] {
-    const stations = this.searchStationsForMaterials(query);
-    type Acc = {
-      stationKeys: Set<string>;
-      minLy: Ly;
-      bestPrice: number | null;
-      label: string;
-    };
-    const systems = new Map<string, Acc>();
-    const needs = materialNeedsFromQuery(query);
-
-    for (const st of stations) {
-      const sys = st.systemName.trim();
-      if (!sys) continue;
-      const sk = buyStationPlaceKey(st);
-      let acc = systems.get(sys);
-      if (!acc) {
-        acc = {
-          stationKeys: new Set(),
-          minLy: null,
-          bestPrice: null,
-          label: needs.map((n) => n.needLabel).join(", "),
-        };
-        systems.set(sys, acc);
-      }
-      acc.stationKeys.add(sk);
-      acc.minLy = nearerLy(acc.minLy, st.minDistanceLy);
-    }
-
-    return [...systems.entries()]
-      .map(([systemName, acc]) => ({
-        systemName,
-        stationCount: acc.stationKeys.size,
-        minDistanceLy: acc.minLy,
-        bestBuyPrice: acc.bestPrice,
-        resolvedLabel: acc.label,
-      }))
-      .sort(sortSystemsByHop);
   }
 
   /** Saved sellers for one depot SKU — same scan as Search (all refs, row label match). */

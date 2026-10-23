@@ -271,4 +271,3 @@ export function buildProfileFromPlanetContexts(
 }
 
 export { speciesFileSlug };
-export { genusFileSlug } from "./flatten.js";

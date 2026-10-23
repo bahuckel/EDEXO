@@ -2,13 +2,8 @@ import { buyStationHitMatchesNeed } from "../../shared/colonize/buyStationHitMat
 import { withLocalStationFacts } from "./localStationFacts";
 import { commodityIdsEquivalent, commodityNeedMatchesLabel } from "../../shared/colonize/commodityKey";
 import { isConstructionDepotStation, type ConstructionDepotRef } from "../../shared/colonize/constructionDepot";
-import type {
-  BuyIndexStationMaterial,
-  BuyIndexStationResult,
-  BuyIndexSystemResult,
-} from "../../shared/colonize/buyIndexSearchTypes";
+import type { BuyIndexStationMaterial, BuyIndexStationResult } from "../../shared/colonize/buyIndexSearchTypes";
 import {
-  formatMaterialSearchLabel,
   materialNeedsFromQuery,
   planMaterialSearchQuery,
   resolveMaterialLookupNeed,
@@ -19,9 +14,9 @@ import type { MaterialBuyStationHit } from "../../shared/colonize/materialBuyInd
 import { isCommanderBuyOffer } from "../../shared/colonize/stationSellOffer";
 import { isSurfaceStationLabel, isSurfaceStationType, normSystemName } from "../../shared/colonize/stationFilter";
 import { sortMaterialBuyHitsBySearchDistance } from "../../shared/colonize/searchDistanceLy";
-import { constructionHopLy, nearerLy, toLy, type Ly } from "../../shared/colonize/systemDistanceLy";
+import { constructionHopLy, nearerLy, toLy } from "../../shared/colonize/systemDistanceLy";
 import { buyStationPlaceKey, mergeBuyStationHits } from "../../shared/colonize/buyStationMerge";
-import { sortStationsByHop, sortSystemsByHop } from "../../shared/colonize/buyIndexSort";
+import { sortStationsByHop } from "../../shared/colonize/buyIndexSort";
 import type { MaterialBuyIndex } from "./materialBuyIndex";
 
 function stationKey(marketId: string, systemName: string, stationName: string): string {
@@ -98,38 +93,6 @@ function searchJournalStationsForMaterials(
 function sortStationsJournalFirst(a: BuyIndexStationResult, b: BuyIndexStationResult): number {
   const rank = (s: BuyIndexStationResult) => ((s.boughtCount ?? 0) > 0 ? 0 : s.lastVisitIso ? 1 : 2);
   return rank(a) - rank(b) || (b.boughtCount ?? 0) - (a.boughtCount ?? 0) || sortStationsByHop(a, b);
-}
-
-function searchJournalSystemsForMaterial(
-  shops: JournalShopRecord[],
-  query: string,
-): BuyIndexSystemResult[] {
-  const stations = searchJournalStationsForMaterials(shops, query);
-  const label = formatMaterialSearchLabel(query);
-  const systems = new Map<string, { stationKeys: Set<string>; minLy: Ly }>();
-
-  for (const st of stations) {
-    const sys = st.systemName.trim();
-    if (!sys) continue;
-    const sk = stationKey(st.marketId, st.systemName, st.stationName);
-    let acc = systems.get(sys);
-    if (!acc) {
-      acc = { stationKeys: new Set(), minLy: null };
-      systems.set(sys, acc);
-    }
-    acc.stationKeys.add(sk);
-    acc.minLy = nearerLy(acc.minLy, st.minDistanceLy);
-  }
-
-  return [...systems.entries()]
-    .map(([systemName, acc]) => ({
-      systemName,
-      stationCount: acc.stationKeys.size,
-      minDistanceLy: acc.minLy,
-      bestBuyPrice: null,
-      resolvedLabel: label,
-    }))
-    .sort(sortSystemsByHop);
 }
 
 function systemMatchesQuery(systemName: string, query: string): boolean {
@@ -272,28 +235,6 @@ function journalCommoditiesForShop(rec: JournalShopRecord): Map<string, string> 
   return out;
 }
 
-function mergeSystemResults(a: BuyIndexSystemResult[], b: BuyIndexSystemResult[]): BuyIndexSystemResult[] {
-  const map = new Map<string, BuyIndexSystemResult>();
-  for (const row of [...a, ...b]) {
-    const prev = map.get(row.systemName);
-    if (!prev) {
-      map.set(row.systemName, row);
-      continue;
-    }
-    map.set(row.systemName, {
-      systemName: row.systemName,
-      stationCount: Math.max(prev.stationCount, row.stationCount),
-      minDistanceLy: nearerLy(prev.minDistanceLy, row.minDistanceLy),
-      bestBuyPrice:
-        prev.bestBuyPrice != null && row.bestBuyPrice != null
-          ? Math.min(prev.bestBuyPrice, row.bestBuyPrice)
-          : prev.bestBuyPrice ?? row.bestBuyPrice,
-      resolvedLabel: prev.resolvedLabel || row.resolvedLabel,
-    });
-  }
-  return [...map.values()].sort(sortSystemsByHop);
-}
-
 function mergeStationResults(a: BuyIndexStationResult[], b: BuyIndexStationResult[]): BuyIndexStationResult[] {
   const map = new Map<string, BuyIndexStationResult>();
   for (const row of [...a, ...b]) {
@@ -406,17 +347,6 @@ function mergeCatalog(a: BuyIndexStationMaterial[], b: BuyIndexStationMaterial[]
   return [...map.values()].sort((x, y) => x.label.localeCompare(y.label));
 }
 
-export function searchBuyIndexMaterial(
-  index: MaterialBuyIndex,
-  journalShops: JournalShopRecord[],
-  query: string,
-): BuyIndexSystemResult[] {
-  return mergeSystemResults(
-    index.searchSystemsForMaterial(query),
-    searchJournalSystemsForMaterial(journalShops, query),
-  );
-}
-
 export function searchBuyIndexStationsForMaterials(
   index: MaterialBuyIndex,
   journalShops: JournalShopRecord[],
@@ -427,15 +357,6 @@ export function searchBuyIndexStationsForMaterials(
     index.searchStationsForMaterials(query, systemName),
     searchJournalStationsForMaterials(journalShops, query, systemName),
   );
-}
-
-export function searchBuyIndexMaterialStations(
-  index: MaterialBuyIndex,
-  journalShops: JournalShopRecord[],
-  systemName: string,
-  materialQuery: string,
-): BuyIndexStationResult[] {
-  return searchBuyIndexStationsForMaterials(index, journalShops, materialQuery, systemName);
 }
 
 export function searchBuyIndexSystem(

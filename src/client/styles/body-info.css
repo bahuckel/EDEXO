@@ -281,51 +281,10 @@
   text-shadow: 0 0 8px var(--accent-a45);
 }
 
-.exo-signals-label {
-  font-weight: 400;
-  color: var(--text);
-}
-
-.exo-signals-num {
-  font-weight: 700;
-  color: var(--accent-bright);
-}
-
 /* Organic sell range collapsible */
 
 .exo-payout-collapsible {
   padding: 0.5rem 0.65rem 0.65rem;
-}
-
-.exo-payout-collapse-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--s-4);
-  font: inherit;
-  font-weight: 700;
-  font-size: var(--fs-lg);
-  color: var(--accent-bright);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0.15rem 0 0.35rem;
-  text-align: left;
-}
-
-.exo-payout-chevron {
-  display: inline-block;
-  transition: transform 250ms ease;
-  font-weight: 900;
-  color: var(--accent-bright);
-}
-
-.exo-payout-chevron--open {
-  transform: rotate(0deg);
-}
-
-.exo-payout-collapsible--closed .exo-payout-chevron {
-  transform: rotate(180deg);
 }
 
 .exo-payout-inner-click {
@@ -337,25 +296,6 @@
   padding: 0.25rem 0 0;
   font: inherit;
   color: inherit;
-}
-
-.exo-payout-body-anim {
-  overflow: hidden;
-  max-height: 2400px;
-  opacity: 1;
-  transition:
-    max-height 250ms ease,
-    opacity 250ms ease;
-}
-
-.exo-payout-body-anim--closed {
-  max-height: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.exo-payout-body-anim-inner {
-  padding-bottom: 0.15rem;
 }
 
 /* The estimated band beside the journal's temperature (owner, D2): there, but quieter. */

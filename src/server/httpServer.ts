@@ -37,7 +37,7 @@ import { registerGreenGiantRoutes } from "./routes/greenGiantRoutes.js";
 import { registerRecordsRoutes } from "./routes/recordsRoutes.js";
 
 // The options and route types live in httpServerTypes.ts (audit 2026-10-22); kept importable from here.
-export type { AppView, RecordsDTO, HttpServerOptions, RouteContext } from "./httpServerTypes.js";
+export type { HttpServerOptions, RouteContext } from "./httpServerTypes.js";
 
 export function getLanIPv4s(port: number): string[] {
   const nets = os.networkInterfaces();

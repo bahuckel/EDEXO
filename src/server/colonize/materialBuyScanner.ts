@@ -32,7 +32,6 @@ type ScanJob = {
 let passiveTimer: ReturnType<typeof setTimeout> | null = null;
 let activeTimer: ReturnType<typeof setTimeout> | null = null;
 let scanRunning = false;
-let basketBlocksPassive = false;
 const passiveQueue: ScanJob[] = [];
 const activeQueue: ScanJob[] = [];
 
@@ -44,7 +43,7 @@ function syncQueueCounts(): void {
   patchMaterialBuyScanStatus({
     passive: { queuedJobs: passiveQueue.length },
     active: { queuedJobs: activeQueue.length },
-    passivePaused: basketBlocksPassive || activeQueue.length > 0 || scanRunning,
+    passivePaused: activeQueue.length > 0 || scanRunning,
   });
 }
 
@@ -54,19 +53,6 @@ function patchQueue(mode: "passive" | "active", slice: Partial<MaterialBuyScanQu
 
 function idleQueueSlice(): MaterialBuyScanQueueSlice {
   return { ...IDLE_MATERIAL_BUY_SCAN_STATUS.passive };
-}
-
-/** Renderer signals basket has items — pause fleet passive scans until basket is empty. */
-export function setBasketBlocksPassiveScan(block: boolean): void {
-  basketBlocksPassive = block;
-  if (block) {
-    passiveQueue.length = 0;
-    if (passiveTimer) {
-      clearTimeout(passiveTimer);
-      passiveTimer = null;
-    }
-  }
-  syncQueueCounts();
 }
 
 function jobKey(job: ScanJob): string {
@@ -193,7 +179,7 @@ export function cancelPassiveMaterialBuyScan(): void {
   if (!scanRunning && !activeQueue.length) {
     patchMaterialBuyScanStatus({
       passive: idleQueueSlice(),
-      passivePaused: basketBlocksPassive,
+      passivePaused: false,
     });
   }
   syncQueueCounts();
@@ -203,13 +189,8 @@ export function schedulePassiveMaterialBuyScan(args: Omit<ScanJob, "mode">): voi
   /**
    * A running scan or a queued active job defers passive work, it does not cancel it — dropping
    * the request here meant anything asked for during a scan was simply never scanned. The drain
-   * loop already runs active jobs first. A blocked basket still discards, since it clears the
-   * queue on the way in.
+   * loop already runs active jobs first.
    */
-  if (basketBlocksPassive) {
-    syncQueueCounts();
-    return;
-  }
   const job: ScanJob = { mode: "passive", ...args };
   if (!passiveQueue.some((j) => jobKey(j) === jobKey(job))) {
     passiveQueue.push(job);
@@ -249,7 +230,7 @@ async function drainScanQueues(): Promise<void> {
   scanRunning = true;
   syncQueueCounts();
   try {
-    while (activeQueue.length || (!basketBlocksPassive && passiveQueue.length)) {
+    while (activeQueue.length || passiveQueue.length) {
       const mode: "passive" | "active" = activeQueue.length ? "active" : "passive";
       const job = mode === "active" ? activeQueue.shift()! : passiveQueue.shift()!;
       syncQueueCounts();
@@ -268,7 +249,7 @@ async function drainScanQueues(): Promise<void> {
       patchMaterialBuyScanStatus({
         passive: idleQueueSlice(),
         active: idleQueueSlice(),
-        passivePaused: basketBlocksPassive,
+        passivePaused: false,
       });
     }
     syncQueueCounts();

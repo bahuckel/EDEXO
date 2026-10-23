@@ -50,14 +50,6 @@ export function isServerChild(): boolean {
   return process.env.EDEXO_SERVER_CHILD === "1";
 }
 
-/** A message box for the main process to show (the utility process has no `dialog`). */
-export function postDialogToMain(title: string, message: string): boolean {
-  const port = parentPort();
-  if (!port) return false;
-  port.postMessage({ type: "dialog", title, message });
-  return true;
-}
-
 /** The runtime methods main may call. Anything else is refused, not looked up by name. */
 const CALLS = new Set([
   "uiCommand",

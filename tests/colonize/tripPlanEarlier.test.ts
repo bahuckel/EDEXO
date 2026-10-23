@@ -3,7 +3,7 @@
  * the other ship, builds the same plan again under the same key, and its ticks come back.
  */
 import { describe, expect, it } from "vitest";
-import { createTripPlanSnapshot, parseTripPlanSnapshot, type TripPlanSnapshot } from "../../src/shared/colonize/tripPlanProgress";
+import { createTripPlanSnapshot, parseTripPlanSnapshot, planDepotFingerprint, planRefreshFingerprint, type TripPlanSnapshot } from "../../src/shared/colonize/tripPlanProgress";
 import type { DepotSnapshot } from "../../src/shared/colonize/types";
 
 const plan = { trips: [{ tripNumber: 1, stops: [] }] } as unknown as TripPlanSnapshot["plan"];
@@ -40,5 +40,17 @@ describe("earlier plans' ticks", () => {
     const a = createTripPlanSnapshot(plan, "A", depots);
     expect(a.earlier).toBeUndefined();
     expect(createTripPlanSnapshot(plan, "A", depots, a).earlier).toBeUndefined();
+  });
+});
+
+describe("a delivery in any order", () => {
+  const site = (provided: number) =>
+    [{ marketId: "1", resources: [{ name: "steel", nameLocalised: "Steel", required: 500, provided, payment: null }], contributions: [] }] as unknown as DepotSnapshot[];
+  it("makes a new plan from what is left; the sites part the HUD compares stays the same", () => {
+    const before = planRefreshFingerprint(site(0), 80, "co", "cn");
+    const after = planRefreshFingerprint(site(80), 80, "co", "cn");
+    expect(after).not.toBe(before);
+    expect(after.startsWith(`${planDepotFingerprint(site(80))}|cap:`)).toBe(true);
+    expect(planDepotFingerprint(site(80))).toBe(planDepotFingerprint(site(0)));
   });
 });

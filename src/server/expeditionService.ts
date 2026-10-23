@@ -212,7 +212,7 @@ export function ruleText(gate: SpatialGate): string {
 export const MAX_RULE_POINTS = 400;
 
 /** The points a rule is measured from near the field, each with the radius it allows, nearest first. */
-export function rulePoints(
+function rulePoints(
   gate: SpatialGate,
   cat: SpatialCatalogue | null,
   from: Xyz,

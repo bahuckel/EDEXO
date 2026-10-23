@@ -28,8 +28,6 @@ interface StationRow {
   own?: boolean;
 }
 
-export type { StationRow as StationPick };
-
 /** Fired when new station data is in place (StationsPanel), for the galaxy map's layer and lists. */
 export const STATIONS_CHANGED_EVENT = "edexo-stations-changed";
 

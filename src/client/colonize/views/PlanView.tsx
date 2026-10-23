@@ -20,6 +20,7 @@ import { useLogisticsPlan } from "../planner/hooks/useLogisticsPlan";
 import { usePlannerCheckouts } from "../planner/hooks/usePlannerCheckouts";
 import { usePlannerSystemCoords } from "../planner/hooks/usePlannerSystemCoords";
 import { colonizeApi } from "../api";
+import { onGalaxyDrawerLinkClick } from "../../galaxyDrawerRequest";
 import { openInEdexoBrowser } from "../inaraBrowser";
 import type { ColonizeModel } from "../useColonize";
 import { Select, type SelectOption } from "../../ui/Select";
@@ -136,7 +137,9 @@ export function PlanView({ m }: { m: ColonizeModel }) {
               this window follows your journals from the last seven days.
             </p>
             <p className="cz-dim" style={{ marginBottom: 0 }}>
-              Looking for where to build? <a href="/?screen=galaxy&amp;drawer=finder" target="_blank" rel="noreferrer">Find colony sites</a>{" "}
+              Looking for where to build? <a href="/?screen=galaxy&amp;drawer=finder" target="_blank" rel="noreferrer" onClick={onGalaxyDrawerLinkClick("finder")}>
+                Find colony sites
+              </a>{" "}
               on the galaxy map: systems near your colonies with the bodies you want, not yet taken.
             </p>
           </Panel>

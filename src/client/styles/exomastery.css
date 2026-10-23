@@ -55,43 +55,9 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.exo-comp-summary-pct {
-  font-size: var(--fs-lg);
-  margin-bottom: 0.35rem;
-}
-
-.exo-comp-summary-label {
-  color: var(--muted);
-  font-size: var(--fs-sm);
-  margin-right: 0.35rem;
-}
-
-.exo-comp-summary-strong {
-  color: rgba(120, 200, 255, 0.95);
-  font-variant-numeric: tabular-nums;
-}
-
-.exo-comp-summary-bestworst {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem 0.5rem;
-  line-height: 1.4;
-  color: rgba(210, 215, 225, 0.88);
-}
-
-.exo-comp-sep {
-  opacity: 0.45;
-}
-
 .exo-compact-sep {
   opacity: 0.4;
   user-select: none;
-}
-
-.exo-stat-sep {
-  margin: 0 0.25rem;
-  opacity: 0.55;
 }
 
 .species-card-inner {

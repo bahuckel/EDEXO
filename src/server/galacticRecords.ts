@@ -9,7 +9,7 @@
  * world`). Some of EDAstro's minimums are placeholders from bad reports (a 6,371 km "gas giant"), so
  * the app calls them EDAstro's records, not facts.
  */
-import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 import { APP_USER_AGENT } from "./appVersion.js";
@@ -207,8 +207,4 @@ export async function fetchGalacticRecords(opts: { force?: boolean; fetchImpl?: 
   renameSync(`${path}.tmp`, path);
   memo = null;
   return readGalacticRecordsStatus();
-}
-
-export function hasGalacticRecords(): boolean {
-  return existsSync(resolveGalacticRecordsPath());
 }

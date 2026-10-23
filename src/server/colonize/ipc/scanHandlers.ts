@@ -8,7 +8,6 @@ import {
   cancelPassiveMaterialBuyScan,
   scheduleActiveMaterialBuyScan,
   schedulePassiveMaterialBuyScan,
-  setBasketBlocksPassiveScan,
 } from "../materialBuyScanner";
 import { errMessage, type ColonizeHandlers, type IpcContext } from "./handlerTypes";
 import { asRecord, parseCheckoutItems, parseConstructionDepots, parseSystemNames } from "./payload";
@@ -38,11 +37,6 @@ export function journalMarketIdsForScan(
 export function scanHandlers({ store, buyIndex }: IpcContext) {
   return {
     getMaterialBuyScanStatus: () => getMaterialBuyScanStatus(),
-
-    setBasketBlocksPassive: (payload) => {
-      setBasketBlocksPassiveScan(asRecord(payload).block === true);
-      return { ok: true as const };
-    },
 
     scheduleActiveBasketScan: async (payload) => {
       if (!payload || typeof payload !== "object") return { ok: false as const, err: "Invalid payload." };

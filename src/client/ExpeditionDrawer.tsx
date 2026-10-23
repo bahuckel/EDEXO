@@ -24,7 +24,7 @@ import { crShort } from "./expeditionFocus";
   The map focus and crShort live in expeditionFocus.ts (audit 2026-10-22), so the header's "Next boxel" does not load
   this drawer; re-exported for the galaxy map and the tests, which import them from here.
 */
-export { EXPEDITION_FOCUS_EVENT, crShort, requestExpeditionFocus, takeExpeditionFocus } from "./expeditionFocus";
+export { EXPEDITION_FOCUS_EVENT, crShort, takeExpeditionFocus } from "./expeditionFocus";
 
 type Xyz = { x: number; y: number; z: number };
 

@@ -32,12 +32,10 @@ describe("the Colonize contract", () => {
     expect(Object.keys(COLONIZE_INVOKE).sort()).toEqual(
       [
         "askSpanshForMaterials",
-        "checkoutBasket",
         "checkoutBasketMulti",
         "clearSavedBuyData",
         "debugSpanshSystem",
         "getBuyIndexStationCatalog",
-        "getDebugJson",
         "getDepotMaterialListings",
         "getInaraImportDir",
         "getMaterialBuyScanStatus",
@@ -48,17 +46,13 @@ describe("the Colonize contract", () => {
         "openInaraImportDir",
         "plannerMaterialsAtCap",
         "readMarketSupplyBrief",
-        "replayWeek",
         "resolveSystemCoords",
         "resolveSystemDistances",
         "scheduleActiveBasketScan",
         "schedulePlannerMaterialScan",
-        "searchBuyIndexMaterial",
-        "searchBuyIndexMaterialStations",
         "searchBuyIndexStationsForMaterials",
         "searchBuyIndexSystem",
         "searchConstructionSites",
-        "setBasketBlocksPassive",
         "setDepotArchived",
         "setInaraImportDir",
         "syncWingCargoFromEdsm",
@@ -69,9 +63,12 @@ describe("the Colonize contract", () => {
 
   it("lets a paired phone read, and keeps writes, network look-ups and files to the PC", () => {
     expect(colonizeMethodAccess("getSnapshot")).toBe("lan");
-    expect(colonizeMethodAccess("searchBuyIndexMaterial")).toBe("lan");
-    for (const m of ["setDepotArchived", "checkoutBasket", "lookupSiteNeeds", "importInaraFile", "setInaraImportDir", "syncWingCargoFromEdsm", "getDebugJson"])
+    expect(colonizeMethodAccess("searchBuyIndexSystem")).toBe("lan");
+    for (const m of ["setDepotArchived", "checkoutBasketMulti", "lookupSiteNeeds", "importInaraFile", "setInaraImportDir", "syncWingCargoFromEdsm", "debugSpanshSystem"])
       expect(colonizeMethodAccess(m)).toBe("local");
+    // Removed in 1.3.0: no client called them.
+    for (const m of ["replayWeek", "getDebugJson", "checkoutBasket", "setBasketBlocksPassive", "searchBuyIndexMaterial", "searchBuyIndexMaterialStations"])
+      expect(colonizeMethodAccess(m)).toBe("unknown");
     expect(colonizeMethodAccess("windowClose")).toBe("unknown");
     expect(colonizeMethodAccess("__proto__")).toBe("unknown");
     for (const m of COLONIZE_LAN_READ) expect(m.startsWith("get") || m.startsWith("search") || m.startsWith("read")).toBe(true);

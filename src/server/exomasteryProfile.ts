@@ -816,16 +816,6 @@ export function exomasteryHabitatQualityPercent(
   return Math.round(q * 1000) / 10;
 }
 
-/** @deprecated Use {@link exomasteryHabitatQualityPercent}. */
-export function exomasterySimilarityPercent(
-  profile: ExomasteryProfileV1,
-  scan: PlanetScan,
-  rec: ExplorationScanRecord | null | undefined,
-  journalHost?: JournalHostStarObservation | null,
-): number | null {
-  return exomasteryHabitatQualityPercent(profile, scan, rec, journalHost);
-}
-
 /**
  * Top dimensions with the strongest central tendency in the feeder sample (spawn-variation hints).
  *

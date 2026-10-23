@@ -1,8 +1,7 @@
 /** The buying list: checkout over the buy index, per-material listings, and distances. */
 import { resolveCoordMapForSystems, resolveSystemDistanceMap } from "../galaxySystemCoords";
-import { scheduleActiveMaterialBuyScan } from "../materialBuyScanner";
 import { buildPlanMaterialListingsFromIndex } from "../planMaterialListings";
-import { runBasketCheckout, runBasketCheckoutBundle } from "../spanshCheckout";
+import { runBasketCheckout } from "../spanshCheckout";
 import { errMessage, type ColonizeHandlers, type IpcContext } from "./handlerTypes";
 import {
   asRecord,
@@ -89,79 +88,6 @@ export function checkoutHandlers({ store, buyIndex }: IpcContext) {
           constructionDepots,
         });
         return { ok: true as const, listings };
-      } catch (e) {
-        return { ok: false as const, err: errMessage(e) };
-      }
-    },
-
-    checkoutBasket: async (payload) => {
-      if (!payload || typeof payload !== "object") return { ok: false as const, err: "Invalid payload." };
-      const p = asRecord(payload);
-      const { journalDir, filters, routingMode, skipCache, forceLiveScan, cacheOnly } = parseCheckoutRequest(p);
-      try {
-        if (p.perDepot === true && Array.isArray(p.depotPlans)) {
-          const depotPlans = p.depotPlans
-            .filter((x): x is Record<string, unknown> => Boolean(x && typeof x === "object"))
-            .map((x) => ({
-              depotLabel: typeof x.depotLabel === "string" ? x.depotLabel : "Construction site",
-              referenceSystem: typeof x.referenceSystem === "string" ? x.referenceSystem.trim() : "",
-              constructionSiteSystem:
-                typeof x.constructionSiteSystem === "string" ? x.constructionSiteSystem.trim() : "",
-              items: parseCheckoutItems(x.items),
-            }))
-            .filter((x) => x.referenceSystem && x.items.length > 0);
-          if (!depotPlans.length) return { ok: false as const, err: "No per-site plans to search." };
-          const index = buyIndex();
-          const bundle = await runBasketCheckoutBundle({
-            journalDir,
-            filters,
-            routingMode,
-            depotPlans,
-            skipCache,
-            forceLiveScan,
-            cacheOnly,
-            materialIndex: index,
-          });
-          if (forceLiveScan) {
-            for (const plan of depotPlans) {
-              scheduleActiveMaterialBuyScan({
-                index,
-                referenceSystem: plan.referenceSystem,
-                items: plan.items,
-                force: true,
-                constructionDepots: filters.constructionDepots,
-              });
-            }
-          }
-          return { ok: true as const, bundle };
-        }
-
-        const ref = typeof p.referenceSystem === "string" ? p.referenceSystem.trim() : "";
-        if (!ref) return { ok: false as const, err: "Reference system is required (from journal dock or type one)." };
-        const items = parseCheckoutItems(p.items);
-        if (items.length === 0) return { ok: false as const, err: "Basket is empty." };
-        const index = buyIndex();
-        const result = await runBasketCheckout({
-          referenceSystem: ref,
-          items,
-          journalDir,
-          filters,
-          routingMode,
-          skipCache,
-          forceLiveScan,
-          cacheOnly,
-          materialIndex: index,
-        });
-        if (forceLiveScan) {
-          scheduleActiveMaterialBuyScan({
-            index,
-            referenceSystem: ref,
-            items,
-            force: true,
-            constructionDepots: filters.constructionDepots,
-          });
-        }
-        return { ok: true as const, result };
       } catch (e) {
         return { ok: false as const, err: errMessage(e) };
       }

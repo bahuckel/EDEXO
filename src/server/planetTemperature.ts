@@ -19,7 +19,7 @@ function hasMeaningfulVolcanism(scan: PlanetScan): boolean {
   return reportsVolcanism(scan.Volcanism);
 }
 
-export { normalizeScanAtmosphereForMatch, atmosphereCompositionKey } from "../shared/scanAtmosphereMatch.js";
+export { normalizeScanAtmosphereForMatch } from "../shared/scanAtmosphereMatch.js";
 
 /**
  * Thickness comes from `Atmosphere`, not `AtmosphereType`.

@@ -31,7 +31,7 @@
  * directly; nothing of it is in this repository or the installer.
  */
 import { K10_CODEX_ID } from "../shared/greenGasGiant.js";
-import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 import { splitCsvLine } from "./edastroCarriers.js";
@@ -618,9 +618,4 @@ export function edastroGreenReports(): readonly EdastroGreenReport[] {
 /** The green codex ids EDAstro has for one system, by address. */
 export function edastroGreenFor(systemAddress: number): readonly string[] {
   return greenReports()?.byAddr.get(systemAddress)?.codexIds ?? [];
-}
-
-/** For tests: whether a cache file is present. */
-export function hasNspCache(): boolean {
-  return existsSync(resolveNspCachePath());
 }

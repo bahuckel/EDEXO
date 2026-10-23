@@ -181,11 +181,6 @@ export function encyclopediaSearchRank(entry: SpeciesEntry, query: string): numb
   return at >= 0 ? 100_000 + at : null;
 }
 
-export function entryMatchesEncyclopediaFilters(entry: SpeciesEntry, f: EncyclopediaFiltersState): boolean {
-  if (!entryMatchesEncyclopediaFacets(entry, f)) return false;
-  return encyclopediaSearchRank(entry, f.search) != null;
-}
-
 export type EncyclopediaFacetOptions = {
   planetClasses: string[];
   atmospheres: { value: string; label: string }[];

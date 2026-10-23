@@ -2,14 +2,7 @@ import { parseCarrierHaul } from "../../../shared/colonize/carrierStock";
 import { parseMinLandingPad } from "../../../shared/colonize/stationFilter";
 import type { CheckoutRoutingMode } from "../../../shared/colonize/types";
 import type { CheckoutFilterState } from "../lib/planFilters";
-import {
-  STORAGE_KEYS,
-  clearLegacyDepotRefPins,
-  clearRetiredKeys,
-  readJson,
-  readLegacyDepotRefPins,
-  readRaw,
-} from "./persisted";
+import { STORAGE_KEYS, clearRetiredKeys, readJson, readRaw } from "./persisted";
 
 /**
  * The window's own UI state: what the commander has chosen, as opposed to what the
@@ -59,11 +52,9 @@ const DEFAULT_CHECKOUT_FILTERS: CheckoutFilterState = {
 
 function parseCheckoutFilters(raw: unknown): CheckoutFilterState | null {
   if (!raw || typeof raw !== "object") return null;
-  const j = raw as Partial<CheckoutFilterState> & { largePadOnly?: boolean };
-  const minLandingPad = parseMinLandingPad(j.minLandingPad, j.largePadOnly === true);
-  /** Older builds stored `stationKind` instead of this flag; derive it when absent. */
-  const showPlanetary =
-    typeof j.showPlanetary === "boolean" ? j.showPlanetary : j.stationKind !== "space";
+  const j = raw as Partial<CheckoutFilterState>;
+  const minLandingPad = parseMinLandingPad(j.minLandingPad);
+  const showPlanetary = typeof j.showPlanetary === "boolean" ? j.showPlanetary : true;
   return {
     includePlanetaryAndGround: showPlanetary,
     showPlanetary,
@@ -92,15 +83,6 @@ function readRoutingMode(): CheckoutRoutingMode {
     : "fewest_stops";
 }
 
-function readDepotRefPins(): Record<string, string> {
-  const current = readJson(STORAGE_KEYS.depotRefPins, parseDepotRefPins, {});
-  if (Object.keys(current).length) return current;
-  /** Fold the one-key-per-depot layout an earlier build used into the single record. */
-  const legacy = readLegacyDepotRefPins();
-  if (Object.keys(legacy).length) clearLegacyDepotRefPins();
-  return legacy;
-}
-
 export function initialUiState(): UiState {
   clearRetiredKeys();
   return {
@@ -110,7 +92,7 @@ export function initialUiState(): UiState {
       DEFAULT_CHECKOUT_FILTERS,
     ),
     routingMode: readRoutingMode(),
-    depotRefPins: readDepotRefPins(),
+    depotRefPins: readJson(STORAGE_KEYS.depotRefPins, parseDepotRefPins, {}),
     carrierHaul: readJson(STORAGE_KEYS.carrierHaul, parseCarrierHaul, {}),
   };
 }

@@ -35,5 +35,3 @@ export function neutronShip(
     system: store.currentSystem ?? null,
   };
 }
-
-export type NeutronShipInfo = ReturnType<typeof neutronShip>;

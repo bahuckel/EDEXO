@@ -8,6 +8,7 @@
  * and Codex drawers, and what to say when the machine cannot draw it.
  */
 import { useInTab, useTabInFront } from "./tabs/TabHost";
+import { GALAXY_DRAWER_EVENT, takeGalaxyDrawer } from "./galaxyDrawerRequest";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GalaxyEngine,
@@ -160,7 +161,16 @@ export function GalaxyMap3D() {
   const expByKey = useMemo(() => new Map((expField?.boxels ?? []).map((b) => [b.key, b])), [expField]);
   const [mine, setMine] = useState<Map<string, MineRow>>(new Map());
   const [route, setRoute] = useState<GalaxyRouteDTO | null>(null);
-  const [drawer, setDrawer] = useState<Drawer>(drawerFromUrl);
+  const [drawer, setDrawer] = useState<Drawer>(() => takeGalaxyDrawer() ?? drawerFromUrl());
+  // A drawer asked for from another screen while the map is open (Colonize's "Find colony sites", in the Galaxy tab).
+  useEffect(() => {
+    const take = () => {
+      const d = takeGalaxyDrawer();
+      if (d) setDrawer(d);
+    };
+    window.addEventListener(GALAXY_DRAWER_EVENT, take);
+    return () => window.removeEventListener(GALAXY_DRAWER_EVENT, take);
+  }, []);
   const codexOn = drawer === "codex";
   const [codexKind, setCodexKind] = useState<CodexMapKind>("bio");
   const [codexRegions, setCodexRegions] = useState<CodexMapRegionsDTO | null>(null);

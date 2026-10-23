@@ -7,7 +7,6 @@ import type { MaterialBuyStationHit } from "../../shared/colonize/materialBuyInd
 import { spanshPrimaryStationSearchFilters } from "../../shared/colonize/spanshCommodity";
 import { MATERIAL_BUY_CACHE_TTL_MS, MaterialBuyIndex } from "./materialBuyIndex";
 import type {
-  BasketCheckoutBundle,
   BasketCheckoutItem,
   BasketCheckoutResult,
   CheckoutFilters,
@@ -888,44 +887,4 @@ export async function runBasketCheckout(args: {
   }
 
   return result;
-}
-
-export type DepotCheckoutPlan = {
-  depotLabel: string;
-  referenceSystem: string;
-  constructionSiteSystem?: string;
-  items: BasketCheckoutItem[];
-};
-
-export async function runBasketCheckoutBundle(args: {
-  journalDir?: string | null;
-  filters?: Partial<CheckoutFilters>;
-  routingMode?: CheckoutRoutingMode;
-  depotPlans: DepotCheckoutPlan[];
-  skipCache?: boolean;
-  materialIndex?: MaterialBuyIndex;
-  forceLiveScan?: boolean;
-  cacheOnly?: boolean;
-}): Promise<BasketCheckoutBundle> {
-  const eligible = args.depotPlans.filter((plan) => plan.items.length > 0 && plan.referenceSystem.trim());
-  /**
-   * Two at a time. Network concurrency is bounded by the gates in `httpGate.ts` either way; a
-   * third plan in flight only held memory while it queued behind the other two.
-   */
-  const plans = await mapPool(eligible, 2, async (plan) =>
-    runBasketCheckout({
-      referenceSystem: plan.referenceSystem,
-      constructionSiteSystem: plan.constructionSiteSystem,
-      items: plan.items,
-      journalDir: args.journalDir,
-      filters: args.filters,
-      routingMode: args.routingMode,
-      depotLabel: plan.depotLabel,
-      skipCache: args.skipCache === true,
-      materialIndex: args.materialIndex,
-      forceLiveScan: args.forceLiveScan,
-      cacheOnly: args.cacheOnly,
-    }),
-  );
-  return { plans };
 }

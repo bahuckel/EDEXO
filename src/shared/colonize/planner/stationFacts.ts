@@ -52,7 +52,7 @@ export function buildBuyStationPreference(listings: MaterialBuyListing[]): Map<s
 }
 
 /** Same station filters as trip planning — keeps buy list and trips aligned. */
-export function filterMaterialBuyStationHits(
+function filterMaterialBuyStationHits(
   stations: MaterialBuyStationHit[],
   args: MaterialBuyStationFilter,
 ): MaterialBuyStationHit[] {

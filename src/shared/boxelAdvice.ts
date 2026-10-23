@@ -58,7 +58,7 @@ export const BOXEL_TARGETS: readonly BoxelTarget[] = [
 ];
 
 /** The genera and species EDAstro's codex file has, as targets (their share is of systems with biology logged). */
-export const BOXEL_BIO_TARGETS: readonly BoxelTarget[] = (() => {
+const BOXEL_BIO_TARGETS: readonly BoxelTarget[] = (() => {
   const keys = new Set<string>();
   for (const r of Object.values(BOXEL_BIO_RATES)) for (const k of Object.keys(r.all.hits)) keys.add(k);
   return [...keys]

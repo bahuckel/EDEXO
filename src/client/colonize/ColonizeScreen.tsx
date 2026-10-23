@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import "./colonize.css";
 import { depotDisplayLabel } from "../../shared/colonize/depotLabel";
 import { formatTons } from "../../shared/colonize/formatPrice";
+import { onGalaxyDrawerLinkClick } from "../galaxyDrawerRequest";
 import { colonizeReadOnly, useColonizeAppState } from "./api";
 import { AppLegalFooter } from "../AppLegalFooter";
 import { HeaderBar } from "../HeaderBar";
@@ -260,7 +261,7 @@ function ColonizeShell({ m, children }: { m: ColonizeModel; children: ReactNode 
               .filter(Boolean)
               .join(" · ") || "No sellers known yet"}
           </span>
-          <a className={BTN_GO} href="/?screen=galaxy&drawer=finder" target="_blank" rel="noreferrer">
+          <a className={BTN_GO} href="/?screen=galaxy&drawer=finder" target="_blank" rel="noreferrer" onClick={onGalaxyDrawerLinkClick("finder")}>
             Find colony sites <span aria-hidden="true">›</span>
           </a>
         </div>

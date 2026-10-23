@@ -22,11 +22,6 @@ export function materialNeedsFromQuery(query: string): MaterialSearchNeed[] {
   }));
 }
 
-export function formatMaterialSearchLabel(query: string): string {
-  const parts = parseMaterialSearchQuery(query);
-  return parts.length ? parts.join(", ") : query.trim();
-}
-
 /** Align depot SKU ids with Search lookups (label-first merge bucket). */
 export function resolveMaterialLookupNeed(needId: string, needLabel: string): MaterialSearchNeed {
   const label = needLabel.trim() || needId.trim();
