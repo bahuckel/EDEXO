@@ -1,4 +1,5 @@
 /** Background Spansh scans that fill the buy index: status, scheduling, and "are we done yet". */
+import { itemLabel } from "../../../shared/colonize/commodityKey";
 import { getMaterialBuyScanStatus } from "../materialBuyScanHub";
 import {
   cancelPassiveMaterialBuyScan,
@@ -10,7 +11,7 @@ import { errMessage, type ColonizeHandlers, type IpcContext } from "./handlerTyp
 import { asRecord, parseCheckoutItems, parseConstructionDepots, parseSystemNames } from "./payload";
 
 const itemRows = (items: ReturnType<typeof parseCheckoutItems>) =>
-  items.map((it) => ({ id: it.id, label: (it.nameLocalised || it.name).trim() || it.name }));
+  items.map((it) => ({ id: it.id, label: itemLabel(it) }));
 
 export function scanHandlers({ store, buyIndex }: IpcContext) {
   return {

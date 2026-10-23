@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { buildColonizeHud } from "../../../src/server/colonize/hudSummary";
-import { tripBuyLineId, type TripPlanSnapshot } from "../../../src/shared/colonize/tripPlanProgress";
+import { planDepotFingerprint, tripBuyLineId, type TripPlanSnapshot } from "../../../src/shared/colonize/tripPlanProgress";
 import type { ColonizeSnapshot, DepotSnapshot } from "../../../src/shared/colonize/types";
 
 const TRIPS = "edexo-colonize-trip-plan-snapshot-v3";
@@ -118,7 +118,8 @@ describe("the HUD's Colonize data", () => {
     const ui = { [TRIPS]: JSON.stringify(plan) };
     const first = buildColonizeHud(snap(), ui)!;
     expect(first.next).toMatchObject({ trip: 1, trips: 2, station: "Seller One", system: "Seller System 1", distanceLy: 12.4, here: false });
-    expect(first.next!.buys).toEqual([{ label: "Steel", tons: 200, done: false }]);
+    expect(first.next!.buys).toEqual([{ commodityId: "steel", label: "Steel", tons: 200, have: 0, done: false }]);
+    expect(first.next!.kind).toBe("buy");
     expect(first.next!.deliverTo).toEqual(["Alpha Port"]);
 
     // Bought (the steel is aboard): the trip's next stop is the delivery.
@@ -145,5 +146,80 @@ describe("the HUD's Colonize data", () => {
 
   it("ignores a torn plan", () => {
     expect(buildColonizeHud(snap(), { [TRIPS]: "{ torn" })!.next).toBeNull();
+  });
+
+  it("fills a buy line's bar with what is aboard, and ticks it once all of it is", () => {
+    const ui = { [TRIPS]: JSON.stringify(plan) };
+    const part = buildColonizeHud(snap({ shipCargo: [{ name: "steel", nameLocalised: "Steel", count: 60 }] }), ui)!;
+    expect(part.next!.buys).toEqual([{ commodityId: "steel", label: "Steel", tons: 200, have: 60, done: false }]);
+    // A carrier switched on counts too, as it does for the ticks.
+    const carrier = { carrierId: "37", kind: "fleet", name: "C", callsign: "ABC-123", tonsByCommodity: { steel: 50 }, labels: {}, reportedTons: 50, capacityTons: 25000, lastEventIso: null };
+    const both = buildColonizeHud(
+      snap({ shipCargo: [{ name: "steel", nameLocalised: "Steel", count: 60 }], carriers: [carrier] as never }),
+      { ...ui, [CARRIERS]: '{"37":true}' },
+    )!;
+    expect(both.next!.buys[0]!.have).toBe(110);
+  });
+
+  it("leaves a commodity no site needs any more off the next stop", () => {
+    const ui = { [TRIPS]: JSON.stringify(plan) };
+    const steelDone = depot("1", "Alpha Port", "2026-10-01T00:00:00Z", [["Steel", 1000, 1000], ["Titanium", 200, 0]]);
+    const bravoDone = depot("2", "Bravo Dock", "2026-10-05T00:00:00Z", [["Steel", 500, 500]]);
+    const h = buildColonizeHud(snap({ activeDepots: [steelDone, bravoDone] }), ui)!;
+    // Trip 1's only buy is steel, which nobody needs: its stop is the delivery.
+    expect(h.next).toMatchObject({ trip: 1, kind: "deliver", buys: [] });
+  });
+
+  it("follows the docked site, else the trip's site, with its materials open first and delivered last", () => {
+    const C = depot("3", "Charlie Hub", "2026-10-06T00:00:00Z", [["Steel", 100, 100], ["CMM Composite", 50, 0], ["Titanium", 300, 20]]);
+    const docked = buildColonizeHud(
+      snap({
+        activeDepots: [A, B, C],
+        liveDocked: { marketId: "3", stationName: C.stationName!, starSystem: "Smoke Colony", timestamp: null },
+        shipCargo: [{ name: "titanium", nameLocalised: "Titanium", count: 500 }],
+      }),
+      {},
+    )!;
+    expect(docked.target!.label).toBe("Charlie Hub");
+    expect(docked.target!.needs.map((n) => [n.label, n.done, n.aboard])).toEqual([
+      ["Titanium", false, 280],
+      ["CMM Composite", false, 0],
+      ["Steel", true, 0],
+    ]);
+    // Not docked: the site the plan's current trip delivers to (Alpha), not the most recent (Charlie).
+    const trip = buildColonizeHud(snap({ activeDepots: [A, B, C] }), { [TRIPS]: JSON.stringify(plan) })!;
+    expect(trip.target!.marketId).toBe("1");
+    // No plan: the most recent.
+    expect(buildColonizeHud(snap({ activeDepots: [A, B, C] }), {})!.target!.marketId).toBe("3");
+  });
+
+  it("is 'buy here' by market id, or by name and system, never by a name another system shares", () => {
+    const ui = { [TRIPS]: JSON.stringify(plan) };
+    const elsewhere = buildColonizeHud(snap({ liveDocked: { marketId: "77", stationName: "Seller One", starSystem: "Other System", timestamp: null } }), ui)!;
+    expect(elsewhere.next!.here).toBe(false);
+    const byName = buildColonizeHud(snap({ liveDocked: { marketId: "77", stationName: "seller one", starSystem: "seller system 1", timestamp: null } }), ui)!;
+    expect(byName.next!.here).toBe(true);
+  });
+
+  it("says how far the next stop is from the ship when both positions are known", () => {
+    const ui = { [TRIPS]: JSON.stringify(plan) };
+    const h = buildColonizeHud(snap(), ui, { ship: () => [0, 0, 0], system: (n) => (n === "Seller System 1" ? [6, 8, 0] : null) })!;
+    expect(h.next!.fromShipLy).toBe(10);
+    expect(buildColonizeHud(snap(), ui, { ship: () => null, system: () => [6, 8, 0] })!.next!.fromShipLy).toBeNull();
+  });
+
+  it("tells a plan made for other sites, a finished plan, and no plan", () => {
+    expect(buildColonizeHud(snap(), {})!.plan).toBe("none");
+    // The plan's key was not made from [A, B].
+    expect(buildColonizeHud(snap(), { [TRIPS]: JSON.stringify(plan) })!.plan).toBe("stale");
+    const fresh = { ...plan, planRefreshKey: `${planDepotFingerprint([A, B])}|cap:400|co:|cn:` };
+    expect(buildColonizeHud(snap(), { [TRIPS]: JSON.stringify(fresh) })!.plan).toBe("active");
+    const allTicked = {
+      ...fresh,
+      manualCompletedLineIds: [1, 2].flatMap((n) => [tripBuyLineId(n, 0, n === 1 ? "steel" : "titanium"), `t${n}-s1-d-1-${n === 1 ? "steel" : "titanium"}`]),
+    };
+    const done = buildColonizeHud(snap(), { [TRIPS]: JSON.stringify(allTicked) })!;
+    expect(done.plan).toBe("done");
+    expect(done.next).toBeNull();
   });
 });

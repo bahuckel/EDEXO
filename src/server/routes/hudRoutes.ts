@@ -1,7 +1,7 @@
 import { getHudBridge } from "../hudBridge.js";
 import express from "express";
 
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 export function registerHudRoutes(app: express.Express, _opts: HttpServerOptions, _ctx: RouteContext): void {
   const hudBridgeOr501 = (res: express.Response) => {

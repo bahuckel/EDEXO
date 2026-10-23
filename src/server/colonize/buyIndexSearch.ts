@@ -228,7 +228,7 @@ export function materialBuyHitsForNeed(args: {
     }
     const distanceLy =
       distRef && Object.keys(distanceBySystem).length
-        ? constructionHopLy(distRef, raw.systemName, raw.distanceLy, distanceBySystem)
+        ? constructionHopLy(distRef, raw.systemName, distanceBySystem)
         : raw.distanceLy;
     const hit: MaterialBuyStationHit = distanceLy === raw.distanceLy ? raw : { ...raw, distanceLy };
     const k = buyStationPlaceKey(hit);

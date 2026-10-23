@@ -1,4 +1,4 @@
-import { resourceNeedId } from "./commodityKey";
+import { itemLabel, resourceNeedId } from "./commodityKey";
 import { getResourceTradeCategory } from "./commodityCategories";
 import type { DepotSnapshot } from "./types";
 import { makeCargoPool, tonsStillNeededWithPool } from "./basketGap";
@@ -45,7 +45,7 @@ export function buildLogisticsSummary(
       if (need <= 0) continue;
       const id = resourceNeedId(r);
       if (!id) continue;
-      const rowLabel = (r.nameLocalised || r.name).trim() || r.name;
+      const rowLabel = itemLabel(r);
       let cur = acc.get(id);
       if (!cur) {
         cur = {

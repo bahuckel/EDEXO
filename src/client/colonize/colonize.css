@@ -28,6 +28,11 @@
 .cz-hi {
   color: var(--accent-bright);
 }
+/* A material delivered in full: last in its list, green (owner, 2026-10-22; Compare's --live). */
+.cz-mat--done,
+.cz-mat--done .cz-num {
+  color: var(--live, #7be07b);
+}
 .cz-ok {
   color: var(--ok);
 }
@@ -63,6 +68,26 @@
   margin: 0;
   font-size: var(--fs-sm);
   color: var(--text-faint);
+}
+/*
+  A panel head with a one-note aside could not wrap (fold.css keeps the title on one line, and Compare's narrow-head
+  wrap needs two aside children): at phone width "NEXT TRIP · 1 OF 80" plus its note pushed the page sideways. The
+  note now drops under the title only when the two do not fit side by side, so a desktop column keeps one line
+  (audit 2026-10-22). Every .fold is an inline-size container (bridge.css).
+*/
+.fold-head:has(.cz-aside-note) {
+  flex-wrap: wrap;
+  row-gap: 0.3rem;
+}
+.fold-head:has(.cz-aside-note) .fold-aside {
+  margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+@container (max-width: 24rem) {
+  .fold-head .cz-aside-note {
+    white-space: normal;
+  }
 }
 .cz-aside-note {
   font-size: var(--fs-sm);
@@ -203,6 +228,15 @@ button.cz-chip:hover {
   flex-wrap: wrap;
   gap: 1rem;
   align-items: flex-start;
+}
+/*
+  The Plan tab: sites on the left on a wide window; once the two columns wrap (half a screen beside the game), the plan
+  goes on top and the sites under it, as on the phone view (audit 2026-10-22). wrap-reverse stacks the second line
+  above the first; with it the cross axis starts at the bottom, so flex-end keeps the columns' tops aligned.
+*/
+.cz-cols--plan {
+  flex-wrap: wrap-reverse;
+  align-items: flex-end;
 }
 .cz-side {
   flex: 1 1 320px;

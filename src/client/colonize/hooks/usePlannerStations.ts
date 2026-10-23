@@ -18,18 +18,13 @@ import { combinedMissingWithQty } from "../../../shared/colonize/basketGap";
 import type { CheckoutFiltersPayload } from "../../../shared/colonize/ipc/contract";
 import type { MissingBuyIndexedItem } from "../../../shared/colonize/logisticsPlanner";
 import { mergeCheckoutPlansByRef } from "../../../shared/colonize/mergeCheckoutPlans";
-import { plannerConstructionReferenceSystems } from "../../../shared/colonize/plannerScan";
+import { plannerConstructionReferenceSystems, type DepotRefResolver } from "../../../shared/colonize/plannerScan";
 import { parseMaxSystemsPerMaterial, type PlannerSettings } from "../../../shared/colonize/plannerSettings";
+import { errText } from "../../../shared/colonize/formatPrice";
 import { loadSavedCheckout, scheduleSaveCheckoutSnapshot } from "../../../shared/colonize/savedCheckout";
 import { banStation, unbanStation, type BannedStation } from "../../../shared/colonize/stationBans";
 import { collectConstructionSystems } from "../../../shared/colonize/stationFilter";
-import type {
-  BasketCheckoutBundle,
-  BasketCheckoutResult,
-  CheckoutRoutingMode,
-  ColonizeSnapshot,
-} from "../../../shared/colonize/types";
-import type { DepotRefResolver } from "../lib/shared";
+import type { BasketCheckoutBundle, CheckoutRoutingMode, ColonizeSnapshot } from "../../../shared/colonize/types";
 import type { CheckoutFilterState } from "../lib/planFilters";
 
 export function usePlannerStations(args: {
@@ -54,9 +49,8 @@ export function usePlannerStations(args: {
     setBuyIndexRefreshToken,
     setBannedStations,
   } = args;
-  const saved = useMemo(() => loadSavedCheckout(), []);
-  const [bundle, setBundle] = useState<BasketCheckoutBundle | null>(() => saved?.bundle ?? null);
-  const [result, setResult] = useState<BasketCheckoutResult | null>(() => saved?.result ?? null);
+  // The sellers the plan routes against: the saved copy at start, saved again (and stamped) only when they change.
+  const [bundle, setBundle] = useState<BasketCheckoutBundle | null>(() => loadSavedCheckout()?.bundle ?? null);
   const bundleRef = useRef(bundle);
   useEffect(() => {
     bundleRef.current = bundle;
@@ -175,11 +169,8 @@ export function usePlannerStations(args: {
         });
         if (res.ok && res.bundle.plans.length) {
           const next = { plans: res.bundle.plans };
-          scheduleSaveCheckoutSnapshot(null, next);
-          startTransition(() => {
-            setBundle(next);
-            setResult(null);
-          });
+          scheduleSaveCheckoutSnapshot(next);
+          startTransition(() => setBundle(next));
         } else if (!res.ok) setError(res.err);
         else if (!opts.background) setError("No seller known yet for what your sites need. Ask Spansh to look.");
         if (opts.askSpansh) {
@@ -199,7 +190,7 @@ export function usePlannerStations(args: {
           setBuyIndexRefreshToken((t) => t + 1);
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(errText(e));
       } finally {
         if (opts.background) startTransition(() => setLookingBusy(false));
         else setBusy(false);
@@ -246,14 +237,11 @@ export function usePlannerStations(args: {
         }
         const next = { plans: mergeCheckoutPlansByRef([...(bundleRef.current?.plans ?? []), ...res.bundle.plans]) };
         bundleRef.current = next;
-        scheduleSaveCheckoutSnapshot(null, next);
-        startTransition(() => {
-          setBundle(next);
-          setResult(null);
-        });
+        scheduleSaveCheckoutSnapshot(next);
+        startTransition(() => setBundle(next));
         setBuyIndexRefreshToken((t) => t + 1);
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(errText(e));
       } finally {
         setFetchingMissingId(null);
       }
@@ -275,9 +263,7 @@ export function usePlannerStations(args: {
 
   return {
     checkoutBundle: bundle,
-    checkoutResult: result,
     setCheckoutBundle: setBundle,
-    setCheckoutResult: setResult,
     busy,
     lookingBusy,
     error,

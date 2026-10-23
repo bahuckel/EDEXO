@@ -15,7 +15,7 @@ import { useCallback, memo, Suspense, useMemo, useState } from "react";
 import { ExoPayoutRangePanel, payoutHeadline } from "./ExoPayoutRangePanel";
 import { FoldPanel } from "./ui/Fold";
 import { SnapshotButton } from "./SnapshotButton";
-import type { BodyComputed, PlanetScan, SpeciesMatch } from "@shared/types";
+import type { BodyComputed, OrganicGenusLock, PlanetScan, SpeciesMatch } from "@shared/types";
 import {
   atmospherePillStyle,
   formatPressurePill,
@@ -41,6 +41,9 @@ import { VolcanismFact } from "./VolcanismFact";
 import { JumponiumFact } from "./JumponiumFact";
 import type { JumponiumDTO } from "@shared/jumponium";
 export { GlanceGenera } from "./BodyGlance";
+
+/** One empty list for a body with no on-foot locks, so the rows' context value keeps its identity. */
+const NO_LOCKS: readonly OrganicGenusLock[] = [];
 
 /*
   The game's DSS names some genera by one of their species: every Sinuous Tubers body comes back "Roseum Sinuous
@@ -240,6 +243,13 @@ export const BodyPane = memo(function BodyPane({
   // "Is this DSS worth it" (1.2.19): the body's expected value from the listed chances, beside the best case.
   const expected = useMemo(() => bodyExpectedValue(body), [body]);
 
+  /*
+    What the species rows read through context, as a value that holds still (audit 2026-10-22). A fresh object each
+    render made every memoised GenusMatchGroup and its rows redraw on any render of this pane, undoing the memo above.
+  */
+  const organicLocks = body.state.organicGenusLocks;
+  const rowCtx = useMemo(() => ({ locks: organicLocks ?? NO_LOCKS, live: liveRun }), [organicLocks, liveRun]);
+
   // The body's first-footfall answer, shared with every species card below (WEBUI-REDESIGN 1.2).
   const bodyFootfall = body.exoPayoutRange
     ? footfallCertainty({
@@ -250,7 +260,7 @@ export const BodyPane = memo(function BodyPane({
 
   return (
     <FootfallContext.Provider value={bodyFootfall}>
-      <RowContext.Provider value={{ locks: body.state.organicGenusLocks ?? [], live: liveRun }}>
+      <RowContext.Provider value={rowCtx}>
         <div className={`body-pane${compactCandidateView ? " body-pane--rows" : ""}`}>
           {/* The glance bar (WEBUI-REDESIGN 5.1 / 5.2): what you look at on approach, and it stays put while
           the rest scrolls — body, price, candidates vs signals, DSS, distance, footfall. */}

@@ -21,20 +21,6 @@ function categoryForNormKey(norm: string): string | undefined {
   return undefined;
 }
 
-/**
- * Frontier market category from FDevIDs `commodity.csv` (via generated lookup).
- * Unknown commodities → `"Other"`.
- */
-export function getCommodityTradeCategory(name: string, nameLocalised?: string | null): string {
-  return getResourceTradeCategory({
-    name,
-    nameLocalised: (nameLocalised ?? name).trim() || name,
-    required: 0,
-    provided: 0,
-    payment: null,
-  });
-}
-
 export function getResourceTradeCategory(row: ResourceRow): string {
   const tried = new Set<string>();
   for (const raw of [row.name, row.nameLocalised]) {

@@ -249,7 +249,7 @@ export function useLogisticsPlan({
      * snapshot with a fresh one and every manual tick was lost.
      */
     if (tripSnapshotRef.current?.planRefreshKey === planRefreshKey) return;
-    const fresh = createTripPlanSnapshot(plan, planRefreshKey, activeDepots);
+    const fresh = createTripPlanSnapshot(plan, planRefreshKey, activeDepots, tripSnapshotRef.current);
     startTransition(() => {
       setTripSnapshot(fresh);
       scheduleSaveTripPlanSnapshot(fresh);

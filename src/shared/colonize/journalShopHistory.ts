@@ -144,12 +144,14 @@ export function migrateJournalShopRecord(raw: unknown): JournalShopRecord | null
   return { marketId, stationName, starSystem, stationType, visitedAt, purchases, marketItems, constructionDistanceLy };
 }
 
+/** True when some shop's distance changed (nothing to save or push otherwise). */
 export function applyShopDistanceLyToJournalRecords(
   shops: Map<string, JournalShopRecord>,
   distanceBySystem: Record<string, number>,
   constructionRefs: string[] = [],
-): void {
+): boolean {
   const refs = [...new Set(constructionRefs.map((s) => s.trim()).filter(Boolean))];
+  let changed = false;
   for (const rec of shops.values()) {
     let best: number | null = null;
     for (const ref of refs) {
@@ -160,8 +162,12 @@ export function applyShopDistanceLyToJournalRecords(
       const d = distanceBySystem[galaxyDistancePairKey(ref, rec.starSystem)];
       if (isKnownLy(d) && (best == null || d < best)) best = d;
     }
-    if (best != null) rec.constructionDistanceLy = best;
+    if (best != null && rec.constructionDistanceLy !== best) {
+      rec.constructionDistanceLy = best;
+      changed = true;
+    }
   }
+  return changed;
 }
 
 /** `event: Market` — docked at a station with market screen open. */

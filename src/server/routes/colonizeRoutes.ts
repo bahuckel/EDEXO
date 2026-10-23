@@ -52,6 +52,10 @@ export function registerColonizeRoutes(app: express.Express, opts: HttpServerOpt
       journalDir: () => opts.getJournalDir?.() ?? DEFAULT_JOURNAL_DIR,
       push: <K extends keyof ColonizeEvents>(event: K, payload: ColonizeEvents[K]) => ctx.pushColonize(event, payload),
       localGalaxy,
+      systemPosition: (addr) => {
+        const p = opts.getJournalStore?.()?.systemPositions.get(addr);
+        return p ? [p.x, p.y, p.z] : null;
+      },
       ownColonies: () =>
         (opts.getJournalStore?.()?.ownAssets.colonies ?? []).map((c) => ({ name: c.name, systemAddress: c.addr, claimedAt: c.at })),
     });

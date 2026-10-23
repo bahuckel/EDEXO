@@ -11,7 +11,7 @@ export type PlanMaterialNeed = {
 };
 
 /**
- * Plan buy cards: same index + journal merge as Search — one station list per material only.
+ * The plan's sellers: same index + journal merge as Search — one station list per material only.
  */
 export function buildPlanMaterialListingsFromIndex(args: {
   index: MaterialBuyIndex;

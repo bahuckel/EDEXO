@@ -4,7 +4,7 @@
  */
 import type express from "express";
 import { parseBookmarkInput } from "../../shared/bookmarks.js";
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 export function registerBookmarksRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
   const service = opts.bookmarks;

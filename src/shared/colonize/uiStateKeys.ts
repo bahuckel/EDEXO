@@ -3,23 +3,41 @@
  * so the app window, a browser tab and the next start all see the same: trip ticks, the trade party, banned stations,
  * planner settings, the wing's claims, the hold override, the carriers switched on, filters and pinned hubs.
  *
- * Caches stay in the browser (shop history, the last plan, distances, station colours, the debug system), and so does
- * what belongs to one window (its tab). A key not listed here is never stored on the server.
+ * Caches stay in the browser (shop history, the last plan, distances), and so does what belongs to one window (its
+ * tab). A key not listed here is never stored on the server.
  */
+
+/*
+  Each key once, by name: the window, the phone view and the HUD summary spelled some of them out in up to four
+  places (audit 2026-10-22).
+*/
+export const KEY_TRIP_PLAN = "edexo-colonize-trip-plan-snapshot-v3";
+export const KEY_TRADE_PARTY = "edexo-colonize-trade-party-v1";
+export const KEY_BANNED_STATIONS = "edexo-colonize-banned-stations-v1";
+export const KEY_PLANNER_SETTINGS = "edexo-colonize-planner-settings-v1";
+export const KEY_WING_MANIFEST = "edexo-colonize-wing-manifest-v1";
+export const KEY_CARGO_CAPACITY = "edexo-colonize-cargo-capacity-v1";
+export const KEY_CARRIER_HAUL = "edexo-colonize-carrier-haul-v1";
+export const KEY_CHECKOUT_FILTERS = "edexo-colonize-checkout-filters-v1";
+export const KEY_CHECKOUT_ROUTING = "edexo-colonize-checkout-routing-v1";
+export const KEY_DEPOT_REF_PINS = "edexo-colonize-depot-ref-pins-v1";
+
+/*
+  The basket (basket-v2, auto-basket-v1) and the shopping run (shopping-run-v1) left the list with their state in
+  1.3.0 (audit 2026-10-22): nothing showed them. A server file that still holds them drops them as it loads
+  (cleanUiStateSet), and the window removes its own copies (state/persisted.ts RETIRED_KEYS).
+*/
 export const COLONIZE_SYNCED_KEYS = [
-  "edexo-colonize-trip-plan-snapshot-v3",
-  "edexo-colonize-trade-party-v1",
-  "edexo-colonize-banned-stations-v1",
-  "edexo-colonize-planner-settings-v1",
-  "edexo-colonize-wing-manifest-v1",
-  "edexo-colonize-cargo-capacity-v1",
-  "edexo-colonize-carrier-haul-v1",
-  "edexo-colonize-basket-v2",
-  "edexo-colonize-auto-basket-v1",
-  "edexo-colonize-checkout-filters-v1",
-  "edexo-colonize-checkout-routing-v1",
-  "edexo-colonize-shopping-run-v1",
-  "edexo-colonize-depot-ref-pins-v1",
+  KEY_TRIP_PLAN,
+  KEY_TRADE_PARTY,
+  KEY_BANNED_STATIONS,
+  KEY_PLANNER_SETTINGS,
+  KEY_WING_MANIFEST,
+  KEY_CARGO_CAPACITY,
+  KEY_CARRIER_HAUL,
+  KEY_CHECKOUT_FILTERS,
+  KEY_CHECKOUT_ROUTING,
+  KEY_DEPOT_REF_PINS,
 ] as const;
 
 export type ColonizeSyncedKey = (typeof COLONIZE_SYNCED_KEYS)[number];

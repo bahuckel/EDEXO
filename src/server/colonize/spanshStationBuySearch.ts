@@ -4,7 +4,7 @@ import { commodityLabelsEquivalent } from "../../shared/colonize/commodityKey";
 import { marketRowsForPlayerBuy, parseMarketRowForPlayerBuy } from "../../shared/colonize/stationSellOffer";
 import { isFdevSymbolSlug, spanshLabelKey } from "../../shared/colonize/spanshCommodity";
 import type { SpanshStationSearchCommodityFilter } from "../../shared/colonize/spanshCommodity";
-import { resolveSpanshReferenceSystem } from "./galaxySystemCoords";
+import { rememberSystemFromSpansh, resolveSpanshReferenceSystem } from "./galaxySystemCoords";
 import { fetchJson, HttpStatusError, spanshGate } from "./httpGate";
 
 const SPANSH_SEARCH = "https://spansh.co.uk/api/stations/search";
@@ -33,6 +33,10 @@ export type SpanshStationSearchRow = {
   body_name?: string;
   updated_at?: string;
   market_updated_at?: string;
+  /** The seller system's position: saved, so its distance never costs a look-up (1.3.0). */
+  system_x?: number;
+  system_y?: number;
+  system_z?: number;
 };
 
 export type SpanshStationSearchPayload = {
@@ -220,6 +224,9 @@ export async function searchSpanshBuyStations(args: {
     if (typeof data.count === "number" && data.count > total) total = data.count;
     for (const row of rows) {
       merged.set(stationSearchRowKey(row), row);
+      if (typeof row.system_name === "string") {
+        rememberSystemFromSpansh(row.system_name, [row.system_x, row.system_y, row.system_z]);
+      }
     }
     /** A short page is the last one; asking for the next would repeat it. */
     if (rows.length < SEARCH_PAGE_SIZE) break;

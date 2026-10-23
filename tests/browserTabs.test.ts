@@ -18,7 +18,9 @@ const {
   passwordCaptureScript,
   passwordFillScript,
   DATA_TYPES_BUT_CACHE,
+  isInaraCommodityPage,
 } = require("../electron/browserTabs.cjs") as {
+  isInaraCommodityPage: (url: string | null | undefined) => boolean;
   cosmeticScript: (blocked: string[]) => string;
   passwordCaptureScript: (nonce: string) => string;
   passwordFillScript: (origin: string, username: string, password: string, auto?: boolean) => string;
@@ -1206,6 +1208,21 @@ describe("Inara's pop-up (1.3.0, C5; owner 2026-10-22: a pop-up in the page, EDE
   };
   const say = (wc: FakeContents, message: string, parent: unknown = null) =>
     wc.emit("console-message", { message, frame: { parent } }, 0, message, 1, "");
+
+  /*
+    The guard every Inara call goes through (openInara, the pop-up offer, Read). Its test moved here from
+    tests/colonize/inaraBrowser.test.ts with the client's unused copy (audit 2026-10-22), so the check under test is
+    the one that protects the real read.
+  */
+  it("isInaraCommodityPage: Inara's commodity search over https, nothing else", () => {
+    expect(isInaraCommodityPage(INARA)).toBe(true);
+    expect(isInaraCommodityPage("https://www.inara.cz/elite/commodities")).toBe(true);
+    expect(isInaraCommodityPage("http://inara.cz/elite/commodities/")).toBe(false);
+    expect(isInaraCommodityPage("https://inara.cz/elite/stations/")).toBe(false);
+    expect(isInaraCommodityPage("https://inara.cz.evil.example/elite/commodities/")).toBe(false);
+    expect(isInaraCommodityPage("not a url")).toBe(false);
+    expect(isInaraCommodityPage(null)).toBe(false);
+  });
 
   it("opens only Inara's commodity search, and offers the pop-up on each search page it loads", async () => {
     const t = setup();

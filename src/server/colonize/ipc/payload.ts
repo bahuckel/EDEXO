@@ -1,43 +1,11 @@
 /**
- * Parsing for renderer payloads. Everything that crosses the bridge is untrusted: anything
+ * Parsing for what the window sends. Everything that crosses the bridge is untrusted: anything
  * unrecognised falls back to a safe default rather than reaching the checkout engine as-is.
  *
- * No Electron import here, so all of it is testable under plain Node.
+ * Plain Node, so all of it is testable on its own.
  */
 import type { BasketCheckoutItem, CheckoutRoutingMode } from "../../../shared/colonize/types";
 import { parseMinLandingPad, parseStationKindFilter } from "../../../shared/colonize/stationFilter";
-
-/** Hosts this app links to. Anything else is not opened, whoever asked. */
-const EXTERNAL_URL_HOSTS = new Set([
-  "inara.cz",
-  "www.inara.cz",
-  "spansh.co.uk",
-  "www.spansh.co.uk",
-  "edsm.net",
-  "www.edsm.net",
-  "github.com",
-  "www.github.com",
-  "ravencolonial.com",
-  "bahuckel.com",
-  "www.bahuckel.com",
-  /** Colonisation mechanics guide linked from the cheat sheet. */
-  "thefloweringash.com",
-  "www.thefloweringash.com",
-]);
-
-export function isAllowedExternalUrl(url: unknown): url is string {
-  if (typeof url !== "string") return false;
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return false;
-  }
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
-  /** Credentials in a URL are a phishing shape, never something this app produces. */
-  if (parsed.username || parsed.password) return false;
-  return EXTERNAL_URL_HOSTS.has(parsed.hostname.toLowerCase());
-}
 
 /** The payload as a record, or an empty one. */
 export function asRecord(payload: unknown): Record<string, unknown> {
@@ -55,7 +23,7 @@ export function parseSystemNames(raw: unknown): string[] {
     : [];
 }
 
-/** Distances arrive from renderer state; drop anything that is not a usable number. */
+/** Distances arrive from the window's state; drop anything that is not a usable number. */
 export function parseDistanceBySystem(raw: unknown): Record<string, number> {
   if (!raw || typeof raw !== "object") return {};
   const out: Record<string, number> = {};

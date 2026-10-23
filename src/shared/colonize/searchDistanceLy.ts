@@ -1,4 +1,3 @@
-import type { BuyIndexStationResult, BuyIndexSystemResult } from "./buyIndexSearchTypes";
 import type { MaterialBuyStationHit } from "./materialBuyIndexTypes";
 import { normSystemName } from "./stationFilter";
 import { bestGalaxyLyFromSites, isKnownLy, lyOrLast } from "./systemDistanceLy";
@@ -28,44 +27,14 @@ export function resolveSearchHopLy(
   return null;
 }
 
-function hopSortKey(ly: number | null): number {
-  return lyOrLast(ly);
-}
-
-export function sortSearchSystemsByDistance(
-  systems: BuyIndexSystemResult[],
-  constructionRefs: string[],
-  distanceMap: Record<string, number>,
-): BuyIndexSystemResult[] {
-  return [...systems].sort((a, b) => {
-    const da = hopSortKey(resolveSearchHopLy(a.systemName, constructionRefs, distanceMap, a.minDistanceLy));
-    const db = hopSortKey(resolveSearchHopLy(b.systemName, constructionRefs, distanceMap, b.minDistanceLy));
-    if (da !== db) return da - db;
-    return a.systemName.localeCompare(b.systemName);
-  });
-}
-
-export function sortSearchStationsByDistance(
-  stations: BuyIndexStationResult[],
-  constructionRefs: string[],
-  distanceMap: Record<string, number>,
-): BuyIndexStationResult[] {
-  return [...stations].sort((a, b) => {
-    const da = hopSortKey(resolveSearchHopLy(a.systemName, constructionRefs, distanceMap, a.minDistanceLy));
-    const db = hopSortKey(resolveSearchHopLy(b.systemName, constructionRefs, distanceMap, b.minDistanceLy));
-    if (da !== db) return da - db;
-    return a.stationName.localeCompare(b.stationName);
-  });
-}
-
 export function sortMaterialBuyHitsBySearchDistance(
   hits: MaterialBuyStationHit[],
   constructionRefs: string[],
   distanceMap: Record<string, number>,
 ): MaterialBuyStationHit[] {
   return [...hits].sort((a, b) => {
-    const da = hopSortKey(resolveSearchHopLy(a.systemName, constructionRefs, distanceMap, a.distanceLy));
-    const db = hopSortKey(resolveSearchHopLy(b.systemName, constructionRefs, distanceMap, b.distanceLy));
+    const da = lyOrLast(resolveSearchHopLy(a.systemName, constructionRefs, distanceMap, a.distanceLy));
+    const db = lyOrLast(resolveSearchHopLy(b.systemName, constructionRefs, distanceMap, b.distanceLy));
     if (da !== db) return da - db;
     return a.stationName.localeCompare(b.stationName);
   });

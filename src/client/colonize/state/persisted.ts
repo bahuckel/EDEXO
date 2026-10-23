@@ -1,5 +1,5 @@
 /**
- * Every browser-storage key the renderer owns, in one place.
+ * Every browser-storage key the window's UI state owns, in one place.
  *
  * These were previously spelled out as string constants beside whichever component
  * happened to need them, each with its own hand-rolled try/catch around `localStorage`.
@@ -10,27 +10,49 @@
  * the parser cannot absorb; the old key is then simply ignored and the default applies.
  * `LEGACY_KEYS` lists keys previous versions wrote, so they can be cleaned up.
  */
-import { storageGet, storageRemove, storageSet } from "../../../shared/colonize/storage";
+import { storageGet, storageRemove, storageSet, storageSetLocal } from "../../../shared/colonize/storage";
+import {
+  KEY_CARRIER_HAUL,
+  KEY_CHECKOUT_FILTERS,
+  KEY_CHECKOUT_ROUTING,
+  KEY_DEPOT_REF_PINS,
+} from "../../../shared/colonize/uiStateKeys";
 
 export const STORAGE_KEYS = {
-  appMode: "edexo-colonize-app-mode-v1",
-  basket: "edexo-colonize-basket-v2",
-  autoBasketSync: "edexo-colonize-auto-basket-v1",
-  checkoutFilters: "edexo-colonize-checkout-filters-v1",
-  checkoutRouting: "edexo-colonize-checkout-routing-v1",
-  shoppingRun: "edexo-colonize-shopping-run-v1",
-  depotRefPins: "edexo-colonize-depot-ref-pins-v1",
-  debugSpanshSystem: "edexo-colonize-debug-spansh-system-v1",
+  checkoutFilters: KEY_CHECKOUT_FILTERS,
+  checkoutRouting: KEY_CHECKOUT_ROUTING,
+  depotRefPins: KEY_DEPOT_REF_PINS,
   /** Which carriers the commander has switched on for hauling, by CarrierID. */
-  carrierHaul: "edexo-colonize-carrier-haul-v1",
+  carrierHaul: KEY_CARRIER_HAUL,
 } as const;
 
 /** Written by earlier versions. Read once for migration, then removed. */
 export const LEGACY_KEYS = {
-  basketV1: "edexo-colonize-basket-v1",
   /** Per-depot pinned hub, one key per market id: `edexo-colonize-depot-ref-<marketId>`. */
   depotRefPrefix: "edexo-colonize-depot-ref-",
 } as const;
+
+/**
+ * Keys nothing reads any more (audit 2026-10-22): EDEXO-Colonize's app mode, basket (both versions), auto-basket
+ * switch and shopping run, none of them shown in 1.3.0, and a debug system nothing ever read. Removed from this
+ * browser once per start; the server's copy drops the synced ones on its own (uiStateKeys.ts).
+ */
+export const RETIRED_KEYS = [
+  "edexo-colonize-app-mode-v1",
+  "edexo-colonize-basket-v1",
+  "edexo-colonize-basket-v2",
+  "edexo-colonize-auto-basket-v1",
+  "edexo-colonize-shopping-run-v1",
+  "edexo-colonize-debug-spansh-system-v1",
+] as const;
+
+let retiredCleared = false;
+/** Local only: none of these is a synced key any more, so there is nothing to tell the server. */
+export function clearRetiredKeys(): void {
+  if (retiredCleared) return;
+  retiredCleared = true;
+  for (const key of RETIRED_KEYS) storageSetLocal(key, null);
+}
 
 /**
  * Storage can throw outright, not just return null: a browser with site data blocked

@@ -5,6 +5,19 @@
  */
 export type ColonizeHudLine = { label: string; tons: number };
 
+/** A buy line of the next stop: `have` of `tons` aboard already (its bar), `done` once bought. */
+export type ColonizeHudBuy = ColonizeHudLine & { done: boolean; commodityId?: string; have?: number };
+
+/** One material of the target site: `aboard` of what is left is in the hold; `done` once delivered in full. */
+export type ColonizeHudNeed = {
+  commodityId: string;
+  label: string;
+  required: number;
+  provided: number;
+  aboard: number;
+  done: boolean;
+};
+
 export type ColonizeHudDTO = {
   /** Sites being built: the one docked at first, then the most recently active. At most three. */
   sites: { marketId: string; label: string; system: string | null; pct: number; leftTons: number; docked: boolean }[];
@@ -16,13 +29,35 @@ export type ColonizeHudDTO = {
   next: {
     trip: number;
     trips: number;
+    /** "buy": a seller; "deliver": every buy of the trip is done, the site is next. */
+    kind?: "buy" | "deliver";
     station: string;
     system: string;
+    /** From the construction site (the plan's figure). */
     distanceLy: number | null;
+    /** From where the ship is now, when both positions are known. */
+    fromShipLy?: number | null;
     here: boolean;
-    buys: (ColonizeHudLine & { done: boolean })[];
+    buys: ColonizeHudBuy[];
     deliverTo: string[];
   } | null;
+  /**
+   * The site the HUD follows (docked at it, else the next trip's delivery, else the most recent): its materials, still
+   * needed first, delivered ones last (the HUD hides those unless asked to show them).
+   */
+  target?: {
+    marketId: string;
+    label: string;
+    system: string | null;
+    pct: number;
+    leftTons: number;
+    needs: ColonizeHudNeed[];
+  } | null;
+  /**
+   * The saved plan: none yet, every trip done, made for sites that are no longer all being built ("stale": the
+   * Colonize window makes a new one when it opens), or in progress.
+   */
+  plan?: "none" | "done" | "stale" | "active";
   /** Tons aboard, and the hold's size when known. */
   hold: { used: number; capacity: number | null };
 };

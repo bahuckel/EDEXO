@@ -169,7 +169,8 @@ export interface CarrierRecord {
   y: number;
   z: number;
   region: string;
-  services: string[];
+  /** Shared between every carrier with the same Services cell (see {@link parseCarrierCsv}): never edit it. */
+  services: readonly string[];
   lastUpdatedMs: number | null;
   lastMovedMs: number | null;
 }
@@ -213,6 +214,25 @@ export function parseCarrierCsv(text: string): CarrierRecord[] {
     The keeper is the newest sighting, and on a tie the one that actually carries a name.
   */
   const byCallsign = new Map<string, CarrierRecord>();
+  /*
+    One array per distinct Services cell and one string per region, shared by every carrier that has it (audit
+    2026-10-22): the owner's file has 1,319 distinct cells among 91,184 rows, and the parsed file is held for the
+    session. With an array of fresh strings per row it was 110 MB of heap (Node); shared, about 28 MB.
+  */
+  const servicesByCell = new Map<string, readonly string[]>();
+  const regionByName = new Map<string, string>();
+  const servicesOf = (cell: string | undefined): readonly string[] => {
+    const key = cell ?? "";
+    let list = servicesByCell.get(key);
+    if (!list) servicesByCell.set(key, (list = Object.freeze(parseCarrierServices(cell))));
+    return list;
+  };
+  const regionOf = (cell: string | undefined): string => {
+    const name = (cell ?? "").trim();
+    let shared = regionByName.get(name);
+    if (shared === undefined) regionByName.set(name, (shared = name));
+    return shared;
+  };
   for (let i = 1; i < lines.length; i += 1) {
     const line = lines[i];
     if (!line) continue;
@@ -232,8 +252,8 @@ export function parseCarrierCsv(text: string): CarrierRecord[] {
       x,
       y,
       z,
-      region: (f[iRegion] ?? "").trim(),
-      services: parseCarrierServices(f[iServices]),
+      region: regionOf(f[iRegion]),
+      services: servicesOf(f[iServices]),
       lastUpdatedMs: parseEdastroDate(f[iUpdated]),
       lastMovedMs: parseEdastroDate(f[iMoved]),
     };
@@ -297,7 +317,13 @@ export function readCarrierStatus(nowMs: number = Date.now()): CarrierDataStatus
     // build fetched it, and a parser change -- the callsign de-duplication, for instance -- leaves it
     // describing a file that is no longer read that way. Parsing is memoised on mtime, so this is a
     // map lookup after the first call.
-    rowCount: have ? loadRows().length : 0,
+    //
+    // Counted when read, not when the status is built (audit 2026-10-22): Options > Notify and the
+    // download's own check ask only `haveData`, and counting parses the 21 MB file and keeps its rows
+    // for the session. The status routes still send it: JSON reads the getter.
+    get rowCount() {
+      return have ? loadRows().length : 0;
+    },
     fetchedAtMs: meta?.fetchedAtMs ?? null,
     sourceLastModified: meta?.sourceLastModified ?? null,
     cooldownMsRemaining: Number.isFinite(cooldownMsRemaining) ? cooldownMsRemaining : 0,
@@ -494,6 +520,20 @@ export function parseCarrierQueryParams(
   };
 }
 
+/**
+ * One row against the search terms, with the name and DSSA entry the panel shows. No copy of the row is made for
+ * it (audit 2026-10-22: a spread per row was 91 k throwaway objects on every query, typed or not).
+ */
+function rowMatchesSearch(
+  r: CarrierRecord,
+  name: string,
+  dssa: { commander: string } | null,
+  terms: readonly string[],
+): boolean {
+  if (terms.length === 0) return true;
+  return carrierMatchesQuery({ callsign: r.callsign, name, system: r.system, region: r.region, dssa }, terms);
+}
+
 export function queryCarriers(q: CarrierQuery, nowMs: number = Date.now()): CarrierRowDTO[] {
   const rows = loadRows();
   const dssa = readDssaByCallsign();
@@ -511,13 +551,7 @@ export function queryCarriers(q: CarrierQuery, nowMs: number = Date.now()): Carr
     if (!carrierHasServices(r.services, wanted)) continue;
     // Searched against the joined values rather than the raw row: the roster name, the DSSA name and
     // the commander are all on screen, so all of them must be findable.
-    if (
-      !carrierMatchesQuery(
-        { ...r, name: member?.name || network?.name || r.name, dssa: network ?? null },
-        terms,
-      )
-    )
-      continue;
+    if (!rowMatchesSearch(r, member?.name || network?.name || r.name, network ?? null, terms)) continue;
     const lastSeenDays = days(r.lastUpdatedMs, nowMs);
     if (q.maxLastSeenDays && q.maxLastSeenDays > 0) {
       if (lastSeenDays == null || lastSeenDays > q.maxLastSeenDays) continue;
@@ -626,13 +660,7 @@ export function countCarriers(q: CarrierQuery, nowMs: number = Date.now()): numb
     const member = networkForCallsign(r.callsign);
     if (q.networkKey && member?.network.key !== q.networkKey) continue;
     if (!carrierHasServices(r.services, wanted)) continue;
-    if (
-      !carrierMatchesQuery(
-        { ...r, name: member?.name || network?.name || r.name, dssa: network ?? null },
-        terms,
-      )
-    )
-      continue;
+    if (!rowMatchesSearch(r, member?.name || network?.name || r.name, network ?? null, terms)) continue;
     if (q.maxLastSeenDays && q.maxLastSeenDays > 0) {
       const seen = days(r.lastUpdatedMs, nowMs);
       if (seen == null || seen > q.maxLastSeenDays) continue;

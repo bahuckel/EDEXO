@@ -2327,6 +2327,20 @@
   var LS_HUD_TYPE = "edexoHudType";
   var LS_HUD_CREDIT = "edexoHudCredit";
   var LS_HUD_NEXT_BOXEL = "edexoHudNextBoxel";
+  /* Colonize HUD (1.3.0): materials and other sites on unless switched off; finished lines off unless switched on. */
+  var HUD_CZ_PREFS = [
+    { id: "hudCzNeeds", ls: "edexoHudCzNeeds", key: "czNeeds", def: true },
+    { id: "hudCzSites", ls: "edexoHudCzSites", key: "czSites", def: true },
+    { id: "hudCzFinished", ls: "edexoHudCzFinished", key: "czFinished", def: false },
+  ];
+  function readCzPref(p) {
+    try {
+      var v = localStorage.getItem(p.ls);
+      return p.def ? v !== "0" : v === "1";
+    } catch (e) {
+      return p.def;
+    }
+  }
   var LS_HUD_TILT = "edexoHudTilt";
   var LS_HUD_TILT_MODE = "edexoHudTiltMode";
   var LS_HUD_SLANT = "edexoHudSlant";
@@ -2356,6 +2370,7 @@
     try { prefs.hudType = localStorage.getItem(LS_HUD_TYPE) || "original"; } catch (e) {}
     try { prefs.credit = localStorage.getItem(LS_HUD_CREDIT) || "off"; } catch (e) {}
     try { prefs.nextBoxel = localStorage.getItem(LS_HUD_NEXT_BOXEL) === "1"; } catch (e) {}
+    HUD_CZ_PREFS.forEach(function (p) { prefs[p.key] = readCzPref(p); });
     try { var tl = parseFloat(localStorage.getItem(LS_HUD_TILT) || ""); prefs.tilt = isFinite(tl) ? tl : 15; } catch (e) {}
     try { prefs.tiltMode = localStorage.getItem(LS_HUD_TILT_MODE) === "slant" ? "slant" : "turn"; } catch (e) {}
     try { var sl = parseFloat(localStorage.getItem(LS_HUD_SLANT) || ""); prefs.slant = isFinite(sl) ? sl : 6; } catch (e) {}
@@ -2585,6 +2600,14 @@
       syncHudPrefs();
     });
   }
+  HUD_CZ_PREFS.forEach(function (p) {
+    var box = document.getElementById(p.id);
+    if (!box) return;
+    box.addEventListener("change", function () {
+      try { localStorage.setItem(p.ls, box.checked ? "1" : "0"); } catch (e) {}
+      syncHudPrefs();
+    });
+  });
   var hudCompact = document.getElementById("hudCompact");
   if (hudCompact) {
     hudCompact.addEventListener("change", function () {
@@ -2798,6 +2821,10 @@
     if (hudType) hudType.value = (function () { try { return localStorage.getItem(LS_HUD_TYPE) || "original"; } catch (e) { return "original"; } })();
     if (hudCredit) hudCredit.value = (function () { try { var v = localStorage.getItem(LS_HUD_CREDIT); return v === "top" || v === "bottom" ? v : "off"; } catch (e) { return "off"; } })();
     if (hudNextBoxel) hudNextBoxel.checked = (function () { try { return localStorage.getItem(LS_HUD_NEXT_BOXEL) === "1"; } catch (e) { return false; } })();
+    HUD_CZ_PREFS.forEach(function (p) {
+      var box = document.getElementById(p.id);
+      if (box) box.checked = readCzPref(p);
+    });
     if (hudTilt) hudTilt.value = (function () { try { var v = parseFloat(localStorage.getItem(LS_HUD_TILT) || "15"); return String(isFinite(v) ? v : 15); } catch (e) { return "15"; } })();
     if (hudTiltMode) hudTiltMode.value = (function () { try { return localStorage.getItem(LS_HUD_TILT_MODE) === "slant" ? "slant" : "turn"; } catch (e) { return "turn"; } })();
     if (hudSlant) hudSlant.value = (function () { try { var v = parseFloat(localStorage.getItem(LS_HUD_SLANT) || "6"); return String(isFinite(v) ? v : 6); } catch (e) { return "6"; } })();

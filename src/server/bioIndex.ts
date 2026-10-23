@@ -24,6 +24,7 @@ import { galaxyIndexFilePath } from "./galaxyIndexFiles.js";
 import { existsSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { getProjectRoot } from "./paths.js";
+import { perfCount } from "./perf.js";
 
 const MAGIC = "EDEXOBIO";
 const RECORD = 25;
@@ -280,10 +281,20 @@ export function bioIndexPath(projectRoot = getProjectRoot()): string {
 
 let cached: BioIndex | null | undefined;
 
-/** The index, or null on a build without one. Read once and held. */
+/**
+ * The index, or null on a build without one. Read once and held.
+ *
+ * Synchronous, so it stops the server's thread for the whole 248 MB read: the routes await
+ * {@link loadBioIndexAsync} first and land here on a cache hit (audit 2026-10-22). A read still under
+ * way off-thread cannot be waited for here; it is stopped instead, so the file is not read to the end
+ * and indexed a second time only to be dropped, and its callers get the index read below.
+ */
 export function loadBioIndex(file = bioIndexPath()): BioIndex | null {
   if (cached !== undefined) return cached;
+  pendingAbort?.abort();
   if (!existsSync(file)) return (cached = null);
+  // Every read that reaches this line blocked the server; EDEXO_PERF=1 shows a stray one.
+  perfCount("bioIndex.syncRead");
   try {
     cached = new Index(readFileSync(file));
   } catch (e) {
@@ -307,6 +318,8 @@ let pending: Promise<BioIndex | null> | null = null;
  * file's index back afterwards (a download replaces the file and clears), and nobody joins it after.
  */
 let generation = 0;
+/** Stops the read in flight when the synchronous loader overtakes it (see {@link loadBioIndex}). */
+let pendingAbort: AbortController | null = null;
 
 /**
  * The same, with the 245 MB read off the main thread (owner, 2026-10-06: opening Boxels froze the
@@ -317,20 +330,29 @@ export function loadBioIndexAsync(file = bioIndexPath()): Promise<BioIndex | nul
   if (cached !== undefined) return Promise.resolve(cached);
   if (pending) return pending;
   const gen = generation;
+  const abort = new AbortController();
   const p: Promise<BioIndex | null> = (async () => {
     let read: BioIndex | null = null;
     try {
-      if (existsSync(file)) read = new Index(await readFile(file));
+      if (existsSync(file)) {
+        perfCount("bioIndex.asyncRead");
+        read = new Index(await readFile(file, { signal: abort.signal }));
+      }
     } catch (e) {
-      console.warn(`ED Exo Compare — bio index unreadable, continuing without it: ${String(e)}`);
+      // Stopped by the synchronous loader, which has put its own read in the cache: not unreadable.
+      if (!abort.signal.aborted) {
+        console.warn(`ED Exo Compare — bio index unreadable, continuing without it: ${String(e)}`);
+      }
     }
     if (gen !== generation) return read; // cleared meanwhile: this caller's answer, never the cache's
     if (cached === undefined) cached = read;
     return cached ?? null;
   })().finally(() => {
     if (pending === p) pending = null;
+    if (pendingAbort === abort) pendingAbort = null;
   });
   pending = p;
+  pendingAbort = abort;
   return p;
 }
 
@@ -338,5 +360,7 @@ export function loadBioIndexAsync(file = bioIndexPath()): Promise<BioIndex | nul
 export function clearBioIndexCache(): void {
   cached = undefined;
   pending = null;
+  // A read from before the clear still answers its own caller; a later synchronous read must not stop it.
+  pendingAbort = null;
   generation++;
 }

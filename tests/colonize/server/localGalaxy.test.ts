@@ -3,8 +3,9 @@
  * then the imported visited list, then the stations index; station facts from the stations index, a pad the row
  * already has kept.
  */
-import { afterEach, describe, expect, it } from "vitest";
-import { createLocalGalaxy } from "../../../src/server/colonize/localGalaxy";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLocalGalaxy, localGalaxyFrom } from "../../../src/server/colonize/localGalaxy";
+import { galaxyMemoryState } from "../../../src/server/galaxyMemory";
 import { setLocalStationFacts, withLocalStationFacts } from "../../../src/server/colonize/localStationFacts";
 
 const stations = {
@@ -37,6 +38,50 @@ describe("coordinates", () => {
     const g = createLocalGalaxy({ stations: () => null });
     expect(g.systemCoords("Hammond")).toBeNull();
     expect(g.stationFacts("Hammond", "Hammond Hub")).toBeNull();
+  });
+});
+
+/*
+  Audit 2026-10-22: the imported list comes back new from every call, and a distance resolve asks for up to 400
+  sellers back to back; the stations index Colonize read stayed until restart.
+*/
+describe("what a burst of look-ups costs", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("builds the imported list once, again when the journal learns a system, and again after a while", () => {
+    vi.useFakeTimers({ now: 1_000_000 });
+    const store = { visitedSystems: new Map<number, string>(), systemPositions: new Map<number, { x: number; y: number; z: number }>() };
+    let built = 0;
+    const g = createLocalGalaxy({
+      journalStore: () => store as never,
+      importedSystems: () => {
+        built++;
+        return [
+          { name: "Old Haunt", x: 4, y: 5, z: 6 },
+          // Not in the galaxy index: its boxel's centre, no name.
+          { name: "", x: 0, y: 0, z: 0 },
+        ];
+      },
+      stations: () => null,
+    });
+    for (let i = 0; i < 400; i++) expect(g.systemCoords("Old Haunt")).toEqual([4, 5, 6]);
+    expect(built).toBe(1);
+    // An unnamed one is never an answer.
+    expect(g.systemCoords("")).toBeNull();
+    expect(built).toBe(1);
+    store.visitedSystems.set(1, "New Jump");
+    store.systemPositions.set(1, { x: 9, y: 9, z: 9 });
+    expect(g.systemCoords("Old Haunt")).toEqual([4, 5, 6]);
+    expect(built).toBe(2);
+    vi.setSystemTime(1_000_000 + 31_000);
+    expect(g.systemCoords("Old Haunt")).toEqual([4, 5, 6]);
+    expect(built).toBe(3);
+  });
+
+  it("keeps the stations index on the galaxy map's idle clock, so it is let go with the map's caches", () => {
+    vi.useFakeTimers({ now: 2_000_000_000_000 });
+    localGalaxyFrom({}).stationFacts("Nowhere", "Nothing");
+    expect(galaxyMemoryState().lastTouch).toBe(2_000_000_000_000);
   });
 });
 

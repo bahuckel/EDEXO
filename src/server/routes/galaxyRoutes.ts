@@ -34,7 +34,7 @@ import { registerGalaxyCache, touchGalaxyMemory } from "../galaxyMemory.js";
 import { clearBioBodiesCache } from "../bioBodies.js";
 import {
   clearBioIndexCache,
-  loadBioIndex,
+  loadBioIndexAsync,
   TIER_BODIES_KNOWN,
   TIER_CODEX,
   TIER_DSS,
@@ -63,7 +63,7 @@ import type { GalaxyFindDTO, GalaxySystemDTO } from "../../shared/dto/galaxy.js"
 import { ownCarrierNow } from "../../shared/ownAssets.js";
 import { id64Boxel } from "../../shared/id64.js";
 
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { galaxyLayer, type GalaxyLayerKind } from "../galaxyLayers.js";
 import { GALAXY_LAYER_KINDS } from "../../shared/galaxyLayers.js";
 import { clearBarrenTable } from "../boxelBarren.js";
@@ -245,8 +245,9 @@ export function registerGalaxyRoutes(
    * `?genera=stratum&species=…&mainStars=N&stars=…&planets=elw&features=terraformable`, each a comma
    * list. Layout: "EDXFLT01", u32 system count, u32 matched, then the bits.
    */
-  app.get("/api/galaxy/filter", (req, res) => {
-    const index = loadBioIndex();
+  app.get("/api/galaxy/filter", async (req, res) => {
+    // Read off the server's thread when not held (audit 2026-10-22): the synchronous loader stops every window.
+    const index = await loadBioIndexAsync();
     if (!index) return void noIndex(res);
     const list = (k: string) =>
       String(req.query[k] ?? "")
@@ -418,8 +419,8 @@ export function registerGalaxyRoutes(
   });
 
   /** Names by system ordinal, for the map's labels: `?i=1,2,3` (at most 400). */
-  app.get("/api/galaxy/names", (req, res) => {
-    const index = loadBioIndex();
+  app.get("/api/galaxy/names", async (req, res) => {
+    const index = await loadBioIndexAsync();
     if (!index) return void noIndex(res);
     const ids = String(req.query.i ?? "")
       .split(",")
@@ -432,8 +433,8 @@ export function registerGalaxyRoutes(
   });
 
   /** One system for the map's panel: `?i=<ordinal>`, or `?addr=<id64>` (a search hit, a journal system). */
-  app.get("/api/galaxy/system", (req, res) => {
-    const index = loadBioIndex();
+  app.get("/api/galaxy/system", async (req, res) => {
+    const index = await loadBioIndexAsync();
     if (!index) return void noIndex(res);
     let i = Number(req.query.i);
     if (req.query.addr != null) {
@@ -479,8 +480,8 @@ export function registerGalaxyRoutes(
    * N stops from the ship (G5.3): chosen by a greedy chain, ordered by 2-opt (5.8); `loop=1` returns
    * to the ship.
    */
-  app.get("/api/galaxy/next", (req, res) => {
-    const index = loadBioIndex();
+  app.get("/api/galaxy/next", async (req, res) => {
+    const index = await loadBioIndexAsync();
     if (!index) return void noIndex(res);
     const store = opts.getJournalStore?.() ?? null;
     const exclude = new Set(
@@ -833,9 +834,11 @@ export function registerGalaxyRoutes(
   });
 
   /** One of them, body by body: `?addr=<SystemAddress>`. */
-  app.get("/api/galaxy/mine/system", (req, res) => {
+  app.get("/api/galaxy/mine/system", async (req, res) => {
     const addr = Number(req.query.addr);
     if (!Number.isFinite(addr)) return void res.status(400).json({ error: "addr must be a SystemAddress" });
+    // Not behind the index middleware (NO_INDEX), and getMySystem reads the index synchronously: read it here first.
+    await loadBioIndexAsync();
     const dto = opts.getMySystem?.(addr) ?? null;
     if (!dto) return void res.status(404).json({ error: "not one of your systems" });
     res.json(dto);
@@ -865,12 +868,13 @@ export function registerGalaxyRoutes(
     res.json(opts.getCommanderSectors());
   });
 
-  app.get("/api/galaxy/species", (_req, res) => {
+  app.get("/api/galaxy/species", async (_req, res) => {
     perfCount("http.galaxySpecies");
     if (!opts.getGalaxySpecies) {
       res.status(404).json({ error: "no galaxy index in this build" });
       return;
     }
+    await loadBioIndexAsync();
     res.json(opts.getGalaxySpecies());
   });
 
@@ -939,7 +943,7 @@ export function registerGalaxyRoutes(
       });
   });
 
-  app.get("/api/galaxy/worth", (req, res) => {
+  app.get("/api/galaxy/worth", async (req, res) => {
     perfCount("http.galaxyWorth");
     if (!opts.searchGalaxyByValue) {
       res.status(404).json({ error: "no galaxy index in this build" });
@@ -962,6 +966,7 @@ export function registerGalaxyRoutes(
       return parts.length ? parts : undefined;
     };
     const tiers = Number(req.query.tiers ?? 0);
+    await loadBioIndexAsync();
     res.json(
       opts.searchGalaxyByValue(
         {

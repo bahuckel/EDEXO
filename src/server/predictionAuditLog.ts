@@ -499,6 +499,14 @@ export function recordPredictionForBody(input: {
  */
 export function finalisePredictionsForSystem(systemAddress: number, marks: SurfaceMark[]): number {
   if (!enabled) return 0;
+  /*
+    Nothing recorded this session: the file is not read just to close a system (audit 2026-10-22). Every jump
+    calls this, and the first one used to parse the whole log (38 MB on the owner's PC, about 36 MB of heap)
+    in sessions with no biology at all. A record exists only for a body with biology, and the snapshot that
+    shows such a body records it, which loads the log first. The one left open: a system entered and left
+    while the snapshot never computed it; it closes on the next visit, or ages out like any open record.
+  */
+  if (!store) return 0;
   try {
     const m = load();
     const prefix = `${systemAddress}:`;

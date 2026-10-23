@@ -4,20 +4,12 @@
  */
 import { useState } from "react";
 import { depotDisplayLabel } from "../../../shared/colonize/depotLabel";
+import { formatTons as tons } from "../../../shared/colonize/formatPrice";
 import { colonyOf } from "../../../shared/colonize/ownColony";
-import type { DepotSnapshot, OwnColony, ResourceRow } from "../../../shared/colonize/types";
+import { siteMaterials, siteTotals } from "../../../shared/colonize/siteMaterials";
+import type { DepotSnapshot, OwnColony } from "../../../shared/colonize/types";
 import type { ColonizeModel } from "../useColonize";
 import { BTN, Fact, Panel } from "./ui";
-
-const left = (r: ResourceRow) => Math.max(0, r.required - r.provided);
-const tons = (n: number) => `${Math.round(n).toLocaleString("en-US")} t`;
-
-function siteTotals(d: DepotSnapshot) {
-  const required = d.resources.reduce((a, r) => a + r.required, 0);
-  const remaining = d.resources.reduce((a, r) => a + left(r), 0);
-  const pct = d.progress != null ? d.progress * 100 : required > 0 ? ((required - remaining) / required) * 100 : 0;
-  return { required, remaining, pct: Math.max(0, Math.min(100, pct)) };
-}
 
 /** What the column needs of the model; the phone view (PhoneView.tsx) passes a read-only one. */
 type SitesModel = Pick<ColonizeModel, "snap" | "setDepotRefPin" | "setArchived"> & { ui: Pick<ColonizeModel["ui"], "depotRefPins"> };
@@ -124,7 +116,9 @@ function Whose({ d, colonies }: { d: DepotSnapshot; colonies: OwnColony[] }) {
 
 function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapshot; m: SitesModel; compact?: boolean; readOnly?: boolean }) {
   const t = siteTotals(d);
-  const needs = d.resources.filter((r) => left(r) > 0).sort((a, b) => left(b) - left(a));
+  // Still needed first, biggest first; delivered in full last, in green (owner, 2026-10-22).
+  const materials = siteMaterials(d);
+  const needs = materials.filter((r) => !r.done);
   const docked = m.snap?.liveDocked?.marketId === d.marketId;
   const [hub, setHub] = useState(m.ui.depotRefPins[d.marketId] ?? "");
   const finished = d.complete || t.remaining <= 0;
@@ -141,7 +135,7 @@ function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapsho
         </div>
         <div className={`cz-big cz-num${finished ? " cz-ok" : " cz-hi"}`}>{Math.floor(t.pct)}%</div>
       </div>
-      <div className="cz-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(t.pct)}>
+      <div className="cz-bar" role="progressbar" aria-label={`${depotDisplayLabel(d)}: ${Math.floor(t.pct)}% built`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(t.pct)}>
         <div className={`cz-bar__fill${finished ? " cz-bar__fill--done" : ""}`} style={{ width: `${t.pct}%` }} />
       </div>
       {finished ? (
@@ -157,26 +151,33 @@ function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapsho
       {!compact && needs.length ? (
         <ul className="cz-list">
           {needs.slice(0, 3).map((r) => (
-            <li key={r.name}>
-              <span>{r.nameLocalised || r.name}</span>
-              <span className="cz-num cz-soft">{tons(left(r))}</span>
+            <li key={r.id || r.label}>
+              <span>{r.label}</span>
+              <span className="cz-num cz-soft">{tons(r.left)}</span>
             </li>
           ))}
         </ul>
       ) : null}
       {!compact ? (
         <details className="cz-more">
-          <summary>{needs.length > 3 ? `All ${needs.length} materials, and more` : "More"}</summary>
+          <summary>{materials.length > 3 ? `All ${materials.length} materials, and more` : "More"}</summary>
           <div className="cz-stack" style={{ marginTop: 10 }}>
             <ul className="cz-list">
-              {needs.map((r) => (
-                <li key={r.name}>
-                  <span>{r.nameLocalised || r.name}</span>
-                  <span className="cz-num cz-dim">
-                    {tons(left(r))} <span className="cz-small">of {tons(r.required)}</span>
-                  </span>
-                </li>
-              ))}
+              {materials.map((r) =>
+                r.done ? (
+                  <li key={r.id || r.label} className="cz-mat--done">
+                    <span>{r.label}</span>
+                    <span className="cz-num">✓ delivered</span>
+                  </li>
+                ) : (
+                  <li key={r.id || r.label}>
+                    <span>{r.label}</span>
+                    <span className="cz-num cz-dim">
+                      {tons(r.left)} <span className="cz-small">of {tons(r.required)}</span>
+                    </span>
+                  </li>
+                ),
+              )}
             </ul>
             {readOnly ? null : (
               <form

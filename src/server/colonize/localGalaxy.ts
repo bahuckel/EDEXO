@@ -7,9 +7,11 @@
  * - a station's facts: type, largest pad and distance from the arrival star, from the same index (1,600 of 1,764
  *   stations there; fleet carriers are not in it, and pads were known for 162 before, from Inara).
  *
- * The stations index is read on the first look-up that needs it (35 MB, about 10 ms) and only if downloaded.
+ * The stations index is read on the first look-up that needs it (35 MB, about 10 ms) and only if downloaded, and let go
+ * with the galaxy map's other caches five idle minutes after the last look-up (galaxyMemory.ts).
  */
 import type { GameStateStore } from "../gameState.js";
+import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { loadStationsIndex, type StationsIndex } from "../stationsIndex.js";
 
 export type LocalCoords = [number, number, number];
@@ -22,6 +24,9 @@ export type LocalGalaxySources = {
 };
 
 const norm = (s: string) => s.trim().toLowerCase();
+
+/** How long the imported list is kept while the journal learns nothing new (see `importedCoords`). */
+const IMPORTED_HOLD_MS = 30_000;
 
 export function createLocalGalaxy(src: LocalGalaxySources) {
   // The journal's positions by name, rebuilt when the journal store has learned more systems.
@@ -39,11 +44,25 @@ export function createLocalGalaxy(src: LocalGalaxySources) {
     }
     return visited.byName.get(norm(name)) ?? null;
   };
-  let imported: { list: readonly unknown[]; byName: Map<string, LocalCoords> } | null = null;
+  /*
+    The imported list comes back new from every call (the bootstrap places each imported id through the galaxy
+    index), and a distance resolve asks for up to 400 sellers back to back, each rebuilding it and this map (audit
+    2026-10-22). Kept while the journal store has learned no system, for at most IMPORTED_HOLD_MS, so an import or a
+    galaxy index loaded since is still picked up.
+  */
+  let imported: { at: number; size: number; pos: number; byName: Map<string, LocalCoords> } | null = null;
   const importedCoords = (name: string): LocalCoords | null => {
-    const list = src.importedSystems?.();
-    if (!list?.length) return null;
-    if (!imported || imported.list !== list) imported = { list, byName: new Map(list.map((s) => [norm(s.name), [s.x, s.y, s.z]])) };
+    if (!src.importedSystems) return null;
+    const store = src.journalStore?.();
+    const size = store?.visitedSystems.size ?? -1;
+    const pos = store?.systemPositions.size ?? -1;
+    const now = Date.now();
+    if (!imported || now - imported.at > IMPORTED_HOLD_MS || imported.size !== size || imported.pos !== pos) {
+      const byName = new Map<string, LocalCoords>();
+      // One the galaxy index could not name sits at its boxel's centre with no name: nobody asks for "".
+      for (const s of src.importedSystems()) if (s.name) byName.set(norm(s.name), [s.x, s.y, s.z]);
+      imported = { at: now, size, pos, byName };
+    }
     return imported.byName.get(norm(name)) ?? null;
   };
 
@@ -71,6 +90,14 @@ export function localGalaxyFrom(opts: {
   return createLocalGalaxy({
     journalStore: opts.getJournalStore,
     importedSystems: opts.getImportedSystems,
-    stations: () => loadStationsIndex(),
+    /*
+      Colonize's look-ups keep the index like the map's requests do, so it goes with the map's other caches five
+      idle minutes after the last one (audit 2026-10-22: loaded silently, its 34 MB and name lookup stayed until
+      restart).
+    */
+    stations: () => {
+      touchGalaxyMemory();
+      return loadStationsIndex();
+    },
   });
 }

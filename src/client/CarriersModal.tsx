@@ -28,6 +28,7 @@ import { CARRIER_SERVICE_OPTIONS, carrierServiceLabel } from "@shared/carrierSer
 import { CARRIER_NETWORKS } from "@shared/carrierNetworks";
 import { Tooltip } from "./ui/Tooltip";
 import { useModal } from "./ui/useModal";
+import { tabListKeyDown } from "./ui/Tabs";
 import { LoadingNote, RefreshBar } from "./ui/Loading";
 import type { CarrierLiveFixDTO, CarrierQueryResultDTO, CarrierRowDTO } from "@shared/types";
 import { CopySystemButton } from "./CopySystemButton";
@@ -323,13 +324,20 @@ export function CarriersModal({ onClose }: { onClose: () => void }) {
         <header className="fdb-head">
           <div>
             <h2 className="fdb-title">{tab === "stations" ? "Stations" : "Carriers"}</h2>
-            <div className="fdb-filters" role="tablist" aria-label="Carriers or stations">
+            {/* The app's keyboard for an option strip (ui/Tabs.tsx, audit 2026-10-22): one Tab stop, arrows choose. */}
+            <div
+              className="fdb-filters"
+              role="tablist"
+              aria-label="Carriers or stations"
+              onKeyDown={(ev) => tabListKeyDown(ev, { follow: true })}
+            >
               {(["carriers", "stations"] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   role="tab"
                   aria-selected={tab === t}
+                  tabIndex={tab === t ? 0 : -1}
                   className={`fdb-chip${tab === t ? " fdb-chip--on" : ""}`}
                   onClick={() => setTab(t)}
                 >

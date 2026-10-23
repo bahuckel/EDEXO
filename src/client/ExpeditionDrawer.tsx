@@ -18,24 +18,15 @@ import { formatValue } from "./galaxy3d/clusters";
 import { G3D_HELP, MenuHead, MenuRow } from "./galaxy3d/G3dMenu";
 import { PickList, type PickOption } from "./galaxy3d/PickList";
 import { CopySystemButton } from "./CopySystemButton";
+import { crShort } from "./expeditionFocus";
+
+/*
+  The map focus and crShort live in expeditionFocus.ts (audit 2026-10-22), so the header's "Next boxel" does not load
+  this drawer; re-exported for the galaxy map and the tests, which import them from here.
+*/
+export { EXPEDITION_FOCUS_EVENT, crShort, requestExpeditionFocus, takeExpeditionFocus } from "./expeditionFocus";
 
 type Xyz = { x: number; y: number; z: number };
-
-/**
- * Open the map on a boxel from elsewhere (the header's "Next boxel", plan 2.7): kept until the map takes it,
- * since the map may not be mounted yet, and announced for a map that already is.
- */
-export const EXPEDITION_FOCUS_EVENT = "edexo:expedition-focus";
-let pendingFocus: { key: string; center: Xyz; cubeLy: number } | null = null;
-export function requestExpeditionFocus(b: Pick<ExpeditionBoxelDTO, "key" | "center" | "cubeLy">): void {
-  pendingFocus = { key: b.key, center: b.center, cubeLy: b.cubeLy };
-  window.dispatchEvent(new CustomEvent(EXPEDITION_FOCUS_EVENT));
-}
-export function takeExpeditionFocus(): { key: string; center: Xyz; cubeLy: number } | null {
-  const f = pendingFocus;
-  pendingFocus = null;
-  return f;
-}
 
 /*
   The drawer's own look in tw: utilities (plan 3.4, 2026-10-12): no rules of its own in galaxy-3d.css.
@@ -68,14 +59,6 @@ const fmtCount = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} M` : n >= 1
 const CANDIDATES_SHOWN = 12;
 /** The server lists at most this many names (expedition.ts `candidateSystems`). */
 const CANDIDATE_CAP = 200;
-
-/** Credits, short: 7.9 M, 1.2 B. */
-export function crShort(v: number): string {
-  if (v >= 1e9) return `${(v / 1e9).toFixed(1)} B`;
-  if (v >= 1e6) return `${(v / 1e6).toFixed(1)} M`;
-  if (v >= 1e3) return `${Math.round(v / 1e3)} k`;
-  return String(Math.round(v));
-}
 
 /** What a boxel is ranked by: credits per jump, or the species' bodies per jump in target-species mode. */
 export function expeditionScore(b: ExpeditionBoxelDTO, species: boolean): number {

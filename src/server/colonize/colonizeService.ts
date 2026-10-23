@@ -15,7 +15,7 @@ import { resolveColonizeDataDir } from "../paths.js";
 import { closeColonizeUiState, colonizeUiState } from "./uiState";
 import { refreshColonizeHud, setColonizeHudSource } from "./hudSummary";
 import { ColonizeStore } from "./colonizeStore";
-import { flushSystemCoordsCache, loadSystemCoordsCache, setLocalSystemCoords } from "./galaxySystemCoords";
+import { flushSystemCoordsCache, loadSystemCoordsCache, peekSystemCoords, setLocalSystemCoords } from "./galaxySystemCoords";
 import { setLocalStationFacts } from "./localStationFacts";
 import type { LocalGalaxy } from "./localGalaxy";
 import { buyIndexHandlers } from "./ipc/buyIndexHandlers";
@@ -40,6 +40,8 @@ export type ColonizeServiceDeps = {
   ownColonies?: () => OwnColony[];
   /** EDEXO's own coordinates and station facts, before EDSM and Spansh (localGalaxy.ts). */
   localGalaxy?: LocalGalaxy;
+  /** A visited system's position by address, from EDEXO's journal store (the HUD's "N ly away"). */
+  systemPosition?: (systemAddress: number) => [number, number, number] | null;
 };
 
 export type ColonizeService = {
@@ -99,7 +101,18 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
   setMaterialBuyScanPush(deps.push);
   setLocalSystemCoords(deps.localGalaxy ? (name) => deps.localGalaxy!.systemCoords(name) : null);
   setLocalStationFacts(deps.localGalaxy ? (sys, st) => deps.localGalaxy!.stationFacts(sys, st) : null);
-  setColonizeHudSource(() => ({ snap: store.getSnapshot(), ui: colonizeUiState().all() }));
+  setColonizeHudSource(() => ({
+    snap: store.getSnapshot(),
+    ui: colonizeUiState().all(),
+    pos: {
+      // Both from what is held already: the journal's positions and the coordinates the plan looked up.
+      ship: (s) => {
+        const addr = s.navContext.systemAddress;
+        return (addr != null ? deps.systemPosition?.(addr) : null) ?? (s.navContext.starSystem ? peekSystemCoords(s.navContext.starSystem) : null);
+      },
+      system: peekSystemCoords,
+    },
+  }));
 
   const ctx: IpcContext = { store, push: deps.push, buyIndex: materialBuyIndex, userDataDir: dataDir };
   const inara = createInaraWatchControl(ctx);

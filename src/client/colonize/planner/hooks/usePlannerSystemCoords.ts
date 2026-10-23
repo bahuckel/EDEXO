@@ -5,7 +5,7 @@ import { normSystemName } from "../../../../shared/colonize/stationFilter";
 import type { PlannerInputs } from "./useDeferredPlannerInputs";
 
 /**
- * How long the plan waits for coordinates before building without them. Warm, the main process
+ * How long the plan waits for coordinates before building without them. Warm, the server
  * answers from its saved file in milliseconds; cold, a few hundred systems are a few EDSM batches.
  */
 const COORDS_WAIT_MS = 3000;
@@ -46,7 +46,7 @@ function plannerSystems(inputs: SellerSources): string[] {
  * from under the tick — line ids carry the stop's position.
  */
 export function usePlannerSystemCoords(args: {
-  api: typeof colonizeApi | undefined;
+  api: typeof colonizeApi;
   isActive: boolean;
   listingsReady: boolean;
   /**
@@ -77,17 +77,15 @@ export function usePlannerSystemCoords(args: {
     missingRef.current = missing;
   }, [missing]);
 
-  const canAsk = Boolean(api?.resolveSystemCoords);
-
   useEffect(() => {
-    if (!isActive || !canAsk || !missingSig) return;
+    if (!isActive || !missingSig) return;
     // Main answers at most this many per request; the rest stay missing and go in the next one.
     const ask = missingRef.current.slice(0, COORDS_REQUEST_CAP);
     const timer = window.setTimeout(() => setWaitedOut(true), COORDS_WAIT_MS);
     void (async () => {
       let found: SystemCoordsByNorm = {};
       try {
-        const res = await api!.resolveSystemCoords({ systems: ask });
+        const res = await api.resolveSystemCoords({ systems: ask });
         if (res.ok && res.coords) found = res.coords;
       } catch {
         /* a failed look-up counts as asked: the plan must not wait on it forever */
@@ -103,13 +101,13 @@ export function usePlannerSystemCoords(args: {
       setWaitedOut(false);
     })();
     return () => window.clearTimeout(timer);
-  }, [missingSig, isActive, canAsk, api]);
+  }, [missingSig, isActive, api]);
 
   /**
    * Only the first plan waits. Later, a new seller's coordinates arriving just rebuilds the plan;
    * holding it back would blank the trips for a round trip every time the listings grew.
    */
-  const settled = !canAsk || !missing.length || waitedOut;
+  const settled = !missing.length || waitedOut;
   const [primed, setPrimed] = useState(false);
   useEffect(() => {
     // Not before the listings are in: those are the sellers the first plan routes over.

@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot, type Root } from "react-dom/client";
 import { act } from "react";
-import { Table } from "../src/client/DiscoveriesTables";
+import { Table } from "../src/client/ui/DataTable";
 
 type Row = { n: number };
 const ROWS: Row[] = Array.from({ length: 2000 }, (_, n) => ({ n }));

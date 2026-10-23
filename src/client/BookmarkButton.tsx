@@ -15,21 +15,33 @@ import {
 } from "@shared/bookmarks";
 import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
 
+/*
+  Both answer null / false when the server cannot be reached (a restart, a phone off the LAN) instead of throwing
+  (audit 2026-10-22): the rejection went unhandled, the Save button stayed disabled for good and Remove never closed.
+*/
 async function saveBookmark(b: Partial<BookmarkDTO> & { system: string }): Promise<BookmarkDTO | null> {
-  const r = await fetch("/api/bookmarks", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(b),
-  });
-  const j = (await r.json().catch(() => null)) as { ok?: boolean; bookmark?: BookmarkDTO } | null;
-  if (j?.ok) window.dispatchEvent(new Event(BOOKMARKS_CHANGED));
-  return j?.ok && j.bookmark ? j.bookmark : null;
+  try {
+    const r = await fetch("/api/bookmarks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(b),
+    });
+    const j = (await r.json().catch(() => null)) as { ok?: boolean; bookmark?: BookmarkDTO } | null;
+    if (j?.ok) window.dispatchEvent(new Event(BOOKMARKS_CHANGED));
+    return j?.ok && j.bookmark ? j.bookmark : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function removeBookmark(id: string): Promise<boolean> {
-  const r = await fetch(`/api/bookmarks/${encodeURIComponent(id)}`, { method: "DELETE" });
-  if (r.ok) window.dispatchEvent(new Event(BOOKMARKS_CHANGED));
-  return r.ok;
+  try {
+    const r = await fetch(`/api/bookmarks/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (r.ok) window.dispatchEvent(new Event(BOOKMARKS_CHANGED));
+    return r.ok;
+  } catch {
+    return false;
+  }
 }
 
 /** Bodies worth offering in the picker: the system's bio bodies and its notable ones. */
@@ -120,6 +132,7 @@ export function BookmarkEditor({
   const [bodyKey, setBodyKey] = useState<string>(initial.bodyKey ?? "");
   const [custom, setCustom] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     void fetch("/api/bookmarks")
       .then((r) => r.json())
@@ -129,18 +142,25 @@ export function BookmarkEditor({
   const body = bodies.find((b) => b.key === bodyKey);
   const save = async () => {
     setBusy(true);
-    const ok = await saveBookmark({
-      ...(initial.id ? { id: initial.id } : {}),
-      system: initial.system,
-      systemAddress: initial.systemAddress,
-      bodyKey: bodyKey || null,
-      body: bodyKey ? (body?.label.split(" — ")[0] ?? initial.body ?? null) : null,
-      tags,
-      note,
-      pos,
-    });
-    setBusy(false);
+    setFailed(false);
+    let ok: BookmarkDTO | null = null;
+    try {
+      ok = await saveBookmark({
+        ...(initial.id ? { id: initial.id } : {}),
+        system: initial.system,
+        systemAddress: initial.systemAddress,
+        bodyKey: bodyKey || null,
+        body: bodyKey ? (body?.label.split(" — ")[0] ?? initial.body ?? null) : null,
+        tags,
+        note,
+        pos,
+      });
+    } finally {
+      // Whatever happened, the button works again: it stayed disabled after a failed request (audit 2026-10-22).
+      setBusy(false);
+    }
     if (ok) onSaved();
+    else setFailed(true);
   };
   return (
     <div className="bm-editor">
@@ -166,6 +186,12 @@ export function BookmarkEditor({
         rows={3}
         onChange={(ev) => setNote(ev.target.value)}
       />
+      {/* Inline, not a toast: the galaxy map's own window has no toast area. */}
+      {failed ? (
+        <p className="msg err" role="alert">
+          Could not save the bookmark. Try again.
+        </p>
+      ) : null}
       <div className="bm-editor__actions">
         <button type="button" className="fdb-chip fdb-chip--on" disabled={busy} onClick={() => void save()}>
           {initial.id ? "Save" : "Bookmark"}
@@ -199,7 +225,12 @@ export function BookmarkButton({
   /** "star": the ☆ drawn by CSS (system card); "button": a labelled button (galaxy map). */
   variant?: "star" | "button";
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const [removeFailed, setRemoveFailed] = useState(false);
+  const setOpen = (v: boolean) => {
+    setOpenState(v);
+    if (v) setRemoveFailed(false);
+  };
   const title = existing
     ? `Bookmarked: ${[existing.body, existing.tags.join(", "), existing.note].filter(Boolean).join(" · ") || "no tags"} — click to edit`
     : "Bookmark this system: tags and a note";
@@ -236,10 +267,21 @@ export function BookmarkButton({
           <button
             type="button"
             className="bm-remove"
-            onClick={() => void removeBookmark(existing.id).then(() => setOpen(false))}
+            // Closes once it is gone; when it could not be removed, stays open and says so (audit 2026-10-22).
+            onClick={() =>
+              void removeBookmark(existing.id).then((ok) => {
+                if (ok) setOpen(false);
+                else setRemoveFailed(true);
+              })
+            }
           >
             Remove bookmark
           </button>
+        ) : null}
+        {removeFailed ? (
+          <p className="msg err" role="alert">
+            Could not remove the bookmark. Try again.
+          </p>
         ) : null}
       </Popover>
     </span>

@@ -167,7 +167,7 @@ export function checkoutHandlers({ store, buyIndex }: IpcContext) {
       }
     },
 
-    /** Batched cache-only checkout: one IPC for all construction refs (replaces renderer per-ref loop). */
+    /** Batched cache-only checkout: one request for all construction refs (instead of one per ref). */
     checkoutBasketMulti: async (payload) => {
       if (!payload || typeof payload !== "object") return { ok: false as const, err: "Invalid payload." };
       const p = asRecord(payload);

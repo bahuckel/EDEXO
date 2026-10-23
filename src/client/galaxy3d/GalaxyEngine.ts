@@ -28,7 +28,7 @@ import {
   cellMin,
   maskTexel,
 } from "../../shared/galaxyGrid";
-import type { CellBounds, CellCoord } from "../../shared/galaxyGrid";
+import type { CellCoord } from "../../shared/galaxyGrid";
 import type { RegionOutlines } from "../../shared/regionBorders";
 import {
   readCells,
@@ -61,154 +61,49 @@ import {
   levelForDistance,
   mergeColumns,
   type Cluster,
-  type ClusterLevel,
 } from "./clusters";
-import type { GraphicsTier } from "./capabilities";
 import { setPointAttributes } from "./pointAttributes";
+import {
+  accentColour,
+  buildCrosshair,
+  CLOUDS_OVER_PLANE,
+  CORE,
+  makeCellMask,
+  makeRenderTarget,
+  NAMES_MAX,
+  PLANE_UNDER_CLOUDS,
+  ringRadius,
+  SOL,
+  SYSTEM_DISTANCE,
+  TOP_HEIGHT,
+} from "./engineGl";
+import type {
+  EngineLabel,
+  EngineOptions,
+  EngineStats,
+  HoverInfo,
+  MarkerItem,
+  MarkerLayer,
+  Selection,
+  ShownGroup,
+  TileEntry,
+} from "./engineTypes";
 
-/** The colour scheme's accent (`--accent` on the page), for lines drawn in WebGL. */
-function accentColour(): THREE.Color {
-  try {
-    const v = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
-    if (v) return new THREE.Color(v);
-  } catch {
-    /* no page style (a test): the default below */
-  }
-  return new THREE.Color(0xff9a3c);
-}
-
-/** Sagittarius A* in three's space (the game's z flipped): what "core" frames. */
-export const CORE = new THREE.Vector3(25.2, 0, -25_900);
-export const SOL = new THREE.Vector3(0, 0, 0);
-const TOP_HEIGHT = 110_000;
-/** A ring's radius on screen, px: the same log scale as its shader (ringVertex). */
-const ringRadius = (count: number) => Math.min(34, Math.max(10, 10 + 5 * Math.log10(Math.max(1, count)))) / 2;
-/** Inside this, system names are shown and systems are picked one by one. */
-const SYSTEM_DISTANCE = 1_600;
-
-/** System names kept for labels and the hover card; past this the oldest are asked for again. */
-const NAMES_MAX = 20_000;
-
-export interface EngineStats {
-  phase: "loading" | "ready" | "failed";
-  error?: string;
-  overviewPoints: number;
-  stride: number;
-  tilesLoaded: number;
-  tilesWanted: number;
-  tilePoints: number;
-  frames: number;
-  lastFrameMs: number;
-  distanceLy: number;
-  tiltDeg: number;
-  level: ClusterLevel;
-  groups: number;
-}
-
-export type LabelKind = "region" | "sector" | "count" | "system" | "plan" | "badge";
-export interface EngineLabel {
-  id: string;
-  kind: LabelKind;
-  text: string;
-  x: number;
-  y: number;
-  priority: number;
-}
-
-export type HoverInfo =
-  | {
-      kind: "system";
-      ordinal: number;
-      name: string | null;
-      species: number;
-      value: number;
-      x: number;
-      y: number;
-    }
-  | {
-      kind: "group";
-      level: ClusterLevel;
-      count: number;
-      top: number;
-      name: string | null;
-      x: number;
-      y: number;
-    }
-  | { kind: "marker"; layer: string; id: string; x: number; y: number };
-
-/** What was clicked: a galaxy-index system (by ordinal) or a marker of one of the layers. */
-export type Selection =
-  | { kind: "index"; ordinal: number; x: number; y: number; z: number }
-  | { kind: "sector"; key: string; x: number; y: number; z: number }
-  | { kind: "marker"; layer: string; id: string; x: number; y: number; z: number };
-
-/** One dot of a marker layer; game coordinates, ly; size in CSS px. */
-export interface MarkerItem {
-  id: string;
-  x: number;
-  y: number;
-  z: number;
-  color: [number, number, number];
-  size: number;
-}
-
-interface MarkerLayer {
-  items: MarkerItem[];
-  points: THREE.Points;
-  /** Screen positions, refreshed when the mouse asks. */
-  sx: Float32Array;
-  sy: Float32Array;
-  /** Higher answers the mouse first where layers overlap. */
-  priority: number;
-}
-
-export interface EngineOptions {
-  tier: Exclude<GraphicsTier, "none">;
-  /** Where the API lives; "" for the same origin. */
-  apiBase?: string;
-  onStats?: (s: EngineStats) => void;
-  onLabels?: (labels: EngineLabel[]) => void;
-  onHover?: (h: HoverInfo | null) => void;
-  onSelect?: (s: Selection | null) => void;
-  /** Clicked empty space while plane-click mode is on (the Codex mode picks a region with it). */
-  onPlaneClick?: (g: { x: number; z: number }) => void;
-}
-
-interface TileEntry {
-  key: string;
-  cell: CellCoord;
-  slot: number;
-  points: THREE.Points;
-  pick: THREE.Points;
-  count: number;
-  lastUsed: number;
-  positions: Int16Array;
-  species: Uint8Array;
-  values: Uint16Array;
-  ordinals: Uint32Array;
-  /** 1 where the system passes the Filter drawer's filter. */
-  match: Uint8Array;
-  groups320: Cluster[];
-  groups80: Cluster[];
-  /** The tile's room in three's space (z flipped), for the picking pass to skip tiles off the cursor. */
-  box: THREE.Box3;
-}
-
-interface ShownGroup extends Cluster {
-  name: string | null;
-  sx: number;
-  sy: number;
-  radius: number;
-}
-
-/**
- * The Milky Way's two layers (owner, 2026-10-04): the drawing laid faintly on the plane, and the 3D
- * clouds over it. The plane carries the detail and most of the light, the clouds — wide, soft and
- * fainter since "still blotchy" — the depth seen from the side; together a little brighter than the
- * drawing alone used to be (0.5), since the clouds spread theirs above and below the plane.
- */
-const PLANE_UNDER_CLOUDS = 0.4;
-const CLOUDS_OVER_PLANE = 0.24;
+/*
+  The types, the constants and the WebGL builders that need no engine state live in engineTypes.ts and
+  engineGl.ts since the audit of 2026-10-22. The public ones are re-exported, so GalaxyMap3D imports
+  them from here as before.
+*/
+export { CORE, SOL } from "./engineGl";
+export type {
+  EngineLabel,
+  EngineOptions,
+  EngineStats,
+  HoverInfo,
+  LabelKind,
+  MarkerItem,
+  Selection,
+} from "./engineTypes";
 
 export class GalaxyEngine {
   readonly renderer: THREE.WebGLRenderer;
@@ -422,7 +317,7 @@ export class GalaxyEngine {
       this.setHover(null);
     });
 
-    this.accum = this.makeTarget(1, 1);
+    this.accum = makeRenderTarget(1, 1);
     const material = new THREE.ShaderMaterial({
       glslVersion: THREE.GLSL3,
       vertexShader: compositeVertex,
@@ -458,15 +353,6 @@ export class GalaxyEngine {
   }
 
   // ---------------------------------------------------------------------------------------- setup
-
-  private makeTarget(w: number, h: number): THREE.WebGLRenderTarget {
-    return new THREE.WebGLRenderTarget(w, h, {
-      type: THREE.HalfFloatType,
-      depthBuffer: false,
-      minFilter: THREE.LinearFilter,
-      magFilter: THREE.LinearFilter,
-    });
-  }
 
   private ringMaterial(base = 0): THREE.ShaderMaterial {
     return new THREE.ShaderMaterial({
@@ -550,7 +436,7 @@ export class GalaxyEngine {
       if (this.disposed) return;
       this.addOverview(readOverview(pts));
       this.cells = readCells(cells);
-      this.mask = this.makeMask(this.cells.bounds);
+      this.mask = makeCellMask(this.cells.bounds);
       this.bindMask();
       this.stats.phase = "ready";
       this.updateLod(true);
@@ -606,20 +492,6 @@ export class GalaxyEngine {
     this.stats.overviewPoints = o.count;
     this.stats.stride = o.stride;
     this.overviewValues = o.values;
-  }
-
-  private makeMask(b: CellBounds): THREE.DataTexture {
-    const tex = new THREE.DataTexture(
-      new Uint8Array(b.dims.x * b.dims.y * b.dims.z),
-      b.dims.x,
-      b.dims.y * b.dims.z,
-      THREE.RedFormat,
-      THREE.UnsignedByteType,
-    );
-    tex.minFilter = THREE.NearestFilter;
-    tex.magFilter = THREE.NearestFilter;
-    tex.needsUpdate = true;
-    return tex;
   }
 
   private bindMask(): void {
@@ -1946,51 +1818,9 @@ export class GalaxyEngine {
     this.needsRender = true;
   }
 
-  /** The cross-hair: a cross at the target, its ring on the galactic plane, and the line between. */
+  /** The cross-hair (engineGl.ts), on the overlay. */
   private makeCrosshair(): THREE.Group {
-    const g = new THREE.Group();
-    const colour = accentColour();
-    const mat = new THREE.LineBasicMaterial({
-      color: colour,
-      transparent: true,
-      opacity: 0.9,
-      depthTest: false,
-    });
-    const faint = new THREE.LineBasicMaterial({
-      color: colour,
-      transparent: true,
-      opacity: 0.45,
-      depthTest: false,
-    });
-    const cross = new THREE.LineSegments(
-      new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-1, 0, 0),
-        new THREE.Vector3(-0.25, 0, 0),
-        new THREE.Vector3(0.25, 0, 0),
-        new THREE.Vector3(1, 0, 0),
-        new THREE.Vector3(0, 0, -1),
-        new THREE.Vector3(0, 0, -0.25),
-        new THREE.Vector3(0, 0, 0.25),
-        new THREE.Vector3(0, 0, 1),
-      ]),
-      mat,
-    );
-    cross.name = "cross";
-    const ringPts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 64; i++) {
-      const a = (i / 64) * Math.PI * 2;
-      ringPts.push(new THREE.Vector3(Math.cos(a) * 0.6, 0, Math.sin(a) * 0.6));
-    }
-    const ring = new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPts), faint);
-    ring.name = "ring";
-    const stem = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0)]),
-      faint,
-    );
-    stem.name = "stem";
-    for (const o of [cross, ring, stem]) o.renderOrder = 10;
-    g.add(cross, ring, stem);
-    g.visible = false;
+    const g = buildCrosshair(accentColour());
     this.overlay.add(g);
     return g;
   }

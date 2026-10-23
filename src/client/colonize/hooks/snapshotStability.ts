@@ -1,10 +1,12 @@
+import { colonizeSnapshotNotifySig } from "../../../shared/colonize/snapshotNotifySig";
 import type { ColonizeSnapshot } from "../../../shared/colonize/types";
+import { reuseUnchanged } from "../../snapshotMerge";
 
 /**
  * Carry unchanged parts of a snapshot forward by reference.
  *
- * The snapshot crosses IPC, which structurally clones it, so every push hands the renderer
- * brand-new arrays even for the parts that did not change. Cargo changes constantly while
+ * The snapshot crosses the socket as JSON, so every push hands the window brand-new arrays
+ * even for the parts that did not change. Cargo changes constantly while
  * trading, and each of those pushes used to give `activeDepots` a fresh identity — which is
  * enough to make every memo keyed on it recompute, including the whole logistics plan.
  *
@@ -18,10 +20,7 @@ function depotsSig(depots: ColonizeSnapshot["activeDepots"]): string {
     .map((d) => {
       const resources = d.resources.map((r) => `${r.name}:${r.required}:${r.provided}`).join(",");
       const contributions = d.contributions.map((c) => `${c.commodityId}:${c.totalTons}`).join(",");
-      /**
-       * History arrays are compared by length rather than contents: they only ever grow, and
-       * a new sample always arrives with a new `lastTimestamp`, which is already covered.
-       */
+      // A new progress sample always arrives with a new `lastTimestamp` (the histories are not pushed any more).
       return [
         d.marketId,
         d.starSystem ?? "",
@@ -31,8 +30,6 @@ function depotsSig(depots: ColonizeSnapshot["activeDepots"]): string {
         d.complete ? 1 : 0,
         d.failed ? 1 : 0,
         d.lastTimestamp ?? "",
-        d.progressHistory.length,
-        d.contributionProgressHistory.length,
         resources,
         contributions,
       ].join("|");
@@ -65,6 +62,15 @@ function keepIfSame<T>(previous: T | undefined, next: T, sign: (value: T) => str
   return sign(previous) === sign(next) ? previous : next;
 }
 
+/**
+ * Whether a push is worth applying in the window: everything the server pushes for (one shared rule,
+ * shared/colonize/snapshotNotifySig.ts), plus where the ship is docked by name, which only the window shows. The
+ * window's own narrower copy dropped carrier, wing, replay, error, colony and market-offer pushes (audit 2026-10-22).
+ */
+export function colonizeWindowSnapSig(s: ColonizeSnapshot): string {
+  return `${colonizeSnapshotNotifySig(s)}|${JSON.stringify([s.liveDocked?.stationName ?? null, s.liveDocked?.starSystem ?? null])}`;
+}
+
 export function stabilizeSnapshot(
   prev: ColonizeSnapshot | null,
   next: ColonizeSnapshot,
@@ -78,5 +84,15 @@ export function stabilizeSnapshot(
     shipCargo: keepIfSame(prev.shipCargo, next.shipCargo, cargoSig),
     journalShopHistory: keepIfSame(prev.journalShopHistory, next.journalShopHistory, shopHistorySig),
     wingRoster: keepIfSame(prev.wingRoster, next.wingRoster, wingSig),
+    /*
+      The server builds these afresh for every snapshot (`carriers` is a new [] even with no carrier), so without this
+      every applied push, an FSD jump among them, rebuilt the cargo map, the needs, the haul plan and the summary
+      (audit 2026-10-22). Small values: compared whole, as Compare's own snapshot is (snapshotMerge.ts).
+    */
+    carriers: reuseUnchanged(prev.carriers, next.carriers),
+    liveDocked: reuseUnchanged(prev.liveDocked, next.liveDocked),
+    dockMarket: reuseUnchanged(prev.dockMarket, next.dockMarket),
+    ownColonies: reuseUnchanged(prev.ownColonies, next.ownColonies),
+    navContext: reuseUnchanged(prev.navContext, next.navContext),
   };
 }

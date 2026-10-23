@@ -58,7 +58,7 @@ function hitDistanceLy(
   distanceBySystem: Record<string, number>,
 ): number {
   /** A cost for the graph: unknown is "unreachable", never a number someone could read as a distance. */
-  return lyOrLast(constructionHopLy(originSystem, hit.systemName, hit.distanceLy, distanceBySystem));
+  return lyOrLast(constructionHopLy(originSystem, hit.systemName, distanceBySystem));
 }
 
 function minSystemDistance(
@@ -76,12 +76,7 @@ function minSystemDistance(
   }
   const sample = hits.find((h) => normSystemName(h.systemName) === systemNorm);
   if (sample) {
-    const mapped = lookupGalaxyDistanceLy(
-      sample.systemName,
-      distanceBySystem,
-      normSystemName,
-      originSystem,
-    );
+    const mapped = lookupGalaxyDistanceLy(sample.systemName, distanceBySystem, originSystem);
     if (mapped != null) best = Math.min(best, mapped);
   }
   return best;

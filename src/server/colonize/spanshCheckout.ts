@@ -2,7 +2,7 @@ import { buyStationPlaceKey } from "../../shared/colonize/buyStationMerge";
 import { parseMarketId } from "../../shared/colonize/marketId";
 import { TtlCache } from "../../shared/colonize/ttlCache";
 import { mapPool } from "../../shared/colonize/mapPool";
-import { commodityMergeBucket, commodityNormKey } from "../../shared/colonize/commodityKey";
+import { basketItemId, commodityMergeBucket, itemLabel } from "../../shared/colonize/commodityKey";
 import type { MaterialBuyStationHit } from "../../shared/colonize/materialBuyIndexTypes";
 import { spanshPrimaryStationSearchFilters } from "../../shared/colonize/spanshCommodity";
 import { MATERIAL_BUY_CACHE_TTL_MS, MaterialBuyIndex } from "./materialBuyIndex";
@@ -255,12 +255,8 @@ export async function scanAndPersistMaterialHits(args: {
   item: BasketCheckoutItem;
   constructionDepots?: CheckoutFilters["constructionDepots"];
 }): Promise<number> {
-  const id =
-    args.item.id ||
-    commodityMergeBucket(args.item.name) ||
-    commodityMergeBucket(args.item.nameLocalised) ||
-    commodityNormKey(args.item.name);
-  const label = (args.item.nameLocalised || args.item.name).trim() || args.item.name;
+  const id = basketItemId(args.item);
+  const label = itemLabel(args.item);
   if (!id) return 0;
   const { spansh, buyPayload } = await resolveSpanshCommodityName(
     args.referenceSystem,
@@ -384,7 +380,7 @@ async function buildCacheOnlyCheckoutResult(args: {
   ];
   const distanceMap = await resolveSystemDistanceMap([args.distanceRef], sellerSystems);
   for (const st of stationByKey.values()) {
-    st.distanceLy = constructionHopLy(args.distanceRef, st.systemName, st.distanceLy, distanceMap);
+    st.distanceLy = constructionHopLy(args.distanceRef, st.systemName, distanceMap);
   }
 
   const hitsByCommodity = new Map<string, MaterialBuyStationHit[]>();
@@ -451,7 +447,7 @@ async function buildCacheOnlyCheckoutResult(args: {
     routingMode: args.routingMode,
     depotLabel: args.depotLabel,
     /**
-     * The live path reports this and the renderer measures against it. Omitting it here left
+     * The live path reports this and the window measures against it. Omitting it here left
      * every cache-only checkout — which is the default — without a site to measure from.
      */
     constructionSiteSystem: args.constructionSiteSystem,
@@ -461,11 +457,7 @@ async function buildCacheOnlyCheckoutResult(args: {
 function dedupeBasketItems(items: BasketCheckoutItem[]): BasketCheckoutItem[] {
   const acc = new Map<string, BasketCheckoutItem>();
   for (const it of items) {
-    const b =
-      it.id ||
-      commodityMergeBucket(it.name) ||
-      commodityMergeBucket(it.nameLocalised) ||
-      commodityNormKey(it.name);
+    const b = basketItemId(it);
     if (!b) continue;
     const qty = Math.max(1, Math.ceil(it.quantityTons || 1));
     const cur = acc.get(b);
@@ -511,7 +503,7 @@ export async function runBasketCheckout(args: {
   const uniqueItems = dedupeBasketItems(args.items);
   const skipMemo = args.skipCache === true;
 
-  const mk = memoKeyCheckout({
+  const memoArgs = {
     referenceSystem: ref,
     distanceRef,
     constructionSiteSystem: siteInput,
@@ -522,7 +514,8 @@ export async function runBasketCheckout(args: {
     cacheOnly,
     forceLiveScan: args.forceLiveScan === true,
     indexGen: args.materialIndex?.mergeGeneration() ?? 0,
-  });
+  };
+  const mk = memoKeyCheckout(memoArgs);
   if (!skipMemo) {
     const memHit = checkoutMemo.get(mk);
     if (memHit) return memHit;
@@ -533,12 +526,8 @@ export async function runBasketCheckout(args: {
   }
 
   const preNeeds = uniqueItems.map((it) => ({
-    id:
-      it.id ||
-      commodityMergeBucket(it.name) ||
-      commodityMergeBucket(it.nameLocalised) ||
-      commodityNormKey(it.name),
-    label: (it.nameLocalised || it.name).trim() || it.name,
+    id: basketItemId(it),
+    label: itemLabel(it),
     quantityTons: it.quantityTons,
   }));
 
@@ -612,12 +601,8 @@ export async function runBasketCheckout(args: {
   const itemsNeedingLive = cacheOnly
     ? []
     : uniqueItems.filter((it) => {
-        const id =
-          it.id ||
-          commodityMergeBucket(it.name) ||
-          commodityMergeBucket(it.nameLocalised) ||
-          commodityNormKey(it.name);
-        const label = (it.nameLocalised || it.name).trim() || it.name;
+        const id = basketItemId(it);
+        const label = itemLabel(it);
         if (!id) return true;
         if (forceLive) return true;
         if (!index) return true;
@@ -641,7 +626,7 @@ export async function runBasketCheckout(args: {
       });
 
   const resolvePass = await mapPool(itemsNeedingLive, RESOLVE_COMMODITY_CONCURRENCY, async (it) => {
-    const label = (it.nameLocalised || it.name).trim() || it.name;
+    const label = itemLabel(it);
     const { spansh, tried, buyPayload } = await resolveSpanshCommodityName(
       ref,
       it.id,
@@ -653,11 +638,7 @@ export async function runBasketCheckout(args: {
 
   const spanshResolved: Resolved[] = [];
   for (const row of resolvePass) {
-    const id =
-      row.it.id ||
-      commodityMergeBucket(row.it.name) ||
-      commodityMergeBucket(row.it.nameLocalised) ||
-      commodityNormKey(row.it.name);
+    const id = basketItemId(row.it);
     const prev = triedById.get(id) ?? [];
     triedById.set(id, [...new Set([...prev, ...row.tried, "spansh"])]);
     if (!row.buyPayload || spanshSearchHitCount(row.buyPayload) <= 0) continue;
@@ -775,7 +756,7 @@ export async function runBasketCheckout(args: {
   ];
   const distanceMap = await resolveSystemDistanceMap([distanceRef], sellerSystems);
   for (const st of stationByKey.values()) {
-    st.distanceLy = constructionHopLy(distanceRef, st.systemName, st.distanceLy, distanceMap);
+    st.distanceLy = constructionHopLy(distanceRef, st.systemName, distanceMap);
   }
 
   const needRows: NeedRow[] = [];
@@ -872,7 +853,17 @@ export async function runBasketCheckout(args: {
     routingMode,
     depotLabel: args.depotLabel ?? null,
   };
-  if (!skipMemo) checkoutMemo.set(mk, result);
+  // A forced live look is asked for again on purpose: never answer the next one from memory.
+  if (!skipMemo && !memoArgs.forceLiveScan) {
+    /*
+      A live checkout merges what it found into the index, which moves the generation on: keyed by the generation it
+      started from, the result could never be served again (audit 2026-10-22). Key it by the index it was built from;
+      older generations' entries are dead, so they go.
+    */
+    const genNow = args.materialIndex?.mergeGeneration() ?? 0;
+    if (genNow !== memoArgs.indexGen) checkoutMemo.clear();
+    checkoutMemo.set(genNow === memoArgs.indexGen ? mk : memoKeyCheckout({ ...memoArgs, indexGen: genNow }), result);
+  }
 
   return result;
 }

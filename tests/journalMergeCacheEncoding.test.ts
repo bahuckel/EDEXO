@@ -1,7 +1,9 @@
+import v8 from "node:v8";
 import { describe, expect, it } from "vitest";
 import {
   decodeJournalMergeCache,
   encodeJournalMergeCache,
+  internStrings,
   JOURNAL_MERGE_CACHE_ENCODING,
 } from "../src/server/journalMergeCacheEncoding.js";
 import type { JournalMergeCachePayload } from "../src/server/gameState.js";
@@ -170,5 +172,51 @@ describe("journal merge cache encoding", () => {
     expect(decodeJournalMergeCache(null)).toBeNull();
     expect(decodeJournalMergeCache({ enc: JOURNAL_MERGE_CACHE_ENCODING })).toBeNull();
     expect(decodeJournalMergeCache("nonsense")).toBeNull();
+  });
+});
+
+/*
+  v8.deserialize makes a new string for every occurrence, and the payload is held for the session: the load shares
+  one copy of each (audit 2026-10-22). Sharing cannot be seen from JavaScript; what can is that nothing changed.
+*/
+describe("repeated strings on load", () => {
+  it("are replaced in place by equal ones, through arrays, plain objects and the [key, value] lists", () => {
+    const doc = v8.deserialize(
+      v8.serialize({
+        bodies: [
+          ["1:2", { source: "journal", scan: { ScanType: "Detailed", materials: [{ Name: "iron", Percent: 1 }] } }],
+          ["1:3", { source: "journal", scan: { ScanType: "Detailed", materials: [{ Name: "iron" }] } }],
+        ],
+        dssMappedBodyKeys: ["1:2", "1:3", "1:2"],
+        organicRunStartedAt: [["1:2::x", 5]],
+        mixed: ["x", null, undefined, 0, false, ["x"]],
+        lastEventIso: "2026-10-22T00:00:00Z",
+        commanderPos: null,
+      }),
+    ) as Record<string, unknown>;
+    const before = v8.deserialize(v8.serialize(doc)) as Record<string, unknown>;
+    internStrings(doc);
+    expect(doc).toEqual(before);
+  });
+
+  it("leaves what is not an array or a plain object alone, and a root that is not an object", () => {
+    const map = new Map([["k", "v"]]);
+    const bytes = new Uint8Array([1, 2, 3]);
+    const date = new Date(0);
+    const doc = { map, bytes, date, list: [map, bytes, date], s: "s" };
+    internStrings(doc);
+    expect(doc).toEqual({ map, bytes, date, list: [map, bytes, date], s: "s" });
+    expect(doc.map.get("k")).toBe("v");
+    expect(() => internStrings(null)).not.toThrow();
+    expect(() => internStrings("text")).not.toThrow();
+  });
+
+  it("keeps a decoded cache deep-equal to the payload that was written", () => {
+    const p = payload([
+      ["1234567:4", body()],
+      ["1234567:5", body({ key: "1234567:5", bodyId: 5, bodyName: "Test AB-C d1-2 3 b" })],
+    ]);
+    const back = decodeJournalMergeCache(v8.deserialize(v8.serialize(encodeJournalMergeCache(p))));
+    expect(back).toEqual(p);
   });
 });

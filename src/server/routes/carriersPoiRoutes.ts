@@ -15,7 +15,7 @@ import { lookupCarrierOnGalmap } from "../edastroGalmap.js";
 import { summariseStatistics } from "../statistics.js";
 import { statisticsScanProgress } from "../statisticsScan.js";
 
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import {
   downloadStations,
   loadStationsIndex,

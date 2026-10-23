@@ -1,13 +1,12 @@
 import { normSystemName, stationNamesMatch } from "./stationFilter";
 import { storageGet, storageSet } from "./storage";
+import { KEY_BANNED_STATIONS as BANNED_STATIONS_KEY } from "./uiStateKeys";
 
 export type BannedStation = {
   systemName: string;
   stationName: string;
   bannedAt: string;
 };
-
-const BANNED_STATIONS_KEY = "edexo-colonize-banned-stations-v1";
 
 function stationBanKey(systemName: string, stationName: string): string {
   return `${normSystemName(systemName)}\0${stationName.trim().toLowerCase().replace(/\s+/g, " ")}`;

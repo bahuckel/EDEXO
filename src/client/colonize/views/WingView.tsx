@@ -5,11 +5,10 @@
 import { useMemo, useState } from "react";
 import { pickWingColor, type WingCargoClaim, type WingMember } from "../../../shared/colonize/wingManifest";
 import { depotDisplayLabel } from "../../../shared/colonize/depotLabel";
+import { formatTons as t } from "../../../shared/colonize/formatPrice";
 import type { ColonizeModel } from "../useColonize";
 import { Select } from "../../ui/Select";
 import { BTN, BTN_LINK, Panel } from "./ui";
-
-const t = (n: number) => `${Math.round(n).toLocaleString("en-US")} t`;
 
 export function WingView({ m }: { m: ColonizeModel }) {
   const roster = m.snap?.wingRoster ?? [];

@@ -23,11 +23,26 @@ export async function writeJsonAtomic(filePath: string, data: unknown, pretty = 
 }
 
 export async function readJson<T>(filePath: string, fallback: T): Promise<T> {
+  return (await readJsonKeepingCorrupt(filePath, fallback)).value;
+}
+
+/**
+ * Like readJson, but a file that is there and does not parse (torn write, antivirus, a hand edit) is copied to
+ * `<file>.bak-corrupt` before the caller starts empty and the next save replaces it. It used to be dropped silently,
+ * and with it archived flags, carriers and Inara imports the journals cannot rebuild (audit 2026-10-22).
+ */
+export async function readJsonKeepingCorrupt<T>(filePath: string, fallback: T): Promise<{ value: T; corrupt: boolean }> {
+  let raw: string;
   try {
-    const raw = await fs.readFile(filePath, "utf8");
-    return JSON.parse(raw) as T;
+    raw = await fs.readFile(filePath, "utf8");
   } catch {
-    return fallback;
+    return { value: fallback, corrupt: false };
+  }
+  try {
+    return { value: JSON.parse(raw) as T, corrupt: false };
+  } catch {
+    await backupUnreadableJson(filePath, "corrupt");
+    return { value: fallback, corrupt: true };
   }
 }
 

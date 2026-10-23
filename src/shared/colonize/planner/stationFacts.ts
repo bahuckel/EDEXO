@@ -112,7 +112,7 @@ export function filterMaterialBuyStationHits(
   });
 }
 
-/** Closest eligible seller per commodity — buy cards and primary trip targets. */
+/** Closest eligible seller per commodity — the trips' primary targets. */
 export function buildPreferredBuyStationByCommodity(
   listings: MaterialBuyListing[],
   catalog: Map<string, PlannerStation>,

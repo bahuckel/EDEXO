@@ -6,26 +6,11 @@ import { initialUiState, uiReducer, type UiState } from "./uiState";
 /**
  * Persistence lives here rather than at each call site.
  *
- * The previous arrangement wrote to storage from wherever a value happened to change, so
- * the basket was saved in five places and the shopping run in five more, and any path
- * that forgot simply lost the change. One effect per slice means a value is saved because
- * it changed, not because someone remembered to save it.
+ * The old app wrote to storage from wherever a value happened to change, and any path that
+ * forgot simply lost the change. One effect per slice means a value is saved because it
+ * changed, not because someone remembered to save it.
  */
 function usePersistUiState(state: UiState): void {
-  useEffect(() => {
-    writeRaw(STORAGE_KEYS.appMode, state.appMode);
-  }, [state.appMode]);
-
-  useEffect(() => {
-    if (state.basket.length) writeJson(STORAGE_KEYS.basket, state.basket);
-    else removeRaw(STORAGE_KEYS.basket);
-  }, [state.basket]);
-
-  useEffect(() => {
-    if (state.autoBasketSync) writeRaw(STORAGE_KEYS.autoBasketSync, "1");
-    else removeRaw(STORAGE_KEYS.autoBasketSync);
-  }, [state.autoBasketSync]);
-
   useEffect(() => {
     writeJson(STORAGE_KEYS.checkoutFilters, state.checkoutFilters);
   }, [state.checkoutFilters]);
@@ -33,11 +18,6 @@ function usePersistUiState(state: UiState): void {
   useEffect(() => {
     writeRaw(STORAGE_KEYS.checkoutRouting, state.routingMode);
   }, [state.routingMode]);
-
-  useEffect(() => {
-    if (state.shoppingRun) writeJson(STORAGE_KEYS.shoppingRun, state.shoppingRun);
-    else removeRaw(STORAGE_KEYS.shoppingRun);
-  }, [state.shoppingRun]);
 
   useEffect(() => {
     if (Object.keys(state.depotRefPins).length) writeJson(STORAGE_KEYS.depotRefPins, state.depotRefPins);

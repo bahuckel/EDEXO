@@ -29,7 +29,7 @@ import type { MassCode } from "../../shared/boxelAdvice.js";
 import { systemPrefixOf } from "../expedition.js";
 import { expeditionCandidates, expeditionField, expeditionPlan, parseCodes, type ExpeditionDeps } from "../expeditionService.js";
 import { BODY_KINDS, circleSuggestions, loadFeatureTable, parseTarget, starTypes } from "../expeditionTargets.js";
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 type Xyz = { x: number; y: number; z: number };
 

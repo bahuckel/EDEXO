@@ -387,22 +387,52 @@ export class StationsIndex {
     return out;
   }
 
-  private byName: Map<string, number> | null = null;
+  /*
+    The systems by name: a hash of each lowercased name, sorted, with its record number beside it (audit 2026-10-22).
+    A Map of 137 k lowercased names held 12 MB for the life of the index; these two arrays hold 1.1 MB, and a
+    look-up checks the few records with its hash against the name itself, lowest record first.
+  */
+  private nameHashes: Uint32Array | null = null;
+  private nameRecords: Uint32Array | null = null;
+
+  private systemNameLower(s: number): string {
+    return this.str(this.buf.readUInt32LE(this.sysAt + s * SYS + 12)).toLowerCase();
+  }
 
   /**
    * A system by name, any case (Colonize, 1.3.0: coordinates and station facts before asking EDSM or Spansh): its
-   * record number, or -1. The name map is built on the first call, one pass over the system records.
+   * record number, or -1; the first record when two share a name. The hashes are built on the first call, one pass
+   * over the system records.
    */
   systemIndex(name: string): number {
-    if (!this.byName) {
-      const m = new Map<string, number>();
-      for (let s = 0; s < this.systemCount; s++) {
-        const k = this.str(this.buf.readUInt32LE(this.sysAt + s * SYS + 12)).toLowerCase();
-        if (!m.has(k)) m.set(k, s);
-      }
-      this.byName = m;
+    if (!this.nameHashes || !this.nameRecords) {
+      const n = this.systemCount;
+      const hashes = new Uint32Array(n);
+      for (let s = 0; s < n; s++) hashes[s] = nameHash(this.systemNameLower(s));
+      const order = new Uint32Array(n);
+      for (let s = 0; s < n; s++) order[s] = s;
+      // By hash, then by record, so the first record with a name is met first.
+      order.sort((a, b) => hashes[a]! - hashes[b]! || a - b);
+      const sorted = new Uint32Array(n);
+      for (let i = 0; i < n; i++) sorted[i] = hashes[order[i]!]!;
+      this.nameHashes = sorted;
+      this.nameRecords = order;
     }
-    return this.byName.get(name.trim().toLowerCase()) ?? -1;
+    const want = name.trim().toLowerCase();
+    const h = nameHash(want);
+    const hashes = this.nameHashes;
+    let lo = 0;
+    let hi = hashes.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (hashes[mid]! < h) lo = mid + 1;
+      else hi = mid;
+    }
+    for (let i = lo; i < hashes.length && hashes[i] === h; i++) {
+      const s = this.nameRecords[i]!;
+      if (this.systemNameLower(s) === want) return s;
+    }
+    return -1;
   }
 
   /** A system's coordinates and name as the dump spells it, by name in any case; null when not in the index. */
@@ -434,6 +464,16 @@ export class StationsIndex {
   }
 }
 
+/** FNV-1a over the UTF-16 code units: the station index's name look-up ({@link StationsIndex.systemIndex}). */
+function nameHash(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
 function userGalaxyDir(): string {
   return path.join(path.dirname(resolveUserSettingsJsonPath()), "galaxy");
 }
@@ -446,20 +486,22 @@ export function stationsFilePath(projectRoot = getProjectRoot()): string {
 }
 
 let cached: StationsIndex | null = null;
-let cachedFrom = "";
 
+/*
+  Held as read, without looking for the file again (audit 2026-10-22): Colonize asks once per seller row, and that
+  was one or two existence checks on disk each time. A download clears it before the new file goes in, and the
+  map's idle release lets it go, so the next call finds the file again.
+*/
 export function loadStationsIndex(): StationsIndex | null {
+  if (cached) return cached;
   const file = stationsFilePath();
-  if (cached && cachedFrom === file) return cached;
   if (!existsSync(file)) return null;
   cached = new StationsIndex(readFileSync(file));
-  cachedFrom = file;
   return cached;
 }
 
 export function clearStationsIndex(): void {
   cached = null;
-  cachedFrom = "";
 }
 
 export interface StationsStatus {

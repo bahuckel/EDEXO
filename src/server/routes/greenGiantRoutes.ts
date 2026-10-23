@@ -3,7 +3,7 @@
  * (server/greenGiants.ts). Open to the phone: he may be looking at the planet while the app is on it.
  */
 import type express from "express";
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 export function registerGreenGiantRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
   app.post("/api/ggg/mark", (req, res) => {

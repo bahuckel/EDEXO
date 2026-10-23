@@ -23,7 +23,8 @@ export function pruneBuyIndexBySources(
       const stations = row.stations.filter((h) => !sources.has(h.dataSource));
       removedHits += row.stations.length - stations.length;
       if (!stations.length) continue;
-      keptRows[id] = stations.length === row.stations.length ? row : { ...row, stations, updatedAtIso: new Date().toISOString() };
+      // Removing hits is not a scan: the row keeps its scan time, so the next background look is not put off 14 days.
+      keptRows[id] = stations.length === row.stations.length ? row : { ...row, stations };
     }
     if (Object.keys(keptRows).length) next[ref] = keptRows;
   }

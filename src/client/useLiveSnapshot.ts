@@ -59,6 +59,15 @@ function websocketUrl(): string {
  */
 const HTTP_STATE_BACKUP_MS = 10_000;
 
+/**
+ * How long a new page waits for the socket's first frame before it fetches `/api/state` instead (audit 2026-10-22).
+ * The server's first frame on a socket is always the whole snapshot, so the fetch every page made at start-up as
+ * well had the server build, stringify and gzip it twice and the page parse and draw it twice: 0.8 MB, about 10 MB in
+ * a rich system, at the moment the server is busiest. Now the fetch is the fallback: no frame in this time, or a
+ * socket that closed before it sent one.
+ */
+const FIRST_FRAME_WAIT_MS = 1_500;
+
 /** Reconnect waits: 1.1 s first, doubling to 10 s while the socket keeps failing (plan 2.2, F-9.3). */
 const RECONNECT_FIRST_MS = 1_100;
 const RECONNECT_MAX_MS = 10_000;
@@ -185,7 +194,17 @@ export function useLiveSnapshot(): {
           if (!cancelled) setConnected(false);
         });
 
-    fetchFull();
+    // The socket's first frame brings the snapshot; `/api/state` only if it has not come in time (FIRST_FRAME_WAIT_MS).
+    let firstFrameTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      firstFrameTimer = null;
+      if (!cancelled && held === null) fetchFull();
+    }, FIRST_FRAME_WAIT_MS);
+    const clearFirstFrameTimer = () => {
+      if (firstFrameTimer != null) {
+        clearTimeout(firstFrameTimer);
+        firstFrameTimer = null;
+      }
+    };
 
     const connect = () => {
       if (cancelled) return;
@@ -200,6 +219,12 @@ export function useLiveSnapshot(): {
         setConnected(false);
         shownRev = null;
         if (!cancelled) {
+          // Closed (or never opened: an error is always followed by a close) before any snapshot: the fallback fetch
+          // now, not at the end of the wait. Once only; after that the 10 s backup check keeps asking, as before.
+          if (held === null && firstFrameTimer != null) {
+            clearFirstFrameTimer();
+            fetchFull();
+          }
           reconnectRef.current = setTimeout(connect, reconnectMs);
           reconnectMs = Math.min(RECONNECT_MAX_MS, reconnectMs * 2);
         }
@@ -210,6 +235,7 @@ export function useLiveSnapshot(): {
           const raw = String(ev.data);
           const msg = JSON.parse(raw);
           if (msg.type === "state") {
+            clearFirstFrameTimer();
             perfSnapshotReceived(raw.length, arrivedAt);
             if (typeof msg.rev === "number") lastRev = shownRev = msg.rev;
             applyPayload(
@@ -247,6 +273,7 @@ export function useLiveSnapshot(): {
     return () => {
       cancelled = true;
       clearReconnect();
+      clearFirstFrameTimer();
       clearInterval(httpBackup);
       ws?.close();
     };

@@ -49,7 +49,7 @@ function hitFromUnified(
   distanceBySystem?: Record<string, number>,
 ): MaterialBuyStationHit {
   const distanceLy = constructionRef
-    ? constructionHopLy(constructionRef, st.systemName, st.distanceLy, distanceBySystem)
+    ? constructionHopLy(constructionRef, st.systemName, distanceBySystem)
     : toLy(st.distanceLy);
   return {
     systemName: st.systemName || "—",

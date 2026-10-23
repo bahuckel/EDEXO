@@ -4,22 +4,24 @@
  *
  * Plan opens first (owner, 2026-10-18: "Sites + haul plan"); Search, Sources and Wing are a tab away.
  */
-import { useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import "./colonize.css";
 import { depotDisplayLabel } from "../../shared/colonize/depotLabel";
+import { formatTons } from "../../shared/colonize/formatPrice";
 import { colonizeReadOnly, useColonizeAppState } from "./api";
-import { AppLegalFooter } from "../App";
+import { AppLegalFooter } from "../AppLegalFooter";
 import { HeaderBar } from "../HeaderBar";
 import { HexSignals } from "../HexSignals";
 import { TabHost } from "../tabs/TabHost";
 import { UiFeedbackProvider } from "../ui/feedback";
+import { tabListKeyDown } from "../ui/Tabs";
 import { useLiveSnapshot } from "../useLiveSnapshot";
 import { STREAMER_MODE } from "../streamerMode";
 import { PhoneView } from "./views/PhoneView";
 import { loadColonizeUiState, onRemoteUiState } from "./uiStateSync";
 import { LoadingNote } from "../ui/Loading";
 import { AppStateProvider } from "./state/AppStateContext";
-import { useColonize } from "./useColonize";
+import { useColonize, type ColonizeModel } from "./useColonize";
 import { PlanView } from "./views/PlanView";
 import { SearchView } from "./views/SearchView";
 import { SourcesView } from "./views/SourcesView";
@@ -84,27 +86,46 @@ function PcScreen() {
       off();
     };
   }, []);
-  if (!ready) return <LoadingNote className="screen-loading" />;
-  const redraw = () => {
+  const redraw = useCallback(() => {
     setRemote(false);
     setGen((g) => g + 1);
-  };
-  // Compare's shell (owner, 2026-10-22: "the same quality and feel"): its feedback (toasts, confirms) and background.
+  }, []);
+  if (!ready) return <LoadingNote className="screen-loading" />;
+  /*
+    Compare's shell (owner, 2026-10-22: "the same quality and feel"): its feedback (toasts, confirms) and background.
+    Compare's live snapshot is read above the redraw's key (audit 2026-10-22): inside it, every "Show the changes" (and
+    every save another window made while this one was behind) closed the socket and loaded the full snapshot twice
+    over, 0.8-10 MB each, to draw the same header.
+  */
   return (
     <UiFeedbackProvider>
       <HexSignals />
-      <AppStateProvider key={gen}>
-        <ColonizeApp remoteChange={remote ? redraw : null} />
-      </AppStateProvider>
+      <LiveSnapshotFeed>
+        <AppStateProvider key={gen}>
+          <ColonizeApp remoteChange={remote ? redraw : null} />
+        </AppStateProvider>
+      </LiveSnapshotFeed>
     </UiFeedbackProvider>
   );
+}
+
+type LiveSnapshot = ReturnType<typeof useLiveSnapshot>;
+const LiveSnapshotContext = createContext<LiveSnapshot>({ snapshot: null, connected: false });
+
+/**
+ * Compare's live snapshot for the shared header, handed down by context to ColonizeShell alone. A push re-renders
+ * this and the shell; its `children` were made by PcScreen, so React leaves them (and the Colonize views) be.
+ */
+function LiveSnapshotFeed({ children }: { children: ReactNode }) {
+  const { snapshot, connected } = useLiveSnapshot();
+  const live = useMemo(() => ({ snapshot, connected }), [snapshot, connected]);
+  return <LiveSnapshotContext.Provider value={live}>{children}</LiveSnapshotContext.Provider>;
 }
 
 const noop = () => undefined;
 
 function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
   const m = useColonize();
-  const app = useColonizeAppState();
   const [tab, setTabState] = useState<Tab>(readTab);
   const setTab = (t: Tab) => {
     setTabState(t);
@@ -119,6 +140,79 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
   }, []);
 
   const snap = m.snap;
+  /*
+    The views, as an element for the shell to place. Made here, so a Compare push or a colonize-socket frame, which
+    re-render only ColonizeShell, finds the same element and skips the whole Colonize tree (audit 2026-10-22: Plan,
+    the sites and the trips were drawn again 1-4 times a second while flying). They redraw when Colonize's own
+    state does.
+  */
+  return (
+    <ColonizeShell m={m}>
+      <div className="cz cz--in-shell">
+      {/* The app's keyboard for an option strip (ui/Tabs.tsx): one Tab stop, the arrows move and choose. */}
+      <nav className="cz-tabs" role="tablist" aria-label="Colonize sections" onKeyDown={(ev) => tabListKeyDown(ev, { follow: true })}>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            className={`tab${tab === t.key ? " on" : ""}`}
+            aria-selected={tab === t.key}
+            tabIndex={tab === t.key ? 0 : -1}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+            {t.key === "wing" && (snap?.wingRoster.length ?? 0) > 0 ? (
+              <span className="cz-tab__count">{snap?.wingRoster.length}</span>
+            ) : null}
+          </button>
+        ))}
+      </nav>
+      {remoteChange ? (
+        <div className="cz-main cz-main--note">
+          <div className="cz-note cz-note--info" role="status">
+            <span className="cz-note__text">Another window changed your plan or settings.</span>
+            <button type="button" className={BTN} onClick={remoteChange}>
+              Show the changes
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {m.inaraNotice ? (
+        <div className="cz-main cz-main--note">
+          <div className="cz-note cz-note--info" role="status">
+            <span className="cz-note__text">{m.inaraNotice}</span>
+            <button type="button" className={BTN_LINK} onClick={m.dismissInaraNotice}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ) : null}
+      <main className="cz-main">
+        {tab === "plan" ? <PlanView m={m} /> : null}
+        {tab === "search" ? <SearchView m={m} /> : null}
+        {tab === "sources" ? <SourcesView m={m} /> : null}
+        {tab === "wing" ? <WingView m={m} /> : null}
+        {snap?.lastError ? (
+          <p className="cz-note cz-note--bad" role="alert" style={{ marginTop: 16 }}>
+            {snap.lastError}
+          </p>
+        ) : null}
+      </main>
+      </div>
+    </ColonizeShell>
+  );
+}
+
+/**
+ * Compare's app bar and footer around the Colonize views, with Colonize's tray in the bar. The only part that reads
+ * Compare's live snapshot and the colonize socket's app state, so their frequent changes redraw this and the header,
+ * and not the views it is given as `children`.
+ */
+function ColonizeShell({ m, children }: { m: ColonizeModel; children: ReactNode }) {
+  const live = useContext(LiveSnapshotContext);
+  const app = useColonizeAppState();
+  const snap = m.snap;
   const docked = snap?.liveDocked ?? null;
   // At one of your sites, its short name ("Hammond Port"), not the game's "Orbital Construction Site: Hammond Port".
   const dockedSite = docked ? snap?.activeDepots.find((d) => d.marketId === docked.marketId) : undefined;
@@ -126,8 +220,6 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
     ? { k: "Docked", v: dockedSite ? depotDisplayLabel(dockedSite) : docked.stationName, sub: docked.starSystem ?? "" }
     : { k: "You", v: snap?.navContext.starSystem ?? app.state.currentSystem ?? "…", sub: "" };
   const sellers = m.stations.checkoutBundle?.plans.reduce((n, p) => n + (p.catalogStations?.length ?? 0), 0) ?? 0;
-  // Compare's snapshot drives the shared shell (app bar, status, CMDR, notices, the screens in the tab strip).
-  const live = useLiveSnapshot();
 
   /* Colonize's tray, under the shared app bar: where the ship is, the hold, carriers, sellers, the site finder. */
   const tray = (
@@ -153,7 +245,7 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
               >
                 <span className="cz-chip__k">{on ? "✓ Carrier" : "Carrier"}</span>
                 <b className="cz-chip__v">{c.callsign || c.name}</b>
-                <span className="cz-chip__s">{tons.toLocaleString("en-US")} t</span>
+                <span className="cz-chip__s">{formatTons(tons)}</span>
               </button>
             );
           })}
@@ -196,56 +288,7 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
         trayContent={tray}
         trayLabel="where you are, the hold, your carriers and the sellers known"
       />
-      <div className="cz cz--in-shell">
-      <nav className="cz-tabs" role="tablist" aria-label="Colonize sections">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            role="tab"
-            className={`tab${tab === t.key ? " on" : ""}`}
-            aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-            {t.key === "wing" && (snap?.wingRoster.length ?? 0) > 0 ? (
-              <span className="cz-tab__count">{snap?.wingRoster.length}</span>
-            ) : null}
-          </button>
-        ))}
-      </nav>
-      {remoteChange ? (
-        <div className="cz-main cz-main--note">
-          <div className="cz-note cz-note--info" role="status">
-            <span className="cz-note__text">Another window changed your plan or settings.</span>
-            <button type="button" className={BTN} onClick={remoteChange}>
-              Show the changes
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {m.inaraNotice ? (
-        <div className="cz-main cz-main--note">
-          <div className="cz-note cz-note--info" role="status">
-            <span className="cz-note__text">{m.inaraNotice}</span>
-            <button type="button" className={BTN_LINK} onClick={m.dismissInaraNotice}>
-              Dismiss
-            </button>
-          </div>
-        </div>
-      ) : null}
-      <main className="cz-main">
-        {tab === "plan" ? <PlanView m={m} /> : null}
-        {tab === "search" ? <SearchView m={m} /> : null}
-        {tab === "sources" ? <SourcesView m={m} /> : null}
-        {tab === "wing" ? <WingView m={m} /> : null}
-        {snap?.lastError ? (
-          <p className="cz-note cz-note--bad" role="alert" style={{ marginTop: 16 }}>
-            {snap.lastError}
-          </p>
-        ) : null}
-      </main>
-      </div>
+      {children}
       <AppLegalFooter />
     </div>
     </TabHost>

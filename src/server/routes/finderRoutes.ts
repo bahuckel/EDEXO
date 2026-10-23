@@ -18,7 +18,7 @@ import type { FinderRef } from "../finderSearch.js";
 import { findInFinderOffThread, searchFinderOffThread } from "../finderWorkerClient.js";
 import { normaliseFinderQuery, type FinderQuery, type FinderResult } from "../../shared/finder.js";
 import { id64Boxel } from "../../shared/id64.js";
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 export function registerFinderRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
   registerGalaxyCache("finder", () => void clearFinderIndex());

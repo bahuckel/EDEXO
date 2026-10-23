@@ -4,7 +4,7 @@
  * download only when asked.
  */
 import type express from "express";
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 export function registerRecordsRoutes(
   app: express.Express,

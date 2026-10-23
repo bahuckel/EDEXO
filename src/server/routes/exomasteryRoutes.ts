@@ -6,7 +6,7 @@ import express from "express";
 import { getProjectRoot, getSpeciesDataDir } from "../paths.js";
 import { isLoopbackAddress } from "../lanAuth.js";
 
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { CONTENT_SECURITY_POLICY } from "../csp.js";
 import {
   eliteAccountsRoot,

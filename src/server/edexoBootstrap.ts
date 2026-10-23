@@ -2,16 +2,10 @@ import { flushNavRouteLog, navRouteLog, recordNavRoute } from "./navRouteLog.js"
 import { enablePredictionAudit, flushPredictionAudit, predictionRecords } from "./predictionAuditLog.js";
 import { predictionQuality } from "./predictionQuality.js";
 import { cardVerdictsFor } from "./cardVerdicts.js";
-import { clearExpeditionCache } from "./expeditionService.js";
 import { flushSurfaceMarks } from "./surfaceMarksFile.js";
 import { startEddnLedgerWatch } from "./eddnLedger.js";
 import path from "node:path";
-import {
-  achievementDetail,
-  achievementExists,
-  achievementsList,
-  clearAchievementsCache,
-} from "./achievements.js";
+import { achievementDetail, achievementExists, achievementsList } from "./achievements.js";
 import { achievementNoticeText, createAchievementWatch } from "./achievementNotices.js";
 import {
   buildCodexExport,
@@ -59,6 +53,7 @@ import { stopColonizeService } from "./colonize/colonizeService";
 import { onColonizeHudChange } from "./colonize/hudSummary";
 import { scanJournalsForStatistics } from "./statisticsScan.js";
 import { createHttpServer, getLanIPv4s } from "./httpServer.js";
+import { appViewUrl } from "./appViews.js";
 import { describeUserDataMigration, migrateLegacyUserData } from "./userDataMigration.js";
 import { readLanAccess, resolveLanAccess } from "./launcherPrefs.js";
 import { isLoopbackHostName } from "./lanAuth.js";
@@ -79,7 +74,6 @@ import { lanUrlWithKey, loadOrCreateLanKey } from "./lanAuth.js";
 import { buildEncyclopediaExomasteryPlanetsPayload } from "./exomasteryEdsmEncyclopedia.js";
 import {
   buildEncyclopediaPayload,
-  clearEncyclopediaPayloadCache,
   buildSnapshot,
   organicLiveSummary,
   findSpeciesEntryForEncyclopedia,
@@ -93,30 +87,12 @@ import { buildFeederStatus } from "./feederStatus.js";
 import { openFeeder } from "../feeder/pipeline.js";
 import { formatImportReport, importSpanshExport } from "../feeder/spanshImport.js";
 import { feederDataDirExists } from "../feeder/paths.js";
-import { clearExomasteryProfileCache } from "./exomasteryProfile.js";
 import { regionalRarity } from "./speciesRarityData.js";
 import { createGamePresence } from "./gamePresence.js";
-import { buildFieldGuide, clearFieldGuideCache } from "./fieldGuide.js";
-import { clearSpeciesPhotoCache } from "./speciesPhotos.js";
+import { buildFieldGuide } from "./fieldGuide.js";
 import { buildDiscoveries } from "./discoveries.js";
-import {
-  clearFootCatalogSpeciesDb,
-  clearFootScannedCatalogCache,
-  flushFootScannedCatalog,
-} from "./footScannedCatalog.js";
-import { clearHostStarObservationsCache } from "./speciesHostStarObservations.js";
-import { clearColourStarNeverCache } from "./colourStarNever.js";
-import { clearEddnTemperatureRangeCache } from "./eddnTemperatureRange.js";
-import { clearMeasuredExclusionsCache } from "./measuredExclusions.js";
-import { clearPlanetClassObservationsCache } from "./speciesPlanetClassObservations.js";
-import { clearStarlightRangesCache } from "./starlightRanges.js";
-import { clearObservedEnvelopeCache } from "./observedEnvelope.js";
-import { clearBodyTypePriorCache } from "./bodyTypePrior.js";
-import { clearSpeciesSplitCache } from "./speciesSplit.js";
-import { clearGenusPriorCache } from "./genusPrior.js";
-import { resetGenusBodySplitCache } from "./genusBodySplit.js";
-import { clearLikelihoodDataCache } from "./likelihoodData.js";
-import { clearGenusPhotosFolderCache, getSpeciesDataWarnings } from "./speciesTreeLoader.js";
+import { flushFootScannedCatalog } from "./footScannedCatalog.js";
+import { getSpeciesDataWarnings } from "./speciesTreeLoader.js";
 import {
   parseStatusJsonDestination,
   parseStatusJsonFootFix,
@@ -146,9 +122,6 @@ import {
   ingestExoOrganicJournalLine,
   restoreOrganicSessionFromJournal,
 } from "./exoOrganicTracker.js";
-import { clearEddsnColourVariantsCache } from "./eddsnColourVariants.js";
-import { clearPhotoCreditsCache } from "./photoCredits.js";
-import { clearRegionSpeciesCache } from "./regionSpeciesData.js";
 import { perfTime, startPerfReporter } from "./perf.js";
 import {
   flushPendingOrganicSampleSession,
@@ -195,13 +168,10 @@ import { createBookmarksService } from "./bookmarks.js";
 import { spawn } from "node:child_process";
 import { createBoxelRun } from "./boxelRun.js";
 import { createSavedBoxels } from "./savedBoxels.js";
-import { createNeutronLive, parseLiveHops } from "./neutronLive.js";
-import { neutronShip } from "./neutronShip.js";
-import { loadNeutronIndex } from "./neutronIndex.js";
-import { applyJumponium, planNeutronRoute } from "./neutronRoute.js";
-import { touchGalaxyMemory } from "./galaxyMemory.js";
+import { createNeutronLive } from "./neutronLive.js";
+import { createNeutronReplanner } from "./neutronReplan.js";
 import { fsdWearEstimate, FSD_WARN } from "../shared/fsdWear.js";
-import { jumponiumView, recipeFor } from "../shared/jumponium.js";
+import { jumponiumView } from "../shared/jumponium.js";
 import { createGreenGiantMarks, greenGiantForRecord, type GreenGiantSources } from "./greenGiants.js";
 import { setNotableOptionsProvider } from "./notableOptions.js";
 import { BODY_FEATURES } from "../shared/bodyFeatures.js";
@@ -222,6 +192,7 @@ import {
   type PersistedUserPrefs,
 } from "./userPrefsFile.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { reloadSpeciesDerivedCaches } from "./speciesCacheReload.js";
 export { backfillCommanderPosition } from "./commanderPositionBackfill.js";
 export { logFatal, assertResourceLayout } from "./startupChecks.js";
 export { parseHost, parsePort, parseCli } from "./cliOptions.js";
@@ -268,47 +239,6 @@ export type EdexoRuntime = {
   stagedUpdate: () => { version: string; form: string; file: string; dir: string } | null;
 };
 
-/**
- * Everything read from the species tree and the exomastery profiles, forgotten in one place.
- *
- * Three reload paths (the species-tree watcher, "Refresh exomastery", and the Fix dialog's clear)
- * each kept their own list and the lists had drifted: after a refresh the host-star and planet-class
- * observations — built from the profiles — kept answering from the old ones until a restart, and the
- * watcher path dropped the foot catalog's unwritten rows (code review A8, 2026-09-27). The catalog is
- * written first now, so clearing its cache cannot lose a find.
- */
-function reloadSpeciesDerivedCaches(): void {
-  flushFootScannedCatalog();
-  clearFootScannedCatalogCache();
-  clearFootCatalogSpeciesDb();
-  clearExomasteryProfileCache();
-  clearEncyclopediaPayloadCache();
-  clearFieldGuideCache();
-  clearExpeditionCache();
-  clearSpeciesPhotoCache();
-  clearGenusPhotosFolderCache();
-  clearEddsnColourVariantsCache();
-  clearPhotoCreditsCache();
-  clearRegionSpeciesCache();
-  clearHostStarObservationsCache();
-  clearColourStarNeverCache();
-  clearEddnTemperatureRangeCache();
-  clearMeasuredExclusionsCache();
-  clearPlanetClassObservationsCache();
-  clearStarlightRangesCache();
-  clearObservedEnvelopeCache();
-  clearBodyTypePriorCache();
-  // The fitted which-of-the-genus tables (data/exomastery/species-split.json, speciesSplit.ts).
-  clearSpeciesSplitCache();
-  clearAchievementsCache();
-  // Code review B10 (2026-10-14): the genus chances and limits, the Brain Tree / Tubers split and the
-  // ranking's edges and prevalence were kept until a restart.
-  clearGenusPriorCache();
-  resetGenusBodySplitCache();
-  clearLikelihoodDataCache();
-}
-
-/** The journal folder is there and can be listed (a drive not mounted yet is not an empty folder). */
 export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   // The app's own prediction log (predictionAuditLog.ts); scripts that run the snapshot code never write it.
   enablePredictionAudit();
@@ -404,6 +334,13 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   // The settings file lives in userPrefsFile.ts; these keep the old names for the wiring below.
   const persistUserPreferences = (): void => writeUserPrefs(store, userSettingsPath);
   const applyPersistedUserPrefs = (j: PersistedUserPrefs): void => applyUserPrefs(store, j);
+  /** A settings setter that writes the settings file after it (audit 2026-10-22: ten copies of the pair). */
+  const persisted =
+    <A extends unknown[]>(fn: (...a: A) => void) =>
+    (...a: A): void => {
+      fn(...a);
+      persistUserPreferences();
+    };
 
   {
     const primary = tryReadUserPrefs(userSettingsPath);
@@ -543,72 +480,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     store.boxelsRevision++;
     push();
   };
-  /*
-    Off the route (owner, 2026-10-13: "always taking into consideration your current location"): planned again from
-    where the ship is to the stops not reached yet, with the ship as the journals know it now. One at a time; the
-    HUD says "re-plotting" meanwhile, and the new next stop goes to the clipboard.
-  */
-  /*
-    One re-plot at a time, whatever the route does meanwhile (review 1.2.16): Stop cleared the route's own flag while
-    a search still ran, so a second one could start; and one that finished after a new route was started replaced
-    the new route — it lands only if the route is still the one it was asked for (its version).
-  */
-  let replanBusy = false;
-  const replanNeutron = async (): Promise<void> => {
-    if (replanBusy) return;
-    const here = shipHere();
-    const left = neutronLive.remaining();
-    if (!here.pos || !left) return;
-    replanBusy = true;
-    const version = neutronLive.version();
-    touchGalaxyMemory();
-    let index;
-    try {
-      index = loadNeutronIndex();
-    } catch {
-      return;
-    }
-    if (!index) return;
-    const s = neutronShip(store);
-    const jumpsPerTank = s.jumpsPerTank ?? 4;
-    neutronLive.setReplanning(true);
-    push();
-    try {
-      const route = await planNeutronRoute(
-        index,
-        [{ name: here.name ?? "Your ship", ...here.pos }, ...left.targets],
-        {
-          // The range the route was planned with (he may have typed one for another ship), else the journals'.
-          rangeLy: left.rangeLy ?? s.rangeLy,
-          boost: left.boost ?? s.boostFactor,
-          jumpsPerTank,
-          jumpsNow: Math.min(jumpsPerTank, Math.max(0, s.jumpsNow ?? jumpsPerTank)),
-          fsdHealth: s.fsdHealth,
-          wearPerBoost: s.wearPerBoost,
-        },
-      );
-      // Planned with FSD injections: the re-plot keeps them (shared/jumponium.ts).
-      const planned = left.useJumponium
-        ? applyJumponium(
-            route,
-            left.rangeLy ?? s.rangeLy ?? 50,
-            left.boost ?? s.boostFactor ?? 4,
-            (t) => recipeFor(store.jumponium, t),
-            store.jumponium?.raw ?? null,
-          ).route
-        : route;
-      const hops = parseLiveHops(planned.hops);
-      if (hops && neutronLive.active() && neutronLive.version() === version)
-        neutronLive.replace(hops, left.targets);
-    } catch (e) {
-      console.warn("[edexo-compare] neutron re-plot failed:", e);
-    } finally {
-      replanBusy = false;
-      if (neutronLive.version() === version) neutronLive.setReplanning(false);
-      touchGalaxyMemory();
-      push();
-    }
-  };
+  /* Off the route: planned again from where the ship is (server/neutronReplan.ts). */
+  const neutronReplanner = createNeutronReplanner({ store, neutronLive, push: () => push(), shipHere });
   const bookmarks = createBookmarksService({
     filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-bookmarks.json"),
   });
@@ -741,9 +614,6 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       return snap;
     });
 
-  /**
-   * Launcher-sized status. Reads store fields directly — no snapshot build, no one-shot state.
-   */
   /*
     "Import Spansh export" from the launcher. Same importer and gates as `feeder -- import-dump`;
     runs in the background because the file is gigabytes, and one at a time because the feeder
@@ -880,6 +750,9 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     return null;
   }
 
+  /**
+   * Launcher-sized status. Reads store fields directly — no snapshot build, no one-shot state.
+   */
   const getStatus = (): AppStatusDTO => {
     let journalDirConfiguredOk = false;
     try {
@@ -912,13 +785,6 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
 
   let broadcast: (s: AppSnapshot) => void = () => {};
 
-  /**
-   * Broadcast, then consume the one-shot UI auto-select key.
-   *
-   * The consume used to live inside buildSnapshot, which /api/state and the launcher poll also
-   * called — whichever poller arrived first swallowed the key, so "focus the body you just
-   * scanned" silently failed and, with two clients, at most one ever saw it.
-   */
   /*
     The codex-first announcement writes the notices file, so it runs with the push, never on a read:
     GET /api/state used to write it too (code review 2026-10-10, A6), the same reason the one-shot
@@ -957,6 +823,13 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     if (changed) snap.notices = notices.snapshot(store.viewingSystemAddress ?? store.currentSystemAddress ?? null);
   };
 
+  /**
+   * Broadcast, then consume the one-shot UI auto-select key.
+   *
+   * The consume used to live inside buildSnapshot, which /api/state and the launcher poll also
+   * called — whichever poller arrived first swallowed the key, so "focus the body you just
+   * scanned" silently failed and, with two clients, at most one ever saw it.
+   */
   // Guarded: it runs on timers too, and a throw there would end the server process (guarded.ts).
   const broadcastSnapshot = guarded("snapshot push", () => {
     const snap = getSnapshot();
@@ -1385,7 +1258,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
           // A neutron route being flown owns the clipboard; else the boxel run or the saved boxel's next.
           const flying = neutronLive.active();
           const onStop = neutronLive.onJump(shipHere()) != null;
-          if (flying && !onStop && neutronLive.offRoute(shipHere())) void replanNeutron();
+          if (flying && !onStop && neutronLive.offRoute(shipHere())) void neutronReplanner.replan();
           if (!flying) boxelRun.onJump();
           // A run can end on a jump (its last system flown): the HUD line says so.
           if (store.boxelCopied) store.boxelCopied.run = savedBoxels.runId() != null;
@@ -1921,10 +1794,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       return true;
     },
     getCommanderSystem: () => store.currentSystem,
-    setHudPrefs: (raw) => {
-      store.setHudPrefs(raw);
-      persistUserPreferences();
-    },
+    setHudPrefs: persisted((raw) => store.setHudPrefs(raw)),
     setPollRates: (statusMs, journalMs) => applyPollRates(statusMs, journalMs),
     getCollectionFocus: () => loadCollectionFocusConfig(),
     getNotifySettings: notifySettings,
@@ -2021,61 +1891,22 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       }
       return store.minimapRadiusM;
     },
-    setIncludeBacterium: (v) => {
-      store.setIncludeBacteriumInSearch(v);
-      persistUserPreferences();
-    },
-    setIncludeExplorationScanData: (v) => {
-      store.setIncludeExplorationScanDataInDataValue(v);
-      persistUserPreferences();
-    },
-    setPranavAntalBonus: (v) => {
-      store.setPranavAntalBonus(v);
-      persistUserPreferences();
-    },
-    setSellAtFleetCarrier: (v) => {
-      store.setSellAtFleetCarrier(v);
-      persistUserPreferences();
-    },
-    setFeederEnabled: (v) => {
-      store.setFeederEnabled(v);
-      persistUserPreferences();
-    },
-    setFleetCarrierIsOwn: (v) => {
-      store.setFleetCarrierIsOwn(v);
-      persistUserPreferences();
-    },
-    setFootTravelOdometer: (v) => {
-      store.setFootTravelOdometerEnabled(v);
-      persistUserPreferences();
-    },
-    setPhotoStamp: (p) => {
-      store.setPhotoStamp(p);
-      persistUserPreferences();
-    },
-    setExoMapTierThresholds: (plus, pp) => {
-      store.setExoMapTierThresholds(plus, pp);
-      persistUserPreferences();
-    },
+    setIncludeBacterium: persisted((v) => store.setIncludeBacteriumInSearch(v)),
+    setIncludeExplorationScanData: persisted((v) => store.setIncludeExplorationScanDataInDataValue(v)),
+    setPranavAntalBonus: persisted((v) => store.setPranavAntalBonus(v)),
+    setSellAtFleetCarrier: persisted((v) => store.setSellAtFleetCarrier(v)),
+    setFeederEnabled: persisted((v) => store.setFeederEnabled(v)),
+    setFleetCarrierIsOwn: persisted((v) => store.setFleetCarrierIsOwn(v)),
+    setFootTravelOdometer: persisted((v) => store.setFootTravelOdometerEnabled(v)),
+    setPhotoStamp: persisted((p) => store.setPhotoStamp(p)),
+    setExoMapTierThresholds: persisted((plus, pp) => store.setExoMapTierThresholds(plus, pp)),
     /*
-      The launcher's "open in browser" and "phone view". The path is chosen here from a two-value
-      enum rather than taken from the caller, so the route cannot be used to launch anything but
-      this app's own views.
+      The launcher's "open in browser" and "phone view". The path is chosen here from the views'
+      own table (appViews.ts) rather than taken from the caller, so the route cannot be used to
+      launch anything but this app's own views.
     */
     openAppView: (view) => {
-      const url =
-        view === "phone"
-          ? `http://127.0.0.1:${port}/?screen=triage`
-          : view === "stream"
-            ? `http://127.0.0.1:${port}/?view=stream`
-            : view === "colonize"
-              ? `http://127.0.0.1:${port}/?screen=colonize`
-              : view === "colonize-phone"
-                ? `http://127.0.0.1:${port}/?screen=colonize&phone=1`
-                : view === "colonize-stream"
-                  ? `http://127.0.0.1:${port}/?screen=colonize&view=stream`
-                  : `http://127.0.0.1:${port}/`;
-      openUrlInBrowser(url);
+      openUrlInBrowser(appViewUrl(port, view));
       return { ok: true };
     },
     openExoMissLog: () => {

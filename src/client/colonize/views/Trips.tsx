@@ -2,9 +2,9 @@
 import { useState } from "react";
 import type { HaulTrip, TripStop } from "../../../shared/colonize/logisticsPlanner";
 import { formatHopLy } from "../../../shared/colonize/systemDistanceLy";
-import { formatPrice } from "../../../shared/colonize/formatPrice";
+import { formatPrice, formatTons as t } from "../../../shared/colonize/formatPrice";
 import { tripBuyLineId, tripDeliverLineId } from "../../../shared/colonize/tripPlanProgress";
-import { BTN, BTN_GO, BTN_LINK, Panel } from "./ui";
+import { BTN, BTN_GO, BTN_LINK, Panel, copyText } from "./ui";
 
 type TripProps = {
   trips: HaulTrip[];
@@ -33,7 +33,6 @@ const tripDone = (trip: HaulTrip, completed: Set<string>) => {
 function setTrip(trip: HaulTrip, completed: Set<string>, done: boolean, onToggle: (id: string) => void) {
   for (const id of tripLineIds(trip)) if (completed.has(id) !== done) onToggle(id);
 }
-const t = (n: number) => `${Math.round(n).toLocaleString("en-US")} t`;
 
 function stopFacts(s: TripStop): string {
   const bits = [formatHopLy(s.distanceLy)];
@@ -43,14 +42,6 @@ function stopFacts(s: TripStop): string {
   if (s.isPlanetaryOrGround) bits.push("planet port");
   if (s.boughtBefore) bits.push("bought here before");
   return bits.filter(Boolean).join(" · ");
-}
-
-async function copy(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    /* no clipboard in this browser: the name is on screen to copy by hand */
-  }
 }
 
 export function NextTripCard({ trips, completed, onToggle, onBan, readOnly = false }: TripProps) {
@@ -159,7 +150,7 @@ export function NextTripCard({ trips, completed, onToggle, onBan, readOnly = fal
                 type="button"
                 className={BTN_GO}
                 onClick={() => {
-                  void copy(copyTarget.systemName);
+                  void copyText(copyTarget.systemName);
                   setCopied(copyTarget.systemName);
                   window.setTimeout(() => setCopied(null), 1800);
                 }}

@@ -1,335 +1,38 @@
 /**
  * The app bar and its tray, split out of App.tsx (WEBUI-REDESIGN 7.3). No logic changed.
+ *
+ * The menu's entries, Compare's tray and the screens it opens live in header/ since the audit of
+ * 2026-10-22; the state they read (which screen is open, the tray switch, the menu) stays here.
  */
-import { useLastStateAt } from "./useLiveSnapshot";
 import { HeaderArt } from "./HeaderArt";
 import { useConfirm, useToast } from "./ui/feedback";
-import { InfoPopover, Tooltip } from "./ui/Tooltip";
-import { NextBoxelCard } from "./NextBoxelCard";
-import {
-  IconAchievements,
-  IconChevronDown,
-  IconEncyclopedia,
-  IconExobiology,
-  IconFeeder,
-  IconGalaxy,
-  IconOptions,
-  IconBacklog,
-  IconCarrier,
-  IconPoi, IconBookmark, IconBoxel,
-  IconStats,
-  IconSession,
-} from "./ui/icons";
+import { Tooltip } from "./ui/Tooltip";
+import { IconChevronDown } from "./ui/icons";
 import { useValueFlash } from "./ui/useValueFlash";
-import { fmtCrExact, fmtCrShort, fmtLy } from "@shared/format";
-import { lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, ReactNode } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, ReactNode } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useFdevServerStatus } from "./useFdevServerStatus";
 import type { EncyclopediaSpawnCompare } from "./EncyclopediaModal";
-import { DScanBodiesBadge } from "./DScanBodiesBadge";
 import type { AppSnapshot, FootScannedEntry, NotableBodyInfo } from "@shared/types";
 import { useFeederStatus } from "./FeederStatusPanel";
 import { ExoDataAlertsHeaderHub } from "./ExoDataAlertsHub";
 import { NoticesBell } from "./NoticesBell";
 import { measurePopoverSide, type PopoverSide } from "./ui/popoverSide";
-import { MENU_ITEM, useMediaQuery, useMenuButton } from "./ui/Menu";
-
-/** An entry on the wide app bar, where the menu is the bar itself: an ordinary button. */
-const NOT_MENU_ITEM = {} as const;
-import {
-  AchievementsModal,
-  MapOptionsModal,
-  prefetchMenuModals,
-  CarriersModal,
-  EncyclopediaModal,
-  PoiModal,
-  BookmarksModal,
-  BoxelScreen,
-  StatisticsModal,
-  FirstDiscoveryBacklogModal,
-  ModalLoading,
-  MyExobiologyModal,
-  DataValueBreakdownModal,
-  SessionLogModal,
-  FeederModal,
-} from "./SharedModals";
+import { useMediaQuery, useMenuButton } from "./ui/Menu";
+import { prefetchMenuModals } from "./SharedModals";
 import { EDEXO_HEADER_TRAY_LS, readLsBool, writeLsBool } from "./lsPrefs";
-import {
-  readRouteHeaderMetricMode,
-  routeHeaderBarAria,
-  routeHeaderBarModel,
-  routeHeaderToggleTitleHint,
-  routeNavCardTitle,
-  writeRouteHeaderMetricMode,
-} from "./routeHeader";
-import type { RouteHeaderMetricMode } from "./routeHeader";
 import { CopySystemButton } from "./CopySystemButton";
 import { SystemCardRow } from "./SystemCard";
+import { JournalSystemSearch } from "./JournalSystemSearch";
+import { useScreenOpen } from "./tabs/TabHost";
+import { useTabSelector } from "./tabs/tabStore";
+import { LiveSnapshotFreshness } from "./header/LiveSnapshotFreshness";
+import { AppMenuEntries, type MenuOpeners } from "./header/AppMenuEntries";
+import { CompareTray } from "./header/CompareTray";
+import { HeaderScreens } from "./header/HeaderScreens";
 
 /** A notable body's quick facts, asked for from outside the header (the body strip's notable tabs). */
 export const NOTABLE_QUICK_EVENT = "edexo-notable-quick";
-import { JournalSystemSearch } from "./JournalSystemSearch";
-import { TabSlot, useScreenOpen } from "./tabs/TabHost";
-import { tabStore, useTabSelector } from "./tabs/tabStore";
-/** The 3D galaxy map inside a tab (Tab view); without it, it opens in its own window as before. */
-// memo: no props, so a snapshot push never reaches it (D11).
-const GalaxyMap3D = memo(lazy(() => import("./GalaxyMap3D").then((m) => ({ default: m.GalaxyMap3D }))));
-
-/** The EDEXO browser's tab (plan 9): its code loads only when the tab opens. */
-const BrowserScreen = lazy(() => import("./BrowserScreen").then((m) => ({ default: m.BrowserScreen })));
-
-const PlanetQuickFactsPopup = lazy(() =>
-  import("./PlanetQuickFactsPopup").then((m) => ({ default: m.PlanetQuickFactsPopup })),
-);
-
-function LiveSnapshotFreshness({ connected }: { connected: boolean }) {
-  /** Subscribed rather than passed down: this value changes on every push, and threading it
-   * through <HeaderBar> would re-render the header each time. */
-  const lastAt = useLastStateAt();
-  const [, setTick] = useState(0);
-  // Minutes only (owner, 2026-09-30: a seconds counter was distracting), so a slow tick will do.
-  // One interval while connected, not a new one for every push (plan 2.2, Fable C6): a push re-renders
-  // this anyway, and the tick reads the latest time when it fires.
-  const hasLast = lastAt != null;
-  useEffect(() => {
-    if (!connected || !hasLast) return;
-    const id = window.setInterval(() => setTick((t) => t + 1), 15_000);
-    return () => clearInterval(id);
-  }, [connected, hasLast]);
-
-  if (!connected || lastAt == null) return null;
-
-  const sec = Math.floor((Date.now() - lastAt) / 1000);
-  const min = Math.floor(sec / 60);
-  return (
-    <span
-      className="top-live-freshness"
-      title={`Last live snapshot from the server: ${sec < 60 ? "under a minute" : `${min} min`} ago`}
-    >
-      {" "}
-      · <span className="top-live-freshness__m">{min}m</span>
-    </span>
-  );
-}
-
-const NO_FOOT_ENTRIES: FootScannedEntry[] = [];
-
-type MenuOpeners = Record<
-  | "setMyExoOpen"
-  | "setBacklogOpen"
-  | "setCarriersOpen"
-  | "setPoiOpen"
-  | "setBoxelOpen"
-  | "setBookmarksOpen"
-  | "setStatsOpen"
-  | "setFeederOpen"
-  | "setEncyclopediaOpen"
-  | "setAchievementsOpen"
-  | "setSessionOpen"
-  | "setOptionsOpen",
-  (v: boolean) => void
->;
-
-/**
- * The menu's entries, apart from the header (plan 2.2, Fable C5): the header takes the whole
- * snapshot and renders on every push — ten a second in flight — and with it went twelve buttons,
- * thirteen tooltips and twelve icons that never change. Its props are the feeder flag and the
- * panels' setters, which are stable, so it renders when the feeder appears and not otherwise.
- */
-const AppMenuEntries = memo(function AppMenuEntries({
-  feederAvailable,
-  open,
-  asMenu,
-}: {
-  feederAvailable: boolean;
-  open: MenuOpeners;
-  /** The dropdown (below 1,700 px): entries are menu items, moved between by the arrows (ui/Menu.tsx). */
-  asMenu: boolean;
-}) {
-  const item = asMenu ? MENU_ITEM : NOT_MENU_ITEM;
-  return (
-    <>
-      {/*
-        The panel behind this icon stopped being only exobiology: it now carries every system,
-        body and star in the merged journals beside the foot-confirmed species. The menu is
-        icons and tooltips, so the tooltip is the only place the name lives — leaving it as "My
-        exobiology" made three new tabs unfindable.
-      */}
-      <Tooltip text="My discoveries — every system, body and star you have scanned, plus the species you confirmed on foot.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setMyExoOpen(true)}
-          aria-label="My discoveries"
-        >
-          <IconExobiology />
-        </button>
-      </Tooltip>
-      <Tooltip text="Unfinished business — biology you found first and never collected, still worth 5x.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setBacklogOpen(true)}
-          aria-label="Unfinished business"
-        >
-          <IconBacklog />
-        </button>
-      </Tooltip>
-      <span className="appbar-menu-sep" aria-hidden="true" />
-      {/*
-        Carriers is in the menu rather than the app bar because it is a thing the commander goes
-        looking for — where do I sell a full sample bag — not something they watch. The panel
-        holds no data until they press its button.
-      */}
-      <Tooltip text="Carriers — fleet carriers near you, from EDAstro. Downloads on request; positions are last sightings.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setCarriersOpen(true)}
-          aria-label="Carriers"
-        >
-          <IconCarrier />
-        </button>
-      </Tooltip>
-      <Tooltip text="Points of interest — the Galactic Exploration Catalog near you, from EDAstro. Downloads on request.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setPoiOpen(true)}
-          aria-label="Points of interest"
-        >
-          <IconPoi />
-        </button>
-      </Tooltip>
-      <Tooltip text="Boxels — your saved boxels in one table: which systems you have flown, what is recorded there, and the next one to fly.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setBoxelOpen(true)}
-          aria-label="Boxel"
-        >
-          <IconBoxel />
-        </button>
-      </Tooltip>
-      <Tooltip text="Bookmarks — systems you marked with the ☆ beside a system's name, with tags and notes.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setBookmarksOpen(true)}
-          aria-label="Bookmarks"
-        >
-          <IconBookmark />
-        </button>
-      </Tooltip>
-      <span className="appbar-menu-sep" aria-hidden="true" />
-      <Tooltip text="Statistics — income by source, activity and balances, over 24 h to all time.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setStatsOpen(true)}
-          aria-label="Statistics"
-        >
-          <IconStats />
-        </button>
-      </Tooltip>
-      {feederAvailable ? (
-        <Tooltip text="Data feeder — the corpus behind the rankings, and whether any profile is behind it.">
-          <button
-            type="button"
-            {...item}
-            className="appbar-icon-btn"
-            onClick={() => open.setFeederOpen(true)}
-            aria-label="Data feeder"
-          >
-            <IconFeeder />
-          </button>
-        </Tooltip>
-      ) : null}
-      <span className="appbar-menu-sep" aria-hidden="true" />
-      <Tooltip text="Galaxy map — 5.3 million systems with recorded biology, your own travels, search and codex, in 3D. Opens in its own window.">
-        <a
-          {...item}
-          className="appbar-icon-btn"
-          href="?screen=galaxy"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Galaxy map"
-          onClick={(ev) => {
-            // Tab view: the map opens in a tab of this window instead of a window of its own.
-            if (!tabStore.get().on) return;
-            ev.preventDefault();
-            tabStore.open("galaxy");
-          }}
-        >
-          <IconGalaxy />
-        </a>
-      </Tooltip>
-      <Tooltip text="Encyclopedia — every species, its requirements, and what you have found.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setEncyclopediaOpen(true)}
-          aria-label="Encyclopedia"
-        >
-          <IconEncyclopedia />
-        </button>
-      </Tooltip>
-      <span className="appbar-menu-sep" aria-hidden="true" />
-      <Tooltip text="Achievements — every plant variant by galaxy, genus, rarity and region, Bronze / Silver / Gold; track one to mark its plants.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setAchievementsOpen(true)}
-          aria-label="Achievements"
-        >
-          <IconAchievements />
-        </button>
-      </Tooltip>
-      <Tooltip text="Session log — tonight's systems, landings, species analysed and sales; copy as Markdown.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setSessionOpen(true)}
-          aria-label="Session log"
-        >
-          <IconSession />
-        </button>
-      </Tooltip>
-      <span className="appbar-menu-sep" aria-hidden="true" />
-      <Tooltip text="Options — journal service info, map tier thresholds, reset.">
-        <button
-          type="button"
-          {...item}
-          className="appbar-icon-btn"
-          onClick={() => open.setOptionsOpen(true)}
-          aria-label="Options"
-        >
-          <IconOptions />
-        </button>
-      </Tooltip>
-    </>
-  );
-});
-
-/*
-  An AFMU repairs the FSD in flight (owner, 2026-10-13, the Laboratory): when one is fitted, the FSD warning says so and
-  how many refills the hold makes. Its ammunition is not in the journals, so not how full it is.
-*/
-function afmuNote(j: AppSnapshot["jumponium"]): string {
-  if (!j?.afmu?.length) return "";
-  const made = j.known ? (j.afmTiers ?? []).map((t) => `${t.count} ${t.name}`).join(", ") : null;
-  return ` An AFMU is fitted: it repairs the FSD in flight.${made ? ` AFM refills you can make: ${made}.` : ""}`;
-}
 
 /**
  * The app bar, its tray and every screen tab — shared by the two apps on this shell (1.3.0, owner 2026-10-22):
@@ -370,35 +73,6 @@ export const HeaderBar = memo(function HeaderBar({
   /** A journal event that moves these numbers should be visible where the user is looking. */
   const dataValueFlash = useValueFlash(totalDataCr);
   const pendingSamplesFlash = useValueFlash(snap.organicPendingSampleCount);
-  /**
-   * This was a ~700-character `title` attribute — the longest and most useful explanation in the
-   * app, and the least reachable: native tooltips truncate, never wrap, and never appear for
-   * keyboard or touch. It now lives behind an ⓘ next to the value.
-   */
-  const dataValueHelp = (
-    <>
-      <p>
-        Typical UC value for unsold exobiology in your journal: each completed species on a body (two{" "}
-        <code>ScanOrganic</code> Sample lines plus one Analyse, or any Analyse that completes the set), priced
-        from <code>price-list.json</code>.
-      </p>
-      <p>
-        On a first-footfall body the game pays <strong>5×</strong> the listed value (1× normal plus a 4×
-        first-footfall bonus, shown separately in-game). That qualifies when a detailed
-        <code> Scan</code> listed <code>WasFootfalled: false</code> for the body and you later disembarked on
-        it (OnPlanet, not OnStation), or the journal set <code>firstfootfall</code>
-        on Disembark.
-      </p>
-      <p>Selling organic data — or dying — clears unsold samples in the journal replay.</p>
-      {scanDataOn ? (
-        <p>
-          This total also includes an approximate UC value for merged FSS/DSS exploration scans from the
-          journal, using <code>Scan</code> <code>WasDiscovered</code> / <code>WasMapped</code> where present.
-        </p>
-      ) : null}
-      <p className="dim">Click the value itself for a per-sample breakdown.</p>
-    </>
-  );
   const [dataBreakdownOpen, setDataBreakdownOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [sessionOpen, setSessionOpen] = useScreenOpen("session");
@@ -480,9 +154,6 @@ export const HeaderBar = memo(function HeaderBar({
     window.addEventListener(NOTABLE_QUICK_EVENT, on);
     return () => window.removeEventListener(NOTABLE_QUICK_EVENT, on);
   }, []);
-  const [routeHeaderMetricMode, setRouteHeaderMetricMode] = useState<RouteHeaderMetricMode>(() =>
-    readRouteHeaderMetricMode(),
-  );
   const [trayOpen, setTrayOpen] = useState(() => readLsBool(EDEXO_HEADER_TRAY_LS, true));
   /*
     The cockpit menu (WEBUI-REDESIGN 2.3): the six secondary destinations behind one button, so the
@@ -516,20 +187,8 @@ export const HeaderBar = memo(function HeaderBar({
   }, [menuOpen]);
 
   useEffect(() => {
-    writeRouteHeaderMetricMode(routeHeaderMetricMode);
-  }, [routeHeaderMetricMode]);
-
-  useEffect(() => {
     writeLsBool(EDEXO_HEADER_TRAY_LS, trayOpen);
   }, [trayOpen]);
-
-  const routeCardRefuelClass = (() => {
-    const nav = snap.liveShipFuelRange?.navRoute;
-    if (!nav?.onPlot) return "";
-    if (nav.routeRefuelAlert === "red") return " header-route--refuel-red";
-    if (nav.routeRefuelAlert === "yellow") return " header-route--refuel-yellow";
-    return "";
-  })();
 
   const toggleExplorationScanData = () => {
     void (async () => {
@@ -750,203 +409,15 @@ export const HeaderBar = memo(function HeaderBar({
       ) : null}
 
       {compare && trayOpen ? (
-        <div className="header-data-value-row header-tray" id="header-tray">
-          <button
-            type="button"
-            className={`header-scan-data-plus${scanDataOn ? " header-scan-data-plus--on" : ""}`}
-            onClick={toggleExplorationScanData}
-            title="Add planetary scans to data value"
-            aria-pressed={scanDataOn}
-          >
-            ⊕
-          </button>
-          <button
-            type="button"
-            className="data-value-pill data-value-pill--clickable"
-            title={
-              scanDataOn
-                ? "Unsold exobiology plus your unsold planetary scans — click for a breakdown"
-                : "Unsold exobiology — click for a per-sample breakdown. ⊕ adds your unsold planetary scans."
-            }
-            onClick={() => setDataBreakdownOpen(true)}
-          >
-            {/* "Data value" either way (owner, 2026-09-30); the tooltip says what it holds. */}
-            <span className="data-value-label header-metric-card-label">Data value</span>
-            <span
-              className={`data-value-amount header-metric-card-value ${dataValueFlash}`.trim()}
-              title={fmtCrExact(totalDataCr)}
-            >
-              {fmtCrShort(totalDataCr)} CR
-            </span>
-            {snap.organicPendingSampleCount > 0 ? (
-              <span
-                className={`data-value-meta dim ${pendingSamplesFlash}`.trim()}
-                title="Completed samples not yet sold"
-              >
-                ({snap.organicPendingSampleCount})
-              </span>
-            ) : null}
-          </button>
-          <InfoPopover title="How “Data value” is calculated" label="How data value is calculated">
-            {dataValueHelp}
-          </InfoPopover>
-          <div className="header-dscan-cluster">
-            <div className="header-dscan-pill">
-              {snap.dScanBodies ? (
-                <DScanBodiesBadge d={snap.dScanBodies} className="d-scan-card--header-row" headerMetrics />
-              ) : (
-                <Tooltip text="No FSS honk line in merged journal for this system yet — if you already mapped everything, totals still come from Scan rows and the system map. Use “Load bodies from EDSM” next to the search when browsing a system, or widen journal history / re-honk in game if counts stay empty.">
-                  <button
-                    type="button"
-                    className="d-scan-card d-scan-card--placeholder d-scan-card--header-row"
-                  >
-                    <span className="d-scan-card__label header-metric-card-label">D-Scan</span>
-                    <span className="d-scan-card__placeholder-text header-metric-card-value">
-                      No body tally yet (honk, Scan data, or map)
-                    </span>
-                  </button>
-                </Tooltip>
-              )}
-            </div>
-            {snap.neutronLive ? (
-              <div
-                className="d-scan-card d-scan-card--header-row header-route-mini d-scan-card--label-only header-neutron"
-                title={
-                  snap.neutronLive.done
-                    ? `Neutron route done: ${snap.neutronLive.destination}`
-                    : `Neutron route to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop is on the clipboard after each jump onto a stop (F6 copies it again).`
-                }
-              >
-                <span className="d-scan-card__label header-metric-card-label">
-                  {snap.neutronLive.done
-                    ? "⚡ Route done"
-                    : snap.neutronLive.refuelHere
-                      ? "⛽ Scoop here"
-                      : snap.neutronLive.superchargeHere
-                        ? "⚡ Supercharge here"
-                        : `⚡ ${snap.neutronLive.at}/${snap.neutronLive.total}`}
-                </span>
-                {snap.neutronLive.next ? (
-                  <span className="header-metric-card-value">{snap.neutronLive.next}</span>
-                ) : null}
-              </div>
-            ) : null}
-            {snap.fsdHealth?.warn ? (
-              <div
-                className="d-scan-card d-scan-card--header-row header-route-mini d-scan-card--label-only header-fsd-warn"
-                title={`The FSD is at ${snap.fsdHealth.estimate ? "about " : ""}${Math.round(snap.fsdHealth.health * 100)} % (the last Loadout, less ${snap.fsdHealth.boostsSince} supercharge${snap.fsdHealth.boostsSince === 1 ? "" : "s"} since): further jumps before a repair are not recommended. Carriers → Stations → Repair finds the nearest.${afmuNote(snap.jumponium)}`}
-              >
-                <span className="d-scan-card__label header-metric-card-label">
-                  ⚠ FSD {snap.fsdHealth.estimate ? "~" : ""}
-                  {Math.round(snap.fsdHealth.health * 100)} %
-                </span>
-              </div>
-            ) : null}
-            {snap.focusedSystemUndiscovered ? (
-              <div
-                className="d-scan-card d-scan-card--complete d-scan-card--header-row header-route-mini d-scan-card--label-only"
-                title="You scanned this system's main star before anyone else had — the system is your discovery, and its cartographic data pays the first-discovery bonus."
-              >
-                <span className="d-scan-card__label header-metric-card-label">◆ First discovery</span>
-              </div>
-            ) : null}
-            {snap.remainingJumpsInRoute != null || snap.liveShipFuelRange != null
-              ? (() => {
-                  const fr = snap.liveShipFuelRange;
-                  const nav = fr?.navRoute;
-                  const jumpsShown =
-                    nav?.onPlot && nav.routeJumpsRemaining != null
-                      ? nav.routeJumpsRemaining
-                      : snap.remainingJumpsInRoute;
-                  const barModel = routeHeaderBarModel(snap, routeHeaderMetricMode);
-                  const barTitle = `${routeNavCardTitle(snap)}\n\n${routeHeaderToggleTitleHint(routeHeaderMetricMode)}`;
-                  const barAria = routeHeaderBarAria(snap, routeHeaderMetricMode, barModel);
-                  let sepN = 0;
-                  const sep = () => (
-                    <span key={`sep-${sepN++}`} className="dim">
-                      {" · "}
-                    </span>
-                  );
-                  const compactLine: ReactNode[] = [];
-                  if (nav) {
-                    if (jumpsShown != null) {
-                      compactLine.push(
-                        <span key="j" className="header-route-num">
-                          {jumpsShown}
-                        </span>,
-                        sep(),
-                      );
-                    }
-                    if (routeHeaderMetricMode === "refuel" && nav.onPlot) {
-                      const jl = nav.jumpsToLastScoopableOnRoute;
-                      compactLine.push(
-                        <span key="refuel" className="header-route-refuel-metric">
-                          {jl != null ? `Refuel in ${jl}` : "No scoop ahead"}
-                        </span>,
-                      );
-                    } else {
-                      compactLine.push(
-                        <span key="ly">
-                          {nav.onPlot && nav.routeRemainingLy != null
-                            ? `${fmtLy(nav.routeRemainingLy)} left`
-                            : fmtLy(nav.routeTotalLy)}
-                        </span>,
-                      );
-                    }
-                  } else if (jumpsShown != null) {
-                    compactLine.push(<span key="jonly">{jumpsShown}</span>);
-                  }
-                  if (fr && !nav?.onPlot && fr.estJumpsRemaining != null && fr.hasLiveStatusFuel) {
-                    if (compactLine.length) compactLine.push(sep());
-                    compactLine.push(
-                      <span key="est" className="dim">
-                        ~{fr.estJumpsRemaining} max
-                      </span>,
-                    );
-                  }
-                  if (nav && !nav.onPlot) {
-                    if (compactLine.length) compactLine.push(sep());
-                    compactLine.push(
-                      <span key="off" className="dim">
-                        off plot
-                      </span>,
-                    );
-                  }
-                  const lineContent = compactLine.length > 0 ? compactLine : <span className="dim">—</span>;
-                  const barBg = barModel.indeterminate
-                    ? undefined
-                    : `linear-gradient(to right, rgba(90, 170, 255, 0.95) 0%, rgba(90, 170, 255, 0.95) ${barModel.bluePct}%, rgba(220, 70, 70, 0.92) ${barModel.bluePct}%, rgba(220, 70, 70, 0.92) 100%)`;
-                  return (
-                    <div
-                      className={`d-scan-card d-scan-card--route d-scan-card--header-row header-route-mini header-route-mini--stacked${routeCardRefuelClass}`}
-                    >
-                      <button
-                        type="button"
-                        className="header-route-compact header-route-compact--toggle"
-                        title={barTitle}
-                        aria-label={barAria}
-                        onClick={() =>
-                          setRouteHeaderMetricMode((m) => (m === "distance" ? "refuel" : "distance"))
-                        }
-                      >
-                        <span className="header-route-line header-route-line--compact">
-                          <span className="header-metric-card-label">Route:</span>{" "}
-                          <span className="header-metric-card-value">{lineContent}</span>
-                        </span>
-                        {barModel.showBar ? (
-                          <div
-                            className={`header-route-bar-track${barModel.indeterminate ? " header-route-bar-track--unknown" : ""}`}
-                            style={barModel.indeterminate ? undefined : { background: barBg }}
-                          />
-                        ) : null}
-                      </button>
-                    </div>
-                  );
-                })()
-              : null}
-            <NextBoxelCard systemAddress={snap.currentSystemAddress} />
-          </div>
-        </div>
+        <CompareTray
+          snap={snap}
+          scanDataOn={scanDataOn}
+          totalDataCr={totalDataCr}
+          dataValueFlash={dataValueFlash}
+          pendingSamplesFlash={pendingSamplesFlash}
+          onToggleScanData={toggleExplorationScanData}
+          onOpenBreakdown={() => setDataBreakdownOpen(true)}
+        />
       ) : null}
 
       {compare &&
@@ -959,174 +430,49 @@ export const HeaderBar = memo(function HeaderBar({
         </p>
       ) : null}
 
-      {galaxyTab ? (
-        <TabSlot kind="galaxy">
-          <Suspense fallback={<ModalLoading />}>
-            <GalaxyMap3D />
-          </Suspense>
-        </TabSlot>
-      ) : null}
-      {statsOpen ? (
-        <TabSlot kind="stats">
-          <Suspense fallback={<ModalLoading />}>
-            <StatisticsModal onClose={closeStats} />
-          </Suspense>
-        </TabSlot>
-      ) : null}
-
-      {boxelOpen ? (
-        <TabSlot kind="boxels">
-        <Suspense fallback={<ModalLoading />}>
-          <BoxelScreen
-            onClose={closeBoxels}
-            currentSystem={snap.currentSystem ?? null}
-            dScan={snap.dScanBodies ?? null}
-            revision={snap.boxelsRevision ?? 0}
-            copied={snap.boxelCopied ?? null}
-          />
-        </Suspense>
-        </TabSlot>
-      ) : null}
-      {bookmarksOpen ? (
-        <TabSlot kind="bookmarks">
-        <Suspense fallback={<ModalLoading />}>
-          <BookmarksModal
-            onClose={closeBookmarks}
-            currentSystemAddress={snap.currentSystemAddress ?? null}
-          />
-        </Suspense>
-        </TabSlot>
-      ) : null}
-      {browserOpen ? (
-        <TabSlot kind="browser">
-          <Suspense fallback={<ModalLoading />}>
-            <BrowserScreen />
-          </Suspense>
-        </TabSlot>
-      ) : null}
-      {poiOpen ? (
-        <TabSlot kind="poi">
-        <Suspense fallback={<ModalLoading />}>
-          <PoiModal onClose={closePoi} />
-        </Suspense>
-        </TabSlot>
-      ) : null}
-
-      {carriersOpen ? (
-        <TabSlot kind="carriers">
-        <Suspense fallback={<ModalLoading />}>
-          <CarriersModal onClose={closeCarriers} />
-        </Suspense>
-        </TabSlot>
-      ) : null}
-
-      {backlogOpen ? (
-        <TabSlot kind="backlog">
-        <Suspense fallback={<ModalLoading />}>
-          <FirstDiscoveryBacklogModal onClose={closeBacklog} />
-        </Suspense>
-        </TabSlot>
-      ) : null}
-
-      {achievementsOpen ? (
-        <TabSlot kind="achievements">
-        <Suspense fallback={<ModalLoading />}>
-          <AchievementsModal onClose={closeAchievements} />
-        </Suspense>
-        </TabSlot>
-      ) : null}
-      {encyclopediaOpen ? (
-        <TabSlot kind="encyclopedia">
-        <Suspense fallback={<ModalLoading />}>
-          <EncyclopediaModal
-            footScannedEntries={snap.footScannedEntries ?? NO_FOOT_ENTRIES}
-            spawnCompare={encyclopediaSpawnCompare}
-            // "Where you are now": the ship's region, not the viewed system's (2026-10-12).
-            currentRegion={(snap.shipRegion !== undefined ? snap.shipRegion : snap.currentRegion)?.name ?? null}
-            onClose={closeEncyclopedia}
-          />
-        </Suspense>
-        </TabSlot>
-      ) : null}
-      {myExoOpen ? (
-        <TabSlot kind="myExo">
-        <Suspense fallback={<ModalLoading />}>
-          <MyExobiologyModal
-            entries={snap.footScannedEntries ?? NO_FOOT_ENTRIES}
-            onClose={closeMyExo}
-            onNavigateEntry={onFootCatalogNavigate}
-            onNavigateSystem={onDiscoveriesNavigate}
-          />
-        </Suspense>
-        </TabSlot>
-      ) : null}
-      {dataBreakdownOpen ? (
-        <Suspense fallback={<ModalLoading />}>
-          <DataValueBreakdownModal
-            lines={snap.organicPendingLines ?? []}
-            includeExplorationScanDataInDataValue={scanDataOn}
-            explorationFssScanCount={snap.explorationFssScanCount ?? 0}
-            explorationFssValueCredits={snap.explorationFssValueCredits ?? 0}
-            explorationHonkValueCredits={snap.explorationHonkValueCredits ?? 0}
-            explorationDssScanCount={snap.explorationDssScanCount ?? 0}
-            explorationDssValueCredits={snap.explorationDssValueCredits ?? 0}
-            exobioScanCount={snap.organicPendingSampleCount}
-            exobioValueCredits={snap.organicDataValueCredits}
-            pranavAntalBonus={snap.pranavAntalBonus === true}
-            onTogglePranavAntal={togglePranavAntal}
-            sellAtFleetCarrier={snap.sellAtFleetCarrier === true}
-            onToggleFleetCarrier={(on) => postCarrierSetting("/api/settings/fleet-carrier-sale", on)}
-            fleetCarrierIsOwn={snap.fleetCarrierIsOwn === true}
-            onToggleOwnCarrier={(on) => postCarrierSetting("/api/settings/fleet-carrier-own", on)}
-            onClose={() => setDataBreakdownOpen(false)}
-          />
-        </Suspense>
-      ) : null}
-      {sessionOpen ? (
-        <TabSlot kind="session">
-          <Suspense fallback={<ModalLoading />}>
-            <SessionLogModal log={snap.sessionLog ?? null} onClose={closeSession} />
-          </Suspense>
-        </TabSlot>
-      ) : null}
-      {optionsOpen ? (
-        <Suspense fallback={<ModalLoading />}>
-          <MapOptionsModal
-            snap={snap}
-            plusMinCr={snap.exoMapTierPlusMinCr}
-            plusPlusMinCr={snap.exoMapTierPlusPlusMinCr}
-            onResetExobiology={resetExobiology}
-            onClose={() => setOptionsOpen(false)}
-            app={app}
-          />
-        </Suspense>
-      ) : null}
-      {feederOpen ? (
-        <Suspense fallback={<ModalLoading />}>
-          <FeederModal status={feeder.status} onRefresh={feeder.refresh} onClose={() => setFeederOpen(false)} />
-        </Suspense>
-      ) : null}
-      {notableQuick ? (
-        <Suspense fallback={null}>
-          <PlanetQuickFactsPopup
-            detail={snap.systemMap?.detailsByBodyId[String(notableQuick.notable.bodyId)] ?? null}
-            fallbackTitle={notableQuick.notable.bodyName}
-            fallbackSubtitle={`${notableQuick.notable.tag}${notableQuick.notable.dssMapped ? " · DSS mapped" : " · FSS / scan only"}`}
-            bodyId={notableQuick.notable.bodyId}
-            records={snap.notices?.recordMarks.filter((m) => m.bodyId === notableQuick.notable.bodyId)}
-            onClose={() => setNotableQuick(null)}
-            onGoToBioBody={
-              onGoToBioBody
-                ? (bk) => {
-                    setNotableQuick(null);
-                    onGoToBioBody(bk);
-                  }
-                : undefined
-            }
-            pos={{ left: notableQuick.x, top: notableQuick.y }}
-          />
-        </Suspense>
-      ) : null}
+      <HeaderScreens
+        snap={snap}
+        app={app}
+        encyclopediaSpawnCompare={encyclopediaSpawnCompare}
+        onFootCatalogNavigate={onFootCatalogNavigate}
+        onDiscoveriesNavigate={onDiscoveriesNavigate}
+        onGoToBioBody={onGoToBioBody}
+        galaxyTab={galaxyTab}
+        browserOpen={browserOpen}
+        statsOpen={statsOpen}
+        closeStats={closeStats}
+        boxelOpen={boxelOpen}
+        closeBoxels={closeBoxels}
+        bookmarksOpen={bookmarksOpen}
+        closeBookmarks={closeBookmarks}
+        poiOpen={poiOpen}
+        closePoi={closePoi}
+        carriersOpen={carriersOpen}
+        closeCarriers={closeCarriers}
+        backlogOpen={backlogOpen}
+        closeBacklog={closeBacklog}
+        achievementsOpen={achievementsOpen}
+        closeAchievements={closeAchievements}
+        encyclopediaOpen={encyclopediaOpen}
+        closeEncyclopedia={closeEncyclopedia}
+        myExoOpen={myExoOpen}
+        closeMyExo={closeMyExo}
+        sessionOpen={sessionOpen}
+        closeSession={closeSession}
+        dataBreakdownOpen={dataBreakdownOpen}
+        setDataBreakdownOpen={setDataBreakdownOpen}
+        scanDataOn={scanDataOn}
+        togglePranavAntal={togglePranavAntal}
+        postCarrierSetting={postCarrierSetting}
+        optionsOpen={optionsOpen}
+        setOptionsOpen={setOptionsOpen}
+        resetExobiology={resetExobiology}
+        feederOpen={feederOpen}
+        setFeederOpen={setFeederOpen}
+        feeder={feeder}
+        notableQuick={notableQuick}
+        setNotableQuick={setNotableQuick}
+      />
     </header>
   );
 });

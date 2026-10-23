@@ -34,6 +34,12 @@ describe("HUD settings on the server", () => {
     expect(s.setHudPrefs({ nextBoxel: "1" })).toEqual({});
   });
 
+  it("keeps the Colonize HUD's three switches (1.3.0)", () => {
+    const s = new GameStateStore();
+    expect(s.setHudPrefs({ czNeeds: false, czSites: true, czFinished: true })).toEqual({ czNeeds: false, czSites: true, czFinished: true });
+    expect(s.setHudPrefs({ czNeeds: "0" })).toEqual({});
+  });
+
   it("keeps the app's open HUD sections in order, for the phone (2026-10-15)", () => {
     const s = new GameStateStore();
     expect(s.setHudPrefs({ sections: ["notable", "fss", "fss", "radio", 3, "jump"] })).toEqual({

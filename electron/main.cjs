@@ -31,10 +31,6 @@ const { createTabWindows } = require("./tabWindows.cjs");
 const updater = require("./updater.cjs");
 const { watchForegroundOffMain, isGameOrOwn, isGame } = require("./foregroundWatch.cjs");
 const { guardWindowNavigation, restrictPermissions, isOwnUrl } = require("./windowGuards.cjs");
-const { createBrowserPrefs } = require("./browserPrefs.cjs");
-const { createBrowserBlocker } = require("./browserBlocker.cjs");
-const { createBrowserTabs } = require("./browserTabs.cjs");
-const { createBrowserPasswords } = require("./browserPasswords.cjs");
 
 /*
   An isolated profile (`EDEXO_USER_DATA_DIR`) takes Electron's own directory with it (2026-10-17: an isolated
@@ -143,15 +139,6 @@ function showLauncher() {
   mainWindow.focus();
 }
 
-/** The tray (tray.cjs): the launcher, the HUD toggle, the UI in the browser, quit. */
-/*
-  Key binds (owner, 2026-10-02): the HUD toggle and previous / next body tab, set in the launcher
-  (electron/keybinds.cjs). The body keys go through the server to every app page.
-*/
-/**
- * A key bind for the app pages: the app window by IPC (instant), browser tabs through the server's
- * socket — which the app window then ignores (useLiveSnapshot.ts), so nothing moves twice.
- */
 /*
   Key timing (owner, 2026-10-07): how long a body / screen tab key took to reach the page and be drawn,
   into hud-events.log — for the developer's own PC only. Key presses are not recorded for anyone else,
@@ -164,6 +151,10 @@ const keyTimingOn = () => {
     return false;
   }
 };
+/**
+ * A key bind for the app pages: the app window by IPC (instant), browser tabs through the server's
+ * socket — which the app window then ignores (useLiveSnapshot.ts), so nothing moves twice.
+ */
 function uiCommandEverywhere(cmd) {
   const timed = keyTimingOn();
   if (timed) huds.log(`key ${cmd.cmd} ${cmd.dir > 0 ? "next" : "previous"}`);
@@ -178,6 +169,10 @@ ipcMain.on("edexo:ui-ack", (_e, r) => {
   huds.log(`key ${String(r.cmd)} in the page: got it +${Number(r.got)} ms, drawn +${Number(r.drawn)} ms`);
 });
 
+/*
+  Key binds (owner, 2026-10-02): the HUD toggle and previous / next body tab, set in the launcher
+  (electron/keybinds.cjs). The body keys go through the server to every app page.
+*/
 const keybinds = createKeybinds({
   globalShortcut,
   fs,
@@ -208,6 +203,7 @@ const keybinds = createKeybinds({
   },
 });
 
+/** The tray (tray.cjs): the launcher, the HUD toggle, the UI in the browser, quit. */
 const trayControl = createTrayControl({
   showLauncher,
   huds,
@@ -1030,18 +1026,6 @@ async function start() {
   });
 }
 
-/**
- * Tell Windows who this application is, before any window exists.
- *
- * The taskbar keys a button's identity — its grouping, its pin, and the icon it draws — on the
- * Application User Model ID, not on the exe path. Without this call Electron leaves the default,
- * which for a portable build is derived from the running process, so Windows can hold an icon
- * association from an older run and redraw it over a window whose own icon has since changed. That
- * is the taskbar half of the icon report; the .ico above is the other half.
- *
- * `com.edexo.compare` is the same id `electron-builder.cjs` publishes as `appId`, deliberately: two
- * different ids would make the packaged app and the dev run two different applications to the shell.
- */
 /*
   Linux: run under XWayland (docs/linux-plan-28092026.md). Electron 38+ starts as a native Wayland
   client on a Wayland desktop, and Wayland lets no app place its windows or keep them above another —
@@ -1065,6 +1049,18 @@ if (
 */
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
 
+/**
+ * Tell Windows who this application is, before any window exists.
+ *
+ * The taskbar keys a button's identity — its grouping, its pin, and the icon it draws — on the
+ * Application User Model ID, not on the exe path. Without this call Electron leaves the default,
+ * which for a portable build is derived from the running process, so Windows can hold an icon
+ * association from an older run and redraw it over a window whose own icon has since changed. That
+ * is the taskbar half of the icon report; the .ico above is the other half.
+ *
+ * `com.edexo.compare` is the same id `electron-builder.cjs` publishes as `appId`, deliberately: two
+ * different ids would make the packaged app and the dev run two different applications to the shell.
+ */
 if (process.platform === "win32") {
   try {
     app.setAppUserModelId("com.edexo.compare");
@@ -1126,12 +1122,16 @@ app.on("render-process-gone", (_e, wc, d) => {
 
 /*
   The EDEXO browser (plan 9, browserTabs.cjs): made at the first call from the Browser tab, so a run that never
-  opens it loads nothing of it.
+  opens it loads nothing of it — its modules too (audit 2026-10-22: ~100 kB were required at every start).
 */
 let browserTabs = null;
 function getBrowserTabs() {
   if (browserTabs) return browserTabs;
   const { session, net, safeStorage } = require("electron");
+  const { createBrowserPrefs } = require("./browserPrefs.cjs");
+  const { createBrowserBlocker } = require("./browserBlocker.cjs");
+  const { createBrowserTabs } = require("./browserTabs.cjs");
+  const { createBrowserPasswords } = require("./browserPasswords.cjs");
   const dir = path.dirname(huds.layoutPath());
   const appSession = session.fromPartition(APP_WINDOW_PARTITION);
   const blocker = createBrowserBlocker({

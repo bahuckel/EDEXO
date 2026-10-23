@@ -1,5 +1,5 @@
 /**
- * The one description of the bridge between the renderer and the main process.
+ * The one description of the bridge between the Colonize window and the server.
  *
  * `colonizeApi.d.ts` used to describe this by hand, beside a preload that listed the channels by
  * hand and handlers that registered them by hand. Three copies drifted twice: a handler returned a
@@ -30,12 +30,12 @@ import type { MaterialBuyScanStatus } from "../materialBuyScanStatus";
 import type { ConstructionSiteHit, SiteNeeds } from "../siteLookup";
 import type { PartyCarrier } from "../tradeParty";
 import type { SpanshSystemDebugClientResult } from "../spanshSystemDebugTypes";
-import type { SupplyMarketRow } from "../supply/recommendationEngine";
 import type {
   BasketCheckoutBundle,
   BasketCheckoutResult,
   CheckoutRoutingMode,
   ColonizeSnapshot,
+  SupplyMarketRow,
 } from "../types";
 import type { WingMember } from "../wingManifest";
 
@@ -143,7 +143,7 @@ export type InaraImportOutcome =
 
 type InaraDirResponse = { ok: true; dir: string; defaultDir: string };
 
-/** Every request the renderer can make, as the renderer sees it. */
+/** Every request the window can make, as the window sees it. */
 export type ColonizeInvoke = {
   getSnapshot: () => Promise<ColonizeSnapshot>;
   replayWeek: () => Promise<ColonizeSnapshot>;

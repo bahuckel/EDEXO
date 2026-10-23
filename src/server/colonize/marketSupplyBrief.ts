@@ -1,6 +1,6 @@
 import { readMarketJson } from "./marketJson";
 import { parseMarketId } from "../../shared/colonize/marketId";
-import type { SupplyMarketRow } from "../../shared/colonize/supply/recommendationEngine";
+import type { SupplyMarketRow } from "../../shared/colonize/types";
 import { buildStationEconomyPhrase } from "../../shared/colonize/journalEconomy";
 
 export type MarketSupplyBriefOk = {

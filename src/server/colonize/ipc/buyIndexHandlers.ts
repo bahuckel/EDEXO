@@ -113,7 +113,7 @@ export function buyIndexHandlers({ store, buyIndex, userDataDir }: IpcContext) {
     },
 
     clearSavedBuyData: async (payload) => {
-      /** No payload means everything — the default the preload used to supply. */
+      /** No payload means everything (the default EDEXO-Colonize's preload supplied). */
       const scopeRaw = payload && typeof payload === "object" ? asRecord(payload).scope : "all";
       const scope: ClearBuyDataScope =
         scopeRaw === "spansh" || scopeRaw === "visited" || scopeRaw === "inara" || scopeRaw === "all"

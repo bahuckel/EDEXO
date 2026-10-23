@@ -521,6 +521,83 @@ test("hud: the Colonize section starts Colonize and says when nothing is being b
 });
 
 /*
+  The Colonize HUD with a site (owner, 2026-10-22): the next stop's buys with bars that fill as the cargo comes aboard,
+  the site's materials with bars, finished lines gone (or last and green with the option), nothing wider than the HUD.
+  The fixture journal has no construction site, so the state is mocked: the first poll and the socket's frame.
+*/
+test("hud: Colonize draws the next stop and the site with bars, finished lines off the HUD", async ({ page }) => {
+  const errors = watchErrors(page);
+  const colonizeHud = {
+    sites: [
+      { marketId: "1", label: "Kraepelin City", system: "Swoilz KI-E b4-9", pct: 52, leftTons: 8280, docked: false },
+      { marketId: "2", label: "Bharadwaj Beacon", system: "Swoilz KI-E b4-9", pct: 8, leftTons: 3700, docked: false },
+    ],
+    moreSites: 0,
+    deliver: null,
+    next: {
+      trip: 2,
+      trips: 9,
+      kind: "buy",
+      station: "Hammond Hub",
+      system: "Laso UF-E d12-16",
+      distanceLy: 14.2,
+      fromShipLy: 33.6,
+      here: false,
+      buys: [
+        { commodityId: "steel", label: "Steel", tons: 40, have: 40, done: true },
+        { commodityId: "titanium", label: "Titanium", tons: 40, have: 12, done: false },
+      ],
+      deliverTo: ["Kraepelin City"],
+    },
+    target: {
+      marketId: "1",
+      label: "Kraepelin City",
+      system: "Swoilz KI-E b4-9",
+      pct: 52,
+      leftTons: 8280,
+      needs: [
+        { commodityId: "steel", label: "Steel", required: 9000, provided: 3600, aboard: 0, done: false },
+        { commodityId: "titanium", label: "Titanium", required: 2400, provided: 600, aboard: 12, done: false },
+        { commodityId: "aluminium", label: "Aluminium", required: 800, provided: 800, aboard: 0, done: true },
+      ],
+    },
+    plan: "active",
+    hold: { used: 52, capacity: 80 },
+  };
+  const payload = { port: 7119, colonizeHud };
+  await page.setViewportSize({ width: 420, height: 900 });
+  await page.route(/\/api\/state\?channel=hud/, (r) => r.fulfill({ json: payload }));
+  await page.route(/\/api\/colonize\/rpc\/getSnapshot/, (r) => r.fulfill({ json: { ok: true, result: null } }));
+  await page.routeWebSocket(/channel=hud/, (ws) => {
+    ws.onMessage(() => {});
+    setTimeout(() => ws.send(JSON.stringify({ type: "state", payload })), 300);
+  });
+  await page.goto("/colonize-overlay.html");
+  const next = page.locator('[data-section="colonize"] [data-f="next"]');
+  await expect(next).toContainText("Hammond Hub");
+  await expect(next).toContainText("34 ly away");
+  await expect(next).toContainText("12 / 40 t");
+  await expect(next).not.toContainText("Steel");
+  expect(await next.locator(".hud-bar__fill").first().evaluate((e) => (e as HTMLElement).style.width)).toBe("30%");
+  const site = page.locator('[data-section="colonize"] [data-f="site"]');
+  await expect(site).toContainText("Kraepelin City");
+  await expect(site).not.toContainText("Aluminium");
+  await expect(site).toContainText("1 of 3 delivered");
+  expect(await page.evaluate(() => [...document.querySelectorAll("*")].filter((e) => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== "visible").length)).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `${OUT}/hud-colonize.png`, fullPage: true });
+
+  // "Show finished lines": the bought line and the delivered material come back, last and green.
+  await page.evaluate(() => localStorage.setItem("edexoHudCzFinished", "1"));
+  await page.reload();
+  await expect(site).toContainText("Aluminium");
+  await expect(site.locator(".row--done")).toHaveCount(1);
+  await expect(next.locator(".row--done")).toContainText("Steel");
+  await page.screenshot({ path: `${OUT}/hud-colonize-finished.png`, fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+/*
   The 3D galaxy map (G1, docs/galaxy-plan-28092026.md): the whole index loads, region names are
   placed, and moving close to Sol swaps the overview for precise tiles there.
 */

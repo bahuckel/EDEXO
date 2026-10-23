@@ -1,5 +1,5 @@
 import { makeCargoPool, tonsStillNeededWithPool } from "../basketGap";
-import { resourceNeedId } from "../commodityKey";
+import { itemLabel, resourceNeedId } from "../commodityKey";
 import type { DepotSnapshot } from "../types";
 import { uniqueDepotLabels } from "../depotLabel";
 import type { WingMember } from "../wingManifest";
@@ -33,7 +33,7 @@ export function collectPlannerNeeds(
       });
       need = Math.max(0, need - wingT);
       if (need <= 0) continue;
-      const label = (r.nameLocalised || r.name).trim() || r.name;
+      const label = itemLabel(r);
       let cur = acc.get(id);
       if (!cur) {
         cur = { commodityId: id, label, tons: 0, forDepots: [] };
@@ -79,7 +79,7 @@ export function buildDepotNeedStates(depots: DepotSnapshot[], wing: WingMember[]
       });
       tons = Math.max(0, tons - wingT);
       if (tons <= 0) continue;
-      const rowLabel = (r.nameLocalised || r.name).trim() || r.name;
+      const rowLabel = itemLabel(r);
       needs.set(id, { label: rowLabel, tons });
     }
     return {

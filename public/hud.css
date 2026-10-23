@@ -666,6 +666,26 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
   box-shadow: var(--hud-glow);
   transition: width 0.4s ease;
 }
+/* A thin bar under a list row (Colonize: tons bought, tons delivered). */
+.hud-bar--thin {
+  height: 0.1875rem;
+  margin-top: 0.12rem;
+  margin-bottom: 0.18rem;
+}
+/* Finished (Colonize, owner 2026-10-22): green, last in its list, and only when "Show finished lines" is on. */
+.hud-bar__fill--done {
+  background: var(--live);
+  box-shadow: 0 0 6px rgba(123, 224, 123, 0.5);
+}
+.row--done .k,
+.row--done .v {
+  color: var(--live);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-bar__fill {
+    transition: none;
+  }
+}
 .hud-bar__ticks {
   position: absolute;
   inset: 0;

@@ -149,7 +149,6 @@ export function clearGalaxyDistanceCache(): void {
 export function lookupGalaxyDistanceLy(
   systemName: string,
   distanceBySystem: Record<string, number> | undefined,
-  _norm: (s: string) => string,
   constructionRef?: string,
 ): number | null {
   if (!distanceBySystem) return null;
@@ -192,18 +191,18 @@ export function lookupGalaxyDistanceLy(
 
 /**
  * Straight-line hop from construction ref to seller system (Milky Way x/y/z).
- * Never uses saved index/Spansh Ly — those are often relative to a different ref.
+ * Never uses saved index/Spansh Ly — those are often relative to a different ref. (Callers passed the saved Ly as a
+ * third argument that was never read, which looked like a fallback; it went, audit 2026-10-22.)
  */
 export function constructionHopLy(
   constructionRef: string,
   sellerSystem: string,
-  _savedLy?: Ly,
   distanceBySystem?: Record<string, number>,
 ): Ly {
   const refN = normSystemName(constructionRef);
   const sellN = normSystemName(sellerSystem);
   if (refN && sellN && refN === sellN) return 0;
-  return lookupGalaxyDistanceLy(sellerSystem, distanceBySystem, normSystemName, constructionRef);
+  return lookupGalaxyDistanceLy(sellerSystem, distanceBySystem, constructionRef);
 }
 
 export function formatHopLy(dist: Ly | undefined, loading = false): string {
@@ -211,13 +210,13 @@ export function formatHopLy(dist: Ly | undefined, loading = false): string {
   return `${dist.toFixed(1)} Ly`;
 }
 
-/** 3D straight-line Ly from colonization site — null when coords not resolved yet. */
+/** 3D straight-line Ly from colonization site — null when coords not resolved yet (or no site is named). */
 export function galaxyLyFromSite(
   sellerSystem: string,
   constructionSite: string,
   distanceMap: Record<string, number>,
 ): number | null {
-  return bestGalaxyLyFromSites(sellerSystem, [constructionSite], distanceMap);
+  return constructionSite.trim() ? constructionHopLy(constructionSite, sellerSystem, distanceMap) : null;
 }
 
 /** Minimum 3D Ly from any construction site to the seller. */
@@ -235,7 +234,7 @@ export function bestGalaxyLyFromSites(
     if (!s) continue;
     if (normSystemName(s) === sellN) return 0;
     if (!Object.keys(distanceMap).length) continue;
-    const d = lookupGalaxyDistanceLy(sell, distanceMap, normSystemName, s);
+    const d = lookupGalaxyDistanceLy(sell, distanceMap, s);
     if (d != null && (best == null || d < best)) best = d;
   }
   return best;

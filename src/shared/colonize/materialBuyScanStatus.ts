@@ -126,8 +126,3 @@ export function normalizeMaterialBuyScanStatus(raw: unknown): MaterialBuyScanSta
     updatedAtIso: typeof r.updatedAtIso === "string" ? r.updatedAtIso : new Date().toISOString(),
   };
 }
-
-export function isQueueSliceBusy(slice: MaterialBuyScanQueueSlice | null | undefined): boolean {
-  if (!slice) return false;
-  return slice.phase === "scanning" || slice.phase === "saving" || slice.queuedJobs > 0;
-}

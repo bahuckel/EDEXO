@@ -6,7 +6,7 @@
  * Writes are batched (a ticked line saves within a moment, a burst of ticks once) and whole-or-nothing
  * (atomicWrite.ts). A file that cannot be read starts empty; the window then uploads what its browser still has.
  */
-import { readFileSync } from "node:fs";
+import { copyFileSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { writeFileAtomic } from "../atomicWrite.js";
 import { resolveColonizeDataDir } from "../paths.js";
@@ -25,12 +25,23 @@ export class ColonizeUiState {
   seeded = false;
 
   constructor(private readonly file: string) {
+    let text: string;
     try {
-      const j = JSON.parse(readFileSync(file, "utf8")) as { values?: unknown };
+      text = readFileSync(file, "utf8");
+    } catch {
+      return; // none yet
+    }
+    try {
+      const j = JSON.parse(text) as { values?: unknown };
       this.seeded = true;
       for (const [k, v] of Object.entries(cleanUiStateSet(j.values))) if (typeof v === "string") this.values[k as ColonizeSyncedKey] = v;
     } catch {
-      /* none yet, or unreadable: start empty */
+      // Unreadable: start empty, but keep a copy first (the plan's ticks and the hub pins live only here).
+      try {
+        copyFileSync(file, `${file}.bak-corrupt`);
+      } catch {
+        /* the copy failed: start empty anyway */
+      }
     }
   }
 

@@ -1,5 +1,5 @@
 import { storageGet, storageSet, storageRemove } from "./storage";
-const CARGO_CAPACITY_KEY = "edexo-colonize-cargo-capacity-v1";
+import { KEY_CARGO_CAPACITY as CARGO_CAPACITY_KEY } from "./uiStateKeys";
 
 export function loadCargoCapacityOverride(): number | null {
   try {

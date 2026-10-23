@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { resourceNeedId } from "../../src/shared/colonize/commodityKey";
 import { buildLogisticsSummary } from "../../src/shared/colonize/logisticsSummary";
-import { combinedMissingWithQty, buildCargoMap } from "../../src/shared/colonize/basketGap";
+import { combinedMissingWithQty } from "../../src/shared/colonize/basketGap";
+import { shipCargoByKey } from "../../src/shared/colonize/carrierStock";
 import type { DepotSnapshot, ResourceRow } from "../../src/shared/colonize/types";
 
 function row(name: string, required: number, provided = 0): ResourceRow {
@@ -31,7 +32,7 @@ describe("cargo on hand is allocated once across depots", () => {
     depot("a", "Site A", [row("Steel", 100)]),
     depot("b", "Site B", [row("Steel", 100)]),
   ];
-  const cargo = buildCargoMap([{ name: "Steel", nameLocalised: "Steel", count: 60 }]);
+  const cargo = shipCargoByKey([{ name: "Steel", nameLocalised: "Steel", count: 60 }]);
 
   it("reports the same outstanding total from the summary as from the basket", () => {
     const summary = buildLogisticsSummary(depots, cargo);

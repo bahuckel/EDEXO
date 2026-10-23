@@ -10,7 +10,7 @@ import { downloadNeutrons, loadNeutronIndex, neutronsStatus, probeNeutronsReleas
 import { applyJumponium, optimiseOrder, planNeutronRoute } from "../neutronRoute.js";
 import { jumponiumView, recipeFor } from "../../shared/jumponium.js";
 import { parseLiveHops, parseLivePlan } from "../neutronLive.js";
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 type Waypoint = { name: string; x: number; y: number; z: number };
 

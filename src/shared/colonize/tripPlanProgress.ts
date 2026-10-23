@@ -2,13 +2,14 @@ import { depotDisplayLabel } from "./depotLabel";
 import type { DepotSnapshot } from "./types";
 import type { HaulTrip, LogisticsPlan } from "./logisticsPlanner";
 import { storageGet, storageSet, storageRemove } from "./storage";
+import { KEY_TRIP_PLAN } from "./uiStateKeys";
 
 /**
  * v3 since S-8: delivery lines are keyed by the site's market id, not its label. A v2 snapshot is
  * still read, flagged `legacyDepotLabels`, and converted by `adoptLegacyDepotIds` once the sites
  * are known; the v2 key is removed on the first v3 save.
  */
-const TRIP_PLAN_SNAPSHOT_KEY = "edexo-colonize-trip-plan-snapshot-v3";
+const TRIP_PLAN_SNAPSHOT_KEY = KEY_TRIP_PLAN;
 const LEGACY_TRIP_PLAN_SNAPSHOT_KEY = "edexo-colonize-trip-plan-snapshot-v2";
 
 export type ContributionBaseline = Record<string, Record<string, number>>;
@@ -22,7 +23,21 @@ export type TripPlanSnapshot = {
   createdAt: string;
   /** Read from a v2 snapshot: deliveries name sites by label only. See `adoptLegacyDepotIds`. */
   legacyDepotLabels?: boolean;
+  /**
+   * The ticks of the last plans this one replaced, newest first (at most EARLIER_PLANS). The same key builds the same
+   * plan, so going back to it (a filter switched off and on again, the other ship) brings its ticks back instead of
+   * starting over (audit 2026-10-22: "calculations should be saved").
+   */
+  earlier?: EarlierPlanTicks[];
 };
+
+export type EarlierPlanTicks = {
+  planRefreshKey: string;
+  manualCompletedLineIds: string[];
+  baselineContributions: ContributionBaseline;
+};
+
+const EARLIER_PLANS = 3;
 
 export function tripBuyLineId(tripNumber: number, stopIndex: number, commodityId: string): string {
   return `t${tripNumber}-s${stopIndex}-b-${commodityId}`;
@@ -91,7 +106,15 @@ export function planRefreshFingerprint(
   checkoutsSig: string,
   constraintsSig = "",
 ): string {
-  const depotPart = depots
+  return `${planDepotFingerprint(depots)}|cap:${capacity ?? ""}|co:${checkoutsSig}|cn:${constraintsSig}`;
+}
+
+/**
+ * The sites part of planRefreshFingerprint: which sites, and what each requires. The HUD compares it with the saved
+ * plan's key to tell a plan made for sites that have since finished (`"stale"`).
+ */
+export function planDepotFingerprint(depots: DepotSnapshot[]): string {
+  return depots
     .map((d) => {
       const reqs = d.resources
         .map((r) => `${r.name}:${r.required}`)
@@ -101,7 +124,6 @@ export function planRefreshFingerprint(
     })
     .sort()
     .join(";");
-  return `${depotPart}|cap:${capacity ?? ""}|co:${checkoutsSig}|cn:${constraintsSig}`;
 }
 
 function collectContributionBaseline(depots: DepotSnapshot[]): ContributionBaseline {
@@ -158,8 +180,9 @@ export function createTripPlanSnapshot(
   plan: LogisticsPlan,
   planRefreshKey: string,
   depots: DepotSnapshot[],
+  previous?: TripPlanSnapshot | null,
 ): TripPlanSnapshot {
-  return {
+  const fresh: TripPlanSnapshot = {
     planRefreshKey,
     // Plans are rebuilt fresh by buildLogisticsPlan and never mutated — store the reference.
     plan,
@@ -167,6 +190,44 @@ export function createTripPlanSnapshot(
     manualCompletedLineIds: [],
     createdAt: new Date().toISOString(),
   };
+  if (!previous || previous.planRefreshKey === planRefreshKey) return fresh;
+  const kept: EarlierPlanTicks[] = [
+    {
+      planRefreshKey: previous.planRefreshKey,
+      manualCompletedLineIds: previous.manualCompletedLineIds,
+      baselineContributions: previous.baselineContributions,
+    },
+    ...(previous.earlier ?? []),
+  ];
+  // Back to a plan made before: its ticks and its starting point for deliveries, as they were.
+  const back = kept.find((e) => e.planRefreshKey === planRefreshKey);
+  if (back) {
+    fresh.manualCompletedLineIds = [...back.manualCompletedLineIds];
+    fresh.baselineContributions = back.baselineContributions;
+  }
+  const earlier = kept.filter((e) => e.planRefreshKey !== planRefreshKey).slice(0, EARLIER_PLANS);
+  if (earlier.length) fresh.earlier = earlier;
+  return fresh;
+}
+
+function parseEarlier(raw: unknown): EarlierPlanTicks[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: EarlierPlanTicks[] = [];
+  for (const e of raw) {
+    if (!e || typeof e !== "object") continue;
+    const r = e as Record<string, unknown>;
+    if (typeof r.planRefreshKey !== "string") continue;
+    out.push({
+      planRefreshKey: r.planRefreshKey,
+      manualCompletedLineIds: Array.isArray(r.manualCompletedLineIds)
+        ? r.manualCompletedLineIds.filter((id): id is string => typeof id === "string")
+        : [],
+      baselineContributions:
+        r.baselineContributions && typeof r.baselineContributions === "object" ? (r.baselineContributions as ContributionBaseline) : {},
+    });
+    if (out.length >= EARLIER_PLANS) break;
+  }
+  return out.length ? out : undefined;
 }
 
 function contributionDeltaTons(
@@ -320,6 +381,16 @@ export function syncTripLineCompletions(
   cargoByKey: Map<string, number>,
   manualCompleted: string[],
 ): string[] {
+  return [...walkTripProgress(snapshot, depots, cargoByKey, manualCompleted).completed];
+}
+
+/** The walk syncTripLineCompletions makes, keeping the trip it stopped at and the cargo left over after that trip. */
+function walkTripProgress(
+  snapshot: TripPlanSnapshot,
+  depots: DepotSnapshot[],
+  cargoByKey: Map<string, number>,
+  manualCompleted: string[],
+): { completed: Set<string>; trip: HaulTrip | null; pool: Map<string, number> } {
   const completed = new Set(manualCompleted);
   const delta = contributionDeltaTons(depots, snapshot.baselineContributions);
   const cargoPool = new Map(cargoByKey);
@@ -332,10 +403,54 @@ export function syncTripLineCompletions(
 
     autoCompleteDeliverLines(trip, delta, completed);
     autoCompleteBuyLines(trip, cargoPool, completed);
-    break;
+    return { completed, trip, pool: cargoPool };
   }
 
-  return [...completed];
+  return { completed, trip: null, pool: cargoPool };
+}
+
+/**
+ * syncTripLineCompletions, plus how much of each open buy line of the current trip is aboard already: the HUD's bars
+ * (owner, 2026-10-22: "amount changing dynamically with bars"). A done line is full; an open line takes what the hold
+ * has left of its commodity, stops in order, so a commodity bought at two stops fills the first stop's line first.
+ * From the same walk as the ticks, so a full bar is always a ticked line.
+ */
+export function tripBuyProgress(
+  snapshot: TripPlanSnapshot,
+  depots: DepotSnapshot[],
+  cargoByKey: Map<string, number>,
+  manualCompleted: string[],
+): { completed: Set<string>; trip: HaulTrip | null; haveByLineId: Map<string, number> } {
+  const walk = walkTripProgress(snapshot, depots, cargoByKey, manualCompleted);
+  const haveByLineId = new Map<string, number>();
+  if (walk.trip) {
+    const pool = new Map(walk.pool);
+    for (const stop of [...walk.trip.stops].sort((a, b) => a.stopIndex - b.stopIndex)) {
+      if (stop.kind !== "buy") continue;
+      for (const b of stop.buys) {
+        const id = tripBuyLineId(walk.trip.tripNumber, stop.stopIndex, b.commodityId);
+        if (walk.completed.has(id)) {
+          haveByLineId.set(id, b.buyTons);
+          continue;
+        }
+        const avail = Math.max(0, pool.get(b.commodityId) ?? 0);
+        const have = Math.min(b.buyTons, avail);
+        haveByLineId.set(id, have);
+        pool.set(b.commodityId, avail - have);
+      }
+    }
+  }
+  return { completed: walk.completed, trip: walk.trip, haveByLineId };
+}
+
+/** A saved trip plan from its stored text (the server's HUD reads it the way the window does); null when unusable. */
+export function parseTripPlanSnapshot(text: string | null | undefined): TripPlanSnapshot | null {
+  if (!text) return null;
+  try {
+    return migrateTripPlanSnapshot(JSON.parse(text) as Record<string, unknown>, false);
+  } catch {
+    return null;
+  }
 }
 
 function migrateTripPlanSnapshot(parsed: Record<string, unknown>, legacyDepotLabels: boolean): TripPlanSnapshot | null {
@@ -354,6 +469,7 @@ function migrateTripPlanSnapshot(parsed: Record<string, unknown>, legacyDepotLab
     manualCompletedLineIds: manual,
     createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : new Date().toISOString(),
     ...(legacyDepotLabels ? { legacyDepotLabels: true } : {}),
+    ...(parseEarlier(parsed.earlier) ? { earlier: parseEarlier(parsed.earlier) } : {}),
   };
 }
 

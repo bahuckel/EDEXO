@@ -6,9 +6,6 @@ import { galaxyDistancePairKey, lookupGalaxyDistanceLy } from "../../src/shared/
 import { mergeMaterialListings } from "../../src/shared/colonize/mergeCheckoutPlans";
 import type { MaterialBuyListing, MaterialBuyStationHit } from "../../src/shared/colonize/materialBuyIndexTypes";
 
-/** `lookupGalaxyDistanceLy` keeps an unused normaliser parameter for signature compatibility. */
-const identity = (v: string) => v;
-
 function marketEvent(timestamp: string): Record<string, unknown> {
   return {
     event: "Market",
@@ -67,11 +64,11 @@ describe("lookupGalaxyDistanceLy", () => {
   it("returns null when the asked-for site has no measured pair", () => {
     // It used to fall through and hand back Site B's distance, which was then shown
     // and filtered on as though it were Site A's.
-    expect(lookupGalaxyDistanceLy("Seller", map, identity, "Site A")).toBeNull();
+    expect(lookupGalaxyDistanceLy("Seller", map, "Site A")).toBeNull();
   });
 
   it("still answers for the site that does have one", () => {
-    expect(lookupGalaxyDistanceLy("Seller", map, identity, "Site B")).toBe(42);
+    expect(lookupGalaxyDistanceLy("Seller", map, "Site B")).toBe(42);
   });
 });
 

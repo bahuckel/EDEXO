@@ -15,10 +15,6 @@ function parseMaterialSearchQuery(query: string): string[] {
   return parts;
 }
 
-export function isMultiMaterialSearch(query: string): boolean {
-  return parseMaterialSearchQuery(query).length > 1;
-}
-
 export function materialNeedsFromQuery(query: string): MaterialSearchNeed[] {
   return parseMaterialSearchQuery(query).map((part) => ({
     needId: commodityMergeBucket(part),

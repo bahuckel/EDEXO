@@ -8,7 +8,7 @@ import type express from "express";
 import { mkdirSync } from "node:fs";
 import { isLoopbackAddress } from "../lanAuth.js";
 import { openLocalFile } from "../openUrl.js";
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 export function registerBackupRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
   const service = opts.backup;

@@ -18,16 +18,14 @@ import { parseBoxel } from "@shared/boxel";
 import { useModal } from "./ui/useModal";
 import { CopySystemButton } from "./CopySystemButton";
 import { useToast } from "./ui/feedback";
-import { isBool, isNum, isStrArr, oneOf, usePersistedState } from "./usePersistedState";
-import { Table, type Column } from "./DiscoveriesTables";
+import { isBool, isNum, oneOf, usePersistedState } from "./usePersistedState";
+import { Table, type Column } from "./ui/DataTable";
 import { useNextBoxelInHeader } from "./nextBoxelSetting";
 import { fuzzyRankAny } from "./fuzzyMatch";
-import { NOTABLE_KINDS, type NotableKind } from "@shared/notices";
 import { Select } from "./ui/Select";
 import { BoxelLookingFor, BoxelMassCodeHelp, GoldenTag } from "./BoxelAdvice";
-import { Tooltip } from "./ui/Tooltip";
 import { LoadingNote, RefreshBar } from "./ui/Loading";
-import { STAR_CLASSES } from "@shared/galaxyTraits";
+import { useMediaQuery } from "./ui/Menu";
 import {
   BOXEL_FILTER_KINDS,
   boxelFilterSuggestions,
@@ -35,62 +33,21 @@ import {
   NOTABLE_SHORT,
   type BoxelFilterKind,
 } from "./boxelFilter";
+import {
+  isIncluded,
+  json,
+  NOTABLE_LABEL,
+  PREV_PAGE,
+  PREV_RANGES,
+  STAR_LABEL,
+  type SideTab,
+} from "./boxel/boxelLabels";
+import { boxelColumns } from "./boxel/boxelColumns";
 
-const NOTABLE_LABEL = Object.fromEntries(NOTABLE_KINDS.map((k) => [k.key, k.label])) as Record<
-  NotableKind,
-  string
->;
-
-const FROM_TITLE = {
-  index: "From the galaxy index (EDSM / Spansh records)",
-  lookup: "From Spansh (Look up)",
-  route: "From a route you plotted or a system you targeted in the galaxy map: the main star's class only",
-} as const;
-
-/** A fact from the galaxy index or a Spansh look-up (not your own scan) reads dimmer, and says so on hover. */
-function fromIndex(r: BoxelTableRowDTO, text: string) {
-  return r.from === "index" || r.from === "lookup" || r.from === "route" ? (
-    <span className="boxel-from-index" title={FROM_TITLE[r.from]}>
-      {text}
-    </span>
-  ) : (
-    <span>{text}</span>
-  );
-}
-
-/** Previous boxels drawn at once: a long log holds thousands. */
-const PREV_PAGE = 60;
-const PREV_RANGES: { days: number; label: string }[] = [
-  { days: 1, label: "24h" },
-  { days: 7, label: "7d" },
-  { days: 30, label: "30d" },
-  { days: 90, label: "90d" },
-  { days: 365, label: "365d" },
-  { days: 0, label: "All" },
-];
-const STAR_LABEL = Object.fromEntries(STAR_CLASSES.map((c) => [c.key, c.label])) as Record<string, string>;
-
-/** True while the window is at most `px` wide. */
-function useNarrow(px: number): boolean {
-  const query = `(max-width: ${px}px)`;
-  const [narrow, setNarrow] = useState(() => window.matchMedia?.(query).matches ?? false);
-  useEffect(() => {
-    const m = window.matchMedia?.(query);
-    if (!m) return;
-    const on = () => setNarrow(m.matches);
-    m.addEventListener("change", on);
-    return () => m.removeEventListener("change", on);
-  }, [query]);
-  return narrow;
-}
-
-type SideTab = "saved" | "explored" | "history";
-
-/** Other stars listed in a row before "+N more". */
-const OTHER_STARS_SHOWN = 2;
-
-const isIncluded = (v: unknown): v is string[] | null => v === null || isStrArr(v);
-const json = { "Content-Type": "application/json" };
+/*
+  The labels and helpers and the table's columns live in boxel/ since the audit of 2026-10-22; the
+  window-width check is ui/Menu's useMediaQuery (this file had its own copy).
+*/
 
 export function BoxelScreen({
   onClose,
@@ -444,217 +401,12 @@ export function BoxelScreen({
   }, [table]);
   const order = useMemo(() => new Map(ids.map((id, i) => [id, i])), [ids]);
   const columns = useMemo<Column<BoxelTableRowDTO>[]>(
-    () => [
-      {
-        key: "n",
-        label: "#",
-        numeric: true,
-        title: "The system's number in its boxel (rows of several boxels stay grouped by boxel)",
-        value: (r) => (order.get(r.boxelId) ?? 0) * 1e5 + r.n,
-        render: (r) => <span className="dim">{r.n}</span>,
-      },
-      {
-        key: "sys",
-        label: "System",
-        value: (r) => r.name,
-        render: (r) => (
-          <span className="boxel-sys">
-            {r.name}
-            <CopySystemButton system={r.name} />
-          </span>
-        ),
-      },
-      {
-        key: "flown",
-        label: "Flown",
-        title: "Flown (when you were last there), skipped, or not yet",
-        value: (r) => (r.flown ? `2${r.visitedAt ?? ""}` : r.skipped ? "1" : null),
-        render: (r) =>
-          r.flown ? (
-            <span
-              className="fdb-dss"
-              title={r.visitedAt ? `Last there ${r.visitedAt.slice(0, 16).replace("T", " ")}` : undefined}
-            >
-              ✓ {r.visitedAt ? r.visitedAt.slice(0, 10) : "flown"}
-            </span>
-          ) : r.skipped ? (
-            <span className="boxel-skipped">skipped</span>
-          ) : r.onRoute ? (
-            <span
-              className="dim"
-              title="Not flown yet: a route you plotted passes through it, or you targeted it in the galaxy map, so it exists"
-            >
-              on route
-            </span>
-          ) : r.gap ? (
-            <span
-              className="dim"
-              title="Not recorded anywhere, but a higher system of this boxel is known: systems are numbered without gaps (mass codes a–g), so it exists"
-            >
-              exists
-            </span>
-          ) : (
-            <span className="dim">—</span>
-          ),
-      },
-      {
-        key: "main",
-        label: "Main star",
-        title:
-          "Flown: the arrival star as you scanned it. Not flown: its class in the galaxy index (no luminosity)",
-        value: (r) => r.mainStar,
-        render: (r) =>
-          r.notOnSpansh && !r.from ? (
-            <span
-              className="dim"
-              title="Looked up: Spansh has no record of it — undiscovered, as far as anyone uploaded"
-            >
-              not on Spansh
-            </span>
-          ) : (
-            fromIndex(r, r.mainStar ?? "—")
-          ),
-      },
-      {
-        key: "stars",
-        label: "Other stars",
-        value: (r) => (r.from ? r.otherStars.length : null),
-        // Two, then "+3 more" with the rest on hover (owner, 2026-10-05: the field had no limit).
-        render: (r) =>
-          r.otherStars.length ? (
-            <span className="boxel-stars">
-              {fromIndex(r, r.otherStars.slice(0, OTHER_STARS_SHOWN).join(", "))}
-              {r.otherStars.length > OTHER_STARS_SHOWN ? (
-                <Tooltip
-                  text={r.otherStars.slice(OTHER_STARS_SHOWN).join(", ")}
-                  className="boxel-stars__more"
-                >
-                  <span tabIndex={0}>+{r.otherStars.length - OTHER_STARS_SHOWN} more</span>
-                </Tooltip>
-              ) : null}
-            </span>
-          ) : (
-            <span className="dim">—</span>
-          ),
-      },
-      {
-        key: "bodies",
-        label: "Bodies",
-        numeric: true,
-        title:
-          "Flown: bodies you scanned, of the count the FSS gave. Not flown: the bodies the galaxy index knows",
-        value: (r) => r.bodies?.total ?? r.bodies?.scanned ?? null,
-        render: (r) =>
-          !r.bodies ? (
-            <span className="dim">—</span>
-          ) : r.bodies.scanned == null ? (
-            fromIndex(r, String(r.bodies.total ?? "—"))
-          ) : (
-            <span
-              className={r.bodies.total != null && r.bodies.scanned >= r.bodies.total ? "fdb-dss" : undefined}
-            >
-              {r.bodies.scanned}
-              {r.bodies.total != null ? `/${r.bodies.total}` : ""}
-            </span>
-          ),
-      },
-      {
-        key: "notable",
-        label: "Notable",
-        title:
-          "Earth-like, water and ammonia worlds, other terraformables, Helium gas giants (the exact class) and green gas giants. Green and Helium gas giants only from your journals: the galaxy index has no gas giants of those classes",
-        value: (r) => (r.notables.length ? r.notables.reduce((t, x) => t + (x.n ?? 1), 0) : null),
-        render: (r) =>
-          r.notables.length ? (
-            <span
-              className={`boxel-notables${r.from === "index" || r.from === "lookup" ? " boxel-from-index" : ""}`}
-            >
-              {r.notables.map((x) => (
-                <span key={x.kind} className="boxel-notable" title={NOTABLE_LABEL[x.kind]}>
-                  {NOTABLE_SHORT[x.kind]}
-                  {x.n != null && x.n > 1 ? ` ×${x.n}` : ""}
-                </span>
-              ))}
-            </span>
-          ) : (
-            <span className="dim">—</span>
-          ),
-      },
-      {
-        key: "bio",
-        label: "Biology",
-        title:
-          "Flown: biology signals you saw and the species you logged, with what EDSM and Spansh recorded. Not flown: the galaxy index's records",
-        value: (r) => (r.bio ? r.bio.species.length * 1000 + (r.bio.signals ?? (r.bio.seen ? 1 : 0)) : null),
-        render: (r) => {
-          if (!r.bio) return <span className="dim">—</span>;
-          const signals = r.bio.signals ? `${r.bio.signals} signal${r.bio.signals === 1 ? "" : "s"}` : "";
-          if (r.bio.species.length)
-            return (
-              <span className="boxel-bio">
-                {signals ? <span className="dim">{signals}: </span> : null}
-                {r.bio.species.join(", ")}
-              </span>
-            );
-          return (
-            <span className="dim">
-              {signals || (r.bio.seen ? "signals, species not logged" : "none recorded")}
-            </span>
-          );
-        },
-      },
-      {
-        key: "act",
-        label: "",
-        value: () => null,
-        render: (r) => {
-          const b = byId.get(r.boxelId);
-          return (
-            <span className="boxel-row__actions">
-              <button
-                type="button"
-                className="fdb-chip"
-                title={
-                  r.flown
-                    ? "Open it in EDEXO, from your journals"
-                    : "Look it up on Spansh and open it in EDEXO"
-                }
-                onClick={() => openRow(r)}
-              >
-                {r.flown ? "Open" : "Spansh"}
-              </button>
-              {b && !r.flown ? (
-                <button
-                  type="button"
-                  className={`fdb-chip${r.skipped ? " fdb-chip--on" : ""}`}
-                  aria-pressed={r.skipped}
-                  title="Skipped: not flown, but it counts as done for this boxel"
-                  onClick={() => void patch(b.id, { skip: r.n, on: !r.skipped })}
-                >
-                  {r.skipped ? "Unskip" : "Skip"}
-                </button>
-              ) : null}
-              {b && r.n >= 1 && r.n > (flownMax.get(b.id) ?? -1) ? (
-                <button
-                  type="button"
-                  className="fdb-chip boxel-x"
-                  aria-label={`Delete -${r.n} and every system after it`}
-                  title="Delete this system and every one after it (a last number typed too high)"
-                  onClick={() => setCutAsk({ id: b.id, n: r.n })}
-                >
-                  ×
-                </button>
-              ) : null}
-            </span>
-          );
-        },
-      },
-    ],
+    () => boxelColumns({ byId, order, flownMax, openRow, patch, setCutAsk }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [byId, order, flownMax],
   );
   // A phone gets cards, titled by the system (owner, 2026-10-05: the redo works on a phone too).
-  const narrow = useNarrow(760);
+  const narrow = useMediaQuery("(max-width: 760px)");
   const shownColumns = useMemo(
     () => (narrow ? [columns[1]!, columns[0]!, ...columns.slice(2)] : columns),
     [narrow, columns],

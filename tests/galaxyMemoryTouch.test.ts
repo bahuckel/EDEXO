@@ -8,12 +8,20 @@ import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import express from "express";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { registerGalaxyRoutes } from "../src/server/routes/galaxyRoutes.js";
 import { galaxyMemoryState } from "../src/server/galaxyMemory.js";
+import { loadBioIndex } from "../src/server/bioIndex.js";
 
 let server: Server;
 let base: string;
 beforeAll(async () => {
+  /*
+    /mine/system reads the bio index before asking the store (audit 2026-10-22). Held as "none" here, so a test
+    never reads the 245 MB file where a clone has it.
+  */
+  loadBioIndex(path.join(tmpdir(), "edexo-no-such-bio-index.bin"));
   const app = express();
   const store = { systemPositions: new Map(), ownAssets: { carrier: null, colonies: [] } };
   registerGalaxyRoutes(
@@ -49,7 +57,7 @@ describe("the galaxy map's idle clock", () => {
   });
 
   it("is reset by the requests that read the map's data", async () => {
-    // (Neither preloads the index: a test must not read the 245 MB file where a clone has it.)
+    // (Neither reads the index: it is held as "none" above.)
     for (const p of ["/api/galaxy/mine/system?addr=1", "/api/galaxy/layers?kind=poi"]) {
       expect(await touchedBy(p), p).toBe(true);
     }

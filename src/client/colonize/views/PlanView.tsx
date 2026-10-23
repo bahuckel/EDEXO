@@ -8,6 +8,7 @@
  */
 import { useMemo } from "react";
 import { isConstructionDepotStation } from "../../../shared/colonize/constructionDepot";
+import { formatTons } from "../../../shared/colonize/formatPrice";
 import { inaraCommoditySearchUrl } from "../../../shared/colonize/inaraLinks";
 import type { MissingBuyIndexedItem } from "../../../shared/colonize/logisticsPlanner";
 import type { MinLandingPad } from "../../../shared/colonize/stationFilter";
@@ -39,15 +40,13 @@ export function PlanView({ m }: { m: ColonizeModel }) {
     isActive: true,
     activeDepots,
     cargoByKey: m.cargoByKey,
-    checkoutResult: m.stations.checkoutResult,
     checkoutBundle: m.stations.checkoutBundle,
     bannedStations: m.bannedStations,
     constructionRefSystems: m.constructionRefSystems,
     constructionSiteSystems: m.constructionSiteRefs,
     homeSystem: m.homeSystem,
-    buyIndexRefreshToken: m.buyIndexRefreshToken,
   });
-  const { listings, listingsReady, listingsLoading, localFetchingId, fetchMissingMaterialLocally } = useDepotBuyListings({
+  const { listings, listingsReady, listingsLoading, localFetchingId, fetchMissingMaterialLocally, localFetchNotice } = useDepotBuyListings({
     isActive: true,
     depotNeeds,
     activeDepots,
@@ -128,7 +127,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
 
   if (!activeDepots?.length) {
     return (
-      <div className="cz-cols">
+      <div className="cz-cols cz-cols--plan">
         <SitesColumn m={m} />
         <div className="cz-wide">
           <Panel k="plan-empty" title="Nothing to haul yet">
@@ -147,7 +146,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
   }
 
   return (
-    <div className="cz-cols">
+    <div className="cz-cols cz-cols--plan">
       <SitesColumn m={m} />
       <div className="cz-wide">
         <Panel
@@ -156,7 +155,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
           aside={
             <span className="cz-aside-note">
               {trips.length
-                ? `${trips.length} trip${trips.length === 1 ? "" : "s"} · ${Math.round(totalTons).toLocaleString("en-US")} t`
+                ? `${trips.length} trip${trips.length === 1 ? "" : "s"} · ${formatTons(totalTons)}`
                 : listingsLoading || m.stations.busy
                   ? "Working it out…"
                   : "No trips yet"}
@@ -172,6 +171,11 @@ export function PlanView({ m }: { m: ColonizeModel }) {
           <PlanFilters m={m} />
         </Panel>
 
+        {localFetchNotice ? (
+          <div className="cz-note cz-note--bad" role="alert">
+            <span className="cz-note__text">{localFetchNotice}</span>
+          </div>
+        ) : null}
         {m.stations.error ? (
           <div className="cz-note cz-note--bad" role="alert">
             <span className="cz-note__text">{m.stations.error}</span>
@@ -196,8 +200,8 @@ export function PlanView({ m }: { m: ColonizeModel }) {
         {afterTons > 0 ? (
           <div className="cz-note cz-note--info" role="status">
             <span className="cz-note__text">
-              Your hold takes {Math.round(m.capacity ?? 0).toLocaleString("en-US")} t, so the plan lists the first {trips.length} trips;{" "}
-              {Math.round(afterTons).toLocaleString("en-US")} t more come after them. Switching on a carrier with cargo, or a
+              Your hold takes {formatTons(m.capacity ?? 0)}, so the plan lists the first {trips.length} trips;{" "}
+              {formatTons(afterTons)} more come after them. Switching on a carrier with cargo, or a
               bigger hold, cuts that down.
             </span>
           </div>
@@ -210,7 +214,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
               {missing.map((item) => (
                 <div key={`${item.why}-${item.id}`} className="cz-row" style={{ alignItems: "center" }}>
                   <span>
-                    <b>{item.label}</b> ({Math.round(item.quantityTons).toLocaleString("en-US")} t):{" "}
+                    <b>{item.label}</b> ({formatTons(item.quantityTons)}):{" "}
                     {item.why === "none"
                       ? "no seller known nearby."
                       : "sellers are known, but none fits what the plan may use (pad, distance, planet ports)."}

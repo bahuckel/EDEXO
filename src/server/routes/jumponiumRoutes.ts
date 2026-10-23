@@ -4,7 +4,7 @@
   element, how much counts, gravity and distance from arrival, nearest first.
 */
 import type express from "express";
-import type { HttpServerOptions } from "../httpServer.js";
+import type { HttpServerOptions } from "../httpServerTypes.js";
 import { touchGalaxyMemory } from "../galaxyMemory.js";
 import {
   filterKeep,

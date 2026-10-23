@@ -242,6 +242,12 @@ export interface HudPrefsDTO {
   credit?: "off" | "top" | "bottom";
   /** "Next boxel" line under the Next jump HUD (plan 2.7). */
   nextBoxel?: boolean;
+  /** Colonize HUD (1.3.0): the followed site's materials with bars (default on). */
+  czNeeds?: boolean;
+  /** Colonize HUD: the other sites being built (default on). */
+  czSites?: boolean;
+  /** Colonize HUD: keep finished lines, last and green (default off: they leave the HUD). */
+  czFinished?: boolean;
   /** Elite Style's tilt, degrees, -35..35 (positive: the right edge goes into the screen). */
   tilt?: number;
   /** Elite Style's angle as a turn (3D, "swinging door") or a slant (flat, same width). */

@@ -185,5 +185,55 @@ export function decodeJournalMergeCache(doc: unknown): JournalMergeCachePayload 
   for (const entry of payload.bodies) {
     entry[1] = decodeBody(entry[0], entry[1] as unknown as Record<string, unknown>);
   }
+  internStrings(payload);
   return payload;
+}
+
+/** A guard, not a limit: the payload is JSON-shaped (no cycles); this only stops a walk that could never end. */
+const INTERN_MAX_NODES = 50_000_000;
+
+/**
+ * One copy of each repeated string in the decoded payload, replaced in place (audit 2026-10-22).
+ *
+ * `v8.deserialize` makes a new string for every occurrence, and the payload stays in memory for the whole
+ * session. The owner's holds 1,366,359 string values but only 167,921 distinct ones: 284 k body keys across
+ * 17 maps for 57 k bodies, "journal" 97 k times, "Detailed" 32 k, "Icy body" 30 k, each material name 19 k.
+ * One walk measured 155.8 MB → 124.1 MB of heap (Node 24), for about 0.18 s of boot.
+ *
+ * A string is only ever replaced by an equal one, so the payload stays deep-equal to what was written. Only
+ * arrays and plain objects are walked; object keys are already shared by the engine.
+ */
+export function internStrings(root: unknown): void {
+  if (root === null || typeof root !== "object") return;
+  const seen = new Map<string, string>();
+  const intern = (s: string): string => {
+    const first = seen.get(s);
+    if (first !== undefined) return first;
+    seen.set(s, s);
+    return s;
+  };
+  const plain = (v: object): boolean => {
+    const proto = Object.getPrototypeOf(v) as unknown;
+    return proto === Object.prototype || proto === null;
+  };
+  const stack: object[] = [root];
+  let nodes = 0;
+  while (stack.length > 0 && ++nodes <= INTERN_MAX_NODES) {
+    const node = stack.pop()!;
+    if (Array.isArray(node)) {
+      for (let i = 0; i < node.length; i++) {
+        const v: unknown = node[i];
+        if (typeof v === "string") node[i] = intern(v);
+        else if (v !== null && typeof v === "object") stack.push(v);
+      }
+    } else if (plain(node)) {
+      const o = node as Record<string, unknown>;
+      // for…in rather than Object.keys: no array per object, and a plain object inherits nothing enumerable.
+      for (const k in o) {
+        const v = o[k];
+        if (typeof v === "string") o[k] = intern(v);
+        else if (v !== null && typeof v === "object") stack.push(v);
+      }
+    }
+  }
 }

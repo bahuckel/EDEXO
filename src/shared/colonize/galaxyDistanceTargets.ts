@@ -1,7 +1,7 @@
 import { compareBuyStationHits } from "./buyStationSort";
 import { bestGalaxyLyFromSites, galaxyLyFromSite, isKnownLy } from "./systemDistanceLy";
 import type { MaterialBuyListing } from "./materialBuyIndexTypes";
-import type { BasketCheckoutBundle, BasketCheckoutResult } from "./types";
+import type { BasketCheckoutBundle } from "./types";
 import type { ShopHistoryEntry } from "./shopHistory";
 
 const GALAXY_DISTANCE_TARGET_CAP = 400;
@@ -9,7 +9,6 @@ const GALAXY_DISTANCE_TARGET_CAP = 400;
 /** Systems that need Milky Way Ly from construction refs (shops + indexed buy stations). */
 export function collectGalaxyDistanceTargets(args: {
   shopHistory: ShopHistoryEntry[];
-  checkoutResult?: BasketCheckoutResult | null;
   checkoutBundle?: BasketCheckoutBundle | null;
   constructionRefs?: string[];
   cap?: number;
@@ -20,10 +19,7 @@ export function collectGalaxyDistanceTargets(args: {
   const sellers = new Set<string>();
   const shops = new Set<string>();
 
-  const plans: BasketCheckoutResult[] = [];
-  if (args.checkoutResult) plans.push(args.checkoutResult);
-  if (args.checkoutBundle?.plans?.length) plans.push(...args.checkoutBundle.plans);
-  for (const plan of plans) {
+  for (const plan of args.checkoutBundle?.plans ?? []) {
     for (const mat of plan.materialListings ?? []) {
       for (const hit of mat.stations) {
         const s = hit.systemName.trim();
@@ -100,38 +96,4 @@ export function enrichMaterialListingsGalaxyLy(
       })
       .sort((a, b) => compareBuyStationHits(a, b, shopHistory, site, distanceMap)),
   }));
-}
-
-export function applyGalaxyDistancesToCheckoutResult(
-  plan: BasketCheckoutResult,
-  distanceMap: Record<string, number>,
-): BasketCheckoutResult {
-  const ref = plan.constructionSiteSystem?.trim();
-  if (!ref || !Object.keys(distanceMap).length) return plan;
-  return {
-    ...plan,
-    materialListings: (plan.materialListings ?? []).map((mat) => ({
-      ...mat,
-      stations: mat.stations.map((hit) => {
-        const galaxy = galaxyLyFromSite(hit.systemName, ref, distanceMap);
-        if (galaxy == null) return hit;
-        return galaxy === hit.distanceLy ? hit : { ...hit, distanceLy: galaxy };
-      }),
-    })),
-    groups: (plan.groups ?? []).map((g) => {
-      const galaxy = galaxyLyFromSite(g.systemName, ref, distanceMap);
-      if (galaxy == null) return g;
-      return galaxy === g.distanceLy ? g : { ...g, distanceLy: galaxy };
-    }),
-  };
-}
-
-export function applyGalaxyDistancesToCheckoutBundle(
-  bundle: BasketCheckoutBundle,
-  distanceMap: Record<string, number>,
-): BasketCheckoutBundle {
-  return {
-    ...bundle,
-    plans: bundle.plans.map((plan) => applyGalaxyDistancesToCheckoutResult(plan, distanceMap)),
-  };
 }

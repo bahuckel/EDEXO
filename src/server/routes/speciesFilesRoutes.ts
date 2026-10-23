@@ -5,7 +5,7 @@ import express from "express";
 import { getSpeciesDataDir } from "../paths.js";
 import { findGenusPhotosFolder, findGenusNotesFile } from "../speciesTreeLoader.js";
 
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { assertInsideDir } from "./httpHelpers.js";
 
 export function registerSpeciesFilesRoutes(

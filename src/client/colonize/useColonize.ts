@@ -6,14 +6,15 @@
  */
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { colonizeApi } from "./api";
-import { carrierAvailability, mergeAvailability, type CarrierStock } from "../../shared/colonize/carrierStock";
+import { carrierAvailability, mergeAvailability, shipCargoByKey as holdByKey, type CarrierStock } from "../../shared/colonize/carrierStock";
 import { resolveCargoCapacity, clearCargoCapacityOverride, loadCargoCapacityOverride, saveCargoCapacityOverride } from "../../shared/colonize/cargoCapacityOverride";
 import { commodityMergeBucket } from "../../shared/colonize/commodityKey";
 import { isConstructionDepotStation, purgeConstructionDepotsFromShopHistory } from "../../shared/colonize/constructionDepot";
 import type { ClearBuyDataScope } from "../../shared/colonize/buyIndexClear";
 import { mergeJournalAndLocalShopHistory } from "../../shared/colonize/journalShopHistory";
+import { errText } from "../../shared/colonize/formatPrice";
 import { buildLogisticsSummary } from "../../shared/colonize/logisticsSummary";
-import { constructionSiteSystems, plannerConstructionReferenceSystems } from "../../shared/colonize/plannerScan";
+import { constructionSiteSystems, plannerConstructionReferenceSystems, primaryCheckoutReferenceSystem } from "../../shared/colonize/plannerScan";
 import { clearSavedCheckout } from "../../shared/colonize/savedCheckout";
 import { clearShopHistory, loadShopHistory, recordShopVisit, saveShopHistory, type ShopHistoryCachedOffer, type ShopHistoryEntry } from "../../shared/colonize/shopHistory";
 import { loadBannedStations, type BannedStation } from "../../shared/colonize/stationBans";
@@ -21,12 +22,12 @@ import { bestGalaxyLyFromSites, clearGalaxyDistanceCache, isKnownLy } from "../.
 import { clearTripPlanSnapshot } from "../../shared/colonize/tripPlanProgress";
 import type { CheckoutRoutingMode, DepotSnapshot } from "../../shared/colonize/types";
 import type { WingMember } from "../../shared/colonize/wingManifest";
+import { stabilizeSnapshot } from "./hooks/snapshotStability";
 import { useColonizeSnapshot } from "./hooks/useColonizeSnapshot";
 import { useGalaxyDistances } from "./hooks/useGalaxyDistances";
 import { useMaterialBuyScanStatus } from "./hooks/useMaterialBuyScan";
 import { usePlannerSettings } from "./hooks/usePlannerSettings";
 import { usePlannerStations } from "./hooks/usePlannerStations";
-import { referenceSystemFromSnap } from "./lib/shared";
 import type { CheckoutFilterState } from "./lib/planFilters";
 import { loadWingManifest, saveWingManifest } from "./lib/wingStore";
 import { depotReferenceSystemFrom } from "./state/uiState";
@@ -62,7 +63,7 @@ export function useColonize() {
     () => (snap?.activeDepots?.length ? constructionSiteSystems(snap, resolveDepotRef) : []),
     [snap, resolveDepotRef],
   );
-  const homeSystem = useMemo(() => referenceSystemFromSnap(snap, resolveDepotRef), [snap, resolveDepotRef]);
+  const homeSystem = useMemo(() => primaryCheckoutReferenceSystem(snap, resolveDepotRef), [snap, resolveDepotRef]);
 
   /* ---- Inara imports ---------------------------------------------------------------------------------------- */
   const [inaraNotice, setInaraNotice] = useState<string | null>(null);
@@ -78,14 +79,7 @@ export function useColonize() {
   );
 
   /* ---- cargo: the hold, and carriers switched on ------------------------------------------------------------- */
-  const shipCargoByKey = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const c of snap?.shipCargo ?? []) {
-      const b = commodityMergeBucket(c.name) || commodityMergeBucket(c.nameLocalised);
-      if (b) m.set(b, (m.get(b) ?? 0) + c.count);
-    }
-    return m;
-  }, [snap?.shipCargo]);
+  const shipCargoByKey = useMemo(() => holdByKey(snap?.shipCargo ?? []), [snap?.shipCargo]);
   const carriers = snap?.carriers ?? EMPTY_CARRIERS;
   const haulingCarrierIds = useMemo(
     () => new Set(carriers.map((c) => c.carrierId).filter((id) => ui.carrierHaul[id])),
@@ -186,7 +180,6 @@ export function useColonize() {
     api,
     constructionSiteRefs,
     effectiveShopHistory,
-    checkoutResult: stations.checkoutResult,
     checkoutBundle: stations.checkoutBundle,
     extraSellerSystems: searchDistanceTargets,
   });
@@ -224,7 +217,7 @@ export function useColonize() {
         setWingNotes(res.notes);
       }
     } catch (e) {
-      setWingNotes([e instanceof Error ? e.message : String(e)]);
+      setWingNotes([errText(e)]);
     } finally {
       setWingBusy(false);
     }
@@ -238,7 +231,12 @@ export function useColonize() {
 
   /* ---- sites ----------------------------------------------------------------------------------------------- */
   const setArchived = useCallback(
-    (marketId: string, archived: boolean) => void api.setDepotArchived(marketId, archived).then(setSnap).catch(() => {}),
+    (marketId: string, archived: boolean) =>
+      void api
+        .setDepotArchived(marketId, archived)
+        // Through stabilizeSnapshot like every other snapshot, or the plan rebuilds from scratch (audit 2026-10-22).
+        .then((next) => setSnap((prev) => stabilizeSnapshot(prev, next)))
+        .catch(() => {}),
     [api, setSnap],
   );
   const summary = useMemo(
@@ -260,11 +258,10 @@ export function useColonize() {
         clearTripPlanSnapshot();
         clearGalaxyDistanceCache();
         stations.setCheckoutBundle(null);
-        stations.setCheckoutResult(null);
         setSystemDistanceLy({});
       }
       setBuyIndexRefreshToken((t) => t + 1);
-      refresh();
+      void refresh();
       return { ok: true as const };
     },
     [api, refresh, setSystemDistanceLy, stations],

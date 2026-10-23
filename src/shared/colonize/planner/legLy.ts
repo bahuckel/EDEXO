@@ -1,6 +1,5 @@
-import type { SystemCoordsByNorm } from "../galaxyDistanceCompute";
-import { normSystemName } from "../stationFilter";
-import { distanceLy3d, isKnownLy } from "../systemDistanceLy";
+import { coordsDistanceLy, type SystemCoordsByNorm } from "../galaxyDistanceCompute";
+import { isKnownLy } from "../systemDistanceLy";
 
 export type { SystemCoordsByNorm };
 
@@ -26,13 +25,6 @@ export function legLy(from: LegEnd, to: LegEnd, coords?: SystemCoordsByNorm): nu
 
 /** Straight-line Ly between two systems: 0 for the same one, null without both coordinates. */
 export function measuredLegLy(fromSystem: string, toSystem: string, coords?: SystemCoordsByNorm): number | null {
-  const a = normSystemName(fromSystem);
-  const b = normSystemName(toSystem);
-  if (!a || !b) return null;
-  if (a === b) return 0;
-  const ca = coords?.[a];
-  const cb = coords?.[b];
-  if (!ca || !cb) return null;
-  const d = distanceLy3d(ca, cb);
+  const d = coordsDistanceLy(fromSystem, toSystem, (k) => coords?.[k]);
   return isKnownLy(d) ? d : null;
 }

@@ -1,7 +1,7 @@
 import express from "express";
 import { EDSM_USER_AGENT } from "../edsmSystemHydration.js";
 
-import type { HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 export function registerServerStatusRoutes(
   app: express.Express,

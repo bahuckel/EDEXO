@@ -20,7 +20,7 @@
  * body). It is memoised there until the store changes, so re-opening this is instant.
  */
 import { isBool, isNum, oneOf, usePersistedState } from "./usePersistedState";
-import { PAGE } from "./DiscoveriesTables";
+import { PAGE } from "./ui/tablePage";
 import { useEffect, useMemo, useState } from "react";
 import { CopySystemButton } from "./CopySystemButton";
 import { csvFileName, downloadCsv, toCsv, type CsvColumn } from "./csv";

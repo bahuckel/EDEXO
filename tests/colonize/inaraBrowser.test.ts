@@ -1,12 +1,13 @@
 /**
  * Inara in the EDEXO Browser (1.3.0, C5): the page "Read into Colonize" reads becomes an Inara import file, one
- * commodity at a time, its near star from the form or the address.
+ * commodity at a time, its near star from the form or the address. Which pages it may read is the main process's
+ * guard, tested in tests/browserTabs.test.ts (the client's copy was dropped, audit 2026-10-22).
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { inaraImportFromPage, isInaraCommodityPage } from "../../src/client/colonize/inaraBrowser";
+import { inaraImportFromPage } from "../../src/client/colonize/inaraBrowser";
 import { parseInaraImportFile } from "../../src/shared/colonize/inaraImportTypes";
 
 const table = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "__fixtures__/inara-buy-results.html"), "utf8");
@@ -41,16 +42,5 @@ describe("inaraImportFromPage", () => {
     expect(inaraImportFromPage({ url: URL_, table: "<table></table>", near: "Sol", commodities: ["Steel"] }, NOW)).toEqual({
       err: "No sellers in the table on this page.",
     });
-  });
-});
-
-describe("isInaraCommodityPage", () => {
-  it("is Inara's commodity search over https, nothing else", () => {
-    expect(isInaraCommodityPage(URL_)).toBe(true);
-    expect(isInaraCommodityPage("https://www.inara.cz/elite/commodities")).toBe(true);
-    expect(isInaraCommodityPage("http://inara.cz/elite/commodities/")).toBe(false);
-    expect(isInaraCommodityPage("https://inara.cz/elite/stations/")).toBe(false);
-    expect(isInaraCommodityPage("https://inara.cz.evil.example/elite/commodities/")).toBe(false);
-    expect(isInaraCommodityPage("not a url")).toBe(false);
   });
 });

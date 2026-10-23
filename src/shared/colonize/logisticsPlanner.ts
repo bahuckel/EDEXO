@@ -20,5 +20,3 @@ export type {
 } from "./planner/types";
 
 export { buildLogisticsPlan } from "./planner/buildPlan";
-export { shoppingRunFromLogisticsPlan } from "./planner/shoppingRun";
-export { filterMaterialBuyStationHits } from "./planner/stationFacts";

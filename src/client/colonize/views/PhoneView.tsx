@@ -10,29 +10,19 @@ import { useEffect, useMemo, useState } from "react";
 import { colonizeApi } from "../api";
 import { useColonizeSnapshot } from "../hooks/useColonizeSnapshot";
 import { onRemoteUiState } from "../uiStateSync";
-import { carrierAvailability, mergeAvailability } from "../../../shared/colonize/carrierStock";
+import { carrierAvailability, carrierHaulIds, mergeAvailability, shipCargoByKey as holdByKey } from "../../../shared/colonize/carrierStock";
 import { loadCargoCapacityOverride, resolveCargoCapacity } from "../../../shared/colonize/cargoCapacityOverride";
-import { commodityMergeBucket } from "../../../shared/colonize/commodityKey";
 import { depotDisplayLabel } from "../../../shared/colonize/depotLabel";
+import { formatTons } from "../../../shared/colonize/formatPrice";
 import { storageGet } from "../../../shared/colonize/storage";
 import { loadTripPlanSnapshot, syncTripLineCompletions } from "../../../shared/colonize/tripPlanProgress";
-import { AppLegalFooter } from "../../App";
+import { KEY_CARRIER_HAUL } from "../../../shared/colonize/uiStateKeys";
+import { AppLegalFooter } from "../../AppLegalFooter";
 import { DeliverHerePanel } from "./DockPanels";
 import { SitesColumn } from "./SitesColumn";
 import { NextTripCard, TripList } from "./Trips";
 
-const CARRIER_HAUL_KEY = "edexo-colonize-carrier-haul-v1";
 const noop = () => undefined;
-const t = (n: number) => `${Math.round(n).toLocaleString("en-US")} t`;
-
-function carriersSwitchedOn(): Set<string> {
-  try {
-    const j = JSON.parse(storageGet(CARRIER_HAUL_KEY) ?? "{}") as Record<string, unknown>;
-    return new Set(Object.entries(j).filter(([, v]) => v === true).map(([k]) => k));
-  } catch {
-    return new Set();
-  }
-}
 
 /** `streamer`: the same, for an OBS Browser source (no note, no Ko-fi, nothing to click, two columns when wide). */
 export function PhoneView({ streamer = false }: { streamer?: boolean }) {
@@ -48,18 +38,11 @@ export function PhoneView({ streamer = false }: { streamer?: boolean }) {
       }),
     [],
   );
-  const shipCargoByKey = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const c of snap?.shipCargo ?? []) {
-      const k = commodityMergeBucket(c.name) || commodityMergeBucket(c.nameLocalised);
-      if (k) m.set(k, (m.get(k) ?? 0) + c.count);
-    }
-    return m;
-  }, [snap?.shipCargo]);
+  const shipCargoByKey = useMemo(() => holdByKey(snap?.shipCargo ?? []), [snap?.shipCargo]);
   const active = useMemo(() => snap?.activeDepots ?? [], [snap?.activeDepots]);
   const completed = useMemo(() => {
     if (!trip || !snap) return new Set<string>();
-    const on = carriersSwitchedOn();
+    const on = carrierHaulIds(storageGet(KEY_CARRIER_HAUL));
     const carriers = snap.carriers.filter((c) => on.has(c.carrierId));
     const cargo = mergeAvailability(shipCargoByKey, carrierAvailability(carriers, on));
     return new Set(syncTripLineCompletions(trip, active, cargo, trip.manualCompletedLineIds));
@@ -88,7 +71,7 @@ export function PhoneView({ streamer = false }: { streamer?: boolean }) {
           </span>
           <span className="cz-chip" data-testid="phone-hold">
             <span className="cz-chip__k">Hold</span>
-            <b className="cz-chip__v">{`${Math.round(used).toLocaleString("en-US")} / ${capacity != null ? t(capacity) : "? t"}`}</b>
+            <b className="cz-chip__v">{`${Math.round(used).toLocaleString("en-US")} / ${capacity != null ? formatTons(capacity) : "? t"}`}</b>
           </span>
         </div>
       </header>

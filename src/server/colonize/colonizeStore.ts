@@ -32,7 +32,7 @@ import { emptyCarrierStock, type CarrierStock } from "../../shared/colonize/carr
 import { readJournalFromOffset, type JournalLineAt } from "../journalWatcher.js";
 import { onJournalReread, onLiveJournalLine } from "../journalTap.js";
 import type { JournalLine } from "../../shared/types.js";
-import { backupUnreadableJson, readJson, writeJsonAtomic } from "./jsonFs";
+import { backupUnreadableJson, readJsonKeepingCorrupt, writeJsonAtomic } from "./jsonFs";
 import { parseMarketId } from "../../shared/colonize/marketId";
 
 /**
@@ -339,7 +339,14 @@ export class ColonizeStore {
   }
 
   async load(): Promise<void> {
-    const raw = await readJson<StateFileV3 | StateFileV2 | StateFileV1 | null>(this.statePath, null);
+    const { value: raw, corrupt } = await readJsonKeepingCorrupt<StateFileV3 | StateFileV2 | StateFileV1 | null>(
+      this.statePath,
+      null,
+    );
+    if (corrupt) {
+      this.lastError =
+        "Saved state could not be read. A copy was kept next to it; construction progress will rebuild from your journals.";
+    }
     if (!raw || typeof raw !== "object") {
       this.journal.depots = {};
       this.journal.journalShops.clear();
@@ -406,8 +413,11 @@ export class ColonizeStore {
         : Object.values(this.journal.depots)
             .map((d) => d.starSystem?.trim() || "")
             .filter(Boolean);
-    applyShopDistanceLyToJournalRecords(this.journal.journalShops, distanceBySystem, refs);
-    this.bump();
+    /*
+      Every distance batch at start (80 names each) used to rewrite the 365 KB state file and drop every site's cached
+      copy, changed or not (audit 2026-10-22).
+    */
+    if (applyShopDistanceLyToJournalRecords(this.journal.journalShops, distanceBySystem, refs)) this.bump();
   }
 
   getSnapshot(): ColonizeSnapshot {

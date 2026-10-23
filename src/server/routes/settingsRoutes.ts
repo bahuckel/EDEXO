@@ -8,7 +8,8 @@ import { parseSpanshRouteFile, summariseSpanshRouteFile } from "../../feeder/spa
 import { isLoopbackAddress, localOnly } from "../lanAuth.js";
 import { isEdsmCatchUpScope } from "../edsmCatchUp.js";
 
-import type { AppView, HttpServerOptions, RouteContext } from "../httpServer.js";
+import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
+import { APP_VIEWS, isAppView } from "../appViews.js";
 import { setUiMirror, uiMirror } from "../uiMirror.js";
 
 export function registerSettingsRoutes(
@@ -689,10 +690,11 @@ export function registerSettingsRoutes(
       });
       return;
     }
-    const view = req.body?.view as AppView;
-    const views: readonly AppView[] = ["app", "phone", "stream", "colonize", "colonize-phone", "colonize-stream"];
-    if (!views.includes(view)) {
-      res.status(400).json({ ok: false, error: `Send JSON { "view": ${views.map((v) => `"${v}"`).join(" | ")} }.` });
+    const view: unknown = req.body?.view;
+    if (!isAppView(view)) {
+      res
+        .status(400)
+        .json({ ok: false, error: `Send JSON { "view": ${APP_VIEWS.map((v) => `"${v}"`).join(" | ")} }.` });
       return;
     }
     res.json(opts.openAppView(view));

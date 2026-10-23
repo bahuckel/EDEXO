@@ -1,5 +1,5 @@
 import type { CheckoutFilters, BasketCheckoutItem } from "../../shared/colonize/types";
-import { commodityMergeBucket, commodityNormKey } from "../../shared/colonize/commodityKey";
+import { basketItemId as itemCommodityId, itemLabel as itemCommodityLabel } from "../../shared/colonize/commodityKey";
 import { resolveSpanshReferenceSystem } from "./galaxySystemCoords";
 import { MaterialBuyIndex, MATERIAL_BUY_CACHE_TTL_MS } from "./materialBuyIndex";
 import { mapPool } from "../../shared/colonize/mapPool";
@@ -62,19 +62,6 @@ export function setBasketBlocksPassiveScan(block: boolean): void {
     }
   }
   syncQueueCounts();
-}
-
-function itemCommodityId(it: BasketCheckoutItem): string {
-  return (
-    it.id ||
-    commodityMergeBucket(it.name) ||
-    commodityMergeBucket(it.nameLocalised) ||
-    commodityNormKey(it.name)
-  );
-}
-
-function itemCommodityLabel(it: BasketCheckoutItem): string {
-  return (it.nameLocalised || it.name).trim() || it.name;
 }
 
 function jobKey(job: ScanJob): string {

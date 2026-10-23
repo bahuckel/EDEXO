@@ -1,4 +1,5 @@
-import { resourceNeedId } from "./commodityKey";
+import { commodityMergeBucket, resourceNeedId } from "./commodityKey";
+import type { ShipCargoLine } from "./types";
 
 /**
  * What a carrier is holding, derived from the journal.
@@ -227,6 +228,44 @@ export function mergeAvailability(
   const out = new Map(ship);
   for (const [id, tons] of carrier) out.set(id, (out.get(id) ?? 0) + tons);
   return out;
+}
+
+/**
+ * The ship's hold by commodity bucket (journal name, or the localised one), summed. The window, the phone view and the
+ * HUD each had a copy (audit 2026-10-22); they must agree on what is aboard.
+ */
+export function shipCargoByKey(lines: readonly ShipCargoLine[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const c of lines) {
+    const k = commodityMergeBucket(c.name) || commodityMergeBucket(c.nameLocalised);
+    if (k) m.set(k, (m.get(k) ?? 0) + c.count);
+  }
+  return m;
+}
+
+/**
+ * The carriers switched on for hauling, as the ui-state key `edexo-colonize-carrier-haul-v1` holds them
+ * (`{ [CarrierID]: true }`; off is the default and is not stored). Null when the value is not that shape. The
+ * window's state, the phone view and the HUD each parsed it on their own (audit 2026-10-22).
+ */
+export function parseCarrierHaul(raw: unknown): Record<string, boolean> | null {
+  if (!raw || typeof raw !== "object") return null;
+  const out: Record<string, boolean> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (v === true && k.trim()) out[k.trim()] = true;
+  }
+  return out;
+}
+
+/** The ids switched on, from the stored text; none when it is missing or unreadable. */
+export function carrierHaulIds(text: string | null | undefined): Set<string> {
+  let raw: unknown = null;
+  try {
+    raw = text ? JSON.parse(text) : null;
+  } catch {
+    /* unreadable: nothing switched on */
+  }
+  return new Set(Object.keys(parseCarrierHaul(raw) ?? {}));
 }
 
 /** Per-carrier tons of one commodity, for the hover breakdown. */

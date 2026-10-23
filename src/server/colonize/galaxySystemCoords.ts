@@ -37,7 +37,11 @@ const SPANSH_COORDS_CONCURRENCY = 2;
 
 type Coords = [number, number, number];
 
-type CoordsFile = { v: number; systems: Record<string, unknown> };
+/**
+ * `names`: Spansh's spelling of a system, by normalised name (1.3.0; optional, so an older EDEXO still reads the file).
+ * A spelling never changes, so once Spansh or EDSM told it, a restart does not ask again.
+ */
+type CoordsFile = { v: number; systems: Record<string, unknown>; names?: Record<string, unknown> };
 
 /** Found coordinates never expire; reading one keeps it from being the next evicted. */
 const coordCache = new TtlCache<string, Coords>({ max: COORD_CACHE_MAX, touchOnGet: true });
@@ -48,6 +52,8 @@ const spanshNameCache = new TtlCache<string, string>({
   max: SPANSH_NAME_CACHE_MAX,
   ttlMs: SPANSH_NAME_CACHE_TTL_MS,
 });
+/** Spellings Spansh or EDSM actually gave (a failed look-up's literal fallback is not one), kept with the coordinates. */
+const knownSpelling = new TtlCache<string, string>({ max: COORD_CACHE_MAX, touchOnGet: true });
 
 /**
  * EDEXO's own data, asked before EDSM and Spansh (1.3.0, localGalaxy.ts): the journal's star positions and the
@@ -84,6 +90,11 @@ export function loadSystemCoordsCache(userDataDir: string): Promise<void> {
       /** Anything found since launch is newer than the file; never overwrite it. */
       if (isCoords(coords) && norm && !coordCache.has(norm)) coordCache.set(norm, coords);
     }
+    if (raw.names && typeof raw.names === "object") {
+      for (const [norm, name] of Object.entries(raw.names)) {
+        if (norm && typeof name === "string" && name.trim() && !knownSpelling.has(norm)) knownSpelling.set(norm, name);
+      }
+    }
   });
   return coordsLoad;
 }
@@ -103,6 +114,7 @@ function startCoordsSave(): void {
   coordsDirty = false;
   const file = coordsFilePath;
   const payload: CoordsFile = { v: COORDS_FILE_VERSION, systems: Object.fromEntries(coordCache.entries()) };
+  if (knownSpelling.size) payload.names = Object.fromEntries(knownSpelling.entries());
   coordsSaveQueue = coordsSaveQueue
     .then(() => writeJsonAtomic(file, payload, false))
     .catch((e) => console.error("[edexo-colonize] system-coords save failed:", e));
@@ -121,6 +133,33 @@ function rememberCoords(norm: string, coords: Coords): void {
   coordCache.set(norm, coords);
   coordMisses.delete(norm);
   scheduleCoordsSave();
+}
+
+/**
+ * Coordinates and spelling that came with another answer: a Spansh station-search row carries its system's x/y/z and
+ * Spansh's own spelling. Kept like a look-up's, so that system is never asked for again (owner, 2026-10-22: "a system
+ * found once should be remembered").
+ */
+export function rememberSystemFromSpansh(name: string, coords: unknown): void {
+  const label = name.trim();
+  const norm = normSystemName(label);
+  if (!norm) return;
+  let changed = false;
+  if (knownSpelling.getStale(norm) !== label) {
+    knownSpelling.set(norm, label);
+    changed = true;
+  }
+  if (isCoords(coords) && !coordCache.has(norm)) {
+    coordCache.set(norm, coords);
+    coordMisses.delete(norm);
+    changed = true;
+  }
+  if (changed) scheduleCoordsSave();
+}
+
+/** Coordinates already known (this session or saved): never a network call, never the stations index. The HUD's. */
+export function peekSystemCoords(name: string): Coords | null {
+  return coordCache.get(normSystemName(name.trim())) ?? null;
 }
 
 function rememberMiss(norm: string): void {
@@ -199,13 +238,17 @@ export function resolveSpanshReferenceSystemLocal(systemName: string): string {
   const q = systemName.trim();
   if (!q) return "";
   /** A stale spelling is still the right spelling; this path never goes to the network. */
-  return spanshNameCache.getStale(normSystemName(q)) ?? q;
+  const norm = normSystemName(q);
+  return knownSpelling.get(norm) ?? spanshNameCache.getStale(norm) ?? q;
 }
 
 export async function resolveSpanshReferenceSystem(systemName: string): Promise<string> {
   const q = systemName.trim();
   if (!q) return "";
+  if (coordsLoad) await coordsLoad.catch(() => undefined);
   const norm = normSystemName(q);
+  const known = knownSpelling.get(norm);
+  if (known !== undefined) return known;
   const cached = spanshNameCache.get(norm);
   if (cached !== undefined) return cached;
 
@@ -239,6 +282,10 @@ export async function resolveSpanshReferenceSystem(systemName: string): Promise<
 
   const out = resolved || q;
   spanshNameCache.set(norm, out);
+  if (resolved) {
+    knownSpelling.set(norm, resolved);
+    scheduleCoordsSave();
+  }
   return out;
 }
 

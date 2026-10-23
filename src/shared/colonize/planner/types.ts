@@ -108,7 +108,7 @@ export type LogisticsPlan = {
   missingTripEligible: MissingBuyIndexedItem[];
   /** Buys for the station you are docked at right now (capacity-capped). */
   dockBuys: TripBuyLine[];
-  /** Batch buy station key per commodity — aligns buy cards with trip routing. */
+  /** The closest eligible seller per commodity (its station key), the trips' primary target for it. */
   buyStationKeyByCommodityId?: Record<string, string>;
   /** Tons still to haul after the last planned trip, when the plan stopped at its trip limit (a small hold). */
   afterTripsTons?: number;

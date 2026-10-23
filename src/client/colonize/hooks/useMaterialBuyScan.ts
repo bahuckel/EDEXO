@@ -1,4 +1,4 @@
-import { colonizeApi } from "../api";
+import type { colonizeApi } from "../api";
 import { useEffect, useRef, useState } from "react";
 import type { MaterialBuyScanStatus } from "../../../shared/colonize/materialBuyScanStatus";
 import { normalizeMaterialBuyScanStatus } from "../../../shared/colonize/materialBuyScanStatus";
@@ -8,7 +8,6 @@ export function useMaterialBuyScanStatus(api: typeof colonizeApi) {
   const lastScanStatusJsonRef = useRef("");
 
   useEffect(() => {
-    if (!api?.getMaterialBuyScanStatus || !api.onMaterialBuyScanStatus) return;
     const applyStatus = (s: MaterialBuyScanStatus) => {
       const norm = normalizeMaterialBuyScanStatus(s);
       const json = JSON.stringify(norm);
@@ -16,7 +15,8 @@ export function useMaterialBuyScanStatus(api: typeof colonizeApi) {
       lastScanStatusJsonRef.current = json;
       setMaterialBuyScanStatus(norm);
     };
-    void api.getMaterialBuyScanStatus().then(applyStatus);
+    // A failed first ask is not an error to show: the push below keeps the status current (audit 2026-10-22).
+    void api.getMaterialBuyScanStatus().then(applyStatus, () => {});
     return api.onMaterialBuyScanStatus(applyStatus);
   }, [api]);
 

@@ -12,7 +12,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEve
 import { IconKey } from "./ui/icons";
 import { UnlockLoginsChip } from "./BrowserMasterPassword";
 import { BrowserPrivacyPanel } from "./BrowserPrivacyPanel";
-import { importInaraRead, onBrowserUrlRequest, takePendingBrowserUrl, type InaraPageRead } from "./colonize/inaraBrowser";
+import { onBrowserUrlRequest, takePendingBrowserUrl } from "./tabs/browserOpen";
+import type { InaraPageRead } from "./colonize/inaraBrowser";
 import "./styles/browser.css";
 
 interface BrowserTab {
@@ -156,7 +157,7 @@ export function BrowserScreen() {
   const pageShown = !!tab && !tab.startPage && !tab.error;
 
   /*
-    An address another screen asked for (Colonize's Inara links, colonize/inaraBrowser.ts): opened in a new page once
+    An address another screen asked for (Colonize's Inara links, tabs/browserOpen.ts): opened in a new page once
     the browser is ready, so a first run still waiting for its blocklists opens it when they are in.
   */
   const ready = !!st?.blocker.ready;
@@ -181,8 +182,10 @@ export function BrowserScreen() {
       else if (m.event === "elsewhere") setElsewhere(true);
       else if (m.event === "inaraRead" && m.data) {
         // An Inara pop-up's "EDEXO — Read": the sellers saved, and the answer in the pop-up and on the note bar.
+        // The reader is Colonize code, loaded on the first Read only (audit 2026-10-22), not with the Browser tab.
         const { id, read } = m.data;
-        void importInaraRead(read)
+        void import("./colonize/inaraBrowser")
+          .then((ib) => ib.importInaraRead(read))
           .catch((e: unknown) => ({ ok: false, text: e instanceof Error ? e.message : String(e) }))
           .then((r) => {
             setPwNote(r.text);

@@ -108,8 +108,6 @@ export function internalToSnapshot(d: DepotInternal): DepotSnapshot {
     lastTimestamp: d.lastTimestamp,
     resources: d.resources.map((r) => ({ ...r })),
     contributions: d.contributions.map((c) => ({ ...c })),
-    progressHistory: d.progressHistory.map((p) => ({ ...p })),
-    contributionProgressHistory: d.contributionProgressHistory.map((p) => ({ ...p })),
   };
 }
 

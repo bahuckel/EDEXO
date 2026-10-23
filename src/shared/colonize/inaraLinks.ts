@@ -35,14 +35,3 @@ export function inaraCommoditySearchUrl(
   if (opts?.excludeFleetCarriers) params.set("pi8", "0");
   return `${base}?${params.toString()}`;
 }
-
-export function inaraStationUrl(stationName: string, systemName: string): string {
-  const params = new URLSearchParams();
-  if (systemName.trim()) params.set("ps1", systemName.trim());
-  if (stationName.trim()) params.set("search", stationName.trim());
-  return `https://inara.cz/elite/stations/?${params.toString()}`;
-}
-
-export function spanshSystemUrl(systemName: string): string {
-  return `https://spansh.co.uk/system?n=${encodeURIComponent(systemName.trim())}`;
-}

@@ -3,14 +3,15 @@
  * Results come from every source together (Spansh, your Inara imports, markets you docked at); a station opens its
  * market, with what your sites still need marked.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BuyIndexStationMaterial, BuyIndexStationResult } from "../../../shared/colonize/buyIndexSearchTypes";
 import { RAVEN_COLONIAL_SITE, type ConstructionSiteHit, type SiteNeeds } from "../../../shared/colonize/siteLookup";
+import { resolveSearchHopLy } from "../../../shared/colonize/searchDistanceLy";
 import { formatHopLy } from "../../../shared/colonize/systemDistanceLy";
-import { formatPrice } from "../../../shared/colonize/formatPrice";
+import { errText, formatPrice, formatTons } from "../../../shared/colonize/formatPrice";
 import { commodityMergeBucket } from "../../../shared/colonize/commodityKey";
 import type { ColonizeModel } from "../useColonize";
-import { BTN, BTN_BAD, BTN_GO, Fact, Panel } from "./ui";
+import { BTN, BTN_BAD, BTN_GO, Fact, Panel, copyText } from "./ui";
 
 type Kind = "commodity" | "system" | "site";
 const KINDS: { k: Kind; label: string; hint: string }[] = [
@@ -57,7 +58,7 @@ export function SearchView({ m }: { m: ColonizeModel }) {
         setSites(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errText(err));
     } finally {
       setBusy(false);
     }
@@ -83,7 +84,7 @@ export function SearchView({ m }: { m: ColonizeModel }) {
         m.setSearchDistanceTargets([...new Set(again.stations.map((s) => s.systemName))]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errText(err));
     } finally {
       setBusy(false);
     }
@@ -106,7 +107,7 @@ export function SearchView({ m }: { m: ColonizeModel }) {
       const again = await api.searchBuyIndexSystem({ query: sys });
       if (again.ok) setStations(again.stations);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errText(err));
     } finally {
       setBusy(false);
     }
@@ -210,7 +211,8 @@ export function SearchView({ m }: { m: ColonizeModel }) {
                             {!s.boughtCount && s.lastVisitIso ? ` · docked ${s.lastVisitIso.slice(0, 10)}` : null}
                           </div>
                         </td>
-                        <td className="r">{formatHopLy(m.systemDistanceLy[s.systemName.toLowerCase()] ?? s.minDistanceLy)}</td>
+                        {/* From your sites, by site-to-seller pair: the map has no plain names, so a name always missed (audit 2026-10-22). */}
+                        <td className="r">{formatHopLy(resolveSearchHopLy(s.systemName, m.constructionSiteRefs, m.systemDistanceLy, s.minDistanceLy))}</td>
                         <td className="r">{s.materialCount}</td>
                         <td className="cz-small cz-dim">
                           {s.stationType ?? ""}
@@ -285,17 +287,30 @@ export function SearchView({ m }: { m: ColonizeModel }) {
 function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIndexStationResult; query: string }) {
   const [rows, setRows] = useState<BuyIndexStationMaterial[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const key = `${station.systemName}|${station.stationName}`;
-  const [loadedKey, setLoadedKey] = useState("");
-  if (loadedKey !== key) {
-    setLoadedKey(key);
+  const api = m.api;
+  const { systemName, stationName, marketId } = station;
+  /*
+    Asked in an effect, and an answer is used only while its station is still the one picked: started during render,
+    a slow answer for the station picked before landed under the newly picked one's heading (audit 2026-10-22).
+  */
+  useEffect(() => {
+    let live = true;
     setRows(null);
     setError(null);
-    void m.api
-      .getBuyIndexStationCatalog({ systemName: station.systemName, stationName: station.stationName, marketId: station.marketId })
-      .then((r) => (r.ok ? setRows(r.materials) : setError(r.err)))
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }
+    api
+      .getBuyIndexStationCatalog({ systemName, stationName, marketId })
+      .then((r) => {
+        if (!live) return;
+        if (r.ok) setRows(r.materials);
+        else setError(r.err);
+      })
+      .catch((e: unknown) => {
+        if (live) setError(errText(e));
+      });
+    return () => {
+      live = false;
+    };
+  }, [api, systemName, stationName, marketId]);
   const needed = useMemo(() => new Set((m.summary?.rows ?? []).map((r) => r.id)), [m.summary]);
   const asked = useMemo(
     () => new Set(query.split(",").map((q) => commodityMergeBucket(q.trim())).filter(Boolean)),
@@ -331,7 +346,7 @@ function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIn
               <li key={r.commodityId} className={hot ? "cz-li cz-li--hot" : "cz-li"}>
                 <span>{hot ? <b>{r.label}</b> : r.label}</span>
                 <span className="cz-dim">
-                  {r.supply != null ? `${r.supply.toLocaleString("en-US")} t` : ""}
+                  {r.supply != null ? formatTons(r.supply) : ""}
                   {r.buyPrice != null ? ` · ${formatPrice(r.buyPrice)} cr` : ""}
                 </span>
               </li>
@@ -344,7 +359,7 @@ function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIn
           type="button"
           className={BTN_GO}
           onClick={() => {
-            void navigator.clipboard?.writeText(station.systemName).catch(() => {});
+            void copyText(station.systemName);
             setCopied(true);
             window.setTimeout(() => setCopied(false), 1800);
           }}
@@ -365,16 +380,27 @@ function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIn
 function SiteNeedsPanel({ m, site }: { m: ColonizeModel; site: ConstructionSiteHit }) {
   const [needs, setNeeds] = useState<SiteNeeds | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loadedKey, setLoadedKey] = useState("");
-  if (loadedKey !== site.marketId) {
-    setLoadedKey(site.marketId);
+  const api = m.api;
+  const { systemName, marketId } = site;
+  // As StationMarket: asked in an effect, a late answer for another site dropped (audit 2026-10-22).
+  useEffect(() => {
+    let live = true;
     setNeeds(null);
     setError(null);
-    void m.api
-      .lookupSiteNeeds({ systemName: site.systemName, marketId: site.marketId })
-      .then((r) => (r.ok ? setNeeds(r.needs) : setError(r.err)))
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }
+    api
+      .lookupSiteNeeds({ systemName, marketId })
+      .then((r) => {
+        if (!live) return;
+        if (r.ok) setNeeds(r.needs);
+        else setError(r.err);
+      })
+      .catch((e: unknown) => {
+        if (live) setError(errText(e));
+      });
+    return () => {
+      live = false;
+    };
+  }, [api, systemName, marketId]);
   return (
     <aside className="cz-side cz-side--wide" aria-label={site.name}>
       <Panel k="search-site" tone="hot" title={site.name}>
@@ -396,13 +422,13 @@ function SiteNeedsPanel({ m, site }: { m: ColonizeModel; site: ConstructionSiteH
           <div className="cz-soft">
             {needs.complete
               ? "Finished."
-              : `${needs.remainingTons.toLocaleString("en-US")} t still to deliver${needs.totalTons ? ` of ${needs.totalTons.toLocaleString("en-US")} t` : ""}.`}
+              : `${formatTons(needs.remainingTons)} still to deliver${needs.totalTons ? ` of ${formatTons(needs.totalTons)}` : ""}.`}
           </div>
           <ul className="cz-list cz-num">
             {needs.remaining.map((r) => (
               <li key={r.commodityId}>
                 <span>{r.label}</span>
-                <span className="cz-dim">{r.tons.toLocaleString("en-US")} t</span>
+                <span className="cz-dim">{formatTons(r.tons)}</span>
               </li>
             ))}
           </ul>

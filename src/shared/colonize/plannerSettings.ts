@@ -1,5 +1,5 @@
 import { storageGet, storageSet } from "./storage";
-const PLANNER_SETTINGS_KEY = "edexo-colonize-planner-settings-v1";
+import { KEY_PLANNER_SETTINGS as PLANNER_SETTINGS_KEY } from "./uiStateKeys";
 
 export type PlannerSettings = {
   /** Distinct seller star systems to keep per material before background Spansh scans stop. Empty = unlimited. */

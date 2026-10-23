@@ -46,10 +46,14 @@ export type DepotSnapshot = {
   resources: ResourceRow[];
   /** Cumulative tons you contributed (journal replay + live tail). */
   contributions: ContributionRecord[];
-  /** Progress samples from `ColonisationConstructionDepot` for timeline charts. */
-  progressHistory: ProgressHistoryPoint[];
-  /** Your delivery share over time (from `ColonisationContribution`). */
-  contributionProgressHistory: ProgressHistoryPoint[];
+  /**
+   * Progress samples from `ColonisationConstructionDepot` for timeline charts. Kept in the state file per site, but no
+   * longer sent with every snapshot push (1.3.0 audit: up to 240 samples x 2 for every site, finished ones included,
+   * about 200 KB a push, and no view draws them).
+   */
+  progressHistory?: ProgressHistoryPoint[];
+  /** Your delivery share over time (from `ColonisationContribution`); like progressHistory, not pushed. */
+  contributionProgressHistory?: ProgressHistoryPoint[];
 };
 
 export type LiveDockedInfo = {
@@ -171,22 +175,6 @@ export type BasketCheckoutResult = {
   marketTimestamp?: string | null;
 };
 
-export type ShoppingRunItem = {
-  id: string;
-  label: string;
-  quantityNeeded: number;
-  stopIndex: number;
-  stationName: string;
-  systemName: string;
-  bodyName?: string | null;
-  done: boolean;
-};
-
-export type ShoppingRunState = {
-  createdAt: string;
-  items: ShoppingRunItem[];
-};
-
 /** Live dock market from `Market.json` (game client or EDMC). */
 export type DockMarketBrief = {
   marketId: string | null;
@@ -194,6 +182,19 @@ export type DockMarketBrief = {
   starSystem: string;
   timestamp: string | null;
   rowCount: number;
+};
+
+/** One commodity line of a station's market (`Market.json`), as the dock market reader returns it. */
+export type SupplyMarketRow = {
+  name: string;
+  nameLocalised: string;
+  stock: number | null;
+  demandBracket: string | null;
+  demand: number | null;
+  /** Credits/ton station pays you (demand side). */
+  buyPrice?: number | null;
+  /** Credits/ton you pay station (stock for sale). */
+  sellPrice?: number | null;
 };
 
 export type BasketCheckoutBundle = {

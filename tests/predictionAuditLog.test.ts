@@ -174,6 +174,20 @@ describe("closing a record", () => {
     expect(predictionRecords()[0]!.final).toBe(false);
   });
 
+  it("does not read the log to close a system when nothing was recorded this session (audit 2026-10-22)", () => {
+    // Last session's open record for system 42, on disk.
+    recordPredictionForBody({ body: body(), matches: [m("frutexa_acus", "Frutexa", 40)], db });
+    flushPredictionAudit();
+    resetPredictionAuditForTests();
+    enablePredictionAudit();
+    // A jump out of 42 with nothing recorded since the start: no load, so nothing closed.
+    expect(finalisePredictionsForSystem(42, [])).toBe(0);
+    expect(JSON.parse(readFileSync(auditPath, "utf8")).records[0].final).toBe(false);
+    // Once something is recorded the log is in memory, and the next jump out closes it as before.
+    recordPredictionForBody({ body: body(), matches: [m("frutexa_acus", "Frutexa", 40)], db });
+    expect(finalisePredictionsForSystem(42, [])).toBe(1);
+  });
+
   it("closes a body with no marks, with an empty list rather than nothing", () => {
     // No marks means the app was not running on foot there. That is a fact about the record, and
     // null would read as "not closed yet".

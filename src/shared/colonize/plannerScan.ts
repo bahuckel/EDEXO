@@ -1,5 +1,11 @@
 import type { ColonizeSnapshot, DepotSnapshot } from "./types";
 
+/**
+ * Resolves a site's shopping hub. Supplied by the caller because the pins are React state
+ * now, rather than a set of storage keys this module used to read at call time.
+ */
+export type DepotRefResolver = (d: DepotSnapshot) => string;
+
 /** Default ref for material search — pinned hub, else first build system. */
 export function primaryCheckoutReferenceSystem(
   snap: ColonizeSnapshot | null,
@@ -33,21 +39,6 @@ export function plannerConstructionReferenceSystems(
     else if (build) systems.add(build);
   }
   return [...systems];
-}
-
-/** Distinct construction-site stars from active depots (display order, first-seen casing). */
-export function uniqueConstructionSystems(depots: DepotSnapshot[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const d of depots) {
-    const s = d.starSystem?.trim();
-    if (!s) continue;
-    const k = s.toLowerCase();
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(s);
-  }
-  return out;
 }
 
 /** Actual construction site star systems — Milky Way Ly is always from here, never the pinned hub. */

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { gzip as gzipCb } from "node:zlib";
 import express from "express";
+import { isLoopbackAddress } from "../lanAuth.js";
 
 /** Below this, framing and CPU cost more than the bytes saved. */
 export const GZIP_MIN_BYTES = 8192;
@@ -11,6 +12,9 @@ export const GZIP_MIN_BYTES = 8192;
  * The snapshot is ~630 KB of highly repetitive JSON and compresses ~85%. Compression runs on the
  * zlib threadpool, not the event loop, so a poll no longer costs the main thread anything beyond
  * the serialize it already did. `onSent` reports both sizes for the perf log.
+ *
+ * Not for this PC's own windows (load-time audit 2026-10-22): over loopback the bytes cost nothing
+ * and the gzip and the window's gunzip are pure cost (0.8-10 MB on each window's first load).
  */
 export function sendJson(
   req: express.Request,
@@ -22,7 +26,7 @@ export function sendJson(
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Vary", "Accept-Encoding");
   const acceptsGzip = String(req.headers["accept-encoding"] ?? "").includes("gzip");
-  if (!acceptsGzip || raw.length < GZIP_MIN_BYTES) {
+  if (!acceptsGzip || raw.length < GZIP_MIN_BYTES || isLoopbackAddress(req.socket?.remoteAddress)) {
     onSent?.(raw.length, raw.length);
     res.end(raw);
     return;

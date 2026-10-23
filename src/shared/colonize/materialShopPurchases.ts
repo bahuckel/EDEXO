@@ -2,7 +2,6 @@ import { commodityNeedMatchesLabel } from "./commodityKey";
 import { enrichMaterialListingsGalaxyLy } from "./galaxyDistanceTargets";
 import { isConstructionDepotStation, type ConstructionDepotRef } from "./constructionDepot";
 import type { MaterialBuyListing, MaterialBuyStationHit } from "./materialBuyIndexTypes";
-import type { BasketCheckoutResult } from "./types";
 import { bestGalaxyLyFromSites, isKnownLy, type Ly } from "./systemDistanceLy";
 import { isCommanderBuyOffer } from "./stationSellOffer";
 import { findShopHistoryEntry, shopEntryBoughtNeed, type ShopHistoryEntry } from "./shopHistory";
@@ -102,29 +101,6 @@ function purchaseHitsForNeed(
     out.push(hitFromShopPurchase(entry, needId, needLabel, offer, constructionSite, distanceMap));
   }
   return out;
-}
-
-function listingNeedsFromCheckout(plan: {
-  materialListings?: MaterialBuyListing[];
-  groups?: { commodityIds: string[]; commodityLabels: string[]; commodities?: { quantityNeeded?: number }[] }[];
-  unresolved?: { id: string; label: string; quantityNeeded: number }[];
-}): Array<{ id: string; label: string; quantityTons: number }> {
-  const needs: Array<{ id: string; label: string; quantityTons: number }> = [];
-  const seen = new Set((plan.materialListings ?? []).map((m) => m.id));
-  for (const g of plan.groups ?? []) {
-    g.commodityIds.forEach((id, i) => {
-      if (!id || seen.has(id)) return;
-      seen.add(id);
-      const qty = g.commodities?.[i]?.quantityNeeded ?? 1;
-      needs.push({ id, label: g.commodityLabels[i] || id, quantityTons: qty });
-    });
-  }
-  for (const u of plan.unresolved ?? []) {
-    if (!u.id || seen.has(u.id)) continue;
-    seen.add(u.id);
-    needs.push({ id: u.id, label: u.label, quantityTons: u.quantityNeeded });
-  }
-  return needs;
 }
 
 /** Ensure every depot need has a listing row so purchase hits can attach. */
@@ -252,28 +228,4 @@ export function finalizeMaterialBuyListings(args: FinalizeMaterialBuyListingsArg
     out = enrichMaterialListingsGalaxyLy(out, site, distanceMap, args.shopHistory);
   }
   return out;
-}
-
-/** Checkout plan: add listing rows from groups/unresolved, then attach purchase-memory stations + Ly. */
-export function enrichCheckoutPlanFromShopPurchases(
-  plan: BasketCheckoutResult,
-  history: ShopHistoryEntry[],
-  depots: ConstructionDepotRef[] = [],
-  constructionSite = "",
-  distanceMap: Record<string, number> = {},
-  constructionSites: string[] = [],
-): BasketCheckoutResult {
-  const sites = constructionSites.length
-    ? constructionSites
-    : [constructionSite.trim() || plan.constructionSiteSystem?.trim() || ""].filter(Boolean);
-  const site = sites[0] ?? "";
-  const listings = finalizeMaterialBuyListings({
-    listings: ensureListingRowsForNeeds(plan.materialListings ?? [], listingNeedsFromCheckout(plan)),
-    shopHistory: history,
-    depots,
-    constructionSite: site,
-    constructionSites: sites,
-    distanceMap,
-  });
-  return { ...plan, materialListings: listings };
 }

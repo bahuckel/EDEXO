@@ -1,4 +1,5 @@
 import { combinedMissingWithQty } from "./basketGap";
+import { itemLabel } from "./commodityKey";
 import type { MaterialBuyListing } from "./materialBuyIndexTypes";
 import { mergeMaterialListings } from "./mergeCheckoutPlans";
 import type { BasketCheckoutResult, DepotSnapshot } from "./types";
@@ -11,7 +12,7 @@ export type DepotNeedItem = {
 };
 
 export function depotNeedLabel(need: Pick<DepotNeedItem, "name" | "nameLocalised">): string {
-  return (need.nameLocalised || need.name).trim() || need.name;
+  return itemLabel(need);
 }
 
 /** Every material still needed across active construction projects (ignores basket). */
@@ -29,7 +30,7 @@ function enrichMaterialListingsForDepotNeeds(
 ): MaterialBuyListing[] {
   const byId = new Map(listings.map((m) => [m.id, { ...m }]));
   for (const need of needs) {
-    const label = (need.nameLocalised || need.name).trim() || need.name;
+    const label = itemLabel(need);
     const prev = byId.get(need.id);
     if (!prev) {
       byId.set(need.id, {

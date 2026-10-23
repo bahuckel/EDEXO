@@ -148,7 +148,9 @@ export class MaterialBuyIndex {
          */
         await backupUnreadableJson(this.filePath, parsed?.version ?? "unknown");
       }
-    } catch {
+    } catch (e) {
+      // A file that is there but does not parse holds Inara imports nobody can fetch again: keep a copy.
+      if ((e as NodeJS.ErrnoException)?.code !== "ENOENT") await backupUnreadableJson(this.filePath, "corrupt");
       this.data = { version: INDEX_VERSION, systems: {} };
     }
     this.loaded = true;
@@ -436,7 +438,7 @@ export class MaterialBuyIndex {
 
     const useDijkstra = Object.keys(distanceBySystem).length > 0;
     const applyHop = (h: MaterialBuyStationHit): MaterialBuyStationHit => {
-      const distanceLy = constructionHopLy(distRef, h.systemName, h.distanceLy, distanceBySystem);
+      const distanceLy = constructionHopLy(distRef, h.systemName, distanceBySystem);
       return distanceLy === h.distanceLy ? h : { ...h, distanceLy };
     };
     const order = (hits: MaterialBuyStationHit[]) => {
@@ -497,10 +499,8 @@ export class MaterialBuyIndex {
         });
         const deduped = dedupeBuyStationHits(kept).sort(sortHits);
         removed += Math.max(0, kept.length - deduped.length);
-        if (deduped.length !== row.stations.length) {
-          row.stations = deduped;
-          row.updatedAtIso = new Date().toISOString();
-        }
+        // Not a scan: the row keeps its scan time, or weeks-old data looks fresh and the next look waits 14 days.
+        if (deduped.length !== row.stations.length) row.stations = deduped;
         if (!row.stations.length) delete sys[rowId];
       }
     }
@@ -543,10 +543,7 @@ export class MaterialBuyIndex {
           if (drop) removed += 1;
           return !drop;
         });
-        if (kept.length !== row.stations.length) {
-          row.stations = kept;
-          row.updatedAtIso = new Date().toISOString();
-        }
+        if (kept.length !== row.stations.length) row.stations = kept; // keeps its scan time (sanitizeSellHits)
         if (!row.stations.length) delete sys[rowId];
       }
     }

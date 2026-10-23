@@ -133,7 +133,7 @@ function buildCanonNormRepresentative(): Map<string, string> {
 }
 
 /**
- * Built on first use rather than at import: this module is pulled into both the main and the renderer
+ * Built on first use rather than at import: this module is pulled into both the server and the window
  * bundle, and a process that never keys a commodity should not pay for the table.
  */
 let canonRepByNorm: Map<string, string> | null = null;
@@ -329,4 +329,17 @@ export function resourceNeedId(row: { name: string; nameLocalised?: string | nul
     commodityMergeBucket(row.nameLocalised) ||
     commodityNormKey(row.name)
   );
+}
+
+/**
+ * A basket line's commodity id: the one it carries, else the one `resourceNeedId` derives. The server spelled this
+ * out five times (checkout, scanner), so a new alias rule had five places to miss (audit 2026-10-22).
+ */
+export function basketItemId(it: { id?: string | null; name: string; nameLocalised?: string | null }): string {
+  return it.id || resourceNeedId(it);
+}
+
+/** What a journal or basket row is called on screen: its localised name, else the journal's. */
+export function itemLabel(row: { name: string; nameLocalised?: string | null }): string {
+  return (row.nameLocalised || row.name).trim() || row.name;
 }

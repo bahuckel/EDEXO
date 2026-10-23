@@ -19,6 +19,8 @@ export function JournalBootScreen({ boot, connected }: { boot: JournalBootProgre
 
         <div
           className="journal-boot__meter"
+          // A progress bar needs a name to be read out (axe aria-progressbar-name, audit 2026-10-22).
+          aria-label="Loading journal data"
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={pct}

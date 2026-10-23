@@ -18,8 +18,8 @@ export type IpcContext = {
 type Untrusted<T extends readonly unknown[]> = { [I in keyof T]: unknown };
 
 /**
- * The main-process side of `ColonizeInvoke`. Parameters are `unknown` (the renderer is not
- * trusted); the return value must be exactly what the renderer was promised.
+ * The server side of `ColonizeInvoke`. Parameters are `unknown` (the window is not
+ * trusted); the return value must be exactly what the window was promised.
  */
 export type ColonizeHandlers = {
   [K in keyof ColonizeInvoke]: (

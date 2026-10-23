@@ -1,5 +1,6 @@
 import { colonizeApi } from "../../api";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { errText } from "../../../../shared/colonize/formatPrice";
 import { enrichMaterialListingsGalaxyLy } from "../../../../shared/colonize/galaxyDistanceTargets";
 import type { MissingBuyIndexedItem } from "../../../../shared/colonize/logisticsPlanner";
 import type { MaterialBuyListing } from "../../../../shared/colonize/materialBuyIndexTypes";
@@ -17,7 +18,6 @@ export type DepotBuyListingsArgs = {
   systemDistanceLy: Record<string, number>;
   /** Bump to re-fetch getDepotMaterialListings after Spansh / buy-index writes. */
   buyIndexRefreshToken: number;
-  onLocalFetchNotice?: (message: string | null) => void;
 };
 
 export type DepotBuyListings = {
@@ -25,16 +25,23 @@ export type DepotBuyListings = {
   /** False until the first fetch lands — the planner must not treat "no sellers" as final before then. */
   listingsReady: boolean;
   listingsLoading: boolean;
-  /** Material id currently being fetched by the per-material "Local" button. */
+  /** Material id currently being fetched by the per-material "Saved sellers" button. */
   localFetchingId: string | null;
   fetchMissingMaterialLocally: (item: MissingBuyIndexedItem) => Promise<void>;
+  /**
+   * Why the saved sellers came back empty or failed ("not found in range", the server's error), or null. Held here so
+   * the view only has to show it: it went to an optional callback nobody passed, and "Saved sellers" failed silently
+   * (audit 2026-10-22).
+   */
+  localFetchNotice: string | null;
 };
 
 /**
- * Buy cards + trip routing: local buy index + journal (same DB as Search / Inara import).
+ * The sellers the trip routing starts from: the server's buy index and journal (the same as Search and the Inara
+ * import use).
  *
  * The fetch is keyed on signatures rather than object identity, so a new array of the same needs
- * does not fire another round trip to the main process.
+ * does not fire another round trip to the server.
  */
 export function useDepotBuyListings({
   isActive,
@@ -45,12 +52,12 @@ export function useDepotBuyListings({
   homeSystem,
   systemDistanceLy,
   buyIndexRefreshToken,
-  onLocalFetchNotice,
 }: DepotBuyListingsArgs): DepotBuyListings {
   const [indexListings, setIndexListings] = useState<MaterialBuyListing[]>([]);
   const [indexListingsReady, setIndexListingsReady] = useState(false);
   const [indexListingsLoading, setIndexListingsLoading] = useState(false);
   const [localFetchingId, setLocalFetchingId] = useState<string | null>(null);
+  const [localFetchNotice, setLocalFetchNotice] = useState<string | null>(null);
 
   const indexListingsReadyRef = useRef(false);
   indexListingsReadyRef.current = indexListingsReady;
@@ -76,23 +83,28 @@ export function useDepotBuyListings({
     .join("|");
   const depotMarketSig = (activeDepots ?? []).map((d) => d.marketId).join("|");
 
+  /** Where the sellers are looked up from and measured to, and which stations are sites (never sellers). */
+  const scope = useMemo(() => {
+    const ref = constructionRefSystems[0]?.trim() || constructionSiteSystems[0]?.trim() || homeSystem;
+    const site = constructionSiteSystems[0]?.trim() || ref;
+    const depots = (activeDepots ?? []).map((d) => ({
+      marketId: d.marketId,
+      systemName: d.starSystem,
+      stationName: d.stationName,
+      label: d.constructionSiteLabel ?? d.stationName,
+    }));
+    return { ref, site, depots };
+  }, [constructionRefSystems, constructionSiteSystems, homeSystem, activeDepots]);
+
   const fetchMissingMaterialLocally = useCallback(
     async (item: MissingBuyIndexedItem) => {
-      const api = colonizeApi;
-      const ref = constructionRefSystems[0]?.trim() || constructionSiteSystems[0]?.trim() || homeSystem;
-      if (!api?.getDepotMaterialListings || !ref) return;
+      const { ref, site, depots } = scope;
+      if (!ref) return;
 
       setLocalFetchingId(item.id);
-      onLocalFetchNotice?.(null);
+      setLocalFetchNotice(null);
       try {
-        const depots = (activeDepots ?? []).map((d) => ({
-          marketId: d.marketId,
-          systemName: d.starSystem,
-          stationName: d.stationName,
-          label: d.constructionSiteLabel ?? d.stationName,
-        }));
-        const site = constructionSiteSystems[0]?.trim() || ref;
-        const res = await api.getDepotMaterialListings({
+        const res = await colonizeApi.getDepotMaterialListings({
           referenceSystem: ref,
           distanceOrigin: site,
           needs: [{ id: item.id, label: item.label, quantityTons: item.quantityTons }],
@@ -100,14 +112,12 @@ export function useDepotBuyListings({
           distanceBySystem: systemDistanceLy,
         });
         if (!res.ok) {
-          onLocalFetchNotice?.(res.err);
+          setLocalFetchNotice(res.err);
           return;
         }
         let listing = res.listings.find((m) => m.id === item.id) ?? res.listings[0];
         if (!listing?.stations.length) {
-          onLocalFetchNotice?.(
-            `Material not found in scan range, use Inara to find the closest one — ${item.label}.`,
-          );
+          setLocalFetchNotice(`Material not found in scan range, use Inara to find the closest one — ${item.label}.`);
           return;
         }
         if (site && Object.keys(systemDistanceLy).length) {
@@ -119,25 +129,16 @@ export function useDepotBuyListings({
             return [...rest, listing!].sort((a, b) => a.label.localeCompare(b.label));
           });
         });
-        onLocalFetchNotice?.(null);
+        setLocalFetchNotice(null);
       } catch (e) {
-        // An IPC rejection used to escape to the error boundary, which took the whole planner
+        // A rejected request used to escape to the error boundary, which took the whole planner
         // panel down over one material that could not be looked up.
-        onLocalFetchNotice?.(
-          `Could not look up ${item.label}: ${e instanceof Error ? e.message : String(e)}`,
-        );
+        setLocalFetchNotice(`Could not look up ${item.label}: ${errText(e)}`);
       } finally {
         setLocalFetchingId(null);
       }
     },
-    [
-      constructionRefSystems,
-      constructionSiteSystems,
-      homeSystem,
-      activeDepots,
-      systemDistanceLy,
-      onLocalFetchNotice,
-    ],
+    [scope, systemDistanceLy],
   );
 
   useEffect(() => {
@@ -148,24 +149,16 @@ export function useDepotBuyListings({
       setIndexListingsLoading(false);
       return;
     }
-    const api = colonizeApi;
-    const ref = constructionRefSystems[0]?.trim() || constructionSiteSystems[0]?.trim() || homeSystem;
-    if (!api?.getDepotMaterialListings || !ref) return;
+    const { ref, site, depots } = scope;
+    if (!ref) return;
 
     const gen = ++indexFetchGenRef.current;
-    const depots = (activeDepots ?? []).map((d) => ({
-      marketId: d.marketId,
-      systemName: d.starSystem,
-      stationName: d.stationName,
-      label: d.constructionSiteLabel ?? d.stationName,
-    }));
-    const site = constructionSiteSystems[0]?.trim() || ref;
     const firstLoad = !indexListingsReadyRef.current;
     if (firstLoad) setIndexListingsLoading(true);
 
     void (async () => {
       try {
-        const res = await api.getDepotMaterialListings({
+        const res = await colonizeApi.getDepotMaterialListings({
           referenceSystem: ref,
           distanceOrigin: site,
           needs: depotNeeds.map((need) => ({
@@ -179,7 +172,7 @@ export function useDepotBuyListings({
         if (gen !== indexFetchGenRef.current) return;
         if (!res.ok) {
           // This was a bare return: the buy list simply stayed empty and said nothing about why.
-          onLocalFetchNotice?.(res.err);
+          setLocalFetchNotice(res.err);
           return;
         }
         let listings = res.listings;
@@ -190,13 +183,9 @@ export function useDepotBuyListings({
           setIndexListings(listings);
           setIndexListingsReady(true);
         });
-        onLocalFetchNotice?.(null);
+        setLocalFetchNotice(null);
       } catch (e) {
-        if (gen === indexFetchGenRef.current) {
-          onLocalFetchNotice?.(
-            `Could not load saved buy locations: ${e instanceof Error ? e.message : String(e)}`,
-          );
-        }
+        if (gen === indexFetchGenRef.current) setLocalFetchNotice(`Could not load saved buy locations: ${errText(e)}`);
       } finally {
         if (gen === indexFetchGenRef.current) setIndexListingsLoading(false);
       }
@@ -229,5 +218,6 @@ export function useDepotBuyListings({
     listingsLoading: indexListingsLoading,
     localFetchingId,
     fetchMissingMaterialLocally,
+    localFetchNotice,
   };
 }

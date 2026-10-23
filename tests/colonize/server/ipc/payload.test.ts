@@ -1,28 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  isAllowedExternalUrl,
   parseCheckoutItems,
   parseCheckoutRequest,
   parseConstructionDepots,
   parseDistanceBySystem,
   parseSystemNames,
 } from "../../../../src/server/colonize/ipc/payload";
-
-describe("isAllowedExternalUrl", () => {
-  it("opens the sites the app links to", () => {
-    expect(isAllowedExternalUrl("https://inara.cz/elite/commodities/?x=1")).toBe(true);
-    expect(isAllowedExternalUrl("https://www.spansh.co.uk/system?n=Sol")).toBe(true);
-    expect(isAllowedExternalUrl("http://edsm.net/")).toBe(true);
-  });
-  it("refuses anything else", () => {
-    expect(isAllowedExternalUrl("https://inara.cz.evil.example/")).toBe(false);
-    expect(isAllowedExternalUrl("https://user:pw@inara.cz/")).toBe(false);
-    expect(isAllowedExternalUrl("file:///C:/Windows/system32/calc.exe")).toBe(false);
-    expect(isAllowedExternalUrl("javascript:alert(1)")).toBe(false);
-    expect(isAllowedExternalUrl("not a url")).toBe(false);
-    expect(isAllowedExternalUrl(42)).toBe(false);
-  });
-});
 
 describe("parseCheckoutRequest", () => {
   it("serves from the saved index unless live data is asked for", () => {

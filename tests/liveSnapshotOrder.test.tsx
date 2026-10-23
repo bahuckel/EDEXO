@@ -5,6 +5,9 @@
  * used to be applied anyway — the screen went back to older data until the next push — and it moved
  * the client's revision back, so the backup check fetched again for nothing. And a socket that keeps
  * failing was retried every 1.1 s for ever.
+ *
+ * And the start-up fetch itself (audit 2026-10-22): the socket's first frame is the whole snapshot, so a page asks
+ * `/api/state` only when that frame has not come within 1.5 s, or the socket closed before sending it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
@@ -49,6 +52,11 @@ function Probe() {
   return null;
 }
 const tag = () => (seen.at(-1) as unknown as { tag?: string } | null)?.tag;
+/** The `/api/state` requests made so far (not the 10 s backup's `/api/state/rev`). */
+const stateFetches = () =>
+  (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter((c) => c[0] === "/api/state").length;
+/** No frame within the wait: the fallback fetch goes out (and stays unanswered until `answerFetch`). */
+const waitOutFirstFrame = () => act(() => vi.advanceTimersByTime(1500));
 
 beforeEach(() => {
   (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -79,20 +87,55 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("the start-up fetch", () => {
+  it("is not made when the socket's first frame brings the snapshot", () => {
+    const ws = FakeSocket.all[0]!;
+    act(() => {
+      ws.open();
+      ws.push(1, "push-1");
+    });
+    expect(tag()).toBe("push-1");
+    // Up to the 10 s backup check, which asks only for the revision while the socket is up.
+    act(() => vi.advanceTimersByTime(9_900));
+    expect(stateFetches()).toBe(0);
+  });
+
+  it("is made when no frame has come within 1.5 s, and fills the page", async () => {
+    act(() => vi.advanceTimersByTime(1_400));
+    expect(stateFetches()).toBe(0);
+    act(() => vi.advanceTimersByTime(100));
+    expect(stateFetches()).toBe(1);
+    await act(() => answerFetch!(3, "fetch-3"));
+    expect(tag()).toBe("fetch-3");
+  });
+
+  it("is made at once when the socket closes before any frame, and only once", () => {
+    act(() => FakeSocket.all[0]!.fail());
+    expect(stateFetches()).toBe(1);
+    // The reconnect fails as well: no second fetch for it, nor when the wait would have ended.
+    act(() => vi.advanceTimersByTime(1_200));
+    act(() => FakeSocket.all.at(-1)!.fail());
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(stateFetches()).toBe(1);
+  });
+});
+
 describe("live snapshot ordering", () => {
   it("drops a full fetch that answers after a newer push", async () => {
+    // The fallback fetch was asked before push 5 and answers with revision 4.
+    waitOutFirstFrame();
     const ws = FakeSocket.all[0]!;
     act(() => {
       ws.open();
       ws.push(5, "push-5");
     });
     expect(tag()).toBe("push-5");
-    // The start-up fetch was asked before push 5 and answers with revision 4.
     await act(() => answerFetch!(4, "fetch-4"));
     expect(tag()).toBe("push-5");
   });
 
   it("takes a fetch that is as new as the last push or newer", async () => {
+    waitOutFirstFrame();
     const ws = FakeSocket.all[0]!;
     act(() => {
       ws.open();
@@ -103,6 +146,7 @@ describe("live snapshot ordering", () => {
   });
 
   it("after the socket drops (a server restart starts counting again), a lower revision is taken", async () => {
+    waitOutFirstFrame();
     const ws = FakeSocket.all[0]!;
     act(() => {
       ws.open();

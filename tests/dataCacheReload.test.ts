@@ -188,13 +188,13 @@ describe("the species split tables", () => {
     expect(speciesSplitGenera(root)).toEqual(["Clypeus"]);
     clearSpeciesSplitCache();
 
-    // The launcher button's list (edexoBootstrap.ts reloadSpeciesDerivedCaches) includes it.
+    // The launcher button's list (speciesCacheReload.ts reloadSpeciesDerivedCaches; in edexoBootstrap.ts
+    // until audit 2026-10-22) includes it.
     const { readFileSync } = await import("node:fs");
-    const src = readFileSync(join(__dirname, "../src/server/edexoBootstrap.ts"), "utf8");
-    const body = src.slice(
-      src.indexOf("function reloadSpeciesDerivedCaches"),
-      src.indexOf("export async function startEdexo"),
-    );
+    const src = readFileSync(join(__dirname, "../src/server/speciesCacheReload.ts"), "utf8");
+    const at = src.indexOf("function reloadSpeciesDerivedCaches");
+    expect(at).toBeGreaterThanOrEqual(0);
+    const body = src.slice(at);
     expect(body).toContain("clearSpeciesSplitCache()");
   });
 });
@@ -203,11 +203,10 @@ describe("the species split tables", () => {
 describe("the genus chances, the Brain Tree / Tubers split and the ranking's tables", () => {
   it("are on Refresh exomastery's list", async () => {
     const { readFileSync } = await import("node:fs");
-    const src = readFileSync(join(__dirname, "../src/server/edexoBootstrap.ts"), "utf8");
-    const body = src.slice(
-      src.indexOf("function reloadSpeciesDerivedCaches"),
-      src.indexOf("export async function startEdexo"),
-    );
+    const src = readFileSync(join(__dirname, "../src/server/speciesCacheReload.ts"), "utf8");
+    const at = src.indexOf("function reloadSpeciesDerivedCaches");
+    expect(at).toBeGreaterThanOrEqual(0);
+    const body = src.slice(at);
     for (const call of [
       "clearGenusPriorCache()",
       "resetGenusBodySplitCache()",

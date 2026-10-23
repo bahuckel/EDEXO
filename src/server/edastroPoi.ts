@@ -179,7 +179,10 @@ export function readPoiStatus(nowMs: number = Date.now()): PoiDataStatusDTO {
   const cooldownMsRemaining = Math.max(0, POI_FETCH_COOLDOWN_MS - since);
   return {
     haveData: have,
-    rowCount: have ? loadRows().length : 0,
+    // Counted when read (audit 2026-10-22): Options > Notify asks only `haveData`; JSON reads the getter.
+    get rowCount() {
+      return have ? loadRows().length : 0;
+    },
     fetchedAtMs: meta?.fetchedAtMs ?? null,
     cooldownMsRemaining: Number.isFinite(cooldownMsRemaining) ? cooldownMsRemaining : 0,
     sourceUrl: POI_URL,

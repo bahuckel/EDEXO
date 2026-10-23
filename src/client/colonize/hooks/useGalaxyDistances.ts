@@ -1,6 +1,6 @@
 import { colonizeApi } from "../api";
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
-import type { BasketCheckoutBundle, BasketCheckoutResult } from "../../../shared/colonize/types";
+import type { BasketCheckoutBundle } from "../../../shared/colonize/types";
 import {
   collectGalaxyDistanceTargets,
   filterUnresolvedGalaxyDistanceTargets,
@@ -11,6 +11,7 @@ import {
   sanitizeGalaxyDistanceMap,
 } from "../../../shared/colonize/systemDistanceLy";
 import type { ShopHistoryEntry } from "../../../shared/colonize/shopHistory";
+import { errText } from "../../../shared/colonize/formatPrice";
 
 /**
  * Names the backend could not resolve stay in the missing-targets list forever, so without a
@@ -23,12 +24,10 @@ export function useGalaxyDistances(args: {
   api: typeof colonizeApi;
   constructionSiteRefs: string[];
   effectiveShopHistory: ShopHistoryEntry[];
-  checkoutResult: BasketCheckoutResult | null;
   checkoutBundle: BasketCheckoutBundle | null;
   extraSellerSystems?: string[];
 }) {
-  const { api, constructionSiteRefs, effectiveShopHistory, checkoutResult, checkoutBundle, extraSellerSystems } =
-    args;
+  const { api, constructionSiteRefs, effectiveShopHistory, checkoutBundle, extraSellerSystems } = args;
   const [systemDistanceLy, setSystemDistanceLy] = useState<Record<string, number>>(() => loadGalaxyDistanceCache());
   const [distancesLoading, setDistancesLoading] = useState(false);
   const [distanceResolveErr, setDistanceResolveErr] = useState<string | null>(null);
@@ -63,12 +62,11 @@ export function useGalaxyDistances(args: {
     () =>
       collectGalaxyDistanceTargets({
         shopHistory: effectiveShopHistory,
-        checkoutResult,
         checkoutBundle,
         constructionRefs: constructionSiteRefs,
         extraSellerSystems,
       }),
-    [effectiveShopHistory, checkoutResult, checkoutBundle, constructionSiteRefs, extraSellerSystems],
+    [effectiveShopHistory, checkoutBundle, constructionSiteRefs, extraSellerSystems],
   );
 
   const missingGalaxyDistanceTargets = useMemo(() => {
@@ -99,10 +97,6 @@ export function useGalaxyDistances(args: {
   }, [constructionSitesSig]);
 
   useEffect(() => {
-    if (!api?.resolveSystemDistances) {
-      setDistancesLoading(false);
-      return;
-    }
     const fromSystems = constructionSiteRefsRef.current;
     if (!fromSystems.length) {
       setDistancesLoading(false);
@@ -160,7 +154,7 @@ export function useGalaxyDistances(args: {
           saveGalaxyDistanceCache(merged);
         } catch (e) {
           if (!cancelled) {
-            startTransition(() => setDistanceResolveErr(e instanceof Error ? e.message : String(e)));
+            startTransition(() => setDistanceResolveErr(errText(e)));
           }
         } finally {
           distanceResolveInflightRef.current = Math.max(0, distanceResolveInflightRef.current - 1);

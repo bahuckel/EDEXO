@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { carrierDisplayName, type CarrierStock } from "../../../shared/colonize/carrierStock";
 import type { ClearBuyDataScope } from "../../../shared/colonize/buyIndexClear";
 import { formatHopLy } from "../../../shared/colonize/systemDistanceLy";
-import { formatPrice } from "../../../shared/colonize/formatPrice";
+import { errText, formatPrice, formatTons as t } from "../../../shared/colonize/formatPrice";
 import { IDLE_MATERIAL_BUY_SCAN_STATUS } from "../../../shared/colonize/materialBuyScanStatus";
 import {
   addPartyMember,
@@ -23,8 +23,6 @@ import { openInEdexoBrowser } from "../inaraBrowser";
 import type { ColonizeModel } from "../useColonize";
 import { BTN, BTN_BAD, BTN_GO, BTN_LINK, BTN_WARN, Panel } from "./ui";
 
-const t = (n: number) => `${Math.round(n).toLocaleString("en-US")} t`;
-const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function SourcesView({ m }: { m: ColonizeModel }) {
   return (

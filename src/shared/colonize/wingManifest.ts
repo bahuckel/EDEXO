@@ -19,18 +19,6 @@ export function pickWingColor(index: number): string {
   return WING_PALETTE[index % WING_PALETTE.length] ?? "#ff7a24";
 }
 
-export function wingTonsForCommodity(members: WingMember[], commodityId: string, depotMarketId?: string | null): number {
-  let sum = 0;
-  for (const m of members) {
-    for (const c of m.claims) {
-      if (c.commodityId !== commodityId) continue;
-      if (depotMarketId && c.targetDepotMarketId && c.targetDepotMarketId !== depotMarketId) continue;
-      sum += c.tons;
-    }
-  }
-  return sum;
-}
-
 /**
  * Untargeted claims (no `targetDepotMarketId`) form one pool drawn down across depots.
  *

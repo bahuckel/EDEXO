@@ -47,8 +47,8 @@ describe("the distance rule", () => {
   it("a hop is 0 in the same system, the mapped distance, or null — never Infinity", () => {
     const map = { [galaxyDistancePairKey("Site", "Seller")]: 14.2 };
     expect(constructionHopLy("Site", "site")).toBe(0);
-    expect(constructionHopLy("Site", "Seller", null, map)).toBe(14.2);
-    expect(constructionHopLy("Site", "Elsewhere", null, map)).toBeNull();
+    expect(constructionHopLy("Site", "Seller", map)).toBe(14.2);
+    expect(constructionHopLy("Site", "Elsewhere", map)).toBeNull();
     expect(formatHopLy(null)).toBe("—");
     expect(formatHopLy(0)).toBe("0.0 Ly");
   });

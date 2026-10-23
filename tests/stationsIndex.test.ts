@@ -357,6 +357,34 @@ describe("looking up by name (Colonize, 1.3.0)", () => {
     expect(idx.system("  FAR ")?.x).toBe(200);
     expect(idx.system("Nowhere")).toBeNull();
   });
+  it("finds names whose hashes collide, and the first record of a name used twice (audit 2026-10-22)", () => {
+    // "costarring" and "liquid" share an FNV-1a hash: the look-up checks the name, not only the hash.
+    const sys = (name: string, x: number): Sys => ({ name, x, y: 0, z: 0, stations: [] });
+    const many = new StationsIndex(
+      encode([sys("Liquid", 1), sys("Costarring", 2), sys("Twice", 3), sys("TWICE", 4), ...SYSTEMS]),
+    );
+    expect(many.system("costarring")?.x).toBe(2);
+    expect(many.system("LIQUID")?.x).toBe(1);
+    expect(many.system("twice")).toEqual({ name: "Twice", x: 3, y: 0, z: 0 });
+    expect(many.system("Far")?.x).toBe(200);
+    expect(many.system("liquids")).toBeNull();
+    expect(many.system("")).toBeNull();
+  });
+  it("answers every name as the name map it replaced did: the first record, any case", () => {
+    let seed = 7;
+    const rand = () => (seed = (Math.imul(seed, 1103515245) + 12345) >>> 0) / 2 ** 32;
+    const names = Array.from({ length: 3000 }, () => {
+      const base = `Sys ${Math.floor(rand() * 1500)}`;
+      return rand() < 0.3 ? base.toUpperCase() : base;
+    });
+    const many = new StationsIndex(encode(names.map((name, i) => ({ name, x: i, y: 0, z: 0, stations: [] }))));
+    const first = new Map<string, number>();
+    names.forEach((n, i) => {
+      if (!first.has(n.toLowerCase())) first.set(n.toLowerCase(), i);
+    });
+    for (const [lower, i] of first) expect(many.systemIndex(lower.toUpperCase())).toBe(i);
+    expect(many.systemIndex("Sys 99999")).toBe(-1);
+  });
   it("finds a station by its system and its name: type, pad, distance from the arrival star", () => {
     const r = idx.station("MIDDLE", "middle port")!;
     expect([r.name, r.type, r.pad, r.distanceLs]).toEqual(["Middle Port", "Coriolis Starport", "L", 9000]);

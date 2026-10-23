@@ -120,5 +120,10 @@ describe("the wiring in electron/hudWindows.cjs", () => {
     */
     const showInactiveCalls = main.match(/\.showInactive\(\)/g) ?? [];
     expect(showInactiveCalls).toHaveLength(1);
+    // Nor in the parts moved out of hudWindows.cjs (audit 2026-10-22), where a second one could hide.
+    for (const f of ["hudGeometry.cjs", "hudWindowOptions.cjs"]) {
+      const src = readFileSync(path.resolve(__dirname, "../electron", f), "utf8");
+      expect(src.match(/\.showInactive\(\)/g) ?? [], f).toHaveLength(0);
+    }
   });
 });

@@ -63,31 +63,6 @@ export function isConstructionDepotStation(
   return false;
 }
 
-/**
- * Adapt bare refs to full depot snapshots.
- *
- * Only identity fields are known here, so everything the journal would supply
- * (progress, contributions, history) comes back empty rather than invented.
- * Callers that need real progress must read it from the store.
- */
-export function depotSnapshotsFromRefs(refs: ConstructionDepotRef[]): DepotSnapshot[] {
-  return refs.map((d) => ({
-    marketId: d.marketId ?? "",
-    starSystem: depotSystemName(d) || null,
-    systemAddress: null,
-    stationName: d.stationName?.trim() || d.constructionSiteLabel?.trim() || d.label?.trim() || null,
-    constructionSiteLabel: d.constructionSiteLabel ?? d.label ?? null,
-    progress: null,
-    complete: false,
-    failed: false,
-    lastTimestamp: null,
-    resources: [],
-    contributions: [],
-    progressHistory: [],
-    contributionProgressHistory: [],
-  }));
-}
-
 export function purgeConstructionDepotsFromShopHistory<T extends { systemName: string; stationName: string; marketId: string }>(
   history: T[],
   depots: DepotSnapshot[],

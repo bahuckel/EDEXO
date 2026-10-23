@@ -80,6 +80,8 @@ module.exports = {
     "electron/preload.cjs",
     "electron/windowState.cjs",
     "electron/hudWindows.cjs",
+    "electron/hudGeometry.cjs",
+    "electron/hudWindowOptions.cjs",
     "electron/tray.cjs",
     "electron/childWindows.cjs",
     "electron/foregroundWatch.cjs",
@@ -90,6 +92,8 @@ module.exports = {
     "electron/tabWindows.cjs",
     // The EDEXO browser (plan 9).
     "electron/browserTabs.cjs",
+    "electron/browserPageScripts.cjs",
+    "electron/browserUrls.cjs",
     "electron/browserPrefs.cjs",
     "electron/browserPasswords.cjs",
     "electron/browserBlocker.cjs",

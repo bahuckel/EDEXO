@@ -54,6 +54,15 @@ export function Panel({
   );
 }
 
+/** Puts text on the clipboard (Trips and Search had a copy each); never throws. */
+export async function copyText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    /* no clipboard in this browser (or not over plain http): the text is on screen to copy by hand */
+  }
+}
+
 /** Compare's fact tile: a small uppercase label over a value. */
 export function Fact({ k, v, tone }: { k: ReactNode; v: ReactNode; tone?: "open" | "hot" }) {
   return (

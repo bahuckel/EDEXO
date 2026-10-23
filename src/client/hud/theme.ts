@@ -74,6 +74,12 @@ export function serverPref(key: string): string | null {
       return str(p.credit);
     case "edexoHudNextBoxel":
       return bool(p.nextBoxel);
+    case "edexoHudCzNeeds":
+      return bool(p.czNeeds);
+    case "edexoHudCzSites":
+      return bool(p.czSites);
+    case "edexoHudCzFinished":
+      return bool(p.czFinished);
     case "edexoHudTilt":
       return numStr(p.tilt);
     case "edexoHudTiltMode":

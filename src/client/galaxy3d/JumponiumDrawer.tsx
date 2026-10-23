@@ -18,6 +18,7 @@ import { fmtLyAway } from "@shared/format";
 import { isBool, isNum, isStrArr, usePersistedState } from "../usePersistedState";
 import { CopySystemButton } from "../CopySystemButton";
 import { LoadingNote } from "../ui/Loading";
+import { tabListKeyDown } from "../ui/Tabs";
 import { G3D_HELP, MenuHead } from "./G3dMenu";
 import { LabCrafting } from "./LabCrafting";
 
@@ -196,13 +197,15 @@ export function JumponiumDrawer({
       data-testid="g3d-jumponium"
     >
       <MenuHead title="Laboratory" help={G3D_HELP.jumponium} />
-      <div className="lab-tabs" role="tablist" aria-label="What to make">
+      {/* The app's keyboard for an option strip (ui/Tabs.tsx, audit 2026-10-22): one Tab stop, arrows choose. */}
+      <div className="lab-tabs" role="tablist" aria-label="What to make" onKeyDown={(ev) => tabListKeyDown(ev, { follow: true })}>
         {(["fsd", "afm"] as const).map((k) => (
           <button
             key={k}
             type="button"
             role="tab"
             aria-selected={kind === k}
+            tabIndex={kind === k ? 0 : -1}
             className={`lab-tab${kind === k ? " lab-tab--on" : ""}`}
             onClick={() => setKind(k)}
           >

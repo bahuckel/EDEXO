@@ -9,7 +9,8 @@ import type { ExpeditionBoxelDTO, ExpeditionFieldDTO } from "@shared/dto/expedit
 import { fmtLy } from "@shared/format";
 import { tabStore } from "./tabs/tabStore";
 import { Tooltip } from "./ui/Tooltip";
-import { crShort, requestExpeditionFocus } from "./ExpeditionDrawer";
+// Not from ExpeditionDrawer: that would put the drawer and the map's menus into every window's first load.
+import { crShort, requestExpeditionFocus } from "./expeditionFocus";
 import { useNextBoxelInHeader } from "./nextBoxelSetting";
 
 export const NEXT_BOXEL_RADIUS_LY = 500;

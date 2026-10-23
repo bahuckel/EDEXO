@@ -4,25 +4,22 @@
  * into the saved sellers, as an Inara import. Only the page the commander opened, only when asked: nothing is fetched
  * or crawled (electron/browserTabs.cjs `openInara`, `inaraOfferScript`). Where there is no EDEXO Browser (a system
  * browser, a phone), the links open a normal browser tab as before.
+ *
+ * Which pages the pop-up reads is the main process's call alone (browserTabs.cjs `isInaraCommodityPage`, tested in
+ * tests/browserTabs.test.ts); the copy that lived here was used by nothing but its test (audit 2026-10-22).
+ *
+ * The "open this address in the Browser tab" part is in tabs/browserOpen.ts, so Compare's Browser tab does not load
+ * this module (and Colonize's request map behind it) until a page is read. Re-exported for Colonize's views.
  */
 import { inaraCommodityNormForPa1 } from "../../shared/colonize/inaraCommodityIds";
 import { parseInaraBuyResultsHtml } from "../../shared/colonize/inaraScrapeParse";
 import { INARA_INDEX_REF, type InaraImportFile } from "../../shared/colonize/inaraImportTypes";
-import { BROWSER_AVAILABLE, heldElsewhere, tabStore } from "../tabs/tabStore";
 import { colonizeApi } from "./api";
+
+export { onBrowserUrlRequest, openInEdexoBrowser, takePendingBrowserUrl } from "../tabs/browserOpen";
 
 /** What the main process read from the page (browserTabs.cjs readInaraPage). */
 export type InaraPageRead = { url: string; table: string; near: string; commodities: string[] };
-
-/** Inara's commodity search, the only page the pop-up reads (the main process checks it again). */
-export function isInaraCommodityPage(url: string | null | undefined): boolean {
-  try {
-    const u = new URL(String(url));
-    return u.protocol === "https:" && /^(www\.)?inara\.cz$/i.test(u.hostname) && /^\/elite\/commodities\/?$/i.test(u.pathname);
-  } catch {
-    return false;
-  }
-}
 
 /**
  * The page as an Inara import file (inaraImportTypes.ts), or why not. One commodity at a time: a search for several
@@ -69,44 +66,4 @@ export async function importInaraRead(read: InaraPageRead): Promise<{ ok: boolea
       res.nearSystem && res.nearSystem !== INARA_INDEX_REF ? ` (near ${res.nearSystem})` : ""
     }.`,
   };
-}
-
-/** An address waiting for the Browser tab to open (BrowserScreen takes it once its pages are ready). */
-let pending: string | null = null;
-const OPEN_EVENT = "edexo:browser-open-url";
-
-/** The address BrowserScreen should open, taken once. */
-export function takePendingBrowserUrl(): string | null {
-  const u = pending;
-  pending = null;
-  return u;
-}
-/** BrowserScreen, while on screen: called with each address asked for. Returns an unsubscribe. */
-export function onBrowserUrlRequest(cb: () => void): () => void {
-  window.addEventListener(OPEN_EVENT, cb);
-  return () => window.removeEventListener(OPEN_EVENT, cb);
-}
-
-/**
- * Opens `url` in the app's Browser tab when there is one (desktop app, tab view on), else in a new browser tab.
- * Returns false when it fell back to a normal link (the caller's `<a target=_blank>` does that by itself).
- */
-export function openInEdexoBrowser(url: string): boolean {
-  if (!BROWSER_AVAILABLE || !tabStore.get().on) return false;
-  /*
-    The browser is on screen in the other app's window (one Browser tab across Compare and Colonize): the page opens
-    there, and that window comes forward (owner, 2026-10-22: the Browser opened in Compare; the address was kept here,
-    where no Browser tab took it).
-  */
-  const b = (window as unknown as { edexoElectron?: { browser?: { openInara?: (u: string) => Promise<unknown> } } }).edexoElectron
-    ?.browser;
-  if (!tabStore.get().tabs.includes("browser") && heldElsewhere("browser") && b?.openInara) {
-    void b.openInara(url).catch(() => {});
-    tabStore.open("browser");
-    return true;
-  }
-  pending = url;
-  tabStore.open("browser");
-  window.dispatchEvent(new Event(OPEN_EVENT));
-  return true;
 }

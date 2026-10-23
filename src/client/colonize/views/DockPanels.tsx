@@ -5,13 +5,13 @@
  */
 import { commodityMergeBucket } from "../../../shared/colonize/commodityKey";
 import { depotDisplayLabel } from "../../../shared/colonize/depotLabel";
+import { formatTons as t } from "../../../shared/colonize/formatPrice";
+import { siteMaterials } from "../../../shared/colonize/siteMaterials";
 import { looksLikeConstructionDepotStation } from "../../../shared/colonize/constructionDepot";
 import type { LogisticsPlan } from "../../../shared/colonize/logisticsPlanner";
 import type { DepotSnapshot } from "../../../shared/colonize/types";
 import type { ColonizeModel } from "../useColonize";
 import { Panel } from "./ui";
-
-const t = (n: number) => `${Math.round(n).toLocaleString("en-US")} t`;
 
 export function BuyHerePanel({ m, plan }: { m: ColonizeModel; plan: LogisticsPlan }) {
   const docked = m.snap?.liveDocked;
@@ -84,14 +84,13 @@ export function BuyHerePanel({ m, plan }: { m: ColonizeModel; plan: LogisticsPla
 }
 
 export function DeliverHerePanel({ m, site }: { m: Pick<ColonizeModel, "shipCargoByKey">; site: DepotSnapshot }) {
-  const rows = site.resources
-    .map((r) => {
-      const need = Math.max(0, r.required - r.provided);
-      const key = commodityMergeBucket(r.name) || commodityMergeBucket(r.nameLocalised);
-      const aboard = key ? (m.shipCargoByKey.get(key) ?? 0) : 0;
-      return { label: r.nameLocalised || r.name, need, aboard, give: Math.min(need, aboard) };
-    })
-    .filter((r) => r.give > 0);
+  // The HUD's order: what is aboard, most first; then what this site has in full, last and green (owner, 2026-10-22).
+  const materials = siteMaterials(site, m.shipCargoByKey);
+  const rows = materials
+    .filter((r) => r.aboard > 0)
+    .map((r) => ({ label: r.label, need: r.left, give: r.aboard }))
+    .sort((a, b) => b.give - a.give);
+  const delivered = materials.filter((r) => r.done);
   return (
     <Panel k="deliver-here" tone="info" title="Docked at your site">
       <div className="cz-stack" style={{ gap: 12 }}>
@@ -114,6 +113,11 @@ export function DeliverHerePanel({ m, site }: { m: Pick<ColonizeModel, "shipCarg
             Nothing in your hold that this site still needs.
           </p>
         )}
+        {delivered.length ? (
+          <p style={{ margin: 0 }} className="cz-small cz-mat--done">
+            {`Delivered in full: ${delivered.map((r) => r.label).join(", ")}`}
+          </p>
+        ) : null}
       </div>
     </Panel>
   );

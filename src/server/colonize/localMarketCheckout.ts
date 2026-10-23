@@ -1,6 +1,6 @@
 import { readMarketJson } from "./marketJson";
 import { parseMarketId } from "../../shared/colonize/marketId";
-import { commodityMergeBucket } from "../../shared/colonize/commodityKey";
+import { commodityMergeBucket, itemLabel } from "../../shared/colonize/commodityKey";
 import { isConstructionDepotStation } from "../../shared/colonize/constructionDepot";
 import type { BasketCheckoutItem, CheckoutFilters, BasketCheckoutResult } from "../../shared/colonize/types";
 
@@ -70,7 +70,7 @@ export async function tryCheckoutFromMarketJson(
 
   const commodities = uniqueItems.map((it) => {
     const row = stockMap.get(it.id)!;
-    const label = (it.nameLocalised || it.name).trim() || it.name;
+    const label = itemLabel(it);
     return {
       id: it.id,
       label,

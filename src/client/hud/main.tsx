@@ -27,6 +27,7 @@ import { hudStore } from "./store";
 import { Panel, RELEVANT_HOLD_MS } from "./Panel";
 import type { HudSection } from "./parts";
 import type { HudExoLive, HudSnapshot } from "./types";
+import { HUD_SECTION_KEYS } from "@shared/hudSections";
 import { achievement } from "./sections/achievement";
 import { candidates } from "./sections/candidates";
 import { datavalue } from "./sections/datavalue";
@@ -48,17 +49,8 @@ export const SECTIONS: Record<string, HudSection> = {
   notices,
   colonize,
 };
-export const ORDER = [
-  "jump",
-  "fss",
-  "candidates",
-  "distance",
-  "datavalue",
-  "achievement",
-  "notable",
-  "colonize",
-  "notices",
-];
+// The one list of section names (shared/hudSections.ts), which the server's prefs check and the CLI read too.
+export const ORDER: string[] = [...HUD_SECTION_KEYS];
 export { RELEVANT_HOLD_MS };
 
 type ElectronHud = {

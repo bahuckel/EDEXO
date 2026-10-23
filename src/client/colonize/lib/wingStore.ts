@@ -2,8 +2,7 @@
 import { parseWingMembers } from "../../../shared/colonize/storageValidation";
 import type { WingMember } from "../../../shared/colonize/wingManifest";
 import { storageGet, storageSet } from "../../../shared/colonize/storage";
-
-const WING_STORAGE_KEY = "edexo-colonize-wing-manifest-v1";
+import { KEY_WING_MANIFEST as WING_STORAGE_KEY } from "../../../shared/colonize/uiStateKeys";
 
 export function loadWingManifest(): WingMember[] {
   try {
