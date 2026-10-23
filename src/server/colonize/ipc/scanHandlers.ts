@@ -1,5 +1,8 @@
 /** Background Spansh scans that fill the buy index: status, scheduling, and "are we done yet". */
-import { itemLabel } from "../../../shared/colonize/commodityKey";
+import { basketItemId, itemLabel } from "../../../shared/colonize/commodityKey";
+import { isConstructionDepotStation } from "../../../shared/colonize/constructionDepot";
+import type { JournalShopRecord } from "../../../shared/colonize/journalShopHistory";
+import { collectPlannerNeeds } from "../../../shared/colonize/planner/needs";
 import { getMaterialBuyScanStatus } from "../materialBuyScanHub";
 import {
   cancelPassiveMaterialBuyScan,
@@ -12,6 +15,25 @@ import { asRecord, parseCheckoutItems, parseConstructionDepots, parseSystemNames
 
 const itemRows = (items: ReturnType<typeof parseCheckoutItems>) =>
   items.map((it) => ({ id: it.id, label: itemLabel(it) }));
+
+/**
+ * The journal's markets worth reading whole (spanshStationMarket.ts): the ones that sold something the sites need,
+ * then the rest, nearest to the sites first. Construction sites never sell.
+ */
+export function journalMarketIdsForScan(
+  shops: JournalShopRecord[],
+  items: ReturnType<typeof parseCheckoutItems>,
+  depots: ReturnType<typeof parseConstructionDepots>,
+): string[] {
+  const wanted = new Set(items.map((it) => basketItemId(it)).filter(Boolean));
+  const sold = (s: JournalShopRecord) =>
+    s.purchases.some((p) => wanted.has(p.commodityId)) || (s.marketItems ?? []).some((o) => o.supply > 0 && wanted.has(o.commodityId));
+  const ly = (s: JournalShopRecord) => (typeof s.constructionDistanceLy === "number" ? s.constructionDistanceLy : Number.POSITIVE_INFINITY);
+  return shops
+    .filter((s) => s.marketId && !isConstructionDepotStation(depots, { systemName: s.starSystem, stationName: s.stationName, marketId: s.marketId, stationType: s.stationType }))
+    .sort((a, b) => Number(sold(b)) - Number(sold(a)) || ly(a) - ly(b))
+    .map((s) => s.marketId);
+}
 
 export function scanHandlers({ store, buyIndex }: IpcContext) {
   return {
@@ -30,11 +52,19 @@ export function scanHandlers({ store, buyIndex }: IpcContext) {
       const items = parseCheckoutItems(p.items);
       if (!items.length) return { ok: false as const, err: "No basket items." };
       try {
+        const active = store.getSnapshot().activeDepots ?? [];
         scheduleActiveMaterialBuyScan({
           index: buyIndex(),
           referenceSystem: ref,
           items,
-          constructionDepots: parseConstructionDepots(store.getSnapshot().activeDepots ?? []),
+          constructionDepots: parseConstructionDepots(active),
+          // The answer for one material carries whole markets: keep everything the sites need from it.
+          alsoFor: [...collectPlannerNeeds(active, new Map(), []).entries()].map(([id, n]) => ({
+            id,
+            name: n.label,
+            nameLocalised: n.label,
+            quantityTons: n.tons,
+          })),
         });
         return { ok: true as const };
       } catch (e) {
@@ -103,6 +133,10 @@ export function scanHandlers({ store, buyIndex }: IpcContext) {
             items,
             maxSystemsPerMaterial: maxSystems,
             constructionDepots,
+            // "Look now" asked for a look: it was dropped here, so a material with any journal seller nearby was never
+            // searched and the index kept no Spansh seller at all (owner's profile, 2026-10-23).
+            force,
+            marketIds: journalMarketIdsForScan(store.getJournalShopRecords(), items, constructionDepots),
           });
         }
         return { ok: true as const, scheduled: true, atCap: false, allFound: false };

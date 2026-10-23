@@ -248,12 +248,20 @@ function passesBuyGatherFilters(r: SpanshStationResult, filters: CheckoutFilters
   return !isConstructionDepotStation(filters.constructionDepots ?? [], args);
 }
 
-/** Background / warmup: one commodity Spansh scan → persist all station hits. */
+/**
+ * Background / warmup: one commodity Spansh scan → persist all station hits.
+ *
+ * Every station in Spansh's answer comes with its whole market (about 60 commodities on sale of 365 rows), so the
+ * sellers of everything in `alsoFor` are saved from the same answer, not only the commodity searched for (owner,
+ * 2026-10-23: "you check one station, instead of getting just Aluminium, when they obviously sell Titanium and Steel
+ * too, you get those things as well"). It used to keep one row of each market and search again for the next material.
+ */
 export async function scanAndPersistMaterialHits(args: {
   index: MaterialBuyIndex;
   referenceSystem: string;
   item: BasketCheckoutItem;
   constructionDepots?: CheckoutFilters["constructionDepots"];
+  alsoFor?: BasketCheckoutItem[];
 }): Promise<number> {
   const id = basketItemId(args.item);
   const label = itemLabel(args.item);
@@ -269,7 +277,21 @@ export async function scanAndPersistMaterialHits(args: {
   hits = await enrichHitsWithBodyNames(hits, 5);
   hits = filterHitsForBuyIndex(hits, args.constructionDepots);
   if (hits.length) args.index.mergeStations(args.referenceSystem, id, label, hits);
-  return hits.length;
+  let saved = hits.length;
+  for (const other of args.alsoFor ?? []) {
+    const oid = basketItemId(other);
+    if (!oid || oid === id) continue;
+    const olabel = itemLabel(other);
+    const more = filterHitsForBuyIndex(
+      hitsFromBuyPayload(args.referenceSystem, { id: oid, label: olabel }, buyPayload, "spansh", olabel),
+      args.constructionDepots,
+    );
+    if (more.length) {
+      args.index.mergeStations(args.referenceSystem, oid, olabel, more);
+      saved += more.length;
+    }
+  }
+  return saved;
 }
 
 const CHECKOUT_YIELD_EVERY = 10;

@@ -61,12 +61,19 @@ function stationSearchRowKey(row: SpanshStationSearchRow): string {
   return `s:${String(row.system_name ?? "").trim().toLowerCase()}\u0000${String(row.name ?? "").trim().toLowerCase()}`;
 }
 
-/** Spansh station search uses `name` / `symbol`; only rows with supply/stock for sale. */
+/**
+ * Spansh station search uses `name` / `symbol`; only rows with supply/stock for sale.
+ *
+ * The result keeps `sell_price` (what the commander pays, Spansh's own field) beside `buy_price` (the same figure,
+ * the name the rest of Colonize reads), so normalising a normalised market again gives the same rows. It did not:
+ * the search normalised each market once, the index writer (hitsFromBuyPayload) a second time, found no `sell_price`
+ * and dropped every row - background Spansh scans saved no seller at all (owner's profile, 2026-10-23).
+ */
 export function normalizeSpanshMarketArray(
   market: unknown,
-): Array<{ commodity?: string; supply?: number; buy_price?: number }> {
+): Array<{ commodity?: string; supply?: number; buy_price?: number; sell_price?: number }> {
   if (!Array.isArray(market)) return [];
-  const out: Array<{ commodity?: string; supply?: number; buy_price?: number }> = [];
+  const out: Array<{ commodity?: string; supply?: number; buy_price?: number; sell_price?: number }> = [];
   for (const raw of market) {
     const parsed = parseMarketRowForPlayerBuy(raw);
     if (!parsed) continue;
@@ -74,6 +81,7 @@ export function normalizeSpanshMarketArray(
       commodity: parsed.commodity,
       supply: parsed.supply,
       buy_price: parsed.playerBuyPrice ?? undefined,
+      sell_price: parsed.playerBuyPrice ?? undefined,
     });
   }
   return out;

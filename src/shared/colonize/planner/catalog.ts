@@ -48,8 +48,17 @@ function ingestCatalogStationMeta(
   if (!st.bodyName && e.bodyName) st.bodyName = e.bodyName;
 }
 
+/**
+ * Stock assumed at a station the commander bought a commodity from when its stock is not known (no Market.json there,
+ * no Spansh row yet). It was 1 t: since shelves empty as the plan buys (packing.ts), every such seller ran dry after
+ * one ton, and the plan stopped with most materials listed as "sellers are known, but none fits" (owner's profile,
+ * 2026-10-23: 30 of 33 materials). A market that sold it restocks; the market-id refresh replaces this with real
+ * figures as soon as Spansh has them.
+ */
+export const UNKNOWN_PROVEN_SUPPLY = 100_000;
+
 function effectiveListingSupply(hit: MaterialBuyListing["stations"][number]): number {
-  if (hit.purchaseProven) return Math.max(hit.supply ?? 0, 1);
+  if (hit.purchaseProven) return (hit.supply ?? 0) > 0 ? hit.supply! : UNKNOWN_PROVEN_SUPPLY;
   const sup = hit.supply ?? 0;
   return sup > 0 ? sup : 0;
 }
@@ -176,7 +185,7 @@ export function injectShopHistoryIntoCatalog(
       );
       const buyPrice = cached?.buyPrice ?? purchase?.buyPrice ?? null;
       const supply =
-        cached && isCommanderBuyOffer(cached.supply, cached.buyPrice) ? cached.supply : purchase ? 1 : null;
+        cached && isCommanderBuyOffer(cached.supply, cached.buyPrice) ? cached.supply : purchase ? UNKNOWN_PROVEN_SUPPLY : null;
       const prev = st.offers.get(needId);
       const nextSupply = supply ?? prev?.supply ?? 1;
       if (!prev || nextSupply > prev.supply) {
