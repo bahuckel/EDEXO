@@ -12,7 +12,7 @@
 
 export const PERF_ENABLED = process.env.EDEXO_PERF === "1";
 
-const PERF_REPORT_MS = 30_000;
+const PERF_REPORT_MS = Number(process.env.EDEXO_PERF_REPORT_MS) > 0 ? Number(process.env.EDEXO_PERF_REPORT_MS) : 30_000;
 /** Cap per-window samples so a runaway loop cannot grow memory without bound. */
 const MAX_SAMPLES = 4000;
 
@@ -118,7 +118,32 @@ function report(): void {
 export function startPerfReporter(): void {
   if (!PERF_ENABLED || reporter) return;
   windowStartedAt = Date.now();
+  countOutboundFetches();
   reporter = setInterval(report, PERF_REPORT_MS);
   reporter.unref();
   console.log(`[perf] instrumentation ON (EDEXO_PERF=1) — reporting every ${PERF_REPORT_MS / 1000}s`);
 }
+
+/**
+ * Every request the server makes to another site, counted by host and the first two path parts ("out spansh.co.uk
+ * /api/stations"), so a screen that asks Spansh or EDSM once per system shows as a count, not a feeling (R2,
+ * 2026-10-23: "fetch once, in bulk"). Only with EDEXO_PERF=1.
+ */
+function countOutboundFetches(): void {
+  const g = globalThis as { fetch: typeof fetch; __edexoPerfFetch?: boolean };
+  if (g.__edexoPerfFetch || typeof g.fetch !== "function") return;
+  g.__edexoPerfFetch = true;
+  const real = g.fetch.bind(globalThis);
+  g.fetch = ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    try {
+      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      if (url.hostname !== "127.0.0.1" && url.hostname !== "localhost") {
+        perfCount(`out ${url.hostname} /${url.pathname.split("/").filter(Boolean).slice(0, 2).join("/")}`);
+      }
+    } catch {
+      /* not a URL we can read: not counted */
+    }
+    return real(input, init);
+  }) as typeof fetch;
+}
+

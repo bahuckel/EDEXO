@@ -9,9 +9,10 @@ import type { FieldGuideDTO, GuideGenus, GuideSpecies } from "@shared/fieldGuide
 export type GuideMaps = { species: Map<string, GuideSpecies>; genera: Map<string, GuideGenus> };
 
 /*
-  The Encyclopedia's two requests, made when this chunk loads — which is the idle prefetch a moment
-  after start (SharedModals `prefetchMenuModals`) — so the first open draws at once instead of
-  waiting ~100 ms for its data. Every open asks again and updates the list if anything changed.
+  The Encyclopedia's two requests, made when it opens; every open asks again and updates the list if anything changed.
+  They used to run when this chunk loaded, which is the idle prefetch a moment after start (SharedModals
+  `prefetchMenuModals`): every window - Compare, Colonize, a detached tab - downloaded and parsed ~770 KB it might never
+  show (R2 measure, 2026-10-23). The chunk itself is still prefetched, so the first open only waits for the data.
 */
 export let rowsCache: EncyclopediaSpeciesRowDTO[] | null = null;
 export let guideCache: GuideMaps | null = null;
@@ -40,7 +41,3 @@ export async function loadGuide(): Promise<GuideMaps | null> {
   return guideCache;
 }
 
-if (typeof window !== "undefined") {
-  void loadRows().catch(() => {});
-  void loadGuide().catch(() => {});
-}

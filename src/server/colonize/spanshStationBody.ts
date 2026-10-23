@@ -1,42 +1,16 @@
 import { parseMarketId } from "../../shared/colonize/marketId";
 import { TtlCache } from "../../shared/colonize/ttlCache";
-import { mapPool } from "../../shared/colonize/mapPool";
 import type { MaterialBuyStationHit } from "../../shared/colonize/materialBuyIndexTypes";
-import { fetchJson, spanshGate } from "./httpGate";
+import { fetchSpanshStationsByMarketIds } from "./spanshStationMarket";
 
-const SPANSH_STATION = "https://spansh.co.uk/api/station/";
-const FETCH_TIMEOUT_MS = 12_000;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const CACHE_MAX = 2500;
-const FETCH_CONCURRENCY = 3;
 
 /** `null` = Spansh had no body name for this station. */
 const cache = new TtlCache<string, string | null>({ max: CACHE_MAX, ttlMs: CACHE_TTL_MS });
 
 function normMarketId(marketId: string): string {
   return parseMarketId(marketId) ?? "";
-}
-
-/** Spansh `/api/station/{marketId}` → `record.body_name`. */
-async function lookupSpanshStationBodyName(marketId: string): Promise<string | null> {
-  const id = normMarketId(marketId);
-  if (!id) return null;
-  const hit = cache.get(id);
-  if (hit !== undefined) return hit;
-
-  let bodyName: string | null = null;
-  try {
-    const payload = (await fetchJson(spanshGate, `${SPANSH_STATION}${encodeURIComponent(id)}`, {
-      timeoutMs: FETCH_TIMEOUT_MS,
-    })) as { record?: { body_name?: string } };
-    const raw = typeof payload.record?.body_name === "string" ? payload.record.body_name.trim() : "";
-    bodyName = raw || null;
-  } catch {
-    bodyName = null;
-  }
-
-  cache.set(id, bodyName);
-  return bodyName;
 }
 
 export async function enrichHitsWithBodyNames(
@@ -54,11 +28,11 @@ export async function enrichHitsWithBodyNames(
   }
   if (!pending.length) return out;
 
-  await mapPool(pending, FETCH_CONCURRENCY, async (row) => {
-    const bodyName = await lookupSpanshStationBodyName(row.marketId);
+  const names = await bodyNamesFor(pending.map((p) => p.marketId));
+  for (const row of pending) {
+    const bodyName = names.get(normMarketId(row.marketId));
     if (bodyName) out[row.index] = { ...out[row.index]!, bodyName };
-  });
-
+  }
   return out;
 }
 
@@ -78,8 +52,38 @@ export async function enrichRecordsWithBodyNames<T extends BodyCarrier>(
   }
   if (!pending.length) return;
 
-  await mapPool(pending, FETCH_CONCURRENCY, async (rec) => {
-    const bodyName = await lookupSpanshStationBodyName(rec.marketId.trim());
+  const names = await bodyNamesFor(pending.map((r) => r.marketId.trim()));
+  for (const rec of pending) {
+    const bodyName = names.get(normMarketId(rec.marketId));
     if (bodyName) rec.bodyName = bodyName;
-  });
+  }
+}
+
+/**
+ * Body names for many stations: cached ones at once, the rest in one Spansh search by market id (was one request per
+ * station, three at a time; R2, 2026-10-23). A failed search leaves them uncached, to be asked again.
+ */
+async function bodyNamesFor(marketIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const ask: string[] = [];
+  for (const raw of marketIds) {
+    const id = normMarketId(raw);
+    if (!id) continue;
+    const hit = cache.get(id);
+    if (hit === undefined) ask.push(id);
+    else if (hit) out.set(id, hit);
+  }
+  if (!ask.length) return out;
+  let rows: Awaited<ReturnType<typeof fetchSpanshStationsByMarketIds>>;
+  try {
+    rows = await fetchSpanshStationsByMarketIds(ask);
+  } catch {
+    return out;
+  }
+  for (const id of ask) {
+    const name = typeof rows.get(id)?.body_name === "string" ? rows.get(id)!.body_name!.trim() : "";
+    cache.set(id, name || null);
+    if (name) out.set(id, name);
+  }
+  return out;
 }

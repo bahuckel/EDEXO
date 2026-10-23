@@ -1,7 +1,8 @@
 /**
- * A station's whole market by its market id (owner, 2026-10-23: "use the full potential of the market ids"). Spansh
- * answers `GET /api/station/<marketId>` with the station and every commodity it trades (supply, price, the market's
- * own timestamp), so one request fills in every material a known station sells, not just the one it was found for.
+ * Stations' whole markets by market id (owner, 2026-10-23: "use the full potential of the market ids"). Spansh's
+ * station search takes a list of market ids and answers each station with every commodity it trades (supply, price,
+ * the market's own timestamp), so one request fills in every material many known stations sell, not just the one each
+ * was found for (`/api/station/<id>` answers one station per request).
  *
  * Used for the stations in the commander's journal: a station he bought Titanium at was known to sell Titanium, with no
  * stock or price unless Market.json had been open there; its Steel and Liquid Oxygen were not known at all.
@@ -12,12 +13,14 @@ import { basketItemId, itemLabel } from "../../shared/colonize/commodityKey";
 import type { BasketCheckoutItem, CheckoutFilters } from "../../shared/colonize/types";
 import { filterHitsForBuyIndex, hitsFromBuyPayload } from "./checkoutIndexBridge";
 import { rememberSystemFromSpansh } from "./galaxySystemCoords";
-import { fetchJson, HttpStatusError, spanshGate } from "./httpGate";
+import { fetchJson, spanshGate } from "./httpGate";
 import type { MaterialBuyIndex } from "./materialBuyIndex";
 import type { SpanshBuyPayload } from "./checkoutStationMap";
 import type { SpanshStationSearchRow } from "./spanshStationBuySearch";
 
-const STATION_URL = "https://spansh.co.uk/api/station/";
+const STATIONS_SEARCH = "https://spansh.co.uk/api/stations/search";
+/** Market ids per search request (each answer carries whole markets, ~100 KB a station). */
+const IDS_PER_SEARCH = 50;
 const FETCH_TIMEOUT_MS = 18_000;
 /** A market asked for within this long is not asked for again (Spansh updates from EDDN as commanders dock). */
 const MARKET_TTL_MS = 6 * 60 * 60 * 1000;
@@ -27,21 +30,28 @@ export const MARKETS_PER_RUN = 40;
 /** Market id → when it was asked (null answers too: Spansh does not know that station). */
 const asked = new TtlCache<string, true>({ max: 2_000, ttlMs: MARKET_TTL_MS });
 
-export async function fetchSpanshStationMarket(marketId: string): Promise<SpanshStationSearchRow | null> {
-  const mid = parseMarketId(marketId);
-  if (!mid) return null;
-  try {
-    const body = (await fetchJson(spanshGate, `${STATION_URL}${encodeURIComponent(mid)}`, { timeoutMs: FETCH_TIMEOUT_MS })) as {
-      record?: SpanshStationSearchRow;
-    } & SpanshStationSearchRow;
-    const row = (body && typeof body === "object" && body.record ? body.record : body) as SpanshStationSearchRow | null;
-    if (!row || typeof row !== "object" || !row.name) return null;
-    if (typeof row.system_name === "string") rememberSystemFromSpansh(row.system_name, [row.system_x, row.system_y, row.system_z]);
-    return { ...row, market_id: row.market_id ?? mid };
-  } catch (e) {
-    if (e instanceof HttpStatusError && (e.status === 400 || e.status === 404)) return null;
-    throw e;
+/**
+ * Many stations in one request: Spansh's station search takes a list of market ids (checked 2026-10-23: three ids, one
+ * answer, three whole markets). Returns the rows by market id; ids Spansh does not know are simply absent. Was one
+ * GET per station (R2, 2026-10-23: "fetch once, in bulk").
+ */
+export async function fetchSpanshStationsByMarketIds(marketIds: string[]): Promise<Map<string, SpanshStationSearchRow>> {
+  const ids = [...new Set(marketIds.map((m) => parseMarketId(m)).filter((m): m is string => !!m))];
+  const out = new Map<string, SpanshStationSearchRow>();
+  for (let i = 0; i < ids.length; i += IDS_PER_SEARCH) {
+    const chunk = ids.slice(i, i + IDS_PER_SEARCH);
+    const body = (await fetchJson(spanshGate, STATIONS_SEARCH, {
+      timeoutMs: FETCH_TIMEOUT_MS,
+      body: { filters: { market_id: { value: chunk } }, size: chunk.length },
+    })) as { results?: SpanshStationSearchRow[] };
+    for (const row of Array.isArray(body?.results) ? body.results : []) {
+      const mid = parseMarketId(row.market_id);
+      if (!mid || !row.name) continue;
+      if (typeof row.system_name === "string") rememberSystemFromSpansh(row.system_name, [row.system_x, row.system_y, row.system_z]);
+      out.set(mid, row);
+    }
   }
+  return out;
 }
 
 /**
@@ -65,14 +75,15 @@ export async function refreshMarketsById(args: {
     .slice(0, MARKETS_PER_RUN);
   let saved = 0;
   let done = 0;
+  for (const mid of todo) asked.set(mid, true);
+  let rows = new Map<string, SpanshStationSearchRow>();
+  try {
+    rows = await fetchSpanshStationsByMarketIds(todo);
+  } catch {
+    for (const mid of todo) asked.delete(mid); // an outage or throttle: ask again next time
+  }
   for (const mid of todo) {
-    asked.set(mid, true);
-    let row: SpanshStationSearchRow | null = null;
-    try {
-      row = await fetchSpanshStationMarket(mid);
-    } catch {
-      asked.delete(mid); // an outage or throttle: ask again next time
-    }
+    const row = rows.get(mid) ?? null;
     if (row) {
       const payload = { results: [row] } as SpanshBuyPayload;
       for (const need of needs) {

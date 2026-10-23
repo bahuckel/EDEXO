@@ -1,5 +1,4 @@
 /** Phase 9b: where each trade-party carrier is and what it trades, from Spansh. */
-import { mapPool } from "../../shared/colonize/mapPool";
 import { normSystemName } from "../../shared/colonize/stationFilter";
 import { normalizeCallsign, parseSpanshCarrier, type PartyCarrier } from "../../shared/colonize/tradeParty";
 import { TtlCache } from "../../shared/colonize/ttlCache";
@@ -30,14 +29,29 @@ async function lookUpOne(callsign: string, referenceSystem: string): Promise<Par
   return carrier;
 }
 
-/** One entry per valid callsign, in the order given. A failed look-up fails the whole call. */
+/**
+ * One entry per valid callsign, in the order given. A failed look-up fails the whole call.
+ *
+ * The callsigns not cached are asked in one Spansh search (its name filter takes a list; checked 2026-10-23), not one
+ * request each (R2: "fetch once, in bulk").
+ */
 export async function lookUpPartyCarriers(
   callsigns: string[],
   referenceSystem = "",
 ): Promise<PartyCarrier[]> {
+  const ref = referenceSystem.trim();
   const unique = [...new Set(callsigns.map(normalizeCallsign).filter((c): c is string => c != null))].slice(
     0,
     MAX_CARRIERS,
   );
-  return mapPool(unique, 2, (c) => lookUpOne(c, referenceSystem.trim()));
+  const keyOf = (c: string) => `${c}|${normSystemName(ref)}`;
+  const ask = unique.filter((c) => !carrierCache.get(keyOf(c)));
+  if (ask.length === 1) await lookUpOne(ask[0]!, ref);
+  else if (ask.length) {
+    const body: Record<string, unknown> = { filters: { name: { value: ask } }, size: Math.min(120, ask.length * 3) };
+    if (ref) body.reference_system = ref;
+    const payload = await fetchJson(spanshGate, SPANSH_STATIONS_SEARCH, { timeoutMs: TIMEOUT_MS, body });
+    for (const c of ask) carrierCache.set(keyOf(c), parseSpanshCarrier(payload, c));
+  }
+  return unique.map((c) => carrierCache.get(keyOf(c)) ?? parseSpanshCarrier(null, c));
 }

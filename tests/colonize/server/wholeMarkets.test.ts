@@ -49,14 +49,19 @@ const items = [
   { id: "liquidoxygen", name: "Liquid oxygen", nameLocalised: "Liquid oxygen", quantityTons: 3000 },
 ];
 
-describe("a station's whole market by market id", () => {
-  it("saves every needed commodity it sells, with stock and price, and asks each market once", async () => {
-    const calls: string[] = [];
-    vi.stubGlobal("fetch", async (input: string | URL) => {
+describe("stations' whole markets by market id", () => {
+  it("asks for every id in one search, saves every needed commodity they sell, and asks each market once", async () => {
+    const bodies: unknown[] = [];
+    vi.stubGlobal("fetch", async (input: string | URL, init?: RequestInit) => {
       const url = String(input);
-      calls.push(url);
-      if (url.endsWith("/4373462019")) {
-        return new Response(JSON.stringify({ record: station("4373462019", "Broot's Monolith", [["Titanium", 900, 1200], ["Steel", 4000, 300], ["Gold", 50, 9000], ["Liquid oxygen", 0, 500]]) }));
+      if (url.includes("/api/stations/search")) {
+        const body = JSON.parse(String(init?.body ?? "{}")) as { filters?: { market_id?: { value?: string[] } } };
+        bodies.push(body);
+        const ids = body.filters?.market_id?.value ?? [];
+        const results = ids.includes("4373462019")
+          ? [station("4373462019", "Broot's Monolith", [["Titanium", 900, 1200], ["Steel", 4000, 300], ["Gold", 50, 9000], ["Liquid oxygen", 0, 500]])]
+          : [];
+        return new Response(JSON.stringify({ count: results.length, results }));
       }
       return new Response("not found", { status: 404 });
     });
@@ -64,15 +69,50 @@ describe("a station's whole market by market id", () => {
     resetMarketsAskedForTests();
     const saved = await refreshMarketsById({ index, referenceSystem: "Swoilz KI-E b4-9", marketIds: ["4373462019", "999", "4373462019"], items });
     expect(saved).toBe(2);
+    expect(bodies).toHaveLength(1);
+    expect((bodies[0] as { filters: { market_id: { value: string[] } } }).filters.market_id.value).toEqual(["4373462019", "999"]);
     const ti = index.getRow("Swoilz KI-E b4-9", "titanium")!.stations[0]!;
     expect([ti.stationName, ti.supply, ti.buyPrice, ti.dataSource]).toEqual(["Broot's Monolith", 900, 1200, "spansh"]);
     expect(index.getRow("Swoilz KI-E b4-9", "steel")!.stations[0]!.supply).toBe(4000);
     // Sold out there: not a seller.
     expect(index.getRow("Swoilz KI-E b4-9", "liquidoxygen")).toBeNull();
-    expect(calls.filter((c) => c.includes("/api/station/"))).toHaveLength(2);
     // Asked within the hour: not again.
     await refreshMarketsById({ index, referenceSystem: "Swoilz KI-E b4-9", marketIds: ["4373462019"], items });
-    expect(calls.filter((c) => c.includes("/api/station/"))).toHaveLength(2);
+    expect(bodies).toHaveLength(1);
+  });
+
+  it("finds the body names of many stations in one search", async () => {
+    let searches = 0;
+    vi.stubGlobal("fetch", async () => {
+      searches += 1;
+      return new Response(JSON.stringify({ results: [{ ...station("11", "On Ground", []), body_name: "X 3 d" }, station("12", "In Orbit", [])] }));
+    });
+    const { enrichHitsWithBodyNames } = await import("../../../src/server/colonize/spanshStationBody");
+    const hit = (marketId: string) => ({ systemName: "X", stationName: marketId, marketId, distanceLy: 1, buyPrice: 1, supply: 1, spanshCommodity: "Steel", dataSource: "spansh" as const, foundAtIso: "" });
+    const out = await enrichHitsWithBodyNames([hit("11"), hit("12"), hit("13")]);
+    expect(out.map((h) => h.bodyName ?? null)).toEqual(["X 3 d", null, null]);
+    expect(searches).toBe(1);
+    await enrichHitsWithBodyNames([hit("11"), hit("12")]);
+    expect(searches).toBe(1); // cached, the miss included
+  });
+});
+
+describe("a trade party", () => {
+  it("is looked up in one search, whatever its size", async () => {
+    const asked: string[][] = [];
+    vi.stubGlobal("fetch", async (_input: string | URL, init?: RequestInit) => {
+      const names = (JSON.parse(String(init?.body)) as { filters: { name: { value: string[] } } }).filters.name.value;
+      asked.push(names);
+      return new Response(JSON.stringify({ results: [{ name: "KBX-05T", system_name: "Col 285 Sector DR-C c13-20", market_id: 3707348992, distance: 12, market: [] }] }));
+    });
+    const { lookUpPartyCarriers } = await import("../../../src/server/colonize/tradeParty");
+    const party = await lookUpPartyCarriers(["KBX-05T", "k7q-n2t", "X9Z11A"], "Swoilz KI-E b4-9");
+    expect(asked).toEqual([["KBX-05T", "K7Q-N2T", "X9Z-11A"]]);
+    expect(party.map((c) => [c.callsign, c.found, c.systemName])).toEqual([
+      ["KBX-05T", true, "Col 285 Sector DR-C c13-20"],
+      ["K7Q-N2T", false, null],
+      ["X9Z-11A", false, null],
+    ]);
   });
 });
 
