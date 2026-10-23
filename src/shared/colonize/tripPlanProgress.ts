@@ -12,7 +12,11 @@ export type TripPlanSnapshot = {
   planRefreshKey: string;
   plan: LogisticsPlan;
   baselineContributions: ContributionBaseline;
-  /** User-toggled ○/✓ only — not cargo/contribution auto-detect. */
+  /**
+   * Always empty since 2026-10-23 (owner: "keep it automatic, no ticks"): a line is done when the cargo is aboard or
+   * the site has it, never by hand. Kept in the shape so plans saved by earlier builds still read; their ticks are
+   * dropped as they load.
+   */
   manualCompletedLineIds: string[];
   createdAt: string;
   /**
@@ -111,8 +115,11 @@ function collectContributionBaseline(depots: DepotSnapshot[]): ContributionBasel
 }
 
 /**
- * Keep pinned haul trips visible while construction is active — live replanning
- * drops trips once cargo covers buy gaps, even before the deliver stop is done.
+ * The plan as made, everywhere (discuss item 4, owner 2026-10-23): while the saved plan's key is the live one, the
+ * window shows and counts the saved plan, as the HUD and the phone do, with the live cargo, warnings and missing
+ * sellers. Live re-planning subtracts the cargo already aboard, so 60 of 100 t bought made the window's line ask for
+ * the other 40 and read done, while the HUD said 60 / 100. A new key (a delivery, another filter or seller) is a new
+ * plan, made and saved by the caller.
  */
 export function resolveDisplayLogisticsPlan(args: {
   live: LogisticsPlan | null;
@@ -125,8 +132,7 @@ export function resolveDisplayLogisticsPlan(args: {
   if (
     hasActiveDepots &&
     snapshot?.planRefreshKey === planRefreshKey &&
-    snapshot.plan.trips.length > 0 &&
-    live.trips.length === 0
+    snapshot.plan.trips.length > 0
   ) {
     return {
       ...snapshot.plan,
@@ -166,17 +172,14 @@ export function createTripPlanSnapshot(
   const kept: EarlierPlanTicks[] = [
     {
       planRefreshKey: previous.planRefreshKey,
-      manualCompletedLineIds: previous.manualCompletedLineIds,
+      manualCompletedLineIds: [],
       baselineContributions: previous.baselineContributions,
     },
     ...(previous.earlier ?? []),
   ];
   // Back to a plan made before: its ticks and its starting point for deliveries, as they were.
   const back = kept.find((e) => e.planRefreshKey === planRefreshKey);
-  if (back) {
-    fresh.manualCompletedLineIds = [...back.manualCompletedLineIds];
-    fresh.baselineContributions = back.baselineContributions;
-  }
+  if (back) fresh.baselineContributions = back.baselineContributions;
   const earlier = kept.filter((e) => e.planRefreshKey !== planRefreshKey).slice(0, EARLIER_PLANS);
   if (earlier.length) fresh.earlier = earlier;
   return fresh;
@@ -191,9 +194,7 @@ function parseEarlier(raw: unknown): EarlierPlanTicks[] | undefined {
     if (typeof r.planRefreshKey !== "string") continue;
     out.push({
       planRefreshKey: r.planRefreshKey,
-      manualCompletedLineIds: Array.isArray(r.manualCompletedLineIds)
-        ? r.manualCompletedLineIds.filter((id): id is string => typeof id === "string")
-        : [],
+      manualCompletedLineIds: [],
       baselineContributions:
         r.baselineContributions && typeof r.baselineContributions === "object" ? (r.baselineContributions as ContributionBaseline) : {},
     });
@@ -374,7 +375,22 @@ function walkTripProgress(
     if (isTripFullyComplete(trip, completed)) continue;
 
     autoCompleteDeliverLines(trip, delta, completed);
+    /*
+      Every delivery of the trip landed: its buys were made, though the cargo has left the hold. Without hand ticks
+      (owner, 2026-10-23: "keep it automatic, no ticks") nothing else could say so, and a delivered trip stayed the
+      next one until the plan was made again.
+    */
+    const deliverIds = trip.stops.flatMap((s) =>
+      s.kind === "deliver"
+        ? (s.deliveries ?? []).flatMap((d) => d.materials.map((m) => tripDeliverLineId(trip.tripNumber, s.stopIndex, d.depotMarketId, m.commodityId)))
+        : [],
+    );
+    if (deliverIds.length && deliverIds.every((id) => completed.has(id))) {
+      for (const id of collectTripLineIds(trip)) completed.add(id);
+      continue;
+    }
     autoCompleteBuyLines(trip, cargoPool, completed);
+    if (isTripFullyComplete(trip, completed)) continue;
     return { completed, trip, pool: cargoPool };
   }
 
@@ -430,15 +446,12 @@ function snapshotFromParsed(parsed: Record<string, unknown>): TripPlanSnapshot |
   const plan = parsed.plan as LogisticsPlan | undefined;
   const planRefreshKey = parsed.planRefreshKey;
   if (!plan?.trips?.length || typeof planRefreshKey !== "string") return null;
-  const manual =
-    Array.isArray(parsed.manualCompletedLineIds)
-      ? parsed.manualCompletedLineIds.filter((id): id is string => typeof id === "string")
-      : [];
   return {
     planRefreshKey,
     plan,
     baselineContributions: (parsed.baselineContributions as ContributionBaseline) ?? collectContributionBaseline([]),
-    manualCompletedLineIds: manual,
+    // Ticks saved by an earlier build are dropped: every line is done by cargo and deliveries alone.
+    manualCompletedLineIds: [],
     createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : new Date().toISOString(),
     ...(parseEarlier(parsed.earlier) ? { earlier: parseEarlier(parsed.earlier) } : {}),
   };

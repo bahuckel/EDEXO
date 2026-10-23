@@ -12,3 +12,24 @@ export function formatMarketAge(iso: string | null | undefined, nowMs = Date.now
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
 }
+
+/**
+ * How old a saved seller's market may be before the plan stops using it (discuss item 5, owner 2026-10-23: 60 days).
+ * Spansh and Inara rows never expired before; 14 days only decided when to look again.
+ */
+export const SELLER_MAX_AGE_DAYS = 60;
+
+/**
+ * A seller too old to plan with: its market (else when it was saved) is older than {@link SELLER_MAX_AGE_DAYS}.
+ * Sellers from the commander's own journal and stations where he bought the commodity never expire; a row without a
+ * readable date is kept (nothing says it is old).
+ */
+export function sellerTooOld(
+  hit: { dataSource?: string | null; purchaseProven?: boolean; marketUpdatedAt?: string | null; foundAtIso?: string | null },
+  nowMs = Date.now(),
+): boolean {
+  if (hit.dataSource === "journal" || hit.purchaseProven) return false;
+  const t = Date.parse(hit.marketUpdatedAt || hit.foundAtIso || "");
+  if (!Number.isFinite(t)) return false;
+  return nowMs - t > SELLER_MAX_AGE_DAYS * 86_400_000;
+}

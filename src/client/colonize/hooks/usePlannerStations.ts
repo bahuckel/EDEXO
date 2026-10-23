@@ -33,6 +33,8 @@ export function usePlannerStations(args: {
   filters: CheckoutFilterState;
   routingMode: CheckoutRoutingMode;
   plannerSettings: PlannerSettings;
+  /** A site's own "systems per material", by reference system in lower case (discuss item 1). */
+  maxSystemsByRef: Record<string, number>;
   resolveDepotRef: DepotRefResolver;
   buyIndexRefreshToken: number;
   setBuyIndexRefreshToken: Dispatch<SetStateAction<number>>;
@@ -44,6 +46,7 @@ export function usePlannerStations(args: {
     filters,
     routingMode,
     plannerSettings,
+    maxSystemsByRef,
     resolveDepotRef,
     buyIndexRefreshToken,
     setBuyIndexRefreshToken,
@@ -121,6 +124,7 @@ export function usePlannerStations(args: {
         referenceSystems: refs,
         items,
         maxSystemsPerMaterial: parseMaxSystemsPerMaterial(plannerSettings.maxSystemsPerMaterial) ?? 0,
+        maxSystemsByRef,
         constructionDepots: payloadFilters().constructionDepots,
       });
       if (!res.ok) return false;
@@ -133,7 +137,7 @@ export function usePlannerStations(args: {
     } catch {
       return false;
     }
-  }, [payloadFilters, plannerSettings.maxSystemsPerMaterial, resolveDepotRef]);
+  }, [payloadFilters, plannerSettings.maxSystemsPerMaterial, maxSystemsByRef, resolveDepotRef]);
 
   useEffect(() => {
     void checkPause();
@@ -178,6 +182,7 @@ export function usePlannerStations(args: {
             referenceSystems: refs,
             items,
             maxSystemsPerMaterial: parseMaxSystemsPerMaterial(plannerSettings.maxSystemsPerMaterial),
+            maxSystemsByRef,
             constructionDepots: f.constructionDepots,
             force: opts.force === true,
           });
@@ -196,7 +201,7 @@ export function usePlannerStations(args: {
         else setBusy(false);
       }
     },
-    [checkPause, filters.showPlanetary, paused, payloadFilters, plannerSettings.maxSystemsPerMaterial, resolveDepotRef, routingMode, setBuyIndexRefreshToken],
+    [checkPause, filters.showPlanetary, paused, payloadFilters, plannerSettings.maxSystemsPerMaterial, maxSystemsByRef, resolveDepotRef, routingMode, setBuyIndexRefreshToken],
   );
 
   const reloadSaved = useCallback(() => void refresh({ background: false, askSpansh: false }), [refresh]);

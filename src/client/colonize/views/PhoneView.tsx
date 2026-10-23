@@ -55,7 +55,14 @@ export function PhoneView({ streamer = false }: { streamer?: boolean }) {
   const used = [...shipCargoByKey.values()].reduce((a, n) => a + n, 0);
   const capacity = resolveCargoCapacity(snap?.shipCargoCapacity ?? null, loadCargoCapacityOverride());
   const trips = trip?.plan.trips ?? [];
-  const sitesModel = { snap, ui: { depotRefPins: {} }, setDepotRefPin: noop, setArchived: noop };
+  const sitesModel = {
+    snap,
+    ui: { depotRefPins: {}, projects: {}, hudFollow: null },
+    setDepotRefPin: noop,
+    setArchived: noop,
+    setProject: noop,
+    setHudFollow: noop,
+  };
 
   return (
     <div className={`app-shell cz ${streamer ? "cz--stream" : "cz--phone"}`}>
@@ -84,8 +91,8 @@ export function PhoneView({ streamer = false }: { streamer?: boolean }) {
         {dockedSite ? <DeliverHerePanel m={{ shipCargoByKey }} site={dockedSite} /> : null}
         {trips.length ? (
           <>
-            <NextTripCard trips={trips} completed={completed} onToggle={noop} onBan={noop} readOnly />
-            {trips.length > 1 ? <TripList trips={trips} completed={completed} onToggle={noop} onBan={noop} readOnly /> : null}
+            <NextTripCard trips={trips} completed={completed} onBan={noop} readOnly />
+            {trips.length > 1 ? <TripList trips={trips} completed={completed} onBan={noop} readOnly /> : null}
           </>
         ) : active.length ? (
           <p className="cz-dim" data-testid="phone-no-plan" style={{ margin: 0 }}>

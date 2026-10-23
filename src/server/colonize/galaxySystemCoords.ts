@@ -41,7 +41,16 @@ type Coords = [number, number, number];
  * `names`: Spansh's spelling of a system, by normalised name (1.3.0; optional, so an older EDEXO still reads the file).
  * A spelling never changes, so once Spansh or EDSM told it, a restart does not ask again.
  */
-type CoordsFile = { v: number; systems: Record<string, unknown>; names?: Record<string, unknown> };
+type CoordsFile = {
+  v: number;
+  systems: Record<string, unknown>;
+  names?: Record<string, unknown>;
+  /** The old EDEXO-Colonize app's positions were read in once (discuss item 8); never again. */
+  seededFromColonize?: boolean;
+};
+
+/** Whether the old app's file was read in (kept in the file, so it happens once per profile). */
+let seededFromColonize = false;
 
 /** Found coordinates never expire; reading one keeps it from being the next evicted. */
 const coordCache = new TtlCache<string, Coords>({ max: COORD_CACHE_MAX, touchOnGet: true });
@@ -81,19 +90,33 @@ function isCoords(v: unknown): v is Coords {
  * Point the cache at its file and read what an earlier session found. Look-ups wait for the
  * read, so a checkout started during startup does not fetch what is already on disk.
  */
-export function loadSystemCoordsCache(userDataDir: string): Promise<void> {
+export function loadSystemCoordsCache(userDataDir: string, legacyFile: string | null = null): Promise<void> {
   coordsFilePath = path.join(userDataDir, COORDS_FILENAME);
   const file = coordsFilePath;
-  coordsLoad = readJson<CoordsFile | null>(file, null).then((raw) => {
-    if (!raw || raw.v !== COORDS_FILE_VERSION || !raw.systems || typeof raw.systems !== "object") return;
-    for (const [norm, coords] of Object.entries(raw.systems)) {
-      /** Anything found since launch is newer than the file; never overwrite it. */
-      if (isCoords(coords) && norm && !coordCache.has(norm)) coordCache.set(norm, coords);
-    }
-    if (raw.names && typeof raw.names === "object") {
-      for (const [norm, name] of Object.entries(raw.names)) {
-        if (norm && typeof name === "string" && name.trim() && !knownSpelling.has(norm)) knownSpelling.set(norm, name);
+  seededFromColonize = false;
+  coordsLoad = readJson<CoordsFile | null>(file, null).then(async (raw) => {
+    if (raw && raw.v === COORDS_FILE_VERSION && raw.systems && typeof raw.systems === "object") {
+      if (raw.seededFromColonize === true) seededFromColonize = true;
+      for (const [norm, coords] of Object.entries(raw.systems)) {
+        /** Anything found since launch is newer than the file; never overwrite it. */
+        if (isCoords(coords) && norm && !coordCache.has(norm)) coordCache.set(norm, coords);
       }
+      if (raw.names && typeof raw.names === "object") {
+        for (const [norm, name] of Object.entries(raw.names)) {
+          if (norm && typeof name === "string" && name.trim() && !knownSpelling.has(norm)) knownSpelling.set(norm, name);
+        }
+      }
+    }
+    // Once per profile (discuss item 8, owner 2026-10-23): the old app's positions, never over one already known.
+    if (!seededFromColonize && legacyFile) {
+      const old = await readJson<CoordsFile | null>(legacyFile, null);
+      if (old && old.v === COORDS_FILE_VERSION && old.systems && typeof old.systems === "object") {
+        for (const [norm, coords] of Object.entries(old.systems)) {
+          if (isCoords(coords) && norm && !coordCache.has(norm)) coordCache.set(norm, coords);
+        }
+      }
+      seededFromColonize = true;
+      scheduleCoordsSave();
     }
   });
   return coordsLoad;
@@ -114,6 +137,7 @@ function startCoordsSave(): void {
   coordsDirty = false;
   const file = coordsFilePath;
   const payload: CoordsFile = { v: COORDS_FILE_VERSION, systems: Object.fromEntries(coordCache.entries()) };
+  if (seededFromColonize) payload.seededFromColonize = true;
   if (knownSpelling.size) payload.names = Object.fromEntries(knownSpelling.entries());
   coordsSaveQueue = coordsSaveQueue
     .then(() => writeJsonAtomic(file, payload, false))

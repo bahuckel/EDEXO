@@ -5,6 +5,8 @@
  * The views (Plan, Docked, Search, Sources, Wing) read from this and call its actions; nothing else holds state.
  */
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { capsByReference, strictestRules, type ProjectSettings } from "../../shared/colonize/projectSettings";
+import { depotDisplayLabel } from "../../shared/colonize/depotLabel";
 import { colonizeApi } from "./api";
 import { carrierAvailability, mergeAvailability, shipCargoByKey as holdByKey, type CarrierStock } from "../../shared/colonize/carrierStock";
 import { resolveCargoCapacity, clearCargoCapacityOverride, loadCargoCapacityOverride, saveCargoCapacityOverride } from "../../shared/colonize/cargoCapacityOverride";
@@ -109,8 +111,35 @@ export function useColonize() {
   /* ---- bans, filters, the plan's sellers -------------------------------------------------------------------- */
   // banStation / unbanStation save as they change the list.
   const [bannedStations, setBannedStations] = useState<BannedStation[]>(() => loadBannedStations());
-  const filters = ui.checkoutFilters;
+  /*
+    The plan's rules (the Haul plan's controls, `baseFilters`) under every active site's own (discuss item 1): one plan
+    serves every site, so it runs under the strictest of them; `stricterFor` names the sites that tightened it.
+  */
+  const baseFilters = ui.checkoutFilters;
+  const { filters, stricterFor } = useMemo(() => {
+    const sites = (snap?.activeDepots ?? []).map((d) => ({ label: depotDisplayLabel(d), rules: ui.projects[d.marketId]?.rules }));
+    const { rules, stricterFor } = strictestRules(baseFilters, sites);
+    const filters: CheckoutFilterState =
+      rules === baseFilters
+        ? baseFilters
+        : { ...rules, largePadOnly: rules.minLandingPad === "L", includePlanetaryAndGround: rules.showPlanetary };
+    return { filters, stricterFor };
+  }, [baseFilters, snap?.activeDepots, ui.projects]);
   const setFilters = useCallback((f: CheckoutFilterState) => dispatch({ type: "setCheckoutFilters", filters: f }), [dispatch]);
+  const setProject = useCallback(
+    (marketId: string, settings: ProjectSettings | null) => dispatch({ type: "setProject", marketId, settings }),
+    [dispatch],
+  );
+  const setHudFollow = useCallback((marketId: string | null) => dispatch({ type: "setHudFollow", marketId }), [dispatch]);
+  // Each site's own "systems per material", by its shopping hub (the scans' key).
+  const maxSystemsByRef = useMemo(
+    () =>
+      capsByReference(
+        (snap?.activeDepots ?? []).map((d) => ({ marketId: d.marketId, reference: resolveDepotRef(d) ?? "" })),
+        ui.projects,
+      ),
+    [snap?.activeDepots, ui.projects, resolveDepotRef],
+  );
   const routingMode = ui.routingMode;
   const setRoutingMode = useCallback((m: CheckoutRoutingMode) => dispatch({ type: "setRoutingMode", mode: m }), [dispatch]);
   const stations = usePlannerStations({
@@ -119,6 +148,7 @@ export function useColonize() {
     filters,
     routingMode,
     plannerSettings,
+    maxSystemsByRef,
     resolveDepotRef,
     buyIndexRefreshToken,
     setBuyIndexRefreshToken,
@@ -296,7 +326,11 @@ export function useColonize() {
     freeTons,
     bannedStations,
     filters,
+    baseFilters,
+    stricterFor,
     setFilters,
+    setProject,
+    setHudFollow,
     routingMode,
     setRoutingMode,
     stations,

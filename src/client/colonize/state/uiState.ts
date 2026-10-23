@@ -1,4 +1,5 @@
 import { parseCarrierHaul } from "../../../shared/colonize/carrierStock";
+import { parseProjectSettings, withProject, type ProjectSettings, type ProjectSettingsMap } from "../../../shared/colonize/projectSettings";
 import { parseMinLandingPad } from "../../../shared/colonize/stationFilter";
 import type { CheckoutRoutingMode } from "../../../shared/colonize/types";
 import type { CheckoutFilterState } from "../lib/planFilters";
@@ -31,13 +32,19 @@ export type UiState = {
    * off changes nothing and shows nothing. Only ids that are on are stored.
    */
   carrierHaul: Record<string, boolean>;
+  /** Each site's own plan rules and "systems per material" (projectSettings.ts, discuss item 1). */
+  projects: ProjectSettingsMap;
+  /** The site the HUD follows when not docked at one (discuss item 9); null = where the next trip delivers. */
+  hudFollow: string | null;
 };
 
 export type UiAction =
   | { type: "setCheckoutFilters"; filters: CheckoutFilterState }
   | { type: "setRoutingMode"; mode: CheckoutRoutingMode }
   | { type: "setDepotRefPin"; marketId: string; system: string }
-  | { type: "toggleCarrierHaul"; carrierId: string };
+  | { type: "toggleCarrierHaul"; carrierId: string }
+  | { type: "setProject"; marketId: string; settings: ProjectSettings | null }
+  | { type: "setHudFollow"; marketId: string | null };
 
 const DEFAULT_CHECKOUT_FILTERS: CheckoutFilterState = {
   includePlanetaryAndGround: true,
@@ -94,6 +101,8 @@ export function initialUiState(): UiState {
     routingMode: readRoutingMode(),
     depotRefPins: readJson(STORAGE_KEYS.depotRefPins, parseDepotRefPins, {}),
     carrierHaul: readJson(STORAGE_KEYS.carrierHaul, parseCarrierHaul, {}),
+    projects: readJson(STORAGE_KEYS.projects, parseProjectSettings, {}),
+    hudFollow: readRaw(STORAGE_KEYS.hudFollow)?.trim() || null,
   };
 }
 
@@ -120,6 +129,12 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       else next[action.carrierId] = true;
       return { ...state, carrierHaul: next };
     }
+
+    case "setProject":
+      return { ...state, projects: withProject(state.projects, action.marketId, action.settings) };
+
+    case "setHudFollow":
+      return { ...state, hudFollow: action.marketId };
 
     default:
       return state;

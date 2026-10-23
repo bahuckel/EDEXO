@@ -157,12 +157,15 @@ export type ColonizeInvoke = {
     referenceSystems: string[];
     items: CheckoutBasketItemPayload[];
     maxSystemsPerMaterial: number;
+    /** A site's own cap by reference system, lower case (discuss item 1); the rest use maxSystemsPerMaterial. */
+    maxSystemsByRef?: Record<string, number>;
     constructionDepots?: ConstructionDepotRef[];
   }) => Promise<{ ok: true; atCap: boolean; allFound: boolean } | Fail>;
   schedulePlannerMaterialScan: (payload: {
     referenceSystems: string[];
     items: CheckoutBasketItemPayload[];
     maxSystemsPerMaterial?: number | null;
+    maxSystemsByRef?: Record<string, number>;
     constructionDepots?: ConstructionDepotRef[];
     /** "Look for sellers now": look even when every material already has a seller. */
     force?: boolean;

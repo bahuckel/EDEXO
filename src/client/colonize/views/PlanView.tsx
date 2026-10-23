@@ -72,7 +72,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
     buyListings: listings,
     shopHistory: m.shopHistory,
   });
-  const { plan, displayPlan, completedLineIds, toggleTripLine } = useLogisticsPlan({
+  const { plan, displayPlan, completedLineIds } = useLogisticsPlan({
     isActive: true,
     deferred,
     listingsReady,
@@ -197,7 +197,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
         {docked && !dockedAtSite && plan ? <BuyHerePanel m={m} plan={plan} /> : null}
 
         {trips.length ? (
-          <NextTripCard trips={trips} completed={completedLineIds} onToggle={toggleTripLine} onBan={m.stations.ban} />
+          <NextTripCard trips={trips} completed={completedLineIds} onBan={m.stations.ban} />
         ) : null}
 
         {afterTons > 0 ? (
@@ -259,7 +259,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
           </div>
         ) : null}
 
-        {trips.length > 1 ? <TripList trips={trips} completed={completedLineIds} onToggle={toggleTripLine} onBan={m.stations.ban} /> : null}
+        {trips.length > 1 ? <TripList trips={trips} completed={completedLineIds} onBan={m.stations.ban} /> : null}
 
         {!trips.length && !listingsLoading ? (
           <Panel k="plan-no-trips" title="No trips yet">
@@ -304,7 +304,8 @@ const ORDERS: SelectOption<CheckoutRoutingMode>[] = [
 
 /** What the plan may use, on the plan itself (they were the checkout dialog's in EDEXO-Colonize). */
 function PlanFilters({ m }: { m: ColonizeModel }) {
-  const f = m.filters;
+  // The controls set the plan's own rules; a site's own can only tighten them (discuss item 1), said below.
+  const f = m.baseFilters;
   const set = (patch: Partial<typeof f>) => m.setFilters({ ...f, ...patch });
   return (
     <div className="cz-filters" role="group" aria-label="What the plan may use">
@@ -354,6 +355,20 @@ function PlanFilters({ m }: { m: ColonizeModel }) {
       <button type="button" className={BTN} disabled={m.stations.lookingBusy} onClick={m.stations.lookNow} style={{ marginLeft: "auto" }}>
         {m.stations.lookingBusy ? "Looking…" : "Look for sellers now"}
       </button>
+      {m.stricterFor.length ? (
+        <p className="cz-small cz-dim cz-filters__note">
+          Stricter for {m.stricterFor.join(", ")} (its own rules, in Your sites): the plan uses{" "}
+          {[
+            m.filters.minLandingPad !== "any" ? `pad ${m.filters.minLandingPad}${m.filters.minLandingPad === "M" ? " or L" : ""}` : null,
+            m.filters.maxDistanceLy ? `within ${m.filters.maxDistanceLy} ly` : null,
+            m.filters.showPlanetary ? null : "no planet ports",
+            m.filters.excludeFleetCarriers ? "no other carriers" : null,
+          ]
+            .filter(Boolean)
+            .join(", ")}
+          .
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -11,9 +11,12 @@ import { siteMaterials, siteTotals } from "../../../shared/colonize/siteMaterial
 import type { DepotSnapshot, OwnColony } from "../../../shared/colonize/types";
 import type { ColonizeModel } from "../useColonize";
 import { BTN, Fact, Panel } from "./ui";
+import { SiteRulesForm } from "./SiteRules";
 
 /** What the column needs of the model; the phone view (PhoneView.tsx) passes a read-only one. */
-type SitesModel = Pick<ColonizeModel, "snap" | "setDepotRefPin" | "setArchived"> & { ui: Pick<ColonizeModel["ui"], "depotRefPins"> };
+type SitesModel = Pick<ColonizeModel, "snap" | "setDepotRefPin" | "setArchived" | "setProject" | "setHudFollow"> & {
+  ui: Pick<ColonizeModel["ui"], "depotRefPins" | "projects" | "hudFollow">;
+};
 
 export function SitesColumn({ m, readOnly = false }: { m: SitesModel; readOnly?: boolean }) {
   const snap = m.snap;
@@ -123,6 +126,7 @@ function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapsho
   const docked = m.snap?.liveDocked?.marketId === d.marketId;
   const [hub, setHub] = useState(m.ui.depotRefPins[d.marketId] ?? "");
   const finished = d.complete || t.remaining <= 0;
+  const followed = m.ui.hudFollow === d.marketId;
   // A material delivered in full slides to the bottom (useFlip) instead of jumping there.
   const flipRef = useRef<HTMLElement>(null);
   useFlip(flipRef);
@@ -136,6 +140,22 @@ function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapsho
             <Whose d={d} colonies={m.snap?.ownColonies ?? []} />
             {docked ? <span className="cz-ok"> · docked here</span> : null}
           </div>
+          {/* Follow on the HUD (discuss item 9): wins over the next trip's site; docked at a site still wins. */}
+          {!readOnly && !finished ? (
+            <button
+              type="button"
+              className={`btn-top-toggle cz-toggle cz-follow${followed ? " btn-top-toggle--on" : ""}`}
+              aria-pressed={followed}
+              title={
+                followed
+                  ? "The HUD follows this site (unless you are docked at another). Click to let it follow the next trip again."
+                  : "Make the HUD follow this site, whatever the next trip delivers to. Docked at a site, the HUD shows that one."
+              }
+              onClick={() => m.setHudFollow(followed ? null : d.marketId)}
+            >
+              {followed ? "Followed on the HUD" : "Follow on the HUD"}
+            </button>
+          ) : null}
         </div>
         <div className={`cz-big cz-num${finished ? " cz-ok" : " cz-hi"}`}>{Math.floor(t.pct)}%</div>
       </div>
@@ -204,6 +224,9 @@ function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapsho
                   onBlur={() => m.setDepotRefPin(d.marketId, hub.trim())}
                 />
               </form>
+            )}
+            {readOnly || finished ? null : (
+              <SiteRulesForm label={depotDisplayLabel(d)} settings={m.ui.projects[d.marketId]} onChange={(s) => m.setProject(d.marketId, s)} />
             )}
             {readOnly ? null : (
               <button type="button" className={BTN} style={{ alignSelf: "flex-start" }} onClick={() => m.setArchived(d.marketId, true)}>

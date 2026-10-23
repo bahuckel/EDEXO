@@ -28,6 +28,16 @@ function usePersistUiState(state: UiState): void {
     if (Object.keys(state.carrierHaul).length) writeJson(STORAGE_KEYS.carrierHaul, state.carrierHaul);
     else removeRaw(STORAGE_KEYS.carrierHaul);
   }, [state.carrierHaul]);
+
+  useEffect(() => {
+    if (Object.keys(state.projects).length) writeJson(STORAGE_KEYS.projects, state.projects);
+    else removeRaw(STORAGE_KEYS.projects);
+  }, [state.projects]);
+
+  useEffect(() => {
+    if (state.hudFollow) writeRaw(STORAGE_KEYS.hudFollow, state.hudFollow);
+    else removeRaw(STORAGE_KEYS.hudFollow);
+  }, [state.hudFollow]);
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {

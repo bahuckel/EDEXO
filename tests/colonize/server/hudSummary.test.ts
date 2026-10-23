@@ -114,7 +114,7 @@ describe("the HUD's Colonize data", () => {
     expect(buildColonizeHud(snap(), {})!.hold.capacity).toBe(400);
   });
 
-  it("gives the saved plan's next stop, moving on as lines are ticked or the cargo is aboard", () => {
+  it("gives the saved plan's next stop, moving on as the cargo is aboard and delivered", () => {
     const ui = { [TRIPS]: JSON.stringify(plan) };
     const first = buildColonizeHud(snap(), ui)!;
     expect(first.next).toMatchObject({ trip: 1, trips: 2, station: "Seller One", system: "Seller System 1", distanceLy: 12.4, here: false });
@@ -126,14 +126,15 @@ describe("the HUD's Colonize data", () => {
     const loaded = buildColonizeHud(snap({ shipCargo: [{ name: "steel", nameLocalised: "Steel", count: 200 }] }), ui)!;
     expect(loaded.next).toMatchObject({ trip: 1, station: "Orbital Construction Site: Alpha Port", buys: [] });
 
-    // Trip 1 ticked done by hand: trip 2, and docked at its seller.
-    const ticked = {
-      [TRIPS]: JSON.stringify({
-        ...plan,
-        manualCompletedLineIds: [tripBuyLineId(1, 0, "steel"), "t1-s1-d-1-steel"],
-      }),
-    };
-    const atSeller = buildColonizeHud(snap({ liveDocked: { marketId: "9", stationName: "seller two", starSystem: "Seller System 2", timestamp: null } }), ticked)!;
+    // Trip 1 delivered (Alpha took 200 t of steel since the plan was made): trip 2, and docked at its seller. Nothing
+    // is ticked by hand any more (owner, 2026-10-23); a tick an earlier build saved changes nothing.
+    const delivered = { ...A, contributions: [{ commodityId: "steel", totalTons: 200 }] } as unknown as DepotSnapshot;
+    const ticked = { [TRIPS]: JSON.stringify({ ...plan, manualCompletedLineIds: [tripBuyLineId(1, 0, "steel")] }) };
+    expect(buildColonizeHud(snap(), ticked)!.next).toMatchObject({ trip: 1, station: "Seller One" });
+    const atSeller = buildColonizeHud(
+      snap({ activeDepots: [delivered, B], liveDocked: { marketId: "9", stationName: "seller two", starSystem: "Seller System 2", timestamp: null } }),
+      ui,
+    )!;
     expect(atSeller.next).toMatchObject({ trip: 2, station: "Seller Two", here: true });
   });
 
@@ -191,6 +192,15 @@ describe("the HUD's Colonize data", () => {
     expect(trip.target!.marketId).toBe("1");
     // No plan: the most recent.
     expect(buildColonizeHud(snap({ activeDepots: [A, B, C] }), {})!.target!.marketId).toBe("3");
+    // Pinned in the window (discuss item 9): over the trip's site; docked at another still wins.
+    const FOLLOW = "edexo-colonize-hud-follow-v1";
+    expect(buildColonizeHud(snap({ activeDepots: [A, B, C] }), { [TRIPS]: JSON.stringify(plan), [FOLLOW]: "2" })!.target!.marketId).toBe("2");
+    expect(
+      buildColonizeHud(
+        snap({ activeDepots: [A, B, C], liveDocked: { marketId: "3", stationName: C.stationName!, starSystem: "Smoke Colony", timestamp: null } }),
+        { [FOLLOW]: "2" },
+      )!.target!.marketId,
+    ).toBe("3");
   });
 
   it("is 'buy here' by market id, or by name and system, never by a name another system shares", () => {
@@ -214,11 +224,15 @@ describe("the HUD's Colonize data", () => {
     expect(buildColonizeHud(snap(), { [TRIPS]: JSON.stringify(plan) })!.plan).toBe("stale");
     const fresh = { ...plan, planRefreshKey: `${planDepotFingerprint([A, B])}|cap:400|co:|cn:` };
     expect(buildColonizeHud(snap(), { [TRIPS]: JSON.stringify(fresh) })!.plan).toBe("active");
-    const allTicked = {
-      ...fresh,
-      manualCompletedLineIds: [1, 2].flatMap((n) => [tripBuyLineId(n, 0, n === 1 ? "steel" : "titanium"), `t${n}-s1-d-1-${n === 1 ? "steel" : "titanium"}`]),
-    };
-    const done = buildColonizeHud(snap(), { [TRIPS]: JSON.stringify(allTicked) })!;
+    // Both trips delivered (Alpha took the steel and the titanium since the plan was made): done.
+    const delivered = {
+      ...A,
+      contributions: [
+        { commodityId: "steel", totalTons: 200 },
+        { commodityId: "titanium", totalTons: 200 },
+      ],
+    } as unknown as DepotSnapshot;
+    const done = buildColonizeHud(snap({ activeDepots: [delivered, B] }), { [TRIPS]: JSON.stringify(fresh) })!;
     expect(done.plan).toBe("done");
     expect(done.next).toBeNull();
   });

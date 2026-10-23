@@ -162,6 +162,30 @@ describe("resolveCoordMapForSystems", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("reads the old Colonize app's positions in once, never over one it knows (discuss item 8)", async () => {
+    const legacy = path.join(dir, "old-colonize-coords.json");
+    await writeFile(legacy, JSON.stringify({ v: 1, systems: { alpha: [9, 9, 9], gamma: [3, 3, 3] } }));
+    await writeFile(path.join(dir, "system-coords.json"), JSON.stringify({ v: 1, systems: { alpha: [1, 1, 1] } }));
+    const calls = stubNetwork({ edsmKnows: () => true });
+    let mod = await load();
+    await mod.loadSystemCoordsCache(dir, legacy);
+    const out = await mod.resolveCoordMapForSystems(["Alpha", "Gamma"]);
+    expect(out.get("alpha")).toEqual([1, 1, 1]);
+    expect(out.get("gamma")).toEqual([3, 3, 3]);
+    expect(calls).toHaveLength(0);
+    await mod.flushSystemCoordsCache();
+    const saved = JSON.parse(await readFile(path.join(dir, "system-coords.json"), "utf8"));
+    expect(saved.seededFromColonize).toBe(true);
+
+    // Next start: the old file is not read again (a position there that changed would not come back).
+    await writeFile(legacy, JSON.stringify({ v: 1, systems: { delta: [4, 4, 4] } }));
+    vi.resetModules();
+    stubNetwork({ edsmKnows: () => false });
+    mod = await load();
+    await mod.loadSystemCoordsCache(dir, legacy);
+    expect((await mod.resolveCoordMapForSystems(["Delta"])).has("delta")).toBe(false);
+  });
+
   it("ignores a cache file it cannot read and entries that are not coordinates", async () => {
     await writeFile(
       path.join(dir, "system-coords.json"),

@@ -34,7 +34,8 @@ const snapshot = {
   archivedDepots: [],
   liveDocked: { marketId: "1", stationName: site.stationName!, starSystem: site.starSystem, timestamp: null },
   navContext: { starSystem: site.starSystem, systemAddress: 1 },
-  shipCargo: [{ name: "steel", nameLocalised: "Steel", count: 60 }],
+  // Trip 1's titanium is aboard: that trip is bought (no ticks by hand since 2026-10-23).
+  shipCargo: [{ name: "titanium", nameLocalised: "Titanium", count: 80 }],
   shipCargoCapacity: 80,
   carriers: [],
   wingRoster: [],
@@ -65,7 +66,8 @@ const PLAN = {
   planRefreshKey: "k",
   createdAt: "",
   baselineContributions: {},
-  manualCompletedLineIds: [tripBuyLineId(1, 0, "titanium")],
+  // A tick an earlier build saved: dropped as it loads.
+  manualCompletedLineIds: [tripBuyLineId(2, 0, "titanium")],
   plan: { trips: [trip(1, "Hammond Hub"), trip(2, "Second Seller")] },
 };
 
@@ -116,8 +118,8 @@ describe("Colonize on a phone", () => {
     const text = host.textContent ?? "";
     expect(text).toContain("Phone view");
     expect(host.querySelector("[data-testid='phone-where']")?.textContent).toContain("Kraepelin City");
-    expect(host.querySelector("[data-testid='phone-hold']")?.textContent).toContain("60 / 80 t");
-    // Trip 1 was ticked on the PC: trip 2 is next.
+    expect(host.querySelector("[data-testid='phone-hold']")?.textContent).toContain("80 / 80 t");
+    // Trip 1's cargo is aboard: trip 2 is next.
     expect(text).toContain("Next trip · 2 of 2");
     expect(text).toContain("Second Seller");
     // The stop's facts from EDEXO's stations index (1.3.0): pad and distance from the star.
@@ -126,9 +128,8 @@ describe("Colonize on a phone", () => {
     expect(text).toContain("Kraepelin City");
     expect(text).toContain("your colony");
     for (const write of ["Never use this station", "Mark trip done", "Put this site away", "Shop around", "Copy"]) expect(text).not.toContain(write);
-    const boxes = [...host.querySelectorAll<HTMLInputElement>("input[type=checkbox]")];
-    expect(boxes.length).toBeGreaterThan(0);
-    expect(boxes.every((b) => b.disabled)).toBe(true);
+    // Nothing to tick, here or on the PC.
+    expect(host.querySelectorAll("input[type=checkbox]").length).toBe(0);
     // No tabs: Search, Sources and Wing write or look things up.
     expect(host.querySelector("[role=tab]")).toBeNull();
     expect(called.length).toBeGreaterThan(0);

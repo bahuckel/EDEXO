@@ -21,6 +21,10 @@ export const KEY_CARRIER_HAUL = "edexo-colonize-carrier-haul-v1";
 export const KEY_CHECKOUT_FILTERS = "edexo-colonize-checkout-filters-v1";
 export const KEY_CHECKOUT_ROUTING = "edexo-colonize-checkout-routing-v1";
 export const KEY_DEPOT_REF_PINS = "edexo-colonize-depot-ref-pins-v1";
+/** Each site's own plan rules and "systems per material" (discuss item 1, projectSettings.ts). */
+export const KEY_PROJECTS = "edexo-colonize-projects-v1";
+/** The site the HUD follows when not docked at one: its market id (discuss item 9). */
+export const KEY_HUD_FOLLOW = "edexo-colonize-hud-follow-v1";
 
 /*
   The basket (basket-v2, auto-basket-v1) and the shopping run (shopping-run-v1) left the list with their state in
@@ -38,6 +42,8 @@ export const COLONIZE_SYNCED_KEYS = [
   KEY_CHECKOUT_FILTERS,
   KEY_CHECKOUT_ROUTING,
   KEY_DEPOT_REF_PINS,
+  KEY_PROJECTS,
+  KEY_HUD_FOLLOW,
 ] as const;
 
 export type ColonizeSyncedKey = (typeof COLONIZE_SYNCED_KEYS)[number];

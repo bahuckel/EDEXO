@@ -1,4 +1,5 @@
 import { buyStationHitMatchesNeed } from "../../shared/colonize/buyStationHitMatch";
+import { sellerTooOld } from "../../shared/colonize/marketAge";
 import { withLocalStationFacts } from "./localStationFacts";
 import { commodityIdsEquivalent, commodityNeedMatchesLabel } from "../../shared/colonize/commodityKey";
 import { isConstructionDepotStation, type ConstructionDepotRef } from "../../shared/colonize/constructionDepot";
@@ -180,6 +181,8 @@ export function materialBuyHitsForNeed(args: {
       buyStationHitMatchesNeed(lookup.needId, lookup.needLabel, raw);
     if (!proofOk) return;
     if (!isCommanderBuyOffer(raw.supply, raw.buyPrice) && !raw.purchaseProven) return;
+    // A market older than 60 days is not planned with (discuss item 5); journal and bought-here sellers always are.
+    if (sellerTooOld(raw)) return;
     if (
       isConstructionDepotStation(depots, {
         systemName: raw.systemName,

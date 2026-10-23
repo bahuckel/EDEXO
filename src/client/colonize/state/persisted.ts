@@ -15,12 +15,16 @@ import {
   KEY_CHECKOUT_FILTERS,
   KEY_CHECKOUT_ROUTING,
   KEY_DEPOT_REF_PINS,
+  KEY_HUD_FOLLOW,
+  KEY_PROJECTS,
 } from "../../../shared/colonize/uiStateKeys";
 
 export const STORAGE_KEYS = {
   checkoutFilters: KEY_CHECKOUT_FILTERS,
   checkoutRouting: KEY_CHECKOUT_ROUTING,
   depotRefPins: KEY_DEPOT_REF_PINS,
+  projects: KEY_PROJECTS,
+  hudFollow: KEY_HUD_FOLLOW,
   /** Which carriers the commander has switched on for hauling, by CarrierID. */
   carrierHaul: KEY_CARRIER_HAUL,
 } as const;

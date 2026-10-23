@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import type { SystemCoordsByNorm } from "../../../../shared/colonize/galaxyDistanceCompute";
 import { buildLogisticsPlan, type LogisticsPlan } from "../../../../shared/colonize/logisticsPlanner";
 import type { BannedStation } from "../../../../shared/colonize/stationBans";
@@ -51,7 +51,6 @@ export type LogisticsPlanState = {
   completedLineIds: Set<string>;
   /** Commodity ids the current trips already buy — used to mark buy cards as planned. */
   tripMaterialIds: Set<string>;
-  toggleTripLine: (lineId: string) => void;
 };
 
 /**
@@ -243,19 +242,6 @@ export function useLogisticsPlan({
     });
   }, [planRefreshKey, plan, activeDepots]);
 
-  const toggleTripLine = useCallback((lineId: string) => {
-    const prev = tripSnapshotRef.current;
-    if (!prev) return;
-    const set = new Set(prev.manualCompletedLineIds);
-    if (set.has(lineId)) set.delete(lineId);
-    else set.add(lineId);
-    const next = { ...prev, manualCompletedLineIds: [...set] };
-    // Advance the ref right away so two quick clicks both build on the latest snapshot, rather
-    // than on the state the ref-sync effect has not written back yet.
-    tripSnapshotRef.current = next;
-    scheduleSaveTripPlanSnapshot(next);
-    startTransition(() => setTripSnapshot(next));
-  }, []);
 
   const tripMaterialIds = useMemo(() => {
     const ids = new Set<string>();
@@ -269,5 +255,5 @@ export function useLogisticsPlan({
     return ids;
   }, [displayPlan]);
 
-  return { plan, displayPlan, completedLineIds, tripMaterialIds, toggleTripLine };
+  return { plan, displayPlan, completedLineIds, tripMaterialIds };
 }

@@ -22,7 +22,8 @@ import {
   type TripPlanSnapshot,
 } from "../../shared/colonize/tripPlanProgress";
 import type { ColonizeSnapshot, DepotSnapshot } from "../../shared/colonize/types";
-import { KEY_CARGO_CAPACITY, KEY_CARRIER_HAUL, KEY_TRIP_PLAN } from "../../shared/colonize/uiStateKeys";
+import { KEY_CARGO_CAPACITY, KEY_CARRIER_HAUL, KEY_HUD_FOLLOW, KEY_TRIP_PLAN } from "../../shared/colonize/uiStateKeys";
+import { followedSiteId } from "../../shared/colonize/projectSettings";
 
 const MAX_SITES = 3;
 
@@ -156,8 +157,15 @@ export function buildColonizeHud(
     }
   }
 
-  // The site to follow: docked at it, else where the current trip delivers, else the most recent.
-  const targetSite = dockedSite ?? (tripSiteId ? active.find((d) => d.marketId === tripSiteId) : undefined) ?? ordered[0]!;
+  // The site to follow (projectSettings.followedSiteId): docked at it, else the one pinned in the window (discuss item
+  // 9), else where the current trip delivers, else the most recent.
+  const followId = followedSiteId({
+    dockedId: dockedSite?.marketId ?? null,
+    pinnedId: ui[KEY_HUD_FOLLOW]?.trim() || null,
+    tripSiteId: tripSiteId ?? null,
+    activeIds: ordered.map((d) => d.marketId),
+  });
+  const targetSite = active.find((d) => d.marketId === followId) ?? ordered[0]!;
   const target: ColonizeHudDTO["target"] = {
     marketId: targetSite.marketId,
     label: depotDisplayLabel(targetSite),

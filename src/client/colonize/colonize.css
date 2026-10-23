@@ -774,3 +774,27 @@ html[data-streamer-bg="transparent"] .cz-head {
 .cz-flip {
   display: contents;
 }
+
+/* A site's own plan rules (SiteRules.tsx, discuss item 1): one wrapping row in the site's details. */
+.cz-site-rules {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.cz-site-rules > .cz-label {
+  flex-basis: 100%;
+}
+/* Follow on the HUD (discuss item 9): small, under the site's name. */
+.cz-follow {
+  margin-top: 6px;
+  font-size: 0.7rem;
+}
+/* The Haul plan's line naming the sites whose own rules tightened it. */
+.cz-filters__note {
+  flex-basis: 100%;
+  margin: 0;
+}
+.cz-site-rules .cz-field {
+  white-space: nowrap;
+}

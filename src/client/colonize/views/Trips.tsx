@@ -1,4 +1,8 @@
-/** The next trip, front and centre, and the trips after it with their ticks. */
+/**
+ * The next trip, front and centre, and the trips after it. Nothing is ticked by hand (owner, 2026-10-23: "keep it
+ * automatic, no ticks"): a buy is done when its cargo is aboard, a delivery when the site has it, and a trip done out
+ * of order makes a new plan from what is left.
+ */
 import { useRef, useState } from "react";
 import { useFlip } from "../../ui/useFlip";
 import type { HaulTrip, TripStop } from "../../../shared/colonize/logisticsPlanner";
@@ -10,13 +14,12 @@ import { BTN, BTN_GO, BTN_LINK, Panel, copyText } from "./ui";
 type TripProps = {
   trips: HaulTrip[];
   completed: Set<string>;
-  onToggle: (lineId: string) => void;
   onBan: (systemName: string, stationName: string) => void;
-  /** A paired phone: the ticks are shown, not changed, and nothing writes. */
+  /** A paired phone: nothing writes. */
   readOnly?: boolean;
 };
 
-/** Every line of a trip that can be ticked: its buys, and each site's delivery. */
+/** Every line of a trip: its buys, and each site's delivery. */
 function tripLineIds(trip: HaulTrip): string[] {
   const ids: string[] = [];
   for (const s of trip.stops) {
@@ -30,11 +33,6 @@ const tripDone = (trip: HaulTrip, completed: Set<string>) => {
   const ids = tripLineIds(trip);
   return ids.length > 0 && ids.every((id) => completed.has(id));
 };
-/** Tick (or untick) every line of a trip. */
-function setTrip(trip: HaulTrip, completed: Set<string>, done: boolean, onToggle: (id: string) => void) {
-  for (const id of tripLineIds(trip)) if (completed.has(id) !== done) onToggle(id);
-}
-
 function stopFacts(s: TripStop): string {
   const bits = [formatHopLy(s.distanceLy)];
   if (s.stationType) bits.push(s.stationType);
@@ -45,13 +43,13 @@ function stopFacts(s: TripStop): string {
   return bits.filter(Boolean).join(" · ");
 }
 
-export function NextTripCard({ trips, completed, onToggle, onBan, readOnly = false }: TripProps) {
+export function NextTripCard({ trips, completed, onBan, readOnly = false }: TripProps) {
   const next = trips.find((tr) => !tripDone(tr, completed));
   const [copied, setCopied] = useState<string | null>(null);
   if (!next) {
     return (
       <Panel k="next-trip" tone="info" title="All planned trips done">
-        <p style={{ margin: 0 }}>Every trip in the plan is ticked. New trips appear as the sites report what they still need.</p>
+        <p style={{ margin: 0 }}>Every trip in the plan is bought and delivered. New trips appear as the sites report what they still need.</p>
       </Panel>
     );
   }
@@ -99,7 +97,9 @@ export function NextTripCard({ trips, completed, onToggle, onBan, readOnly = fal
                         <th scope="col" className="r">
                           Price
                         </th>
-                        <th scope="col">Done</th>
+                        <th scope="col">
+                          <span className="visually-hidden">State</span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -111,16 +111,7 @@ export function NextTripCard({ trips, completed, onToggle, onBan, readOnly = fal
                             <td>{b.label}</td>
                             <td className={`r cz-strong${done ? "" : " cz-hi"}`}>{t(b.buyTons)}</td>
                             <td className="r cz-dim">{b.buyPrice != null ? `${formatPrice(b.buyPrice)} cr` : ""}</td>
-                            <td>
-                              <input
-                                type="checkbox"
-                                className="cz-tick"
-                                checked={done}
-                                disabled={readOnly}
-                                onChange={() => onToggle(id)}
-                                aria-label={`${b.label} bought`}
-                              />
-                            </td>
+                            <td className="cz-ok cz-small">{done ? "✓ aboard" : ""}</td>
                           </tr>
                         );
                       })}
@@ -159,9 +150,6 @@ export function NextTripCard({ trips, completed, onToggle, onBan, readOnly = fal
                 {copied === copyTarget.systemName ? "Copied" : `Copy “${copyTarget.systemName}”`}
               </button>
             ) : null}
-            <button type="button" className={BTN} onClick={() => setTrip(next, completed, true, onToggle)}>
-              Mark trip done
-            </button>
           </div>
         )}
       </div>

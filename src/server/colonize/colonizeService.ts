@@ -9,6 +9,9 @@
  * Everything that runs on its own (the background start, the folder watch, the scans) is guarded: a failure is
  * logged, never thrown into the server process, which would close the desktop app.
  */
+import path from "node:path";
+import { finishedSellerRefs } from "../../shared/colonize/buyIndexClear";
+import { KEY_DEPOT_REF_PINS } from "../../shared/colonize/uiStateKeys";
 import type { OwnColony } from "../../shared/colonize/types";
 import { readEdsmCredentials } from "../edsmCredentials.js";
 import { resolveColonizeDataDir } from "../paths.js";
@@ -83,7 +86,9 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
   const materialBuyIndex = (): MaterialBuyIndex => (buyIndex ??= getMaterialBuyIndex(dataDir));
 
   // Not awaited: coordinate look-ups wait for this read themselves.
-  void loadSystemCoordsCache(dataDir).catch((e) => console.error("[colonize] system-coords load failed:", e));
+  // The old EDEXO-Colonize app's positions are read in once (discuss item 8); Windows only, where it ran.
+  const legacyCoords = process.env.APPDATA ? path.join(process.env.APPDATA, "edexo-colonize", "system-coords.json") : null;
+  void loadSystemCoordsCache(dataDir, legacyCoords).catch((e) => console.error("[colonize] system-coords load failed:", e));
 
   let lastNotifySig = "";
   store.setNotify(() => {
@@ -132,6 +137,15 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
       const depots = parseConstructionDepots(store.getSnapshot().activeDepots ?? []);
       if (depots.length) index.purgeConstructionDepotStations(depots);
       await index.flush();
+      // Sellers gathered round sites finished over 30 days ago stop feeding plans (discuss item 6).
+      const snap = store.getSnapshot();
+      const old = finishedSellerRefs(
+        [...(snap.activeDepots ?? []), ...(snap.completedDepots ?? []), ...(snap.archivedDepots ?? [])],
+        depotRefPinsFrom(colonizeUiState().all()[KEY_DEPOT_REF_PINS]),
+        (n) => index.refKey(n),
+      );
+      const dropped = await index.pruneRefs(old);
+      if (dropped) console.log(`[colonize] dropped ${dropped} sellers near sites finished over 30 days ago`);
     } catch (e) {
       console.error("[colonize] background start failed:", e);
     }
@@ -160,6 +174,18 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
   };
   running = service;
   return service;
+}
+
+/** The hub pins as saved in ui-state.json (market id -> reference system). */
+function depotRefPinsFrom(raw: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  try {
+    const j = raw ? (JSON.parse(raw) as unknown) : null;
+    if (j && typeof j === "object") for (const [k, v] of Object.entries(j)) if (typeof v === "string" && v.trim()) out[k] = v.trim();
+  } catch {
+    /* none */
+  }
+  return out;
 }
 
 /** Stop it if it runs (server shutdown, tests). */

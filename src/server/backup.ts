@@ -121,9 +121,9 @@ export function appDataExclusion(rel: string, s: Pick<BackupSettings, "includeKe
   ) {
     return "download or cache (fetched again)";
   }
-  // Colonize (1.3.0): its sites, saved settings and seller index go in; the last Spansh answer (up to ~10 MB, kept
-  // for debugging) and the coordinates cache are fetched again.
-  if (top === "colonize" && (base === "spansh-debug-last.json" || base === "system-coords.json")) return "cache (fetched again)";
+  // Colonize (1.3.0): its sites, saved settings, seller index and system positions go in (positions since R5: up to
+  // ~1 MB, and each one is a look-up saved); the last Spansh answer (up to ~10 MB, kept for debugging) is fetched again.
+  if (top === "colonize" && base === "spansh-debug-last.json") return "cache (fetched again)";
   if ((base === "edexo-compare-edsm-key.json" || base === "edexo-compare-lan-key.txt") && !s.includeKeys) return "key (off by default)";
   // Saved browser passwords are encrypted with this Windows account's key, which lives outside the app data
   // folder: a restored copy could not be read, and a zip should not list the sites with saved logins.

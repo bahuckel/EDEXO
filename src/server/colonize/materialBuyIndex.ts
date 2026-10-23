@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import { sellerTooOld } from "../../shared/colonize/marketAge";
 import path from "node:path";
 import { backupUnreadableJson, writeJsonAtomic } from "./jsonFs";
 import { buyStationHitMatchesNeed } from "../../shared/colonize/buyStationHitMatch";
@@ -12,7 +13,7 @@ import { isCommanderBuyOffer } from "../../shared/colonize/stationSellOffer";
 import { hasBuyStationWithinLy } from "../../shared/colonize/buyStationNearby";
 import { LIVE_SCAN_NEARBY_LY, normSystemName } from "../../shared/colonize/stationFilter";
 import { buyStationPlaceKey, dedupeBuyStationHits, mergeBuyStationHits } from "../../shared/colonize/buyStationMerge";
-import { pruneBuyIndexBySources } from "../../shared/colonize/buyIndexClear";
+import { pruneBuyIndexBySources, pruneBuyIndexRefs } from "../../shared/colonize/buyIndexClear";
 import { sortStationsByHop } from "../../shared/colonize/buyIndexSort";
 import type { CheckoutOfferSource } from "../../shared/colonize/types";
 import type { MaterialBuyIndexFile, MaterialBuyIndexRow, MaterialBuyStationHit } from "../../shared/colonize/materialBuyIndexTypes";
@@ -205,6 +206,21 @@ export class MaterialBuyIndex {
   async clearBySources(sources: CheckoutOfferSource[], dropRefKeys: string[] = []): Promise<number> {
     await this.load();
     const { systems, removedHits } = pruneBuyIndexBySources(this.data.systems, new Set(sources), dropRefKeys);
+    this.data = { version: INDEX_VERSION, systems };
+    this.sanitized = false;
+    this.lastPurgeSig = null;
+    this.snapshots.clear();
+    this.rowIdsCache.clear();
+    this.hitsCache.clear();
+    await this.flush();
+    return removedHits;
+  }
+
+  /** Found sellers of these buckets go (pruneBuyIndexRefs: sites finished over 30 days ago, discuss item 6). */
+  async pruneRefs(refs: ReadonlySet<string>): Promise<number> {
+    await this.load();
+    const { systems, removedHits } = pruneBuyIndexRefs(this.data.systems, refs);
+    if (!removedHits) return 0;
     this.data = { version: INDEX_VERSION, systems };
     this.sanitized = false;
     this.lastPurgeSig = null;
@@ -447,9 +463,15 @@ export class MaterialBuyIndex {
         ? orderHitsByDijkstraReach(distRef, enriched, distanceBySystem)
         : [...enriched].sort(sortHits);
     };
+    // A market older than 60 days is not planned with (discuss item 5); checked on the way out, so a cached list
+    // that has aged past it drops the row too.
+    const fresh = (hits: MaterialBuyStationHit[]) => {
+      const now = Date.now();
+      return hits.some((h) => sellerTooOld(h, now)) ? hits.filter((h) => !sellerTooOld(h, now)) : hits;
+    };
     if (!useDijkstra) {
       const cached = this.hitsCache.get(cacheKey);
-      if (cached) return cached;
+      if (cached) return fresh(cached);
     }
     const merged = new Map<string, MaterialBuyStationHit>();
     for (const h of [...localHits.values(), ...remoteHits.values()]) {
@@ -459,7 +481,7 @@ export class MaterialBuyIndex {
     }
     const out = order([...merged.values()]);
     if (!useDijkstra) this.hitsCache.set(cacheKey, out);
-    return out;
+    return fresh(out);
   }
 
   /**

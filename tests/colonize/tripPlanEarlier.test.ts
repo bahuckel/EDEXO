@@ -1,6 +1,7 @@
 /**
- * A plan replaced by another keeps its ticks for a while (audit 2026-10-22): switching a filter off and on again, or
- * the other ship, builds the same plan again under the same key, and its ticks come back.
+ * A plan replaced by another is remembered for a while (audit 2026-10-22): switching a filter off and on again, or
+ * the other ship, builds the same plan again under the same key, and its starting point for deliveries comes back.
+ * Ticks by hand are gone (owner, 2026-10-23: "keep it automatic, no ticks"), so none come back.
  */
 import { describe, expect, it } from "vitest";
 import { createTripPlanSnapshot, parseTripPlanSnapshot, planDepotFingerprint, planRefreshFingerprint, type TripPlanSnapshot } from "../../src/shared/colonize/tripPlanProgress";
@@ -11,15 +12,15 @@ const depots = [{ marketId: "1", resources: [], contributions: [{ commodityId: "
 const ticked = (s: TripPlanSnapshot, ids: string[]): TripPlanSnapshot => ({ ...s, manualCompletedLineIds: ids });
 
 describe("earlier plans' ticks", () => {
-  it("come back when the plan's key comes back, with its starting point for deliveries", () => {
+  it("give back the plan's starting point for deliveries when its key comes back, and no ticks", () => {
     const a = ticked(createTripPlanSnapshot(plan, "A", depots), ["t1-s0-b-steel"]);
     const later = [{ marketId: "1", resources: [], contributions: [{ commodityId: "steel", totalTons: 99 }] }] as unknown as DepotSnapshot[];
     const b = ticked(createTripPlanSnapshot(plan, "B", later, a), ["t1-s0-b-titanium"]);
-    expect(b.manualCompletedLineIds).toEqual(["t1-s0-b-titanium"]);
+    expect(b.manualCompletedLineIds).toEqual(["t1-s0-b-titanium"]); // set by the test, not by the snapshot
     expect(b.earlier?.map((e) => e.planRefreshKey)).toEqual(["A"]);
 
     const backToA = createTripPlanSnapshot(plan, "A", later, b);
-    expect(backToA.manualCompletedLineIds).toEqual(["t1-s0-b-steel"]);
+    expect(backToA.manualCompletedLineIds).toEqual([]);
     expect(backToA.baselineContributions).toEqual({ "1": { steel: 10 } });
     expect(backToA.earlier?.map((e) => e.planRefreshKey)).toEqual(["B"]);
   });
@@ -30,9 +31,9 @@ describe("earlier plans' ticks", () => {
     expect(s.earlier?.map((e) => e.planRefreshKey)).toEqual(["K4", "K3", "K2"]);
     const read = parseTripPlanSnapshot(JSON.stringify(s));
     expect(read?.earlier?.map((e) => [e.planRefreshKey, e.manualCompletedLineIds])).toEqual([
-      ["K4", ["x4"]],
-      ["K3", ["x3"]],
-      ["K2", ["x2"]],
+      ["K4", []],
+      ["K3", []],
+      ["K2", []],
     ]);
   });
 

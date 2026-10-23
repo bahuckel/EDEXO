@@ -21,7 +21,7 @@ describe("the window's UI state", () => {
     for (const key of RETIRED_KEYS) localStorage.setItem(key, "x");
     localStorage.setItem(KEY_CARRIER_HAUL, JSON.stringify({ "3700000001": true, off: false }));
     const state = initialUiState();
-    expect(Object.keys(state).sort()).toEqual(["carrierHaul", "checkoutFilters", "depotRefPins", "routingMode"]);
+    expect(Object.keys(state).sort()).toEqual(["carrierHaul", "checkoutFilters", "depotRefPins", "hudFollow", "projects", "routingMode"]);
     expect(state.carrierHaul).toEqual({ "3700000001": true });
     for (const key of RETIRED_KEYS) expect(localStorage.getItem(key), key).toBeNull();
     expect(localStorage.getItem(KEY_CARRIER_HAUL)).not.toBeNull();

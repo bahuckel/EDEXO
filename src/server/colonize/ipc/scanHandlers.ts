@@ -19,6 +19,18 @@ const itemRows = (items: ReturnType<typeof parseCheckoutItems>) =>
  * The journal's markets worth reading whole (spanshStationMarket.ts): the ones that sold something the sites need,
  * then the rest, nearest to the sites first. Construction sites never sell.
  */
+/**
+ * A site's own "systems per material" (discuss item 1, owner 2026-10-23): `maxSystemsByRef` maps a reference system
+ * (lower case) to its cap; the others use `maxSystemsPerMaterial`.
+ */
+function capByRef(p: Record<string, unknown>, fallback: number | null): (ref: string) => number | null {
+  const raw = p.maxSystemsByRef && typeof p.maxSystemsByRef === "object" ? (p.maxSystemsByRef as Record<string, unknown>) : {};
+  return (ref) => {
+    const v = raw[ref.trim().toLowerCase()];
+    return typeof v === "number" && v > 0 ? Math.floor(v) : fallback;
+  };
+}
+
 export function journalMarketIdsForScan(
   shops: JournalShopRecord[],
   items: ReturnType<typeof parseCheckoutItems>,
@@ -81,9 +93,11 @@ export function scanHandlers({ store, buyIndex }: IpcContext) {
         const index = buyIndex();
         await index.load();
         const allFound = index.allMaterialsHaveBuyStations(referenceSystems, items, constructionDepots);
-        const atCap = maxSystems
-          ? index.allMaterialsAtSystemCap(referenceSystems, items, maxSystems, constructionDepots)
-          : false;
+        const capOf = capByRef(p, maxSystems || null);
+        const atCap = referenceSystems.every((ref) => {
+          const cap = capOf(ref);
+          return cap != null && index.allMaterialsAtSystemCap([ref], items, cap, constructionDepots);
+        });
         return { ok: true as const, atCap, allFound };
       } catch (e) {
         return { ok: false as const, err: errMessage(e) };
@@ -112,7 +126,12 @@ export function scanHandlers({ store, buyIndex }: IpcContext) {
           cancelPassiveMaterialBuyScan();
           return { ok: true as const, scheduled: false, atCap: true, allFound: true };
         }
-        if (!force && maxSystems != null && index.allMaterialsAtSystemCap(referenceSystems, rows, maxSystems, constructionDepots)) {
+        const capOf = capByRef(p, maxSystems);
+        const allAtCap = referenceSystems.every((ref) => {
+          const cap = capOf(ref);
+          return cap != null && index.allMaterialsAtSystemCap([ref], rows, cap, constructionDepots);
+        });
+        if (!force && allAtCap) {
           cancelPassiveMaterialBuyScan();
           return { ok: true as const, scheduled: false, atCap: true, allFound: false };
         }
@@ -125,7 +144,7 @@ export function scanHandlers({ store, buyIndex }: IpcContext) {
             index,
             referenceSystem: ref,
             items,
-            maxSystemsPerMaterial: maxSystems,
+            maxSystemsPerMaterial: capOf(ref),
             constructionDepots,
             // "Look now" asked for a look: it was dropped here, so a material with any journal seller nearby was never
             // searched and the index kept no Spansh seller at all (owner's profile, 2026-10-23).
