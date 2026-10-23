@@ -1,0 +1,243 @@
+/* ==========================================================================================================
+   Cut corners with their outline (owner, 2026-10-23: "the brighter outline [should] extend to those cut corners
+   as well, everywhere in the app ... right now they look unfinished").
+
+   The chamfered look is a clip-path over a box with a 1px border: the clip cuts the border away at the corners,
+   leaving the diagonal edge bare. Each cut gets a band one border-width thick, drawn by a pseudo-element in the
+   element's own border colour, so it matches in every state (hover, on, focus, disabled) without restating a
+   single colour here. The band is a polygon on the cut itself, so it shares its outer edge with the element's
+   clip-path and meets the straight borders without a seam.
+
+   --cut is the corner size of each rule's polygon. Two shapes:
+     TL/BR  polygon(c 0, 100% 0, 100% calc(100% - c), calc(100% - c) 100%, 0 100%, 0 c)  -> top-left, bottom-right
+     TR/BL  polygon(0 0, calc(100% - c) 0, 100% c, 100% 100%, c 100%, 0 calc(100% - c))  -> top-right, bottom-left
+   Inputs cannot have pseudo-elements: theirs is two background gradients (bottom of this file).
+
+   Not here: .ss-row (its ::after is taken), elements with no border, images; .options-modal is a .modal-panel
+   (its top-right/bottom-left cut wins over its own).
+   ========================================================================================================== */
+
+/* ---- which elements, and their corner size ---- */
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+  .srow-tag, .srow-prog) {
+  --cut: 3px;
+}
+:where(.btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon, .fold-help-btn,
+  .facts-dss, .land-badge, .price-tag) {
+  --cut: 4px;
+}
+:where(.tab, .galaxy-map__controls, .ss-link, .ss-hud-link, .ui-select) {
+  --cut: 5px;
+}
+:where(.cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral, .btn-top-toggle,
+  .planetary-info-copy-summary, .tabs-jump-btn, .species-similarity-index, .species-quad-cell, .bio-empty-next, .btn) {
+  --cut: 6px;
+}
+:where(.fact) {
+  --cut: 7px;
+}
+:where(.species-identity-neon-inner, .ss-sort) {
+  --cut: 8px;
+}
+:where(.payout-hero) {
+  --cut: 9px;
+}
+:where(.bio-empty-wrap) {
+  --cut: 10px;
+}
+/* TR/BL */
+:where(.ui-select__menu, .tab-strip__tab) {
+  --cut: 8px;
+}
+:where(.cockpit-card) {
+  --cut: 9px;
+}
+:where(.exo-data-alerts-popover) {
+  --cut: 10px;
+}
+:where(.cz-head, .modal-panel, .info-panel, .confirm-modal) {
+  --cut: 12px;
+}
+
+/* A containing block for the bands: every chamfered element; one positioned by its own rules keeps that (zero
+   specificity). A static modal put its bands against the page instead. */
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+  .srow-tag, .srow-prog, .btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon,
+  .fold-help-btn, .facts-dss, .land-badge, .price-tag, .tab, .galaxy-map__controls, .ss-link, .ss-hud-link, .ui-select,
+  .cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral, .btn-top-toggle,
+  .planetary-info-copy-summary, .tabs-jump-btn, .species-similarity-index, .species-quad-cell, .bio-empty-next, .btn,
+  .fact, .species-identity-neon-inner, .ss-sort, .payout-hero, .bio-empty-wrap, .ui-select__menu, .tab-strip__tab,
+  .cockpit-card, .exo-data-alerts-popover, .cz-head, .modal-panel, .info-panel, .confirm-modal) {
+  position: relative;
+}
+
+/*
+  Each cut is a band exactly one border-width thick, shaped by a polygon as the element's own clip is, so its outer
+  edge is the clip's edge (the same anti-aliasing) and it meets the straight borders without a seam. The band's colour
+  and style are the element's own border's, whatever the state: the pseudo-element draws it as a border too (a thick
+  one, the band is cut out of it), inheriting the style and colour of the element's top or bottom border - so an
+  element (or a state, or a screen width) without a border gets no band.
+  (The first version rotated a 1px line into each corner; its ends smeared and the diagonal read thicker.)
+*/
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+  .srow-tag, .srow-prog, .btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon,
+  .fold-help-btn, .facts-dss, .land-badge, .price-tag, .tab, .galaxy-map__controls, .ss-link,
+  .ss-hud-link, .ui-select, .cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral,
+  .btn-top-toggle, .planetary-info-copy-summary, .tabs-jump-btn, .species-similarity-index, .species-quad-cell,
+  .bio-empty-next, .btn, .fact, .species-identity-neon-inner, .ss-sort, .payout-hero, .bio-empty-wrap)::before,
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+  .srow-tag, .srow-prog, .btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon,
+  .fold-help-btn, .facts-dss, .land-badge, .price-tag, .tab, .galaxy-map__controls, .ss-link,
+  .ss-hud-link, .ui-select, .cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral,
+  .btn-top-toggle, .planetary-info-copy-summary, .tabs-jump-btn, .species-similarity-index, .species-quad-cell,
+  .bio-empty-next, .btn, .fact, .species-identity-neon-inner, .ss-sort, .payout-hero, .bio-empty-wrap)::after,
+:where(.ui-select__menu, .tab-strip__tab, .cockpit-card, .exo-data-alerts-popover, .cz-head,
+  .modal-panel, .info-panel, .confirm-modal)::before,
+:where(.ui-select__menu, .tab-strip__tab, .cockpit-card, .exo-data-alerts-popover, .cz-head,
+  .modal-panel, .info-panel, .confirm-modal)::after {
+  content: "";
+  position: absolute;
+  width: calc(var(--cut) + 2px);
+  height: 0;
+  border: 0 solid transparent;
+  pointer-events: none;
+}
+/* top-left: the band between the cut (x + y = c) and the line one border-width inside it */
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+  .srow-tag, .srow-prog, .btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon,
+  .fold-help-btn, .facts-dss, .land-badge, .price-tag, .tab, .galaxy-map__controls, .ss-link,
+  .ss-hud-link, .ui-select, .cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral,
+  .btn-top-toggle, .planetary-info-copy-summary, .tabs-jump-btn, .species-similarity-index, .species-quad-cell,
+  .bio-empty-next, .btn, .fact, .species-identity-neon-inner, .ss-sort, .payout-hero, .bio-empty-wrap)::before {
+  left: -1px;
+  top: -1px;
+  border-top-width: calc(var(--cut) + 2px);
+  border-top-style: inherit;
+  border-top-color: inherit;
+  clip-path: polygon(var(--cut) 0, calc(var(--cut) + 1.4142px) 0, 0 calc(var(--cut) + 1.4142px), 0 var(--cut));
+}
+/* bottom-right */
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+  .srow-tag, .srow-prog, .btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon,
+  .fold-help-btn, .facts-dss, .land-badge, .price-tag, .tab, .galaxy-map__controls, .ss-link,
+  .ss-hud-link, .ui-select, .cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral,
+  .btn-top-toggle, .planetary-info-copy-summary, .tabs-jump-btn, .species-similarity-index, .species-quad-cell,
+  .bio-empty-next, .btn, .fact, .species-identity-neon-inner, .ss-sort, .payout-hero, .bio-empty-wrap)::after {
+  right: -1px;
+  bottom: -1px;
+  border-bottom-width: calc(var(--cut) + 2px);
+  border-bottom-style: inherit;
+  border-bottom-color: inherit;
+  clip-path: polygon(
+    100% calc(100% - var(--cut)),
+    100% calc(100% - var(--cut) - 1.4142px),
+    calc(100% - var(--cut) - 1.4142px) 100%,
+    calc(100% - var(--cut)) 100%
+  );
+}
+/* top-right */
+:where(.ui-select__menu, .tab-strip__tab, .cockpit-card, .exo-data-alerts-popover, .cz-head,
+  .modal-panel, .info-panel, .confirm-modal)::before {
+  right: -1px;
+  top: -1px;
+  border-top-width: calc(var(--cut) + 2px);
+  border-top-style: inherit;
+  border-top-color: inherit;
+  clip-path: polygon(
+    calc(100% - var(--cut)) 0,
+    calc(100% - var(--cut) - 1.4142px) 0,
+    100% calc(var(--cut) + 1.4142px),
+    100% var(--cut)
+  );
+}
+/* bottom-left */
+:where(.ui-select__menu, .tab-strip__tab, .cockpit-card, .exo-data-alerts-popover, .cz-head,
+  .modal-panel, .info-panel, .confirm-modal)::after {
+  left: -1px;
+  bottom: -1px;
+  border-bottom-width: calc(var(--cut) + 2px);
+  border-bottom-style: inherit;
+  border-bottom-color: inherit;
+  clip-path: polygon(
+    0 calc(100% - var(--cut)),
+    0 calc(100% - var(--cut) - 1.4142px),
+    calc(var(--cut) + 1.4142px) 100%,
+    var(--cut) 100%
+  );
+}
+
+/* ---- keyboard focus: the outline drew outside the shape, where the clip-path cut it away entirely ---- */
+:where(.btn-ency-exomastery, .btn-ency-found, .fdb-chip, .my-exo-nav-icon, .fold-help-btn, .tab, .ui-select,
+  .cz-chip, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral, .btn-top-toggle, .planetary-info-copy-summary,
+  .tabs-jump-btn, .btn, .tab-strip__tab, .ss-link, .ss-hud-link, .ss-sort):focus-visible {
+  outline: none;
+  border-color: var(--accent-bright, var(--accent));
+  box-shadow: inset 0 0 0 1px var(--accent-bright, var(--accent));
+}
+
+/* ---- inputs: the two cut edges as background gradients (an <input> has no ::before) ---- */
+:where(input[type="search"], input[type="text"], .cz-input) {
+  --cut: 5px;
+  --edge-line: linear-gradient(
+    135deg,
+    transparent calc(var(--cut) * 0.7071),
+    var(--edge, var(--accent-dim)) calc(var(--cut) * 0.7071),
+    var(--edge, var(--accent-dim)) calc(var(--cut) * 0.7071 + 1px),
+    transparent calc(var(--cut) * 0.7071 + 1px)
+  );
+  --edge-line-end: linear-gradient(
+    -45deg,
+    transparent calc(var(--cut) * 0.7071),
+    var(--edge, var(--accent-dim)) calc(var(--cut) * 0.7071),
+    var(--edge, var(--accent-dim)) calc(var(--cut) * 0.7071 + 1px),
+    transparent calc(var(--cut) * 0.7071 + 1px)
+  );
+  /* Forced: every text input sets a plain colour with the `background` shorthand, which would reset these layers. No
+     text input has a background image of its own (checked 2026-10-23), so nothing is lost. */
+  background-image: var(--edge-line), var(--edge-line-end) !important;
+  background-size: calc(var(--cut) + 2px) calc(var(--cut) + 2px) !important;
+  background-position: 0 0, 100% 100% !important;
+  background-repeat: no-repeat !important;
+  background-origin: border-box !important;
+}
+:where(.my-exo-search-input) {
+  --edge: var(--accent-a38);
+}
+:where(input[type="search"], input[type="text"], .cz-input):focus {
+  --edge: var(--accent);
+}
+
+/* The window tab's bottom sits on the strip's own line, with no bottom border showing: no band at its bottom-left. */
+.tab-strip__tab::after {
+  content: none;
+}
+
+/*
+  The app bar's menu is a dropdown only below 1,700 px; from there it is a plain row with no frame, and no bands
+  (owner, 2026-10-23: lines in the bar on a wide screen). As a dropdown its frame is not a border but a 1px gradient
+  ring (padding over a 135deg accent gradient), so its bands take the ring's colour at those corners, mid-gradient.
+*/
+@media (max-width: 1699.98px) {
+  .appbar-menu::before,
+  .appbar-menu::after {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 0;
+    border: 0 solid var(--accent-dim);
+    pointer-events: none;
+  }
+  .appbar-menu::before {
+    right: 0;
+    top: 0;
+    border-top-width: 12px;
+    clip-path: polygon(calc(100% - 10px) 0, calc(100% - 11.4142px) 0, 100% 11.4142px, 100% 10px);
+  }
+  .appbar-menu::after {
+    left: 0;
+    bottom: 0;
+    border-bottom-width: 12px;
+    clip-path: polygon(0 calc(100% - 10px), 0 calc(100% - 11.4142px), 11.4142px 100%, 10px 100%);
+  }
+}
+

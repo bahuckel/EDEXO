@@ -63,3 +63,4 @@
 @import "./styles/galaxy-3d.css" layer(app);
 @import "./styles/streamer.css" layer(app);
 @import "./styles/tabs.css" layer(app);
+@import "./styles/chamfer.css" layer(app);
