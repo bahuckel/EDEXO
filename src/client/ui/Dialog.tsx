@@ -9,6 +9,7 @@
  * click anywhere in it or on its backdrop stops here, so it never reaches the card or list it opened from.
  */
 import { useId, type ReactNode } from "react";
+import { ModalHead } from "./ModalHead";
 import { useModal } from "./useModal";
 
 export function Dialog({
@@ -17,6 +18,9 @@ export function Dialog({
   className,
   backdropClassName,
   closeTitle,
+  help,
+  helpTitle,
+  tools,
   children,
 }: {
   /** The heading; the dialog is named by it. */
@@ -28,6 +32,11 @@ export function Dialog({
   backdropClassName?: string;
   /** The close button's tooltip. */
   closeTitle?: string;
+  /** What the dialog shows and how to read it, behind a "?" beside the ×. */
+  help?: ReactNode;
+  helpTitle?: string;
+  /** Buttons in the head, left of the "?". */
+  tools?: ReactNode;
   /** The body, usually a `modal-body`. */
   children: ReactNode;
 }) {
@@ -50,18 +59,7 @@ export function Dialog({
         aria-labelledby={titleId}
         tabIndex={-1}
       >
-        <div className="modal-head">
-          <h3 id={titleId}>{title}</h3>
-          <button
-            type="button"
-            className="modal-close"
-            onClick={onClose}
-            aria-label="Close"
-            title={closeTitle}
-          >
-            ×
-          </button>
-        </div>
+        <ModalHead title={title} titleId={titleId} onClose={onClose} closeTitle={closeTitle} help={help} helpTitle={helpTitle} tools={tools} />
         {children}
       </div>
     </div>

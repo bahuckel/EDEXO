@@ -106,6 +106,15 @@ import { LayersMenu } from "./galaxy3d/LayersMenu";
 import { CodexMenu } from "./galaxy3d/CodexMenu";
 import { StatusBar } from "./galaxy3d/StatusBar";
 
+/** The base layers (View menu); a stored copy missing a key, or with a non-boolean, is not used. */
+const BASE_LAYERS = { photo: true, borders: true, labels: true, groups: true, you: true };
+const isBaseLayers = (v: unknown): v is typeof BASE_LAYERS =>
+  !!v && typeof v === "object" && Object.keys(BASE_LAYERS).every((k) => typeof (v as Record<string, unknown>)[k] === "boolean");
+const isColour = (v: unknown): v is Colour => v === 0 || v === 1 || v === 2;
+/** The Brightness slider's range. */
+const isExposure = (v: unknown): v is number => typeof v === "number" && v >= 0.2 && v <= 4;
+const isWaitMinM = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0;
+
 /*
   The constants, the hover card, the side panel's records, why a dot is lit, and the View, Layers and
   Codex drawers and the status bar live in galaxy3d/ since the audit of 2026-10-22 (phase 1: no hook
@@ -124,9 +133,12 @@ export function GalaxyMap3D() {
   const outlines = useRef<RegionOutlines | null>(null);
   const [graphics] = useState<Graphics>(() => detectGraphics());
   const [stats, setStats] = useState<EngineStats | null>(null);
-  const [colour, setColour] = useState<Colour>(0);
-  const [exposure, setExposure] = useState(1.2);
-  const [layers, setLayers] = useState({ photo: true, borders: true, labels: true, groups: true, you: true });
+  // The View menu and the base layers, remembered between opens like the extra layers below (owner, 2026-10-23:
+  // "activated or deactivated layers and other options in the galaxy map should be remembered on close"). Drawers and
+  // the plan list still start closed.
+  const [colour, setColour] = usePersistedState<Colour>("galaxy.view.colour", 0, isColour);
+  const [exposure, setExposure] = usePersistedState("galaxy.view.exposure", 1.2, isExposure);
+  const [layers, setLayers] = usePersistedState("galaxy.layer.base", BASE_LAYERS, isBaseLayers);
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   // The expedition planner (plan 2.5): its scored boxels, the plan's stops and the ordered plan.
@@ -180,7 +192,7 @@ export function GalaxyMap3D() {
   const [codexRegion, setCodexRegion] = useState<string | null>(null);
   const [codexSystems, setCodexSystems] = useState<Map<string, CodexMapSystemDTO>>(new Map());
   const [search, setSearch] = useState<GalaxySearchApplied | null>(null);
-  const [waitMinM, setWaitMinM] = useState(0);
+  const [waitMinM, setWaitMinM] = usePersistedState("galaxy.layer.waitMinM", 0, isWaitMinM);
   const [findText, setFindText] = useState("");
   const [find, setFind] = useState<GalaxyFindDTO | null>(null);
   const [findOpen, setFindOpen] = useState(false);

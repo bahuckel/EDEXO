@@ -99,3 +99,24 @@ export function collectExoDataAlertsFromSnapshot(
   }
   return [...byId.values()];
 }
+
+/**
+ * The alerts' sources and a re-check, set from Options › Exobiology (2026-10-23) and heard by the app bar's envelope,
+ * which keeps its own copy of the switches.
+ */
+export const EXO_ALERT_SOURCES_EVENT = "edexo:exo-alert-sources";
+export const EXO_ALERT_RESCAN_EVENT = "edexo:exo-alert-rescan";
+
+export function setExoAlertSource(kind: "journal" | "feeder", on: boolean): void {
+  try {
+    localStorage.setItem(kind === "journal" ? EXO_ALERT_DETECT_JOURNAL_LS : EXO_ALERT_DETECT_FEEDER_LS, on ? "1" : "0");
+  } catch {
+    /* storage blocked: this window only */
+  }
+  window.dispatchEvent(new CustomEvent(EXO_ALERT_SOURCES_EVENT));
+}
+
+export function requestExoAlertRescan(): void {
+  window.dispatchEvent(new CustomEvent(EXO_ALERT_RESCAN_EVENT));
+}
+

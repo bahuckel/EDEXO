@@ -1253,10 +1253,6 @@ input[type="range"]:focus-visible::-webkit-slider-thumb {
 .modal-panel--session {
   width: min(96vw, 56rem);
 }
-.modal-head .session-copy {
-  margin-left: auto;
-  margin-right: 0.6rem;
-}
 .facts--session {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }

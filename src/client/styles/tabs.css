@@ -179,6 +179,7 @@ html.tab-view {
   animation: none;
 }
 .tab-pane--screen > .modal-backdrop > .modal-panel > .modal-head > .modal-close,
+.tab-pane--screen > .modal-backdrop > .modal-panel > .modal-head > .modal-head__tools > .modal-close,
 .tab-pane--screen > .modal-backdrop > .boxel-screen > .modal-head > .modal-close {
   display: none;
 }

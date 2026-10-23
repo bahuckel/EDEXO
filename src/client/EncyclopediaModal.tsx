@@ -2,6 +2,7 @@ import { isBool, isStr, usePersistedState } from "./usePersistedState";
 import type { EncyclopediaSpeciesRowDTO, FootScannedEntry, SpeciesEntry } from "@shared/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PhotoGallery } from "./PhotoGallery";
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import { SkeletonRows } from "./ui/Skeleton";
 import {
@@ -292,18 +293,14 @@ export function EncyclopediaModal({
         aria-labelledby="encyclopedia-title"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3 id="encyclopedia-title">Encyclopedia</h3>
-          <button
-            type="button"
-            className="modal-close"
-            onClick={onClose}
-            aria-label="Close"
-            title="Close encyclopedia"
-          >
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title="Encyclopedia"
+          titleId="encyclopedia-title"
+          onClose={onClose}
+          closeTitle="Close encyclopedia"
+          helpTitle="What the Encyclopedia shows"
+          help={<EncyclopediaHelp />}
+        />
         <div className="modal-body encyclopedia-body">
           <div className="ency-layout">
             <aside
@@ -494,5 +491,27 @@ export function EncyclopediaModal({
         />
       ) : null}
     </div>
+  );
+}
+
+/** Behind the "?" beside the × (owner, 2026-10-23). */
+function EncyclopediaHelp() {
+  return (
+    <>
+      <p>
+        Every species in the app's own species data, grouped by genus: the conditions it grows in, its value
+        (and five times that on a first footfall), its colours and, where there are enough, charts of the bodies it has been confirmed on.
+      </p>
+      <p>
+        Opened with a body selected, each species is compared with that body: blue conditions match, yellow ones
+        are not known yet, red ones do not match. <strong>Found</strong> lists your own finds of the species from
+        your journals; <strong>Exomastery</strong>, where shown, opens the per-body exomastery data held for it.
+      </p>
+      <p>
+        Search by species or genus, narrow the list with <strong>Filters</strong>, or show only species you
+        have not found yet, species recorded in your current region, or one colour. Each active filter shows as a
+        chip: click it to remove it, or use <strong>Clear all</strong>.
+      </p>
+    </>
   );
 }

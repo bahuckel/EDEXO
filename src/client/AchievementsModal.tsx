@@ -7,6 +7,7 @@
  * rows and in the HUD's Achievement section.
  */
 import { isStrOrNull, usePersistedState } from "./usePersistedState";
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import { useToast } from "./ui/feedback";
 import { LoadingNote } from "./ui/Loading";
@@ -417,12 +418,13 @@ export function AchievementsModal({ onClose }: { onClose: () => void }) {
         aria-labelledby="achievements-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3 id="achievements-title">Achievements</h3>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title="Achievements"
+          titleId="achievements-title"
+          onClose={onClose}
+          helpTitle="What the achievements are"
+          help={<AchievementsHelp />}
+        />
         <div className="modal-body modal-body--achievements">
           {failed ? (
             <p className="dim">The achievements could not be loaded.</p>
@@ -508,5 +510,28 @@ export function AchievementsModal({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Behind the "?" beside the × (owner, 2026-10-23). */
+function AchievementsHelp() {
+  return (
+    <>
+      <p>
+        Your progress on the achievement sets: the galaxy-wide sets, and a card for each region with its own sets.
+        Each set has a bronze, a silver and a gold step, marked on its progress bar.
+      </p>
+      <p>
+        What a set holds comes from EDSM's codex dump per region (the plants, stars and worlds found there) and,
+        for the Sights sets, from the EDAstro points of interest once you have downloaded them. What counts as
+        done comes from your journals only.
+      </p>
+      <p>
+        Type in the search box to filter regions and achievements. Pick a card to open its sets, and a set to see
+        its entries, done and still to find. <strong>Track</strong> one set at a time: a plant set marks its plants
+        on the species rows and in the HUD, and for the other sets the HUD lists what is still to
+        find. <strong>Stop</strong> ends it.
+      </p>
+    </>
   );
 }

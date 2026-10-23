@@ -357,9 +357,25 @@ export function FinderDrawer({
                           >
                             −
                           </button>
-                          <span className="finder-stepper__value" title={v ? `At least ${v}` : "Any"}>
-                            {v ? `≥ ${v}` : "any"}
-                          </span>
+                          {/* Typed as well as stepped (owner, 2026-10-23: "if I want more than 50 bodies, I don't want to
+                              click 49 times"); empty is "any", 255 the most the data holds. */}
+                          <label className="finder-stepper__value" title={v ? `At least ${v}` : "Any"}>
+                            <span aria-hidden="true">{v ? "≥" : ""}</span>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              max={255}
+                              value={v || ""}
+                              placeholder="any"
+                              aria-label={`At least how many ${f.label}`}
+                              onChange={(e) => {
+                                const n = Math.floor(Number(e.target.value));
+                                setFloor(f.key, Number.isFinite(n) ? Math.max(0, Math.min(255, n)) : 0);
+                              }}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </label>
                           <button type="button" aria-label={`More ${f.label}`} onClick={() => setFloor(f.key, v + 1)}>
                             +
                           </button>

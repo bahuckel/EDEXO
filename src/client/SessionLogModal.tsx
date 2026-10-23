@@ -4,6 +4,7 @@
 import { CopySystemButton } from "./CopySystemButton";
 import { fmtCrExact, fmtCrShort, fmtLy } from "@shared/format";
 import { useToast } from "./ui/feedback";
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import type { SessionLogDTO } from "@shared/types";
 import { useState } from "react";
@@ -81,20 +82,23 @@ export function SessionLogModal({ log, onClose }: { log: SessionLogDTO | null; o
         aria-labelledby="session-log-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3 id="session-log-title">Session log</h3>
-          <button
-            type="button"
-            className="btn-top-neutral session-copy"
-            onClick={() => void copy()}
-            disabled={empty}
-          >
-            {copied ? "Copied" : "Copy as Markdown"}
-          </button>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title="Session log"
+          titleId="session-log-title"
+          onClose={onClose}
+          helpTitle="What the session log records"
+          help={<SessionLogHelp />}
+          tools={
+            <button
+              type="button"
+              className="btn-top-neutral session-copy"
+              onClick={() => void copy()}
+              disabled={empty}
+            >
+              {copied ? "Copied" : "Copy as Markdown"}
+            </button>
+          }
+        />
         <div className="modal-body modal-body--session">
           {!log ? (
             <p className="dim">The log starts with the first live journal line after the app boots.</p>
@@ -213,5 +217,26 @@ export function SessionLogModal({ log, onClose }: { log: SessionLogDTO | null; o
         </div>
       </div>
     </div>
+  );
+}
+
+/** Behind the "?" beside the × (owner, 2026-10-23). */
+function SessionLogHelp() {
+  return (
+    <>
+      <p>
+        What happened since the app started, from the live journal lines only: systems jumped to, bodies landed
+        on, species analysed, first footfalls and organic data sold. Nothing is read back from older journals, and
+        the log starts again when the app restarts.
+      </p>
+      <p>
+        A species counts once its third scan (Analyse) is logged. Its value is the app's price-list value, five
+        times that on a body where you have first footfall. <strong>Sold</strong> is what the game paid in{" "}
+        <code>SellOrganicData</code>, bonuses included.
+      </p>
+      <p>
+        <strong>Copy as Markdown</strong> puts the whole log on the clipboard, for notes or a stream overlay.
+      </p>
+    </>
   );
 }

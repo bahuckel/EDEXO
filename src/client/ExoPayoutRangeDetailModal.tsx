@@ -1,6 +1,7 @@
 /**
  * The payout range, explained species by species. Split out of BodyPane.tsx (code review D, 2026-09-27).
  */
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import { footfallCertainty, showsFootfallPrice, showsListPrice } from "@shared/footfallValue";
 import type { ExoPayoutRangeDTO } from "@shared/types";
@@ -58,12 +59,13 @@ export function ExoPayoutRangeDetailModal({
         aria-labelledby="exo-payout-detail-title"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3 id="exo-payout-detail-title">Organic Sell Range: {bodyTabLabel}</h3>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title={`Organic Sell Range: ${bodyTabLabel}`}
+          titleId="exo-payout-detail-title"
+          onClose={onClose}
+          helpTitle="What the sell range is"
+          help={<PayoutRangeHelp />}
+        />
         <div className="modal-body exo-payout-detail-body">
           <section className="exo-payout-detail-section">
             <h4>How this range is calculated</h4>
@@ -204,5 +206,26 @@ export function ExoPayoutRangeDetailModal({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Behind the "?" beside the × (owner, 2026-10-23). */
+function PayoutRangeHelp() {
+  return (
+    <>
+      <p>
+        The lowest and highest the biology on this body could sell for, before you have sampled it. The body has
+        a number of biological slots (its biological signal count in the journal, or the number of genera a DSS
+        found); the low total fills them with the
+        cheapest species that could be there, the high total with the priciest.
+      </p>
+      <p>
+        The candidates are the same species the Candidate species list shows for this body, and each price is
+        the species' row in the app's price list. <strong>List / sell (×1)</strong> is the normal payout;{" "}
+        <strong>Footfall (×5)</strong> is what it pays when you are first to set foot on the body. Once the journal
+        shows whether the body has been walked, the column that does not apply is greyed.
+      </p>
+      <p>The list under "How this range is calculated" gives this body's own figures for each step.</p>
+    </>
   );
 }

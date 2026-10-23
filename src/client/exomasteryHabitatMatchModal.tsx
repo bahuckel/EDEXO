@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 
 import { ExomasteryHabitatDetailInner } from "./exomasteryHabitatDetailInner";
 import { useToast } from "./ui/feedback";
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 
 export function ExomasteryHabitatMatchModal({
@@ -43,7 +44,6 @@ export function ExomasteryHabitatMatchModal({
     }
   };
 
-
   const exportHref =
     variant === "profile" && exportBasename && genusDataDir
       ? `/api/exomastery-feeder-json/${encodeURIComponent(genusDataDir)}/${encodeURIComponent(exportBasename)}`
@@ -60,12 +60,13 @@ export function ExomasteryHabitatMatchModal({
         aria-labelledby="exomastery-detail-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3 id="exomastery-detail-title">{title}</h3>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title={title}
+          titleId="exomastery-detail-title"
+          onClose={onClose}
+          helpTitle={variant === "journal" ? "What this scan detail shows" : "What the habitat match shows"}
+          help={<HabitatMatchHelp variant={variant} />}
+        />
 
         <div className="exomastery-habitat-body encyclopedia-exomastery-body">
           <ExomasteryHabitatDetailInner
@@ -119,5 +120,47 @@ export function ExomasteryHabitatMatchModal({
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** Behind the "?" beside the × (owner, 2026-10-23). */
+function HabitatMatchHelp({ variant }: { variant: "profile" | "journal" }) {
+  const reload = (
+    <p>
+      <strong>Force re-compare</strong> re-reads the feeder profiles from disk and rebuilds the merge with your
+      journal, for when the data changed while the app was open.
+    </p>
+  );
+  if (variant === "journal") {
+    return (
+      <>
+        <p>
+          The fields of this body's scan as merged from your journal (FSS and DSS): climate, atmosphere gases,
+          crust, the body itself, its surface and its orbit. Nothing is compared here; it is the body's own data,
+          with no species profile beside it.
+        </p>
+        <p>A field showing — was not in the scans your journal holds for this body.</p>
+        {reload}
+      </>
+    );
+  }
+  return (
+    <>
+      <p>
+        How this body sits against the species' exomastery profile, field by field. Each tile shows the profile's
+        most common value (the mode) above this body's own value from your journal scans; the colour says how far
+        apart they are.
+      </p>
+      <p>
+        The profile is built by the data feeder from EDSM sample data: the bodies the species has been found on.
+        Click a typical value to see its spread (min to max, with the peak; dashed is this body when it is in
+        range). Spawn consistency, where shown, is how tightly the profile's bodies cluster on one value, field by
+        field.
+      </p>
+      <p>
+        <strong>Download exomastery JSON</strong> saves the species' feeder profile file.
+      </p>
+      {reload}
+    </>
   );
 }

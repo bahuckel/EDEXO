@@ -599,8 +599,34 @@
 .snapshot-btn.is-done {
   color: var(--ok, #7be07b);
 }
-.modal-head .system-map-snapshot {
+/* ModalHead (ui/ModalHead.tsx): tools, then the "?", then the ×, together at the head's right end. */
+.modal-head__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   margin-left: auto;
+}
+.modal-head__tools .fold-help-btn {
+  order: 1;
+  margin-left: 0;
+}
+.modal-head__tools .modal-close {
+  order: 2;
+}
+/* The explanation behind the "?": under the head, as a fold's help opens under its head. */
+.modal-help {
+  margin: 0.6rem 0.75rem 0;
+  padding: 0.55rem 0.8rem 0.4rem;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--text-dim);
+  border: 1px solid var(--accent-a22);
+  border-left: 3px solid var(--accent);
+  background: var(--accent-a06);
+  animation: pane-in 220ms var(--fold-ease, ease);
+}
+.modal-help p {
+  margin: 0 0 0.45rem;
 }
 
 /* ---- touch targets (plan 3.4b) -------------------------------------------

@@ -4,6 +4,7 @@
 import { FeederStatusPanel } from "./FeederStatusPanel";
 import type { SpanshRouteSummaryDTO } from "./bodyHelpers";
 import { useToast } from "./ui/feedback";
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import type { FeederStatusDTO } from "@shared/types";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -147,20 +148,45 @@ export function FeederModal({
         aria-labelledby="feeder-modal-title"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3 id="feeder-modal-title">Data feeder</h3>
-          <button type="button" className="feeder-refresh btn-top-toggle" onClick={onRefresh}>
-            Refresh
-          </button>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title="Data feeder"
+          titleId="feeder-modal-title"
+          onClose={onClose}
+          helpTitle="What the data feeder is"
+          help={<FeederHelp />}
+          tools={
+            <button type="button" className="feeder-refresh btn-top-toggle" onClick={onRefresh}>
+              Refresh
+            </button>
+          }
+        />
         <div className="modal-body">
           <FeederStatusPanel status={status} />
           <FeederRouteImport />
         </div>
       </div>
     </div>
+  );
+}
+
+/** Behind the "?" beside the × (owner, 2026-10-23). */
+function FeederHelp() {
+  return (
+    <>
+      <p>
+        The state of the data feeder on this machine. The feeder builds the habitat profiles the app ranks
+        candidate species with, from a corpus of EDSM sample data; this pop-up reports what it has produced and
+        whether any installed profile is behind the corpus.
+      </p>
+      <p>
+        The figures are read when the pop-up opens. The feeder itself runs from a terminal (
+        <code>npm run feeder -- run</code>), so press <strong>Refresh</strong> after a run to see the new state.
+      </p>
+      <p>
+        A Spansh exobiology route export (JSON preferred, or CSV) can be given to the corpus here. The app reads
+        it, summarises what is in it and queues it; <code>npm run feeder -- import</code> then adds it to the
+        corpus.
+      </p>
+    </>
   );
 }

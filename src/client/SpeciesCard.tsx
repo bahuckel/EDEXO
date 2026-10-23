@@ -5,6 +5,7 @@ import { achievementMarkTitle, codexFirstTitle, codexMarkTitle, rareColourOf, ra
 import { STREAMER_MODE } from "./streamerMode";
 import { speciesPhotoVariant } from "./speciesPhotoVariant";
 import { fmtCrExact, fmtCrShort } from "@shared/format";
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import { useFootfallCertainty } from "./footfallContext";
 import { settledMultiplier } from "@shared/footfallValue";
@@ -761,19 +762,14 @@ export const SpeciesCard = memo(function SpeciesCard({
                 aria-labelledby={`other-match-${e.id}`}
                 onClick={(ev) => ev.stopPropagation()}
               >
-                <div className="modal-head">
-                  <h3 id={`other-match-${e.id}`} className="other-matching-details-modal-title">
-                    Other matching details — {e.displayName}
-                  </h3>
-                  <button
-                    type="button"
-                    className="modal-close"
-                    onClick={() => setOtherMatchModalOpen(false)}
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-                </div>
+                <ModalHead
+                  title={`Other matching details — ${e.displayName}`}
+                  titleId={`other-match-${e.id}`}
+                  titleClassName="other-matching-details-modal-title"
+                  onClose={() => setOtherMatchModalOpen(false)}
+                  helpTitle="What these details show"
+                  help={<OtherMatchHelp />}
+                />
                 <div className="modal-body other-matching-details-modal-body">
                   <OtherMatchDetailCardsGrid cards={otherDetailCards} />
                 </div>
@@ -798,3 +794,21 @@ export const SpeciesCard = memo(function SpeciesCard({
     </article>
   );
 });
+
+/** Behind the "?" beside the × of Other matching details (owner, 2026-10-23). */
+function OtherMatchHelp() {
+  return (
+    <>
+      <p>
+        This body set against the species' exomastery profile, one field per tile: the profile's most common
+        value (or, for the host star, the most common star among the profile's bodies) above this body's own
+        value from your journal scans.
+      </p>
+      <p>
+        The profile is built by the data feeder from EDSM sample data. The tile's colour says how far this body
+        is from the typical value; hover a tile for the full reading. Tiles marked Context are the match's own
+        notes: a gate it checked, or where an imported reading came from.
+      </p>
+    </>
+  );
+}

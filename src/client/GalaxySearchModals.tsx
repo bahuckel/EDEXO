@@ -3,6 +3,7 @@
  */
 import { CopySystemButton } from "./CopySystemButton";
 import { cr, ly } from "./galaxySearchShared";
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import type { GalaxyBodyScanDTO, GalaxyValueHitDTO } from "@shared/types";
 import type { ReactNode } from "react";
@@ -39,14 +40,13 @@ export function GalaxyHitsModal({
         aria-labelledby="gsx-hits-title"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3 id="gsx-hits-title">
-            {hits.length} system{hits.length === 1 ? "" : "s"}, nearest first
-          </h3>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title={`${hits.length} system${hits.length === 1 ? "" : "s"}, nearest first`}
+          titleId="gsx-hits-title"
+          onClose={onClose}
+          helpTitle="What this list shows"
+          help={<RecordedHelp />}
+        />
         <div className="fdb-scroll gsx-hits-scroll">{children}</div>
       </div>
     </div>
@@ -73,17 +73,20 @@ export function GalaxyPossibleModal({ result, onClose }: { result: GalaxyBodySca
         aria-labelledby="gsx-possible-title"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3 id="gsx-possible-title">
-            {bodies} bod{bodies === 1 ? "y" : "ies"} in {result.hits.length} system
-            {result.hits.length === 1 ? "" : "s"}
-            {/* Never "nearest first" over a partial walk — see the summary row for why. */}
-            {result.truncated ? ", nearest in the part searched" : ", nearest first"}
-          </h3>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title={
+            <>
+              {bodies} bod{bodies === 1 ? "y" : "ies"} in {result.hits.length} system
+              {result.hits.length === 1 ? "" : "s"}
+              {/* Never "nearest first" over a partial walk — see the summary row for why. */}
+              {result.truncated ? ", nearest in the part searched" : ", nearest first"}
+            </>
+          }
+          titleId="gsx-possible-title"
+          onClose={onClose}
+          helpTitle="What this list shows"
+          help={<PossibleHelp />}
+        />
         <div className="fdb-scroll gsx-hits-scroll">
           {/*
             Said once, at the top of the list, rather than beside every row. Every row here is the
@@ -161,5 +164,49 @@ export function GalaxyPossibleModal({ result, onClose }: { result: GalaxyBodySca
         </div>
       </div>
     </div>
+  );
+}
+
+/** Behind the "?" beside the × of the recorded list (owner, 2026-10-23). */
+function RecordedHelp() {
+  return (
+    <>
+      <p>
+        Systems where what you searched for has been recorded, nearest to you first. Every row is a sighting
+        somebody logged, not a prediction.
+      </p>
+      <p>
+        The species come from EDAstro's codex and the body counts from Spansh's export.{" "}
+        <strong>Evidence</strong> says how much is known: a species logged on
+        foot, a genus from a probe-mapped body, or only an FSS signal count. Hover it for the detail.
+      </p>
+      <p>
+        <strong>System worth</strong> adds up every species known there at the price-list value, then the same
+        at five times for a first footfall. Nothing here can say whether the bodies have been walked, so both are
+        shown. The icon beside a name copies the system.
+      </p>
+    </>
+  );
+}
+
+/** Behind the "?" beside the × of the predicted list (owner, 2026-10-23). */
+function PossibleHelp() {
+  return (
+    <>
+      <p>
+        Bodies in the region you searched whose conditions suit the species, nearest to you first. They pass the
+        same gates the app applies when you are in the system; nobody has confirmed anything on them.
+      </p>
+      <p>
+        The bodies come from the galaxy body file on this machine. <strong>Conditions</strong> lists the planet
+        class, atmosphere, temperature, gravity and star, and how often bodies with that gravity carry biology
+        where known. <strong>Signals</strong> is the FSS biological signal count; <strong>Could be</strong> the
+        species that pass, priciest first; <strong>At 5×</strong> the priciest one's first-footfall value.
+      </p>
+      <p>
+        "probed" means somebody has mapped the body with probes, "walked" that somebody has logged a species in
+        the system. The icon beside a name copies the system.
+      </p>
+    </>
   );
 }

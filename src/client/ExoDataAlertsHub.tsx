@@ -3,11 +3,13 @@
  */
 import { useToast } from "./ui/feedback";
 import { Popover } from "./ui/Popover";
-import { useCallback, useMemo, useState, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, ReactNode } from "react";
 import type { ExoDataAlertDTO } from "@shared/types";
 import {
   EXO_ALERT_DETECT_FEEDER_LS,
   EXO_ALERT_DETECT_JOURNAL_LS,
+  EXO_ALERT_RESCAN_EVENT,
+  EXO_ALERT_SOURCES_EVENT,
   EXO_DATA_ALERT_DISMISS_LS,
   applyExoDataScanSourceClear,
   collectExoDataAlertsFromSnapshot,
@@ -15,7 +17,7 @@ import {
   readExoAlertDismissals,
   writeExoAlertAckIds,
 } from "./exoAlertsStore";
-import { readLsBool, writeLsBool } from "./lsPrefs";
+import { readLsBool } from "./lsPrefs";
 import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
 
 const ALERT_FIELDS = ["bodies", "exoOverlayFocusBody", "sharedExomastery", "journalBoot"] as const;
@@ -32,7 +34,6 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
   const [detectFeeder, setDetectFeeder] = useState(() => readLsBool(EXO_ALERT_DETECT_FEEDER_LS, true));
   const [dismissed, setDismissed] = useState(() => readExoAlertDismissals());
   const [ackEpoch, setAckEpoch] = useState(0);
-  const [scanBusy, setScanBusy] = useState(false);
 
   // `ackEpoch` is the re-read trigger: the ids live in localStorage, and bumping it re-reads them.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,7 +84,6 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
   const runScan = useCallback(async () => {
     if (snap.journalBoot) return;
     if (!detectJournal && !detectFeeder) return;
-    setScanBusy(true);
     try {
       applyExoDataScanSourceClear(detectJournal, detectFeeder);
       setDismissed(readExoAlertDismissals());
@@ -101,10 +101,23 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Scan failed.");
-    } finally {
-      setScanBusy(false);
     }
   }, [detectJournal, detectFeeder, snap.journalBoot, toast]);
+
+  // The switches and "Show dismissed again" live in Options › Exobiology now (2026-10-23).
+  useEffect(() => {
+    const sources = () => {
+      setDetectJournal(readLsBool(EXO_ALERT_DETECT_JOURNAL_LS, true));
+      setDetectFeeder(readLsBool(EXO_ALERT_DETECT_FEEDER_LS, true));
+    };
+    const rescan = () => void runScan();
+    window.addEventListener(EXO_ALERT_SOURCES_EVENT, sources);
+    window.addEventListener(EXO_ALERT_RESCAN_EVENT, rescan);
+    return () => {
+      window.removeEventListener(EXO_ALERT_SOURCES_EVENT, sources);
+      window.removeEventListener(EXO_ALERT_RESCAN_EVENT, rescan);
+    };
+  }, [runScan]);
 
   const fix = useCallback(
     async (a: ExoDataAlertDTO) => {
@@ -166,7 +179,7 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
   } else if (!detectJournal && !detectFeeder) {
     panelBody = (
       <p className="dim tiny">
-        Turn on <strong>Journal</strong> and/or <strong>Exo-Feeder</strong> to scan for mismatches.
+        Both sources are off: switch them on in Options › Exobiology › Codex consistency alerts.
       </p>
     );
   } else if (visible.length > 0) {
@@ -208,12 +221,15 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
   } else if (collected.length > 0) {
     panelBody = (
       <p className="dim tiny">
-        No alerts for enabled sources — turn on Journal or Exo-Feeder to see hidden items.
+        No alerts for the sources switched on in Options › Exobiology.
       </p>
     );
   } else {
     panelBody = <p className="dim tiny">No mismatches detected for loaded bodies.</p>;
   }
+
+  // Hidden until there is something to show (owner, 2026-10-23); open stays open until closed.
+  if (!visible.length && !open) return null;
 
   return (
     <div className="exo-data-alerts-header-wrap">
@@ -268,45 +284,6 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
           </button>
         }
       >
-        <div className="exo-data-alerts-popover__detect">
-          <span className="exo-data-alerts-popover__detect-label">Detect from:</span>
-          <button
-            type="button"
-            className={`btn-top-toggle exo-data-alerts-source-toggle${detectJournal ? " btn-top-toggle--on" : ""}`}
-            aria-pressed={detectJournal}
-            onClick={() => {
-              const v = !detectJournal;
-              setDetectJournal(v);
-              writeLsBool(EXO_ALERT_DETECT_JOURNAL_LS, v);
-            }}
-          >
-            Journal
-          </button>
-          <button
-            type="button"
-            className={`btn-top-toggle exo-data-alerts-source-toggle${detectFeeder ? " btn-top-toggle--on" : ""}`}
-            aria-pressed={detectFeeder}
-            onClick={() => {
-              const v = !detectFeeder;
-              setDetectFeeder(v);
-              writeLsBool(EXO_ALERT_DETECT_FEEDER_LS, v);
-            }}
-          >
-            Exo-Feeder
-          </button>
-          <button
-            type="button"
-            className="exo-data-alerts-scan-btn"
-            disabled={scanBusy || (!detectJournal && !detectFeeder) || snap.journalBoot != null}
-            title={
-              "Re-check: clears dismissals for the selected sources so those alerts show again. " +
-              "With Exo-Feeder on, reloads species/exomastery data from disk after journal-side refresh (journal first, then feeder reload)."
-            }
-            onClick={() => void runScan()}
-          >
-            {scanBusy ? "…" : "Scan"}
-          </button>
-        </div>
         {panelBody}
       </Popover>
       {/* Beside the button, not in it: its cut corner (clip-path) clipped the number (owner, 2026-10-11). */}

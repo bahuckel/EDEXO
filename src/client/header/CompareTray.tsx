@@ -3,7 +3,7 @@
  * the route and fuel, and the next boxel. Moved out of HeaderBar.tsx (audit 2026-10-22), with the route
  * card's distance/refuel switch, which only the tray shows.
  */
-import { InfoPopover, Tooltip } from "../ui/Tooltip";
+import { Tooltip } from "../ui/Tooltip";
 import { NextBoxelCard } from "../NextBoxelCard";
 import { fmtCrExact, fmtCrShort, fmtLy } from "@shared/format";
 import { useEffect, useState, type ReactNode } from "react";
@@ -50,35 +50,6 @@ export function CompareTray({
   onToggleScanData: () => void;
   onOpenBreakdown: () => void;
 }) {
-  /**
-   * This was a ~700-character `title` attribute — the longest and most useful explanation in the
-   * app, and the least reachable: native tooltips truncate, never wrap, and never appear for
-   * keyboard or touch. It now lives behind an ⓘ next to the value.
-   */
-  const dataValueHelp = (
-    <>
-      <p>
-        Typical UC value for unsold exobiology in your journal: each completed species on a body (two{" "}
-        <code>ScanOrganic</code> Sample lines plus one Analyse, or any Analyse that completes the set), priced
-        from <code>price-list.json</code>.
-      </p>
-      <p>
-        On a first-footfall body the game pays <strong>5×</strong> the listed value (1× normal plus a 4×
-        first-footfall bonus, shown separately in-game). That qualifies when a detailed
-        <code> Scan</code> listed <code>WasFootfalled: false</code> for the body and you later disembarked on
-        it (OnPlanet, not OnStation), or the journal set <code>firstfootfall</code>
-        on Disembark.
-      </p>
-      <p>Selling organic data — or dying — clears unsold samples in the journal replay.</p>
-      {scanDataOn ? (
-        <p>
-          This total also includes an approximate UC value for merged FSS/DSS exploration scans from the
-          journal, using <code>Scan</code> <code>WasDiscovered</code> / <code>WasMapped</code> where present.
-        </p>
-      ) : null}
-      <p className="dim">Click the value itself for a per-sample breakdown.</p>
-    </>
-  );
   const [routeHeaderMetricMode, setRouteHeaderMetricMode] = useState<RouteHeaderMetricMode>(() =>
     readRouteHeaderMetricMode(),
   );
@@ -133,9 +104,6 @@ export function CompareTray({
           </span>
         ) : null}
       </button>
-      <InfoPopover title="How “Data value” is calculated" label="How data value is calculated">
-        {dataValueHelp}
-      </InfoPopover>
       <div className="header-dscan-cluster">
         <div className="header-dscan-pill">
           {snap.dScanBodies ? (

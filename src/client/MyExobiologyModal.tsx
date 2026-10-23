@@ -16,6 +16,7 @@ import {
 import { fuzzyRankAny } from "./fuzzyMatch";
 import { ScrollArea } from "./ui/ScrollArea";
 import { InfoPopover } from "./ui/Tooltip";
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import { LoadingNote } from "./ui/Loading";
 import type { DiscoveriesDTO, FootScannedEntry } from "@shared/types";
@@ -235,53 +236,58 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
         aria-labelledby="my-exo-title"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3 id="my-exo-title">My discoveries</h3>
-          <div className="disc-tabs" role="tablist" aria-label="What to show" onKeyDown={(ev) => tabListKeyDown(ev, { follow: true })}>
-            {(
-              [
-                ["species", "Exobiology"],
-                ["systems", "Systems"],
-                ["bodies", "Bodies"],
-                ["stars", "Stars"],
-              ] as const
-            ).map(([k, label]) => (
-              <button
-                key={k}
-                type="button"
-                role="tab"
-                aria-selected={view === k}
-                tabIndex={view === k ? 0 : -1}
-                className={`disc-tab${view === k ? " disc-tab--on" : ""}`}
-                onClick={() => setView(k)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {/* List by default everywhere; cards on request (owner, 2026-09-25). */}
-          <div className="disc-layout" role="group" aria-label="View">
-            {(
-              [
-                ["list", "List"],
-                ["cards", "Cards"],
-              ] as const
-            ).map(([k, label]) => (
-              <button
-                key={k}
-                type="button"
-                aria-pressed={layout === k}
-                className={`disc-layout__btn${layout === k ? " disc-layout__btn--on" : ""}`}
-                onClick={() => setLayout(k)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title="My discoveries"
+          titleId="my-exo-title"
+          onClose={onClose}
+          helpTitle="What My discoveries shows"
+          help={<MyDiscoveriesHelp />}
+          tools={
+            <>
+              <div className="disc-tabs" role="tablist" aria-label="What to show" onKeyDown={(ev) => tabListKeyDown(ev, { follow: true })}>
+                {(
+                  [
+                    ["species", "Exobiology"],
+                    ["systems", "Systems"],
+                    ["bodies", "Bodies"],
+                    ["stars", "Stars"],
+                  ] as const
+                ).map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="tab"
+                    aria-selected={view === k}
+                    tabIndex={view === k ? 0 : -1}
+                    className={`disc-tab${view === k ? " disc-tab--on" : ""}`}
+                    onClick={() => setView(k)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {/* List by default everywhere; cards on request (owner, 2026-09-25). */}
+              <div className="disc-layout" role="group" aria-label="View">
+                {(
+                  [
+                    ["list", "List"],
+                    ["cards", "Cards"],
+                  ] as const
+                ).map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={layout === k}
+                    className={`disc-layout__btn${layout === k ? " disc-layout__btn--on" : ""}`}
+                    onClick={() => setLayout(k)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          }
+        />
         <div className="modal-body modal-body--my-exo">
           {view !== "species" ? (
             discoveriesError ? (
@@ -446,3 +452,23 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
     </div>
   );
 });
+
+/** Behind the "?" beside the × (owner, 2026-10-23). */
+function MyDiscoveriesHelp() {
+  return (
+    <>
+      <p>
+        Everything you have scanned, from your own journals on this machine. <strong>Exobiology</strong> is
+        every species you have confirmed on foot: a <code>ScanOrganic</code> Sample or Analyse paired with the
+        detailed scan of the body it happened on. <strong>Systems</strong>, <strong>Bodies</strong> and{" "}
+        <strong>Stars</strong> are every system, body and star your journals hold.
+      </p>
+      <p>
+        Search to narrow a tab, and click a column heading to sort by it. Long lists show their first rows; narrow
+        the search to reach the rest; <strong>Export CSV</strong> on the Exobiology list saves every row.{" "}
+        <strong>List</strong> and <strong>Cards</strong> switch the layout, and the
+        last tab and layout are remembered.
+      </p>
+    </>
+  );
+}

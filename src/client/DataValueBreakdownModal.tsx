@@ -3,6 +3,7 @@
  */
 import { CopySystemButton } from "./CopySystemButton";
 import { speciesPhotoVariant } from "./speciesPhotoVariant";
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import type { OrganicPendingLineItem } from "@shared/types";
 import { fmtCrExact } from "@shared/format";
@@ -61,12 +62,12 @@ export function DataValueBreakdownModal({
         aria-modal="true"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3>Unsold data value</h3>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title="Unsold data value"
+          onClose={onClose}
+          helpTitle="How the data value is calculated"
+          help={<DataValueHelp withScans={includeExplorationScanDataInDataValue} />}
+        />
         <div className="modal-body modal-body--data-value">
           {/*
             The three things worth selling, on three lines, before the per-sample list.
@@ -231,3 +232,34 @@ export function DataValueBreakdownModal({
     </div>
   );
 }
+
+/**
+ * How the value is made up. It sat behind an "i" beside the header's Data value (and before that in a ~700-character
+ * tooltip); it lives here, behind the "?" beside the × (owner, 2026-10-23).
+ */
+function DataValueHelp({ withScans }: { withScans: boolean }) {
+  return (
+    <>
+      <p>
+        Typical UC value for unsold exobiology in your journal: each completed species on a body (two{" "}
+        <code>ScanOrganic</code> Sample lines plus one Analyse, or any Analyse that completes the set), priced
+        from <code>price-list.json</code>.
+      </p>
+      <p>
+        On a first-footfall body the game pays <strong>5×</strong> the listed value (1× normal plus a 4×
+        first-footfall bonus, shown separately in-game). That qualifies when a detailed
+        <code> Scan</code> listed <code>WasFootfalled: false</code> for the body and you later disembarked on
+        it (OnPlanet, not OnStation), or the journal set <code>firstfootfall</code>
+        on Disembark.
+      </p>
+      <p>Selling organic data — or dying — clears unsold samples in the journal replay.</p>
+      {withScans ? (
+        <p>
+          This total also includes an approximate UC value for merged FSS/DSS exploration scans from the
+          journal, using <code>Scan</code> <code>WasDiscovered</code> / <code>WasMapped</code> where present.
+        </p>
+      ) : null}
+    </>
+  );
+}
+

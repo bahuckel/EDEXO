@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
 import { DetailBody } from "./PlanetQuickFactsPopup";
 import { recordMarksByBodyId } from "./noticesClient";
+import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import {
   computeSystemMapLayout,
@@ -372,12 +373,12 @@ export const SystemMapModal = memoOnSnapSlice(SYSTEM_MAP_FIELDS, function System
           aria-modal="true"
           onClick={(ev) => ev.stopPropagation()}
         >
-          <div className="modal-head">
-            <h3>{mapHeading}</h3>
-            <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-              ×
-            </button>
-          </div>
+          <ModalHead
+            title={mapHeading}
+            onClose={onClose}
+            helpTitle="What the system map shows"
+            help={<SystemMapHelp />}
+          />
           <div className="modal-body">
             {!map ? (
               <div
@@ -413,13 +414,13 @@ export const SystemMapModal = memoOnSnapSlice(SYSTEM_MAP_FIELDS, function System
         onClick={(ev) => ev.stopPropagation()}
         onKeyDown={onKeyDown}
       >
-        <div className="modal-head">
-          <h3>{mapHeading}</h3>
-          <SnapshotButton what="system-map" className="system-map-snapshot" prepare={prepareSnapshot} />
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title={mapHeading}
+          onClose={onClose}
+          helpTitle="What the system map shows"
+          help={<SystemMapHelp />}
+          tools={<SnapshotButton what="system-map" className="system-map-snapshot" prepare={prepareSnapshot} />}
+        />
         <div className="system-map-totals card-neon">
           <div>
             <div className="dim small-caps">System FSS Value:</div>
@@ -600,3 +601,27 @@ export const SystemMapModal = memoOnSnapSlice(SYSTEM_MAP_FIELDS, function System
     </div>
   );
 });
+
+/** Behind the "?" beside the × (owner, 2026-10-23). */
+function SystemMapHelp() {
+  return (
+    <>
+      <p>
+        The system drawn from your journal, laid out by what orbits what, with each body's data from the FSS and
+        detailed scans the journal holds. With no scan data for the system yet there is nothing to draw: FSS it
+        first.
+      </p>
+      <p>
+        <strong>System FSS Value</strong> and <strong>System DSS Value</strong> are rough estimates of what the
+        whole system's scans are worth; <strong>Current value</strong> is the unsold exploration data for this
+        system in your journal. Notable bodies are listed above the map: click one to select it.
+      </p>
+      <p>
+        Drag to move the map and use the wheel or <strong>−</strong> / <strong>+</strong> to zoom;{" "}
+        <strong>Fit</strong>, a double-click or <strong>0</strong> shows the whole system again. Click a body, or
+        move between bodies with the arrow keys, to see its data in the side panel. <strong>Biology only</strong>{" "}
+        and <strong>Landable only</strong> dim the other bodies. The Legend explains the colours and marks.
+      </p>
+    </>
+  );
+}

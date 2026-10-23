@@ -2,6 +2,8 @@
  * The options modal and its panels, split out of App.tsx (7.3).
  */
 import { useToast } from "./ui/feedback";
+import { ModalHead } from "./ui/ModalHead";
+import { ExoAlertsSetting } from "./options/ExoAlertsSetting";
 import { useModal } from "./ui/useModal";
 import { InfoPopover } from "./ui/Tooltip";
 import { FoldPanel } from "./ui/Fold";
@@ -269,12 +271,24 @@ export function MapOptionsModal({
         aria-labelledby="options-modal-title"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="modal-head">
-          <h3 id="options-modal-title">Options</h3>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+        <ModalHead
+          title="Options"
+          titleId="options-modal-title"
+          onClose={onClose}
+          helpTitle="About these settings"
+          help={
+            <>
+              <p>
+                The settings of this app, grouped by kind. Each one is a fold that starts closed and remembers being
+                opened; the "?" on a fold explains its settings.
+              </p>
+              <p>
+                They are kept by the app, not this window, so every window and the next start show the same. The
+                install facts at the bottom (Copy diagnostics) are what a bug report needs.
+              </p>
+            </>
+          }
+        />
         <div className="modal-body">
           {/*
             Grouped (owner, 2026-10-04: "less chaotic options everywhere, with hover-on details for each
@@ -376,6 +390,7 @@ export function MapOptionsModal({
                 Exobiology
               </h4>
               <CollectionFocusPanel />
+              <ExoAlertsSetting />
               <ExoMissLogPanel outliers={snap.exoOutliers} />
             </>
           ) : null}
