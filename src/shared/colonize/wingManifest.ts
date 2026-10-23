@@ -13,7 +13,17 @@ export type WingMember = {
   claims: WingCargoClaim[];
 };
 
-const WING_PALETTE = ["#ff7a24", "#5b9bd5", "#7bc96f", "#c77dff", "#ffd166", "#ef476f", "#4ecdc4"] as const;
+/*
+  No green (discuss 15a g, owner 2026-10-23): green means done everywhere in Colonize, so the third colour is amber.
+  A member saved with the old green shows in amber (wingColor).
+*/
+const WING_PALETTE = ["#ff7a24", "#5b9bd5", "#ffc94a", "#c77dff", "#4ecdc4", "#ef476f", "#f49ac1"] as const;
+const OLD_GREEN = "#7bc96f";
+
+/** A member's colour as drawn: the old green became amber. */
+export function wingColor(color: string): string {
+  return color.toLowerCase() === OLD_GREEN ? "#ffc94a" : color;
+}
 
 export function pickWingColor(index: number): string {
   return WING_PALETTE[index % WING_PALETTE.length] ?? "#ff7a24";

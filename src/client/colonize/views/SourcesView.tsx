@@ -1,12 +1,15 @@
 /**
- * Where the cargo comes from: your carriers, trade-party carriers, seller data (Spansh scans, Inara imports),
- * the stations you never want, the markets you have bought at, and forgetting saved sellers.
+ * Where the cargo comes from, in three stacks (R5b, cards mockup P11; group names from discuss 15a): cargo you have
+ * (your carriers, trade-party carriers), where sellers come from (seller data, Inara, markets you docked at), and keep
+ * out / clean up (stations you never want, forgetting saved sellers). Three columns on a wide window, one on a phone,
+ * with no holes under the short panels.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { carrierDisplayName, type CarrierStock } from "../../../shared/colonize/carrierStock";
 import type { ClearBuyDataScope } from "../../../shared/colonize/buyIndexClear";
 import { formatHopLy } from "../../../shared/colonize/systemDistanceLy";
 import { errText, formatPrice, formatTons as t } from "../../../shared/colonize/formatPrice";
+import { formatMarketAge } from "../../../shared/colonize/marketAge";
 import { IDLE_MATERIAL_BUY_SCAN_STATUS } from "../../../shared/colonize/materialBuyScanStatus";
 import {
   addPartyMember,
@@ -26,14 +29,23 @@ import { BTN, BTN_BAD, BTN_GO, BTN_LINK, BTN_WARN, Panel } from "./ui";
 
 export function SourcesView({ m }: { m: ColonizeModel }) {
   return (
-    <div className="cz-grid">
-      <CarriersPanel m={m} />
-      <TradePartyPanel m={m} />
-      <SellerDataPanel m={m} />
-      <InaraPanel m={m} />
-      <BansPanel m={m} />
-      <HistoryPanel m={m} />
-      <ForgetPanel m={m} />
+    <div className="cz-colstacks">
+      <div className="cz-colstack">
+        <div className="cz-colhead">Cargo you have</div>
+        <CarriersPanel m={m} />
+        <TradePartyPanel m={m} />
+      </div>
+      <div className="cz-colstack">
+        <div className="cz-colhead">Where sellers come from</div>
+        <SellerDataPanel m={m} />
+        <InaraPanel m={m} />
+        <HistoryPanel m={m} />
+      </div>
+      <div className="cz-colstack">
+        <div className="cz-colhead">Keep out / clean up</div>
+        <BansPanel m={m} />
+        <ForgetPanel m={m} />
+      </div>
     </div>
   );
 }
@@ -41,6 +53,8 @@ export function SourcesView({ m }: { m: ColonizeModel }) {
 /* ---- your carriers ---------------------------------------------------------------------------------------------- */
 
 function CarriersPanel({ m }: { m: ColonizeModel }) {
+  // What your sites still need, by commodity: a carrier says how much of it its cargo covers.
+  const need = useMemo(() => new Map((m.summary?.rows ?? []).map((r) => [r.id, r.totalTonsNeeded])), [m.summary]);
   return (
     <Panel k="carriers" title="Your carriers" aside={<span className="cz-aside-note">{m.carriers.length || "none"}</span>}>
       <div className="cz-stack">
@@ -48,7 +62,9 @@ function CarriersPanel({ m }: { m: ColonizeModel }) {
         What the journal saw moving on and off them. Switch one on and the plan counts its cargo as already bought.
       </p>
       {m.carriers.length ? (
-        m.carriers.map((c) => <CarrierCard key={c.carrierId} c={c} on={m.haulingCarrierIds.has(c.carrierId)} toggle={() => m.toggleCarrier(c.carrierId)} />)
+        m.carriers.map((c) => (
+          <CarrierCard key={c.carrierId} c={c} on={m.haulingCarrierIds.has(c.carrierId)} toggle={() => m.toggleCarrier(c.carrierId)} need={need} />
+        ))
       ) : (
         <p className="cz-dim" style={{ margin: 0 }}>
           No carrier of yours in the journal yet. The game names your carrier each time you load in, and when you open its
@@ -60,44 +76,64 @@ function CarriersPanel({ m }: { m: ColonizeModel }) {
   );
 }
 
-function CarrierCard({ c, on, toggle }: { c: CarrierStock; on: boolean; toggle: () => void }) {
+function CarrierCard({ c, on, toggle, need }: { c: CarrierStock; on: boolean; toggle: () => void; need: Map<string, number> }) {
+  // What your sites need first, then the rest, each biggest first.
   const lines = Object.entries(c.tonsByCommodity)
     .filter(([, n]) => n > 0)
-    .sort((a, b) => b[1] - a[1]);
+    .sort((a, b) => Number(need.has(b[0])) - Number(need.has(a[0])) || b[1] - a[1]);
   const total = lines.reduce((a, [, n]) => a + n, 0);
+  const covers = lines.reduce((a, [id, n]) => a + Math.min(n, need.get(id) ?? 0), 0);
+  const useful = lines.filter(([id]) => need.has(id)).length;
   return (
-    <div className={`cz-card${on ? " cz-card--on" : ""}`}>
-      <div className="cz-row" style={{ alignItems: "center" }}>
-        <div>
+    <article className={`cz-card cz-stack${on ? " cz-card--on" : ""}`} aria-label={carrierDisplayName(c)}>
+      <div className="cz-cardhead">
+        <div className="min0">
           <b>{carrierDisplayName(c)}</b>
           <div className="cz-small cz-dim">
             {c.callsign}
             {c.kind === "squadron" ? " · squadron carrier" : ""}
           </div>
         </div>
-        <label className="cz-check">
-          <input type="checkbox" checked={on} onChange={toggle} />
-          <span>Use its cargo</span>
-        </label>
+        {/* The plan's on/off button (was a checkbox): on, its cargo counts as already bought. */}
+        <button type="button" className={`btn-top-toggle${on ? " btn-top-toggle--on" : ""}`} aria-pressed={on} onClick={toggle}>
+          Use its cargo
+        </button>
       </div>
-      <div className="cz-small cz-soft" style={{ margin: "6px 0" }}>
-        {c.reportedTons != null ? `${t(c.reportedTons)} of cargo aboard` : `${t(total)} seen moving`}
-        {c.capacityTons ? ` · holds ${t(c.capacityTons)}` : ""}
+      <div className="facts cz-facts3">
+        <div className="fact">
+          <span className="fact-k">{c.reportedTons != null ? "Aboard" : "Seen moving"}</span>
+          <span className="fact-v">{t(c.reportedTons ?? total)}</span>
+        </div>
+        {c.capacityTons ? (
+          <div className="fact">
+            <span className="fact-k">Holds</span>
+            <span className="fact-v">{t(c.capacityTons)}</span>
+          </div>
+        ) : null}
+        <div className={`fact${covers > 0 ? " cz-fact--hot" : ""}`}>
+          <span className="fact-k">Covers</span>
+          <span className="fact-v">{t(covers)}</span>
+        </div>
       </div>
       {lines.length ? (
-        <details className="cz-more">
-          <summary className="cz-more-summary">{lines.length} commodities</summary>
-          <ul className="cz-list cz-num" style={{ marginTop: 6 }}>
-            {lines.map(([id, n]) => (
-              <li key={id}>
-                <span>{c.labels[id] ?? id}</span>
-                <span className="cz-dim">{t(n)}</span>
-              </li>
-            ))}
+        <details className="cz-fold">
+          <summary>
+            {lines.length} commodities{useful ? ` · ${useful} your sites need` : ""}
+          </summary>
+          <ul className="cz-list cz-num">
+            {lines.map(([id, n]) => {
+              const hot = need.has(id);
+              return (
+                <li key={id} className={hot ? "cz-li cz-li--hot" : "cz-li"}>
+                  <span>{hot ? <b>{c.labels[id] ?? id}</b> : <span className="cz-soft">{c.labels[id] ?? id}</span>}</span>
+                  <span className="cz-dim">{t(n)}</span>
+                </li>
+              );
+            })}
           </ul>
         </details>
       ) : null}
-    </div>
+    </article>
   );
 }
 
@@ -177,39 +213,52 @@ function TradePartyPanel({ m }: { m: ColonizeModel }) {
         const c = carriers.get(p.callsign);
         const forUs = c ? ordersForNeeds(c, needIds) : [];
         return (
-          <div key={p.callsign} className="cz-card">
-            <div className="cz-row" style={{ alignItems: "center" }}>
-              <div>
+          <article key={p.callsign} className="cz-card cz-stack" aria-label={p.callsign}>
+            <div className="cz-cardhead">
+              <div className="min0">
                 <b>{p.callsign}</b>
                 {p.note ? <span className="cz-dim"> · {p.note}</span> : null}
                 <div className="cz-small cz-dim">
-                  {!c ? "looking…" : !c.found ? "Spansh has never seen this carrier" : `${c.systemName ?? "somewhere"}${c.systemName ? ` · ${formatHopLy(c.distanceLy)}` : ""}`}
+                  {!c ? "looking…" : !c.found ? "Spansh has never seen this carrier" : (c.systemName ?? "somewhere")}
                 </div>
               </div>
               <button type="button" className={BTN_LINK} onClick={() => save(removePartyMember(members, p.callsign))}>
                 Remove
               </button>
             </div>
-            {forUs.length ? (
-              <ul className="cz-list cz-num" style={{ marginTop: 6 }}>
+            {c?.found && (c.locationAt || c.marketAt) ? (
+              <div className="cz-chiprow">
+                {c.locationAt ? <span className="sys-chip sys-chip--ok">Seen {formatMarketAge(c.locationAt)}</span> : null}
+                {c.marketAt ? <span className="sys-chip">Market {formatMarketAge(c.marketAt)}</span> : null}
+              </div>
+            ) : null}
+            {forUs.length || (c?.found && c.systemName) ? (
+              <div className="cz-mtiles">
+                {c?.found && c.systemName ? (
+                  <div className="fact">
+                    <span className="fact-k">Dist</span>
+                    <span className="fact-v">{formatHopLy(c.distanceLy)}</span>
+                  </div>
+                ) : null}
                 {forUs.map((o) => (
-                  <li key={o.commodityId}>
-                    <span>
-                      <b>{o.label}</b>
+                  <div key={o.commodityId} className="fact">
+                    <span className="fact-k" title={o.label}>
+                      {o.label}
                     </span>
-                    <span className="cz-dim">
+                    <span className="fact-v cz-hi">
                       {t(o.tons)}
-                      {o.price != null ? ` · ${formatPrice(o.price)} cr` : ""}
+                      {o.price != null ? <small> {formatPrice(o.price)} cr</small> : null}
                     </span>
-                  </li>
+                  </div>
                 ))}
-              </ul>
-            ) : c?.found ? (
-              <div className="cz-small cz-dim" style={{ marginTop: 4 }}>
+              </div>
+            ) : null}
+            {!forUs.length && c?.found ? (
+              <div className="cz-small cz-dim">
                 {c.selling.length ? `Sells ${c.selling.length} things, none your sites need.` : "Sells nothing right now."}
               </div>
             ) : null}
-          </div>
+          </article>
         );
       })}
       </div>
@@ -235,14 +284,16 @@ function SellerDataPanel({ m }: { m: ColonizeModel }) {
             : "Not looking right now."}
       </div>
       {s.lastError ? <p className="cz-note cz-note--warn">{s.lastError}</p> : null}
-      <label className="cz-check">
-        <input
-          type="checkbox"
-          checked={ps.liveSpanshScans}
-          onChange={(e) => m.setPlannerSettings({ ...ps, liveSpanshScans: e.target.checked })}
-        />
-        <span>Ask Spansh in the background</span>
-      </label>
+      <div className="cz-actions">
+        <button
+          type="button"
+          className={`btn-top-toggle${ps.liveSpanshScans ? " btn-top-toggle--on" : ""}`}
+          aria-pressed={ps.liveSpanshScans}
+          onClick={() => m.setPlannerSettings({ ...ps, liveSpanshScans: !ps.liveSpanshScans })}
+        >
+          Ask Spansh in the background
+        </button>
+      </div>
       <label className="cz-field">
         <span className="cz-soft">Stop after this many seller systems per material</span>
         <input
@@ -422,14 +473,15 @@ function HistoryPanel({ m }: { m: ColonizeModel }) {
       {rows.length ? (
         <ul className="cz-list">
           {shown.map((h) => (
-            <li key={`${h.systemName}|${h.stationName}`}>
-              <span>
-                <b>{h.stationName}</b> <span className="cz-small cz-dim">{h.systemName}</span>
+            <li key={`${h.systemName}|${h.stationName}`} className="cz-histrow">
+              <span className="min0">
+                <b className="ell">{h.stationName}</b>
+                <span className="cz-small cz-dim ell">{h.systemName}</span>
               </span>
-              <span className="cz-small cz-dim cz-num">
+              <span className="cz-small cz-dim cz-num" title={h.visitedAt.slice(0, 10)}>
                 {h.constructionDistanceLy != null ? `${formatHopLy(h.constructionDistanceLy)} · ` : ""}
                 {h.purchases?.length ? `bought ${h.purchases.length}× · ` : ""}
-                {h.visitedAt.slice(0, 10)}
+                {h.visitedAt.slice(5, 10)}
               </span>
             </li>
           ))}

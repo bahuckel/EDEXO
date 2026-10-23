@@ -1,9 +1,10 @@
 /**
  * Search: one box, three kinds — a commodity (a comma means "sells all of them"), a system, a construction site.
- * Results come from every source together (Spansh, your Inara imports, markets you docked at); a station opens its
- * market, with what your sites still need marked.
+ * Results come from every source together (Spansh, your Inara imports, markets you docked at), a card each (R5b, cards
+ * mockup P9); the picked station's market sits beside them and stays in view (below 940 px picking scrolls to it),
+ * what your sites need first and the rest folded.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BuyIndexStationMaterial, BuyIndexStationResult } from "../../../shared/colonize/buyIndexSearchTypes";
 import { RAVEN_COLONIAL_SITE, type ConstructionSiteHit, type SiteNeeds } from "../../../shared/colonize/siteLookup";
 import { resolveSearchHopLy } from "../../../shared/colonize/searchDistanceLy";
@@ -114,6 +115,23 @@ export function SearchView({ m }: { m: ColonizeModel }) {
   };
 
   const hint = KINDS.find((x) => x.k === kind)?.hint ?? "";
+  /*
+    The market beside the cards stays in view (sticky from 940 px); below that it sits under all the cards, so picking
+    scrolls to it (the mockup: 92 Titanium sellers, nothing visible after a tap).
+  */
+  const marketRef = useRef<HTMLElement | null>(null);
+  const showMarket = () =>
+    window.requestAnimationFrame(() => {
+      if (window.innerWidth < 940) marketRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  const pick = (st: BuyIndexStationResult) => {
+    setPicked(st);
+    showMarket();
+  };
+  const pickSite = (st: ConstructionSiteHit) => {
+    setPickedSite(st);
+    showMarket();
+  };
   return (
     <div className="cz-stack" style={{ gap: 18 }}>
       <form className="cz-row" style={{ alignItems: "center", justifyContent: "flex-start", gap: 12 }} onSubmit={run}>
@@ -179,49 +197,56 @@ export function SearchView({ m }: { m: ColonizeModel }) {
             k="search-stations"
             title="Stations"
             className="cz-panel--flush"
-            aside={<span className="cz-aside-note">{stations.length ? `${stations.length} found` : "none found"}</span>}
+            aside={<span className="cz-aside-note">{stations.length ? `${stations.length} found · nearest first` : "none found"}</span>}
           >
             {stations.length ? (
-              <div className="cz-table-wrap">
-                <table className="cz-table">
-                  <thead>
-                    <tr>
-                      <th scope="col" style={{ paddingLeft: 16 }}>
-                        Station
-                      </th>
-                      <th scope="col" className="r">
-                        Distance
-                      </th>
-                      <th scope="col" className="r">
-                        Matches
-                      </th>
-                      <th scope="col">Kind</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stations.map((s) => (
-                      <tr key={`${s.systemName}|${s.stationName}`} className={picked === s ? "is-picked" : undefined}>
-                        <td style={{ paddingLeft: 16 }}>
-                          <button type="button" className="cz-pick" onClick={() => setPicked(s)}>
-                            {s.stationName}
-                          </button>
-                          <div className="cz-small cz-dim">
-                            {s.systemName}
-                            {s.boughtCount ? <span className="cz-own">{` · bought here ${s.boughtCount}×`}</span> : null}
-                            {!s.boughtCount && s.lastVisitIso ? ` · docked ${s.lastVisitIso.slice(0, 10)}` : null}
-                          </div>
-                        </td>
-                        {/* From your sites, by site-to-seller pair: the map has no plain names, so a name always missed (audit 2026-10-22). */}
-                        <td className="r">{formatHopLy(resolveSearchHopLy(s.systemName, m.constructionSiteRefs, m.systemDistanceLy, s.minDistanceLy))}</td>
-                        <td className="r">{s.materialCount}</td>
-                        <td className="cz-small cz-dim">
-                          {s.stationType ?? ""}
-                          {s.isPlanetaryOrGround ? " · planet port" : ""}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="cz-results">
+                {stations.map((s) => {
+                  const banned = (m.bannedStations ?? []).some(
+                    (b) => b.systemName.toLowerCase() === s.systemName.toLowerCase() && b.stationName.toLowerCase() === s.stationName.toLowerCase(),
+                  );
+                  return (
+                    <button
+                      key={`${s.systemName}|${s.stationName}`}
+                      type="button"
+                      className="cz-card cz-result"
+                      aria-pressed={picked === s}
+                      onClick={() => pick(s)}
+                    >
+                      <span>
+                        <span className="cz-result__name">{s.stationName}</span>
+                        <span className="cz-small cz-dim">
+                          {s.systemName}
+                          {s.bodyName && s.bodyName !== s.systemName ? ` · ${s.bodyName}` : ""}
+                        </span>
+                      </span>
+                      <span className="facts">
+                        <span className="fact">
+                          <span className="fact-k">Dist</span>
+                          {/* From your sites, by site-to-seller pair: the map has no plain names (audit 2026-10-22). */}
+                          <span className="fact-v">{formatHopLy(resolveSearchHopLy(s.systemName, m.constructionSiteRefs, m.systemDistanceLy, s.minDistanceLy))}</span>
+                        </span>
+                        {/* How many goods its saved market holds (a comma search already keeps only stations selling all asked). */}
+                        <span className="fact" title="Goods in its saved market">
+                          <span className="fact-k">Sells</span>
+                          <span className="fact-v">{s.materialCount}</span>
+                        </span>
+                        <span className="fact">
+                          <span className="fact-k">Kind</span>
+                          <span className="fact-v" title={s.stationType ?? undefined}>
+                            {s.isPlanetaryOrGround ? "Surface" : shortType(s.stationType)}
+                          </span>
+                        </span>
+                      </span>
+                      <span className="cz-chiprow">
+                        {s.boughtCount ? <span className="sys-chip sys-chip--accent">Bought here {s.boughtCount}×</span> : null}
+                        {s.lastVisitIso ? <span className="sys-chip">Docked {s.lastVisitIso.slice(0, 10)}</span> : null}
+                        {s.isPlanetaryOrGround ? <span className="sys-chip">Planet port</span> : null}
+                        {banned ? <span className="sys-chip sys-chip--danger">Never use</span> : null}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <p className="cz-dim cz-pad">
@@ -231,7 +256,7 @@ export function SearchView({ m }: { m: ColonizeModel }) {
           </Panel>
           </div>
         ) : null}
-        {picked ? <StationMarket m={m} station={picked} query={kind === "commodity" ? query : ""} /> : null}
+        {picked ? <StationMarket m={m} station={picked} query={kind === "commodity" ? query : ""} at={marketRef} /> : null}
 
         {sites ? (
           <div className="cz-wide">
@@ -242,34 +267,25 @@ export function SearchView({ m }: { m: ColonizeModel }) {
             aside={<span className="cz-aside-note">{sites.length ? `${sites.length} found` : "none found"}</span>}
           >
             {sites.length ? (
-              <div className="cz-table-wrap">
-                <table className="cz-table">
-                  <thead>
-                    <tr>
-                      <th scope="col" style={{ paddingLeft: 16 }}>
-                        Site
-                      </th>
-                      <th scope="col" className="r">
-                        Distance
-                      </th>
-                      <th scope="col">Kind</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sites.map((s) => (
-                      <tr key={s.marketId} className={pickedSite === s ? "is-picked" : undefined}>
-                        <td style={{ paddingLeft: 16 }}>
-                          <button type="button" className="cz-pick" onClick={() => setPickedSite(s)}>
-                            {s.name}
-                          </button>
-                          <div className="cz-small cz-dim">{s.systemName}</div>
-                        </td>
-                        <td className="r">{formatHopLy(s.distanceLy)}</td>
-                        <td className="cz-small cz-dim">{s.kind === "planetary" ? "surface" : "orbital"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="cz-results">
+                {sites.map((s) => (
+                  <button key={s.marketId} type="button" className="cz-card cz-result" aria-pressed={pickedSite === s} onClick={() => pickSite(s)}>
+                    <span>
+                      <span className="cz-result__name">{s.name}</span>
+                      <span className="cz-small cz-dim">{s.systemName}</span>
+                    </span>
+                    <span className="facts">
+                      <span className="fact">
+                        <span className="fact-k">Dist</span>
+                        <span className="fact-v">{formatHopLy(s.distanceLy)}</span>
+                      </span>
+                      <span className="fact">
+                        <span className="fact-k">Kind</span>
+                        <span className="fact-v">{s.kind === "planetary" ? "Surface" : "Orbital"}</span>
+                      </span>
+                    </span>
+                  </button>
+                ))}
               </div>
             ) : (
               <p className="cz-dim cz-pad">Spansh knows no construction site by that name.</p>
@@ -277,14 +293,24 @@ export function SearchView({ m }: { m: ColonizeModel }) {
           </Panel>
           </div>
         ) : null}
-        {pickedSite ? <SiteNeedsPanel m={m} site={pickedSite} /> : null}
+        {pickedSite ? <SiteNeedsPanel m={m} site={pickedSite} at={marketRef} /> : null}
       </div>
     </div>
   );
 }
 
 /** A station's market: everything it sells, what your sites need first. */
-function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIndexStationResult; query: string }) {
+function StationMarket({
+  m,
+  station,
+  query,
+  at,
+}: {
+  m: ColonizeModel;
+  station: BuyIndexStationResult;
+  query: string;
+  at: React.MutableRefObject<HTMLElement | null>;
+}) {
   const [rows, setRows] = useState<BuyIndexStationMaterial[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const api = m.api;
@@ -316,14 +342,25 @@ function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIn
     () => new Set(query.split(",").map((q) => commodityMergeBucket(q.trim())).filter(Boolean)),
     [query],
   );
-  const sorted = useMemo(() => {
+  // What was asked first, then what your sites need; the rest of the market folded (15a f).
+  const { hot, other } = useMemo(() => {
     const score = (r: BuyIndexStationMaterial) => (asked.has(r.commodityId) ? 2 : needed.has(r.commodityId) ? 1 : 0);
-    return [...(rows ?? [])].sort((a, b) => score(b) - score(a) || a.label.localeCompare(b.label));
+    const sorted = [...(rows ?? [])].sort((a, b) => score(b) - score(a) || a.label.localeCompare(b.label));
+    return { hot: sorted.filter((r) => score(r) > 0), other: sorted.filter((r) => score(r) === 0) };
   }, [rows, needed, asked]);
+  const line = (r: BuyIndexStationMaterial, isHot: boolean) => (
+    <li key={r.commodityId} className={isHot ? "cz-li cz-li--hot" : "cz-li"}>
+      <span>{isHot ? <b>{r.label}</b> : r.label}</span>
+      <span className="cz-dim">
+        {r.supply != null ? formatTons(r.supply) : ""}
+        {r.buyPrice != null ? ` · ${formatPrice(r.buyPrice)} cr` : ""}
+      </span>
+    </li>
+  );
   const [copied, setCopied] = useState(false);
   return (
-    <aside className="cz-side cz-side--wide" aria-label={station.stationName}>
-      <Panel k="search-market" tone="hot" title={station.stationName}>
+    <aside ref={at} className="cz-side cz-side--wide cz-sticky" aria-label={station.stationName}>
+      <Panel k="search-market" tone="hot" title={station.stationName} aside={<span className="cz-aside-note">market</span>}>
       <div className="cz-stack">
       <div className="cz-small cz-dim">
         {station.systemName}
@@ -331,29 +368,30 @@ function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIn
         {station.bodyName ? ` · ${station.bodyName}` : ""}
       </div>
       {station.boughtCount || station.lastVisitIso ? (
-        <div className="facts cz-facts">
+        <div className="facts cz-facts3">
           {station.boughtCount ? <Fact k="Bought here" v={`${station.boughtCount}×`} tone="open" /> : null}
           {station.lastVisitIso ? <Fact k="Docked" v={station.lastVisitIso.slice(0, 10)} /> : null}
         </div>
       ) : null}
       {error ? <p className="cz-note cz-note--bad">{error}</p> : null}
       {!rows && !error ? <p className="cz-dim">Reading its market…</p> : null}
-      {rows ? (
-        <ul className="cz-list cz-num">
-          {sorted.map((r) => {
-            const hot = asked.has(r.commodityId) || needed.has(r.commodityId);
-            return (
-              <li key={r.commodityId} className={hot ? "cz-li cz-li--hot" : "cz-li"}>
-                <span>{hot ? <b>{r.label}</b> : r.label}</span>
-                <span className="cz-dim">
-                  {r.supply != null ? formatTons(r.supply) : ""}
-                  {r.buyPrice != null ? ` · ${formatPrice(r.buyPrice)} cr` : ""}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+      {rows && hot.length ? (
+        <>
+          <div className="cz-label">{asked.size ? "What you asked for, and what your sites need" : "Your sites need"}</div>
+          <ul className="cz-list cz-num">{hot.map((r) => line(r, true))}</ul>
+        </>
       ) : null}
+      {rows && other.length ? (
+        hot.length ? (
+          <details className="cz-fold">
+            <summary>Also sells ({other.length})</summary>
+            <ul className="cz-list cz-num">{other.map((r) => line(r, false))}</ul>
+          </details>
+        ) : (
+          <ul className="cz-list cz-num">{other.map((r) => line(r, false))}</ul>
+        )
+      ) : null}
+      {rows && !rows.length ? <p className="cz-dim">No market saved for this station.</p> : null}
       <div className="cz-actions">
         <button
           type="button"
@@ -377,7 +415,7 @@ function StationMarket({ m, station, query }: { m: ColonizeModel; station: BuyIn
 }
 
 /** What a construction site still needs, from Raven Colonial (when somebody registered the project there). */
-function SiteNeedsPanel({ m, site }: { m: ColonizeModel; site: ConstructionSiteHit }) {
+function SiteNeedsPanel({ m, site, at }: { m: ColonizeModel; site: ConstructionSiteHit; at: React.MutableRefObject<HTMLElement | null> }) {
   const [needs, setNeeds] = useState<SiteNeeds | null>(null);
   const [error, setError] = useState<string | null>(null);
   const api = m.api;
@@ -402,7 +440,7 @@ function SiteNeedsPanel({ m, site }: { m: ColonizeModel; site: ConstructionSiteH
     };
   }, [api, systemName, marketId]);
   return (
-    <aside className="cz-side cz-side--wide" aria-label={site.name}>
+    <aside ref={at} className="cz-side cz-side--wide cz-sticky" aria-label={site.name}>
       <Panel k="search-site" tone="hot" title={site.name}>
       <div className="cz-stack">
       <div className="cz-small cz-dim">{site.systemName}</div>
@@ -445,4 +483,11 @@ function SiteNeedsPanel({ m, site }: { m: ColonizeModel; site: ConstructionSiteH
       </Panel>
     </aside>
   );
+}
+
+/** A station type short enough for a tile: "Coriolis Starport" is "Coriolis", "Drake-Class Carrier" is "Carrier". */
+function shortType(type: string | null): string {
+  if (!type) return "—";
+  if (/carrier/i.test(type)) return "Carrier";
+  return type.replace(/\s+(Starport|Station)$/i, "").replace(/^Planetary\s+/i, "") || type;
 }

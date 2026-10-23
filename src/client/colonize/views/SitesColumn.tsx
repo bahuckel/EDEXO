@@ -1,6 +1,7 @@
 /**
- * Your construction sites: progress, what is left, the biggest needs; finished and put-away sites in folds.
- * A site's details hold its full list, where to shop around (its hub) and putting it away.
+ * Your construction sites, a card each (R5b, cards mockup P2): docked first, then the most recent; progress with what
+ * your hold adds, Left / In hold / You, the biggest needs, the full list in a fold, and the site's own settings
+ * (where to shop around, its plan rules, the HUD pin, putting it away). Finished and put-away sites in folds.
  */
 import { useRef, useState } from "react";
 import { useFlip } from "../../ui/useFlip";
@@ -10,20 +11,30 @@ import { colonyOf } from "../../../shared/colonize/ownColony";
 import { siteMaterials, siteTotals } from "../../../shared/colonize/siteMaterials";
 import type { DepotSnapshot, OwnColony } from "../../../shared/colonize/types";
 import type { ColonizeModel } from "../useColonize";
-import { BTN, Fact, Panel } from "./ui";
+import { BTN, BTN_LINK, Panel } from "./ui";
+import { MaterialRows } from "./MaterialList";
 import { SiteRulesForm } from "./SiteRules";
 
 /** What the column needs of the model; the phone view (PhoneView.tsx) passes a read-only one. */
-type SitesModel = Pick<ColonizeModel, "snap" | "setDepotRefPin" | "setArchived" | "setProject" | "setHudFollow"> & {
+type SitesModel = Pick<ColonizeModel, "snap" | "setDepotRefPin" | "setArchived" | "setProject" | "setHudFollow" | "shipCargoByKey"> & {
   ui: Pick<ColonizeModel["ui"], "depotRefPins" | "projects" | "hudFollow">;
 };
 
+const TOP = 3;
+
 export function SitesColumn({ m, readOnly = false }: { m: SitesModel; readOnly?: boolean }) {
   const snap = m.snap;
-  const active = snap?.activeDepots ?? [];
+  const dockedId = snap?.liveDocked?.marketId ?? null;
+  // Docked first (owner, 2026-10-22: as on the HUD), then the most recent.
+  const active = [...(snap?.activeDepots ?? [])].sort(
+    (a, b) => Number(b.marketId === dockedId) - Number(a.marketId === dockedId) || (b.lastTimestamp ?? "").localeCompare(a.lastTimestamp ?? ""),
+  );
   const done = snap?.completedDepots ?? [];
   const away = snap?.archivedDepots ?? [];
   const total = active.reduce((a, d) => a + siteTotals(d).remaining, 0);
+  const failed = done.filter((d) => d.failed).length;
+  // The hold hint shows on one card only (15a c): the docked site, else the one the HUD follows.
+  const hintId = active.some((d) => d.marketId === dockedId) ? dockedId : m.ui.hudFollow;
   return (
     <div className="cz-side">
       <Panel
@@ -31,16 +42,24 @@ export function SitesColumn({ m, readOnly = false }: { m: SitesModel; readOnly?:
         title="Your sites"
         aside={<span className="cz-aside-note">{active.length ? `${active.length} building · ${tons(total)} left` : "none building"}</span>}
       >
-        <div className="cz-sites">
-          {active.map((d) => (
-            <SiteCard key={d.marketId} d={d} m={m} readOnly={readOnly} />
-          ))}
+        <div className="cz-stack" style={{ gap: "0.9rem" }}>
+          {active.length ? (
+            <div className="cz-sites">
+              {active.map((d) => (
+                <SiteCard key={d.marketId} d={d} m={m} readOnly={readOnly} holdHint={d.marketId === hintId} />
+              ))}
+            </div>
+          ) : (
+            <p className="cz-lead">No site is being built. Dock at a construction site and it appears here.</p>
+          )}
           {done.length ? (
             <details className="cz-fold">
-              <summary>Finished ({done.length})</summary>
-              <div className="cz-stack">
+              <summary>
+                Finished ({done.length}){failed ? ` · ${done.length - failed} built · ${failed} failed` : ""}
+              </summary>
+              <div className="cz-sites">
                 {done.map((d) => (
-                  <SiteCard key={d.marketId} d={d} m={m} compact readOnly={readOnly} />
+                  <SiteCard key={d.marketId} d={d} m={m} readOnly={readOnly} />
                 ))}
               </div>
             </details>
@@ -105,137 +124,171 @@ function ColoniesFold({ m }: { m: SitesModel }) {
   );
 }
 
-/** "Your colony" on a site in a claimed system; "helping" on one elsewhere, once the claims are known at all. */
-function Whose({ d, colonies }: { d: DepotSnapshot; colonies: OwnColony[] }) {
-  if (!colonies.length || !d.starSystem) return null;
-  return colonyOf(d, colonies) ? (
-    <span className="cz-own"> · your colony</span>
-  ) : (
-    <span className="cz-dim" title="A system another commander claimed: you are helping build it">
-      {" "}
-      · helping
-    </span>
-  );
-}
-
-function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapshot; m: SitesModel; compact?: boolean; readOnly?: boolean }) {
+function SiteCard({ d, m, readOnly = false, holdHint = false }: { d: DepotSnapshot; m: SitesModel; readOnly?: boolean; holdHint?: boolean }) {
   const t = siteTotals(d);
+  const label = depotDisplayLabel(d);
   // Still needed first, biggest first; delivered in full last, in green (owner, 2026-10-22).
-  const materials = siteMaterials(d);
-  const needs = materials.filter((r) => !r.done);
+  const materials = siteMaterials(d, m.shipCargoByKey);
+  const open = materials.filter((r) => !r.done);
+  const delivered = materials.length - open.length;
   const docked = m.snap?.liveDocked?.marketId === d.marketId;
-  const [hub, setHub] = useState(m.ui.depotRefPins[d.marketId] ?? "");
-  const finished = d.complete || t.remaining <= 0;
+  const finished = d.complete || d.failed || t.remaining <= 0;
+  const colonies = m.snap?.ownColonies ?? [];
+  const yours = colonies.length && d.starSystem ? !!colonyOf(d, colonies) : null;
   const followed = m.ui.hudFollow === d.marketId;
+  const you = (d.contributions ?? []).reduce((a, c) => a + c.totalTons, 0);
+  const inHold = open.reduce((a, r) => a + r.aboard, 0);
+  const boost = holdHint && t.required > 0 ? Math.min(100 - t.pct, (inHold / t.required) * 100) : 0;
+  const hub = m.ui.depotRefPins[d.marketId] ?? "";
+  const [editHub, setEditHub] = useState(false);
+  const [hubText, setHubText] = useState(hub);
   // A material delivered in full slides to the bottom (useFlip) instead of jumping there.
   const flipRef = useRef<HTMLElement>(null);
   useFlip(flipRef);
+  const tone = d.failed ? " cz-sitecard--failed" : finished ? " cz-sitecard--built" : docked ? " cz-sitecard--docked" : "";
   return (
-    <article ref={flipRef} className={`cz-site${docked ? " cz-site--docked" : ""}`} aria-label={depotDisplayLabel(d)}>
-      <div className="cz-row" style={{ alignItems: "flex-start" }}>
-        <div>
-          <div className="cz-site__name">{depotDisplayLabel(d)}</div>
-          <div className="cz-small cz-dim">
-            {d.starSystem ?? "System not known yet"}
-            <Whose d={d} colonies={m.snap?.ownColonies ?? []} />
-            {docked ? <span className="cz-ok"> · docked here</span> : null}
+    <article ref={flipRef} className={`cz-card cz-sitecard${tone}`} aria-label={label}>
+      <div className="cz-sitecard__head">
+        <div className="min0">
+          <div className="cz-site__name">{label}</div>
+          <div className="cz-small cz-dim">{d.starSystem ?? "System not known yet"}</div>
+          <div className="cz-chiprow">
+            {yours === true ? <span className="sys-chip sys-chip--accent">Your colony</span> : null}
+            {yours === false ? (
+              <span className="sys-chip sys-chip--dim" title="A system another commander claimed: you are helping build it">
+                Helping
+              </span>
+            ) : null}
+            {docked ? <span className="sys-chip sys-chip--ok">Docked</span> : null}
+            {followed && !finished ? <span className="sys-chip sys-chip--accent">On the HUD</span> : null}
+            {d.failed ? <span className="sys-chip sys-chip--danger">Failed</span> : finished ? <span className="sys-chip sys-chip--live">Built</span> : null}
           </div>
-          {/* Follow on the HUD (discuss item 9): wins over the next trip's site; docked at a site still wins. */}
-          {!readOnly && !finished ? (
-            <button
-              type="button"
-              className={`btn-top-toggle cz-toggle cz-follow${followed ? " btn-top-toggle--on" : ""}`}
-              aria-pressed={followed}
-              title={
-                followed
-                  ? "The HUD follows this site (unless you are docked at another). Click to let it follow the next trip again."
-                  : "Make the HUD follow this site, whatever the next trip delivers to. Docked at a site, the HUD shows that one."
-              }
-              onClick={() => m.setHudFollow(followed ? null : d.marketId)}
-            >
-              {followed ? "Followed on the HUD" : "Follow on the HUD"}
-            </button>
-          ) : null}
         </div>
-        <div className={`cz-big cz-num${finished ? " cz-ok" : " cz-hi"}`}>{Math.floor(t.pct)}%</div>
+        <div className={`cz-pct${d.failed ? " cz-dim" : finished ? " cz-live" : " cz-hi"}`}>{Math.floor(t.pct)}%</div>
       </div>
-      <div className="cz-bar" role="progressbar" aria-label={`${depotDisplayLabel(d)}: ${Math.floor(t.pct)}% built`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(t.pct)}>
-        <div className={`cz-bar__fill${finished ? " cz-bar__fill--done" : ""}`} style={{ width: `${t.pct}%` }} />
+      <div
+        className="cz-bar"
+        role="progressbar"
+        aria-label={`${label}: ${Math.floor(t.pct)}% built`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.floor(t.pct)}
+      >
+        <i
+          className={`cz-bar__fill${d.failed ? " cz-bar__fill--failed" : finished ? " cz-bar__fill--done" : ""}`}
+          style={{ width: `${finished && !d.failed ? 100 : t.pct}%` }}
+        />
+        {boost > 0 ? <i className="cz-bar__boost" style={{ left: `${t.pct}%`, width: `${boost}%` }} /> : null}
       </div>
-      {finished ? (
-        <div className="facts cz-facts">
-          <Fact k="Built" v="Finished" tone="open" />
-        </div>
-      ) : (
-        <div className="facts cz-facts">
-          <Fact k="Left" v={tons(t.remaining)} tone="hot" />
-          <Fact k="Of" v={tons(t.required)} />
+      {finished ? null : (
+        <div className="cz-barcap">
+          {boost >= 0.5 ? <span className="cz-ok">+{Math.round(boost)} % with your hold</span> : <span />}
+          <span className="cz-dim">
+            {tons(t.required - t.remaining)} of {tons(t.required)}
+          </span>
         </div>
       )}
-      {!compact && needs.length ? (
-        <ul className="cz-list">
-          {needs.slice(0, 3).map((r) => (
-            <li key={r.id || r.label} data-flip-key={`top:${r.id || r.label}`}>
-              <span>{r.label}</span>
-              <span className="cz-num cz-soft">{tons(r.left)}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {!compact ? (
-        <details className="cz-more">
-          <summary>{materials.length > 3 ? `All ${materials.length} materials, and more` : "More"}</summary>
-          <div className="cz-stack" style={{ marginTop: 10 }}>
-            <ul className="cz-list">
-              {materials.map((r) =>
-                r.done ? (
-                  <li key={r.id || r.label} data-flip-key={`all:${r.id || r.label}`} className="cz-mat--done">
-                    <span>{r.label}</span>
-                    <span className="cz-num">✓ delivered</span>
-                  </li>
-                ) : (
-                  <li key={r.id || r.label} data-flip-key={`all:${r.id || r.label}`}>
-                    <span>{r.label}</span>
-                    <span className="cz-num cz-dim">
-                      {tons(r.left)} <span className="cz-small">of {tons(r.required)}</span>
-                    </span>
-                  </li>
-                ),
-              )}
-            </ul>
-            {readOnly ? null : (
-              <form
-                className="cz-row"
-                style={{ alignItems: "center", justifyContent: "flex-start" }}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  m.setDepotRefPin(d.marketId, hub.trim());
+      <div className="facts cz-facts3">
+        {finished ? (
+          <div className={`fact ${d.failed ? "fact--tone-other" : "fact--tone-yours"}`}>
+            <span className="fact-k">Built</span>
+            <span className="fact-v">{d.failed ? "Failed" : "Finished"}</span>
+          </div>
+        ) : (
+          <>
+            <div className="fact cz-fact--hot">
+              <span className="fact-k">Left</span>
+              <span className="fact-v">{tons(t.remaining)}</span>
+            </div>
+            {inHold > 0 ? (
+              <div className="fact fact--tone-open">
+                <span className="fact-k">In hold</span>
+                <span className="fact-v">{tons(inHold)}</span>
+              </div>
+            ) : null}
+          </>
+        )}
+        <div className="fact">
+          <span className="fact-k">You</span>
+          <span className="fact-v">{tons(you)}</span>
+        </div>
+      </div>
+      {finished ? null : (
+        <>
+          <MaterialRows rows={open.slice(0, TOP)} flipPrefix="top" />
+          {materials.length > TOP ? (
+            <details className="cz-fold">
+              <summary>
+                Materials · {open.length} open{delivered ? ` · ${delivered} delivered` : ""}
+              </summary>
+              <MaterialRows rows={materials.slice(Math.min(TOP, open.length))} showOf flipPrefix="all" />
+            </details>
+          ) : null}
+          {readOnly ? null : (
+            <details className="cz-fold">
+              <summary>This site's settings</summary>
+              <SiteRulesForm label={label} settings={m.ui.projects[d.marketId]} onChange={(s) => m.setProject(d.marketId, s)} />
+            </details>
+          )}
+        </>
+      )}
+      {readOnly ? null : (
+        <div className="cz-sitecard__foot">
+          {finished ? (
+            <span />
+          ) : editHub ? (
+            <form
+              className="cz-row cz-sitecard__hub"
+              onSubmit={(e) => {
+                e.preventDefault();
+                m.setDepotRefPin(d.marketId, hubText.trim());
+                setEditHub(false);
+              }}
+            >
+              <label className="cz-label" htmlFor={`cz-hub-${d.marketId}`}>
+                Shop around
+              </label>
+              <input
+                id={`cz-hub-${d.marketId}`}
+                className="cz-input"
+                value={hubText}
+                // Opened by the commander's own click: the box takes the focus it was opened for.
+                autoFocus
+                placeholder={d.starSystem ?? "a system"}
+                onChange={(e) => setHubText(e.target.value)}
+                onBlur={() => {
+                  m.setDepotRefPin(d.marketId, hubText.trim());
+                  setEditHub(false);
                 }}
+              />
+            </form>
+          ) : (
+            <button type="button" className={BTN_LINK} title="Where the plan looks for sellers for this site; click to change it" onClick={() => setEditHub(true)}>
+              Shop around: {hub || d.starSystem || "—"}
+            </button>
+          )}
+          <span className="cz-sitecard__acts">
+            {finished ? null : (
+              <button
+                type="button"
+                className={`${BTN_LINK}${followed ? " is-on" : ""}`}
+                aria-pressed={followed}
+                title={
+                  followed
+                    ? "The HUD follows this site (unless you are docked at another). Click to let it follow the next trip again."
+                    : "Make the HUD follow this site, whatever the next trip delivers to. Docked at a site, the HUD shows that one."
+                }
+                onClick={() => m.setHudFollow(followed ? null : d.marketId)}
               >
-                <label className="cz-label" htmlFor={`cz-hub-${d.marketId}`}>
-                  Shop around
-                </label>
-                <input
-                  id={`cz-hub-${d.marketId}`}
-                  className="cz-input"
-                  value={hub}
-                  placeholder={d.starSystem ?? "a system"}
-                  onChange={(e) => setHub(e.target.value)}
-                  onBlur={() => m.setDepotRefPin(d.marketId, hub.trim())}
-                />
-              </form>
-            )}
-            {readOnly || finished ? null : (
-              <SiteRulesForm label={depotDisplayLabel(d)} settings={m.ui.projects[d.marketId]} onChange={(s) => m.setProject(d.marketId, s)} />
-            )}
-            {readOnly ? null : (
-              <button type="button" className={BTN} style={{ alignSelf: "flex-start" }} onClick={() => m.setArchived(d.marketId, true)}>
-                Put this site away
+                {followed ? "Unpin from HUD" : "Follow on HUD"}
               </button>
             )}
-          </div>
-        </details>
-      ) : null}
+            <button type="button" className={BTN_LINK} onClick={() => m.setArchived(d.marketId, true)}>
+              Put away
+            </button>
+          </span>
+        </div>
+      )}
     </article>
   );
 }

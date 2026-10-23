@@ -12,6 +12,12 @@ export function useFlip(container: RefObject<HTMLElement | null>): void {
   useLayoutEffect(() => {
     const root = container.current;
     if (!root) return;
+    // A list in a hidden tab (Colonize keeps its Plan tab mounted) has no places: forget them, so showing it again
+    // does not slide every row in from the corner.
+    if (!root.getClientRects().length) {
+      last.current = new Map();
+      return;
+    }
     const level = motionLevel();
     const next = new Map<string, DOMRect>();
     const rows = root.querySelectorAll<HTMLElement>("[data-flip-key]");

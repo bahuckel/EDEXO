@@ -286,31 +286,33 @@ test("colonize: settings live on the server, so two windows with their own stora
   const a = await (await browser.newContext()).newPage();
   const b = await (await browser.newContext()).newPage();
   const errors = [...watchErrors(a), ...watchErrors(b)];
-  const spansh = (p: typeof a) => p.getByRole("checkbox", { name: "Ask Spansh in the background" });
+  // The plan's on/off button since the cards (R5b; was a checkbox).
+  const spansh = (p: typeof a) => p.getByRole("button", { name: "Ask Spansh in the background" });
+  const on = (x: boolean) => String(x);
   await a.goto("/?screen=colonize");
   await a.getByRole("tab", { name: "Sources" }).click();
   await expect(spansh(a)).toBeVisible();
-  const before = await spansh(a).isChecked();
+  const before = (await spansh(a).getAttribute("aria-pressed")) === "true";
   await b.goto("/?screen=colonize");
   await b.getByRole("tab", { name: "Sources" }).click();
-  await expect(spansh(b)).toBeChecked({ checked: before });
+  await expect(spansh(b)).toHaveAttribute("aria-pressed", on(before));
 
   await spansh(b).click();
-  await expect(spansh(b)).toBeChecked({ checked: !before });
+  await expect(spansh(b)).toHaveAttribute("aria-pressed", on(!before));
   // The other window hears it: redrawn at once when not in front, else it offers to.
   const show = a.getByRole("button", { name: "Show the changes" });
   await expect(async () => {
     if (await show.isVisible()) await show.click();
-    await expect(spansh(a)).toBeChecked({ checked: !before, timeout: 500 });
+    await expect(spansh(a)).toHaveAttribute("aria-pressed", on(!before), { timeout: 500 });
   }).toPass({ timeout: 10_000 });
   // And a window opened later starts from it.
   const c = await (await browser.newContext()).newPage();
   await c.goto("/?screen=colonize");
   await c.getByRole("tab", { name: "Sources" }).click();
-  await expect(spansh(c)).toBeChecked({ checked: !before });
+  await expect(spansh(c)).toHaveAttribute("aria-pressed", on(!before));
   // Put it back for the other tests.
   await spansh(c).click();
-  await expect(spansh(c)).toBeChecked({ checked: before });
+  await expect(spansh(c)).toHaveAttribute("aria-pressed", on(before));
   expect(errors).toEqual([]);
 });
 

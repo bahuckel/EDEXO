@@ -256,12 +256,6 @@ button.cz-chip:hover {
   flex-direction: column;
   gap: 1rem;
 }
-.cz-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1rem;
-  align-items: start;
-}
 .cz-row {
   display: flex;
   flex-wrap: wrap;
@@ -310,11 +304,6 @@ button.cz-chip:hover {
 .cz .cz-panel--quiet .fold-title {
   color: var(--text-faint);
   text-shadow: none;
-}
-
-/* Compare's fact tiles (layout.css .facts / .fact), two across in a narrow column; "hot" is what is left to do. */
-.cz-facts {
-  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
 }
 .cz-fact--hot {
   color: var(--accent-bright);
@@ -448,40 +437,9 @@ button.cz-chip:hover {
   font-size: var(--fs-lg);
   border-color: var(--accent);
 }
-.cz-check {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-}
-.cz-check input,
-.cz-tick {
-  width: 18px;
-  height: 18px;
-  margin: 2px 0 0;
-  accent-color: var(--ok);
-}
 
 /* ---- sites ---------------------------------------------------------------------------------------------------- */
-.cz-sites {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-.cz-site {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-.cz-site + .cz-site {
-  padding-top: 0.9rem;
-  border-top: 1px solid var(--accent-a15);
-}
-.cz-site--docked {
-  margin: 0 -1rem;
-  padding: 0.6rem 1rem;
-  background: linear-gradient(90deg, rgba(79, 208, 255, 0.08), transparent);
-  box-shadow: inset 3px 0 0 var(--ok);
-}
+
 .cz-site__name {
   font-size: var(--fs-xl);
   font-weight: 700;
@@ -517,8 +475,7 @@ button.cz-chip:hover {
   background: linear-gradient(90deg, rgba(var(--shade-row-rgb), 0.95), rgba(var(--shade-row-2-rgb), 0.35));
 }
 /* A fold inside a panel: Compare's chevron and an uppercase label, no frame of its own. */
-.cz-fold > summary,
-.cz-more > summary {
+.cz-fold > summary {
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -532,17 +489,10 @@ button.cz-chip:hover {
   cursor: pointer;
   list-style: none;
 }
-.cz-more > summary {
-  padding: 0.2rem 0;
-  border-top: 0;
-  color: var(--accent-bright);
-}
-.cz-fold > summary::-webkit-details-marker,
-.cz-more > summary::-webkit-details-marker {
+.cz-fold > summary::-webkit-details-marker {
   display: none;
 }
-.cz-fold > summary::before,
-.cz-more > summary::before {
+.cz-fold > summary::before {
   content: "";
   width: 6px;
   height: 6px;
@@ -551,8 +501,7 @@ button.cz-chip:hover {
   transform: rotate(-45deg);
   transition: transform var(--fold-ms, 260ms) var(--fold-ease, ease);
 }
-.cz-fold[open] > summary::before,
-.cz-more[open] > summary::before {
+.cz-fold[open] > summary::before {
   transform: rotate(45deg);
 }
 .cz-fold[open] > summary {
@@ -584,118 +533,14 @@ button.cz-chip:hover {
 }
 
 /* ---- tables --------------------------------------------------------------------------------------------------- */
-.cz-table-wrap {
-  overflow-x: auto;
-}
-.cz-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-.cz-table th {
-  padding: 0.45rem 0.6rem;
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-  text-align: left;
-}
-.cz-table td {
-  padding: 0.55rem 0.6rem;
-  border-top: 1px solid var(--accent-a12);
-  vertical-align: top;
-}
-.cz-table th:first-child,
-.cz-table td:first-child {
-  padding-left: 0;
-}
-.cz-panel--flush .cz-table th:first-child,
-.cz-panel--flush .cz-table td:first-child {
-  padding-left: 1rem;
-}
-.cz-table--big {
-  font-size: var(--fs-lg);
-}
-.cz-table .r {
-  text-align: right;
-}
-.cz-table tr.is-picked td {
-  background: linear-gradient(90deg, rgba(var(--shade-row-rgb), 0.95), rgba(var(--shade-row-2-rgb), 0.35));
-}
-.cz-table tr.is-picked td:first-child {
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-.cz-table tr.is-done td {
-  color: var(--text-faint);
-}
-.cz-pick {
-  padding: 0;
-  font: inherit;
-  font-weight: 700;
-  color: var(--text);
-  text-align: left;
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-.cz-pick:hover {
-  color: var(--accent-bright);
-}
-.cz-done-mark {
-  color: var(--ok);
-}
 
 /* ---- the next trip and the trips after it --------------------------------------------------------------------- */
-.cz-next {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-}
-.cz-next > :first-child {
-  flex: 1 1 340px;
-  min-width: 0;
-}
-.cz-next__then {
-  flex: 0 1 280px;
-  padding-left: 1.25rem;
-  border-left: 1px solid var(--accent-a22);
-}
-.cz-trip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1rem;
-  padding: 0.6rem 1rem;
-  border-top: 1px solid var(--accent-a10);
-}
-.cz-trip:first-child {
-  border-top: 0;
-}
-.cz-trip__main {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex: 1 1 340px;
-  min-width: 0;
-}
-.cz-trip__n {
-  width: 1.75rem;
-  color: var(--text-faint);
-}
-.cz-trip__buys {
-  flex: 1 1 240px;
-  color: var(--text-dim);
-}
+
 .cz-trip__to {
   font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-faint);
-}
-.cz-trip--done,
-.cz-trip--done .cz-trip__buys {
   color: var(--text-faint);
 }
 

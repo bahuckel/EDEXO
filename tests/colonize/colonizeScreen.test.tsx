@@ -149,18 +149,19 @@ describe("the Colonize window", () => {
     expect(text).toContain("25%");
     // Docked at the site with 300 t of steel aboard: deliver all of it (3,000 t still needed).
     expect(text).toContain("Docked at your site");
-    expect(text).toMatch(/Deliver\s*Steel/);
-    expect(text).toContain("300 t");
+    // The cards (R5b): "Unload now", then a tile per material aboard.
+    expect(text).toContain("Unload now");
+    expect(text).toMatch(/Steel\s*Deliver 300 t/);
     // Whose system each site is in, and the colonies with what was built there.
-    expect(host.querySelector("[aria-label='Hammond Port']")?.textContent).toContain("your colony");
-    expect(host.querySelector("[aria-label='Their Port']")?.textContent).toContain("helping");
+    expect(host.querySelector("article[aria-label='Hammond Port']")?.textContent).toContain("Your colony");
+    expect(host.querySelector("article[aria-label='Their Port']")?.textContent).toContain("Helping");
     const colonies = host.querySelector("[data-testid='colonies']")?.textContent ?? "";
     expect(colonies).toContain("Your colonies (1)");
     expect(colonies).toContain("Smoke Colony");
     expect(colonies).toContain("claimed 2026-05-15");
     expect(colonies).toContain("1 building");
-    // Aluminium is delivered in full, so it is not among the needs.
-    expect(host.querySelector("[aria-label='Hammond Port'] .cz-list")?.textContent).not.toContain("Aluminium");
+    // Aluminium is delivered in full, so it is not among the needs shown on the card (only in its folded list).
+    expect(host.querySelector("article[aria-label='Hammond Port'] > .cz-mats")?.textContent).not.toContain("Aluminium");
   });
 
   it("draws every tab", async () => {

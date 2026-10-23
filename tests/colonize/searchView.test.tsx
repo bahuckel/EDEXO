@@ -67,8 +67,9 @@ afterEach(() => {
 async function settle() {
   for (let i = 0; i < 5; i++) await act(async () => void (await new Promise((r) => setTimeout(r, 0))));
 }
+/** A station's result card (R5b: a card per station, named by its first line). */
 const pick = (name: string) =>
-  [...host.querySelectorAll<HTMLButtonElement>("button.cz-pick")].find((b) => b.textContent === name)!;
+  [...host.querySelectorAll<HTMLButtonElement>("button.cz-result")].find((b) => b.querySelector(".cz-result__name")?.textContent === name)!;
 
 async function search() {
   act(() => root.render(<SearchView m={model()} />));
@@ -85,8 +86,9 @@ async function search() {
 describe("Search", () => {
   it("shows the distance from your site, and the saved one only while that is not measured yet", async () => {
     await search();
-    const cells = [...host.querySelectorAll("tbody tr")].map((tr) => tr.querySelectorAll("td")[1]?.textContent);
-    expect(cells).toEqual(["12.3 Ly", "88.0 Ly"]);
+    // Each card's first tile is the distance.
+    const dist = [...host.querySelectorAll("button.cz-result")].map((b) => b.querySelector(".fact .fact-v")?.textContent);
+    expect(dist).toEqual(["12.3 Ly", "88.0 Ly"]);
   });
 
   it("shows the market of the station picked last, whichever answer comes back first", async () => {

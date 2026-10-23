@@ -7,6 +7,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { withTransition } from "../motion";
 import "./colonize.css";
+import "./cards.css";
 import { depotDisplayLabel } from "../../shared/colonize/depotLabel";
 import { formatTons } from "../../shared/colonize/formatPrice";
 import { onGalaxyDrawerLinkClick } from "../galaxyDrawerRequest";
@@ -191,7 +192,13 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
         </div>
       ) : null}
       <main className="cz-main">
-        {tab === "plan" ? <PlanView m={m} /> : null}
+        {/*
+          The Plan tab stays mounted behind the others (discuss item 14): switching back is instant and the HUD's next
+          stop stays current; its background Spansh looks pause while another tab is shown (PlanView `shown`).
+        */}
+        <div hidden={tab !== "plan"} className="cz-tabpane">
+          <PlanView m={m} shown={tab === "plan"} />
+        </div>
         {tab === "search" ? <SearchView m={m} /> : null}
         {tab === "sources" ? <SourcesView m={m} /> : null}
         {tab === "wing" ? <WingView m={m} /> : null}

@@ -123,10 +123,11 @@ describe("Colonize on a phone", () => {
     expect(text).toContain("Next trip · 2 of 2");
     expect(text).toContain("Second Seller");
     // The stop's facts from EDEXO's stations index (1.3.0): pad and distance from the star.
-    expect(text).toContain("Coriolis Starport · L pad · 1,234 ls from the star");
+    // As chips on the stop's card (R5b): its type, pad and distance from the star.
+    for (const chip of ["Coriolis Starport", "L pad", "1,234 ls"]) expect(text).toContain(chip);
     expect(text).toContain("Docked at your site");
     expect(text).toContain("Kraepelin City");
-    expect(text).toContain("your colony");
+    expect(text).toContain("Your colony");
     for (const write of ["Never use this station", "Mark trip done", "Put this site away", "Shop around", "Copy"]) expect(text).not.toContain(write);
     // Nothing to tick, here or on the PC.
     expect(host.querySelectorAll("input[type=checkbox]").length).toBe(0);

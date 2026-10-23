@@ -9,7 +9,6 @@
 import { useMemo } from "react";
 import { isConstructionDepotStation } from "../../../shared/colonize/constructionDepot";
 import { formatTons } from "../../../shared/colonize/formatPrice";
-import { inaraCommoditySearchUrl } from "../../../shared/colonize/inaraLinks";
 import type { MissingBuyIndexedItem } from "../../../shared/colonize/logisticsPlanner";
 import type { MinLandingPad } from "../../../shared/colonize/stationFilter";
 import type { CheckoutRoutingMode } from "../../../shared/colonize/types";
@@ -21,15 +20,15 @@ import { usePlannerCheckouts } from "../planner/hooks/usePlannerCheckouts";
 import { usePlannerSystemCoords } from "../planner/hooks/usePlannerSystemCoords";
 import { colonizeApi } from "../api";
 import { onGalaxyDrawerLinkClick } from "../../galaxyDrawerRequest";
-import { openInEdexoBrowser } from "../inaraBrowser";
 import type { ColonizeModel } from "../useColonize";
 import { Select, type SelectOption } from "../../ui/Select";
 import { BuyHerePanel, DeliverHerePanel } from "./DockPanels";
 import { SitesColumn } from "./SitesColumn";
 import { NextTripCard, TripList } from "./Trips";
-import { BTN, BTN_GO, BTN_LINK, BTN_WARN, Panel } from "./ui";
+import { MissingSellers } from "./MissingSellers";
+import { BTN, BTN_GO, BTN_LINK, Panel } from "./ui";
 
-export function PlanView({ m }: { m: ColonizeModel }) {
+export function PlanView({ m, shown = true }: { m: ColonizeModel; shown?: boolean }) {
   const snap = m.snap;
   const activeDepots = snap?.activeDepots;
   const docked = snap?.liveDocked ?? null;
@@ -98,7 +97,8 @@ export function PlanView({ m }: { m: ColonizeModel }) {
   // Nothing left to look for once every material the plan needs has a seller, or each has enough of them.
   const restLooking = m.stations.atCap || Boolean(plan && depotNeeds.length > 0 && plan.missingBuyIndexed.length === 0);
   useBackgroundScanScheduler({
-    enabled: m.plannerSettings.liveSpanshScans && Boolean(activeDepots?.length) && !restLooking,
+    // Paused while another tab is shown (discuss item 14): the tab stays mounted, the looks do not run behind it.
+    enabled: shown && m.plannerSettings.liveSpanshScans && Boolean(activeDepots?.length) && !restLooking,
     onBackgroundScan: m.stations.backgroundLook,
     docked,
     navSystem: snap?.navContext.starSystem,
@@ -155,6 +155,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
         <Panel
           k="plan"
           title="Haul plan"
+          summary={planSummary(m)}
           aside={
             <span className="cz-aside-note">
               {trips.length
@@ -197,7 +198,7 @@ export function PlanView({ m }: { m: ColonizeModel }) {
         {docked && !dockedAtSite && plan ? <BuyHerePanel m={m} plan={plan} /> : null}
 
         {trips.length ? (
-          <NextTripCard trips={trips} completed={completedLineIds} onBan={m.stations.ban} />
+          <NextTripCard trips={trips} completed={completedLineIds} onBan={m.stations.ban} sites={activeDepots ?? []} />
         ) : null}
 
         {afterTons > 0 ? (
@@ -210,54 +211,14 @@ export function PlanView({ m }: { m: ColonizeModel }) {
           </div>
         ) : null}
 
-        {missing.length ? (
-          <div className="cz-note cz-note--warn" role="status">
-            <span className="cz-note__tag">No seller</span>
-            <div className="cz-note__text cz-stack" style={{ gap: 8 }}>
-              {missing.map((item) => (
-                <div key={`${item.why}-${item.id}`} className="cz-row" style={{ alignItems: "center" }}>
-                  <span>
-                    <b>{item.label}</b> ({formatTons(item.quantityTons)}):{" "}
-                    {item.why === "none"
-                      ? "no seller known nearby."
-                      : "sellers are known, but none fits what the plan may use (pad, distance, planet ports)."}
-                  </span>
-                  <span className="cz-actions">
-                    <button
-                      type="button"
-                      className={BTN_WARN}
-                      disabled={m.stations.fetchingMissingId === item.id || localFetchingId === item.id}
-                      onClick={() => void m.stations.findMissing(item)}
-                    >
-                      {m.stations.fetchingMissingId === item.id ? "Asking Spansh…" : "Ask Spansh"}
-                    </button>
-                    <button
-                      type="button"
-                      className={BTN_WARN}
-                      disabled={localFetchingId === item.id}
-                      title="Look through the sellers already saved, further out"
-                      onClick={() => void fetchMissingMaterialLocally(item)}
-                    >
-                      Saved sellers
-                    </button>
-                    <a
-                      className={BTN_WARN}
-                      href={inaraCommoditySearchUrl(item.label, near)}
-                      target="_blank"
-                      rel="noreferrer"
-                      title="Inara's sellers of this, in the EDEXO Browser; the EDEXO pop-up there reads them into Colonize"
-                      onClick={(e) => {
-                        if (openInEdexoBrowser(e.currentTarget.href)) e.preventDefault();
-                      }}
-                    >
-                      Inara
-                    </a>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        <MissingSellers
+          items={missing}
+          near={near}
+          askingId={m.stations.fetchingMissingId}
+          localId={localFetchingId}
+          onAsk={(item) => void m.stations.findMissing(item)}
+          onSaved={(item) => void fetchMissingMaterialLocally(item)}
+        />
 
         {trips.length > 1 ? <TripList trips={trips} completed={completedLineIds} onBan={m.stations.ban} /> : null}
 
@@ -289,6 +250,21 @@ export function PlanView({ m }: { m: ColonizeModel }) {
       </div>
     </div>
   );
+}
+
+/** The Haul plan folded: its rules in one line (cards mockup). */
+function planSummary(m: ColonizeModel): string {
+  const f = m.filters;
+  const order = ORDERS.find((o) => o.value === m.routingMode)?.label.toLowerCase() ?? "";
+  return [
+    f.minLandingPad === "any" ? "any pad" : `pad ${f.minLandingPad}${f.minLandingPad === "M" ? "+" : ""}`,
+    f.maxDistanceLy ? `within ${f.maxDistanceLy} ly` : null,
+    order,
+    f.showPlanetary ? "planet ports on" : "no planet ports",
+    f.excludeFleetCarriers ? null : "carriers that sell",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 const PADS: SelectOption<MinLandingPad>[] = [

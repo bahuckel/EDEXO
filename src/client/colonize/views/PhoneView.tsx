@@ -62,6 +62,7 @@ export function PhoneView({ streamer = false }: { streamer?: boolean }) {
     setArchived: noop,
     setProject: noop,
     setHudFollow: noop,
+    shipCargoByKey,
   };
 
   return (
@@ -91,7 +92,7 @@ export function PhoneView({ streamer = false }: { streamer?: boolean }) {
         {dockedSite ? <DeliverHerePanel m={{ shipCargoByKey }} site={dockedSite} /> : null}
         {trips.length ? (
           <>
-            <NextTripCard trips={trips} completed={completed} onBan={noop} readOnly />
+            <NextTripCard trips={trips} completed={completed} onBan={noop} sites={active} readOnly />
             {trips.length > 1 ? <TripList trips={trips} completed={completed} onBan={noop} readOnly /> : null}
           </>
         ) : active.length ? (

@@ -32,6 +32,8 @@ beforeEach(() => {
     const i = [...(this.parentElement?.children ?? [])].indexOf(this);
     return { left: 0, top: i * 20, width: 100, height: 20, right: 100, bottom: i * 20 + 20, x: 0, y: i * 20, toJSON() {} } as DOMRect;
   });
+  // Shown (jsdom lays nothing out, so it says every element has no box); the hidden-tab test overrides it.
+  vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(() => [{}] as unknown as DOMRectList);
   (HTMLElement.prototype as { animate?: unknown }).animate = function (this: HTMLElement, frames: Keyframe[]) {
     calls.push({ key: this.dataset.flipKey ?? "", frames });
     return {} as Animation;
@@ -64,6 +66,18 @@ describe("useFlip", () => {
     expect(steel.frames[0]).toEqual({ transform: "translate(0px, -40px)" });
     expect(calls.find((c) => c.key === "water")!.frames[0]).toEqual({ opacity: 0 });
     expect(calls.find((c) => c.key === "titanium")!.frames[0]).toEqual({ transform: "translate(0px, 20px)" });
+    m.unmount();
+  });
+
+  it("does nothing in a hidden tab, and does not slide rows in when it shows again", () => {
+    localStorage.setItem("edexo.motion", "full");
+    const m = mount();
+    m.render(["a", "b"]);
+    const shown = vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(() => [] as unknown as DOMRectList);
+    m.render(["b", "a"]);
+    shown.mockImplementation(() => [{}] as unknown as DOMRectList);
+    m.render(["b", "a", "c"]);
+    expect(calls).toEqual([]);
     m.unmount();
   });
 
