@@ -720,6 +720,9 @@
         accent-color: var(--hud);
         margin: 0;
       }
+      .gfx-restart {
+        margin: 6px 0 0 20px;
+      }
       .tray-pref.is-off {
         opacity: 0.5;
         cursor: not-allowed;
@@ -2143,6 +2146,14 @@
         </label>
         <!-- What "the tray" is (owner, 2026-10-01): a tester sent the launcher there and took the app for gone. -->
         <p class="tray-note" id="trayNote" hidden></p>
+        <!-- Hardware acceleration (L1, Linux ticket 2026-10-23; electron/gpuSafeMode.cjs): off by hand, or turned off
+             by itself after the GPU process died at start; on again to try the graphics card. Electron only. -->
+        <label class="tray-pref" id="gfxPrefRow" hidden>
+          <input type="checkbox" id="gfxPref" />
+          <span>Hardware acceleration</span>
+        </label>
+        <p class="tray-note" id="gfxNote" hidden></p>
+        <button type="button" class="btn-mini gfx-restart" id="gfxRestart" hidden>Restart now</button>
 
         <div class="foot">
           <span>EDEXO · exobiology routing</span>

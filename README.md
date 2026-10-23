@@ -64,6 +64,18 @@ On start the launcher checks your desktop and lists anything the HUD needs that 
 install command for your distro: XWayland on a Wayland session, a compositor on a bare window
 manager (the HUD is see-through only with one), the AppIndicator extension for the tray on GNOME.
 
+**If the AppImage closes at start** (seen on Wayland with a hybrid NVIDIA laptop: the graphics process
+crashes, exit code 139): from 1.3.0 the app notices, turns **Hardware acceleration** off in the launcher
+and starts again by itself; tick it to try the graphics card again later. If it still closes, start it
+once with the graphics card off:
+
+```bash
+./EDExoCompare-1.2.20-x86_64.AppImage --disable-gpu --disable-gpu-sandbox
+```
+
+or set `EDEXO_SAFE_GRAPHICS=1` to keep it off. Without the graphics card the 3D galaxy map draws in
+software (slower); the Classic map is unaffected.
+
 **Browser build:** `tar xzf EDExoCompare-1.2.20-linux-x64.tar.gz`, then `./edexo-client.sh` in the
 folder it makes. Its `README.txt` has the rest.
 

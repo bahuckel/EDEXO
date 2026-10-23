@@ -3557,6 +3557,54 @@
     }
   })();
 
+  /*
+    Hardware acceleration (electron/gpuSafeMode.cjs; L1, Linux ticket 2026-10-23). Ticked = the graphics card is used.
+    It can have been turned off by itself (the GPU process died at start); the note says so and when. A change counts
+    from the next start, so the note says that and offers the restart.
+  */
+  var gfxPrefRow = document.getElementById("gfxPrefRow");
+  var gfxPref = document.getElementById("gfxPref");
+  var gfxNote = document.getElementById("gfxNote");
+  var gfxRestart = document.getElementById("gfxRestart");
+  function renderGfxPref(p) {
+    if (!gfxPrefRow || !gfxPref || !p) return;
+    gfxPrefRow.hidden = false;
+    gfxPref.checked = !p.safeNext;
+    gfxPref.disabled = !!p.locked;
+    gfxPrefRow.classList.toggle("is-off", !!p.locked);
+    gfxPrefRow.title = p.locked
+      ? p.why === "env"
+        ? "Off for every start while EDEXO_SAFE_GRAPHICS=1 is set."
+        : "Off for this start: it was started with --disable-gpu."
+      : "Uses the graphics card to draw the app and the galaxy map. Turn it off if the app crashes or its windows stay blank at start.";
+    var pending = !!p.safeNow !== !!p.safeNext;
+    var lines = [];
+    if (p.safeNext && p.auto && p.reason)
+      lines.push("Turned off by itself: the " + p.reason.replace(/^GPU process/, "graphics process") + ". Tick it to try the graphics card again.");
+    if (p.safeNow && !pending) lines.push("Without it the galaxy map draws in software (slower) or falls back to the Classic map.");
+    if (pending) lines.push(p.safeNext ? "Off from the next start." : "On from the next start.");
+    if (gfxNote) {
+      gfxNote.textContent = lines.join(" ");
+      gfxNote.hidden = lines.length === 0;
+    }
+    if (gfxRestart) gfxRestart.hidden = !(pending && window.edexoElectron && typeof window.edexoElectron.relaunch === "function");
+  }
+  (function () {
+    var ee = window.edexoElectron;
+    if (!ee || typeof ee.getGraphicsPref !== "function") return;
+    ee.getGraphicsPref().then(renderGfxPref).catch(function () {});
+    if (gfxPref) {
+      gfxPref.addEventListener("change", function () {
+        ee.setGraphicsPref({ hardware: gfxPref.checked }).then(renderGfxPref).catch(function () {});
+      });
+    }
+    if (gfxRestart) {
+      gfxRestart.addEventListener("click", function () {
+        ee.relaunch();
+      });
+    }
+  })();
+
   /* ------------------------------------------------------------------ first-run wizard */
   var LS_WIZARD = "edexo.launcher.wizardDone";
   var wizardModal = document.getElementById("wizardModal");

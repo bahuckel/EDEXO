@@ -102,6 +102,8 @@ module.exports = {
     "electron/serverChild.cjs",
     "electron/staticShell.cjs",
     "electron/atomicWrite.cjs",
+    // Safe graphics mode (L1, Linux ticket 2026-10-23).
+    "electron/gpuSafeMode.cjs",
     ...(process.env.EDEXO_DIAG === "1" ? ["electron/diag.cjs"] : []),
     "package.json",
   ],

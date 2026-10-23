@@ -79,6 +79,13 @@ contextBridge.exposeInMainWorld("edexoElectron", {
   getTrayPref: () => ipcRenderer.invoke("edexo:get-tray-pref"),
   /** @param {{ enabled: boolean }} opts */
   setTrayPref: (opts) => ipcRenderer.invoke("edexo:set-tray-pref", opts),
+  /**
+   * Hardware acceleration (electron/gpuSafeMode.cjs): `{ safeNow, why, safeNext, locked, auto, reason }`; a change
+   * counts from the next start.
+   */
+  getGraphicsPref: () => ipcRenderer.invoke("edexo:get-graphics-pref"),
+  /** @param {{ hardware: boolean }} opts */
+  setGraphicsPref: (opts) => ipcRenderer.invoke("edexo:set-graphics-pref", opts),
   /** Whether the HUD hotkey could be registered: `{ shortcut, registered }`. */
   getHotkeyStatus: () => ipcRenderer.invoke("edexo:hotkey-status"),
   /** Key binds: `{ binds, status, actions }` (electron/keybinds.cjs). Launcher only. */

@@ -17,6 +17,7 @@ const { installStaticShell } = require("./staticShell.cjs");
 const path = require("path");
 const fs = require("fs");
 const { writeFileAtomic } = require("./atomicWrite.cjs");
+const gpuSafe = require("./gpuSafeMode.cjs");
 const { WINDOW_MIN, createWindowState, enableZoom } = require("./windowState.cjs");
 const { childWindowKind, galaxyWindowBounds } = require("./childWindows.cjs");
 const {
@@ -518,6 +519,31 @@ function registerFootOverlayIpc(iconForChild) {
   ipcMain.handle("edexo:open-colonize-window", () => openColonizeWindow(iconForChild));
 
   ipcMain.handle("edexo:get-tray-pref", () => ({ enabled: closeToTray(), ...trayAvailability() }));
+  /*
+    Hardware acceleration (gpuSafeMode.cjs): what this start runs with, what the next will, and why. A change counts
+    from the next start; the launcher offers the restart. Launcher only, like the key binds.
+  */
+  const graphicsPref = () => {
+    const flag = gpuSafe.readGpuSafe(gpuSafeDir);
+    return {
+      // This start.
+      safeNow: graphics.safe,
+      why: graphics.why,
+      // The next start (the remembered mode; env and argv are outside the app's say).
+      safeNext: graphics.why === "env" || graphics.why === "argv" ? true : !!flag,
+      locked: graphics.why === "env" || graphics.why === "argv",
+      auto: !!flag && flag.auto,
+      reason: flag ? flag.reason : "",
+    };
+  };
+  ipcMain.handle("edexo:get-graphics-pref", () => graphicsPref());
+  ipcMain.handle("edexo:set-graphics-pref", (evt, opts) => {
+    if (!mainWindow || evt.sender !== mainWindow.webContents) return graphicsPref();
+    const hardware = !!(opts && typeof opts === "object" && opts.hardware);
+    if (hardware) gpuSafe.clearGpuSafe(gpuSafeDir);
+    else gpuSafe.writeGpuSafe(gpuSafeDir, { auto: false, reason: "turned off in the launcher", at: new Date().toISOString() });
+    return graphicsPref();
+  });
   ipcMain.handle("edexo:set-tray-pref", (_evt, opts) => {
     setCloseToTray(!!(opts && typeof opts === "object" && opts.enabled));
     return { enabled: closeToTray(), ...trayAvailability() };
@@ -1043,6 +1069,24 @@ if (
 }
 
 /*
+  Safe graphics mode (gpuSafeMode.cjs; L1, Linux ticket 2026-10-23: a hybrid NVIDIA laptop on Wayland lost the GPU
+  process at start and the app with it, and ran with --disable-gpu --disable-gpu-sandbox). Read before `ready`,
+  where these switches still count: the remembered mode, EDEXO_SAFE_GRAPHICS=1, or the commander's own flag.
+*/
+const appStartedAt = Date.now();
+const gpuSafeDir = app.getPath("userData");
+const graphics = gpuSafe.graphicsMode({
+  env: process.env,
+  argv: process.argv,
+  flag: gpuSafe.readGpuSafe(gpuSafeDir),
+});
+if (graphics.addSwitches) {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch("disable-gpu");
+  app.commandLine.appendSwitch("disable-gpu-sandbox");
+}
+
+/*
   The app's pages keep their normal process priority while another program (the game) is in front
   (owner, 2026-10-07: tab keys took 2-3 s in game). Chromium otherwise lowers a background
   renderer's priority, and next to a game at full load that is seconds per redraw.
@@ -1100,6 +1144,26 @@ if (!separateCopy) {
 */
 app.on("child-process-gone", (_e, d) => {
   huds.log(`process gone: ${d && d.type} (${d && d.reason}${d && d.exitCode != null ? `, exit ${d.exitCode}` : ""})`);
+  /*
+    The GPU process gone at start on Linux (the ticket's exit 139): remember safe graphics mode and start again
+    once without the GPU, before the X connection takes the rest down. The retry argument stops a loop; the
+    launcher shows why the mode is on and can turn it off.
+  */
+  if (
+    gpuSafe.shouldSwitchToSafe({
+      platform: process.platform,
+      details: d,
+      sinceStartMs: Date.now() - appStartedAt,
+      safe: graphics.safe,
+      argv: process.argv,
+    })
+  ) {
+    const reason = `GPU process ${d.reason}${d.exitCode != null ? ` (exit ${d.exitCode})` : ""} at start`;
+    gpuSafe.writeGpuSafe(gpuSafeDir, { auto: true, reason, at: new Date().toISOString() });
+    huds.log(`safe graphics mode on: ${reason}; starting again without the GPU`);
+    relaunchAsUsual([gpuSafe.GPU_RETRY_ARG]);
+    app.exit(0);
+  }
 });
 /*
   A browsed page asking for a client certificate gets none (review 1.2.16: Electron's default sends the first one
@@ -1210,9 +1274,20 @@ let installUpdateOnQuit = null;
 /** This copy's self-update form (updater.cjs), or null where it cannot replace itself. */
 let selfUpdateFormValue = null;
 
-function relaunchAsUsual() {
-  const portable = process.env.PORTABLE_EXECUTABLE_FILE;
-  app.relaunch(portable ? { execPath: portable, args: process.argv.slice(1) } : undefined);
+/*
+  Starts this copy again: the portable exe's own file, the AppImage itself (its running binary sits in a mount that
+  goes with this process), or Electron's default. `extra` arguments are added (the GPU retry); the GPU retry of an
+  earlier start is not carried on, or a later crash after "Hardware acceleration" is ticked again could not switch.
+*/
+function relaunchAsUsual(extra = []) {
+  const args = process.argv
+    .slice(1)
+    .filter((a) => a !== gpuSafe.GPU_RETRY_ARG)
+    .concat(extra);
+  const own =
+    process.env.PORTABLE_EXECUTABLE_FILE ||
+    (process.platform === "linux" && process.env.APPIMAGE ? process.env.APPIMAGE : null);
+  app.relaunch(own ? { execPath: own, args } : { args });
 }
 
 app.on("will-quit", () => {

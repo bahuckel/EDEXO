@@ -1242,6 +1242,11 @@ export function GalaxyMap3D() {
             This window cannot draw it ({graphics.renderer}). The Classic map works everywhere and has the
             same search.
           </p>
+          {/* Safe graphics mode (electron/gpuSafeMode.cjs, L1) is the usual cause in the desktop app. */}
+          <p className="dim">
+            In the desktop app: if <strong>Hardware acceleration</strong> is off in the launcher (it turns itself off
+            when the graphics card crashes at start), ticking it again may bring the 3D map back.
+          </p>
           <a className="g3d-btn g3d-btn--primary" href="?screen=map">
             Open the Classic map
           </a>
