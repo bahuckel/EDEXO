@@ -8,7 +8,7 @@ import { GALAXY_LAYERS, layerPointText, type GalaxyLayerDTO, type GalaxyLayerKin
 import type { GalaxyNextDTO, GalaxyRouteDTO } from "@shared/types";
 import type { GalaxySearchApplied } from "../GalaxySearchPanel";
 import type { NavRouteSystemDTO } from "../GalaxyNavRoutePanel";
-import type { JumpRow } from "./JumponiumDrawer";
+import type { JumpRow } from "./jumpRow";
 import type { MineRow, SpanshFindHit } from "./mapConstants";
 
 /** A stop of the Targets plan, numbered from 1. */

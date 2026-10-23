@@ -43,8 +43,10 @@ if (process.env.EDEXO_USER_DATA_DIR) {
 }
 /** The app's own origin once the server listens (windowGuards.cjs). */
 const ownBase = () => (runtime ? runtime.getLocalBaseUrl() : null);
-/** The foreground watcher (foregroundWatch.cjs), started with the HUDs. */
+/** The foreground watcher (foregroundWatch.cjs), started a few seconds after the launcher. */
 let foreground = null;
+let foregroundStartTimer = null;
+const FOREGROUND_START_DELAY_MS = 5000;
 
 /*
   Diagnostics, in the diagnostic build only (`npm run dist:win:diag`; owner, 2026-09-25). A public
@@ -984,7 +986,14 @@ async function start() {
     hiding, so alt-tabbing past something does not flicker them; back at once with the game. This
     app's own windows count as the game's side: the app on a second screen keeps the overlays.
   */
-  {
+  /*
+    Started five seconds in (discuss item 18, owner 2026-10-23): the watcher compiles its C# helper on every start
+    (PowerShell Add-Type), which competed with the launcher's first paint. Until then the overlays behave as before
+    the game is seen in front: shown, keys not narrowed.
+  */
+  foregroundStartTimer = setTimeout(() => {
+    foregroundStartTimer = null;
+    if (appQuitting) return;
     const own = [path.basename(process.execPath, ".exe").toLowerCase(), "electron"];
     let hideTimer = null;
     foreground = watchForegroundOffMain(utilityProcess, path.join(__dirname, "foregroundHost.cjs"), (name, at) => {
@@ -1009,8 +1018,21 @@ async function start() {
         huds.setFocusAway(true);
       }, 1500);
     });
+  }, FOREGROUND_START_DELAY_MS);
+  /*
+    The HUD windows come back once the launcher has drawn (discuss item 17): restored in the same first second they
+    made the launcher's first paint wait. A launcher that never finishes loading still gets them after a few seconds.
+  */
+  {
+    let restored = false;
+    const restoreHuds = () => {
+      if (restored) return;
+      restored = true;
+      void huds.restore(winIcon);
+    };
+    mainWindow.webContents.once("did-finish-load", () => setTimeout(restoreHuds, 250));
+    setTimeout(restoreHuds, 5000);
   }
-  void huds.restore(winIcon);
   mainWindow.on("close", (e) => {
     // With "Close to tray" on (and a tray to come back from), the X hides the launcher in the tray;
     // the server, the HUDs and the app window carry on. Quitting (tray menu) closes it for real.
@@ -1404,6 +1426,7 @@ function closeForQuit() {
     /* ignore */
   }
   huds.dispose();
+  if (foregroundStartTimer) clearTimeout(foregroundStartTimer);
   foreground?.stop();
   trayControl.destroy();
 }

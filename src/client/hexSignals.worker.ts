@@ -9,6 +9,7 @@ type Msg =
   | { type: "start"; canvas: OffscreenCanvas; w: number; h: number; dpr: number; opts: BackdropOptions }
   | { type: "resize"; w: number; h: number; dpr: number }
   | { type: "accent"; rgb: string | null }
+  | { type: "pause"; paused: boolean }
   | { type: "stop" };
 
 let handle: HexSignalsHandle | null = null;
@@ -21,6 +22,8 @@ self.onmessage = (ev: MessageEvent<Msg>) => {
     handle?.resize(m.w, m.h, m.dpr);
   } else if (m.type === "accent") {
     handle?.setAccent(m.rgb);
+  } else if (m.type === "pause") {
+    handle?.setPaused(m.paused);
   } else {
     handle?.stop();
     handle = null;

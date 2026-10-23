@@ -64,7 +64,19 @@ const paneRef = (k: TabKind) => {
  * Where a screen renders: in tab view, into its tab's pane (once the pane exists); otherwise in place,
  * as the pop-up it has always been.
  */
-export function TabSlot({ kind, children }: { kind: TabKind; children: ReactNode }) {
+export function TabSlot({
+  kind,
+  releaseAfterMs,
+  children,
+}: {
+  kind: TabKind;
+  /**
+   * Let the screen go after this long behind other tabs (discuss item 23, owner 2026-10-23: the galaxy map kept ~60 MB
+   * behind them); it starts again, drawn afresh, when its tab comes back to the front.
+   */
+  releaseAfterMs?: number;
+  children: ReactNode;
+}) {
   // false with tab view off, else the pane (null until it exists): not the active tab, which every switch changes.
   const pane = useTabSelector((s) => (s.on ? tabStore.pane(kind) : false));
   /*
@@ -76,6 +88,11 @@ export function TabSlot({ kind, children }: { kind: TabKind; children: ReactNode
   const inFront = useTabSelector((s) => !s.on || s.active === kind);
   const [started, setStarted] = useState(inFront);
   if (inFront && !started) setStarted(true);
+  useEffect(() => {
+    if (!releaseAfterMs || inFront || !started) return;
+    const t = window.setTimeout(() => setStarted(false), releaseAfterMs);
+    return () => window.clearTimeout(t);
+  }, [releaseAfterMs, inFront, started]);
   if (pane === false) return <>{children}</>;
   if (!started) return null;
   return pane

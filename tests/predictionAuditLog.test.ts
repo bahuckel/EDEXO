@@ -383,3 +383,48 @@ describe("guarding the commander's file", () => {
     expect(predictionRecords().length).toBeLessThanOrEqual(2000);
   });
 });
+
+describe("how the file is written (discuss item 21)", () => {
+  const changes = () => `${auditPath}.changes.jsonl`;
+  afterEach(() => vi.useRealTimers());
+
+  it("appends a change instead of rewriting the file, and folds it in at shutdown, compact", () => {
+    vi.useFakeTimers();
+    recordPredictionForBody({ body: body(), matches: [m("frutexa_acus", "Frutexa", 40)], db });
+    vi.advanceTimersByTime(2000);
+    expect(existsSync(auditPath)).toBe(false);
+    const lines = readFileSync(changes(), "utf8").trim().split("\n");
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0]!).bodyKey).toBe("42:7");
+    flushPredictionAudit();
+    expect(existsSync(changes())).toBe(false);
+    const text = readFileSync(auditPath, "utf8");
+    expect(text.startsWith('{"formatVersion":1')).toBe(true);
+    expect(JSON.parse(text).records).toHaveLength(1);
+  });
+
+  it("reads the changes after the file on the next start, the last line for a body winning", async () => {
+    const { writeFileSync } = await import("node:fs");
+    const rec = (n: number) => ({ bodyKey: "42:7", bodyName: `v${n}`, stages: [], truth: [], outcomes: [], final: false, updatedAt: "2026-10-23T00:00:00Z" });
+    writeFileSync(auditPath, JSON.stringify({ formatVersion: 1, records: [rec(1)] }));
+    writeFileSync(changes(), `${JSON.stringify(rec(2))}\n${JSON.stringify(rec(3))}\n{"torn`);
+    resetPredictionAuditForTests();
+    enablePredictionAudit();
+    expect(predictionRecords().map((r) => r.bodyName)).toEqual(["v3"]);
+    // Folded in at once: one compact file, no changes left.
+    expect(existsSync(changes())).toBe(false);
+    expect(JSON.parse(readFileSync(auditPath, "utf8")).records[0].bodyName).toBe("v3");
+  });
+
+  it("compacts a pretty file from an older build the first time it is read, keeping every record", async () => {
+    const { writeFileSync, statSync } = await import("node:fs");
+    const records = Array.from({ length: 20 }, (_, i) => ({ bodyKey: `1:${i}`, bodyName: `b${i}`, stages: [], truth: [], outcomes: [], final: true, updatedAt: "2026-10-01T00:00:00Z" }));
+    writeFileSync(auditPath, `${JSON.stringify({ formatVersion: 1, records }, null, 2)}\n`);
+    const before = statSync(auditPath).size;
+    resetPredictionAuditForTests();
+    enablePredictionAudit();
+    expect(predictionRecords()).toHaveLength(20);
+    expect(statSync(auditPath).size).toBeLessThan(before * 0.75);
+    expect(JSON.parse(readFileSync(auditPath, "utf8")).records).toHaveLength(20);
+  });
+});

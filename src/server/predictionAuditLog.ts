@@ -26,8 +26,16 @@
  * place, because a commander who hops out to orbit and back has not finished with the body.
  *
  * Private, like every other observation file: it lives beside the user settings and never ships.
+ *
+ * ## How it is written (discuss item 21, owner 2026-10-23)
+ *
+ * The file was pretty-printed (46 % whitespace, 38 MB on the owner's PC) and rewritten whole, with fsync, after every
+ * stage change. Now the file is compact JSON, and a change during a session is one line appended to
+ * `edexo-predictions.json.changes.jsonl` (the whole record, the last line for a body wins). The lines are folded back
+ * into the file — the "compaction" — when the log is first read, at shutdown, and every few hundred changes. A file
+ * from an older build (pretty) is compacted the first time it is read.
  */
-import { existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 import { resolvePredictionAuditPath } from "./paths.js";
 import { collectOwnOrganicLockSpeciesIds } from "./organicLocks.js";
@@ -189,6 +197,14 @@ const SAVE_DEBOUNCE_MS = 1500;
 
 let store: Map<string, PredictionRecord> | null = null;
 let pending: ReturnType<typeof setTimeout> | null = null;
+/** Records changed since the last append. */
+const dirty = new Set<string>();
+/** Lines in the changes file since the last compaction. */
+let appended = 0;
+/** Fold the changes into the file after this many lines. */
+const COMPACT_AFTER = 300;
+
+const changesPath = () => `${resolvePredictionAuditPath()}.changes.jsonl`;
 
 /*
   Off until the app turns it on (owner, 2026-10-09). Probe scripts run the same snapshot code, and with
@@ -211,9 +227,13 @@ function load(): Map<string, PredictionRecord> {
   if (store) return store;
   const m = new Map<string, PredictionRecord>();
   const p = resolvePredictionAuditPath();
+  let compactNeeded = false;
   if (existsSync(p)) {
     try {
-      const parsed = JSON.parse(readFileSync(p, "utf8")) as Partial<PredictionAuditFile>;
+      const text = readFileSync(p, "utf8");
+      // Written by an older build, pretty-printed: compacted once, now.
+      if (text.startsWith("{\n")) compactNeeded = true;
+      const parsed = JSON.parse(text) as Partial<PredictionAuditFile>;
       for (const r of parsed.records ?? []) {
         if (r?.bodyKey) m.set(r.bodyKey, r);
       }
@@ -229,27 +249,70 @@ function load(): Map<string, PredictionRecord> {
       }
     }
   }
+  // Changes appended since the file was last written, in order: the last line for a body wins. A torn last line
+  // (the app stopped mid-write) is skipped.
+  try {
+    const lines = readFileSync(changesPath(), "utf8").split("\n");
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const r = JSON.parse(line) as PredictionRecord;
+        if (r?.bodyKey) m.set(r.bodyKey, r);
+        compactNeeded = true;
+      } catch {
+        /* a torn line */
+      }
+    }
+  } catch {
+    /* no changes file */
+  }
   store = m;
+  if (compactNeeded) {
+    evict(m);
+    compactNow();
+  }
   return m;
 }
 
-function saveNow(): void {
+/** The whole file, compact, then the changes file gone (a crash between the two only replays what is in the file). */
+function compactNow(): void {
   const m = store;
   if (!m) return;
   const file = resolvePredictionAuditPath();
   try {
     mkdirSync(path.dirname(file), { recursive: true });
-    writeFileAtomic(
-      file,
-      `${JSON.stringify({ formatVersion: 1, records: [...m.values()] } satisfies PredictionAuditFile, null, 2)}\n`,
-      "utf8",
-    );
+    writeFileAtomic(file, `${JSON.stringify({ formatVersion: 1, records: [...m.values()] } satisfies PredictionAuditFile)}\n`, "utf8");
+    rmSync(changesPath(), { force: true });
+    dirty.clear();
+    appended = 0;
   } catch {
     /* the app does not fail because its notebook could not be written */
   }
 }
 
-function saveSoon(): void {
+/** The changed records, one line each, at the end of the changes file; folded in when it has grown. */
+function saveNow(): void {
+  const m = store;
+  if (!m || !dirty.size) return;
+  const lines: string[] = [];
+  for (const key of dirty) {
+    const r = m.get(key);
+    if (r) lines.push(JSON.stringify(r));
+  }
+  dirty.clear();
+  if (!lines.length) return;
+  try {
+    mkdirSync(path.dirname(changesPath()), { recursive: true });
+    appendFileSync(changesPath(), `${lines.join("\n")}\n`, "utf8");
+    appended += lines.length;
+  } catch {
+    /* the app does not fail because its notebook could not be written */
+  }
+  if (appended >= COMPACT_AFTER) compactNow();
+}
+
+function saveSoon(key?: string): void {
+  if (key) dirty.add(key);
   if (pending) return;
   pending = setTimeout(() => {
     pending = null;
@@ -258,12 +321,17 @@ function saveSoon(): void {
   pending.unref?.();
 }
 
-/** Write what is waiting now, at shutdown (code review 2026-10-10, A4): the debounce would drop it. */
+/**
+ * Write what is waiting now, at shutdown (code review 2026-10-10, A4): the debounce would drop it. The changes are
+ * folded into the file, so a clean exit leaves one compact file and no changes log.
+ */
 export function flushPredictionAudit(): void {
-  if (!pending) return;
-  clearTimeout(pending);
-  pending = null;
-  saveNow();
+  if (pending) {
+    clearTimeout(pending);
+    pending = null;
+  }
+  if (!store || (!dirty.size && !appended)) return;
+  compactNow();
 }
 
 /** Test seam — the module holds the file in memory for the life of the process. */
@@ -271,6 +339,8 @@ export function resetPredictionAuditForTests(): void {
   if (pending) clearTimeout(pending);
   pending = null;
   store = null;
+  dirty.clear();
+  appended = 0;
 }
 
 /**
@@ -484,7 +554,7 @@ export function recordPredictionForBody(input: {
     rec.scan = scanOf(body);
     rec.bodyName = body.bodyName;
     rec.updatedAt = at;
-    saveSoon();
+    saveSoon(rec.bodyKey);
   } catch {
     /* an audit log must never be the reason a snapshot fails */
   }
@@ -521,6 +591,7 @@ export function finalisePredictionsForSystem(systemAddress: number, marks: Surfa
         gravityG: k.gravityG ?? null,
       }));
       rec.final = true;
+      dirty.add(rec.bodyKey);
       closed++;
     }
     if (closed > 0) {

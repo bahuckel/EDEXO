@@ -5,9 +5,9 @@
  * in the dev build, 2-6 ms after). A screen's open state and its slot read only their own slice. A
  * tab's screen starts the first time its tab is in front, not when the tab is restored.
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
-import { act } from "react";
+import { act, useEffect } from "react";
 import { tabStore } from "../src/client/tabs/tabStore.js";
 import { TabSlot, useScreenOpen } from "../src/client/tabs/TabHost.js";
 
@@ -63,6 +63,45 @@ describe("switching tabs", () => {
     act(() => tabStore.close("boxels"));
     expect(owner).toBe(o + 1);
     expect(pane.textContent).toBe("");
+    act(() => root.unmount());
+  });
+});
+
+describe("a tab left behind", () => {
+  afterEach(() => vi.useRealTimers());
+  it("lets its screen go after releaseAfterMs, and starts it afresh when it comes back (discuss item 23)", () => {
+    vi.useFakeTimers();
+    let mounts = 0;
+    function Screen() {
+      // Once per mount, not per render.
+      useEffect(() => {
+        mounts++;
+      }, []);
+      return <p>map</p>;
+    }
+    const pane = document.createElement("div");
+    document.body.append(pane);
+    const root = createRoot(document.createElement("div"));
+    act(() => {
+      tabStore.open("boxels");
+      tabStore.setPane("boxels", pane);
+      tabStore.activate("boxels");
+      root.render(
+        <TabSlot kind="boxels" releaseAfterMs={1000}>
+          <Screen />
+        </TabSlot>,
+      );
+    });
+    expect(pane.textContent).toBe("map");
+    expect(mounts).toBe(1);
+    act(() => tabStore.activate("main"));
+    act(() => vi.advanceTimersByTime(999));
+    expect(pane.textContent).toBe("map");
+    act(() => vi.advanceTimersByTime(1));
+    expect(pane.textContent).toBe("");
+    act(() => tabStore.activate("boxels"));
+    expect(pane.textContent).toBe("map");
+    expect(mounts).toBe(2);
     act(() => root.unmount());
   });
 });

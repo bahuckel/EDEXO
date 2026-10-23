@@ -25,6 +25,7 @@ import {
 import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { readAutoRefreshSettings, writeAutoRefreshSettings } from "../dataAutoRefresh.js";
 import { findTritium } from "../tritiumSearch.js";
+import { listOldCopies, removeOldCopies } from "../oldCopies.js";
 
 /** `?x&y&z` when all three are numbers (a point picked on the galaxy map), else null. */
 function pointFromQuery(q: Record<string, unknown>): { x: number; y: number; z: number } | null {
@@ -327,6 +328,15 @@ export function registerCarriersPoiRoutes(
     } catch (e) {
       res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
     }
+  });
+
+  /** One-off copies in the data folder (oldCopies.ts): listed for Options, removed only when asked. */
+  app.get("/api/old-copies", (_req, res) => {
+    res.json(listOldCopies());
+  });
+  app.post("/api/old-copies/remove", localOnly, (req, res) => {
+    const result = removeOldCopies(req.body?.paths);
+    res.json({ ...result, ...listOldCopies() });
   });
 
   /** Carriers & Stations keep themselves current (dataAutoRefresh.ts): the two intervals. */

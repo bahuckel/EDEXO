@@ -155,6 +155,8 @@ module.exports = {
   portable: {
     artifactName: "${productName}.exe",
     unpackDirName: "EDExoPortable",
+    // Shown while it unpacks (discuss item 16); made by scripts/make-splash.mjs before every Windows build.
+    splashImage: "build/portable-splash.bmp",
   },
   npmRebuild: false,
 };

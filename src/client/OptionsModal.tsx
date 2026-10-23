@@ -9,6 +9,7 @@ import { ExoAlertsSetting } from "./options/ExoAlertsSetting";
 import { useModal } from "./ui/useModal";
 import { InfoPopover } from "./ui/Tooltip";
 import { FoldPanel } from "./ui/Fold";
+import { OldCopiesPanel } from "./options/OldCopiesPanel";
 import { Select } from "./ui/Select";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { AppSnapshot } from "@shared/types";
@@ -508,6 +509,7 @@ export function MapOptionsModal({
               </InfoPopover>
             </div>
           </FoldPanel>
+          {compare ? <OldCopiesPanel /> : null}
           {compare ? (
           <FoldPanel
             foldKey="options-developer"

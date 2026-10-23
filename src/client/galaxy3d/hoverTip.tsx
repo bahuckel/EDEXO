@@ -7,7 +7,7 @@ import { fmtLy } from "@shared/format";
 import { expeditionTip, targetLabelOf } from "../ExpeditionDrawer";
 import { formatCount, formatValue } from "./clusters";
 import type { HoverInfo } from "./engineTypes";
-import { jumpLine } from "./JumponiumDrawer";
+import { jumpLine } from "./jumpRow";
 import { MINE_IMPORTED, mineStatus } from "./mapConstants";
 import { extraPoint, navPoint, type MapLookups } from "./pointLookup";
 import { StationNames } from "./StationsAt";

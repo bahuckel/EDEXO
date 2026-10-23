@@ -589,3 +589,16 @@
 .msg.err {
   color: #ffb38a;
 }
+
+/* Options › Old copies: one line a file, the path wraps, the size beside it. */
+.options-old-copies {
+  margin: 0 0 0.6rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.25rem;
+  font-size: var(--fs-sm);
+}
+.options-old-copies code {
+  overflow-wrap: anywhere;
+}

@@ -29,6 +29,8 @@ import { TabSlot } from "../tabs/TabHost";
 /** The 3D galaxy map inside a tab (Tab view); without it, it opens in its own window as before. */
 // memo: no props, so a snapshot push never reaches it (D11).
 const GalaxyMap3D = memo(lazy(() => import("../GalaxyMap3D").then((m) => ({ default: m.GalaxyMap3D }))));
+/** A galaxy map left behind other tabs this long gives its memory back (discuss item 23); its tab redraws it. */
+const GALAXY_RELEASE_MS = 10 * 60_000;
 
 /** The EDEXO browser's tab (plan 9): its code loads only when the tab opens. */
 const BrowserScreen = lazy(() => import("../BrowserScreen").then((m) => ({ default: m.BrowserScreen })));
@@ -131,7 +133,7 @@ export function HeaderScreens({
   return (
     <>
       {galaxyTab ? (
-        <TabSlot kind="galaxy">
+        <TabSlot kind="galaxy" releaseAfterMs={GALAXY_RELEASE_MS}>
           <Suspense fallback={<ModalLoading />}>
             <GalaxyMap3D />
           </Suspense>

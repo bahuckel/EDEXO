@@ -15,6 +15,7 @@
     "build": "vite build",
     "bundle": "node scripts/bundle.mjs",
     "icon": "node scripts/make-ico.mjs",
+    "gen:commodities": "node scripts/gen-commodity-categories.mjs",
     "images": "node scripts/gen-image-derivatives.mjs",
     "electron:dev": "npm run build && npm run bundle && electron .",
     "dist:win": "npm run build && npm run images && npm run bundle && node scripts/dist-win.mjs && node scripts/dist-win-cli.mjs",

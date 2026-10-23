@@ -10,7 +10,7 @@
 import { useInTab, useTabInFront } from "./tabs/TabHost";
 import { GALAXY_DRAWER_EVENT, takeGalaxyDrawer } from "./galaxyDrawerRequest";
 import { withTransition } from "./motion";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GalaxyEngine,
   type EngineStats,
@@ -23,9 +23,9 @@ import { SYSTEM_CHANGED_EVENT } from "./useLiveSnapshot";
 import { placeLabels } from "./galaxy3d/labelPlacement";
 import { formatCount, formatValue } from "./galaxy3d/clusters";
 import { fmtLy } from "@shared/format";
-import { GalaxySearchPanel, type GalaxySearchApplied } from "./GalaxySearchPanel";
+import type { GalaxySearchApplied } from "./GalaxySearchPanel";
 import { GalaxyIndexDownload } from "./GalaxyIndexDownload";
-import { GalaxyNavRoutePanel, type NavRouteSystemDTO } from "./GalaxyNavRoutePanel";
+import type { NavRouteSystemDTO } from "./GalaxyNavRoutePanel";
 import {
   EMPTY_GALAXY_FILTER,
   GalaxyFilterPanel,
@@ -41,19 +41,23 @@ import {
   expeditionSize,
   takeExpeditionFocus,
 } from "./ExpeditionDrawer";
-import { NeutronDrawer } from "./NeutronDrawer";
-import { JumponiumDrawer, type JumpRow } from "./galaxy3d/JumponiumDrawer";
-import { FinderDrawer } from "./galaxy3d/FinderDrawer";
+import type { JumpRow } from "./galaxy3d/jumpRow";
 import type { FinderHit, FinderResult } from "@shared/finder";
 import { StationsList } from "./galaxy3d/StationsAt";
 import { STATIONS_CHANGED_EVENT } from "./StationsPanel";
+import { CARRIERS_STATIONS_TITLE, useCarriersStationsTab, type CarriersStationsPick } from "./carriersStationsTab";
 import {
-  CARRIERS_STATIONS_TITLE,
   CarriersStationsBody,
   CarriersStationsTabs,
-  useCarriersStationsTab,
-  type CarriersStationsPick,
-} from "./CarriersStations";
+  CodexMenu,
+  DrawerLoading,
+  FinderDrawer,
+  GalaxyNavRoutePanel,
+  GalaxySearchPanel,
+  JumponiumDrawer,
+  NeutronDrawer,
+  preloadGalaxyDrawers,
+} from "./galaxy3d/lazyDrawers";
 import { clearStationsAtCache } from "./galaxy3d/StationsAt";
 import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
 import {
@@ -111,7 +115,6 @@ import { hoverTip } from "./galaxy3d/hoverTip";
 import { selectionPanel } from "./galaxy3d/selectionPanel";
 import { ViewMenu } from "./galaxy3d/ViewMenu";
 import { LayersMenu } from "./galaxy3d/LayersMenu";
-import { CodexMenu } from "./galaxy3d/CodexMenu";
 import { StatusBar } from "./galaxy3d/StatusBar";
 
 /** The base layers (View menu); a stored copy missing a key, or with a non-boolean, is not used. */
@@ -1227,6 +1230,11 @@ export function GalaxyMap3D() {
     return hits;
   }, [findText, extraData]);
 
+  // The drawers load in the background once the map has drawn (lazyDrawers.tsx), so opening one is instant.
+  useEffect(() => {
+    if (stats?.phase === "ready") preloadGalaxyDrawers();
+  }, [stats?.phase]);
+
   const go = (g: { x: number; y: number; z: number }, distance: number, sel?: Selection) => {
     setFindOpen(false);
     engine.current?.flyTo(g, distance);
@@ -1637,6 +1645,8 @@ export function GalaxyMap3D() {
         </aside>
       ) : null}
 
+      {/* Drawers load when first opened (galaxy3d/lazyDrawers.tsx); one at a time is open. */}
+      <Suspense fallback={<DrawerLoading />}>
       {drawer === "expedition" ? (
         <ExpeditionDrawer
           ship={route?.position ?? null}
@@ -1768,6 +1778,7 @@ export function GalaxyMap3D() {
           codexSystems={codexSystems}
         />
       ) : null}
+      </Suspense>
 
       <header className="g3d-bar" ref={barRef}>
         <nav className="g3d-tabs" aria-label="Galaxy map menus">

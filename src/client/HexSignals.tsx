@@ -7,8 +7,8 @@
  * edges (hexSignalsEngine.ts).
  *
  * Cost, on purpose: drawn in a worker on an OffscreenCanvas, so the page's main thread does not paint
- * it; 30 frames a second at most (15 on a phone, glimmer only); nothing when the window is hidden, and
- * nothing at all with "reduce motion" on.
+ * it; 30 frames a second at most (15 on a phone, glimmer only); nothing when the window is hidden or has been
+ * behind another (the game) for 30 seconds (discuss item 25), and nothing at all with "reduce motion" on.
  *
  * Strength: `?backdrop=soft` (default) or `?backdrop=faint`, remembered in this browser — two levels
  * for the owner to choose between. Options → Colour scheme → "Animated background" turns it off and
@@ -24,6 +24,8 @@ import { runHexSignals, type BackdropLevel, type BackdropOptions } from "./hexSi
 const LEVEL_KEY = "edexo.backdrop";
 const OFF_KEY = "edexo.backdropOff";
 const BACKDROP_EVENT = "edexo-backdrop";
+/** How long behind another window before the backdrop holds still. */
+const BLUR_PAUSE_MS = 30_000;
 
 export function readBackdropOn(): boolean {
   try {
@@ -104,6 +106,12 @@ export function HexSignals() {
     let stop: () => void = () => {};
     let resize: () => void = () => {};
     let setAccent: (rgb: string | null) => void = () => {};
+    let setPausedRaw: (paused: boolean) => void = () => {};
+    // Readable in devtools and checks: `data-backdrop-paused` on the host.
+    const setPaused = (p: boolean) => {
+      el.toggleAttribute("data-backdrop-paused", p);
+      setPausedRaw(p);
+    };
     /* On the page's own thread: browsers without OffscreenCanvas, or a worker that failed to start. */
     const runHere = () => {
       const handle = runHexSignals(canvas, size(), opts);
@@ -118,6 +126,7 @@ export function HexSignals() {
       };
       stop = () => handle.stop();
       setAccent = (rgb) => handle.setAccent(rgb);
+      setPausedRaw = (p) => handle.setPaused(p);
     };
     if (typeof canvas.transferControlToOffscreen === "function" && typeof Worker === "function") {
       try {
@@ -127,6 +136,7 @@ export function HexSignals() {
         mark(`worker · ${opts.level}${opts.signals ? "" : " · glimmer only"}`);
         resize = () => worker.postMessage({ type: "resize", ...size() });
         setAccent = (rgb) => worker.postMessage({ type: "accent", rgb });
+        setPausedRaw = (p) => worker.postMessage({ type: "pause", paused: p });
         stop = () => worker.terminate();
         // A worker that cannot load (an older phone browser, a blocked file) would leave the canvas it
         // was handed blank for good: start again on the page's own thread with a fresh canvas.
@@ -157,7 +167,36 @@ export function HexSignals() {
       }
     };
     motion?.addEventListener?.("change", onMotion);
+    /*
+      Paused while nobody can see it move (discuss item 25): at once when the window is hidden (minimised, another tab),
+      after 30 seconds when it is merely behind another window (the game in front). Back with the focus or the window.
+    */
+    let blurTimer: number | null = null;
+    const clearBlur = () => {
+      if (blurTimer != null) window.clearTimeout(blurTimer);
+      blurTimer = null;
+    };
+    const onVisibility = () => {
+      if (document.hidden) setPaused(true);
+      else if (document.hasFocus()) setPaused(false);
+    };
+    const onBlur = () => {
+      clearBlur();
+      blurTimer = window.setTimeout(() => setPaused(true), BLUR_PAUSE_MS);
+    };
+    const onFocus = () => {
+      clearBlur();
+      if (!document.hidden) setPaused(false);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    if (!document.hasFocus()) onBlur();
     return () => {
+      clearBlur();
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
       window.removeEventListener("resize", onResize);
       window.removeEventListener(APP_THEME_EVENT, onTheme);
       motion?.removeEventListener?.("change", onMotion);

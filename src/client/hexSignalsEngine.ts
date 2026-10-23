@@ -103,6 +103,8 @@ export interface HexSignalsHandle {
   resize(w: number, h: number, dpr: number): void;
   /** Follow a colour-scheme change without restarting. */
   setAccent(rgb: string | null): void;
+  /** Hold the frames (the picture stays as it was) or carry on (discuss item 25: a window behind the game). */
+  setPaused(paused: boolean): void;
   stop(): void;
 }
 
@@ -126,6 +128,7 @@ export function runHexSignals(
   let raf = 0;
   let last = -1;
   let stopped = false;
+  let paused = false;
 
   const pick = <T>(xs: T[]): T => xs[Math.floor(Math.random() * xs.length)]!;
 
@@ -239,7 +242,7 @@ export function runHexSignals(
   };
 
   const frame = (now: number) => {
-    if (stopped) return;
+    if (stopped || paused) return;
     raf = requestAnimationFrame(frame);
     if (last < 0) last = now;
     if (now - last < frameMs) return;
@@ -265,6 +268,15 @@ export function runHexSignals(
     resize,
     setAccent(rgb) {
       accent = rgb || RGB.accent;
+    },
+    setPaused(p) {
+      if (p === paused || stopped) return;
+      paused = p;
+      if (p) cancelAnimationFrame(raf);
+      else {
+        last = -1;
+        raf = requestAnimationFrame(frame);
+      }
     },
     stop() {
       stopped = true;

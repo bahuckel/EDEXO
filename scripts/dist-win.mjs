@@ -126,6 +126,15 @@ function installPortableTemplate() {
 }
 installPortableTemplate();
 
+// The portable exe's splash (discuss item 16): build/ is generated, so it is made here every time.
+{
+  const r = spawnSync(process.execPath, [join("scripts", "make-splash.mjs")], { stdio: "inherit" });
+  if (r.status !== 0) {
+    console.error("[dist:win] could not make the portable splash");
+    process.exit(1);
+  }
+}
+
 function runBuilder(label) {
   console.info(
     `\n[dist:win] ${label}: packaging portable .exe (7-Zip + NSIS; often several minutes with little or no new log lines).\n`,
