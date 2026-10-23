@@ -769,3 +769,8 @@ html[data-streamer-bg="transparent"] .cz-head {
     grid-row: 1 / span 4;
   }
 }
+
+/* useFlip wrapper (Trips): no box of its own. */
+.cz-flip {
+  display: contents;
+}

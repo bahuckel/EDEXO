@@ -4,6 +4,8 @@
  * moving the ship.
  */
 import { commodityMergeBucket } from "../../../shared/colonize/commodityKey";
+import { useRef } from "react";
+import { useFlip } from "../../ui/useFlip";
 import { depotDisplayLabel } from "../../../shared/colonize/depotLabel";
 import { formatTons as t } from "../../../shared/colonize/formatPrice";
 import { siteMaterials } from "../../../shared/colonize/siteMaterials";
@@ -91,14 +93,16 @@ export function DeliverHerePanel({ m, site }: { m: Pick<ColonizeModel, "shipCarg
     .map((r) => ({ label: r.label, need: r.left, give: r.aboard }))
     .sort((a, b) => b.give - a.give);
   const delivered = materials.filter((r) => r.done);
+  const flipRef = useRef<HTMLUListElement>(null);
+  useFlip(flipRef);
   return (
     <Panel k="deliver-here" tone="info" title="Docked at your site">
       <div className="cz-stack" style={{ gap: 12 }}>
         <div className="cz-big">{depotDisplayLabel(site)}</div>
         {rows.length ? (
-          <ul className="cz-list">
+          <ul ref={flipRef} className="cz-list">
             {rows.map((r) => (
-              <li key={r.label}>
+              <li key={r.label} data-flip-key={r.label}>
                 <span>
                   Deliver <b>{r.label}</b>
                 </span>

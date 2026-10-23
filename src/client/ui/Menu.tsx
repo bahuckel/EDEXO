@@ -11,6 +11,7 @@
  * do not take the tooltips the entries sit in.
  */
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { withTransition } from "../motion";
 
 /** Spread on an entry inside a menu (`{...MENU_ITEM}`). */
 export const MENU_ITEM = { role: "menuitem", tabIndex: -1 } as const;
@@ -48,7 +49,7 @@ export function useMenuButton<B extends HTMLElement = HTMLButtonElement, M exten
 
   const close = useCallback(
     (refocus: boolean) => {
-      setOpen(false);
+      withTransition(() => setOpen(false)); // fades out (motion.ts)
       if (refocus) buttonRef.current?.focus({ preventScroll: true });
     },
     [setOpen],
@@ -108,8 +109,10 @@ export function useMenuButton<B extends HTMLElement = HTMLButtonElement, M exten
     },
     /** For the button's onClick: opens on the first entry, or closes. */
     toggle: () => {
-      if (!open) focusOnOpen.current = "first";
-      setOpen(!open);
+      if (!open) {
+        focusOnOpen.current = "first";
+        setOpen(true);
+      } else withTransition(() => setOpen(false));
     },
     menuProps: {
       ref: menuRef,

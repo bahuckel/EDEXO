@@ -16,6 +16,7 @@
  * in another window brings that window forward instead.
  */
 import { useSyncExternalStore } from "react";
+import { motionLevel } from "../motion";
 import { flushSync } from "react-dom";
 
 export type TabKind =
@@ -160,7 +161,8 @@ function switchesFront(next: TabState): boolean {
   if (next.active === state.active || typeof document === "undefined") return false;
   const d = document as Document & { startViewTransition?: (cb: () => void) => unknown };
   if (typeof d.startViewTransition !== "function") return false;
-  return !(typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  // Options › Look › Motion (motion.ts): a fade at Reduced too, nothing at Off.
+  return motionLevel() !== "off";
 }
 
 function emit(next: TabState): void {

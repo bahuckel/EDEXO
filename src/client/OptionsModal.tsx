@@ -2,6 +2,8 @@
  * The options modal and its panels, split out of App.tsx (7.3).
  */
 import { useToast } from "./ui/feedback";
+import { withTransition } from "./motion";
+import { MotionSetting } from "./options/MotionSetting";
 import { ModalHead } from "./ui/ModalHead";
 import { ExoAlertsSetting } from "./options/ExoAlertsSetting";
 import { useModal } from "./ui/useModal";
@@ -261,7 +263,7 @@ export function MapOptionsModal({
   );
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         tabIndex={-1}
@@ -299,6 +301,7 @@ export function MapOptionsModal({
             Look
           </h4>
           <ColourSchemePanel />
+          <MotionSetting />
           {compare ? (
           <>
           {/*

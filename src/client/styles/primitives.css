@@ -337,13 +337,13 @@
 
 /* ---- dialogs ------------------------------------------------------------- */
 .modal-backdrop {
-  animation: modal-backdrop-in var(--motion-base) var(--motion-ease);
+  animation: modal-backdrop-in var(--motion-in, 180ms) var(--motion-ease-out, ease-out);
 }
 
 .modal-panel,
 .confirm-modal,
 .info-panel {
-  animation: modal-panel-in var(--motion-base) var(--motion-ease);
+  animation: modal-panel-in var(--motion-in, 180ms) var(--motion-ease-out, ease-out);
 }
 
 @keyframes modal-backdrop-in {
@@ -358,7 +358,7 @@
 @keyframes modal-panel-in {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.99);
+    transform: translateY(calc(6px * var(--motion-shift, 1))) scale(calc(1 - 0.01 * var(--motion-shift, 1)));
   }
   to {
     opacity: 1;

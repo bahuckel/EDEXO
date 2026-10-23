@@ -2,6 +2,7 @@
  * The feeder corpus dialog and its route-file import. Split out of AppModals.tsx (code review D, 2026-09-27).
  */
 import { FeederStatusPanel } from "./FeederStatusPanel";
+import { withTransition } from "./motion";
 import type { SpanshRouteSummaryDTO } from "./bodyHelpers";
 import { useToast } from "./ui/feedback";
 import { ModalHead } from "./ui/ModalHead";
@@ -138,7 +139,7 @@ export function FeederModal({
   }, [onRefresh]);
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         tabIndex={-1}

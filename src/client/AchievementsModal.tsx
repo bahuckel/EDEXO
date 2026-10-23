@@ -7,6 +7,7 @@
  * rows and in the HUD's Achievement section.
  */
 import { isStrOrNull, usePersistedState } from "./usePersistedState";
+import { withTransition } from "./motion";
 import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import { useToast } from "./ui/feedback";
@@ -409,7 +410,7 @@ export function AchievementsModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         className="modal-panel modal-panel--achievements"

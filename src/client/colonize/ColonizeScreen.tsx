@@ -5,6 +5,7 @@
  * Plan opens first (owner, 2026-10-18: "Sites + haul plan"); Search, Sources and Wing are a tab away.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { withTransition } from "../motion";
 import "./colonize.css";
 import { depotDisplayLabel } from "../../shared/colonize/depotLabel";
 import { formatTons } from "../../shared/colonize/formatPrice";
@@ -160,7 +161,7 @@ function ColonizeApp({ remoteChange }: { remoteChange: (() => void) | null }) {
             className={`tab${tab === t.key ? " on" : ""}`}
             aria-selected={tab === t.key}
             tabIndex={tab === t.key ? 0 : -1}
-            onClick={() => setTab(t.key)}
+            onClick={() => withTransition(() => setTab(t.key))}
           >
             {t.label}
             {t.key === "wing" && (snap?.wingRoster.length ?? 0) > 0 ? (

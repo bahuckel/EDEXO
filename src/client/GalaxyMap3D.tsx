@@ -9,6 +9,7 @@
  */
 import { useInTab, useTabInFront } from "./tabs/TabHost";
 import { GALAXY_DRAWER_EVENT, takeGalaxyDrawer } from "./galaxyDrawerRequest";
+import { withTransition } from "./motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GalaxyEngine,
@@ -1233,8 +1234,9 @@ export function GalaxyMap3D() {
     const ship = engine.current?.getShip();
     if (ship) engine.current?.flyTo(ship, 2_500);
   };
+  // A drawer closing or giving way to another fades out (motion.ts); opening slides in (layout.css).
   const openDrawer = (d: Drawer) => {
-    setDrawer((cur) => (cur === d ? "none" : d));
+    withTransition(() => setDrawer((cur) => (cur === d ? "none" : d)));
     engine.current?.select(null);
   };
 

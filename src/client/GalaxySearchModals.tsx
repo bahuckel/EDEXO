@@ -2,6 +2,7 @@
  * The galaxy search's result dialogs. Split out of GalaxySearchPanel.tsx (code review D, 2026-09-27).
  */
 import { CopySystemButton } from "./CopySystemButton";
+import { withTransition } from "./motion";
 import { cr, ly } from "./galaxySearchShared";
 import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
@@ -30,7 +31,7 @@ export function GalaxyHitsModal({
 }) {
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         tabIndex={-1}
@@ -63,7 +64,7 @@ export function GalaxyPossibleModal({ result, onClose }: { result: GalaxyBodySca
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
   const bodies = result.hits.reduce((n, h) => n + h.bodies.length, 0);
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         tabIndex={-1}

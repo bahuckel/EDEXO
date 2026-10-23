@@ -2,6 +2,7 @@
  * The payout range, explained species by species. Split out of BodyPane.tsx (code review D, 2026-09-27).
  */
 import { ModalHead } from "./ui/ModalHead";
+import { withTransition } from "./motion";
 import { useModal } from "./ui/useModal";
 import { footfallCertainty, showsFootfallPrice, showsListPrice } from "@shared/footfallValue";
 import type { ExoPayoutRangeDTO } from "@shared/types";
@@ -49,7 +50,7 @@ export function ExoPayoutRangeDetailModal({
   const maxFfTot = pr.maxTotalSpecies.reduce((s, r) => s + r.listCredits * 5, 0);
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         tabIndex={-1}

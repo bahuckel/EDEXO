@@ -23,6 +23,7 @@
  * instinct, which is exactly why both numbers are on screen instead of one confidence score.
  */
 import { isBool, isNum, isStr, isStrArr, usePersistedState } from "./usePersistedState";
+import { withTransition } from "./motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CARRIER_SERVICE_OPTIONS, carrierServiceLabel } from "@shared/carrierServices";
 import { CARRIER_NETWORKS } from "@shared/carrierNetworks";
@@ -312,7 +313,7 @@ export function CarriersModal({ onClose }: { onClose: () => void }) {
   const rows = data?.rows ?? [];
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         className="modal-panel fdb-panel"
@@ -354,7 +355,7 @@ export function CarriersModal({ onClose }: { onClose: () => void }) {
               someone aboard it is running a journal uploader.
             </p>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
             ×
           </button>
         </header>

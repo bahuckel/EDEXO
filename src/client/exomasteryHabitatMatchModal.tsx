@@ -1,5 +1,6 @@
 import type { ExomasteryDetailDTO, ExomasteryVarietyItemDTO } from "@shared/types";
 
+import { withTransition } from "./motion";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -50,7 +51,7 @@ export function ExomasteryHabitatMatchModal({
       : null;
 
   return createPortal(
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         tabIndex={-1}

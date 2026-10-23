@@ -20,6 +20,7 @@
  * body). It is memoised there until the store changes, so re-opening this is instant.
  */
 import { isBool, isNum, oneOf, usePersistedState } from "./usePersistedState";
+import { withTransition } from "./motion";
 import { PAGE } from "./ui/tablePage";
 import { useEffect, useMemo, useState } from "react";
 import { CopySystemButton } from "./CopySystemButton";
@@ -164,7 +165,7 @@ export function FirstDiscoveryBacklogModal({
   const systems = new Set(rows.map((r) => r.systemAddress)).size;
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         className="modal-panel fdb-panel"
@@ -181,7 +182,7 @@ export function FirstDiscoveryBacklogModal({
               bonus, because nobody has walked these yet.
             </p>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
             ×
           </button>
         </header>

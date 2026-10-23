@@ -2,7 +2,8 @@
  * Your construction sites: progress, what is left, the biggest needs; finished and put-away sites in folds.
  * A site's details hold its full list, where to shop around (its hub) and putting it away.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useFlip } from "../../ui/useFlip";
 import { depotDisplayLabel } from "../../../shared/colonize/depotLabel";
 import { formatTons as tons } from "../../../shared/colonize/formatPrice";
 import { colonyOf } from "../../../shared/colonize/ownColony";
@@ -122,8 +123,11 @@ function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapsho
   const docked = m.snap?.liveDocked?.marketId === d.marketId;
   const [hub, setHub] = useState(m.ui.depotRefPins[d.marketId] ?? "");
   const finished = d.complete || t.remaining <= 0;
+  // A material delivered in full slides to the bottom (useFlip) instead of jumping there.
+  const flipRef = useRef<HTMLElement>(null);
+  useFlip(flipRef);
   return (
-    <article className={`cz-site${docked ? " cz-site--docked" : ""}`} aria-label={depotDisplayLabel(d)}>
+    <article ref={flipRef} className={`cz-site${docked ? " cz-site--docked" : ""}`} aria-label={depotDisplayLabel(d)}>
       <div className="cz-row" style={{ alignItems: "flex-start" }}>
         <div>
           <div className="cz-site__name">{depotDisplayLabel(d)}</div>
@@ -151,7 +155,7 @@ function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapsho
       {!compact && needs.length ? (
         <ul className="cz-list">
           {needs.slice(0, 3).map((r) => (
-            <li key={r.id || r.label}>
+            <li key={r.id || r.label} data-flip-key={`top:${r.id || r.label}`}>
               <span>{r.label}</span>
               <span className="cz-num cz-soft">{tons(r.left)}</span>
             </li>
@@ -165,12 +169,12 @@ function SiteCard({ d, m, compact = false, readOnly = false }: { d: DepotSnapsho
             <ul className="cz-list">
               {materials.map((r) =>
                 r.done ? (
-                  <li key={r.id || r.label} className="cz-mat--done">
+                  <li key={r.id || r.label} data-flip-key={`all:${r.id || r.label}`} className="cz-mat--done">
                     <span>{r.label}</span>
                     <span className="cz-num">✓ delivered</span>
                   </li>
                 ) : (
-                  <li key={r.id || r.label}>
+                  <li key={r.id || r.label} data-flip-key={`all:${r.id || r.label}`}>
                     <span>{r.label}</span>
                     <span className="cz-num cz-dim">
                       {tons(r.left)} <span className="cz-small">of {tons(r.required)}</span>

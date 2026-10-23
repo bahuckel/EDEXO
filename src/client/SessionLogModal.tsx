@@ -2,6 +2,7 @@
  * The session log and its Markdown copy. Split out of AppModals.tsx (code review D, 2026-09-27).
  */
 import { CopySystemButton } from "./CopySystemButton";
+import { withTransition } from "./motion";
 import { fmtCrExact, fmtCrShort, fmtLy } from "@shared/format";
 import { useToast } from "./ui/feedback";
 import { ModalHead } from "./ui/ModalHead";
@@ -73,7 +74,7 @@ export function SessionLogModal({ log, onClose }: { log: SessionLogDTO | null; o
       log.samples.length === 0 &&
       log.sales.length === 0);
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         className="modal-panel modal-panel--session"

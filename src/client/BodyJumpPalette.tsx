@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { withTransition } from "./motion";
 import { createPortal } from "react-dom";
 import type { BodyComputed } from "@shared/types";
 import { useModal } from "./ui/useModal";
@@ -79,7 +80,7 @@ export function BodyJumpPalette({
   };
 
   return createPortal(
-    <div className="modal-backdrop jump-backdrop" onClick={onClose} role="presentation">
+    <div className="modal-backdrop jump-backdrop" onClick={() => withTransition(onClose)} role="presentation">
       <div
         ref={dialogRef}
         className="modal jump-palette"

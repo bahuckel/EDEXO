@@ -3,6 +3,7 @@
  * and the button with their editor are in BookmarkButton.tsx.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { withTransition } from "./motion";
 import { type BookmarkRowDTO, type BookmarksListDTO } from "@shared/bookmarks";
 import { useModal } from "./ui/useModal";
 import { LoadingNote } from "./ui/Loading";
@@ -81,7 +82,7 @@ export function BookmarksModal({
   };
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         className="modal-panel fdb-panel"
@@ -98,7 +99,7 @@ export function BookmarksModal({
               this PC.
             </p>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
             ×
           </button>
         </header>

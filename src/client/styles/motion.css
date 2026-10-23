@@ -1,0 +1,87 @@
+/* ==========================================================================================================
+   Motion (R3b, owner 2026-10-23: "less like a website and more like a piece of software ... no abrupt changes,
+   everything should be smooth, fast animations"). One set of durations and curves for the whole app, and the three
+   levels from Options › Look › Motion on <html data-motion> (motion.ts):
+     full     fades and slides;
+     reduced  fades only: every keyframe's movement is multiplied by --motion-shift, which is 0 here;
+     off      instant: durations collapse to nothing.
+   Things React removes (a pop-up, a sub-tab, a drawer) fade out through a View Transition (motion.ts
+   withTransition); things CSS shows and hides fade both ways here.
+   ========================================================================================================== */
+
+:root {
+  --motion-in: 180ms;
+  --motion-out: 140ms;
+  /* decelerate in, accelerate out */
+  --motion-ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --motion-ease-in: cubic-bezier(0.5, 0, 0.75, 0);
+  --motion-shift: 1;
+}
+html[data-motion="reduced"] {
+  --motion-shift: 0;
+}
+html[data-motion="off"] *,
+html[data-motion="off"] *::before,
+html[data-motion="off"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0s !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0s !important;
+}
+
+/* ---- the cross-fade of a switch or a close (View Transitions) ---- */
+::view-transition-old(root) {
+  animation: vt-fade-out var(--motion-out) var(--motion-ease-in) both;
+}
+::view-transition-new(root) {
+  animation: vt-fade-in var(--motion-in) var(--motion-ease-out) both;
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---- pop-overs (Radix): out as they came in. Radix keeps the content until the animation ends. ---- */
+[data-radix-popper-content-wrapper] > [data-state="closed"] {
+  animation: motion-drop-out var(--motion-out) var(--motion-ease-in) forwards;
+}
+@keyframes motion-drop-out {
+  to {
+    opacity: 0;
+    transform: translateY(calc(-6px * var(--motion-shift))) scaleY(calc(1 - 0.04 * var(--motion-shift)));
+  }
+}
+
+/* ---- the app bar's dropdown (below 1,700 px): shown and hidden by a class, so CSS fades it both ways ---- */
+@media (max-width: 1699.98px) {
+  .appbar-menu {
+    opacity: 0;
+    transform: translateY(calc(-6px * var(--motion-shift))) scaleY(calc(1 - 0.04 * var(--motion-shift)));
+    transform-origin: top right;
+    transition:
+      opacity var(--motion-out) var(--motion-ease-in),
+      transform var(--motion-out) var(--motion-ease-in),
+      display var(--motion-out) allow-discrete;
+  }
+  .appbar-menu--left {
+    transform-origin: top left;
+  }
+  .appbar-menu--open {
+    opacity: 1;
+    transform: none;
+    transition-duration: var(--motion-in);
+    transition-timing-function: var(--motion-ease-out);
+  }
+  @starting-style {
+    .appbar-menu--open {
+      opacity: 0;
+      transform: translateY(calc(-6px * var(--motion-shift))) scaleY(calc(1 - 0.04 * var(--motion-shift)));
+    }
+  }
+}

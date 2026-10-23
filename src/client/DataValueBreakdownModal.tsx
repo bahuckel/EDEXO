@@ -2,6 +2,7 @@
  * What the unsold data is worth, line by line. Split out of AppModals.tsx (code review D, 2026-09-27).
  */
 import { CopySystemButton } from "./CopySystemButton";
+import { withTransition } from "./motion";
 import { speciesPhotoVariant } from "./speciesPhotoVariant";
 import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
@@ -53,7 +54,7 @@ export function DataValueBreakdownModal({
     <span className="dim tiny">{fleetCarrierIsOwn ? " · at your carrier (−15 %)" : " · at a carrier"}</span>
   ) : null;
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         tabIndex={-1}

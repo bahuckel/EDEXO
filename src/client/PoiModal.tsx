@@ -18,6 +18,7 @@
  *   carrier list there is no sighting age to report and none is implied.
  */
 import { isBool, isNum, isStrArr, usePersistedState } from "./usePersistedState";
+import { withTransition } from "./motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { POI_GROUP_OPTIONS } from "@shared/gecCategories";
 import { Tooltip } from "./ui/Tooltip";
@@ -116,7 +117,7 @@ export function PoiModal({ onClose }: { onClose: () => void }) {
   const rows = data?.rows ?? [];
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         className="modal-panel fdb-panel"
@@ -141,7 +142,7 @@ export function PoiModal({ onClose }: { onClose: () => void }) {
               . Places commanders went to and wrote up. Each row links to its own page.
             </p>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
             ×
           </button>
         </header>

@@ -1,4 +1,5 @@
 import { isBool, isStr, usePersistedState } from "./usePersistedState";
+import { withTransition } from "./motion";
 import type { EncyclopediaSpeciesRowDTO, FootScannedEntry, SpeciesEntry } from "@shared/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PhotoGallery } from "./PhotoGallery";
@@ -283,7 +284,7 @@ export function EncyclopediaModal({
   };
 
   return (
-    <div className="modal-backdrop encyclopedia-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop encyclopedia-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         tabIndex={-1}

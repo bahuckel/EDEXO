@@ -1,4 +1,5 @@
 import { isBool, usePersistedState } from "./usePersistedState";
+import { withTransition } from "./motion";
 import { SNAPSHOT_SYSTEM_CLASS } from "./panelSnapshot";
 import { SnapshotButton } from "./SnapshotButton";
 import type { NotableBodyInfo } from "@shared/types";
@@ -364,7 +365,7 @@ export const SystemMapModal = memoOnSnapSlice(SYSTEM_MAP_FIELDS, function System
 
   if (!map || !layout || layout.width <= 0) {
     return (
-      <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
         <div
           ref={dialogRef}
           tabIndex={-1}
@@ -404,7 +405,7 @@ export const SystemMapModal = memoOnSnapSlice(SYSTEM_MAP_FIELDS, function System
   const vb = `${layout.minX} ${layout.minY} ${layout.width} ${layout.height}`;
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         tabIndex={-1}

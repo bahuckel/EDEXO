@@ -11,6 +11,7 @@
  * and the side menu re-read the journals after every jump, so the ticks follow you.
  */
 import { tabListKeyDown } from "./ui/Tabs";
+import { withTransition } from "./motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BoxelTableDTO, BoxelTableRowDTO, PreviousBoxelDTO, SavedBoxelDTO } from "@shared/boxel";
 import type { BoxelLookupStatus } from "@shared/boxel";
@@ -578,7 +579,7 @@ export function BoxelScreen({
           >
             ?
           </button>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
             ×
           </button>
         </header>

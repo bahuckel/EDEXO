@@ -1,5 +1,6 @@
 /** The next trip, front and centre, and the trips after it with their ticks. */
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useFlip } from "../../ui/useFlip";
 import type { HaulTrip, TripStop } from "../../../shared/colonize/logisticsPlanner";
 import { formatHopLy } from "../../../shared/colonize/systemDistanceLy";
 import { formatPrice, formatTons as t } from "../../../shared/colonize/formatPrice";
@@ -173,15 +174,23 @@ export function TripList({ trips, completed }: TripProps) {
   const next = trips.find((tr) => !tripDone(tr, completed));
   const rest = trips.filter((tr) => tr !== next);
   const shown = all ? rest : rest.slice(0, 8);
+  // After a delivery the plan is made again and the trips move up: they slide (useFlip), keyed by what they carry.
+  const flipRef = useRef<HTMLDivElement>(null);
+  useFlip(flipRef);
   return (
     <Panel k="trips" title="After that" className="cz-panel--flush">
+      <div ref={flipRef} className="cz-flip">
       {shown.map((tr) => {
         const done = tripDone(tr, completed);
         const buy = tr.stops.find((s) => s.kind === "buy" && s.buys.length);
         const buys = tr.stops.flatMap((s) => s.buys).map((b) => `${b.label} ${t(b.buyTons)}`);
         const sites = [...new Set(tr.stops.flatMap((s) => (s.deliveries ?? []).map((d) => d.depotLabel)))];
         return (
-          <div key={tr.tripNumber} className={`cz-trip${done ? " cz-trip--done" : ""}`}>
+          <div
+            key={tr.tripNumber}
+            data-flip-key={`${buy?.systemName ?? ""}|${buy?.stationName ?? ""}|${buys.join(",")}`}
+            className={`cz-trip${done ? " cz-trip--done" : ""}`}
+          >
             {/*
               No tick here (owner, 2026-10-23): a trip hauled out of order shows in the sites' deliveries, and the plan is
               made again from what is left (planRefreshFingerprint), so it simply leaves the list.
@@ -196,6 +205,7 @@ export function TripList({ trips, completed }: TripProps) {
           </div>
         );
       })}
+      </div>
       {rest.length > 8 ? (
         <div className="cz-trip">
           <button type="button" className={BTN} onClick={() => setAll(!all)}>

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { withTransition } from "../motion";
 import { useInTab } from "../tabs/TabHost";
 
 /**
@@ -109,7 +110,8 @@ export function useModal<T extends HTMLElement = HTMLDivElement>(
       if ((ev.target as Element | null)?.closest?.("[data-radix-popper-content-wrapper]")) return;
       if (ev.key === "Escape") {
         ev.stopPropagation();
-        onCloseRef.current();
+        // Fades out like every other close (motion.ts).
+        withTransition(() => onCloseRef.current());
         return;
       }
       if (ev.key !== "Tab" || !root) return;

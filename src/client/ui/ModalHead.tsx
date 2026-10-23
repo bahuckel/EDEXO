@@ -5,6 +5,7 @@
  * fold's help, and is not a tooltip: it can be read, scrolled and selected.
  */
 import { useId, useState, type ReactNode } from "react";
+import { withTransition } from "../motion";
 import { HelpToggle } from "./Fold";
 
 export function ModalHead({
@@ -43,7 +44,7 @@ export function ModalHead({
             the "?" left of it. */}
         <div className="modal-head__tools">
           {tools}
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close" title={closeTitle}>
+          <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close" title={closeTitle}>
             ×
           </button>
           {help ? (

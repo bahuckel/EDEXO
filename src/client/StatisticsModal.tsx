@@ -18,6 +18,7 @@
  * a smooth line across the owner's 9,045-hour gap would invent a year of steady earning.
  */
 import { formatRadius, type RecordRowDTO } from "@shared/notices";
+import { withTransition } from "./motion";
 import { isStr, oneOf, usePersistedState } from "./usePersistedState";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { INCOME_CATEGORY_LABEL, type IncomeCategory } from "@shared/incomeCategories";
@@ -449,7 +450,7 @@ export function StatisticsModal({ onClose }: { onClose: () => void }) {
   const carriers = data?.carriers ?? [];
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         className="modal-panel fdb-panel"
@@ -466,7 +467,7 @@ export function StatisticsModal({ onClose }: { onClose: () => void }) {
               it, so a source earning a thousandth of another is still a bar you can read.
             </p>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
             ×
           </button>
         </header>

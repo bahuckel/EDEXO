@@ -9,6 +9,7 @@
  * click anywhere in it or on its backdrop stops here, so it never reaches the card or list it opened from.
  */
 import { useId, type ReactNode } from "react";
+import { withTransition } from "../motion";
 import { ModalHead } from "./ModalHead";
 import { useModal } from "./useModal";
 
@@ -48,7 +49,7 @@ export function Dialog({
       role="presentation"
       onClick={(ev) => {
         ev.stopPropagation();
-        if (ev.target === ev.currentTarget) onClose();
+        if (ev.target === ev.currentTarget) withTransition(onClose);
       }}
     >
       <div

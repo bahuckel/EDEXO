@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { withTransition } from "../motion";
 
 /**
  * The app's one dropdown (owner, 2026-09-25: "same style for the whole app").
@@ -70,8 +71,11 @@ export function Select<V extends string = string>({
   const current = selectedIndex >= 0 ? options[selectedIndex]! : options[0];
 
   const close = useCallback((refocus: boolean) => {
-    setOpen(false);
-    setPos(null);
+    // Fades out (motion.ts) instead of vanishing.
+    withTransition(() => {
+      setOpen(false);
+      setPos(null);
+    });
     if (refocus) controlRef.current?.focus({ preventScroll: true });
   }, []);
 

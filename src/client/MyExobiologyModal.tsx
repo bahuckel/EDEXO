@@ -2,6 +2,7 @@
  * My exobiology: the finds table and the discoveries views. Split out of AppModals.tsx (code review D, 2026-09-27).
  */
 import { tabListKeyDown } from "./ui/Tabs";
+import { withTransition } from "./motion";
 import { usePersistedState } from "./usePersistedState";
 import { footConfirmationLabel } from "@shared/footConfirmationLabel";
 import { CopySystemButton } from "./CopySystemButton";
@@ -226,7 +227,7 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
   }, [entries, query]);
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         tabIndex={-1}
