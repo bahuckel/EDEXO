@@ -46,7 +46,14 @@ import { JumponiumDrawer, type JumpRow } from "./galaxy3d/JumponiumDrawer";
 import { FinderDrawer } from "./galaxy3d/FinderDrawer";
 import type { FinderHit, FinderResult } from "@shared/finder";
 import { StationsList } from "./galaxy3d/StationsAt";
-import { STATIONS_CHANGED_EVENT, StationsPanel } from "./StationsPanel";
+import { STATIONS_CHANGED_EVENT } from "./StationsPanel";
+import {
+  CARRIERS_STATIONS_TITLE,
+  CarriersStationsBody,
+  CarriersStationsTabs,
+  useCarriersStationsTab,
+  type CarriersStationsPick,
+} from "./CarriersStations";
 import { clearStationsAtCache } from "./galaxy3d/StationsAt";
 import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
 import {
@@ -142,6 +149,21 @@ export function GalaxyMap3D() {
   const [layers, setLayers] = usePersistedState("galaxy.layer.base", BASE_LAYERS, isBaseLayers);
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
+  /*
+    Carriers & Stations measures from the picked system, else the ship (R4, owner 2026-10-23). A row picked in the
+    drawer selects its own system, and that pick must not re-sort the list under the cursor: the drawer's own picks
+    are remembered and leave the point where it was. A group ring is not a system: it leaves the point too.
+  */
+  const [csTab, setCsTab] = useCarriersStationsTab();
+  const [csFrom, setCsFrom] = useState<{ x: number; y: number; z: number } | null>(null);
+  const csOwnPick = useRef("");
+  useEffect(() => {
+    if (!selection) return setCsFrom(null);
+    if (selection.kind === "sector") return;
+    const key = `${selection.x.toFixed(1)},${selection.y.toFixed(1)},${selection.z.toFixed(1)}`;
+    if (key === csOwnPick.current) return;
+    setCsFrom({ x: selection.x, y: selection.y, z: selection.z });
+  }, [selection]);
   // The expedition planner (plan 2.5): its scored boxels, the plan's stops and the ordered plan.
   const [expField, setExpField] = useState<ExpeditionFieldDTO | null>(null);
   const [expPlanKeys, setExpPlanKeys] = useState<string[]>([]);
@@ -1634,20 +1656,24 @@ export function GalaxyMap3D() {
       {drawer === "stations" ? (
         <aside
           className="g3d-drawer g3d-menu g3d-plan g3d-stations-drawer"
-          aria-label="Stations"
+          aria-label={CARRIERS_STATIONS_TITLE}
           data-testid="g3d-stations"
         >
-          <MenuHead title="Nearest station" help={G3D_HELP.stations} />
+          <MenuHead title={CARRIERS_STATIONS_TITLE} help={G3D_HELP.stations} />
           <div className="g3d-menu__section g3d-menu__section--first">
-            <StationsPanel
+            <CarriersStationsTabs tab={csTab} setTab={setCsTab} />
+            <CarriersStationsBody
+              tab={csTab}
               compact
-              onPick={(r) => {
-                if (r.x == null || r.y == null || r.z == null) return;
-                extraSet.stations(true);
-                const at = { x: r.x, y: r.y, z: r.z };
+              from={csFrom}
+              onPick={(p: CarriersStationsPick) => {
+                const at = p.at;
+                csOwnPick.current = `${at.x.toFixed(1)},${at.y.toFixed(1)},${at.z.toFixed(1)}`;
+                if (p.kind === "carrier") extraSet.carriers(true);
+                if (p.kind === "station") extraSet.stations(true);
                 engine.current?.flyTo(at, 400);
-                if (r.sys != null)
-                  engine.current?.select({ kind: "marker", layer: "x-stations", id: String(r.sys), ...at });
+                if (p.kind === "station" && p.stationSys != null)
+                  engine.current?.select({ kind: "marker", layer: "x-stations", id: String(p.stationSys), ...at });
               }}
             />
           </div>

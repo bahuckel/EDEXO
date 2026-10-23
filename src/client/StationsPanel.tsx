@@ -1,6 +1,6 @@
 /**
  * Stations — the nearest station with the services you need (plan 7, owner 2026-10-13: "same as the carrier thing").
- * The Carriers window's second tab. Like the carriers list it is empty until asked: the first thing it shows is a
+ * The Carriers & Stations screen's second tab. Like the carriers list it is empty until asked: the first thing it shows is a
  * download button saying what it fetches (Spansh's station dump, boiled down to one file beside the galaxy index),
  * and every search after that runs on this machine.
  */
@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { isBool, isNum, isStr, isStrArr, usePersistedState } from "./usePersistedState";
 import { CopySystemButton } from "./CopySystemButton";
 import { LoadingNote } from "./ui/Loading";
+import { AutoRefreshPick } from "./AutoRefreshPick";
 import { fmtLyAway } from "@shared/format";
 
 interface StationRow {
@@ -69,12 +70,21 @@ const short = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10_000 ? 0 
 
 /**
  * `compact`: the galaxy map's side drawer (owner, 2026-10-13: nearest with a service on the map too) — fewer
- * columns; `onPick`: a row clicked (the map flies there and picks the station's system).
+ * columns; `from`: the point to measure from (the map's picked system, R4), else the ship; `onPick`: a row clicked
+ * (the map flies there and picks the station's system).
  */
 export function StationsPanel({
   compact = false,
+  from = null,
   onPick,
-}: { compact?: boolean; onPick?: (r: StationRow) => void } = {}) {
+}: {
+  compact?: boolean;
+  from?: { x: number; y: number; z: number } | null;
+  onPick?: (r: StationRow) => void;
+} = {}) {
+  // The point as a string: the map hands a new object on every render (CarriersPanel the same).
+  const fromKey = from ? [from.x, from.y, from.z].map((n) => n.toFixed(1)).join(",") : "";
+  const fromParams = fromKey ? `&${fromKey.split(",").map((v, i) => `${"xyz"[i]}=${v}`).join("&")}` : "";
   const [status, setStatus] = useState<StationsStatus | null>(null);
   const [rows, setRows] = useState<StationRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +107,7 @@ export function StationsPanel({
     if (q.length < 3) return setNamed(null);
     const ac = new AbortController();
     const t = window.setTimeout(() => {
-      void fetch(`/api/stations/search?q=${encodeURIComponent(q)}`, { signal: ac.signal })
+      void fetch(`/api/stations/search?q=${encodeURIComponent(q)}${fromParams}`, { signal: ac.signal })
         .then((r) => (r.ok ? r.json() : null))
         .then((j: { stations?: StationRow[] } | null) => {
           if (!ac.signal.aborted) setNamed(j?.stations ?? []);
@@ -108,7 +118,7 @@ export function StationsPanel({
       ac.abort();
       clearTimeout(t);
     };
-  }, [name]);
+  }, [name, fromParams]);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -150,6 +160,7 @@ export function StationsPanel({
     if (settlements) p.set("settlements", "1");
     if (construction) p.set("construction", "1");
     p.set("limit", "50");
+    if (fromKey) fromKey.split(",").forEach((v, i) => p.set("xyz"[i]!, v));
     const n = (seq.current += 1);
     setQuerying(true);
     try {
@@ -165,7 +176,7 @@ export function StationsPanel({
     } finally {
       if (n === seq.current) setQuerying(false);
     }
-  }, [status?.present, services, mode, pad, maxLs, settlements, construction]);
+  }, [status?.present, services, mode, pad, maxLs, settlements, construction, fromKey]);
   useEffect(() => {
     void search();
   }, [search]);
@@ -210,6 +221,7 @@ export function StationsPanel({
                 rel ? ` (${rel.stations.toLocaleString("en-US")} of them, data of ${rel.dump ?? "?"})` : ""
               }. Downloads one file to this machine; searches never leave it.`}
         </span>
+        {status?.present ? <AutoRefreshPick which="stationsHours" /> : null}
       </div>
       {status?.error ? <p className="fdb-empty">Download failed: {status.error}</p> : null}
       {error ? <p className="fdb-empty">{error}</p> : null}
@@ -307,7 +319,7 @@ export function StationsPanel({
             <LoadingNote className="fdb-empty" label="Searching the stations…" />
           ) : null}
           {!named && rows && rows.length === 0 ? (
-            <p className="fdb-empty">No station near you has all of that.</p>
+            <p className="fdb-empty">No station near {from ? "there" : "you"} has all of that.</p>
           ) : null}
           {(named ?? rows)?.length ? (
             <div className="fdb-scroll">

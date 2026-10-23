@@ -436,7 +436,7 @@ export function NotifyPanel() {
         </div>
         <p className="dim tiny options-notify-sub">
           Carriers, beyond {CARRIER_NOTICE_MIN_FROM_SOL_LY.toLocaleString()} ly from Sol
-          {st.carrierDataReady ? "" : " — download the list in Carriers first"}
+          {st.carrierDataReady ? "" : " — download the list in Carriers & Stations first"}
         </p>
         <div className="options-focus-grid">
           <label htmlFor="notify-carriers">Announce</label>

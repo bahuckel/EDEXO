@@ -54,7 +54,7 @@ export const TAB_SCREENS: readonly { kind: TabKind; label: string }[] = [
   { kind: "stats", label: "Statistics" },
   { kind: "bookmarks", label: "Bookmarks" },
   { kind: "poi", label: "Points of interest" },
-  { kind: "carriers", label: "Carriers" },
+  { kind: "carriers", label: "Carriers & Stations" },
   { kind: "backlog", label: "Unfinished business" },
   { kind: "session", label: "Session log" },
   ...(BROWSER_AVAILABLE ? [{ kind: "browser" as const, label: "Browser" }] : []),

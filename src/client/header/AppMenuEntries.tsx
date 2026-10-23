@@ -91,13 +91,13 @@ export const AppMenuEntries = memo(function AppMenuEntries({
         looking for — where do I sell a full sample bag — not something they watch. The panel
         holds no data until they press its button.
       */}
-      <Tooltip text="Carriers — fleet carriers near you, from EDAstro. Downloads on request; positions are last sightings.">
+      <Tooltip text="Carriers & Stations — fleet carriers near you (EDAstro), the nearest station with a service, and Find Tritium. Downloads on request; then kept current.">
         <button
           type="button"
           {...item}
           className="appbar-icon-btn"
           onClick={() => open.setCarriersOpen(true)}
-          aria-label="Carriers"
+          aria-label="Carriers & Stations"
         >
           <IconCarrier />
         </button>

@@ -164,6 +164,7 @@ import { createGggResearch } from "./gggResearch.js";
 import { createNoticesService, type CodexFirstFind, type NoticesContext, type RareColourFind } from "./notices.js";
 import { isRareColour } from "../shared/rareColour.js";
 import { communityGoalNoticeText, startCommunityGoalPoller } from "./communityGoals.js";
+import { startDataAutoRefresh } from "./dataAutoRefresh.js";
 import { createBookmarksService } from "./bookmarks.js";
 import { spawn } from "node:child_process";
 import { createBoxelRun } from "./boxelRun.js";
@@ -1113,6 +1114,9 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       if (added) push();
     },
   });
+
+  // Carriers & Stations refresh themselves once fetched (dataAutoRefresh.ts): 12 h / 24 h unless changed.
+  const dataAutoRefresh = startDataAutoRefresh(() => push());
 
   /**
    * Contributing discoveries back to Canonn, when the commander has asked for it.
@@ -2362,6 +2366,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     flushNavRouteLog();
     backupService.dispose();
     gamePresence.dispose();
+    dataAutoRefresh.stop();
     if (footStatusPollTimer != null) {
       clearInterval(footStatusPollTimer);
       footStatusPollTimer = null;

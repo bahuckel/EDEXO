@@ -283,3 +283,24 @@
   color: #ffd27a;
   text-shadow: 0 0 6px rgba(255, 190, 70, 0.35);
 }
+
+/* "Auto refresh every …" at the end of a fetch bar (AutoRefreshPick, R4): pushed right, label and pick on one line. */
+.auto-refresh-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Find Tritium (TritiumPanel): two short tables under their own heads, one scroller. */
+.tritium-lists__head {
+  margin: 0.4rem 0 0.35rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+}
+.tritium-lists__head ~ .tritium-lists__head {
+  margin-top: 1rem;
+}

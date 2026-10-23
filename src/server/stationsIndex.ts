@@ -554,9 +554,12 @@ export function stationsStatus(): StationsStatus {
   };
 }
 
-/** Ask the release what it holds (a few hundred bytes), at most every ten minutes. Quiet on failure. */
-export async function probeStationsRelease(fetchImpl: typeof fetch = fetch): Promise<void> {
-  if (Date.now() - releaseAskedAt < 600_000) return;
+/**
+ * Ask the release what it holds (a few hundred bytes), at most every ten minutes unless `force` (the auto refresh
+ * asks on its own schedule). Quiet on failure.
+ */
+export async function probeStationsRelease(fetchImpl: typeof fetch = fetch, force = false): Promise<void> {
+  if (!force && Date.now() - releaseAskedAt < 600_000) return;
   releaseAskedAt = Date.now();
   try {
     const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${STATIONS_META_REMOTE}`, {
@@ -570,6 +573,12 @@ export async function probeStationsRelease(fetchImpl: typeof fetch = fetch): Pro
   } catch {
     /* the button shows no size */
   }
+}
+
+/** The release holds other data than the file here (another dump, or another count): a download would bring it. */
+export function stationsReleaseIsNewer(s: StationsStatus = stationsStatus()): boolean {
+  if (!s.present || !s.release) return false;
+  return (s.release.dump != null && s.release.dump !== s.dump) || s.release.stations !== s.stations;
 }
 
 /** Download and unpack the index beside the settings; a `.part` until whole, so a cut download is never read. */

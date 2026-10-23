@@ -15,7 +15,7 @@ import { parseCarrierQueryParams } from "../src/server/edastroCarriers.js";
 
 const origin = { x: 1, y: 2, z: 3 };
 
-/** Exactly the parameter names `CarriersModal.tsx` puts on the wire. */
+/** Exactly the parameter names `CarriersPanel.tsx` puts on the wire. */
 const PANEL_SENDS = ["services", "maxLastSeenDays", "dssaOnly", "network", "q", "limit"] as const;
 
 describe("every filter the panel sends reaches the query", () => {

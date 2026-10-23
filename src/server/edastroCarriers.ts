@@ -569,6 +569,9 @@ export function queryCarriers(q: CarrierQuery, nowMs: number = Date.now()): Carr
       systemAddress: r.systemAddress,
       region: r.region,
       distanceLy,
+      x: r.x,
+      y: r.y,
+      z: r.z,
       lastSeenDays,
       // Dwell is measured at the moment of the sighting, not against now: "it had sat still for 180
       // days when someone last looked" is a fact, where "it has sat still for 215 days" would be a

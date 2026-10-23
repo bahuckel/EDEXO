@@ -62,8 +62,8 @@ export const G3D_TABS: { key: G3dTabKey; label: string; hint: string }[] = [
   },
   {
     key: "stations",
-    label: "Stations",
-    hint: "Stations: the nearest station with the services you pick (repair, refuel, Vista Genomics…), shown on the map",
+    label: "Carriers & Stations",
+    hint: "Carriers & Stations: the nearest fleet carriers, stations with the services you pick, and Find Tritium — from the system you picked, else your ship",
   },
   {
     key: "finder",
@@ -89,9 +89,9 @@ export const G3D_HELP: Record<G3dTabKey, string[]> = {
     "Your own scanned bodies are always searched. The rest of the galaxy comes from a file downloaded with the galaxy index: the top 1 % of landable bodies for each of thirteen elements, from Spansh's dump. An AFMU's ammunition is not in the journals: the app knows whether one is fitted, not how full it is.",
   ],
   stations: [
-    "The nearest stations to your ship with every service you pick (or any of them), a pad big enough and not too far from the arrival star. Settlements and colony construction sites only if you ask for them.",
-    "Click a row to fly the map there; Layers → Stations shows every system with a station, and pointing at one names its stations.",
-    "From Spansh's station dump, downloaded with the galaxy index (or alone here). Fleet carriers are in Carriers.",
+    "Three tabs, the same as the Carriers & Stations screen. Every list is measured from the system you picked on the map, else from your ship; picking a row here flies the map there without re-sorting the list.",
+    "Carriers: fleet carriers from EDAstro's list, nearest first (last sightings, not live). Stations: the nearest with every service you pick (or any of them), a pad big enough and not too far from the arrival star; settlements and colony construction sites only if you ask. Find Tritium: the nearest rings with Tritium hotspots and the nearest stations and carriers selling it, ten of each, from Spansh.",
+    "Carriers and stations are downloaded once on request, then kept current on their own (every 12 h and 24 h; change it beside each list). Layers → Stations and Carriers show them on the map.",
   ],
   view: [
     "Top looks straight down on the galaxy, Tilt across it at an angle. Core flies to Sagittarius A*, Sol home, Me to your ship.",

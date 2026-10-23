@@ -1028,6 +1028,10 @@
 .g3d-stations-drawer .fdb-scroll {
   max-height: 55vh;
 }
+/* Carriers & Stations (R4): three tabs of tables, wider than the other plan drawers. */
+.g3d-plan.g3d-stations-drawer {
+  width: min(440px, calc(100vw - 24px));
+}
 .g3d-stations-drawer .carriers-table tr.is-pickable {
   cursor: pointer;
 }

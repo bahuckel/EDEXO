@@ -49,7 +49,7 @@ export const GALAXY_LAYERS: readonly {
     system"); 5, at a fifth less light.
   */
   { kind: "nsp", label: "Phenomena (NSP)", needs: "Download them in Options → Notify me", colour: [0.42, 0.23, 0.48], size: 5 },
-  { kind: "carriers", label: "Carriers", needs: "Download them in Carriers", colour: [1, 0.85, 0.3], size: 5 },
+  { kind: "carriers", label: "Carriers", needs: "Download them in Carriers & Stations", colour: [1, 0.85, 0.3], size: 5 },
   { kind: "bookmarks", label: "Bookmarks", needs: "Bookmark a system with the ☆ beside its name", colour: [0.96, 0.72, 0.24], size: 9 },
   { kind: "ggg", label: "Green gas giants", needs: "", colour: [0.62, 1, 0.18], size: 11 },
   /*
@@ -62,5 +62,5 @@ export const GALAXY_LAYERS: readonly {
     red, a little larger than a system (owner, 2026-10-13: lone stations were hard to spot in cyan, beside the
     blue-white systems and the POI cyan).
   */
-  { kind: "stations", label: "Stations", needs: "Download them in Carriers → Stations", colour: [0.9, 0.42, 0.4], size: 6 },
+  { kind: "stations", label: "Stations", needs: "Download them in Carriers & Stations → Stations", colour: [0.9, 0.42, 0.4], size: 6 },
 ];

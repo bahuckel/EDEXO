@@ -23,6 +23,15 @@ import {
   stationsStatus,
 } from "../stationsIndex.js";
 import { touchGalaxyMemory } from "../galaxyMemory.js";
+import { readAutoRefreshSettings, writeAutoRefreshSettings } from "../dataAutoRefresh.js";
+import { findTritium } from "../tritiumSearch.js";
+
+/** `?x&y&z` when all three are numbers (a point picked on the galaxy map), else null. */
+function pointFromQuery(q: Record<string, unknown>): { x: number; y: number; z: number } | null {
+  if (q.x === undefined || q.y === undefined || q.z === undefined) return null;
+  const p = { x: Number(q.x), y: Number(q.y), z: Number(q.z) };
+  return [p.x, p.y, p.z].every(Number.isFinite) ? p : null;
+}
 
 export function registerCarriersPoiRoutes(
   app: express.Express,
@@ -66,7 +75,7 @@ export function registerCarriersPoiRoutes(
       index = null;
     }
     if (!index) return void res.status(404).json({ error: "No station data yet." });
-    const from = opts.getCommanderPosition?.() ?? null;
+    const from = pointFromQuery(req.query as Record<string, unknown>) ?? opts.getCommanderPosition?.() ?? null;
     res.json({ from, stations: markOwn(index.search(String(req.query.q ?? "").slice(0, 80), 50, from)) });
   });
   /** The stations of the system at a point (the galaxy map's Stations dot): `?x&y&z`. */
@@ -320,8 +329,28 @@ export function registerCarriersPoiRoutes(
     }
   });
 
+  /** Carriers & Stations keep themselves current (dataAutoRefresh.ts): the two intervals. */
+  app.get("/api/data-refresh", (_req, res) => {
+    res.json(readAutoRefreshSettings());
+  });
+  app.post("/api/data-refresh", localOnly, (req, res) => {
+    res.json(writeAutoRefreshSettings((req.body ?? {}) as Record<string, unknown>));
+  });
+
+  /** Find Tritium (tritiumSearch.ts): rings with hotspots and sellers nearest the point, else the ship. */
+  app.get("/api/tritium", async (req, res) => {
+    const from = pointFromQuery(req.query as Record<string, unknown>) ?? opts.getCommanderPosition?.() ?? null;
+    if (!from) return void res.status(400).json({ error: "No position yet: jump once, or pick a system on the map." });
+    try {
+      res.json(await findTritium(from));
+    } catch (e) {
+      res.status(502).json({ error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+
   app.get("/api/carriers/query", (req, res) => {
-    const origin = opts.getCommanderPosition();
+    // Nearest the system picked on the galaxy map when it sends one (R4), else the ship.
+    const origin = pointFromQuery(req.query as Record<string, unknown>) ?? opts.getCommanderPosition();
     // One parser, tested: see parseCarrierQueryParams. Inlining this is how the OASIS filter shipped
     // as a chip that did nothing.
     const query = parseCarrierQueryParams(req.query as Record<string, unknown>, origin);
