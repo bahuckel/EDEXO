@@ -1010,7 +1010,8 @@ test("galaxy 3D: NavRoute — Next is the plotted route with EDSM checks, Previo
 /*
   Owner, 2026-10-15: "NavRoute > Next ... does not find a system even if I copy the name from a galmap location". The map
   read the plotted route on a jump and every 30 s, so a route plotted a moment ago was not there yet. Next reads it on
-  opening and every 3 s while open.
+  opening, and the map reads it again when the server says the route changed (R2, 2026-10-24: the events socket,
+  played here by the test, since the route is mocked in the page and the server never sees it change).
 */
 test("galaxy 3D: NavRoute — a route plotted while Next is open shows within seconds", async ({ page }) => {
   const errors = watchErrors(page);
@@ -1020,6 +1021,11 @@ test("galaxy 3D: NavRoute — a route plotted while Next is open shows within se
     const body = (await res.json()) as Record<string, unknown>;
     body.navRoute = plotted;
     await route.fulfill({ response: res, json: body });
+  });
+  let announce: (() => void) | null = null;
+  await page.routeWebSocket(/channel=events/, (ws) => {
+    ws.onMessage(() => {});
+    announce = () => ws.send(JSON.stringify({ type: "changed", topics: ["galaxy-route"] }));
   });
   await page.setViewportSize({ width: 1400, height: 820 });
   await page.goto("/?screen=galaxy");
@@ -1031,11 +1037,13 @@ test("galaxy 3D: NavRoute — a route plotted while Next is open shows within se
   const drawer = page.getByTestId("g3d-navroute");
   await drawer.getByRole("button", { name: "Next", exact: true }).click();
   await expect(drawer).toContainText("No route plotted");
-  // Plotted in the game now: well inside the map's 30 s poll.
+  // Plotted in the game now; the server announces it.
   plotted = [
     { address: 11, name: "Smoke Start", starClass: "K", x: 0, y: 0, z: 0, visited: true },
     { address: 12, name: "Copied From Galmap", starClass: "N", x: 40, y: 0, z: 0, visited: false },
   ];
+  await expect.poll(() => announce != null).toBe(true);
+  announce!();
   await drawer.getByLabel("Filter by system name").fill("Copied From Galmap");
   await expect(drawer.locator(".g3d-navroute__item")).toContainText("Copied From Galmap", { timeout: 6_000 });
   expect(errors).toEqual([]);

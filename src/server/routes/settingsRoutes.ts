@@ -15,7 +15,7 @@ import { setUiMirror, uiMirror } from "../uiMirror.js";
 export function registerSettingsRoutes(
   app: express.Express,
   opts: HttpServerOptions,
-  _ctx: RouteContext,
+  ctx: RouteContext,
 ): void {
   app.post("/api/settings/journal-directory", localOnly, async (req, res) => {
     if (typeof opts.setJournalDirectory !== "function") {
@@ -668,6 +668,8 @@ export function registerSettingsRoutes(
     res.setHeader("Cache-Control", "no-store");
     res.json(uiMirror());
   });
+  // The streamer view redraws when the streamer changes a setting (R2: it asked every second).
+  ctx.watchTopic("ui-mirror", () => uiMirror().rev);
   app.post("/api/ui/mirror", (req, res) => {
     if (!isLoopbackAddress(req.socket.remoteAddress)) {
       res
@@ -676,6 +678,7 @@ export function registerSettingsRoutes(
       return;
     }
     res.json({ ok: true, rev: setUiMirror(req.body?.values).rev });
+    ctx.topicsMayHaveChanged();
   });
 
   app.post("/api/ui/open-external", (req, res) => {

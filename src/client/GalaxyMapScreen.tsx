@@ -32,6 +32,7 @@ import { regionIndexForCoords } from "@shared/regionMap.js";
 import type { BacklogMapDTO, CommanderSectorsDTO } from "@shared/types";
 import { CopySystemButton } from "./CopySystemButton";
 import { LoadingNote } from "./ui/Loading";
+import { onServerChange } from "./serverChanges";
 
 type Load =
   | { state: "loading" }
@@ -200,10 +201,11 @@ export function GalaxyMapScreen() {
         });
     };
     read();
-    const t = setInterval(read, 15_000);
+    // Moved when the ship does (R2, 2026-10-24: was asked every 15 s).
+    const stop = onServerChange("commander-position", read);
     return () => {
       cancelled = true;
-      clearInterval(t);
+      stop();
     };
   }, []);
 

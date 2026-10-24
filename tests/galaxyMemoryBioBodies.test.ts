@@ -23,7 +23,7 @@ function emptyFile(file: string): void {
 
 describe("galaxy memory and the body file", () => {
   it("registers the body file and lets it go on release", () => {
-    registerGalaxyRoutes(express(), {} as never, {} as never);
+    registerGalaxyRoutes(express(), {} as never, { watchTopic: () => {}, topicsMayHaveChanged: () => {} } as never);
     expect(galaxyMemoryState().caches).toContain("bio-bodies");
 
     const dir = mkdtempSync(path.join(tmpdir(), "edexo-galaxy-mem-"));

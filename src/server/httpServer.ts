@@ -4,6 +4,7 @@ import http from "node:http";
 import os from "node:os";
 import express from "express";
 import { WebSocketServer } from "ws";
+import { ChangeTopics } from "./changeTopics.js";
 import type { AppSnapshot, ExoLiveDTO, UiCommand } from "../shared/types.js";
 import { getProjectRoot, getWebRoot } from "./paths.js";
 import { perfBytes, perfCount, perfTime } from "./perf.js";
@@ -91,7 +92,47 @@ export function createHttpServer(opts: HttpServerOptions): {
       }
     }
   };
-  const routeCtx: RouteContext = { root, webRoot, pushColonize };
+  /*
+    The `events` sockets (R2, changeTopics.ts): pages told "this changed" for the topics they show, instead of asking
+    on a timer. Kept apart from `clients`, which get the state pushes; these never get a snapshot.
+  */
+  const topics = new ChangeTopics();
+  const eventSockets = new Map<import("ws").WebSocket, Set<string>>();
+  let topicsCheckedAt = 0;
+  let topicsTimer: ReturnType<typeof setTimeout> | null = null;
+  const checkTopics = () => {
+    topicsTimer = null;
+    topicsCheckedAt = Date.now();
+    const wanted = new Set<string>();
+    for (const t of eventSockets.values()) for (const k of t) wanted.add(k);
+    if (!wanted.size) return;
+    const changed = topics.changed(wanted);
+    if (!changed.length) return;
+    perfCount("ws.events.changed");
+    for (const [ws, mine] of eventSockets) {
+      const theirs = changed.filter((k) => mine.has(k));
+      if (!theirs.length || ws.readyState !== ws.OPEN) continue;
+      try {
+        sendFrame(ws, JSON.stringify({ type: "changed", topics: theirs }));
+      } catch {
+        eventSockets.delete(ws);
+      }
+    }
+  };
+  /** At most one check a second: a state push can come four times a second while the game is busy. */
+  const TOPICS_MIN_GAP_MS = 1000;
+  const scheduleTopicsCheck = () => {
+    if (topicsTimer || !eventSockets.size) return;
+    topicsTimer = setTimeout(checkTopics, Math.max(0, topicsCheckedAt + TOPICS_MIN_GAP_MS - Date.now()));
+    topicsTimer.unref?.();
+  };
+  const routeCtx: RouteContext = {
+    root,
+    webRoot,
+    pushColonize,
+    watchTopic: (topic, read) => topics.watch(topic, read),
+    topicsMayHaveChanged: scheduleTopicsCheck,
+  };
 
   /**
    * First middleware on purpose: an unpaired LAN client must not reach a route handler, and must
@@ -389,8 +430,18 @@ export function createHttpServer(opts: HttpServerOptions): {
     }
   }, 25_000);
   wsKeepAlive.unref();
+  /*
+    What changes with no state push behind it (a file the game rewrote, a download's progress): looked at every few
+    seconds while an events socket is open. Server-side only; nothing goes out unless a topic changed.
+  */
+  const topicsSweep = setInterval(scheduleTopicsCheck, 4000);
+  topicsSweep.unref();
 
-  server.once("close", () => clearInterval(wsKeepAlive));
+  server.once("close", () => {
+    clearInterval(wsKeepAlive);
+    clearInterval(topicsSweep);
+    if (topicsTimer) clearTimeout(topicsTimer);
+  });
 
   /** A snapshot this recent is sent to a new socket as it is: a reconnect storm is not N rebuilds. */
   let lastAppSnapAt = 0;
@@ -402,7 +453,56 @@ export function createHttpServer(opts: HttpServerOptions): {
     return lastAppSnap;
   };
 
+  /** An events socket: it says which topics it shows (`{ type: "watch", topics }`) and is told when one changes. */
+  const acceptEventSocket = (ws: import("ws").WebSocket) => {
+    eventSockets.set(ws, new Set());
+    perfCount("ws.events.connect");
+    ws.on("error", () => eventSockets.delete(ws));
+    ws.on("close", () => {
+      eventSockets.delete(ws);
+    });
+    let alive = true;
+    ws.on("pong", () => (alive = true));
+    const ping = setInterval(() => {
+      if (!alive) return void ws.terminate();
+      alive = false;
+      try {
+        ws.ping();
+      } catch {
+        /* closing */
+      }
+    }, 25_000);
+    ping.unref();
+    ws.on("close", () => clearInterval(ping));
+    ws.on("message", (raw) => {
+      try {
+        const msg = JSON.parse(String(raw)) as { type?: unknown; topics?: unknown };
+        if (msg?.type !== "watch" || !Array.isArray(msg.topics)) return;
+        const mine = new Set(msg.topics.filter((t): t is string => typeof t === "string" && topics.has(t)).slice(0, 32));
+        const before = eventSockets.get(ws);
+        eventSockets.set(ws, mine);
+        // A topic nobody else shows starts a fresh baseline: the page has just read it.
+        for (const t of mine) {
+          if (before?.has(t)) continue;
+          let elsewhere = false;
+          for (const [other, theirs] of eventSockets) if (other !== ws && theirs.has(t)) elsewhere = true;
+          if (!elsewhere) topics.forget(t);
+        }
+        scheduleTopicsCheck();
+      } catch {
+        /* not ours */
+      }
+    });
+  };
+
   wss.on("connection", (ws, req) => {
+    let wantsEvents = false;
+    try {
+      wantsEvents = new URL(req.url ?? "/ws", "http://x").searchParams.get("channel") === "events";
+    } catch {
+      /* a state socket */
+    }
+    if (wantsEvents) return acceptEventSocket(ws);
     clients.add(ws);
     /*
       A client may name its channel in the address (`/ws?channel=hud`), so its first frame is already
@@ -506,6 +606,8 @@ export function createHttpServer(opts: HttpServerOptions): {
         clients.delete(ws);
       }
     }
+    // A state push follows a change in the game or the app: the topics the open pages show may have moved too.
+    scheduleTopicsCheck();
   };
 
   /**

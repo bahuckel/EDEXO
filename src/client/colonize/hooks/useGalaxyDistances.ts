@@ -1,4 +1,5 @@
 import { colonizeApi } from "../api";
+import { lookUpSystems } from "../systemLookup";
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import type { BasketCheckoutBundle } from "../../../shared/colonize/types";
 import {
@@ -131,10 +132,8 @@ export function useGalaxyDistances(args: {
             // asked for again on the next effect run, or the request repeats forever.
             const attemptedAt = Date.now();
             for (const name of chunk) attemptedTargetsRef.current.set(name, attemptedAt);
-            const res = await api.resolveSystemDistances({
-              fromSystems,
-              toSystems: chunk,
-            });
+            // With the planner's coordinates when they are asked for at the same time: one request (systemLookup.ts).
+            const res = await lookUpSystems(api, { fromSystems, toSystems: chunk });
             if (!res.ok) {
               // A transport-level failure says nothing about the names, so let them be retried.
               for (const name of chunk) attemptedTargetsRef.current.delete(name);

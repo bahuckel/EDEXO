@@ -12,37 +12,30 @@ import {
   parseSystemNames,
 } from "./payload";
 
-/** Same bound as a distance request: a cold look-up of this many is a few EDSM batches. */
+/** Coordinates per request: a cold look-up of this many is a few EDSM batches. */
 const COORDS_REQUEST_CAP = 400;
 
 export function checkoutHandlers({ store, buyIndex }: IpcContext) {
   return {
-    resolveSystemDistances: async (payload) => {
+    /** Coordinates for the planner's seller-to-seller legs (S-13) and the sites' distances, in one request (R2). */
+    resolveSystems: async (payload) => {
       if (!payload || typeof payload !== "object") return { ok: false as const, err: "Invalid payload." };
       const p = asRecord(payload);
+      const systems = parseSystemNames(p.systems).slice(0, COORDS_REQUEST_CAP);
       /** Untrimmed on purpose, as before: the pair keys are built from the names as sent. */
       const names = (raw: unknown) =>
         Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string" && x.trim().length > 0) : [];
       const fromSystems = names(p.fromSystems);
       const toSystems = names(p.toSystems);
-      if (!fromSystems.length || !toSystems.length) {
-        return { ok: true as const, distances: {} as Record<string, number> };
-      }
       try {
-        const distances = await resolveSystemDistanceMap(fromSystems, toSystems);
-        if (Object.keys(distances).length) store.applyJournalShopDistances(distances, fromSystems);
-        return { ok: true as const, distances };
-      } catch (e) {
-        return { ok: false as const, err: errMessage(e) };
-      }
-    },
-
-    /** S-13: the planner measures seller-to-seller legs from these. */
-    resolveSystemCoords: async (payload) => {
-      const systems = parseSystemNames(asRecord(payload).systems).slice(0, COORDS_REQUEST_CAP);
-      try {
-        const coords = await resolveCoordMapForSystems(systems);
-        return { ok: true as const, coords: Object.fromEntries(coords) };
+        // Coordinates first: the distances below then find most of them in the cache this filled.
+        const coords = systems.length ? Object.fromEntries(await resolveCoordMapForSystems(systems)) : {};
+        let distances: Record<string, number> = {};
+        if (fromSystems.length && toSystems.length) {
+          distances = await resolveSystemDistanceMap(fromSystems, toSystems);
+          if (Object.keys(distances).length) store.applyJournalShopDistances(distances, fromSystems);
+        }
+        return { ok: true as const, coords, distances };
       } catch (e) {
         return { ok: false as const, err: errMessage(e) };
       }

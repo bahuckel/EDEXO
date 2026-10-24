@@ -8,7 +8,7 @@
  * and Codex drawers, and what to say when the machine cannot draw it.
  */
 import { useInTab, useTabInFront } from "./tabs/TabHost";
-import { GALAXY_DRAWER_EVENT, takeGalaxyDrawer } from "./galaxyDrawerRequest";
+import { GALAXY_DRAWER_EVENT, peekGalaxyDrawer, takeGalaxyDrawer } from "./galaxyDrawerRequest";
 import { withTransition } from "./motion";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -116,6 +116,7 @@ import { selectionPanel } from "./galaxy3d/selectionPanel";
 import { ViewMenu } from "./galaxy3d/ViewMenu";
 import { LayersMenu } from "./galaxy3d/LayersMenu";
 import { StatusBar } from "./galaxy3d/StatusBar";
+import { onServerChange } from "./serverChanges";
 
 /** The base layers (View menu); a stored copy missing a key, or with a non-boolean, is not used. */
 const BASE_LAYERS = { photo: true, borders: true, labels: true, groups: true, you: true };
@@ -199,9 +200,11 @@ export function GalaxyMap3D() {
   const expByKey = useMemo(() => new Map((expField?.boxels ?? []).map((b) => [b.key, b])), [expField]);
   const [mine, setMine] = useState<Map<string, MineRow>>(new Map());
   const [route, setRoute] = useState<GalaxyRouteDTO | null>(null);
-  const [drawer, setDrawer] = useState<Drawer>(() => takeGalaxyDrawer() ?? drawerFromUrl());
+  // Peeked, not taken: this render may be thrown away (galaxyDrawerRequest.ts); taken below once the map is on screen.
+  const [drawer, setDrawer] = useState<Drawer>(() => peekGalaxyDrawer() ?? drawerFromUrl());
   // A drawer asked for from another screen while the map is open (Colonize's "Find colony sites", in the Galaxy tab).
   useEffect(() => {
+    takeGalaxyDrawer();
     const take = () => {
       const d = takeGalaxyDrawer();
       if (d) setDrawer(d);
@@ -518,17 +521,22 @@ export function GalaxyMap3D() {
     readRouteNow.current = tick;
     /*
       A jump, read from the journal by the app on this page, moves the map at once (owner, 2026-10-07:
-      "use the hyperspace jump ... I don't see a reason the galmap should poll"). The slow check stays
-      for what the jump does not carry — a scan or a mapping changing your systems — and for the map
-      in a window of its own (Tab view off), which has no live game data: 30 s here, 15 s there.
+      "use the hyperspace jump ... I don't see a reason the galmap should poll"). What the jump does not carry - a
+      scan or a mapping changing your systems, a plotted route - and the map in a window of its own (Tab view off),
+      which has no live game data, follow the server's "galaxy-route" change (R2, 2026-10-24: was a check every
+      15-30 s). Hidden, the tick skips; coming back reads once.
     */
     const onJump = () => tick();
     window.addEventListener(SYSTEM_CHANGED_EVENT, onJump);
-    const standalone = new URLSearchParams(window.location.search).get("screen") === "galaxy";
-    const t = setInterval(tick, standalone ? 15_000 : 30_000);
+    const stop = onServerChange("galaxy-route", tick);
+    const onVisible = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       live = false;
-      clearInterval(t);
+      stop();
+      document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener(SYSTEM_CHANGED_EVENT, onJump);
       if (readRouteNow.current === tick) readRouteNow.current = null;
     };
@@ -597,8 +605,8 @@ export function GalaxyMap3D() {
 
   /*
     His own carrier's system and his colonies (owner, 2026-10-13: "a little icon"; server/routes/galaxyRoutes.ts
-    /api/galaxy/own): an anchor and a house beside them, both on one label when they share a system. Asked again
-    every minute, so a carrier jump shows without reopening the map.
+    /api/galaxy/own): an anchor and a house beside them, both on one label when they share a system. Read again
+    when they change, so a carrier jump shows without reopening the map.
   */
   useEffect(() => {
     const e = engine.current;
@@ -626,10 +634,8 @@ export function GalaxyMap3D() {
         })
         .catch(() => undefined);
     read();
-    const t = window.setInterval(() => {
-      if (!document.hidden) read();
-    }, 60_000);
-    return () => clearInterval(t);
+    // A carrier jump or a new colony (R2, 2026-10-24: was asked every minute).
+    return onServerChange("galaxy-own", read);
   }, [stats?.phase, inFront]);
 
   // The expedition field and plan: drawn while the Expedition drawer has scored something.

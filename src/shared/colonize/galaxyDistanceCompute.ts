@@ -3,7 +3,7 @@ import { normSystemName } from "./stationFilter";
 
 export type GalaxyCoords = [number, number, number];
 
-/** Galaxy x/y/z per system, keyed by `normSystemName` — what `resolveSystemCoords` returns. */
+/** Galaxy x/y/z per system, keyed by `normSystemName` — what `resolveSystems` returns as `coords`. */
 export type SystemCoordsByNorm = Readonly<Record<string, GalaxyCoords>>;
 
 /**

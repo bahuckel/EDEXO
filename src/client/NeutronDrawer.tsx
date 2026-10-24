@@ -12,6 +12,7 @@ import { G3D_HELP, MenuHead, MenuRow } from "./galaxy3d/G3dMenu";
 import { PickList, type PickOption } from "./galaxy3d/PickList";
 import { CopySystemButton } from "./CopySystemButton";
 import { isBool, usePersistedState } from "./usePersistedState";
+import { onServerChange } from "./serverChanges";
 
 const isBoost = (v: unknown): v is number | null => v === null || v === 4 || v === 6;
 
@@ -178,11 +179,8 @@ export function NeutronDrawer({
       .catch(() => undefined);
   }, [onRoute]);
   useEffect(readLive, [readLive]);
-  useEffect(() => {
-    if (!live?.active) return;
-    const t = window.setInterval(readLive, 4000);
-    return () => clearInterval(t);
-  }, [live?.active, readLive]);
+  // A re-plot, an arrival or a stop from another window (R2, 2026-10-24: was asked every 4 s while flying).
+  useEffect(() => onServerChange("neutron-live", readLive), [readLive]);
   const setFlying = async (body: object) => {
     setError(null);
     try {
@@ -233,10 +231,8 @@ export function NeutronDrawer({
     if (!tank && ship.jumpsPerTank) setTank(String(ship.jumpsPerTank));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ship]);
-  useEffect(() => {
-    const t = window.setInterval(load, 5000);
-    return () => clearInterval(t);
-  }, []);
+  // A jump or an outfitting changed the ship (R2, 2026-10-24: was asked every 5 s).
+  useEffect(() => onServerChange("neutron-status", load), []);
   const from: Stop | null = ship?.position ? { name: ship.system ?? "Your ship", ...ship.position } : null;
   // Without a position from the journals (no jump yet), the first stop is where the route starts.
   const waypoints = from ? [from, ...stops] : stops;

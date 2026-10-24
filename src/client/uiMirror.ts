@@ -5,11 +5,13 @@
  *
  * - the app on the streamer's PC (not a phone, not the streamer view itself) reports its `edexo.*`
  *   settings to the server whenever they change, checked once a second;
- * - the streamer view puts them into its own storage before its first paint, and again whenever they
- *   change, and then draws the app afresh so every panel reads them.
+ * - the streamer view puts them into its own storage before its first paint, and again whenever the
+ *   server says they changed (serverChanges.ts), and then draws the app afresh so every panel reads them.
  *
  * Only settings: what the viewers see still follows the game (the body, the scans) as before.
  */
+import { onServerChange } from "./serverChanges";
+
 const PREFIX = "edexo.";
 /** Not a setting of the picture: diagnostics switches. */
 const SKIP = new Set(["edexo.perf"]);
@@ -84,7 +86,8 @@ export async function loadUiMirror(): Promise<number> {
 /** In the streamer view: follow the settings; `onChange` redraws the app. */
 export function watchUiMirror(fromRev: number, onChange: () => void): void {
   let rev = fromRev;
-  window.setInterval(() => {
+  // Read when the streamer changes a setting (R2, 2026-10-24: was asked every second).
+  onServerChange("ui-mirror", () => {
     fetch("/api/ui/mirror", { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<Mirror>) : null))
       .then((m) => {
@@ -94,5 +97,5 @@ export function watchUiMirror(fromRev: number, onChange: () => void): void {
         onChange();
       })
       .catch(() => {});
-  }, 1000);
+  });
 }

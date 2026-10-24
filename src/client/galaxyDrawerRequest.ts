@@ -25,6 +25,15 @@ export function takeGalaxyDrawer(): RequestableDrawer | null {
 }
 
 /**
+ * The request without taking it, for a render: a render can be thrown away (the drawer's lazy chunk suspends it on the
+ * first open) and run again, and one that took the request left the next without it - the map opened with no Finder
+ * (e2e, 2026-10-24). The map takes it once it is on screen.
+ */
+export function peekGalaxyDrawer(): RequestableDrawer | null {
+  return pending;
+}
+
+/**
  * A plain click opens the tab; a modified one (new window, new tab) keeps the link's own behaviour. So does a click with
  * tab view off (no Galaxy tab to open: it did nothing) and one while the other app's window holds the Galaxy tab (that
  * window came forward without its drawer, and the request waited here to open the Finder by surprise later; review

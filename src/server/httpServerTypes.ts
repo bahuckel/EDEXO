@@ -381,4 +381,11 @@ export interface RouteContext {
   webRoot: string;
   /** An event to every Colonize window (`colonize` sockets), as `{ type: "colonize", event, payload }`. */
   pushColonize: (event: string, payload: unknown) => void;
+  /**
+   * A topic for the `events` sockets (changeTopics.ts, R2): `read` builds what the endpoint answers, and a page that
+   * shows it is told when that answer changes instead of asking on a timer.
+   */
+  watchTopic: (topic: string, read: () => unknown) => void;
+  /** Something a topic reads changed outside a state push (a POST): check the watched topics now. */
+  topicsMayHaveChanged: () => void;
 }

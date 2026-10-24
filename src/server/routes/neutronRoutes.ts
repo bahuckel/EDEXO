@@ -27,7 +27,7 @@ export function planBoost(asked: unknown, current: number | null): number {
 export function registerNeutronRoutes(
   app: express.Express,
   opts: HttpServerOptions,
-  _ctx: RouteContext,
+  ctx: RouteContext,
 ): void {
   /** What the journals say about the ship: range, jumps a full tank and the fuel aboard allow, the FSD's health. */
   const ship = () => {
@@ -60,6 +60,9 @@ export function registerNeutronRoutes(
     };
   };
   app.get("/api/neutron/live", (_req, res) => res.json(liveState()));
+  // The Neutron drawer follows the route being flown and the ship's range from these (R2: was every 4-5 s).
+  ctx.watchTopic("neutron-live", liveState);
+  ctx.watchTopic("neutron-status", () => ({ ...neutronsStatus(), ship: ship() }));
   app.post("/api/neutron/live", (req, res) => {
     const live = opts.neutronLive;
     if (!live) return void res.status(501).json({ error: "Not available in this build." });

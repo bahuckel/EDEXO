@@ -130,7 +130,7 @@ describe("the galaxy routes", () => {
           return index ? ({ addr, systems: index.systemCount } as never) : null;
         },
       } as never,
-      {} as never,
+      { watchTopic: () => {}, topicsMayHaveChanged: () => {} } as never,
     );
     server = app.listen(0, "127.0.0.1");
     await new Promise<void>((r) => server.once("listening", () => r()));

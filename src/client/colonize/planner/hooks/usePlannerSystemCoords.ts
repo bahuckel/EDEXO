@@ -1,4 +1,5 @@
 import { colonizeApi } from "../../api";
+import { lookUpSystems } from "../../systemLookup";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { GalaxyCoords, SystemCoordsByNorm } from "../../../../shared/colonize/galaxyDistanceCompute";
 import { normSystemName } from "../../../../shared/colonize/stationFilter";
@@ -10,7 +11,7 @@ import type { PlannerInputs } from "./useDeferredPlannerInputs";
  */
 const COORDS_WAIT_MS = 3000;
 
-/** Matches the main-side cap in `checkoutHandlers.ts`. */
+/** Matches the server's cap in `checkoutHandlers.ts`. */
 const COORDS_REQUEST_CAP = 400;
 
 /** A system main could not place is asked about again after this long. */
@@ -85,8 +86,9 @@ export function usePlannerSystemCoords(args: {
     void (async () => {
       let found: SystemCoordsByNorm = {};
       try {
-        const res = await api.resolveSystemCoords({ systems: ask });
-        if (res.ok && res.coords) found = res.coords;
+        // With the sites' distances when they are asked for at the same time: one request (systemLookup.ts).
+        const res = await lookUpSystems(api, { systems: ask });
+        if (res.ok) found = res.coords;
       } catch {
         /* a failed look-up counts as asked: the plan must not wait on it forever */
       }

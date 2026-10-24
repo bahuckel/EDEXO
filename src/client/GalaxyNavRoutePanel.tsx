@@ -88,11 +88,9 @@ export function GalaxyNavRoutePanel({
   useEffect(() => {
     if (half === "next") void loadLog();
   }, [half, loadLog]);
+  // Once on open; the map reads the route again when the server says it changed (R2, 2026-10-24: was every 3 s).
   useEffect(() => {
-    if (half !== "next" || !readRoute) return;
-    readRoute();
-    const t = window.setInterval(readRoute, 3000);
-    return () => window.clearInterval(t);
+    if (half === "next") readRoute?.();
   }, [half, readRoute]);
   useEffect(() => {
     if (!log?.checking) return;

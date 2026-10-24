@@ -72,8 +72,7 @@ const answers: Record<string, unknown> = {
   getSnapshot: snapshot,
   getMaterialBuyScanStatus: IDLE_MATERIAL_BUY_SCAN_STATUS,
   getInaraImportDir: { ok: true, dir: "inara", defaultDir: "inara" },
-  resolveSystemDistances: { ok: true, distances: {} },
-  resolveSystemCoords: { ok: true, coords: {} },
+  resolveSystems: { ok: true, coords: {}, distances: {} },
   getDepotMaterialListings: { ok: true, listings: [] },
   searchBuyIndexStationsForMaterials: { ok: true, stations: [] },
 };

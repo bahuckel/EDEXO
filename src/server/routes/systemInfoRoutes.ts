@@ -11,7 +11,7 @@ import { perfCount } from "../perf.js";
 export function registerSystemInfoRoutes(
   app: express.Express,
   opts: HttpServerOptions,
-  _ctx: RouteContext,
+  ctx: RouteContext,
 ): void {
   /**
    * Where the commander is (§10.3).
@@ -23,11 +23,13 @@ export function registerSystemInfoRoutes(
    * Null is a real answer — the app may not have seen a jump yet — and the map draws nothing rather
    * than guessing the origin.
    */
+  const commanderPosition = () => ({ position: opts.getCommanderPosition(), system: opts.getCommanderSystem() });
   app.get("/api/commander-position", (_req, res) => {
     perfCount("http.commanderPosition");
-    const pos = opts.getCommanderPosition();
-    res.json({ position: pos, system: opts.getCommanderSystem() });
+    res.json(commanderPosition());
   });
+  // The sector map moves the ship marker when this changes (R2: was a poll every 15 s).
+  ctx.watchTopic("commander-position", commanderPosition);
 
   app.get("/api/status", (_req, res) => {
     perfCount("http.apiStatus");

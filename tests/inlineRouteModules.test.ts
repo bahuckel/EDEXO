@@ -15,7 +15,13 @@ import { registerFeederRoutes } from "../src/server/routes/feederRoutes.js";
 import { registerLauncherRoutes } from "../src/server/routes/launcherRoutes.js";
 import { registerSystemInfoRoutes } from "../src/server/routes/systemInfoRoutes.js";
 
-const ctx: RouteContext = { root: ".", webRoot: ".", pushColonize: () => {} };
+const ctx: RouteContext = {
+  root: ".",
+  webRoot: ".",
+  pushColonize: () => {},
+  watchTopic: () => {},
+  topicsMayHaveChanged: () => {},
+};
 const servers: http.Server[] = [];
 afterEach(async () => {
   for (const s of servers.splice(0)) await new Promise((r) => s.close(r));

@@ -90,7 +90,7 @@ import {
 export function registerGalaxyRoutes(
   app: express.Express,
   opts: HttpServerOptions,
-  _ctx: RouteContext,
+  ctx: RouteContext,
 ): void {
   // The map's extra layers (galaxyLayers.ts): points of interest, phenomena, carriers, bookmarks.
   app.get("/api/galaxy/layers", (req, res) => {
@@ -811,9 +811,9 @@ export function registerGalaxyRoutes(
     The commander's own carrier and colonised systems, for the map's badges (owner, 2026-10-13; shared/ownAssets.ts):
     where each is from the journals' StarPos, else the boxel's centre from its address (within a boxel of it).
   */
-  app.get("/api/galaxy/own", (_req, res) => {
+  const ownAssets = () => {
     const store = opts.getJournalStore?.() ?? null;
-    if (!store) return void res.json({ carrier: null, colonies: [] });
+    if (!store) return { carrier: null, colonies: [] };
     const place = (s: { name: string; addr: number } | null) => {
       if (!s) return null;
       const p = store.systemPositions.get(s.addr);
@@ -822,11 +822,14 @@ export function registerGalaxyRoutes(
       const b = Number.isSafeInteger(s.addr) ? id64Boxel(s.addr) : null;
       return b ? { name: s.name, ...b.center, exact: false } : null;
     };
-    res.json({
+    return {
       carrier: place(ownCarrierNow(store.ownAssets)),
       colonies: store.ownAssets.colonies.map(place).filter((c) => c != null),
-    });
-  });
+    };
+  };
+  app.get("/api/galaxy/own", (_req, res) => res.json(ownAssets()));
+  // The map's badges follow a carrier jump or a new colony when this changes (R2: was a poll every minute).
+  ctx.watchTopic("galaxy-own", ownAssets);
 
   app.get("/api/galaxy/mine", (_req, res) => {
     if (!opts.getMySystems) return void res.status(404).json({ error: "no journal store behind this build" });
@@ -858,6 +861,8 @@ export function registerGalaxyRoutes(
       return void res.status(404).json({ error: "no journal store behind this build" });
     res.json(opts.getSessionRoute());
   });
+  // The ship, the session's jumps and the plotted route (R2: the map asked every 15-30 s, the Next panel every 3 s).
+  if (opts.getSessionRoute) ctx.watchTopic("galaxy-route", opts.getSessionRoute);
 
   app.get("/api/galaxy/my-sectors", (_req, res) => {
     perfCount("http.commanderSectors");

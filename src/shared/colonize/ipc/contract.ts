@@ -45,8 +45,7 @@ export const COLONIZE_INVOKE = {
   schedulePlannerMaterialScan: true,
   syncWingCargoFromEdsm: true,
   getMaterialBuyScanStatus: true,
-  resolveSystemDistances: true,
-  resolveSystemCoords: true,
+  resolveSystems: true,
   searchConstructionSites: true,
   lookupSiteNeeds: true,
   lookUpPartyCarriers: true,
@@ -175,12 +174,17 @@ export type ColonizeInvoke = {
     existing?: WingMember[];
   }) => Promise<{ ok: true; members: WingMember[]; notes: string[] } | Fail>;
   getMaterialBuyScanStatus: () => Promise<MaterialBuyScanStatus>;
-  resolveSystemDistances: (payload: {
-    fromSystems: string[];
-    toSystems: string[];
-  }) => Promise<{ ok: true; distances: Record<string, number> } | Fail>;
-  /** Galaxy x/y/z keyed by normalized system name; a system nobody could place is left out. */
-  resolveSystemCoords: (payload: { systems: string[] }) => Promise<{ ok: true; coords: SystemCoordsByNorm } | Fail>;
+  /**
+   * Where systems are, in one request (R2, owner 2026-10-24): `coords` for `systems` (galaxy x/y/z keyed by normalized
+   * name; a system nobody could place is left out) and `distances` from each of `fromSystems` to each of `toSystems`.
+   * The planner's coordinates and the sites' distances used to be two requests on every Plan open
+   * (client/colonize/systemLookup.ts puts them in one).
+   */
+  resolveSystems: (payload: {
+    systems?: string[];
+    fromSystems?: string[];
+    toSystems?: string[];
+  }) => Promise<{ ok: true; coords: SystemCoordsByNorm; distances: Record<string, number> } | Fail>;
   /** Construction sites by name on Spansh; distances from `referenceSystem` when given. */
   searchConstructionSites: (payload: {
     query: string;
