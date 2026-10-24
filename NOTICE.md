@@ -148,9 +148,9 @@ Only the outline and a set of points are kept; no image from any of them ships w
 
 ## Species photographs
 
-`data/species/<genus>/<genus>_photos/` holds 180 images of Elite Dangerous exobiology (each also
-present as a cropped card and thumbnail, so 540 files). **150 of them were contributed by commanders
-of the Bahuckel clan and by the Stellar Exobiologists Guild**; the remaining 30 are sourced from the ED-DSN community, are **not covered by
+`data/species/<genus>/<genus>_photos/` holds 184 images of Elite Dangerous exobiology (each also
+present as a cropped card and thumbnail, so 552 files). **157 of them were contributed by commanders
+of the Bahuckel clan and by the Stellar Exobiologists Guild**; the remaining 27 are sourced from the ED-DSN community, are **not covered by
 this project's licences** and are not this project's to sublicense.
 
 ### Telling them apart, in the app and on disk
@@ -173,7 +173,7 @@ commander against each file:
 
 | commander                                     | images |
 | --------------------------------------------- | ------ |
-| Bahuckel — CMDR FALrenica (the project owner) | 139    |
+| Bahuckel — CMDR FALrenica (the project owner) | 146    |
 | Bahuckel — CMDR PhoEniXDFA                    | 6      |
 | Stellar Exobiologists Guild                   | 5      |
 
