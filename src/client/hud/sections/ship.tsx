@@ -1,13 +1,16 @@
 /* ============================================================== Ship ======================== */
 /*
   The ship's damage part by part (discuss item 32, owner 2026-10-22: "a top-down 2D ship view with per-part damage
-  %"; server: shared/shipDamage.ts). A drawn outline - one shape for every hull, not Frontier's art - with its parts
-  in place: the hull's edge, the core modules down the middle, weapons on the wings, utilities along the spine, the
-  internals as one block; each coloured by its health. Under it, the parts that are not whole, worst first, with
-  their damage. The hull is live (HullDamage); a module is as of the last Loadout or AFMU, and the note says when.
+  %"; server: shared/shipDamage.ts). The ship you fly seen from above (shared/shipOutlines.ts: all 49 ships, owner
+  2026-10-24 "include them in 1.3.0") with each module where it sits - weapons, utilities, core modules and internals by
+  their Loadout slot - each coloured by its health. A module the data does not place keeps the old spot (core modules
+  down the middle, weapons on the wings, utilities along the spine, the internals as one block); a ship it does not
+  know (a newer one) gets the old dart. Under it, the parts that are not whole, worst first, with their damage. The
+  hull is live (HullDamage); a module is as of the last Loadout or AFMU, and the note says when.
 */
 import type { ShipDamageState, ShipPart } from "../../../shared/shipDamage";
 import { healthTier } from "../../../shared/shipDamage";
+import { SHIP_OUTLINES, type ShipOutline as Outline } from "../../../shared/shipOutlines";
 import type { HudSnapshot } from "../types";
 import { Head, type HudSection } from "../parts";
 
@@ -41,7 +44,122 @@ const CORE_AT: Record<string, number> = {
   MainEngines: 126,
 };
 
+/** A smooth closed curve through the points (Catmull-Rom, each handle at most a third of its segment, so a short
+ * edge beside a long one does not overshoot into a hook). Same drawing as the outline review page. */
+function curvePath(pts: readonly (readonly [number, number])[]): string {
+  const n = pts.length;
+  const P = (k: number) => pts[(k + n) % n]!;
+  const f = (v: number) => Math.round(v * 10) / 10;
+  let d = `M${f(P(0)[0])} ${f(P(0)[1])}`;
+  for (let k = 0; k < n; k++) {
+    const [p0, p1, p2, p3] = [P(k - 1), P(k), P(k + 1), P(k + 2)];
+    const seg = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 3;
+    const cap = (dx: number, dy: number): [number, number] => {
+      const l = Math.hypot(dx, dy);
+      return l > seg && l > 0 ? [(dx * seg) / l, (dy * seg) / l] : [dx, dy];
+    };
+    const t1 = cap((p2[0] - p0[0]) / 6, (p2[1] - p0[1]) / 6);
+    const t2 = cap((p3[0] - p1[0]) / 6, (p3[1] - p1[1]) / 6);
+    d += ` C${f(p1[0] + t1[0])} ${f(p1[1] + t1[1])} ${f(p2[0] - t2[0])} ${f(p2[1] - t2[1])} ${f(p2[0])} ${f(p2[1])}`;
+  }
+  return `${d} Z`;
+}
+
+/** Where a core module sits along the length when the data does not place it (fraction of the length, nose 0). */
+const CORE_ALONG: Record<string, number> = {
+  Radar: 0.14,
+  LifeSupport: 0.27,
+  PowerDistributor: 0.4,
+  PowerPlant: 0.52,
+  FrameShiftDrive: 0.64,
+  FuelTank: 0.76,
+  MainEngines: 0.9,
+};
+
+/** The data's place for a slot: internals are keyed without their size ("Slot05_Size4" -> "Slot05"). */
+function slotAt(o: Outline, slot: string): readonly [number, number] | null {
+  return o.slots[slot] ?? o.slots[slot.replace(/_Size\d+$/, "")] ?? null;
+}
+
 function ShipOutline({ s }: { s: ShipDamageState }) {
+  const o = s.ship ? SHIP_OUTLINES[s.ship.toLowerCase()] : undefined;
+  if (!o) return <GenericOutline s={s} />;
+  // The outline in its own frame (y 0..100 nose to tail, x across), fitted into the 240 x 150 box above the label.
+  const half: [number, number][] = [];
+  for (let k = 0; k + 1 < o.half.length; k += 2) half.push([o.half[k]!, o.half[k + 1]!]);
+  const full = [...half, ...half.slice(1, -1).reverse().map(([x, y]) => [-x, y] as [number, number])];
+  const top = Math.min(...half.map((p) => p[1]));
+  const bottom = Math.max(...half.map((p) => p[1]));
+  const span = Math.max(...half.map((p) => p[0]), 1);
+  const k = Math.min(224 / (2 * span), 126 / (bottom - top));
+  const oy = 4 + (126 - (bottom - top) * k) / 2;
+  const X = (x: number) => 120 + x * k;
+  const Y = (y: number) => oy + (y - top) * k;
+  const len = bottom - top;
+
+  const hull = healthTier(s.hull);
+  const core = s.parts.filter((p) => p.group === "core" && p.slot !== "Armour");
+  const weapons = s.parts.filter((p) => p.group === "hardpoint");
+  const utility = s.parts.filter((p) => p.group === "utility");
+  const internals = s.parts.filter((p) => p.group === "optional");
+  const placedInternals = internals.filter((p) => slotAt(o, p.slot));
+  const looseInternals = internals.filter((p) => !slotAt(o, p.slot));
+  const title = (p: ShipPart) => <title>{`${p.label} ${pct(p.health)}`}</title>;
+  return (
+    <svg className="ship-view" viewBox="0 0 240 150" role="img" aria-label={`Hull ${pct(s.hull)}`}>
+      <path className={`ship-hull ship--${hull}`} d={curvePath(full.map(([x, y]) => [X(x), Y(y)] as const))} />
+      {looseInternals.length ? (
+        <rect
+          className={`ship-part ship-block ship--${healthTier(worst(looseInternals))}`}
+          x={120 - 5}
+          y={Y(top + 0.38 * len)}
+          width="10"
+          height={0.3 * len * k}
+          rx="2"
+        />
+      ) : null}
+      {placedInternals.map((p) => {
+        const at = slotAt(o, p.slot)!;
+        return (
+          <circle key={p.slot} className={`ship-part ship--${healthTier(p.health)}`} cx={X(at[0])} cy={Y(at[1])} r="3">
+            {title(p)}
+          </circle>
+        );
+      })}
+      {core.map((p) => {
+        const at = slotAt(o, p.slot) ?? [0, top + (CORE_ALONG[p.slot] ?? 0.5) * len];
+        return (
+          <circle key={p.slot} className={`ship-part ship--${healthTier(p.health)}`} cx={X(at[0])} cy={Y(at[1])} r="4.5">
+            {title(p)}
+          </circle>
+        );
+      })}
+      {weapons.map((p, i) => {
+        const side = i % 2 === 0 ? -1 : 1;
+        const at = slotAt(o, p.slot) ?? [side * Math.min(span * 0.6, 8 + Math.floor(i / 2) * 5), top + 0.3 * len + Math.floor(i / 2) * 6];
+        return (
+          <rect key={p.slot} className={`ship-part ship--${healthTier(p.health)}`} x={X(at[0]) - 3.5} y={Y(at[1]) - 3.5} width="7" height="7">
+            {title(p)}
+          </rect>
+        );
+      })}
+      {utility.map((p, i) => {
+        const at = slotAt(o, p.slot) ?? [(i % 2 ? 1 : -1) * Math.min(span * 0.4, 5), top + 0.2 * len + Math.floor(i / 2) * 6];
+        return (
+          <circle key={p.slot} className={`ship-part ship--${healthTier(p.health)}`} cx={X(at[0])} cy={Y(at[1])} r="2.5">
+            {title(p)}
+          </circle>
+        );
+      })}
+      <text className="ship-hull-label" x="120" y="146" textAnchor="middle">
+        {`hull ${pct(s.hull)}`}
+      </text>
+    </svg>
+  );
+}
+
+/** Every ship before 1.3.0's outlines, and any ship they do not know: one dart. */
+function GenericOutline({ s }: { s: ShipDamageState }) {
   const hull = healthTier(s.hull);
   const core = s.parts.filter((p) => p.group === "core" && p.slot !== "Armour");
   const weapons = s.parts.filter((p) => p.group === "hardpoint");

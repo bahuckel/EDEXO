@@ -127,6 +127,23 @@ Credited by link to the network rather than by commander name, at ED-DSN's reque
 photographs were taken on an expedition years ago and a significant number of those commanders can no
 longer be reached, so naming some and not others would be worse than naming none.
 
+### Ship outlines — the HUD's Ship section
+
+The ships seen from above (`src/shared/shipOutlines.ts`) are simplified silhouettes traced from other
+people's drawings, and where each module sits comes from the same places:
+
+- **ED Ship Chart** by Simon Janich (version 2.3, 2017, the to-scale chart of every ship from above,
+  posted on the Frontier forums; its ship images are Frontier's, used there with Frontier's
+  permission): the outlines of the 31 ships it shows.
+- **Elite Dangerous Ship Anatomy (EDSA)** — [siriuscorp.cc/edsa](https://siriuscorp.cc/edsa/), first
+  published at teall.info: the outlines of twelve newer ships, and where the hardpoints, utility
+  mounts and core modules sit on 43 ships.
+- **[coriolis-data](https://github.com/EDCD/coriolis-data)** (EDCD) and **[Inara](https://inara.cz)**:
+  the slot layout of the six newest ships, whose outlines were traced from pictures and whose module
+  positions are estimated.
+
+Only the outline and a set of points are kept; no image from any of them ships with the app.
+
 ---
 
 ## Species photographs
