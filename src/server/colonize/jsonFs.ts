@@ -2,6 +2,9 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 let tmpCounter = 0;
+/** A locked store file is asked again this often before it counts as unreadable (readJsonKeepingCorrupt). */
+const READ_ATTEMPTS = 10;
+const READ_RETRY_MS = 300;
 
 /** Write JSON atomically via temp file + rename to avoid corruption on crash. */
 export async function writeJsonAtomic(filePath: string, data: unknown, pretty = false): Promise<void> {
@@ -32,11 +35,23 @@ export async function readJson<T>(filePath: string, fallback: T): Promise<T> {
  * and with it archived flags, carriers and Inara imports the journals cannot rebuild (audit 2026-10-22).
  */
 export async function readJsonKeepingCorrupt<T>(filePath: string, fallback: T): Promise<{ value: T; corrupt: boolean }> {
-  let raw: string;
-  try {
-    raw = await fs.readFile(filePath, "utf8");
-  } catch {
-    return { value: fallback, corrupt: false };
+  let raw: string | null = null;
+  /*
+    Only a missing file means "start empty". One held by antivirus or a sync client (EBUSY, EPERM) used to count as
+    missing too, and the next save replaced the real one (review 2026-10-24): it is asked again for a few seconds, and
+    if it still cannot be read it is copied aside like a corrupt one before the caller starts empty.
+  */
+  for (let attempt = 1; raw == null; attempt++) {
+    try {
+      raw = await fs.readFile(filePath, "utf8");
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException)?.code === "ENOENT") return { value: fallback, corrupt: false };
+      if (attempt >= READ_ATTEMPTS) {
+        await backupUnreadableJson(filePath, "unreadable");
+        return { value: fallback, corrupt: true };
+      }
+      await new Promise((r) => setTimeout(r, READ_RETRY_MS));
+    }
   }
   try {
     return { value: JSON.parse(raw) as T, corrupt: false };

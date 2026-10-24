@@ -39,7 +39,14 @@ export function OldCopiesPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paths: list.files.map((f) => f.path) }),
       });
-      const j = (await r.json()) as { removed: string[]; skipped: string[]; files: OldCopy[]; bytes: number };
+      const j = (await r.json().catch(() => null)) as
+        | { removed?: string[]; skipped: string[]; files: OldCopy[]; bytes: number; error?: string }
+        | null;
+      // A refusal (403 on a phone: removing is for this PC only) read as a list threw a TypeError (review 2026-10-24).
+      if (!r.ok || !j || !Array.isArray(j.removed)) {
+        setNote(r.status === 403 ? "Old copies can be removed only on this PC." : `Could not remove them (${j?.error ?? `HTTP ${r.status}`}).`);
+        return;
+      }
       setNote(
         `Removed ${j.removed.length} cop${j.removed.length === 1 ? "y" : "ies"}${j.skipped.length ? `; ${j.skipped.length} could not be removed (in use?)` : ""}.`,
       );

@@ -145,6 +145,17 @@ export function useGalaxyDistances(args: {
               ...merged,
               ...res.distances,
             });
+            /*
+              The list changed while this chunk was out: keep what came back. These names are marked as asked, so the
+              next run skips them, and dropping the answer left them without a distance for ten minutes (review
+              2026-10-24).
+            */
+            if (cancelled) {
+              const kept = merged;
+              startTransition(() => setSystemDistanceLy((prev) => sanitizeGalaxyDistanceMap({ ...prev, ...kept })));
+              saveGalaxyDistanceCache(kept);
+              return;
+            }
           }
           if (cancelled) return;
           startTransition(() => {

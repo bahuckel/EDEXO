@@ -197,9 +197,7 @@ export class MaterialBuyIndex {
     this.loaded = true;
     this.sanitized = true;
     this.lastPurgeSig = null;
-    this.snapshots.clear();
-    this.rowIdsCache.clear();
-    this.hitsCache.clear();
+    this.dropDerived();
     await this.flush();
   }
 
@@ -209,9 +207,7 @@ export class MaterialBuyIndex {
     this.data = { version: INDEX_VERSION, systems };
     this.sanitized = false;
     this.lastPurgeSig = null;
-    this.snapshots.clear();
-    this.rowIdsCache.clear();
-    this.hitsCache.clear();
+    this.dropDerived();
     await this.flush();
     return removedHits;
   }
@@ -224,11 +220,22 @@ export class MaterialBuyIndex {
     this.data = { version: INDEX_VERSION, systems };
     this.sanitized = false;
     this.lastPurgeSig = null;
+    this.dropDerived();
+    await this.flush();
+    return removedHits;
+  }
+
+  /**
+   * Sellers were removed (clear, clear by source, prune, sanitize, depot purge): what was derived from them goes, a
+   * save is queued and the checkout memo, keyed on mergeGeneration, sees the change. Clearing used to flush with
+   * nothing queued, so the file kept every cleared seller and they came back on the next start (review 2026-10-24).
+   */
+  private dropDerived(): void {
     this.snapshots.clear();
     this.rowIdsCache.clear();
     this.hitsCache.clear();
-    await this.flush();
-    return removedHits;
+    this.mergeGen++;
+    this.savePending = true;
   }
 
   refKey(referenceSystem: string): string {
@@ -424,7 +431,10 @@ export class MaterialBuyIndex {
     constructionDepots: ConstructionDepotRef[] = [],
   ): MaterialBuyStationHit[] {
     const distRef = distanceOrigin?.trim() || referenceSystem;
-    const cacheKey = `${this.refKey(referenceSystem)}\0${this.rowIdsCacheKey(commodityId, label)}`;
+    // Distances are measured from distRef and depots are left out, so both belong in the key: the scanner asks from the
+    // hub, checkout from the site, and whichever came first used to be served to both (review 2026-10-24).
+    const depotSig = constructionDepots.length ? MaterialBuyIndex.purgeSig(constructionDepots) : "";
+    const cacheKey = `${this.refKey(referenceSystem)}\0${this.refKey(distRef)}\0${this.rowIdsCacheKey(commodityId, label)}\0${depotSig}`;
 
     const localRef = this.refKey(referenceSystem);
     const rowIds = this.cachedRowIdsForNeed(referenceSystem, commodityId, label);
@@ -527,9 +537,7 @@ export class MaterialBuyIndex {
       }
     }
     if (removed > 0) {
-      this.snapshots.clear();
-      this.rowIdsCache.clear();
-      this.hitsCache.clear();
+      this.dropDerived();
       this.queueSave();
     }
     return removed;
@@ -571,9 +579,7 @@ export class MaterialBuyIndex {
     }
     this.lastPurgeSig = sig;
     if (removed > 0) {
-      this.snapshots.clear();
-      this.rowIdsCache.clear();
-      this.hitsCache.clear();
+      this.dropDerived();
       this.queueSave();
     }
     return removed;

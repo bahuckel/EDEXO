@@ -7,6 +7,7 @@ import { parseInaraImportFile, INARA_INDEX_REF, type InaraImportFile } from "../
 import type { MaterialBuyStationHit } from "../../shared/colonize/materialBuyIndexTypes";
 import { isCommanderBuyOffer } from "../../shared/colonize/stationSellOffer";
 import { isGroundStyleType } from "../../shared/colonize/inaraStationIcon";
+import { marketTimeIso } from "../../shared/colonize/marketAge";
 import type { MaterialBuyIndex } from "./materialBuyIndex";
 import { writeJsonAtomic } from "./jsonFs";
 
@@ -178,7 +179,8 @@ function hitsFromImport(doc: InaraImportFile): MaterialBuyStationHit[] {
       isPlanetaryOrGround: isGround,
       pad: s.pad?.trim() ? s.pad.trim().charAt(0).toUpperCase() : null,
       foundAtIso: doc.scrapedAt,
-      marketUpdatedAt: s.marketUpdatedAt ?? null,
+      // Inara's "Updated" cell is relative ("12 days ago"): saved as the time it means, counted from the scrape.
+      marketUpdatedAt: marketTimeIso(s.marketUpdatedAt, doc.scrapedAt),
     });
   }
   return out;

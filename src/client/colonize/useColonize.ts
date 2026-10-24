@@ -23,7 +23,7 @@ import { loadBannedStations, type BannedStation } from "../../shared/colonize/st
 import { bestGalaxyLyFromSites, clearGalaxyDistanceCache, isKnownLy } from "../../shared/colonize/systemDistanceLy";
 import { clearTripPlanSnapshot } from "../../shared/colonize/tripPlanProgress";
 import type { CheckoutRoutingMode, DepotSnapshot } from "../../shared/colonize/types";
-import type { WingMember } from "../../shared/colonize/wingManifest";
+import { mergeWingSync, type WingMember } from "../../shared/colonize/wingManifest";
 import { stabilizeSnapshot } from "./hooks/snapshotStability";
 import { useColonizeSnapshot } from "./hooks/useColonizeSnapshot";
 import { useGalaxyDistances } from "./hooks/useGalaxyDistances";
@@ -239,11 +239,13 @@ export function useColonize() {
       return;
     }
     setWingBusy(true);
+    const before = wingRef.current;
     try {
-      const res = await api.syncWingCargoFromEdsm({ roster, existing: wingRef.current });
+      const res = await api.syncWingCargoFromEdsm({ roster, existing: before });
       if (!res.ok) setWingNotes([res.err]);
       else {
-        setWingMembers(res.members);
+        // Edits made while EDSM was asked (a claim typed in, a member added or removed) are kept (review 2026-10-24).
+        setWingMembers(mergeWingSync(before, wingRef.current, res.members));
         setWingNotes(res.notes);
       }
     } catch (e) {
@@ -286,14 +288,19 @@ export function useColonize() {
         setShopHistory([]);
       }
       if (scope === "all") {
-        clearSavedCheckout();
         clearTripPlanSnapshot();
         clearGalaxyDistanceCache();
-        stations.setCheckoutBundle(null);
         setSystemDistanceLy({});
       }
+      /*
+        Every scope: the plan's sellers are made again from what is left. Forgetting Spansh results, Inara imports or
+        docked markets used to leave them in the plan's own list until the next look (review 2026-10-24).
+      */
+      clearSavedCheckout();
+      stations.setCheckoutBundle(null);
       setBuyIndexRefreshToken((t) => t + 1);
       void refresh();
+      stations.reloadSaved();
       return { ok: true as const };
     },
     [api, refresh, setSystemDistanceLy, stations],

@@ -22,6 +22,7 @@ import { useLiveSnapshot } from "../useLiveSnapshot";
 import { STREAMER_MODE } from "../streamerMode";
 import { PhoneView } from "./views/PhoneView";
 import { loadColonizeUiState, onRemoteUiState } from "./uiStateSync";
+import { adoptSavedPlanOnNextMount } from "./planner/hooks/useLogisticsPlan";
 import { LoadingNote } from "../ui/Loading";
 import { AppStateProvider } from "./state/AppStateContext";
 import { useColonize, type ColonizeModel } from "./useColonize";
@@ -82,7 +83,10 @@ function PcScreen() {
     void loadColonizeUiState().finally(() => live && setReady(true));
     const off = onRemoteUiState(() => {
       if (document.hasFocus()) setRemote(true);
-      else setGen((g) => g + 1);
+      else {
+        adoptSavedPlanOnNextMount();
+        setGen((g) => g + 1);
+      }
     });
     return () => {
       live = false;
@@ -90,6 +94,7 @@ function PcScreen() {
     };
   }, []);
   const redraw = useCallback(() => {
+    adoptSavedPlanOnNextMount();
     setRemote(false);
     setGen((g) => g + 1);
   }, []);

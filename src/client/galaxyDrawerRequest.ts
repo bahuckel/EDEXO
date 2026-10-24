@@ -5,7 +5,7 @@
  * is - the pattern of the header's "Next boxel" (expeditionFocus.ts). A module of its own, so the request does not pull
  * the lazy map into the window that asks.
  */
-import { tabStore } from "./tabs/tabStore";
+import { heldElsewhere, tabStore } from "./tabs/tabStore";
 
 export type RequestableDrawer = "finder" | "stations" | "neutron";
 
@@ -24,10 +24,17 @@ export function takeGalaxyDrawer(): RequestableDrawer | null {
   return d;
 }
 
-/** A plain click opens the tab; a modified one (new window, new tab) keeps the link's own behaviour. */
+/**
+ * A plain click opens the tab; a modified one (new window, new tab) keeps the link's own behaviour. So does a click with
+ * tab view off (no Galaxy tab to open: it did nothing) and one while the other app's window holds the Galaxy tab (that
+ * window came forward without its drawer, and the request waited here to open the Finder by surprise later; review
+ * 2026-10-24): the link opens the map on its drawer in a window of its own.
+ */
 export function onGalaxyDrawerLinkClick(drawer: RequestableDrawer) {
   return (e: { button: number; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean; preventDefault(): void }) => {
     if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    const tabs = tabStore.get();
+    if (!tabs.on || (!tabs.tabs.includes("galaxy") && heldElsewhere("galaxy"))) return;
     e.preventDefault();
     openGalaxyDrawer(drawer);
   };

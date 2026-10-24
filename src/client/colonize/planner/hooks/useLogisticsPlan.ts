@@ -53,6 +53,17 @@ export type LogisticsPlanState = {
   tripMaterialIds: Set<string>;
 };
 
+/*
+  Set by ColonizeScreen when it draws the window again because another window saved (review 2026-10-24): the first plan
+  this mount makes is not saved over theirs. Two windows whose saved sellers differ make different plans; each saved
+  its own, the other redrew and saved again, every few seconds for as long as both stayed open. A plan made after that
+  (a delivery, a new seller) is saved as usual.
+*/
+let adoptOnNextMount = false;
+export function adoptSavedPlanOnNextMount(): void {
+  adoptOnNextMount = true;
+}
+
 /**
  * Builds the haul plan, keeps the pinned snapshot that survives a momentarily empty rebuild, and
  * owns the per-line "done" ticks.
@@ -224,11 +235,21 @@ export function useLogisticsPlan({
   }, [tripSnapshot, activeDepots, deferred.cargoByKey, displayPlan]);
 
   const lastPersistedPlanKeyRef = useRef("");
+  const [adopting] = useState(() => {
+    const a = adoptOnNextMount;
+    adoptOnNextMount = false;
+    return a;
+  });
+  const adoptRef = useRef(adopting);
   useEffect(() => {
     if (!activeDepots?.length || !planRefreshKey || !plan) return;
     if (lastPersistedPlanKeyRef.current === planRefreshKey) return;
     if (!plan.trips.length) return;
     lastPersistedPlanKeyRef.current = planRefreshKey;
+    if (adoptRef.current) {
+      adoptRef.current = false;
+      return;
+    }
     /**
      * The snapshot on disk is already this plan: keep it, and the ticks in it. The ref above
      * starts empty on every mount, so without this check each app start replaced the saved

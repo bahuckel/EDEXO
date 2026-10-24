@@ -69,6 +69,22 @@ describe("useFlip", () => {
     m.unmount();
   });
 
+  it("does not slide rows when only the page scrolled (review 2026-10-24)", () => {
+    localStorage.setItem("edexo.motion", "full");
+    let scroll = 0;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      const i = this.tagName === "LI" ? [...(this.parentElement?.children ?? [])].indexOf(this) : 0;
+      const top = i * 20 - scroll;
+      return { left: 0, top, width: 100, height: 20, right: 100, bottom: top + 20, x: 0, y: top, toJSON() {} } as DOMRect;
+    });
+    const m = mount();
+    m.render(["a", "b"]);
+    scroll = 300;
+    m.render(["a", "b"]);
+    expect(calls).toEqual([]);
+    m.unmount();
+  });
+
   it("does nothing in a hidden tab, and does not slide rows in when it shows again", () => {
     localStorage.setItem("edexo.motion", "full");
     const m = mount();

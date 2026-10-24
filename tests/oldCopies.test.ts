@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { isOldCopyName, listOldCopies, removeOldCopies } from "../src/server/oldCopies.js";
+import { isOldCopyName, isRecentRecoveryCopy, listOldCopies, removeOldCopies } from "../src/server/oldCopies.js";
 
 let dir = "";
 beforeEach(() => {
@@ -38,9 +38,21 @@ describe("old copies", () => {
       "edexo-bio-bodies.bin.before-20261010-v1",
       "edexo-predictions.json.polluted-20261009.bak",
       "galaxy/bio-index.bin.before-20261007",
-      "colonize-state.json.bak-corrupt",
     ]);
-    expect(bytes).toBe(601);
+    expect(bytes).toBe(600);
+  });
+
+  it("keeps a recovery copy made in the last 30 days: neither listed nor removed (review 2026-10-24)", () => {
+    expect(listOldCopies(dir).files.some((f) => f.path.endsWith(".bak-corrupt"))).toBe(false);
+    expect(removeOldCopies(["colonize-state.json.bak-corrupt"], dir).removed).toEqual([]);
+    expect(existsSync(path.join(dir, "colonize-state.json.bak-corrupt"))).toBe(true);
+    const day = 86_400_000;
+    const now = Date.parse("2026-10-24T00:00:00Z");
+    expect(isRecentRecoveryCopy("x.json.bak-corrupt", now - 29 * day, now)).toBe(true);
+    expect(isRecentRecoveryCopy("x.json.bak-corrupt", now - 31 * day, now)).toBe(false);
+    expect(isRecentRecoveryCopy("x.json.bak-4", now, now)).toBe(true);
+    expect(isRecentRecoveryCopy("x.json.bak-unreadable", now, now)).toBe(true);
+    expect(isRecentRecoveryCopy("x.bin.before-20261007", now, now)).toBe(false);
   });
 
   it("removes only what is named, an old copy, and inside the folder", () => {

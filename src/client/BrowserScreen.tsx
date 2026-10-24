@@ -180,6 +180,8 @@ export function BrowserScreen() {
       if (m.type === "state") setSt(m.state);
       else if (m.event === "focusAddress") addressRef.current?.focus();
       else if (m.event === "elsewhere") setElsewhere(true);
+      // The window that had the pages let them go: this one, still showing its Browser tab, takes them back.
+      else if (m.event === "free") bringHereRef.current();
       else if (m.event === "inaraRead" && m.data) {
         // An Inara pop-up's "EDEXO — Read": the sellers saved, and the answer in the pop-up and on the note bar.
         // The reader is Colonize code, loaded on the first Read only (audit 2026-10-22), not with the Browser tab.
@@ -271,6 +273,20 @@ export function BrowserScreen() {
       setStill(null);
     }
   }, [api, pageShown]);
+
+  /** "Bring it here", and the same when the other window lets the pages go (a "free" event) while this one waits. */
+  const elsewhereRef = useRef(elsewhere);
+  elsewhereRef.current = elsewhere;
+  const bringHereRef = useRef(() => {});
+  bringHereRef.current = () => {
+    if (!api || !elsewhereRef.current) return;
+    void api.start().then((s) => {
+      setSt(s);
+      setElsewhere(false);
+      sentRef.current = "";
+      place();
+    });
+  };
   useLayoutEffect(() => {
     place();
     const el = boxRef.current;
@@ -705,14 +721,7 @@ export function BrowserScreen() {
             <button
               type="button"
               className="btn-confirm-go"
-              onClick={() =>
-                void api.start().then((s) => {
-                  setSt(s);
-                  setElsewhere(false);
-                  sentRef.current = "";
-                  place();
-                })
-              }
+              onClick={() => bringHereRef.current()}
             >
               Bring it here
             </button>

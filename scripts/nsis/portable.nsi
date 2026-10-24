@@ -16,6 +16,11 @@
 ; kept after the app exits: a start whose build stamp matches the one written in the folder, with its main files
 ; there, runs it as it is. A new build (another stamp), a folder Windows' clean-up thinned out, or a cut unpack
 ; (the stamp is written last) unpacks it fresh. The folder stays at ~372 MB in %TEMP%\EDExoPortable.
+;
+; "Thinned out" is counted (review 2026-10-24): the four main files survive a clean-up that deletes seldom-read ones
+; (lazy web chunks, data files, the software-rendering DLL), and the damaged folder was run until the next build. The
+; number of files is written beside the stamp after an unpack; a folder holding fewer is unpacked fresh. More is fine:
+; the app writes its startup and crash logs there.
 
 !include "common.nsh"
 !include "extractAppPackage.nsh"
@@ -28,6 +33,7 @@ RequestExecutionLevel ${REQUEST_EXECUTION_LEVEL}
 
 Var EdexoRunning
 Var EdexoFresh
+Var EdexoCount
 
 ; This build, for the folder's stamp: set when the script is compiled, so every build differs.
 !define /date EDEXO_BUILD_STAMP "%Y%m%d-%H%M%S"
@@ -65,11 +71,41 @@ Function EdexoCheckRunning
   ${EndIf}
 FunctionEnd
 
+; Adds the files under the folder on the stack (and its subfolders) to $EdexoCount.
+Function EdexoCountFiles
+  Exch $R0
+  Push $R1
+  Push $R2
+  ClearErrors
+  FindFirst $R1 $R2 "$R0\*.*"
+  loop:
+    StrCmp $R2 "" done
+    StrCmp $R2 "." next
+    StrCmp $R2 ".." next
+    IfFileExists "$R0\$R2\*.*" 0 isfile
+      Push "$R0\$R2"
+      Call EdexoCountFiles
+      Goto next
+    isfile:
+      IntOp $EdexoCount $EdexoCount + 1
+    next:
+    ClearErrors
+    FindNext $R1 $R2
+    IfErrors done
+    Goto loop
+  done:
+  FindClose $R1
+  Pop $R2
+  Pop $R1
+  Pop $R0
+FunctionEnd
+
 ; Sets $EdexoFresh to 1 when $INSTDIR already holds this build, whole: the stamp written last after
-; an unpack, and the files the app cannot start without.
+; an unpack, the files the app cannot start without, and at least as many files as the unpack left.
 Function EdexoCheckFresh
   StrCpy $EdexoFresh 0
   ${If} ${FileExists} "$INSTDIR\.edexo-build"
+  ${AndIf} ${FileExists} "$INSTDIR\.edexo-files"
   ${AndIf} ${FileExists} "$INSTDIR\${APP_EXECUTABLE_FILENAME}"
   ${AndIf} ${FileExists} "$INSTDIR\resources\app.asar"
   ${AndIf} ${FileExists} "$INSTDIR\resources\edexo\app.cjs"
@@ -79,7 +115,22 @@ Function EdexoCheckFresh
       FileRead $1 $2
       FileClose $1
       ${If} $2 == "${EDEXO_BUILD_STAMP}"
-        StrCpy $EdexoFresh 1
+        ClearErrors
+        FileOpen $1 "$INSTDIR\.edexo-files" r
+        ${IfNot} ${Errors}
+          FileRead $1 $3
+          FileClose $1
+          IntOp $3 $3 + 0
+          StrCpy $EdexoCount 0
+          Push $INSTDIR
+          Call EdexoCountFiles
+          ; The two marker files are not part of the unpack.
+          IntOp $EdexoCount $EdexoCount - 2
+          ${If} $3 > 0
+          ${AndIf} $EdexoCount >= $3
+            StrCpy $EdexoFresh 1
+          ${EndIf}
+        ${EndIf}
       ${EndIf}
     ${EndIf}
   ${EndIf}
@@ -156,6 +207,14 @@ Section
       !insertmacro extractEmbeddedAppPackage
     !endif
   !endif
+
+  ; How many files the unpack left, for the next start's check.
+  StrCpy $EdexoCount 0
+  Push $INSTDIR
+  Call EdexoCountFiles
+  FileOpen $1 "$INSTDIR\.edexo-files" w
+  FileWrite $1 "$EdexoCount"
+  FileClose $1
 
   ; Unpacked whole: the stamp goes last, so a cut unpack is never taken for a whole one.
   FileOpen $1 "$INSTDIR\.edexo-build" w

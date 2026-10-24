@@ -156,18 +156,23 @@ function TradePartyPanel({ m }: { m: ColonizeModel }) {
     saveTradeParty(next);
   };
   const callsigns = members.map((x) => x.callsign).join(",");
+  // Only the newest look-up's answer is shown: adding a callsign while one is out let the older answer land last
+  // (review 2026-10-24).
+  const lookSeq = useRef(0);
   const lookUp = useCallback(async () => {
     if (!callsigns) return;
+    const seq = ++lookSeq.current;
     setBusy(true);
     setError(null);
     try {
       const res = await m.api.lookUpPartyCarriers({ callsigns: callsigns.split(","), referenceSystem: near });
+      if (seq !== lookSeq.current) return;
       if (res.ok) setCarriers(new Map(res.carriers.map((c) => [c.callsign, c])));
       else setError(res.err);
     } catch (e) {
-      setError(errText(e));
+      if (seq === lookSeq.current) setError(errText(e));
     } finally {
-      setBusy(false);
+      if (seq === lookSeq.current) setBusy(false);
     }
   }, [m.api, callsigns, near]);
   useEffect(() => {

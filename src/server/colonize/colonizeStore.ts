@@ -134,6 +134,8 @@ export class ColonizeStore {
   private following: (() => void)[] = [];
   private readonly reached = new Map<string, number>();
   private held: { line: JournalLine; at: JournalLineAt }[] | null = null;
+  /** A catch-up asked for by a live line from a file not read yet (applyLive); one at a time. */
+  private catchUpQueued = false;
   private liveJournalPath: string | null = null;
   /** Last station economy string from Docked (for Supply archetype hint). */
   private cargoWatchPath: string | null = null;
@@ -847,7 +849,21 @@ export class ColonizeStore {
   private applyLive(line: JournalLine, at: JournalLineAt): void {
     const key = fileKey(at.path);
     const reached = this.reached.get(key);
-    if (reached !== undefined && at.end <= reached) return;
+    /*
+      A file this store has not read yet (the game started during the startup read, or just now): its opening lines
+      (LoadGame, Location, Docked) came by EDEXO's re-read, not live, so taking this line would mark the file read past
+      them. Read the file from its start instead; the line is in it (review 2026-10-24).
+    */
+    if (reached === undefined) {
+      if (!this.catchUpQueued) {
+        this.catchUpQueued = true;
+        void this.catchUp().finally(() => {
+          this.catchUpQueued = false;
+        });
+      }
+      return;
+    }
+    if (at.end <= reached) return;
     this.reached.set(key, at.end);
     this.liveJournalPath = at.path;
     // A copy: the line is EDEXO's too, and parts of it are kept in the depot records.

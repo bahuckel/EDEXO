@@ -126,9 +126,13 @@ export function startDataAutoRefresh(onChanged: () => void): { stop(): void } {
   const tick = () => {
     if (busy) return;
     busy = true;
-    void runAutoRefresh(onChanged).finally(() => {
-      busy = false;
-    });
+    // Unattended: a failure (a dropped download, a .part file antivirus holds) is logged and tried at the next tick. An
+    // unhandled rejection here stopped the server mid-session (review 2026-10-24).
+    void runAutoRefresh(onChanged)
+      .catch((e) => console.warn("[auto refresh]", e instanceof Error ? e.message : e))
+      .finally(() => {
+        busy = false;
+      });
   };
   const first = setTimeout(tick, FIRST_DELAY_MS);
   const timer = setInterval(tick, TICK_MS);

@@ -244,7 +244,18 @@ export function TripList({ trips, completed }: TripProps) {
         {shown.map((tr) => {
           const done = tripDone(tr, completed);
           const buy = tr.stops.find((s) => s.kind === "buy" && s.buys.length);
-          const buys = tr.stops.flatMap((s) => s.buys);
+          // One chip per commodity: a trip can buy the same one at two stops when the first runs short (review
+          // 2026-10-24: two chips with one key).
+          const buys = [
+            ...tr.stops
+              .flatMap((s) => s.buys)
+              .reduce((by, b) => {
+                const had = by.get(b.commodityId);
+                by.set(b.commodityId, had ? { ...had, buyTons: had.buyTons + b.buyTons } : b);
+                return by;
+              }, new Map<string, (typeof tr.stops)[number]["buys"][number]>())
+              .values(),
+          ];
           const sites = [...new Set(tr.stops.flatMap((s) => (s.deliveries ?? []).map((d) => d.depotLabel)))];
           const loadPct = tr.capacity > 0 ? Math.min(100, (tr.loadTons / tr.capacity) * 100) : 0;
           const more = buys.slice(CHIPS);

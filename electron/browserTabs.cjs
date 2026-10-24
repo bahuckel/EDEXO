@@ -100,6 +100,18 @@ function createBrowserTabs(o) {
   let host = null;
   let bounds = null;
   let detachTimer = null;
+  /*
+    Windows told the pages went to another window ("elsewhere"). When that window lets them go (its Browser tab or the
+    window closes), they are told the pages are free and take them back; the pages used to close after the grace while
+    the first window still had its Browser tab open (review 2026-10-24).
+  */
+  const waiting = new Set();
+  function offerToWaiting() {
+    for (const wc of waiting) {
+      if (wc.isDestroyed()) waiting.delete(wc);
+      else wc.send("edexo:browser-event", { type: "free" });
+    }
+  }
   let ses = null;
   let cleared = false;
   /** Hosts whose https upgrade failed and that the commander chose to open over plain HTTP, this run. */
@@ -778,6 +790,7 @@ function createBrowserTabs(o) {
       hostListeners.win.removeListener("closed", hostListeners.closed);
     }
     host = win;
+    waiting.delete(win.webContents);
     // The window's size changes as it goes in and out of fullscreen: the fullscreen page follows it.
     const resize = () => {
       if (fullscreen && host === win) placeViews();
@@ -786,6 +799,7 @@ function createBrowserTabs(o) {
       if (host === win) {
         host = null;
         armDetach();
+        offerToWaiting();
       }
     };
     win.on("resize", resize);
@@ -942,7 +956,10 @@ function createBrowserTabs(o) {
         clearTimeout(detachTimer);
         detachTimer = null;
         // The window that had them (Compare and Colonize can both have a Browser tab) is told, so it says so.
-        if (host && host !== win && !host.isDestroyed()) host.webContents.send("edexo:browser-event", { type: "elsewhere" });
+        if (host && host !== win && !host.isDestroyed()) {
+          host.webContents.send("edexo:browser-event", { type: "elsewhere" });
+          waiting.add(host.webContents);
+        }
         adopt(win);
         if (!cleared) {
           cleared = true;
@@ -961,6 +978,7 @@ function createBrowserTabs(o) {
         bounds = null;
         placeViews();
         armDetach();
+        offerToWaiting();
         return { ok: true };
       case "downloadLists": {
         const ok = await o.blocker.download();

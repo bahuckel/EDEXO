@@ -30,6 +30,29 @@ export function pickWingColor(index: number): string {
 }
 
 /**
+ * An EDSM sync's answer laid over what the window holds now (review 2026-10-24): the sync was asked with `before`, and
+ * whatever changed in the window while it was out wins. A member whose claims were edited keeps them; one added stays;
+ * one removed stays gone. Everyone else takes the sync's claims.
+ */
+export function mergeWingSync(before: WingMember[], now: WingMember[], synced: WingMember[]): WingMember[] {
+  const key = (m: WingMember) => m.name.trim().toLowerCase();
+  const sig = (m: WingMember | undefined) => (m ? JSON.stringify(m.claims) : "");
+  const was = new Map(before.map((m) => [key(m), m]));
+  const is = new Map(now.map((m) => [key(m), m]));
+  const out: WingMember[] = [];
+  for (const m of synced) {
+    const k = key(m);
+    const prev = was.get(k);
+    const cur = is.get(k);
+    if (prev && !cur) continue;
+    out.push(cur && sig(cur) !== sig(prev) ? cur : m);
+  }
+  const have = new Set(out.map(key));
+  for (const m of now) if (!have.has(key(m)) && !was.has(key(m))) out.push(m);
+  return out;
+}
+
+/**
  * Untargeted claims (no `targetDepotMarketId`) form one pool drawn down across depots.
  *
  * They used to be subtracted in full from every depot that wanted the commodity, so a

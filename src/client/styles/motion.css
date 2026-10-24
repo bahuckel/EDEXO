@@ -30,6 +30,11 @@ html[data-motion="off"] *::after {
 }
 
 /* ---- the cross-fade of a switch or a close (View Transitions) ---- */
+/* The fading pictures lie over the page and took the clicks: the click that closed a dropdown, landing on a checkbox
+   or a button during the fade, went nowhere (review 2026-10-24). They let clicks through to the page under them. */
+::view-transition {
+  pointer-events: none;
+}
 ::view-transition-old(root) {
   animation: vt-fade-out var(--motion-out) var(--motion-ease-in) both;
 }

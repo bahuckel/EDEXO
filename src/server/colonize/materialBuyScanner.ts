@@ -64,6 +64,17 @@ function jobKey(job: ScanJob): string {
   return `${job.mode}\0${job.referenceSystem.trim().toLowerCase()}\0${ids}`;
 }
 
+/**
+ * The same materials round the same place are one job, but the newest request's settings win (cap, markets) and a
+ * forced look stays forced: a "Look now" pressed while a background look was queued used to be dropped as a
+ * duplicate, so the unforced one ran and skipped every material that had a seller nearby (review 2026-10-24).
+ */
+function enqueue(queue: ScanJob[], job: ScanJob): void {
+  const i = queue.findIndex((j) => jobKey(j) === jobKey(job));
+  if (i < 0) queue.push(job);
+  else queue[i] = { ...job, force: Boolean(queue[i]!.force || job.force) };
+}
+
 async function runMaterialBuyScan(job: ScanJob): Promise<void> {
   await job.index.load();
   job.index.sanitizeSellHits();
@@ -103,7 +114,8 @@ async function runMaterialBuyScan(job: ScanJob): Promise<void> {
       if (maxSystems != null && maxSystems > 0) {
         return job.index.needsMoreSystems(ref, id, label, maxSystems, depots);
       }
-      return false;
+      // No cap ("systems per material" blank): a forced look searches every material (review 2026-10-24).
+      return true;
     }
     if (maxSystems != null && maxSystems > 0) {
       if (!job.index.needsMoreSystems(ref, id, label, maxSystems, depots)) return false;
@@ -191,11 +203,8 @@ export function schedulePassiveMaterialBuyScan(args: Omit<ScanJob, "mode">): voi
    * the request here meant anything asked for during a scan was simply never scanned. The drain
    * loop already runs active jobs first.
    */
-  const job: ScanJob = { mode: "passive", ...args };
-  if (!passiveQueue.some((j) => jobKey(j) === jobKey(job))) {
-    passiveQueue.push(job);
-    patchQueue("passive", { referenceSystem: args.referenceSystem.trim() });
-  }
+  enqueue(passiveQueue, { mode: "passive", ...args });
+  patchQueue("passive", { referenceSystem: args.referenceSystem.trim() });
   syncQueueCounts();
   if (passiveTimer) clearTimeout(passiveTimer);
   passiveTimer = setTimeout(() => {
@@ -210,11 +219,8 @@ export function scheduleActiveMaterialBuyScan(args: Omit<ScanJob, "mode">): void
     clearTimeout(passiveTimer);
     passiveTimer = null;
   }
-  const job: ScanJob = { mode: "active", ...args };
-  if (!activeQueue.some((j) => jobKey(j) === jobKey(job))) {
-    activeQueue.push(job);
-    patchQueue("active", { referenceSystem: args.referenceSystem.trim() });
-  }
+  enqueue(activeQueue, { mode: "active", ...args });
+  patchQueue("active", { referenceSystem: args.referenceSystem.trim() });
   syncQueueCounts();
   if (activeTimer) clearTimeout(activeTimer);
   activeTimer = setTimeout(() => {

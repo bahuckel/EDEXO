@@ -34,10 +34,14 @@ export function SearchView({ m }: { m: ColonizeModel }) {
   const api = m.api;
   const near = m.constructionSiteRefs[0]?.trim() || m.homeSystem || m.snap?.navContext.starSystem || "";
 
+  // Switching the search type drops an answer still on its way (review 2026-10-24: stations shown in site mode).
+  const runSeq = useRef(0);
   const run = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const q = query.trim();
     if (!q) return;
+    const seq = ++runSeq.current;
+    const current = () => seq === runSeq.current;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -46,12 +50,14 @@ export function SearchView({ m }: { m: ColonizeModel }) {
     try {
       if (kind === "site") {
         const res = await api.searchConstructionSites({ query: q, referenceSystem: near || undefined });
+        if (!current()) return;
         if (res.ok) setSites(res.sites);
         else setError(res.err);
         setStations(null);
       } else {
         const res =
           kind === "commodity" ? await api.searchBuyIndexStationsForMaterials({ query: q }) : await api.searchBuyIndexSystem({ query: q });
+        if (!current()) return;
         if (res.ok) {
           setStations(res.stations);
           m.setSearchDistanceTargets([...new Set(res.stations.map((s) => s.systemName))]);
@@ -59,9 +65,9 @@ export function SearchView({ m }: { m: ColonizeModel }) {
         setSites(null);
       }
     } catch (err) {
-      setError(errText(err));
+      if (current()) setError(errText(err));
     } finally {
-      setBusy(false);
+      if (current()) setBusy(false);
     }
   };
 
@@ -144,6 +150,8 @@ export function SearchView({ m }: { m: ColonizeModel }) {
               className={`tab${kind === x.k ? " on" : ""}`}
               aria-selected={kind === x.k}
               onClick={() => {
+                runSeq.current++;
+                setBusy(false);
                 setKind(x.k);
                 setStations(null);
                 setSites(null);

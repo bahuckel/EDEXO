@@ -52,6 +52,9 @@ export async function syncWingCargoFromEdsm(args: {
       continue;
     }
     if (!res.lines.length) {
+      // An empty hold now: the last sync's claims go, or the plan keeps subtracting cargo already delivered (review
+      // 2026-10-24). A failed request (above) keeps them.
+      member.claims = [];
       notes.push(`${name}: no cargo rows on EDSM`);
       continue;
     }

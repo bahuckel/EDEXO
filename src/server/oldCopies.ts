@@ -25,6 +25,19 @@ export function isOldCopyName(name: string): boolean {
   return OLD_COPY.test(name);
 }
 
+/**
+ * The copy a store keeps of a file it could not read (`.bak-corrupt`, `.bak-unreadable`, `.bak-<version>` from a newer
+ * build: jsonFs.ts, colonizeStore, materialBuyIndex). Recent ones may be the only copy of the commander's sites,
+ * carriers and Inara imports, so for 30 days they are neither listed nor removed (review 2026-10-24).
+ */
+const RECOVERY_COPY = /\.bak-(corrupt|unreadable|v?\d[\w.]*)$/i;
+const RECOVERY_KEEP_MS = 30 * 86_400_000;
+export function isRecentRecoveryCopy(name: string, madeMs: number, nowMs = Date.now()): boolean {
+  return RECOVERY_COPY.test(name) && nowMs - madeMs < RECOVERY_KEEP_MS;
+}
+/** When a copy was made: a Windows copy keeps the original's modified time, so its creation time counts too. */
+const madeMs = (st: { mtimeMs: number; birthtimeMs: number }) => Math.max(st.mtimeMs, st.birthtimeMs || 0);
+
 function dataDir(): string {
   return path.dirname(resolveUserSettingsJsonPath());
 }
@@ -49,7 +62,7 @@ export function listOldCopies(root = dataDir()): { files: OldCopy[]; bytes: numb
       const r = rel ? `${rel}/${name}` : name;
       if (st.isDirectory()) {
         if (depth < MAX_DEPTH && !SKIP_DIRS.has(name.toLowerCase())) walk(full, r, depth + 1);
-      } else if (isOldCopyName(name)) {
+      } else if (isOldCopyName(name) && !isRecentRecoveryCopy(name, madeMs(st))) {
         files.push({ path: r, bytes: st.size, modified: st.mtime.toISOString() });
       }
     }
@@ -78,7 +91,8 @@ export function removeOldCopies(paths: unknown, root = dataDir()): { removed: st
       continue;
     }
     try {
-      if (!statSync(full).isFile()) throw new Error("not a file");
+      const st = statSync(full);
+      if (!st.isFile() || isRecentRecoveryCopy(path.basename(full), madeMs(st))) throw new Error("not removable");
       rmSync(full);
       removed.push(p);
     } catch {

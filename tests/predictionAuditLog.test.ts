@@ -416,6 +416,17 @@ describe("how the file is written (discuss item 21)", () => {
     expect(JSON.parse(readFileSync(auditPath, "utf8")).records[0].bodyName).toBe("v3");
   });
 
+  it("removes a changes file holding only a torn line, so the next append is not glued onto it (review 2026-10-24)", async () => {
+    const { writeFileSync } = await import("node:fs");
+    const rec = (n: number) => ({ bodyKey: "42:7", bodyName: `v${n}`, stages: [], truth: [], outcomes: [], final: false, updatedAt: "2026-10-23T00:00:00Z" });
+    writeFileSync(auditPath, JSON.stringify({ formatVersion: 1, records: [rec(1)] }));
+    writeFileSync(changes(), `{"torn`);
+    resetPredictionAuditForTests();
+    enablePredictionAudit();
+    expect(predictionRecords().map((r) => r.bodyName)).toEqual(["v1"]);
+    expect(existsSync(changes())).toBe(false);
+  });
+
   it("compacts a pretty file from an older build the first time it is read, keeping every record", async () => {
     const { writeFileSync, statSync } = await import("node:fs");
     const records = Array.from({ length: 20 }, (_, i) => ({ bodyKey: `1:${i}`, bodyName: `b${i}`, stages: [], truth: [], outcomes: [], final: true, updatedAt: "2026-10-01T00:00:00Z" }));

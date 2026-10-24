@@ -1652,6 +1652,8 @@
   if (btnColonizeMenu && colonizeMenu) {
     btnColonizeMenu.addEventListener("click", function (ev) {
       ev.stopPropagation();
+      // The other app's menu closes: stopPropagation kept its click-outside from seeing this (review 2026-10-24).
+      if (!mainUiMenu.hidden) closeOpenMenu();
       var open = colonizeMenu.hidden;
       colonizeMenu.hidden = !open;
       btnColonizeMenu.setAttribute("aria-expanded", open ? "true" : "false");
@@ -1702,6 +1704,7 @@
   });
   btnMainUiMenu.addEventListener("click", function (ev) {
     ev.stopPropagation();
+    if (colonizeMenu && !colonizeMenu.hidden) closeColonizeMenu();
     var open = mainUiMenu.hidden;
     mainUiMenu.hidden = !open;
     btnMainUiMenu.setAttribute("aria-expanded", open ? "true" : "false");

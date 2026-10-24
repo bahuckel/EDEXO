@@ -255,10 +255,12 @@ function load(): Map<string, PredictionRecord> {
     const lines = readFileSync(changesPath(), "utf8").split("\n");
     for (const line of lines) {
       if (!line.trim()) continue;
+      // Any line, torn or not, folds the file in and removes it: a changes file holding only a torn line was kept,
+      // and the next append was glued onto it and lost (review 2026-10-24).
+      compactNeeded = true;
       try {
         const r = JSON.parse(line) as PredictionRecord;
         if (r?.bodyKey) m.set(r.bodyKey, r);
-        compactNeeded = true;
       } catch {
         /* a torn line */
       }
