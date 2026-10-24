@@ -7,9 +7,20 @@ export type WingRosterEntry = {
   lastSeenIso: string;
 };
 
+/** "CMDR Foo" and "foo" are one commander. */
+const sameCommander = (a: string, b: string) => {
+  const n = (s: string) => s.trim().replace(/^cmdr\s+/i, "").toLowerCase();
+  return n(a) !== "" && n(a) === n(b);
+};
+
 export async function syncWingCargoFromEdsm(args: {
   roster: WingRosterEntry[];
   edsmApiKey?: string | null;
+  /**
+   * The commander the key belongs to. The key is sent only with that name (owner, 2026-10-24): it opens nobody
+   * else's cargo, and sent with a wingmate's name it only told EDSM whose key asked.
+   */
+  edsmCommanderName?: string | null;
   existing?: WingMember[];
 }): Promise<{ members: WingMember[]; notes: string[] }> {
   const notes: string[] = [];
@@ -34,7 +45,8 @@ export async function syncWingCargoFromEdsm(args: {
       byName.set(key, member);
     }
 
-    const res = await fetchEdsmCommanderCargo(name, args.edsmApiKey);
+    const own = args.edsmCommanderName ? sameCommander(name, args.edsmCommanderName) : false;
+    const res = await fetchEdsmCommanderCargo(name, own ? args.edsmApiKey : null);
     if (!res.ok) {
       notes.push(`${name}: ${res.err}`);
       continue;

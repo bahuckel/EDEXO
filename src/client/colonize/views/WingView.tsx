@@ -70,11 +70,17 @@ export function WingView({ m }: { m: ColonizeModel }) {
               ))}
             </ul>
           ) : null}
-          {m.snap && !m.snap.edsmApiKeyPresent && roster.length ? (
-            <p className="cz-note cz-note--warn" style={{ margin: 0 }}>
-              No EDSM key saved: only commanders with public EDSM cargo show up. Add your key in EDEXO's settings.
-            </p>
-          ) : null}
+          <div className="cz-actions">
+            <button
+              type="button"
+              className={`btn-top-toggle${m.plannerSettings.wingEdsmAuto ? " btn-top-toggle--on" : ""}`}
+              aria-pressed={m.plannerSettings.wingEdsmAuto}
+              title="Sends your wingmates' commander names to EDSM whenever your wing changes"
+              onClick={() => m.setPlannerSettings({ ...m.plannerSettings, wingEdsmAuto: !m.plannerSettings.wingEdsmAuto })}
+            >
+              Ask EDSM when the wing changes
+            </button>
+          </div>
           <form
             className="cz-row"
             style={{ justifyContent: "flex-start", alignItems: "center", gap: 8 }}

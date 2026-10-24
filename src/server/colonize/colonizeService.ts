@@ -80,6 +80,7 @@ export function colonizeService(deps: ColonizeServiceDeps): ColonizeService {
   const store = new ColonizeStore(dataDir, {
     journalDir: deps.journalDir,
     edsmApiKey: () => readEdsmCredentials()?.apiKey ?? null,
+    edsmCommanderName: () => readEdsmCredentials()?.commanderName ?? null,
     ownColonies: deps.ownColonies,
   });
   let buyIndex: MaterialBuyIndex | null = null;

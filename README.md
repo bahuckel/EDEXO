@@ -198,10 +198,12 @@ game) or as pop-ups if Tab view is off.
   every species you confirmed against what the app had listed.
 - **Achievements**: quest-style goals by colour variant, region and rarity, with Bronze, Silver and
   Gold steps and a notice when you reach one; track one on the HUD.
-- **Carriers** and **Points of interest**: EDAstro's lists, downloaded when you ask, searchable by
-  distance and service. The Carriers window's **Stations** tab finds the nearest station with the
-  services you pick (refuel, repair, Universal Cartographics, Vista Genomics, Interstellar Factors,
-  material traders, technology brokers and more), by pad size and distance from arrival.
+- **Carriers & Stations** and **Points of interest**: EDAstro's lists, downloaded when you ask, searchable by
+  distance and service; carriers can refresh themselves every 12 hours and stations every 24 (or 6, 48, off). The
+  **Stations** tab finds the nearest station with the services you pick (refuel, repair, Universal Cartographics,
+  Vista Genomics, Interstellar Factors, material traders, technology brokers and more), by pad size and distance
+  from arrival. **Find Tritium** asks Spansh for the nearest rings with Tritium hotspots and the stations and
+  carriers that sold it in the last 30 days.
 - **Browser** (desktop app only; "+" → Browser): a private browser in a tab. Nothing a site stores
   outlives the app unless you mark the site **Remember**; ads, trackers, cookie notices and YouTube
   ads are blocked (EasyList, EasyPrivacy and uBlock Origin's lists, fetched from their publishers when
@@ -221,7 +223,7 @@ game) or as pop-ups if Tab view is off.
   carrier and colonies marked, your stations in gold; your codex by region, with the biology others have
   logged in a region that is not in your codex yet, rarest first — a click flies to the nearest system in
   that same region that has it.
-- **Stations** tab: the nearest station with a service, from your ship or any system.
+- **Carriers & Stations** drawer: the same three tabs, measured from the system you picked, else from your ship.
 - **Laboratory** tab, with a Jumponium and an AFM Refill tab inside: the materials you hold (from your
   journals) and how many FSD injections or AFM refills of each tier they make, whether an AFMU is fitted, then
   the nearest landable bodies rich in the elements you pick — any or all of them, rich or the top 1 %, by
@@ -250,20 +252,37 @@ game) or as pop-ups if Tab view is off.
 - The galaxy index, the stations and the neutron stars are one download from inside the map; its
   update button says how many systems it adds.
 
+### Colonize
+
+- **Your sites**: every construction site in your journals (read once from your whole history), in your colony or
+  one you are helping, each as a card with what is left, in your hold and still to buy; delivered materials last
+  and green; a site's own rules (pad, distance from the star, planetary ports, other carriers, systems per
+  material); **Credits by week** per system, paid and spent.
+- **Haul plan**: which station to buy what at, in as few trips of your hold's size as the sellers allow; the next
+  trip stop by stop, the rest as cards. Nothing to tick: a purchase is done when the cargo is aboard, a trip when
+  the site records the delivery. Docked at a site it shows what to unload; at a seller, what to buy.
+- **Search** from the markets in your journal first, then Spansh and Inara (read in the app's own Browser tab when
+  you press Read); **Sources**: your fleet carrier, a trade party's carriers, stations to avoid; **Wing**: who
+  hauls what.
+- A read-only view for your phone, and a streamer view, from the launcher's Colonize menu.
+
 ### Overlay (HUD)
 
 Click-through panels over the game, each on or off: the exo-distance tracker (a radar with each sample
 ringed at its genus's distance, and the payout), discovery scan count, candidates for the targeted
 body, unsold data value, the next jumps with their star class and whether EDSM knows them, the Next
 boxel line (or, on a neutron route, where to scoop and supercharge and the FSD's health), notable
-bodies, notices (F5 clears them) and a tracked achievement. Stacked or merged into
+bodies, notices (F5 clears them), a tracked achievement, **Colonize** (the haul plan's next stop and
+the site you are working on, with bars that fill as you buy and deliver, and this week's credits) and
+**Ship** (an outline of your ship with each part coloured by its health, the damaged parts worst first).
+Stacked or merged into
 one panel, in the original look, a title bar or an Elite-style frame; any colour, 50–200 % scale,
 10–100 % background, hidden when the game is not in front.
 
 ### Launcher and options
 
-- **Open exobiology UI** in the app window or your browser; a **Triage** view for a phone or tablet;
-  a **Streamer view** for OBS.
+- **Open Compare** and **Open Colonize**, each in the app window or your browser, with a view for a phone or
+  tablet and a **Streamer view** for OBS.
 - **Network settings**: this PC, your LAN (with an access key in the link) and your public address,
   each one can be hidden or turned off.
 - **Backups** of your journals and the app's data, with warnings when the folder shares a drive with
@@ -278,7 +297,9 @@ one panel, in the original look, a title bar or an Elite-style frame; any colour
 - **Opt-ins**, each off by default: EDSM look-ups and journal upload (your own API key), Canonn, EDDN.
 - **Import visited systems**: the game's own list of every system your account visited, for journals
   you no longer have; they count as visited on the map, in Find and in the planner.
-- **Close to tray**, and **What's new** once after each update.
+- **Motion**: Full, Reduced or Off for every animation; **Old copies** lists the one-off backup copies in the
+  data folder and removes them on a second click.
+- **Close to tray**, **Hardware acceleration** (see Linux above), and **What's new** once after each update.
 
 ## Where the predictions come from
 

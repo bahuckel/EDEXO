@@ -46,6 +46,7 @@ export function journalHandlers({ store }: IpcContext) {
           roster,
           existing,
           edsmApiKey: store.getEdsmApiKey(),
+          edsmCommanderName: store.getEdsmCommanderName(),
         });
         return { ok: true as const, members, notes };
       } catch (e) {

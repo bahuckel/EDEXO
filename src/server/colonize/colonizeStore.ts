@@ -50,6 +50,8 @@ export type ColonizeStoreDeps = {
   journalDir: () => string;
   /** EDEXO's EDSM API key (Options), for wing cargo; null when none is saved. */
   edsmApiKey: () => string | null;
+  /** The commander name saved with that key: the key goes to EDSM only with this name (owner, 2026-10-24). */
+  edsmCommanderName?: () => string | null;
   /** The systems the commander claimed, from EDEXO's journal store (shared/ownAssets.ts). */
   ownColonies?: () => OwnColony[];
 };
@@ -416,6 +418,10 @@ export class ColonizeStore {
 
   getEdsmApiKey(): string | null {
     return this.deps.edsmApiKey();
+  }
+
+  getEdsmCommanderName(): string | null {
+    return this.deps.edsmCommanderName?.() ?? null;
   }
 
   applyJournalShopDistances(distanceBySystem: Record<string, number>, constructionRefs: string[] = []): void {

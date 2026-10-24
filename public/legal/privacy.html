@@ -21,7 +21,7 @@
 
       <main class="site-main">
         <h1 class="legal-hed">Privacy Policy</h1>
-        <p class="legal-updated">Last updated: 16 October 2026 · applies to version 1.2.18 and later</p>
+        <p class="legal-updated">Last updated: 24 October 2026 · applies to version 1.3.0 and later</p>
 
         <div class="legal-box">
           <p>
@@ -43,7 +43,7 @@
         </p>
         <p>
           Its own data &mdash; settings, the species you scanned on foot, surface marks, statistics, the miss log,
-          looked-up systems, your HUD layout &mdash; lives in its data folder
+          looked-up systems, your HUD layout, Colonize&rsquo;s sites, sellers and plans &mdash; lives in its data folder
           (<code>%LOCALAPPDATA%\ED Exo Compare</code> on Windows, <code>~/.config/edexo-compare</code> on Linux).
           <strong>Backups</strong> are written only to the folder you choose and are never sent anywhere.
           The exomastery and codex downloads are saved only where you save them.
@@ -97,12 +97,22 @@
             <strong>System search &mdash; Spansh</strong> (spansh.co.uk). Typing three or more letters in the
             system search sends what you typed. Opening a result for a system you have not scanned yourself
             fetches that system's data by its number; it is kept on your computer for 30 days. The carrier
-            check in the Carriers screen sends a carrier's callsign when you press it.
+            check in the Carriers screen sends a carrier's callsign when you press it (after fetching EDAstro's
+            points-of-interest list once per session).
+          </li>
+          <li>
+            <strong>Find Tritium &mdash; Spansh.</strong> Pressing <em>Find Tritium</em> in Carriers &amp; Stations or
+            the galaxy map sends a position &mdash; the system you picked, or your ship&rsquo;s current coordinates
+            &mdash; to find the nearest rings with Tritium hotspots and the markets selling it. No name is sent;
+            answers are kept for 10 minutes.
           </li>
           <li>
             <strong>Carriers and points of interest &mdash; EDAstro</strong> (edastro.com). The download buttons
-            in the Carriers and Points of Interest screens fetch EDAstro's public lists. Nothing about you is
-            sent.
+            in the Carriers and Points of Interest screens fetch EDAstro's public lists (the carrier list with
+            EDAstro's DSSA list). Once you have fetched the carrier list, <em>Auto refresh</em> beside its button
+            fetches it again every 12 hours (6, 24, 48 or off), asking first whether it changed. The Notify me
+            panel's codex download and the Statistics screen's galactic records come from EDAstro too, on a button.
+            Nothing about you is sent.
           </li>
           <li>
             <strong>Your public address &mdash; ipify</strong> (api.ipify.org). Only when you click the eye icon
@@ -117,7 +127,66 @@
           <li>
             <strong>Galaxy index &mdash; GitHub</strong> (github.com). When you press <em>Download</em> in the
             galaxy map, its index (about 255 MB) is downloaded from this project's GitHub releases. Nothing about you
-            is sent.
+            is sent. Once you have the stations data, <em>Auto refresh</em> in the Stations screen checks that release
+            every 24 hours (6, 12, 48 or off) and downloads the stations again only when there is a newer copy; the
+            Stations screen and the map also check the release&rsquo;s file sizes, at most every 10 minutes.
+          </li>
+        </ul>
+
+        <h3>Colonize</h3>
+        <p>
+          Colonize&rsquo;s requests name the app as <em>edexo-colonize</em> in their <em>User-Agent</em>, and are queued
+          per service: Spansh two at a time, EDSM one at a time at least 0.35 seconds apart, Raven Colonial one at a
+          time at least 0.5 seconds apart. Your own commander name is never sent.
+        </p>
+        <ul>
+          <li>
+            <strong>Sellers &mdash; Spansh</strong> (spansh.co.uk). While Colonize&rsquo;s Plan tab is open and a site
+            still has materials without sellers, the app asks Spansh&rsquo;s station search for them in the background:
+            a commodity name with the construction site&rsquo;s system as the place to measure from, and the market
+            ids of stations in your journal (up to 40 per request, each at most once in 6 hours) to read their whole
+            markets. It starts a few seconds after you dock, load cargo or a site&rsquo;s needs change, then every few
+            minutes, and stops once every material has enough sellers. Switch it off in <em>Sources &rarr; Seller data
+            &rarr; Ask Spansh in the background</em>; <em>Look for sellers now</em>, <em>Ask Spansh</em> and
+            <em>Ask Spansh near</em> run the same search on a press. Before a search, a system&rsquo;s name may be sent to
+            Spansh once to get its spelling, which is then kept.
+          </li>
+          <li>
+            <strong>System positions &mdash; EDSM, then Spansh.</strong> To measure distances to sellers, a system that
+            is not in your journals, the stations data or the positions already saved is looked up by name: up to 50
+            names per request to EDSM, and one at a time to Spansh for any EDSM does not know. A position found is
+            kept for good; nothing else is sent.
+          </li>
+          <li>
+            <strong>Sellers further out &mdash; EDSM.</strong> When you press <em>Ask Spansh</em> on a material that
+            neither the saved sellers nor Spansh can place, the app asks EDSM for the systems within 30 to 100 ly of
+            the site, their stations and their markets (at most 48 markets a press). Only system names and market ids
+            are sent.
+          </li>
+          <li>
+            <strong>Your wing&rsquo;s cargo &mdash; EDSM.</strong> When you press <em>Ask EDSM again</em> in the Wing tab,
+            or, if you switch on <em>Ask EDSM when the wing changes</em> there (off by default), whenever the journal
+            shows your wing change while Colonize is open: each wingmate&rsquo;s commander name, as the game wrote it in
+            your journal, is sent to EDSM to read the cargo they share there. Your EDSM API key is sent only with the
+            commander name you saved it with, never with a wingmate&rsquo;s.
+          </li>
+          <li>
+            <strong>Trade party &mdash; Spansh.</strong> The carrier callsigns you list under Sources (up to 40) with
+            your reference system, when you open the Sources tab, every 5 minutes while it stays open, and on
+            <em>Look again</em>. Remove the callsigns and it stops.
+          </li>
+          <li>
+            <strong>Construction sites &mdash; Spansh and Raven Colonial.</strong> <em>Search &rarr; Sites</em> sends the
+            name you typed and a reference system to Spansh. Picking a result asks Raven Colonial
+            (ravencolonial.com&rsquo;s public API) for that system&rsquo;s registered projects and what one still needs,
+            by the system&rsquo;s name; kept 5 minutes. <em>Search &rarr; System &rarr; Ask Spansh for its markets</em>
+            sends that system&rsquo;s name and number to Spansh.
+          </li>
+          <li>
+            <strong>Inara.</strong> Colonize never contacts Inara by itself. Its Inara links open Inara&rsquo;s commodity
+            search in the EDEXO browser (or your own browser) with the commodity and the site&rsquo;s system in the
+            address, as any link would; <em>EDEXO &mdash; Read</em> reads the table on the page you have open and
+            saves it on your computer, with no further request.
           </li>
         </ul>
 

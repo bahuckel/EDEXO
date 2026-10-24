@@ -14,12 +14,18 @@ export type PlannerSettings = {
    * by hand.
    */
   liveSpanshScans: boolean;
+  /**
+   * Ask EDSM for the wing's cargo by itself when the journal's wing changes (owner, 2026-10-24). Off by default: it
+   * sends other commanders' names to EDSM, and the README promises nothing personal leaves until switched on. "Ask
+   * EDSM again" still asks on a press.
+   */
+  wingEdsmAuto: boolean;
 };
 
 const DEFAULT_MAX_SYSTEMS = "15";
 
 function defaultPlannerSettings(): PlannerSettings {
-  return { maxSystemsPerMaterial: DEFAULT_MAX_SYSTEMS, liveSpanshScans: true };
+  return { maxSystemsPerMaterial: DEFAULT_MAX_SYSTEMS, liveSpanshScans: true, wingEdsmAuto: false };
 }
 
 export function loadPlannerSettings(): PlannerSettings {
@@ -31,6 +37,7 @@ export function loadPlannerSettings(): PlannerSettings {
       maxSystemsPerMaterial:
         typeof j.maxSystemsPerMaterial === "string" ? j.maxSystemsPerMaterial : DEFAULT_MAX_SYSTEMS,
       liveSpanshScans: typeof j.liveSpanshScans === "boolean" ? j.liveSpanshScans : true,
+      wingEdsmAuto: j.wingEdsmAuto === true,
     };
   } catch {
     return defaultPlannerSettings();

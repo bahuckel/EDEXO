@@ -253,11 +253,13 @@ export function useColonize() {
     }
   }, [api, snap?.wingRoster, setWingMembers]);
   const rosterSig = useMemo(() => (snap?.wingRoster ?? []).map((r) => r.commanderName).sort().join("|"), [snap?.wingRoster]);
+  // By itself only when switched on (Wing tab, plannerSettings.wingEdsmAuto): it sends the wingmates' names to EDSM.
+  const wingAuto = plannerSettings.wingEdsmAuto;
   useEffect(() => {
-    if (!rosterSig) return;
+    if (!rosterSig || !wingAuto) return;
     const t = window.setTimeout(() => void syncWing(), 1500);
     return () => clearTimeout(t);
-  }, [rosterSig, syncWing]);
+  }, [rosterSig, wingAuto, syncWing]);
 
   /* ---- sites ----------------------------------------------------------------------------------------------- */
   const setArchived = useCallback(
