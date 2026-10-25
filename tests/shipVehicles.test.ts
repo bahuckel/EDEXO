@@ -18,6 +18,8 @@ import {
 } from "../src/shared/shipDamage";
 import { ship } from "../src/client/hud/sections/ship";
 import type { HudSnapshot } from "../src/client/hud/types";
+import { VEHICLE_OUTLINES } from "../src/shared/vehicleOutlines";
+import { outlinePath } from "../src/client/hud/sections/vehicleOutlines";
 
 /** Feeds journal lines the way gameState.apply does: the vehicle events, and HullDamage to the hulls. */
 function play(s: ShipDamageState, lines: Record<string, unknown>[]): void {
@@ -167,5 +169,43 @@ describe("the Ship section", () => {
     expect(html(s)).toContain("out · crew");
     play(s, [{ event: "DockFighter", ID: 7 }]);
     expect(html(s)).not.toContain("F63 Condor");
+  });
+});
+
+describe("the vehicles' outlines", () => {
+  it("has one for each SRV, the Nomad and the six fighters, each a right half from the centre line to the centre line", () => {
+    expect(Object.keys(VEHICLE_OUTLINES).sort()).toEqual(
+      [
+        "combat_multicrew_srv_01",
+        "empire_fighter",
+        "federation_fighter",
+        "gdn_hybrid_fighter_v1",
+        "gdn_hybrid_fighter_v2",
+        "gdn_hybrid_fighter_v3",
+        "independent_fighter",
+        "lander01",
+        "mev_rhino",
+        "testbuggy",
+      ],
+    );
+    for (const [id, half] of Object.entries(VEHICLE_OUTLINES)) {
+      expect(half.length % 2, id).toBe(0);
+      expect(half[0], id).toBe(0);
+      expect(half[half.length - 2], id).toBe(0);
+      const xs = half.filter((_, i) => i % 2 === 0);
+      const ys = half.filter((_, i) => i % 2 === 1);
+      expect(Math.min(...xs), id).toBeGreaterThanOrEqual(0);
+      expect(Math.max(...ys) - Math.min(...ys), id).toBeGreaterThan(90);
+    }
+  });
+
+  it("draws a known model from its outline and a new one with its kind's shape", () => {
+    expect(outlinePath("mev_rhino", 0, 0, 100, 100)).toMatch(/^M[\d.]+ [\d.]+ C/);
+    expect(outlinePath("some_new_srv", 0, 0, 100, 100)).toBeNull();
+    const s = loaded();
+    play(s, [{ event: "LaunchSRV", SRVType: "some_new_srv", SRVType_Localised: "SRV Hornet", ID: 50, PlayerControlled: true }]);
+    const h = html(s);
+    expect(h).toContain("SRV Hornet");
+    expect(h).toContain("ship-veh-detail");
   });
 });

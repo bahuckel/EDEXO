@@ -1,11 +1,29 @@
 /*
   The ship's vehicles seen from above, for the HUD's Ship section (1.3.1, owner 2026-10-25: "ship deployed vehicles ...
-  Nomad, Rhino, the SRVs"). Drawn shapes, not Frontier's art: a body coloured by the vehicle's hull, and its wheels or
-  legs. Nose up, in a 100 x 100 box, like the ship outlines. A model the app does not know yet gets its kind's shape
-  (an SRV, a fighter), so a new vehicle never breaks the section.
+  Nomad, Rhino, the SRVs"). Each known model has its outline (shared/vehicleOutlines.ts: the SRVs, the Nomad and the six
+  fighters, reviewed by the owner), drawn like the ships and coloured by the vehicle's hull. A model the app does not
+  know yet gets its kind's drawn shape (an SRV, a fighter), so a new vehicle never breaks the section.
 */
 import type { ShipVehicle } from "../../../shared/shipDamage";
 import { healthTier } from "../../../shared/shipDamage";
+import { VEHICLE_OUTLINES } from "../../../shared/vehicleOutlines";
+import { curvePath } from "./curvePath";
+
+/** A known model's outline as one closed path, fitted (aspect kept) and centred in the box. */
+export function outlinePath(type: string | null, x: number, y: number, w: number, h: number): string | null {
+  const half = type ? VEHICLE_OUTLINES[type] : undefined;
+  if (!half) return null;
+  const right: [number, number][] = [];
+  for (let k = 0; k + 1 < half.length; k += 2) right.push([half[k]!, half[k + 1]!]);
+  const full = [...right, ...right.slice(1, -1).reverse().map(([a, b]) => [-a, b] as [number, number])];
+  const ys = full.map((p) => p[1]);
+  const top = Math.min(...ys);
+  const len = Math.max(...ys) - top;
+  const span = Math.max(...full.map((p) => p[0]), 1);
+  const k = Math.min(w / (2 * span), h / len);
+  const oy = y + (h - len * k) / 2;
+  return curvePath(full.map(([a, b]) => [x + w / 2 + a * k, oy + (b - top) * k] as const));
+}
 
 type Shape = { body: string; details: string[] };
 
@@ -76,9 +94,12 @@ export function vehicleShape(v: Pick<ShipVehicle, "kind" | "type">): Shape {
   return SCARAB;
 }
 
+/** The model's outline in the 100 x 100 box, else its kind's drawn shape. */
 function Drawn({ v }: { v: ShipVehicle }) {
-  const s = vehicleShape(v);
   const tier = healthTier(v.hull);
+  const d = outlinePath(v.type, 4, 4, 92, 92);
+  if (d) return <path className={`ship-hull ship--${tier}`} d={d} vectorEffect="non-scaling-stroke" />;
+  const s = vehicleShape(v);
   return (
     <>
       {s.details.map((d, i) => (
@@ -91,11 +112,16 @@ function Drawn({ v }: { v: ShipVehicle }) {
 
 /** The vehicle the commander is in, drawn as big as the ship would be. */
 export function VehicleView({ v, label }: { v: ShipVehicle; label: string }) {
+  const d = outlinePath(v.type, 8, 4, 224, 126);
   return (
     <svg className="ship-view" viewBox="0 0 240 150" role="img" aria-label={`${v.name} ${label}`}>
-      <g transform="translate(62 0) scale(1.16)">
-        <Drawn v={v} />
-      </g>
+      {d ? (
+        <path className={`ship-hull ship--${healthTier(v.hull)}`} d={d} />
+      ) : (
+        <g transform="translate(62 0) scale(1.16)">
+          <Drawn v={v} />
+        </g>
+      )}
       <text className="ship-hull-label" x="120" y="146" textAnchor="middle">
         {label}
       </text>

@@ -142,6 +142,11 @@ people's drawings, and where each module sits comes from the same places:
   the slot layout of the six newest ships, whose outlines were traced from pictures and whose module
   positions are estimated.
 
+The ships' vehicles (`src/shared/vehicleOutlines.ts`, from 1.3.1): the six ship-launched fighters are
+traced from the **EDSA** blueprints as well; the SRV Scarab is measured on a fan-made blueprint's top
+view (elite-dangerous-blog.co.uk), and the SRV Scorpion on the game's own radar icon; the Rhino and the
+Nomad have no top view anywhere and are approximated from a screenshot.
+
 Only the outline and a set of points are kept; no image from any of them ships with the app.
 
 ---

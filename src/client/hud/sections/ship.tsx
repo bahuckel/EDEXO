@@ -18,6 +18,7 @@ import { SHIP_OUTLINES, type ShipOutline as Outline } from "../../../shared/ship
 import type { HudSnapshot } from "../types";
 import { Head, type HudSection } from "../parts";
 import { VehicleIcon, VehicleView } from "./vehicleOutlines";
+import { curvePath } from "./curvePath";
 
 const LIST = 6;
 /** Under this a part counts as damaged and is listed; above it, everyday wear (98-99 % after any trip) is summed up. */
@@ -48,27 +49,6 @@ const CORE_AT: Record<string, number> = {
   FuelTank: 108,
   MainEngines: 126,
 };
-
-/** A smooth closed curve through the points (Catmull-Rom, each handle at most a third of its segment, so a short
- * edge beside a long one does not overshoot into a hook). Same drawing as the outline review page. */
-function curvePath(pts: readonly (readonly [number, number])[]): string {
-  const n = pts.length;
-  const P = (k: number) => pts[(k + n) % n]!;
-  const f = (v: number) => Math.round(v * 10) / 10;
-  let d = `M${f(P(0)[0])} ${f(P(0)[1])}`;
-  for (let k = 0; k < n; k++) {
-    const [p0, p1, p2, p3] = [P(k - 1), P(k), P(k + 1), P(k + 2)];
-    const seg = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 3;
-    const cap = (dx: number, dy: number): [number, number] => {
-      const l = Math.hypot(dx, dy);
-      return l > seg && l > 0 ? [(dx * seg) / l, (dy * seg) / l] : [dx, dy];
-    };
-    const t1 = cap((p2[0] - p0[0]) / 6, (p2[1] - p0[1]) / 6);
-    const t2 = cap((p3[0] - p1[0]) / 6, (p3[1] - p1[1]) / 6);
-    d += ` C${f(p1[0] + t1[0])} ${f(p1[1] + t1[1])} ${f(p2[0] - t2[0])} ${f(p2[1] - t2[1])} ${f(p2[0])} ${f(p2[1])}`;
-  }
-  return `${d} Z`;
-}
 
 /** Where a core module sits along the length when the data does not place it (fraction of the length, nose 0). */
 const CORE_ALONG: Record<string, number> = {
