@@ -7,12 +7,17 @@
   down the middle, weapons on the wings, utilities along the spine, the internals as one block); a ship it does not
   know (a newer one) gets the old dart. Under it, the parts that are not whole, worst first, with their damage. The
   hull is live (HullDamage); a module is as of the last Loadout or AFMU, and the note says when.
+
+  Its vehicles (1.3.1, owner 2026-10-25: "ship deployed vehicles ... Nomad, Rhino, the SRVs"): a row each for an SRV,
+  fighter or Nomad that is out, lost, or back damaged, with its hull and who drives it; while the commander is in one,
+  that vehicle is the picture and the ship becomes a row (vehicleOutlines.tsx).
 */
-import type { ShipDamageState, ShipPart } from "../../../shared/shipDamage";
+import type { ShipDamageState, ShipPart, ShipVehicle } from "../../../shared/shipDamage";
 import { healthTier } from "../../../shared/shipDamage";
 import { SHIP_OUTLINES, type ShipOutline as Outline } from "../../../shared/shipOutlines";
 import type { HudSnapshot } from "../types";
 import { Head, type HudSection } from "../parts";
+import { VehicleIcon, VehicleView } from "./vehicleOutlines";
 
 const LIST = 6;
 /** Under this a part counts as damaged and is listed; above it, everyday wear (98-99 % after any trip) is summed up. */
@@ -198,10 +203,62 @@ function GenericOutline({ s }: { s: ShipDamageState }) {
   );
 }
 
+/** The vehicles worth a row: out, lost, or back in the hangar damaged. A whole one in the hangar is left out. */
+function vehicleRows(s: ShipDamageState): ShipVehicle[] {
+  return (s.vehicles ?? []).filter((v) => v.key !== s.inVehicle && (v.state !== "docked" || (v.hull != null && v.hull < DAMAGED)));
+}
+
+function vehicleState(v: ShipVehicle): string {
+  if (v.state === "destroyed") return "lost";
+  if (v.state === "docked") return "in the hangar";
+  return v.pilot === "crew" ? "out · crew" : "out";
+}
+
+function VehicleRow({ v }: { v: ShipVehicle }) {
+  return (
+    <div className={`row ship-row--${v.state === "destroyed" ? "bad" : healthTier(v.hull)}`}>
+      <span className="k">
+        <VehicleIcon v={v} />
+        {v.name}
+        <small className="ship-veh-state">{vehicleState(v)}</small>
+      </span>
+      <span className="v">{v.state === "destroyed" ? "—" : pct(v.hull)}</span>
+    </div>
+  );
+}
+
+/** The commander in an SRV, a fighter or the Nomad: that vehicle is the picture, and the ship becomes a row. */
+function InVehicle({ s, v }: { s: ShipDamageState; v: ShipVehicle }) {
+  const ship = s.shipName || s.ship || "Your ship";
+  return (
+    <>
+      <Head title="Ship" status={`${v.name} ${pct(v.hull)}`} />
+      <div className="hud-big">
+        {v.name}
+        <small>{` from ${ship}`}</small>
+      </div>
+      <VehicleView v={v} label={v.hull == null ? "hull ?" : `hull ${pct(v.hull)}`} />
+      <div className={`row ship-row--${healthTier(s.hull)}`}>
+        <span className="k">{ship}</span>
+        <span className="v">{`hull ${pct(s.hull)}`}</span>
+      </div>
+      {vehicleRows(s).map((x) => (
+        <VehicleRow key={x.key} v={x} />
+      ))}
+      <p className="hud-note hud-explain">
+        {v.hull == null ? "No hit taken since it launched." : `Its hull as of its last hit, ${ago(v.hullAt)}.`}
+      </p>
+    </>
+  );
+}
+
 function Ship({ s }: { s: ShipDamageState }) {
+  const inside = s.inVehicle ? (s.vehicles ?? []).find((v) => v.key === s.inVehicle) : undefined;
+  if (inside) return <InVehicle s={s} v={inside} />;
   const hurt = s.parts.filter((p) => p.health != null && p.health < DAMAGED).sort((a, b) => (a.health ?? 1) - (b.health ?? 1));
   const worn = s.parts.filter((p) => p.health != null && p.health >= DAMAGED && p.health < 0.995).length;
   const name = s.shipName || s.ship || "Your ship";
+  const vehicles = vehicleRows(s);
   return (
     <>
       <Head title="Ship" status={`hull ${pct(s.hull)}`} />
@@ -225,6 +282,9 @@ function Ship({ s }: { s: ShipDamageState }) {
       )}
       {hurt.length > LIST ? <p className="hud-note">{`+${hurt.length - LIST} more`}</p> : null}
       {worn ? <p className="hud-note">{`${worn} lightly worn (95 % or more)`}</p> : null}
+      {vehicles.map((v) => (
+        <VehicleRow key={v.key} v={v} />
+      ))}
       <p className="hud-note hud-explain">{`Hull live; modules as of the last outfitting or repair, ${ago(s.loadoutAt)}.`}</p>
     </>
   );
@@ -235,13 +295,22 @@ export const ship: HudSection = {
   /* "Only when relevant": the hull or a module is damaged (under 95 %), not merely worn. */
   relevant: (d: HudSnapshot) => {
     const s = d.shipDamage;
-    return !!s && ((s.hull != null && s.hull < DAMAGED) || s.parts.some((p) => p.health != null && p.health < DAMAGED));
+    return (
+      !!s &&
+      ((s.hull != null && s.hull < DAMAGED) ||
+        s.parts.some((p) => p.health != null && p.health < DAMAGED) ||
+        // A vehicle out there taking hits (1.3.1).
+        (s.vehicles ?? []).some((v) => v.state === "out" && v.hull != null && v.hull < DAMAGED))
+    );
   },
   /* Amber while anything is badly hurt (under 50 %). */
   state: (d) => {
     const s = d.shipDamage;
     if (!s) return null;
-    const bad = healthTier(s.hull) === "bad" || s.parts.some((p) => healthTier(p.health) === "bad");
+    const bad =
+      healthTier(s.hull) === "bad" ||
+      s.parts.some((p) => healthTier(p.health) === "bad") ||
+      (s.vehicles ?? []).some((v) => v.state === "out" && healthTier(v.hull) === "bad");
     return bad ? "warn" : null;
   },
   initial: () => (

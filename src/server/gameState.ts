@@ -93,6 +93,7 @@ import {
   shipDamageHull,
   shipDamageLoadout,
   shipDamageRepair,
+  shipDamageVehicle,
   type ShipDamageState,
 } from "../shared/shipDamage.js";
 import { emptyJumpRange, jumpRangeJump, jumpRangeLoadout, type JumpRangeState } from "../shared/jumpRange.js";
@@ -1969,6 +1970,9 @@ export class GameStateStore {
     this.lastEventIso = ts;
 
     try {
+      // The ship's SRVs, fighters and the Nomad (1.3.1): launched, docked, lost, rebuilt, taken over. First, because
+      // LoadGame and others return early below.
+      shipDamageVehicle(this.shipDamage, line as Record<string, unknown>);
       if (event === "Commander") return this.onCommander(line);
 
       if (event === "LoadGame") return this.onLoadGame(line);

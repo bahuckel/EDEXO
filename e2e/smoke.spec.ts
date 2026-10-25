@@ -653,6 +653,45 @@ test("hud: Ship draws the outline and lists the damaged parts, worst first", asy
   expect(errors).toEqual([]);
 });
 
+/* The ship's vehicles (1.3.1): in the Rhino, it is the picture and the ship a row; a crew-flown fighter is listed. */
+test("hud: Ship draws the vehicle you are in, with the ship and the other vehicles as rows", async ({ page }) => {
+  const errors = watchErrors(page);
+  const now = new Date().toISOString();
+  const shipDamage = {
+    ship: "krait_mkii",
+    shipName: "Ze Zoom",
+    shipIdent: "FA-01",
+    hull: 0.91,
+    hullAt: now,
+    loadoutAt: now,
+    parts: [],
+    vehicles: [
+      { key: "srv:mev_rhino", kind: "srv", type: "mev_rhino", name: "Rhino", state: "out", hull: 0.42, hullAt: now, pilot: "you" },
+      { key: "fighter:independent_fighter", kind: "fighter", type: "independent_fighter", name: "Taipan", state: "out", hull: 0.77, hullAt: now, pilot: "crew" },
+      { key: "slv:lander01", kind: "slv", type: "lander01", name: "Nomad", state: "destroyed", hull: 0, hullAt: now, pilot: null },
+    ],
+    inVehicle: "srv:mev_rhino",
+    fighterType: "independent_fighter",
+  };
+  const payload = { port: 7119, shipDamage };
+  await page.setViewportSize({ width: 420, height: 700 });
+  await page.route(/\/api\/state\?channel=hud/, (r) => r.fulfill({ json: payload }));
+  await page.routeWebSocket(/channel=hud/, (ws) => {
+    ws.onMessage(() => {});
+    setTimeout(() => ws.send(JSON.stringify({ type: "state", payload })), 300);
+  });
+  await page.goto("/ship-overlay.html");
+  const sec = page.locator('[data-section="ship"]');
+  await expect(sec).toContainText("Rhino");
+  await expect(sec).toContainText("from Ze Zoom");
+  await expect(sec).toContainText("hull 42%");
+  await expect(sec.locator(".row .k")).toHaveText(["Ze Zoom", /Taipan\s*out · crew/, /Nomad\s*lost/]);
+  await expect(sec.locator(".ship-veh-icon")).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `${OUT}/hud-ship-vehicle.png`, fullPage: true });
+  expect(errors).toEqual([]);
+});
+
 /*
   The 3D galaxy map (G1, docs/galaxy-plan-28092026.md): the whole index loads, region names are
   placed, and moving close to Sol swaps the overview for precise tiles there.

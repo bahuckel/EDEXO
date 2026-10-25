@@ -6,6 +6,14 @@
  * crosses a threshold) and `AfmuRepairs` (a module's health after the AFMU), nothing per module per hit. So the hull
  * is live, a module is as of the last Loadout (or AFMU), and the view says so. `Repair` / `RepairAll` set what they
  * name back to whole; a ship swap or a death clears it until the next Loadout.
+ *
+ * The vehicles the ship carries (1.3.1, owner 2026-10-25: "ship deployed vehicles ... Nomad, Rhino, the SRVs"): an SRV
+ * (`LaunchSRV` / `DockSRV` / `SRVDestroyed`, `SRVType` testbuggy = Scarab, combat_multicrew_srv_01 = Scorpion,
+ * mev_rhino = Rhino), a fighter or the Nomad (`LaunchFighter` / `DockFighter` / `FighterDestroyed` / `FighterRebuilt`;
+ * since the Rhino update a field with no name carries the vessel, "lander01" = Nomad; a fighter's model comes from
+ * `RestockVehicle`). Their hull is a `HullDamage` too: `Fighter: true` for a fighter or the Nomad, and no `Fighter` field
+ * at all while the commander drives an SRV (owner's journals: every such line falls between LaunchSRV and DockSRV; 1.3.0
+ * put those on the ship's hull). Like the hull, a vehicle's figure is as of its last hit.
  */
 
 export type ShipPartGroup = "core" | "hardpoint" | "utility" | "optional";
@@ -19,6 +27,23 @@ export interface ShipPart {
   health: number | null;
 }
 
+export type VehicleKind = "srv" | "fighter" | "slv";
+
+export interface ShipVehicle {
+  /** One per kind and model: "srv:testbuggy", "fighter:independent_fighter", "slv:lander01". */
+  key: string;
+  kind: VehicleKind;
+  /** The journal's name for the model, or null when it did not say. */
+  type: string | null;
+  name: string;
+  state: "out" | "docked" | "destroyed";
+  /** 0..1 as of its last HullDamage, or null when nothing was said yet. */
+  hull: number | null;
+  hullAt: string | null;
+  /** Who flies or drives it when it is out. */
+  pilot: "you" | "crew" | null;
+}
+
 export interface ShipDamageState {
   ship: string | null;
   shipName: string | null;
@@ -30,11 +55,42 @@ export interface ShipDamageState {
   parts: ShipPart[];
   /** The Loadout the module figures come from. */
   loadoutAt: string | null;
+  /** The ship's vehicles seen since its Loadout, newest launch first. */
+  vehicles: ShipVehicle[];
+  /** The vehicle the commander is in (its key), or null in the ship itself (or on foot). */
+  inVehicle: string | null;
+  /** The fighter model the hangar was last restocked with (`RestockVehicle`), for a LaunchFighter that does not say. */
+  fighterType: string | null;
 }
 
 export function newShipDamage(): ShipDamageState {
-  return { ship: null, shipName: null, shipIdent: null, hull: null, hullAt: null, parts: [], loadoutAt: null };
+  return {
+    ship: null,
+    shipName: null,
+    shipIdent: null,
+    hull: null,
+    hullAt: null,
+    parts: [],
+    loadoutAt: null,
+    vehicles: [],
+    inVehicle: null,
+    fighterType: null,
+  };
 }
+
+/** The game's vehicle names, for when an event has no `_Localised` (old journals, a cache). */
+const VEHICLE_NAMES: Record<string, string> = {
+  testbuggy: "SRV Scarab",
+  combat_multicrew_srv_01: "SRV Scorpion",
+  mev_rhino: "Rhino",
+  lander01: "Nomad",
+  independent_fighter: "Taipan",
+  empire_fighter: "GU-97",
+  federation_fighter: "F63 Condor",
+  gdn_hybrid_fighter_v1: "XG7 Trident",
+  gdn_hybrid_fighter_v2: "XG8 Javelin",
+  gdn_hybrid_fighter_v3: "XG9 Lance",
+};
 
 const CORE: Record<string, string> = {
   Armour: "Armour",
@@ -153,13 +209,127 @@ export function shipDamageLoadout(s: ShipDamageState, j: Record<string, unknown>
   s.parts = parts;
 }
 
-/** `HullDamage`: the commander's own ship only (not a fighter he flies, not one his crew flies). */
+/**
+ * `HullDamage`, to whichever hull it is about: `Fighter: true` is a fighter or the Nomad (the one the commander is in,
+ * else the one his crew flies); `Fighter: false` is the ship, whoever flies it; no `Fighter` field is the vehicle the
+ * commander is in (an SRV writes it so), else the ship.
+ */
 export function shipDamageHull(s: ShipDamageState, j: Record<string, unknown>): void {
-  if (j.Fighter === true || j.PlayerPilot === false) return;
   const h = num(j.Health);
   if (h == null) return;
+  const at = str(j.timestamp);
+  const pilot = j.PlayerPilot === false ? "crew" : "you";
+  if (j.Fighter === true) {
+    const out = s.vehicles.filter((v) => v.state === "out" && v.kind !== "srv");
+    const v =
+      out.find((v) => pilot === "you" && v.key === s.inVehicle) ?? out.find((v) => v.pilot === pilot) ?? out[0] ?? null;
+    if (v) Object.assign(v, { hull: h, hullAt: at, pilot });
+    return;
+  }
+  if (j.Fighter === undefined && s.inVehicle) {
+    const v = s.vehicles.find((v) => v.key === s.inVehicle);
+    if (v) {
+      Object.assign(v, { hull: h, hullAt: at });
+      return;
+    }
+  }
+  if (j.Fighter === undefined && j.PlayerPilot === false) return;
   s.hull = h;
-  s.hullAt = str(j.timestamp);
+  s.hullAt = at;
+}
+
+function vehicleOf(s: ShipDamageState, kind: VehicleKind, type: string | null, localised: string | null): ShipVehicle {
+  const key = `${kind}:${type ?? "?"}`;
+  let v = s.vehicles.find((x) => x.key === key);
+  if (!v) {
+    const fallback = kind === "srv" ? "SRV" : kind === "slv" ? "Ship-launched vessel" : "Fighter";
+    const name = localised ?? (type ? VEHICLE_NAMES[type] : undefined) ?? fallback;
+    v = { key, kind, type, name, state: "docked", hull: null, hullAt: null, pilot: null };
+    s.vehicles.unshift(v);
+    // A ship carries two or three; an old model drops off after a few.
+    s.vehicles.length = Math.min(s.vehicles.length, 6);
+  } else if (localised) v.name = localised;
+  return v;
+}
+
+/** A fighter-bay launch's vessel: the unnamed field of the Rhino update ("lander01"), a named one, else the restock. */
+function bayVessel(
+  s: ShipDamageState,
+  j: Record<string, unknown>,
+): { kind: VehicleKind; type: string | null; localised: string | null } {
+  const type = str(j.FighterType) ?? str(j.VesselType) ?? str(j[""]) ?? s.fighterType;
+  const localised = str(j.FighterType_Localised) ?? str(j.VesselType_Localised) ?? str(j._Localised);
+  const slv = /^lander/i.test(type ?? "") || /nomad/i.test(localised ?? "");
+  return { kind: slv ? "slv" : "fighter", type: type ? type.toLowerCase() : null, localised };
+}
+
+const findOut = (s: ShipDamageState, kinds: VehicleKind[]) =>
+  s.vehicles.find((v) => v.state === "out" && kinds.includes(v.kind)) ?? null;
+
+/** Puts a vehicle first, out, with who drives it; the commander in it when he does. */
+function launch(s: ShipDamageState, v: ShipVehicle, pilot: "you" | "crew"): void {
+  s.vehicles = [v, ...s.vehicles.filter((x) => x !== v)];
+  Object.assign(v, { state: "out", pilot });
+  if (pilot === "you") s.inVehicle = v.key;
+}
+
+/** Back in the hangar, or lost (a lost one's hull is nothing). */
+function recover(s: ShipDamageState, v: ShipVehicle | null, lost: boolean, at: string | null): void {
+  if (!v) return;
+  v.state = lost ? "destroyed" : "docked";
+  if (lost) Object.assign(v, { hull: 0, hullAt: at });
+  v.pilot = null;
+  if (s.inVehicle === v.key) s.inVehicle = null;
+}
+
+/** The vehicle events: launches, docks, losses, rebuilds, the commander switching between ship and fighter. */
+export function shipDamageVehicle(s: ShipDamageState, j: Record<string, unknown>): void {
+  const ev = j.event;
+  const at = str(j.timestamp);
+  if (ev === "LaunchSRV") {
+    const type = str(j.SRVType)?.toLowerCase() ?? null;
+    launch(s, vehicleOf(s, "srv", type, str(j.SRVType_Localised)), j.PlayerControlled === false ? "crew" : "you");
+  } else if (ev === "DockSRV" || ev === "SRVDestroyed") {
+    const type = str(j.SRVType)?.toLowerCase() ?? null;
+    const v = s.vehicles.find((x) => x.kind === "srv" && x.state === "out" && (type == null || x.type === type));
+    recover(s, v ?? findOut(s, ["srv"]), ev === "SRVDestroyed", at);
+  } else if (ev === "LaunchFighter") {
+    const b = bayVessel(s, j);
+    launch(s, vehicleOf(s, b.kind, b.type, b.localised), j.PlayerControlled === true ? "you" : "crew");
+  } else if (ev === "DockFighter" || ev === "FighterDestroyed") {
+    const mine = s.inVehicle ? s.vehicles.find((x) => x.key === s.inVehicle && x.kind !== "srv") : undefined;
+    recover(s, mine ?? findOut(s, ["fighter", "slv"]), ev === "FighterDestroyed", at);
+  } else if (ev === "FighterRebuilt") {
+    // A new one in the bay, whole.
+    const v = s.vehicles.find((x) => x.kind !== "srv" && x.state === "destroyed");
+    if (v) Object.assign(v, { state: "docked", hull: 1, hullAt: at, pilot: null });
+  } else if (ev === "VehicleSwitch") {
+    // `To`: "Fighter" or "Mothership" - the commander takes the fighter over, or hands it to his crew.
+    const v = findOut(s, ["fighter", "slv"]);
+    if (j.To === "Fighter" && v) {
+      v.pilot = "you";
+      s.inVehicle = v.key;
+    } else if (j.To === "Mothership") {
+      if (v) v.pilot = "crew";
+      s.inVehicle = null;
+    }
+  } else if (ev === "RestockVehicle") {
+    const type = str(j.Type)?.toLowerCase() ?? null;
+    if (type && !/buggy|srv|rhino/.test(type)) s.fighterType = type;
+  } else if (ev === "LoadGame") {
+    // A new session: whatever was out when the game closed is back in the hangar.
+    for (const v of s.vehicles) if (v.state === "out") Object.assign(v, { state: "docked", pilot: null });
+    s.inVehicle = null;
+  } else if (ev === "Embark" && j.SRV === true) {
+    const v = findOut(s, ["srv"]);
+    if (v) {
+      v.pilot = "you";
+      s.inVehicle = v.key;
+    }
+  } else if ((ev === "Embark" || ev === "Disembark") && s.inVehicle) {
+    // Back in the ship, or out on foot: no vehicle of his is taking his hits.
+    s.inVehicle = null;
+  }
 }
 
 /** `AfmuRepairs`: one module's health after the AFMU worked on it. */
@@ -175,6 +345,8 @@ export function shipDamageRepair(s: ShipDamageState, j: Record<string, unknown>)
   if (j.event === "RepairAll") {
     s.hull = s.hull == null ? null : 1;
     for (const p of s.parts) if (p.health != null) p.health = 1;
+    // The vehicles in the hangar are repaired with the ship.
+    for (const v of s.vehicles) if (v.state === "docked" && v.hull != null) v.hull = 1;
     return;
   }
   const items = (Array.isArray(j.Items) ? j.Items : [j.Item]).map((x) => (typeof x === "string" ? x.toLowerCase().replace(/^\$|_name;$/g, "") : ""));
@@ -212,5 +384,25 @@ export function hydrateShipDamage(raw: unknown): ShipDamageState {
   s.parts = (Array.isArray(o.parts) ? o.parts : [])
     .filter((p): p is ShipPart => !!p && typeof p === "object" && typeof (p as ShipPart).slot === "string" && typeof (p as ShipPart).item === "string")
     .map((p) => ({ slot: p.slot, item: p.item, label: String(p.label ?? p.item), group: p.group, health: num(p.health) }));
+  const kinds: VehicleKind[] = ["srv", "fighter", "slv"];
+  const states: ShipVehicle["state"][] = ["out", "docked", "destroyed"];
+  s.vehicles = (Array.isArray(o.vehicles) ? o.vehicles : [])
+    .filter(
+      (v): v is ShipVehicle =>
+        !!v && typeof v === "object" && typeof (v as ShipVehicle).key === "string" && kinds.includes((v as ShipVehicle).kind),
+    )
+    .slice(0, 6)
+    .map((v) => ({
+      key: v.key,
+      kind: v.kind,
+      type: str(v.type),
+      name: str(v.name) ?? v.key,
+      state: states.includes(v.state) ? v.state : "docked",
+      hull: num(v.hull),
+      hullAt: str(v.hullAt),
+      pilot: v.pilot === "you" || v.pilot === "crew" ? v.pilot : null,
+    }));
+  s.inVehicle = s.vehicles.some((v) => v.key === o.inVehicle) ? (o.inVehicle as string) : null;
+  s.fighterType = str(o.fighterType);
   return s;
 }
