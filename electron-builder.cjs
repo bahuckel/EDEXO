@@ -79,6 +79,10 @@ module.exports = {
   */
   files: [
     "electron/main.cjs",
+    // Split out of main.cjs (1.3.1).
+    "electron/appWindows.cjs",
+    "electron/launcherIpc.cjs",
+    "electron/quitFlow.cjs",
     "electron/preload.cjs",
     "electron/windowState.cjs",
     "electron/hudWindows.cjs",
@@ -94,6 +98,7 @@ module.exports = {
     "electron/tabWindows.cjs",
     // The EDEXO browser (plan 9).
     "electron/browserTabs.cjs",
+    "electron/browserTabPasswords.cjs",
     "electron/browserPageScripts.cjs",
     "electron/browserUrls.cjs",
     "electron/browserPrefs.cjs",
