@@ -20,10 +20,10 @@ Windows; everything the app saves lives in `%LOCALAPPDATA%\ED Exo Compare\`.
 
 |                                                                                                                |                                                                       |
 | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **[Portable — one file](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.3.0/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
-| **[Program folder — .zip](https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.3.0-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
+| **[Portable — one file](https://github.com/bahuckel/EDEXO/releases/download/v1.3.0/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
+| **[Program folder — .zip](https://github.com/bahuckel/EDEXO/releases/tag/v1.3.0-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
 
-Both are the same version and the same code — [all releases](https://github.com/bahuckel/EDEXO-Compare/releases).
+Both are the same version and the same code — [all releases](https://github.com/bahuckel/EDEXO/releases).
 
 The galaxy map's data is a separate download, offered by the map the first time you open it and left
 in place by updates: the index (every system with recorded biology, from EDAstro's codex data, about
@@ -44,8 +44,8 @@ distro, desktop, X11 or Wayland — is the most useful thing you can send.
 
 |                                                                                                                                         |                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.3.0-zip/EDExoCompare-1.3.0-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
-| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO-Compare/releases/download/v1.3.0-zip/EDExoCompare-1.3.0-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
+| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO/releases/download/v1.3.0-zip/EDExoCompare-1.3.0-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
+| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO/releases/download/v1.3.0-zip/EDExoCompare-1.3.0-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
 
 **AppImage:** `chmod +x EDExoCompare-1.3.0-x86_64.AppImage`, then run it. It needs FUSE 2:
 

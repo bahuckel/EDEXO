@@ -29,7 +29,7 @@ export type GalaxyIndexFile = (typeof GALAXY_INDEX_FILES)[number];
 
 /** Where the release keeps them: one release, updated when the index is rebuilt. */
 export const GALAXY_INDEX_BASE_URL =
-  "https://github.com/bahuckel/EDEXO-Compare/releases/download/galaxy-index";
+  "https://github.com/bahuckel/EDEXO/releases/download/galaxy-index";
 
 function userGalaxyDir(): string {
   return path.join(path.dirname(resolveUserSettingsJsonPath()), "galaxy");

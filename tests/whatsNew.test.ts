@@ -75,7 +75,7 @@ describe("releaseNotesBetween", () => {
     const n = releaseNotesBetween(RELEASES, "1.2.10", "1.2.12", "zip");
     expect(n.map((r) => r.version)).toEqual(["1.2.12", "1.2.11"]);
     expect(n[0]!.notes).toContain("1.2.12 zip");
-    expect(n[0]!.pageUrl).toBe("https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.2.12-zip");
+    expect(n[0]!.pageUrl).toBe("https://github.com/bahuckel/EDEXO/releases/tag/v1.2.12-zip");
   });
 
   it("prefers the exe's release for the exe", () => {

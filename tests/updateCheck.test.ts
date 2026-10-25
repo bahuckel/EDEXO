@@ -45,10 +45,10 @@ describe("parseReleaseTag / compareVersions", () => {
 describe("pickLatestRelease", () => {
   it("links the single-exe copy to the plain tag and the folder copy to the -zip tag", () => {
     expect(pickLatestRelease(RELEASES, "portable")?.pageUrl).toBe(
-      "https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.1.9",
+      "https://github.com/bahuckel/EDEXO/releases/tag/v1.1.9",
     );
     expect(pickLatestRelease(RELEASES, "zip")?.pageUrl).toBe(
-      "https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.1.9-zip",
+      "https://github.com/bahuckel/EDEXO/releases/tag/v1.1.9-zip",
     );
   });
 
@@ -89,7 +89,7 @@ describe("createUpdateChecker", () => {
     const c = createUpdateChecker({ fetchImpl: fakeFetch(RELEASES), current: "1.1.8", form: "portable" });
     const a = await c.check();
     expect(a).toMatchObject({ current: "1.1.8", latest: "1.1.9", newer: true, error: null });
-    expect(c.updatePageUrl()).toBe("https://github.com/bahuckel/EDEXO-Compare/releases/tag/v1.1.9");
+    expect(c.updatePageUrl()).toBe("https://github.com/bahuckel/EDEXO/releases/tag/v1.1.9");
   });
 
   it("is not newer when running the latest, and offers no page to open", async () => {

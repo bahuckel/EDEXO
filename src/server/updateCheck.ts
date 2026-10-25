@@ -14,10 +14,10 @@
 import type { UpdateInfoDTO } from "../shared/types.js";
 import { APP_USER_AGENT, APP_VERSION } from "./appVersion.js";
 
-export const RELEASES_API = "https://api.github.com/repos/bahuckel/EDEXO-Compare/releases?per_page=20";
-const RELEASE_PAGE = "https://github.com/bahuckel/EDEXO-Compare/releases/tag/";
+export const RELEASES_API = "https://api.github.com/repos/bahuckel/EDEXO/releases?per_page=20";
+const RELEASE_PAGE = "https://github.com/bahuckel/EDEXO/releases/tag/";
 /** Where a release file is downloaded from: built from the tag and the file name, this repo only. */
-export const RELEASE_DOWNLOAD = "https://github.com/bahuckel/EDEXO-Compare/releases/download/";
+export const RELEASE_DOWNLOAD = "https://github.com/bahuckel/EDEXO/releases/download/";
 /** One answer per hour is plenty; GitHub allows an unauthenticated caller 60 requests an hour. */
 const MEMO_MS = 60 * 60 * 1000;
 const TIMEOUT_MS = 10_000;

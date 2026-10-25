@@ -37,14 +37,14 @@ describe("window guards", () => {
     const shell = { openExternal: async (u: string) => void external.push(u) };
     const w = fakeWindow();
     guardWindowNavigation(w.win, () => "http://127.0.0.1:7111", shell);
-    expect(w.open("https://github.com/bahuckel/EDEXO-Compare/releases")).toBe("deny");
+    expect(w.open("https://github.com/bahuckel/EDEXO/releases")).toBe("deny");
     expect(w.open("http://127.0.0.1:7111/?screen=triage")).toBe("allow");
     expect(w.open("http://127.0.0.1:71119/")).toBe("deny"); // not a prefix trick
     expect(w.open("file:///C:/Windows/system32/calc.exe")).toBe("deny");
     expect(w.navigate("https://evil.example/")).toBe(true);
     expect(w.navigate("http://127.0.0.1:7111/launcher.html")).toBe(false);
     expect(external).toEqual([
-      "https://github.com/bahuckel/EDEXO-Compare/releases",
+      "https://github.com/bahuckel/EDEXO/releases",
       "http://127.0.0.1:71119/",
       "https://evil.example/",
     ]);

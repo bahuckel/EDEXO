@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "data", "galaxy", "developer-populated-systems.json");
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-const UA = `ED-Exo-Compare/${pkg.version} (+https://github.com/bahuckel/EDEXO-Compare)`;
+const UA = `ED-Exo-Compare/${pkg.version} (+https://github.com/bahuckel/EDEXO)`;
 const URL = "https://spansh.co.uk/api/systems/search";
 const CAP = 10_000;
 const PAGE = 100;

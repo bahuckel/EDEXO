@@ -12,4 +12,4 @@
 export const APP_VERSION = "1.3.0";
 
 /** The User-Agent the HTTP lookups send. */
-export const APP_USER_AGENT = `ED-Exo-Compare/${APP_VERSION} (+https://github.com/bahuckel/EDEXO-Compare)`;
+export const APP_USER_AGENT = `ED-Exo-Compare/${APP_VERSION} (+https://github.com/bahuckel/EDEXO)`;

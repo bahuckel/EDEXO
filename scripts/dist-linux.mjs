@@ -69,7 +69,7 @@ const readme = `EDEXO ${version} — Linux (browser UI)
 
 UNTESTED: the first Linux release, not yet tried on a real desktop with the game running. What
 worked and what did not (distro, desktop, X11 or Wayland) is welcome as a GitHub issue:
-https://github.com/bahuckel/EDEXO-Compare/issues
+https://github.com/bahuckel/EDEXO/issues
 
 Run one of the launchers in this folder, from a terminal or your file manager:
 

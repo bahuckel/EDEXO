@@ -48,7 +48,7 @@ const JOURNAL_URL = "https://www.edsm.net/api-journal-v1";
 const DISCARD_URL = "https://www.edsm.net/api-journal-v1/discard";
 
 /** EDSM asks for a User-Agent that says who is calling. Same one the read side uses. */
-export const EDSM_UPLOAD_USER_AGENT = `${JOURNAL_UPLOAD_SOFTWARE}/${JOURNAL_UPLOAD_VERSION} (+https://github.com/bahuckel/EDEXO-Compare)`;
+export const EDSM_UPLOAD_USER_AGENT = `${JOURNAL_UPLOAD_SOFTWARE}/${JOURNAL_UPLOAD_VERSION} (+https://github.com/bahuckel/EDEXO)`;
 
 /**
  * How many events go in one request.

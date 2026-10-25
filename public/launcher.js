@@ -725,7 +725,7 @@
   var whatsNewTitle = document.getElementById("whatsNewTitle");
   var btnWhatsNew = document.getElementById("btnWhatsNew");
   var whatsNewPending = false;
-  var whatsNewPageUrl = "https://github.com/bahuckel/EDEXO-Compare/releases";
+  var whatsNewPageUrl = "https://github.com/bahuckel/EDEXO/releases";
 
   function notesInline(parent, text) {
     var re = /!\[[^\]]*\]\([^)]*\)|\[([^\]]+)\]\((https:\/\/[^)\s]+)\)|\*\*([^*]+)\*\*|`([^`]+)`/g;
@@ -815,7 +815,7 @@
     whatsNewBody.innerHTML = "";
     var rel = info.releases || [];
     whatsNewTitle.textContent = (info.pending ? "Updated to v" : "What's new in v") + info.current;
-    whatsNewPageUrl = rel.length ? rel[0].pageUrl : "https://github.com/bahuckel/EDEXO-Compare/releases";
+    whatsNewPageUrl = rel.length ? rel[0].pageUrl : "https://github.com/bahuckel/EDEXO/releases";
     if (!rel.length) {
       var p = document.createElement("p");
       p.textContent =

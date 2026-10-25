@@ -18,7 +18,7 @@ import {
 
 const SPANSH_NAMES_URL = "https://spansh.co.uk/api/systems/field_values/system_names";
 const SPANSH_DUMP_URL = "https://spansh.co.uk/api/dump";
-const USER_AGENT = "EDExoCompare (+https://github.com/bahuckel/EDEXO-Compare)";
+const USER_AGENT = "EDExoCompare (+https://github.com/bahuckel/EDEXO)";
 
 function pickStr(v: unknown): string | undefined {
   return typeof v === "string" && v.trim() ? v : undefined;

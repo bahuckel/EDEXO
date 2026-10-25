@@ -11,7 +11,7 @@
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const UA = { "User-Agent": "EDEXO-Compare catalogue build (github.com/bahuckel/EDEXO-Compare)" };
+const UA = { "User-Agent": "EDEXO catalogue build (github.com/bahuckel/EDEXO)" };
 const LIST = "https://raw.githubusercontent.com/ed-ggg/edggg/refs/heads/master/resources/gggjson.json";
 const PAGE = (n) => `https://ed-ggg.github.io/edggg/planets/ggg${n}/`;
 
