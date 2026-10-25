@@ -16,7 +16,7 @@ import {
   sharedGateAlerts,
   sharedSignature,
 } from "./sharedExomastery.js";
-import type { AppStatusDTO, SessionLogDTO, SharedExomasteryDTO } from "../shared/types.js";
+import type { SessionLogDTO, SharedExomasteryDTO } from "../shared/types.js";
 import { existsSync, statSync } from "node:fs";
 import { loadSpatialCatalogue } from "./spatialCatalogue.js";
 import { UNOBSERVED } from "../shared/observedFlag.js";
@@ -25,10 +25,8 @@ import type {
   BodyComputed,
   GenusCertaintyDTO,
   BodyExoState,
-  EncyclopediaSpeciesRowDTO,
   ExplorationScanRecord,
   JournalBootProgressDTO,
-  OrganicPendingLineItem,
   PlanetScan,
   SpeciesDatabase,
   SpeciesEntry,
@@ -47,12 +45,9 @@ import { candidateInputs, matchCandidates, rankCandidates, splitInputsFor } from
 import { explainChances } from "./chanceWhy.js";
 import { bumpMatchCacheEpoch } from "./matchCacheEpoch.js";
 import { achievementAdvanceFor, trackedAchievementSummary, trackedSet } from "./achievements.js";
-import { clearStarlightRangesCache, starlightRangeFor } from "./starlightRanges.js";
 import { journalHostObservationFromSpeciesContext } from "./journalHostObservation.js";
 import { resolveSpeciesPhoto } from "./speciesPhotos.js";
-import { loadSpeciesDatabaseFromTree } from "./speciesTreeLoader.js";
-import { loadPriceList, lookupPrice, type PriceIndex } from "./priceList.js";
-import { speciesEntryMatchesOrganicLabel } from "./organicTracking.js";
+import { lookupPrice, type PriceIndex } from "./priceList.js";
 import { explorationDataValueBreakdown } from "./explorationDataEstimate.js";
 import {
   buildPrimaryStarsHeader,
@@ -64,10 +59,8 @@ import {
   type ExoMatchRun,
 } from "./systemMap.js";
 import { computeExoPayoutRangeFromMatches, resolveOrganicSlotCount } from "./exoPayoutRange.js";
-import { countEdsmPlanetRows } from "./exomasteryEdsmEncyclopedia.js";
 import {
   augmentMatchesWithFootCatalog,
-  clearFootCatalogSpeciesDb,
   footScannedCatalogSignature,
   ownFootEntriesWithBackups,
   resolveEntryForCatalogRow,
@@ -92,15 +85,9 @@ import {
   feederProfileBodyCount,
   hasExomasteryProfileFile,
   loadExomasteryProfile,
-  maxExomasteryProfileSampleCount,
   resolveExomasteryExportBasename,
 } from "./exomasteryProfile.js";
-import {
-  clearExoOrganicGenusMinDistCache,
-  setExoOrganicSpeciesDb,
-  buildExoMinimapDto,
-  buildExoOrganicOverlayDto,
-} from "./exoOrganicTracker.js";
+import { buildExoMinimapDto, buildExoOrganicOverlayDto } from "./exoOrganicTracker.js";
 import { shortBodyLabel } from "../shared/systemMapLabels.js";
 import { collectOwnOrganicLockSpeciesIds, collectResolvedOrganicLockSpeciesIds } from "./organicLocks.js";
 import { loadGenusCooccurrenceTable } from "./genusCooccurrenceTable.js";
@@ -119,12 +106,7 @@ import { recordPredictionForBody } from "./predictionAuditLog.js";
 import { collectionFocusCached } from "./collectionFocus.js";
 import { edsmUploadLedgerSummary } from "./edsmUploadLedger.js";
 import { edsmCredentialsStatus } from "./edsmCredentials.js";
-import {
-  clearSpeciesRarityCache,
-  regionalRarity,
-  speciesRarity,
-  syncRaritySightings,
-} from "./speciesRarityData.js";
+import { regionalRarity, syncRaritySightings } from "./speciesRarityData.js";
 import { floorKeptReason } from "./presenceFloors.js";
 import { autoScanOnlyBodies } from "./autoScanOnly.js";
 import {
@@ -136,7 +118,25 @@ import {
   buildLiveShipFuelRangeDTO,
   buildNotableBodiesForFocusedSystem,
 } from "./snapshotSystemInfo.js";
-import { bodyIdOfBodyKey, bodyKey } from "../shared/bodyKey.js";
+import { bodyKey } from "../shared/bodyKey.js";
+// The unsold exobiology's value moved to organicValue.ts (item 30); the live strip is still importable from here.
+export { organicLiveSummary } from "./organicValue.js";
+import {
+  buildOrganicPendingLines,
+  FLEET_CARRIER_SALE_FACTOR,
+  organicDataValuation,
+  OWN_FLEET_CARRIER_SALE_FACTOR,
+} from "./organicValue.js";
+// The species database moved to speciesDb.ts (item 30); still importable from here.
+export { loadSpeciesDatabase, getCachedPrices, getCachedSpeciesDatabase, getCachedPriceIndex, clearEncyclopediaPayloadCache, buildEncyclopediaPayload, findSpeciesEntryForEncyclopedia } from "./speciesDb.js";
+import {
+  getCachedPrices,
+  getCachedSpeciesDatabase,
+  loadSpeciesDatabase,
+  onSpeciesReload,
+  speciesGeneration,
+  tagRarity,
+} from "./speciesDb.js";
 export { PRESENCE_FLOOR_PCT, demoteBelowPresenceFloor, GENUS_SHARE_FLOOR_PCT } from "./presenceFloors.js";
 
 /**
@@ -175,15 +175,6 @@ function withFirstFootfall(
 }
 
 let cachedStarRoles: ReturnType<typeof loadStarRolesConfig> | null = null;
-
-/**
- * Bumped whenever the species database or price list is reloaded, so per-body caches keyed on it
- * drop automatically. See {@link computeBody}.
- */
-let speciesDataGeneration = 0;
-
-let cachedDb: SpeciesDatabase = { species: [] };
-let cachedPrices: PriceIndex = new Map();
 
 function attachOtherMatchCardScores(
   matches: SpeciesMatch[],
@@ -252,28 +243,6 @@ function attachOtherMatchDetailCardsToMatches(
   });
 }
 
-/** Tag every species with its rarity tier (EDSM codex + extras + own new sightings) — the DNA badge reads it. */
-function tagRarity(db: SpeciesDatabase, root: string): void {
-  for (const e of db.species) {
-    const r = speciesRarity(root, e.id);
-    if (r) e.rarity = r;
-    else delete e.rarity;
-  }
-}
-
-/** A fresh database starts from the files again (Refresh exomastery re-reads them). */
-function withRarity(db: SpeciesDatabase, root: string): SpeciesDatabase {
-  clearSpeciesRarityCache();
-  tagRarity(db, root);
-  // The starlight ranges ride along for the Encyclopedia card; the gate reads them server-side.
-  clearStarlightRangesCache();
-  for (const e of db.species) {
-    const s = starlightRangeFor(e.id);
-    if (s) e.starlight = { gate: s.gate, lo: s.lo, hi: s.hi, n: s.n };
-  }
-  return db;
-}
-
 /**
  * Rarity is dynamic (owner, 2026-09-27): the commander's codex entries newer than the EDSM dump add to
  * the counts, so tiers and region verdicts can move. Only when they did are the tags redone and the
@@ -285,109 +254,6 @@ function syncRarity(store: GameStateStore, db: SpeciesDatabase): void {
   tagRarity(db, root);
   computeBodyCache.clear();
   bumpMatchCacheEpoch();
-}
-
-export function loadSpeciesDatabase(): SpeciesDatabase {
-  const root = getProjectRoot();
-  clearExoOrganicGenusMinDistCache();
-  cachedDb = withRarity(loadSpeciesDatabaseFromTree(root), root);
-  setExoOrganicSpeciesDb(cachedDb);
-  // The foot catalog keeps its own copy of the tree; a reload has to reach it too.
-  clearFootCatalogSpeciesDb();
-  speciesDataGeneration += 1;
-  computeBodyCache.clear();
-  bumpMatchCacheEpoch();
-  cachedPrices = loadPriceList(root);
-  if (!cachedDb.species.length) {
-    console.warn("ED Exo Compare — no species loaded; add data/species/<genus>/… (*_new.json or *.json)");
-  }
-  return cachedDb;
-}
-
-export function getCachedPrices(): PriceIndex {
-  return cachedPrices;
-}
-
-export function getCachedSpeciesDatabase(): SpeciesDatabase {
-  return cachedDb;
-}
-
-export function getCachedPriceIndex(): PriceIndex {
-  return cachedPrices;
-}
-
-/*
-  The Encyclopedia's rows, built once per species database (UI review P5, 2026-09-29). Building them
-  re-read and re-parsed every species' sample files (`countEdsmPlanetRows`, ~220 ms) on every open of
-  the Encyclopedia; the files only change when the feeder or a photo refresh reloads the species
-  caches, which clears this one too (edexoBootstrap `reloadSpeciesDerivedCaches`).
-*/
-let encyclopediaCache: { db: SpeciesDatabase; rows: EncyclopediaSpeciesRowDTO[] } | null = null;
-
-export function clearEncyclopediaPayloadCache(): void {
-  encyclopediaCache = null;
-}
-
-export function buildEncyclopediaPayload(): EncyclopediaSpeciesRowDTO[] {
-  const root = getProjectRoot();
-  if (!cachedDb.species.length) {
-    cachedDb = withRarity(loadSpeciesDatabaseFromTree(root), root);
-    setExoOrganicSpeciesDb(cachedDb);
-  }
-  if (encyclopediaCache?.db === cachedDb) return encyclopediaCache.rows;
-  const rows = buildEncyclopediaRows(root);
-  encyclopediaCache = { db: cachedDb, rows };
-  return rows;
-}
-
-function buildEncyclopediaRows(root: string): EncyclopediaSpeciesRowDTO[] {
-  return cachedDb.species.map((entry) => {
-    const { photoUrl, photoNote, photoUrls, photoVariants, photoCreditByUrl } = resolveSpeciesPhoto(
-      entry,
-      root,
-    );
-    const exomasteryEdsmSampleCount = countEdsmPlanetRows(root, entry);
-    const exomasteryProfile = loadExomasteryProfile(root, entry);
-    const exomasteryProfileFilePresent = exomasteryProfile != null;
-    const profileMaxN = exomasteryProfile ? maxExomasteryProfileSampleCount(exomasteryProfile) : 0;
-    const exomasteryEncyclopediaAvailable = exomasteryProfileFilePresent || exomasteryEdsmSampleCount >= 1;
-    const exomasteryDataInsufficient =
-      exomasteryEncyclopediaAvailable &&
-      ((exomasteryProfileFilePresent && profileMaxN === 1) ||
-        (!exomasteryProfileFilePresent && exomasteryEdsmSampleCount === 1) ||
-        (exomasteryProfileFilePresent && profileMaxN === 0 && exomasteryEdsmSampleCount === 1));
-    const exomasteryFeederBodyCount = exomasteryProfile
-      ? feederProfileBodyCount(exomasteryProfile)
-      : exomasteryEdsmSampleCount;
-    return {
-      entry,
-      priceCredits: lookupPrice(cachedPrices, entry.displayName, entry.id),
-      photoUrl,
-      photoNote,
-      photoUrls,
-      ...(photoVariants.length ? { photoVariants } : {}),
-      ...(photoCreditByUrl ? { photoCreditByUrl } : {}),
-      exomasteryEdsmSampleCount,
-      exomasteryFeederBodyCount,
-      exomasteryProfileFilePresent,
-      exomasteryEncyclopediaAvailable,
-      exomasteryDataInsufficient,
-    };
-  });
-}
-
-/** Resolve a species row for Encyclopedia HTTP APIs (validated genus folder name). */
-export function findSpeciesEntryForEncyclopedia(
-  genusDataDir: string,
-  speciesEntryId: string,
-): SpeciesEntry | null {
-  if (!genusDataDir || genusDataDir.includes("..") || /[/\\]/.test(genusDataDir)) return null;
-  if (!speciesEntryId) return null;
-  if (!cachedDb.species.length) {
-    cachedDb = loadSpeciesDatabaseFromTree(getProjectRoot());
-    setExoOrganicSpeciesDb(cachedDb);
-  }
-  return cachedDb.species.find((e) => e.genusDataDir === genusDataDir && e.id === speciesEntryId) ?? null;
 }
 
 function resolveStarForBodyTab(b: BodyExoState, store: GameStateStore): string {
@@ -782,7 +648,7 @@ function attachAchievementAdvance(
 ): void {
   if (!store.trackedAchievementId) return;
   const root = getProjectRoot();
-  const tracked = trackedSet(root, store, cachedDb.species);
+  const tracked = trackedSet(root, store, getCachedSpeciesDatabase().species);
   if (!tracked) return;
   for (const m of matches) {
     if (m.unlikely) continue;
@@ -790,7 +656,7 @@ function attachAchievementAdvance(
     const adv = achievementAdvanceFor(
       root,
       store,
-      cachedDb.species,
+      getCachedSpeciesDatabase().species,
       tracked,
       m.entry.id,
       ctx?.regionName,
@@ -805,7 +671,7 @@ function trackedAchievementForSnapshot(
   store: GameStateStore,
   bodies: readonly BodyComputed[],
 ): TrackedAchievementDTO | null {
-  const summary = trackedAchievementSummary(getProjectRoot(), store, cachedDb.species);
+  const summary = trackedAchievementSummary(getProjectRoot(), store, getCachedSpeciesDatabase().species);
   if (!summary) return null;
   const here: TrackedAchievementDTO["here"] = [];
   for (const b of bodies) {
@@ -827,7 +693,7 @@ let sharedSummaryMemo: { key: string; value: SharedExomasteryDTO } | null = null
 
 /** The launcher's line about the shared folder (GET /api/exomastery/shared). */
 export function sharedExomasterySummary(): SharedExomasteryDTO {
-  return buildSharedExomasterySummary(cachedDb);
+  return buildSharedExomasterySummary(getCachedSpeciesDatabase());
 }
 
 /**
@@ -835,7 +701,7 @@ export function sharedExomasterySummary(): SharedExomasteryDTO {
  * every shared find, so it runs once per change of the folder (or of the species data), not per push.
  */
 function buildSharedExomasterySummary(db: SpeciesDatabase): SharedExomasteryDTO {
-  const key = `${sharedSignature()}#${speciesDataGeneration}`;
+  const key = `${sharedSignature()}#${speciesGeneration()}`;
   if (sharedSummaryMemo?.key === key) return sharedSummaryMemo.value;
   const s = loadSharedExomastery();
   const withOwner = sharedFindsWithOwnership(s);
@@ -880,6 +746,8 @@ function ambiguityForBody(b: BodyExoState): string | null {
  * changed. Only the entry for a body whose inputs actually moved is recomputed.
  */
 const computeBodyCache = new Map<string, { signature: string; value: BodyComputed }>();
+// A reload of the species database or prices drops it (speciesDb.ts).
+onSpeciesReload(() => computeBodyCache.clear());
 
 /** Bounded so bodies from systems left behind cannot accumulate for a whole session. */
 const COMPUTE_BODY_CACHE_MAX = 256;
@@ -917,7 +785,7 @@ function computeBodyCacheSignature(
       return m ? `${String(m.value)}:${m.seenAt ?? ""}` : null;
     })(),
     organic: organicProgressSignature(store, b.key),
-    species: speciesDataGeneration,
+    species: speciesGeneration(),
     footCatalog: footScannedCatalogSignature(root),
     // A new CodexEntry changes the "new to you" and [CODEX] marks without touching the body.
     codex: `${store.codexLoggedSpecies.size}/${store.codexRegionLogged.size}`,
@@ -977,8 +845,8 @@ function computeBody(
 export function computeAutoScanOnlyBody(
   b: BodyExoState,
   store: GameStateStore,
-  db: SpeciesDatabase = cachedDb,
-  prices: PriceIndex = cachedPrices,
+  db: SpeciesDatabase = getCachedSpeciesDatabase(),
+  prices: PriceIndex = getCachedPrices(),
 ): BodyComputed | null {
   const computed = computeBody({ ...b, key: `${b.key}#autoscan` }, db, prices, store);
   return {
@@ -1326,86 +1194,6 @@ function computeBodyUncached(
   };
 }
 
-/** Unsold exobiology (3× Analyse in journal): list ×5 on first-footfall bodies (else ×1) — same multiplier as map tier/heuristic when footfall applies. */
-/** Pranav Antal's +30 % on exobiology sales (Powerplay 2.0), as the Data value toggle applies it. */
-export const PRANAV_ANTAL_BONUS = 1.3;
-/**
- * A fleet carrier's Universal Cartographics pays 75 % (the owner's carrier sales, 2026-10-03). Only
- * Cartographics and codex data; Vista Genomics pays in full (owner, 2026-10-04).
- */
-export const FLEET_CARRIER_SALE_FACTOR = 0.75;
-/** At his own carrier 10 of those 25 % land in its bank, his to take back: 85 % (owner, 2026-10-04). */
-export const OWN_FLEET_CARRIER_SALE_FACTOR = 0.85;
-
-function organicDataValuation(
-  store: GameStateStore,
-  prices: PriceIndex,
-): {
-  credits: number;
-  pendingSamples: number;
-} {
-  let credits = 0;
-  for (const p of store.pendingOrganicSales) {
-    const base = lookupPrice(prices, p.label, p.label);
-    if (base == null) continue;
-    const mult = store.firstFootfallBodies.has(p.bodyKey) ? 5 : 1;
-    credits += base * mult;
-  }
-  // The Pranav Antal sale bonus on the whole exobiology sale, when the commander says he sells there.
-  if (store.pranavAntalBonus) credits = Math.round(credits * PRANAV_ANTAL_BONUS);
-  return { credits, pendingSamples: store.pendingOrganicSales.length };
-}
-
-/*
-  Label → species, per database. The pending list is re-read on every snapshot and each line searched
-  all 109 species with the organic-label matcher: 17 % of a live refresh (code review §E, 2026-09-27).
-*/
-const pendingLabelEntries = new WeakMap<SpeciesDatabase, Map<string, SpeciesEntry | null>>();
-
-function speciesForPendingLabel(db: SpeciesDatabase, label: string): SpeciesEntry | null {
-  let byLabel = pendingLabelEntries.get(db);
-  if (!byLabel) pendingLabelEntries.set(db, (byLabel = new Map()));
-  let hit = byLabel.get(label);
-  if (hit === undefined) {
-    hit = db.species.find((e) => speciesEntryMatchesOrganicLabel(e, label)) ?? null;
-    byLabel.set(label, hit);
-  }
-  return hit;
-}
-
-function buildOrganicPendingLines(
-  store: GameStateStore,
-  db: SpeciesDatabase,
-  prices: PriceIndex,
-): OrganicPendingLineItem[] {
-  const root = getProjectRoot();
-  const out: OrganicPendingLineItem[] = [];
-  for (const p of store.pendingOrganicSales) {
-    const body = store.bodies.get(p.bodyKey);
-    const bid = bodyIdOfBodyKey(p.bodyKey);
-    const bodyName = body?.bodyName ?? (Number.isFinite(bid) ? `Body ${bid}` : p.bodyKey);
-    const starSystem = body?.starSystem ?? store.currentSystem ?? "—";
-    const base = lookupPrice(prices, p.label, p.label);
-    const firstFootfall = store.firstFootfallBodies.has(p.bodyKey);
-    const mult: 1 | 5 = firstFootfall ? 5 : 1;
-    const valueCredits = base != null ? base * mult : 0;
-    const entry = speciesForPendingLabel(db, p.label);
-    const photoUrl = entry ? resolveSpeciesPhoto(entry, root).photoUrl : "/photos/__builtin_placeholder.svg";
-    out.push({
-      bodyKey: p.bodyKey,
-      bodyName,
-      starSystem,
-      speciesLabel: p.label,
-      baseCredits: base,
-      valueCredits,
-      firstFootfall,
-      multiplier: mult,
-      photoUrl,
-    });
-  }
-  return out;
-}
-
 /**
  * The region under the system being looked at.
  *
@@ -1427,29 +1215,6 @@ function regionForFocusedSystem(
   return name ? { name, index } : null;
 }
 
-/**
- * The launcher's live strip: cheap store reads, no snapshot build. Where the commander is, what is
- * unsold, and the last jump target — enough to make the launcher a glance-able dashboard while the
- * game runs, without the ~180 ms a full snapshot costs.
- */
-export function organicLiveSummary(store: GameStateStore): NonNullable<AppStatusDTO["live"]> {
-  const { credits, pendingSamples } = organicDataValuation(store, cachedPrices);
-  const bodyKey =
-    store.exoOrganicTracker?.bodyKey ?? store.overlayTouchdownBodyKey ?? store.uiSelectedBodyKey;
-  const body = bodyKey ? store.bodies.get(bodyKey) : undefined;
-  const jt = store.nextJumpTarget();
-  return {
-    systemName: store.currentSystem ?? null,
-    bodyName: body?.bodyName ?? null,
-    bioSignals: body?.biologicalSignals ?? null,
-    organicDataValueCredits: credits,
-    organicPendingSampleCount: pendingSamples,
-    jumpTarget: jt
-      ? { starSystem: jt.starSystem, starClass: jt.starClass, arrived: jt.arrived, source: jt.source }
-      : null,
-  };
-}
-
 export function buildSnapshot(
   store: GameStateStore,
   journalPath: string | null,
@@ -1462,7 +1227,7 @@ export function buildSnapshot(
   sessionLog: SessionLogDTO | null = null,
 ): AppSnapshot {
   const bootLoading = journalBoot != null;
-  const db = cachedDb;
+  const db = getCachedSpeciesDatabase();
   // Whose shared-exomastery files are this commander's own backups (§S), before any body is computed.
   setOwnCommander({ name: store.commanderName, fid: commanderIdHash(store.commanderFid) });
   if (!bootLoading) syncRarity(store, db);
@@ -1473,7 +1238,7 @@ export function buildSnapshot(
   */
   const { credits: organicDataValueCredits, pendingSamples: organicPendingSampleCount } = bootLoading
     ? { credits: 0, pendingSamples: 0 }
-    : organicDataValuation(store, cachedPrices);
+    : organicDataValuation(store, getCachedPrices());
   // One walk of every scan, not two: the total is the breakdown's own total (code review §E).
   const exploreRaw = bootLoading
     ? { totalCredits: 0, fssScanCount: 0, fssValueCredits: 0, dssScanCount: 0, dssValueCredits: 0 }
@@ -1492,7 +1257,7 @@ export function buildSnapshot(
       Math.round(exploreRaw.fssValueCredits * carrier) + Math.round(exploreRaw.dssValueCredits * carrier),
   };
   const explorationScanDataValueCredits = exploreBreakdown.totalCredits;
-  const organicPendingLines = bootLoading ? [] : buildOrganicPendingLines(store, db, cachedPrices);
+  const organicPendingLines = bootLoading ? [] : buildOrganicPendingLines(store, db, getCachedPrices());
   // Logged colours anywhere in the journals, not only in the system in view (see the function).
   if (!bootLoading) perfTime("snap.colourSweep", () => sweepColourOutliers(store, db));
   const bodies: BodyComputed[] = bootLoading
@@ -1501,7 +1266,7 @@ export function buildSnapshot(
         store
           .listBioBodies()
           .sort((a, b) => a.bodyId - b.bodyId)
-          .map((b) => computeBody(b, db, cachedPrices, store)),
+          .map((b) => computeBody(b, db, getCachedPrices(), store)),
       );
 
   /*
@@ -1529,7 +1294,7 @@ export function buildSnapshot(
   // Landable bodies the ship only AutoScanned: their biology is unknown until the FSS (autoScanOnly.ts).
   if (!bootLoading && focusAddr != null && !store.isShowingRemoteSystem(focusAddr)) {
     for (const b of autoScanOnlyBodies(store, focusAddr)) {
-      const c = computeAutoScanOnlyBody(b, store, db, cachedPrices);
+      const c = computeAutoScanOnlyBody(b, store, db, getCachedPrices());
       if (c) bodies.push(c);
     }
   }
@@ -1562,7 +1327,7 @@ export function buildSnapshot(
             focusAddr,
             db,
             cachedStarRoles!,
-            cachedPrices,
+            getCachedPrices(),
             loadSpatialCatalogue(projectRoot),
             tabRuns,
           ),
@@ -1606,7 +1371,7 @@ export function buildSnapshot(
       raw.systemAddress === focusAddr &&
       !bodies.some((b) => b.state.key === exoOverlayFocusBodyKey)
     ) {
-      exoOverlayFocusBody = computeBody(raw, db, cachedPrices, store);
+      exoOverlayFocusBody = computeBody(raw, db, getCachedPrices(), store);
     }
   }
 
@@ -1718,7 +1483,7 @@ export function buildSnapshot(
     photoStamp: store.photoStamp,
     footTravelOdometerTracking: bootLoading ? false : store.footTravelOdometerTracking,
     footTravelDistanceMeters: bootLoading ? 0 : store.footTravelDistanceMeters,
-    exoOrganicOverlay: bootLoading ? null : buildExoOrganicOverlayDto(store, cachedPrices),
+    exoOrganicOverlay: bootLoading ? null : buildExoOrganicOverlayDto(store, getCachedPrices()),
     /*
       The radar rides on the snapshot separately from the sample session.
 
