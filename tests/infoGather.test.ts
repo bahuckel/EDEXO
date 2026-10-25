@@ -81,7 +81,8 @@ describe("how many more scans are wanted", () => {
 });
 
 describe("Analyse, Sample and Log all count", () => {
-  const gameState = readFileSync(path.resolve(__dirname, "../src/server/gameState.ts"), "utf8");
+  // ScanOrganic is handled in gameStateEvents.ts since the 1.3.1 split of gameState.ts.
+  const gameState = readFileSync(path.resolve(__dirname, "../src/server/gameStateEvents.ts"), "utf8");
   const focus = readFileSync(path.resolve(__dirname, "../src/server/collectionFocus.ts"), "utf8");
 
   it("treats all three scan types as a confirmation", () => {
