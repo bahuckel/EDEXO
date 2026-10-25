@@ -78,9 +78,10 @@ describe("where a demoted row is filed", () => {
     /*
       A flag nobody sets is a rule that does not hold, and the order matters: it has to run after
       `demoteBelowPresenceFloor`, or the floor would demote the row again straight afterwards. The
-      passes live in candidatePipeline.ts since 2026-10-10 (B18), and the snapshot runs them there.
+      passes live in candidatePipeline.ts since 2026-10-10 (B18), and the body computation
+      (bodyCompute.ts, split out of snapshot.ts in 1.3.1) runs them there.
     */
-    const snap = readFileSync(path.resolve(__dirname, "../src/server/snapshot.ts"), "utf8");
+    const snap = readFileSync(path.resolve(__dirname, "../src/server/bodyCompute.ts"), "utf8");
     expect(snap).toContain("rankCandidates(matches, b, inputs, store, db, root);");
     const src = readFileSync(path.resolve(__dirname, "../src/server/candidatePipeline.ts"), "utf8");
     const floor = src.indexOf("demoteBelowPresenceFloor(matches, b, db);");

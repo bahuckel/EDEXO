@@ -12,6 +12,9 @@ import { readJournalEvents } from "../../../src/server/colonize/journalFs";
 
 let journalDir: string;
 let dataDir: string;
+/** The journals' paths, named once per test: naming them again later can land on the next second and miss the file. */
+let oldJournal: string;
+let nowJournal: string;
 let store: ColonizeStore | null = null;
 const dirs: string[] = [];
 
@@ -40,8 +43,10 @@ beforeEach(() => {
   journalDir = mkdtempSync(path.join(tmpdir(), "colonize-history-j-"));
   dataDir = mkdtempSync(path.join(tmpdir(), "colonize-history-d-"));
   dirs.push(journalDir, dataDir);
+  oldJournal = path.join(journalDir, journalName(40));
+  nowJournal = path.join(journalDir, journalName(0));
   writeFileSync(
-    path.join(journalDir, journalName(40)),
+    oldJournal,
     lines(
       { timestamp: iso(40), event: "Location", StarSystem: "Old Colony", SystemAddress: 77 },
       ...site(3_900_000_001, "Halfway Port", 0.5, 40),
@@ -51,7 +56,7 @@ beforeEach(() => {
     ) + '{ "timestamp":"torn", "event":"ColonisationConstr',
   );
   writeFileSync(
-    path.join(journalDir, journalName(0)),
+    nowJournal,
     lines({ timestamp: iso(0), event: "FSDJump", StarSystem: "Here Now", SystemAddress: 5 }, { timestamp: iso(0), event: "Music", MusicTrack: "x" }),
   );
 });
@@ -88,8 +93,7 @@ describe("the journal history pass", () => {
     expect(JSON.parse(readFileSync(path.join(dataDir, "edexo-colonize-state.json"), "utf8")).historyScannedDir).toBe(journalDir);
 
     // A site added to an old journal now is not read again: the folder is remembered...
-    const old = path.join(journalDir, journalName(40));
-    appendFileSync(old, "\r\n" + lines(...site(3_900_000_003, "Later Find", 0.2, 40)));
+    appendFileSync(oldJournal, "\r\n" + lines(...site(3_900_000_003, "Later Find", 0.2, 40)));
     store = await start();
     expect(store.getSnapshot().activeDepots.map((d) => d.constructionSiteLabel)).toEqual(["Halfway Port"]);
     await store.shutdown();
@@ -108,12 +112,12 @@ describe("old docking", () => {
   it("does not say which carrier the ship is on now", async () => {
     const CARRIER = 3_700_000_099;
     appendFileSync(
-      path.join(journalDir, journalName(40)),
+      oldJournal,
       "\r\n" + lines({ timestamp: iso(40), event: "Docked", StationName: "K7Q-1HT", StationType: "FleetCarrier", MarketID: CARRIER, StarSystem: "Old Colony" }),
     );
     // In the window: the carrier is known, and cargo moves while the journal never said where the ship docked.
     appendFileSync(
-      path.join(journalDir, journalName(0)),
+      nowJournal,
       lines(
         { timestamp: iso(0), event: "CarrierStats", CarrierID: CARRIER, Callsign: "K7Q-1HT", Name: "OLD HAULER", SpaceUsage: { TotalCapacity: 25000, Cargo: 0 } },
         { timestamp: iso(0), event: "CargoTransfer", Transfers: [{ Type: "steel", Count: 10, Direction: "tocarrier" }] },
@@ -129,7 +133,7 @@ describe("old docking", () => {
 describe("reading only some events", () => {
   it("parses only the lines naming one of them, and skips a torn line", async () => {
     const seen: string[] = [];
-    await readJournalEvents(path.join(journalDir, journalName(40)), ["Docked", "Colonisation"], (j) => seen.push(String(j.event)));
+    await readJournalEvents(oldJournal, ["Docked", "Colonisation"], (j) => seen.push(String(j.event)));
     expect(seen).toEqual(["Docked", "ColonisationConstructionDepot", "Docked", "ColonisationConstructionDepot"]);
   });
 });
