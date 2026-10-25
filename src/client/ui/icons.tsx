@@ -9,6 +9,7 @@
  * 1.4 px stroke the hand-drawn set had (`absoluteStrokeWidth`), under the same names so no caller changed. Only the
  * icons imported here reach the bundle.
  */
+import type { SVGProps } from "react";
 import {
   BookOpen,
   Bookmark,
@@ -26,7 +27,6 @@ import {
   Orbit,
   Save,
   Settings,
-  Ship,
   Sprout,
   Telescope,
   Trophy,
@@ -68,8 +68,40 @@ export const IconEncyclopedia = glyph(BookOpen);
 export const IconOptions = glyph(Settings);
 /** The menu's open arrow. */
 export const IconChevronDown = glyph(ChevronDown);
-/** A ship — carriers. */
-export const IconCarrier = glyph(Ship);
+/**
+ * A Coriolis starport face on (owner, 2026-10-13), in a 24 × 24 box: a cuboctahedron — six squares meeting at their
+ * corners, a triangle in each gap. From the front its outline is a square; the front square stands on a corner inside
+ * it, touching each side in the middle, the four corner gaps are triangles, and the docking slot lies level across the
+ * middle, from the left corner towards the right. The galaxy map's Carriers & Stations tab (G3dMenu.tsx) and the app
+ * menu's both draw it.
+ */
+export function CoriolisPaths({ p, slotWidth }: { p: SVGProps<SVGPathElement>; slotWidth: number }) {
+  return (
+    <>
+      <path {...p} d="M3.5 3.5h17v17h-17z" />
+      <path {...p} d="M12 3.5 20.5 12 12 20.5 3.5 12z" />
+      <path {...p} d="M8.6 11.3h6.8v1.4H8.6z" strokeWidth={slotWidth} />
+    </>
+  );
+}
+
+/** A Coriolis starport — carriers and stations (owner, 2026-10-25: the galaxy map's own, not lucide's ship). */
+export function IconCarrier({ className }: IconProps) {
+  // The lucide glyphs' 1.4 px stroke at 16 px, whatever the box is scaled to (their `absoluteStrokeWidth`).
+  const p = {
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.4,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    vectorEffect: "non-scaling-stroke",
+  } as const;
+  return (
+    <svg className={className} width={16} height={16} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <CoriolisPaths p={p} slotWidth={1.1} />
+    </svg>
+  );
+}
 /** Columns — statistics. */
 export const IconStats = glyph(ChartColumn);
 /** A pin — points of interest. */

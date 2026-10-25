@@ -5,6 +5,7 @@
  * itself on hover, and each menu has a [?] for the longer story.
  */
 import type { ReactNode } from "react";
+import { CoriolisPaths } from "../ui/icons";
 import { BookOpen, Compass, Crosshair, Eye, Filter, FlaskConical, Layers, Route, ScanSearch, Search, type LucideIcon } from "lucide-react";
 import { InfoPopover, Tooltip } from "../ui/Tooltip";
 
@@ -226,17 +227,8 @@ export function G3dIcon({ name }: { name: G3dTabKey }) {
   return (
     <svg className="g3d-tab__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       {name === "stations" ? (
-        /*
-          A Coriolis starport face on (owner, 2026-10-13): a cuboctahedron — six squares meeting at their corners, a
-          triangle in each gap. From the front its outline is a square; the front square stands on a corner inside
-          it, touching each side in the middle, the four corner gaps are triangles, and the docking slot lies level
-          across the middle, from the left corner towards the right.
-        */
-        <>
-          <path {...p} d="M3.5 3.5h17v17h-17z" />
-          <path {...p} d="M12 3.5 20.5 12 12 20.5 3.5 12z" />
-          <path {...p} d="M8.6 11.3h6.8v1.4H8.6z" strokeWidth={1.3} />
-        </>
+        // The Coriolis starport drawn for him (ui/icons.tsx), shared with the app menu's Carriers & Stations.
+        <CoriolisPaths p={p} slotWidth={1.3} />
       ) : (
         /*
           A neutron star, not a sun (owner, 2026-10-15): a small bright core, the two jets the game draws along its
