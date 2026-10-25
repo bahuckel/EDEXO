@@ -21,7 +21,13 @@ const runPkg = (label, entry, exeName) =>
   runPkgShared("dist:win:cli", label, entry, join(outDir, exeName), target);
 
 runPkg("Server (console)", join("build", "launch-server.cjs"), "EDExoCompare-Server-CLI.exe");
-runPkg("Client (console)", join("build", "launch-client.cjs"), "EDExoCompare-Client-CLI.exe");
+/*
+  The client is no longer a second copy of the same 56 MB server (1.3.1, owner 2026-10-25): native/src/client_cli.rs
+  starts the Server-CLI beside it with what launch-client.cjs added (--host 127.0.0.1, --open). Built by
+  scripts/build-native.mjs.
+*/
+cpSync(join("build", "native", "EDExoCompare-Client-CLI.exe"), join(outDir, "EDExoCompare-Client-CLI.exe"));
+console.info(`[dist:win:cli] Client (console) → ${join(outDir, "EDExoCompare-Client-CLI.exe")} (native launcher of the Server-CLI)`);
 
 signWindowsArtifactsIfConfigured([
   join(outDir, "EDExoCompare-Server-CLI.exe"),
@@ -37,7 +43,7 @@ const readme = `ED Exo Compare — Windows CLI build (no Electron, console stays
 Run one of the executables in this folder:
 
 - EDExoCompare-Server-CLI.exe — listens on 0.0.0.0:7111 (LAN + this PC).
-- EDExoCompare-Client-CLI.exe — 127.0.0.1:7111 and opens your browser to the app.
+- EDExoCompare-Client-CLI.exe — 127.0.0.1:7111 and opens your browser to the app (it starts the Server-CLI beside it).
 
 Keep this folder layout: the .exe plus "web" and "data" next to it.
 

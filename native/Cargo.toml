@@ -1,0 +1,24 @@
+[package]
+name = "edexo-native"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "EDEXO's small Windows helpers (1.3.1): the HUD's foreground watcher and the console client launcher."
+
+# No dependencies: the few Windows calls are declared in the sources.
+[dependencies]
+
+[[bin]]
+name = "edexo-fgwatch"
+path = "src/fgwatch.rs"
+
+[[bin]]
+name = "EDExoCompare-Client-CLI"
+path = "src/client_cli.rs"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

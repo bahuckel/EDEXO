@@ -8,4 +8,5 @@
 const { watchForeground } = require("./foregroundWatch.cjs");
 
 const port = process.parentPort;
-if (port) watchForeground((name, at) => port.postMessage({ name, at }));
+// The native watcher's path comes from the main process (argv[2]); without one, the PowerShell script.
+if (port) watchForeground((name, at) => port.postMessage({ name, at }), process.argv[2] || null);

@@ -38,6 +38,8 @@ const copyright = process.env.EDEXO_COPYRIGHT || "Copyright © Bahuckel — EDEX
 const win = {
   target: [{ target: "portable", arch: ["x64"] }],
   icon: "build/icon.ico",
+  // The HUD's foreground watcher (native/src/fgwatch.rs, 1.3.1; scripts/build-native.mjs builds it): Windows only.
+  extraResources: [{ from: "build/native/edexo-fgwatch.exe", to: "edexo/edexo-fgwatch.exe" }],
 };
 
 if (usePfx) {

@@ -30,7 +30,7 @@ const { createTrayControl } = require("./tray.cjs");
 const { createKeybinds } = require("./keybinds.cjs");
 const { createTabWindows } = require("./tabWindows.cjs");
 const updater = require("./updater.cjs");
-const { watchForegroundOffMain, isGameOrOwn, isGame } = require("./foregroundWatch.cjs");
+const { watchForegroundOffMain, isGameOrOwn, isGame, nativeWatcherPath } = require("./foregroundWatch.cjs");
 const { guardWindowNavigation, restrictPermissions, isOwnUrl } = require("./windowGuards.cjs");
 
 /*
@@ -43,10 +43,11 @@ if (process.env.EDEXO_USER_DATA_DIR) {
 }
 /** The app's own origin once the server listens (windowGuards.cjs). */
 const ownBase = () => (runtime ? runtime.getLocalBaseUrl() : null);
-/** The foreground watcher (foregroundWatch.cjs), started a few seconds after the launcher. */
+/** The foreground watcher (foregroundWatch.cjs), started a moment after the launcher. */
 let foreground = null;
 let foregroundStartTimer = null;
-const FOREGROUND_START_DELAY_MS = 5000;
+/** Was 5 s while PowerShell compiled its helper on every start; the native watcher (1.3.1) needs only the launcher drawn. */
+const FOREGROUND_START_DELAY_MS = 1500;
 
 /*
   Diagnostics, in the diagnostic build only (`npm run dist:win:diag`; owner, 2026-09-25). A public
@@ -987,15 +988,18 @@ async function start() {
     app's own windows count as the game's side: the app on a second screen keeps the overlays.
   */
   /*
-    Started five seconds in (discuss item 18, owner 2026-10-23): the watcher compiles its C# helper on every start
-    (PowerShell Add-Type), which competed with the launcher's first paint. Until then the overlays behave as before
-    the game is seen in front: shown, keys not narrowed.
+    Started a moment in (discuss item 18, owner 2026-10-23): it was five seconds while the watcher compiled its C#
+    helper on every start (PowerShell Add-Type), which competed with the launcher's first paint; the native watcher
+    (1.3.1) has nothing to compile. Until then the overlays behave as before the game is seen in front: shown, keys
+    not narrowed.
   */
   foregroundStartTimer = setTimeout(() => {
     foregroundStartTimer = null;
     if (appQuitting) return;
     const own = [path.basename(process.execPath, ".exe").toLowerCase(), "electron"];
     let hideTimer = null;
+    const watcherExe = nativeWatcherPath(process.resourcesPath);
+    huds.log(`foreground watcher: ${watcherExe ? "native" : "PowerShell (native helper not built)"}`);
     foreground = watchForegroundOffMain(utilityProcess, path.join(__dirname, "foregroundHost.cjs"), (name, at) => {
       huds.log(`foreground ${name || "(unreadable)"}${at ? ` at ${at.x},${at.y}` : ""}`);
       // The body tabs and Clear the notices take their keys only while Elite or this app (the app
@@ -1017,7 +1021,7 @@ async function start() {
         hideTimer = null;
         huds.setFocusAway(true);
       }, 1500);
-    });
+    }, watcherExe);
   }, FOREGROUND_START_DELAY_MS);
   /*
     The HUD windows come back once the launcher has drawn (discuss item 17): restored in the same first second they
