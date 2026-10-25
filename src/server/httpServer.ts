@@ -11,6 +11,8 @@ import { createWsHub } from "./wsHub.js";
 import { catchAsyncRejections } from "./routes/asyncErrors.js";
 import { registerSpeciesFilesRoutes } from "./routes/speciesFilesRoutes.js";
 import { registerGalaxyRoutes } from "./routes/galaxyRoutes.js";
+import { registerBoxelRoutes } from "./routes/boxelRoutes.js";
+import { registerDiscoveriesRoutes } from "./routes/discoveriesRoutes.js";
 import { registerExpeditionRoutes } from "./routes/expeditionRoutes.js";
 import { registerNeutronRoutes } from "./routes/neutronRoutes.js";
 import { registerFinderRoutes } from "./routes/finderRoutes.js";
@@ -125,6 +127,8 @@ export function createHttpServer(opts: HttpServerOptions): {
   registerSpeciesFilesRoutes(app, opts, routeCtx);
 
   registerGalaxyRoutes(app, opts, routeCtx);
+  registerBoxelRoutes(app, opts, routeCtx);
+  registerDiscoveriesRoutes(app, opts, routeCtx);
   registerExpeditionRoutes(app, opts, routeCtx);
   registerNeutronRoutes(app, opts, routeCtx);
   registerFinderRoutes(app, opts, routeCtx);
