@@ -246,6 +246,15 @@ export function createHttpServer(opts: HttpServerOptions): {
     });
   });
 
+  /*
+    The on-foot scans alone (discuss item 22, 1.3.1): the Colonize window's `shell` channel leaves them out (501 KB on
+    the owner's profile), and its Encyclopedia and My exobiology ask for them here when they open.
+  */
+  app.get("/api/foot-scanned", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ entries: recentSnapshot().footScannedEntries ?? [] });
+  });
+
   registerServerStatusRoutes(app, opts, routeCtx);
 
   registerEncyclopediaRoutes(app, opts, routeCtx);

@@ -351,7 +351,8 @@ export const HeaderBar = memo(function HeaderBar({
 
           <div className="appbar-actions">
             <NoticesBell snap={snap} />
-            <ExoDataAlertsHeaderHub snap={snap} />
+            {/* An exobiology alert: Compare's, as the rest of its exobiology (Colonize's feed has no bodies, item 22). */}
+            {compare ? <ExoDataAlertsHeaderHub snap={snap} /> : null}
             <div className="appbar-menu-wrap" ref={menuRef}>
               <button
                 type="button"

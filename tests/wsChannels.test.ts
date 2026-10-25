@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AppSnapshot, BodyComputed } from "../src/shared/types.js";
-import { findMatchDetail, parseWsChannel, slimBodyForHud, slimSnapshotForChannel } from "../src/server/wsChannels.js";
+import { SHELL_OMIT, findMatchDetail, parseWsChannel, slimBodyForHud, slimSnapshotForChannel } from "../src/server/wsChannels.js";
 
 function body(key: string): BodyComputed {
   return {
@@ -65,6 +65,7 @@ describe("socket channels: slim snapshots per client kind", () => {
     expect(parseWsChannel("hud")).toBe("hud");
     expect(parseWsChannel("launcher")).toBe("launcher");
     expect(parseWsChannel("app")).toBe("app");
+    expect(parseWsChannel("shell")).toBe("shell");
     expect(parseWsChannel("nope")).toBeNull();
     expect(parseWsChannel(undefined)).toBeNull();
   });
@@ -115,6 +116,16 @@ describe("socket channels: slim snapshots per client kind", () => {
     expect(v()).toBe(fresh);
     m0.exomasteryDetail = { ...detail, stats: [{ id: "b" }] };
     expect(v()).not.toBe(fresh);
+  });
+
+  it("gives the Colonize window's shell everything but the big fields only Compare's own screen uses (item 22)", () => {
+    const full = { ...snap(), footScannedEntries: [{}], journalSystems: [{}], organicPendingLines: [{}], systemMap: {} } as unknown as AppSnapshot;
+    const out = slimSnapshotForChannel(full, "shell") as unknown as Record<string, unknown>;
+    const app = slimSnapshotForChannel(full, "app") as unknown as Record<string, unknown>;
+    for (const k of SHELL_OMIT) expect(out[k], k).toBeUndefined();
+    // Everything else is the app's, so the shared header and the screens in its tabs read what they read in Compare.
+    expect(Object.keys(out).sort()).toEqual(Object.keys(app).filter((k) => !(SHELL_OMIT as readonly string[]).includes(k)).sort());
+    expect(out.commanderName).toBe(app.commanderName);
   });
 
   it("gives the launcher its five fields and nothing heavy", () => {

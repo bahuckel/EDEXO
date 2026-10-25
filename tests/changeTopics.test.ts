@@ -92,3 +92,29 @@ describe("the events socket", () => {
     }
   });
 });
+
+describe("the on-foot scans on their own (item 22)", () => {
+  it("answers /api/foot-scanned with the snapshot's list, for the Colonize window's Encyclopedia and My exobiology", async () => {
+    const entries = [{ speciesName: "Stratum Tectonicas", systemName: "Sol" }];
+    const { server, listening, closeConnections } = createHttpServer({
+      port: 0,
+      bindHost: "127.0.0.1",
+      getSnapshot: () => ({ port: 1, bodies: [], footScannedEntries: entries }) as unknown as AppSnapshot,
+      getStatus: () => ({}) as never,
+      getCommanderPosition: () => null,
+      getCommanderSystem: () => null,
+    });
+    await listening;
+    try {
+      const port = (server.address() as AddressInfo).port;
+      const j = (await (await fetch(`http://127.0.0.1:${port}/api/foot-scanned`)).json()) as { entries: unknown[] };
+      expect(j.entries).toEqual(entries);
+      const shell = (await (await fetch(`http://127.0.0.1:${port}/api/state?channel=shell`)).json()) as Record<string, unknown>;
+      expect(shell.footScannedEntries).toBeUndefined();
+      expect(shell.port).toBe(1);
+    } finally {
+      closeConnections();
+      await new Promise((r) => server.close(r));
+    }
+  });
+});

@@ -25,6 +25,7 @@ import {
   FeederModal,
 } from "../SharedModals";
 import { TabSlot } from "../tabs/TabHost";
+import { useFootScanned } from "./useFootScanned";
 
 /** The 3D galaxy map inside a tab (Tab view); without it, it opens in its own window as before. */
 // memo: no props, so a snapshot push never reaches it (D11).
@@ -39,7 +40,6 @@ const PlanetQuickFactsPopup = lazy(() =>
   import("../PlanetQuickFactsPopup").then((m) => ({ default: m.PlanetQuickFactsPopup })),
 );
 
-const NO_FOOT_ENTRIES: FootScannedEntry[] = [];
 
 type NotableQuick = { notable: NotableBodyInfo; x: number; y: number };
 
@@ -130,6 +130,8 @@ export function HeaderScreens({
   notableQuick,
   setNotableQuick,
 }: HeaderScreensProps) {
+  // In Colonize the on-foot scans are not in the live feed: asked for when a screen that shows them opens (item 22).
+  const footScanned = useFootScanned(snap, encyclopediaOpen || myExoOpen);
   return (
     <>
       {galaxyTab ? (
@@ -212,7 +214,7 @@ export function HeaderScreens({
         <TabSlot kind="encyclopedia">
         <Suspense fallback={<ModalLoading />}>
           <EncyclopediaModal
-            footScannedEntries={snap.footScannedEntries ?? NO_FOOT_ENTRIES}
+            footScannedEntries={footScanned}
             spawnCompare={encyclopediaSpawnCompare}
             // "Where you are now": the ship's region, not the viewed system's (2026-10-12).
             currentRegion={(snap.shipRegion !== undefined ? snap.shipRegion : snap.currentRegion)?.name ?? null}
@@ -225,7 +227,7 @@ export function HeaderScreens({
         <TabSlot kind="myExo">
         <Suspense fallback={<ModalLoading />}>
           <MyExobiologyModal
-            entries={snap.footScannedEntries ?? NO_FOOT_ENTRIES}
+            entries={footScanned}
             onClose={closeMyExo}
             onNavigateEntry={onFootCatalogNavigate}
             onNavigateSystem={onDiscoveriesNavigate}

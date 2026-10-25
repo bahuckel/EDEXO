@@ -46,10 +46,16 @@ const IPC_UI_COMMANDS: boolean = (() => {
   return true;
 })();
 
-function websocketUrl(): string {
+function websocketUrl(channel: LiveChannel): string {
   const p = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${p}//${window.location.host}/ws`;
+  return `${p}//${window.location.host}/ws${channel === "app" ? "" : `?channel=${channel}`}`;
 }
+
+/**
+ * `app`: the whole state, for Compare. `shell`: the Colonize window's (discuss item 22, 1.3.1) - the same without the
+ * big fields only Compare's own screen uses (server/wsChannels.ts SHELL_OMIT), about 20 KB instead of ~1 MB.
+ */
+export type LiveChannel = "app" | "shell";
 
 /**
  * The backup check while the WebSocket is primary — recovers from half-open / silent drops without
@@ -99,7 +105,7 @@ export function useLastStateAt(): number | null {
   );
 }
 
-export function useLiveSnapshot(): {
+export function useLiveSnapshot(channel: LiveChannel = "app"): {
   snapshot: AppSnapshot | null;
   connected: boolean;
 } {
@@ -177,7 +183,7 @@ export function useLiveSnapshot(): {
     };
 
     const fetchFull = () =>
-      void fetch("/api/state", { cache: "no-store" })
+      void fetch(channel === "app" ? "/api/state" : `/api/state?channel=${channel}`, { cache: "no-store" })
         .then(async (r) => {
           const header = r.headers.get("X-Edexo-Rev");
           const rev = header == null ? NaN : Number(header);
@@ -209,7 +215,7 @@ export function useLiveSnapshot(): {
     const connect = () => {
       if (cancelled) return;
       clearReconnect();
-      ws = new WebSocket(websocketUrl());
+      ws = new WebSocket(websocketUrl(channel));
       ws.onopen = () => {
         reconnectMs = RECONNECT_FIRST_MS;
         setConnected(true);
@@ -277,7 +283,7 @@ export function useLiveSnapshot(): {
       clearInterval(httpBackup);
       ws?.close();
     };
-  }, []);
+  }, [channel]);
 
   /** Runs after each snapshot commit; no-op unless client perf is enabled. */
   useEffect(() => {

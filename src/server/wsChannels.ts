@@ -12,12 +12,31 @@ import { lazyDetailOf } from "./lazyMatchDetail.js";
 import type { AppSnapshot, BodyComputed } from "../shared/types.js";
 import { footfallCertainty, type FootfallCertainty } from "../shared/footfallValue.js";
 
-/** `colonize`: a Colonize window (1.3.0) — its own events, and only the few app fields its header shows. */
-export type WsChannel = "app" | "hud" | "launcher" | "colonize";
+/**
+ * `colonize`: a Colonize window (1.3.0) — its own events, and only the few app fields its header shows.
+ * `shell`: the Colonize window's shared header and Compare's screens in its tabs (discuss item 22, 1.3.1): the app's
+ * state without the big fields only Compare's own screen uses (SHELL_OMIT).
+ */
+export type WsChannel = "app" | "hud" | "launcher" | "colonize" | "shell";
 
 export function parseWsChannel(v: unknown): WsChannel | null {
-  return v === "app" || v === "hud" || v === "launcher" || v === "colonize" ? v : null;
+  return v === "app" || v === "hud" || v === "launcher" || v === "colonize" || v === "shell" ? v : null;
 }
+
+/**
+ * What the shell leaves out (measured on the owner's profile 2026-10-25: 1,027 KB of state, these 1,016 KB of it):
+ * the on-foot scans (501 KB; the Encyclopedia and My exobiology fetch them when opened, /api/foot-scanned), the
+ * journal's system list (319 KB; Compare's header search), the bodies (115 KB, and pushed again on every scan; the
+ * exobiology alerts, shown in Compare), the unsold organics' lines (46 KB; Compare's data-value breakdown) and the
+ * system map (35 KB; not offered in Colonize).
+ */
+export const SHELL_OMIT = [
+  "footScannedEntries",
+  "journalSystems",
+  "bodies",
+  "organicPendingLines",
+  "systemMap",
+] as const satisfies readonly (keyof AppSnapshot)[];
 
 /** What a Colonize window reads off the app's state: the connection, the boot, where the ship is. */
 const COLONIZE_KEYS = [
@@ -255,6 +274,12 @@ export function findMatchDetail(
 }
 
 export function slimSnapshotForChannel(snap: AppSnapshot, channel: WsChannel): Partial<AppSnapshot> {
+  if (channel === "shell") {
+    const out: Record<string, unknown> = { ...snap };
+    for (const k of SHELL_OMIT) delete out[k];
+    if (snap.exoOverlayFocusBody) out.exoOverlayFocusBody = slimBodyForApp(snap.exoOverlayFocusBody);
+    return out as Partial<AppSnapshot>;
+  }
   if (channel === "app") {
     return {
       ...snap,

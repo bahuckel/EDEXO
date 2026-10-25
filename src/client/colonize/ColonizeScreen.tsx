@@ -123,9 +123,11 @@ const LiveSnapshotContext = createContext<LiveSnapshot>({ snapshot: null, connec
 /**
  * Compare's live snapshot for the shared header, handed down by context to ColonizeShell alone. A push re-renders
  * this and the shell; its `children` were made by PcScreen, so React leaves them (and the Colonize views) be.
+ * The `shell` channel (discuss item 22, 1.3.1): the state without the big fields only Compare's own screen uses,
+ * about 20 KB instead of ~1 MB, and no longer pushed again on every scan.
  */
 function LiveSnapshotFeed({ children }: { children: ReactNode }) {
-  const { snapshot, connected } = useLiveSnapshot();
+  const { snapshot, connected } = useLiveSnapshot("shell");
   const live = useMemo(() => ({ snapshot, connected }), [snapshot, connected]);
   return <LiveSnapshotContext.Provider value={live}>{children}</LiveSnapshotContext.Provider>;
 }
