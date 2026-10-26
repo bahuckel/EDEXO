@@ -183,6 +183,52 @@
   */
 }
 
+/* The game playing another commander than this window shows (per-commander profiles, 1.3.1). */
+.appbar-cmdr-other {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 0 0 auto;
+  font-size: var(--fs-xs);
+  color: var(--warn);
+  white-space: nowrap;
+}
+.appbar-cmdr-other--error {
+  color: var(--danger-soft);
+  white-space: normal;
+  max-width: 22rem;
+}
+.appbar-cmdr-switch {
+  padding: 1px 8px;
+}
+.cmdr-switch-dialog {
+  max-width: 34rem;
+}
+.cmdr-switch-dialog__note {
+  color: var(--text-dim);
+}
+.cmdr-switch-dialog__error {
+  color: var(--danger-soft);
+}
+.cmdr-switch-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+/* While the server starts again for the other commander; the page loads again when it answers. */
+.cmdr-switching {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 4, 6, 0.86);
+  color: var(--accent-bright);
+  font-size: var(--fs-lg);
+  letter-spacing: 0.04em;
+}
+
 .appbar-actions {
   display: inline-flex;
   align-items: center;

@@ -53,6 +53,11 @@ export interface HudBridge {
   setLayout(layout: Record<string, unknown>): HudLayout | Promise<HudLayout>;
   /** `hidden` omitted flips it; passing a boolean sets it outright. */
   toggleVisibility(opts: { hidden?: boolean }): { hidden: boolean } | Promise<{ hidden: boolean }>;
+  /**
+   * Start the server again for another commander (per-commander profiles, 1.3.1). The desktop app answers at once and
+   * restarts a moment later, so this server's reply still goes out; absent where nothing can restart the server.
+   */
+  switchCommander?(req: { fid: string }): { ok: boolean; error?: string } | Promise<{ ok: boolean; error?: string }>;
 }
 
 let bridge: HudBridge | null = null;

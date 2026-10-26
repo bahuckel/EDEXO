@@ -15,7 +15,8 @@ const settingsPath = join(dir, "settings.json");
 
 vi.mock("../src/server/paths.js", async () => {
   const actual = await vi.importActual<typeof import("../src/server/paths.js")>("../src/server/paths.js");
-  return { ...actual, resolveUserSettingsJsonPath: () => settingsPath };
+  // The commander's folder since 1.3.1 (per-commander profiles); with no commander it is the settings' folder.
+  return { ...actual, resolveUserSettingsJsonPath: () => settingsPath, resolveCommanderDataDir: () => dir };
 });
 
 const {

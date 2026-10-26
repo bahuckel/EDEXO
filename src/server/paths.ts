@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve as pathResolve } from "node:path";
+import { activeCommander } from "./activeCommander.js";
 
 /** File name only; full path from {@link resolveUserSettingsJsonPath}. */
 export const USER_SETTINGS_FILENAME = "edexo-compare-user-settings.json";
@@ -51,11 +52,62 @@ export function resolveUserSettingsJsonPath(): string {
 }
 
 /**
+ * One commander's own files (per-commander profiles, 1.3.1): `<app data>/commanders/<FID>/`, for the commander this
+ * server run is for (activeCommander.ts). The app data folder itself when the journals name nobody, and in tests that
+ * set no commander. Settings, the HUD layout, key binds and downloaded data stay in the app data folder for every
+ * commander.
+ */
+export function resolveCommanderDataDir(): string {
+  const base = dirname(resolveUserSettingsJsonPath());
+  const c = activeCommander();
+  if (!c) return base;
+  const dir = join(base, "commanders", commanderFolderName(c.fid));
+  if (!ensuredDirs.has(dir)) {
+    try {
+      mkdirSync(dir, { recursive: true });
+      ensuredDirs.add(dir);
+    } catch {
+      /* the first write reports it */
+    }
+  }
+  return dir;
+}
+
+/** A folder name from an FID ("F1234567"): letters and digits only, so no FID can reach outside `commanders/`. */
+export function commanderFolderName(fid: string): string {
+  return fid.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 64) || "_";
+}
+
+/**
+ * What lives in a commander's folder (1.3.1), by name in the app data folder before then: moved into the folder of
+ * the commander a first 1.3.1 start picks (commanderMigration.ts). Every name here is built on
+ * {@link resolveCommanderDataDir}.
+ */
+export const PER_COMMANDER_ENTRIES = [
+  "colonize",
+  ".edexo-cache",
+  "edexo-compare-edsm-key.json",
+  "edexo-edsm-uploaded.json",
+  "edexo-foot-scanned.json",
+  "edexo-surface-marks.json",
+  "edexo-organic-sample-session.json",
+  "edexo-notices.json",
+  "edexo-collection-focus.json",
+  "edexo-navroutes.json",
+  "edexo-neutron-live.json",
+  "edexo-visited-cache.json",
+  "edexo-compare-statistics.json",
+  "edexo-bookmarks.json",
+  "edexo-boxels.json",
+  "edexo-boxel-lookups.json",
+] as const;
+
+/**
  * Colonize's own files (1.3.0, moved in from EDEXO-Colonize): its depot state, the buy index, the system
  * coordinates cache and the Inara import settings, in a folder of their own beside the user settings.
  */
 export function resolveColonizeDataDir(): string {
-  const dir = join(dirname(resolveUserSettingsJsonPath()), "colonize");
+  const dir = join(resolveCommanderDataDir(), "colonize");
   if (!ensuredDirs.has(dir)) {
     try {
       mkdirSync(dir, { recursive: true });
@@ -84,7 +136,7 @@ export function resolveLanKeyPath(): string {
  * auto-fetch off and leaves every other preference alone.
  */
 export function resolveEdsmCredentialsPath(): string {
-  return join(dirname(resolveUserSettingsJsonPath()), "edexo-compare-edsm-key.json");
+  return join(resolveCommanderDataDir(), "edexo-compare-edsm-key.json");
 }
 
 /**
@@ -95,7 +147,7 @@ export function resolveEdsmCredentialsPath(): string {
  * also the one thing that makes a catch-up re-runnable, so losing it costs a re-upload, not data.
  */
 export function resolveEdsmUploadLedgerPath(): string {
-  return join(dirname(resolveUserSettingsJsonPath()), "edexo-edsm-uploaded.json");
+  return join(resolveCommanderDataDir(), "edexo-edsm-uploaded.json");
 }
 
 /**
@@ -133,7 +185,7 @@ export function resolveExoOutlierLogPath(): string {
  * on first read.
  */
 export function resolveFootScannedPath(): string {
-  return join(dirname(resolveUserSettingsJsonPath()), "edexo-foot-scanned.json");
+  return join(resolveCommanderDataDir(), "edexo-foot-scanned.json");
 }
 
 /**
@@ -188,7 +240,7 @@ export function resolvePredictionAuditPath(): string {
  * regenerate it, which means losing this file loses the positions for good.
  */
 export function resolveSurfaceMarksPath(): string {
-  return join(dirname(resolveUserSettingsJsonPath()), "edexo-surface-marks.json");
+  return join(resolveCommanderDataDir(), "edexo-surface-marks.json");
 }
 
 /**
@@ -201,7 +253,7 @@ export function resolveSurfaceMarksPath(): string {
  * the positions, which exist nowhere else because `ScanOrganic` carries no coordinates.
  */
 export function resolveOrganicSampleSessionPath(): string {
-  return join(dirname(resolveUserSettingsJsonPath()), "edexo-organic-sample-session.json");
+  return join(resolveCommanderDataDir(), "edexo-organic-sample-session.json");
 }
 
 /**
@@ -222,7 +274,8 @@ export function resolveSpeciesFixesDir(): string {
  * `npm run build`, Electron `resources/` replacement, and unpackaged installs.
  */
 export function resolveJournalMergeCacheRoot(): string {
-  const base = dirname(resolveUserSettingsJsonPath());
+  // Per commander (1.3.1): each one's merge is its own files.
+  const base = resolveCommanderDataDir();
   const dir = join(base, ".edexo-cache");
   try {
     mkdirSync(dir, { recursive: true });

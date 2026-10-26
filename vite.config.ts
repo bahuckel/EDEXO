@@ -41,10 +41,12 @@ export default defineConfig({
       /*
         The app and the HUD overlay pages (React since 1.2.17, plan 3.8). The overlays keep their names, so their
         addresses — the Electron windows know them by path (electron/hudWindows.cjs), the phone by link — stay.
+        The launcher too since 1.3.1 (discuss item 19): still /launcher.html, its script and styles hashed.
       */
       input: Object.fromEntries(
         [
           "index",
+          "launcher",
           "hud-overlay",
           "jump-overlay",
           "fss-scan-overlay",

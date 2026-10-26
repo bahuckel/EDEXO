@@ -16,11 +16,11 @@
  */
 import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { resolveUserSettingsJsonPath } from "./paths.js";
 import { optionsDirForJournalDir } from "./protonJournals.js";
 import type { BioIndex } from "./bioIndex.js";
 import { id64Boxel } from "../shared/id64.js";
 import type { MassCode } from "../shared/boxelAdvice.js";
+import { resolveCommanderDataDir } from "./paths.js";
 
 const MAGIC = "VisitedStars";
 const HEADER = 0x30;
@@ -94,7 +94,7 @@ export interface VisitedImport {
 }
 
 export function visitedImportPath(): string {
-  return path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-visited-cache.json");
+  return path.join(resolveCommanderDataDir(), "edexo-visited-cache.json");
 }
 
 let cache: { file: string; value: VisitedImport | null } | null = null;

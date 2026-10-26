@@ -18,6 +18,7 @@ import type {
   AchievementsDTO,
   AppSnapshot,
   AppStatusDTO,
+  CommandersDTO,
   EncyclopediaExomasteryPlanetsResponseDTO,
   EncyclopediaSpeciesRowDTO,
   FeederStatusDTO,
@@ -76,6 +77,8 @@ export interface HttpServerOptions {
   getImportedSystems?: () => readonly { addr: number; name: string; x: number; y: number; z: number }[];
   /** GET /api/status — launcher-sized status; must not rebuild the snapshot. */
   getStatus: () => AppStatusDTO;
+  /** Whose data this run shows, who the game plays, every commander (per-commander profiles, 1.3.1). */
+  getCommanders?: () => CommandersDTO;
   /** §10.3 — the commander's own coordinates, or null before the first jump this session. */
   getCommanderPosition: () => { x: number; y: number; z: number } | null;
   getCommanderSystem: () => string | null;

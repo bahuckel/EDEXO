@@ -119,6 +119,89 @@ test("launcher: renders with the live strip", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+/*
+  Per-commander profiles (1.3.1, owner 2026-10-25): two commanders in the journals, the app showing Alpha while the
+  game plays Bravo. The fixture journal has one commander, so the server's answers are given two here.
+*/
+const TWO_COMMANDERS = {
+  active: { fid: "F111", name: "Alpha" },
+  game: { fid: "F222", name: "Bravo" },
+  list: [
+    { fid: "F222", name: "Bravo", files: 3 },
+    { fid: "F111", name: "Alpha", files: 9 },
+  ],
+  canSwitch: false,
+};
+
+test("commanders: the launcher's dropdown lists them and says why a switch cannot happen here", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.route("**/api/status", async (route) => {
+    const r = await route.fetch();
+    await route.fulfill({ response: r, json: { ...(await r.json()), commanders: TWO_COMMANDERS } });
+  });
+  // The dev server cannot start itself again: the answer a console build gives.
+  await page.route("**/api/commanders/switch", (route) =>
+    route.fulfill({
+      status: 501,
+      json: { ok: false, error: "This server cannot start itself again. Start it with EDEXO_COMMANDER=F222 to show CMDR Bravo." },
+    }),
+  );
+  await page.goto("/launcher.html");
+  const select = page.locator("#cmdrSelect");
+  await expect(select).toBeVisible();
+  await expect(select.locator("option")).toHaveText(["CMDR Bravo", "CMDR Alpha"]);
+  await expect(select).toHaveValue("F111");
+  await expect(page.locator("#cmdrNote")).toHaveText("The game is playing CMDR Bravo.");
+  await select.selectOption("F222");
+  await expect(page.locator("#cmdrNote")).toContainText("EDEXO_COMMANDER=F222");
+  await expect(select).toHaveValue("F111");
+  await expect(select).toBeEnabled();
+  // The first-run card (a fresh test profile) off the picture.
+  const done = page.locator("#wzDone");
+  if (await done.isVisible()) await done.click();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${OUT}/launcher-commanders.png`, fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+test("commanders: one commander, no dropdown", async ({ page }) => {
+  await page.goto("/launcher.html");
+  await expect(page.getByText("Open Compare", { exact: true })).toBeVisible();
+  await page.waitForTimeout(3000);
+  await expect(page.locator("#cmdrPick")).toBeHidden();
+});
+
+test("commanders: the app says the game plays another commander, asks once, and Keep is kept", async ({ page }) => {
+  const errors = watchErrors(page);
+  // Compare's own channel is plain /ws.
+  await page.routeWebSocket(/\/ws$/, (ws) => {
+    const server = ws.connectToServer();
+    server.onMessage((m) => {
+      try {
+        const j = JSON.parse(String(m)) as { type?: string; payload?: Record<string, unknown> };
+        if (j.type === "state" && j.payload) j.payload.commanders = { ...TWO_COMMANDERS, canSwitch: true };
+        ws.send(JSON.stringify(j));
+      } catch {
+        ws.send(m);
+      }
+    });
+  });
+  await page.goto("/");
+  await expect(page.locator(".appbar-cmdr-other")).toContainText("Logged in as another commander");
+  await expect(page.locator(".appbar-cmdr-switch")).toBeVisible();
+  const dialog = page.getByRole("dialog", { name: "Another commander in the game" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("This window shows CMDR Alpha. The game is playing CMDR Bravo.");
+  await page.screenshot({ path: `${OUT}/commander-switch-prompt.png` });
+  await dialog.getByRole("button", { name: "Keep CMDR Alpha" }).click();
+  await expect(dialog).toBeHidden();
+  await page.reload();
+  await expect(page.locator(".appbar-cmdr-other")).toContainText("Logged in as another commander");
+  await page.waitForTimeout(1500);
+  await expect(page.getByRole("dialog", { name: "Another commander in the game" })).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
 test("colonize: the window opens on the plan, every tab draws, and the launcher offers it", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto("/launcher.html");
@@ -995,8 +1078,11 @@ test("galaxy 3D: NavRoute — Next is the plotted route with EDSM checks, Previo
     ...(edsm === undefined ? {} : { edsm, edsmAt: at }),
   });
   const plotted = [sys(1, "Sol", "G", true), sys(2, "Neut A", "N", false), sys(3, "Neut B", "N"), sys(4, "Hole C", "H", true)];
+  // The fixture commander's own folder (per-commander profiles, 1.3.1).
+  const cmdrDir = path.join(tmpdir(), "edexo-e2e-profile", "commanders", "F0000000");
+  mkdirSync(cmdrDir, { recursive: true });
   writeFileSync(
-    path.join(tmpdir(), "edexo-e2e-profile", "edexo-navroutes.json"),
+    path.join(cmdrDir, "edexo-navroutes.json"),
     JSON.stringify({ formatVersion: 1, routes: [{ at, from: "Sol", to: "Hole C", systems: [1, 2, 3, 4] }], systems: plotted }),
   );
   // The fixture journal has no NavRoute.json: the route poll is given one.

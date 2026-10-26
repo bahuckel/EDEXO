@@ -102,7 +102,9 @@ export function writeBackupSettings(appDataDir: string, s: BackupSettings): void
  * in — a file added in a later version is backed up until someone decides it is a cache.
  */
 export function appDataExclusion(rel: string, s: Pick<BackupSettings, "includeKeys" | "includeBioBodies">): string | null {
-  const top = rel.split("/")[0]!;
+  // A commander's folder (1.3.1) holds what the app data folder held before: judged by the same names.
+  const inner = rel.replace(/^commanders\/[^/]+\//, "");
+  const top = inner.split("/")[0]!;
   const base = path.posix.basename(rel);
   if (top === ".edexo-cache") return "cache (rebuilt from the journals)";
   if (top === "diag") return "diagnostics";

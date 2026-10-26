@@ -17,8 +17,7 @@
  * app ships statistics rather than his rows. Nothing here is shipped, committed, or sent anywhere.
  */
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { resolveUserSettingsJsonPath } from "./paths.js";
+import { join } from "node:path";
 import { collectOwnOrganicLockSpeciesIds } from "./organicLocks.js";
 import {
   hasExomasteryProfileFile,
@@ -28,6 +27,7 @@ import {
 import type { BodyExoState, SpeciesDatabase, SpeciesEntry } from "../shared/types.js";
 import type { CollectionFocusConfig } from "../shared/collectionFocus.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { resolveCommanderDataDir } from "./paths.js";
 
 export type { CollectionFocusConfig } from "../shared/collectionFocus.js";
 
@@ -44,7 +44,7 @@ export const DEFAULT_COLLECTION_FOCUS: CollectionFocusConfig = {
 };
 
 export function collectionFocusPath(): string {
-  return join(dirname(resolveUserSettingsJsonPath()), "edexo-collection-focus.json");
+  return join(resolveCommanderDataDir(), "edexo-collection-focus.json");
 }
 
 export function loadCollectionFocusConfig(): CollectionFocusConfig {

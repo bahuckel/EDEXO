@@ -14,7 +14,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { EDSM_USER_AGENT } from "./edsmSystemHydration.js";
 import type { NavRouteWaypointDTO } from "./navRouteFuel.js";
-import { resolveUserSettingsJsonPath } from "./paths.js";
+import { resolveCommanderDataDir } from "./paths.js";
 
 export interface NavRouteSystem {
   address: number;
@@ -59,7 +59,7 @@ let loadedFrom: string | null = null;
 let lastKey = "";
 
 function filePath(): string {
-  return path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-navroutes.json");
+  return path.join(resolveCommanderDataDir(), "edexo-navroutes.json");
 }
 
 function ensureLoaded(): void {

@@ -84,6 +84,7 @@ import {
 import { parseNavRouteJson } from "./navRouteFuel.js";
 import {
   getProjectRoot,
+  resolveCommanderDataDir,
   resolveLanKeyPath,
   resolveUserSettingsJsonPath,
   resolveExoOutlierLogPath,
@@ -165,6 +166,10 @@ import { createStatusPoller } from "./statusPoller.js";
 import { createJournalPipeline } from "./journalPipeline.js";
 import { createSpeciesDataWatcher } from "./speciesDataWatcher.js";
 import { reloadSpeciesDerivedCaches } from "./speciesCacheReload.js";
+import { pickCommanderForRun } from "./commanderMigration.js";
+import { activeCommander } from "./activeCommander.js";
+import { createCommanderWatch } from "./commanderWatch.js";
+import { isOtherCommandersJournal } from "./journalCommanders.js";
 export { backfillCommanderPosition } from "./commanderPositionBackfill.js";
 export { logFatal, assertResourceLayout } from "./startupChecks.js";
 export { parseHost, parsePort, parseCli } from "./cliOptions.js";
@@ -242,6 +247,11 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   });
 
   let journalDir = resolveInitialJournalDir(projectRoot);
+  /*
+    Whose data this run shows (per-commander profiles, 1.3.1): picked from every journal before anything below reads
+    a journal or a commander's file, and the files from before 1.3.1 moved into that commander's folder once.
+  */
+  await pickCommanderForRun(journalDir);
 
   /** The live route into the store, and a new one into the NavRoute star finder's log (navRouteLog.ts). */
   function applyNavRoute(waypoints: ReturnType<typeof readLiveNavRouteWaypoints>): boolean {
@@ -369,7 +379,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     version: () => `${store.achievementDone.size}|${store.codexMapLogged.size}|${store.visitedSystems.size}`,
   });
   const notices = createNoticesService({
-    filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-notices.json"),
+    filePath: path.join(resolveCommanderDataDir(), "edexo-notices.json"),
   });
   setCodexFirstLowChanceKept(() => notices.prefs().codexFirstLowChance ?? true);
   /* The nudge research log: the developer's PC only, where `ggg-research.on` is (server/gggResearch.ts). */
@@ -378,7 +388,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     notify: (n, at) => notices.announceGggResearch(n, at),
   });
   const savedBoxels = createSavedBoxels({
-    filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-boxels.json"),
+    filePath: path.join(resolveCommanderDataDir(), "edexo-boxels.json"),
     // A boxel run takes the clipboard over from a neutron route being flown (plan 8.5).
     onRun: (id) => {
       if (id && neutronLive.active()) {
@@ -428,7 +438,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     jump onto a stop, the same way; starting one ends the boxel run.
   */
   const neutronLive = createNeutronLive({
-    filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-neutron-live.json"),
+    filePath: path.join(resolveCommanderDataDir(), "edexo-neutron-live.json"),
     deliver: (name) => deliverToClipboard(name, "neutron"),
     onStart: () => {
       if (savedBoxels.runId()) savedBoxels.setRun(null);
@@ -445,7 +455,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   /* Off the route: planned again from where the ship is (server/neutronReplan.ts). */
   const neutronReplanner = createNeutronReplanner({ store, neutronLive, push: () => push(), shipHere });
   const bookmarks = createBookmarksService({
-    filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-bookmarks.json"),
+    filePath: path.join(resolveCommanderDataDir(), "edexo-bookmarks.json"),
   });
   /* Green gas giants (owner, 2026-09-30): the commander's own calls, and what the verdict reads. */
   const greenMarks = createGreenGiantMarks({
@@ -573,6 +583,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         store.viewingSystemAddress ?? store.currentSystemAddress ?? null,
         snap.viewingSystemName ?? store.currentSystem ?? null,
       );
+      snap.commanders = commanderWatch.state();
       return snap;
     });
 
@@ -651,6 +662,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       radarRadius: radarRadiusDto(store.minimapRadiusM),
       live: organicLiveSummary(store),
       feederEnabled: store.feederEnabled,
+      commanders: commanderWatch.state(),
     };
   };
 
@@ -740,6 +752,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
 
   // The HUD's Colonize section follows the Colonize store and its saved plan, not the journal store.
   const offColonizeHud = onColonizeHudChange(push);
+  // Who the game is playing and every commander the journals name (per-commander profiles, 1.3.1).
+  const commanderWatch = createCommanderWatch({ getJournalDir: () => journalDir, onChange: () => push() });
 
 
   /**
@@ -837,6 +851,13 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
 
   function createLiveJournalLine(): (line: JournalLine, at: JournalLineAt) => void {
     return (line: JournalLine, at: JournalLineAt) => {
+      /*
+        Another commander's session (1.3.1): the lists leave other commanders' files out, but a file the game has just
+        started names nobody until its Commander line, and the tail may be following it then. Nothing from it is
+        this run's, not even for Colonize.
+      */
+      const cmdr = activeCommander();
+      if (cmdr && isOtherCommandersJournal(at.path, cmdr.fid)) return;
       // Colonize and any other follower first (journalTap.ts): a failure below must not cost them the line.
       emitLiveJournalLine(line, at);
       try {
@@ -997,6 +1018,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     getSnapshot,
     getJournalDir: () => journalDir,
     getStatus,
+    getCommanders: () => commanderWatch.state(),
     getCommanderPosition: () => store.commanderPos,
     getFirstDiscoveryBacklog: () => firstDiscoveryBacklogWithDistance(store),
     getBacklogMap: async () => backlogMap(store, await firstDiscoveryBacklogSliced(store)),
@@ -1468,6 +1490,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         return true;
       };
       statusPoller.setTick(() => {
+        // Status.json and NavRoute.json are the game's commander's: while that is another commander, not ours (1.3.1).
+        if (commanderWatch.gameIsAnotherCommander()) return;
         const navChanged = applyNavRoute(readLiveNavRouteWaypoints());
         const jumpChanged = jumpChangedNow();
         const statusPath = path.join(journalDir, "Status.json");
@@ -1601,6 +1625,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     gamePresence.dispose();
     dataAutoRefresh.stop();
     statusPoller.stop();
+    commanderWatch.stop();
     speciesWatch.stop();
     await journal.close();
     // Colonize, if a window started it: its depot state and buy index are saved on a debounce.

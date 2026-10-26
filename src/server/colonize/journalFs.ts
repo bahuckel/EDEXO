@@ -4,6 +4,8 @@
  */
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { activeCommander } from "../activeCommander.js";
+import { journalOwners } from "../journalCommanders.js";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -62,8 +64,15 @@ export async function listJournalFilesChronological(
   );
   const rows = stated.filter((r): r is NonNullable<typeof r> => r !== null);
   rows.sort((a, b) => a.key - b.key || a.mtime - b.mtime || a.name.localeCompare(b.name));
+  /*
+    This run's commander's logs only (1.3.1): another account's colonies are its own. Sessions that name nobody stay
+    (main-menu sessions, nothing in them), as in the main journal list (journalWatcher.ts).
+  */
+  const cmdr = activeCommander();
+  const owners = cmdr ? journalOwners(rows.map((r) => r.p)) : null;
   return rows
-    .filter((r) => {
+    .filter((r, i) => {
+      if (owners && owners[i] && owners[i]!.fid !== cmdr!.fid) return false;
       if (minFileStartUtcMs == null) return true;
       return journalFileLogicalStartUtcMs(r.name, r.mtime) >= minFileStartUtcMs;
     })

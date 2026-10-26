@@ -4,6 +4,7 @@ import type { ColonizeHudDTO } from "../colonize/hud.js";
 import type { JournalHistoryPreset } from "../journalHistoryPreset.js";
 import type { TriageTiming } from "../systemTriage.js";
 import type {
+  CommandersDTO,
   HudPrefsDTO,
   JournalBootProgressDTO,
   PhotoStampPrefs,
@@ -58,6 +59,8 @@ export interface AppSnapshot {
   lanUrls: string[];
   /** Journal `LoadGame.Commander`; null until a LoadGame line is merged. */
   commanderName: string | null;
+  /** Whose data this is and who the game is playing (per-commander profiles, 1.3.1); absent from older servers. */
+  commanders?: CommandersDTO;
   currentSystem: string | null;
   currentSystemAddress: number | null;
   /**

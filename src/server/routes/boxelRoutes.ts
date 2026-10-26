@@ -5,7 +5,6 @@
 import { boxelSystems, boxelTable, previousBoxelsPage, type SystemStats } from "../boxel.js";
 import { parseBoxel } from "../../shared/boxel.js";
 import { createBoxelLookups } from "../boxelLookup.js";
-import { resolveUserSettingsJsonPath } from "../paths.js";
 import { boxelJournalFacts, notableBodiesForSystem, systemBodyTally } from "../snapshotSystemInfo.js";
 import type { GameStateStore } from "../gameState.js";
 import { getCachedSpeciesDatabase } from "../snapshot.js";
@@ -16,6 +15,7 @@ import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { loadSystemTraits, loadSystemTraitsAsync } from "../galaxyTraits.js";
 import { navRouteLog } from "../navRouteLog.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
+import { resolveCommanderDataDir } from "../paths.js";
 
 /** Bodies scanned and notable bodies per visited system, for the boxel lists (owner, 2026-09-30). */
 function boxelStats(store: GameStateStore): SystemStats {
@@ -84,7 +84,7 @@ export function registerBoxelRoutes(
   // Spansh look-ups of whole boxels (server/boxelLookup.ts), kept 30 days beside the saved boxels.
   const lookups = createBoxelLookups({
     filePath: opts.savedBoxels
-      ? path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-boxel-lookups.json")
+      ? path.join(resolveCommanderDataDir(), "edexo-boxel-lookups.json")
       : null,
     isPlant: (genus) => {
       const g = genus.trim().toLowerCase();

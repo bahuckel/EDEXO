@@ -95,6 +95,7 @@ export function runServerChild(): void {
     getLayout: hudCall("getLayout"),
     setLayout: hudCall("setLayout"),
     toggleVisibility: hudCall("toggleVisibility"),
+    switchCommander: hudCall("switchCommander"),
   };
 
   async function start(mode: "server" | "client", argv: string[]): Promise<void> {

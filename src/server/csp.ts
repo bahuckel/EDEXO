@@ -4,10 +4,10 @@
  * pages share one policy and the built index.html needs no build step. The Vite dev server does not
  * send it: its React refresh runs inline.
  *
- * - Scripts: this origin only. The launcher's script moved to launcher.js and the overlays' to
- *   hud/boot (a module; src/client/hud/boot.ts since 1.2.17) for this; an inline script or an `on…=` attribute no
- *   longer runs.
- * - Styles: inline allowed — the launcher's one <style> block and style attributes throughout.
+ * - Scripts: this origin only. The launcher's script moved to launcher.js (src/client/launcher since 1.3.1) and the
+ *   overlays' to hud/boot (a module; src/client/hud/boot.ts since 1.2.17) for this; an inline script or an `on…=`
+ *   attribute no longer runs.
+ * - Styles: inline allowed — style attributes throughout (the launcher's <style> block is a file since 1.3.1).
  * - Connections: this origin, its WebSocket, the local API by address (the launcher builds
  *   `http://127.0.0.1:<port>` URLs), and api.ipify.org for the launcher's "show my public address".
  * - Images, media and workers: this origin, plus data: and blob: (snapshots, CSV and JSON exports,

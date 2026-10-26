@@ -2,6 +2,8 @@ import { promises as fs, unwatchFile, watchFile } from "node:fs";
 import path from "node:path";
 import type { JournalLine } from "../shared/types.js";
 import { JOURNAL_POLL_DEFAULT_MS, clampJournalPollMs } from "../shared/pollRates.js";
+import { activeCommander } from "./activeCommander.js";
+import { journalOwners } from "./journalCommanders.js";
 
 function isJournalFile(name: string): boolean {
   return name.startsWith("Journal.") && name.endsWith(".log");
@@ -43,6 +45,8 @@ function journalFileLogicalStartUtcMs(name: string, mtimeMs: number): number {
 export type JournalListFilterOpts = {
   /** When set, omit logs whose logical start is strictly before this instant (UTC). */
   minFileStartUtcMs: number | null;
+  /** Every commander's logs, not only this run's (activeCommander.ts): the commander list itself. */
+  allCommanders?: boolean;
 };
 
 /**
@@ -76,9 +80,17 @@ export async function listJournalFilesChronological(
       }),
     );
     rows.sort((a, b) => a.key - b.key || a.mtime - b.mtime || a.name.localeCompare(b.name));
+    /*
+      Only this run's commander's logs (1.3.1), decided on the whole list: a later part belongs to the file before it.
+      A session that names nobody (quit at the main menu: Fileheader, Friends, Shutdown) stays in every commander's
+      list, as it was in everyone's caches before 1.3.1, so those caches still match.
+    */
+    const cmdr = filter.allCommanders ? null : activeCommander();
+    const owners = cmdr ? journalOwners(rows.map((r) => r.p)) : null;
     const cutoff = filter.minFileStartUtcMs;
     return rows
-      .filter((r) => {
+      .filter((r, i) => {
+        if (owners && owners[i] && owners[i]!.fid !== cmdr!.fid) return false;
         if (cutoff == null) return true;
         return journalFileLogicalStartUtcMs(r.name, r.mtime) >= cutoff;
       })

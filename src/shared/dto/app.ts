@@ -111,7 +111,28 @@ export interface JournalBootProgressDTO {
   message: string;
 }
 
+/** A commander the journals name (per-commander profiles, 1.3.1). */
+export interface CommanderRefDTO {
+  fid: string;
+  name: string;
+}
+
+/**
+ * Whose data the app shows, and who the game is playing (per-commander profiles, 1.3.1). `list` is every commander
+ * the journals name, the one who played last first; `game` is the commander of a session still running (null when
+ * the game is closed or at the main menu); `canSwitch`: this server can be started again for another commander (the
+ * desktop app), else switching needs a restart by hand.
+ */
+export interface CommandersDTO {
+  active: CommanderRefDTO | null;
+  game: CommanderRefDTO | null;
+  list: (CommanderRefDTO & { files: number })[];
+  canSwitch: boolean;
+}
+
 export interface AppStatusDTO {
+  /** Per-commander profiles (1.3.1). */
+  commanders?: CommandersDTO;
   mode: "server" | "client";
   bindHost: string;
   port: number;

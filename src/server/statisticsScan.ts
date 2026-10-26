@@ -28,11 +28,11 @@
 import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { incomeFromJournalLine, INCOME_EVENT_NAMES, type IncomeEvent } from "../shared/incomeCategories.js";
 import type { CarrierLedgerBreak } from "../shared/carrierUpkeep.js";
 import type { RankLine } from "../shared/rankProgress.js";
-import { resolveUserSettingsJsonPath } from "./paths.js";
+import { resolveCommanderDataDir } from "./paths.js";
 
 /** Counted rather than listed: the panel wants "how many", never "which". */
 export interface ActivityCounts {
@@ -316,7 +316,7 @@ function fileSig(f: string): string {
 }
 
 function cachePath(): string {
-  return join(dirname(resolveUserSettingsJsonPath()), "edexo-compare-statistics.json");
+  return join(resolveCommanderDataDir(), "edexo-compare-statistics.json");
 }
 
 interface CachedPart {

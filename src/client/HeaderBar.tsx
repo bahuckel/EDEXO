@@ -30,6 +30,7 @@ import { LiveSnapshotFreshness } from "./header/LiveSnapshotFreshness";
 import { AppMenuEntries, type MenuOpeners } from "./header/AppMenuEntries";
 import { CompareTray } from "./header/CompareTray";
 import { HeaderScreens } from "./header/HeaderScreens";
+import { CommanderSwitch } from "./header/CommanderSwitch";
 
 /** A notable body's quick facts, asked for from outside the header (the body strip's notable tabs). */
 export const NOTABLE_QUICK_EVENT = "edexo-notable-quick";
@@ -348,6 +349,8 @@ export const HeaderBar = memo(function HeaderBar({
               <span className="top-playing-as-cmdr">{cmdr}</span>
             </span>
           ) : null}
+          {/* The game playing another commander than this window shows (1.3.1): a line, Switch, and a pop-up once. */}
+          <CommanderSwitch snap={snap} />
 
           <div className="appbar-actions">
             <NoticesBell snap={snap} />

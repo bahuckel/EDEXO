@@ -15,7 +15,6 @@ export default tseslint.config(
       "data/**",
       "docs/**",
       ".edexo-cache/**",
-      "public/launcher.html",
       // Local screenshots, backups and one-off probes; never shipped, never imported.
       "build-artifacts/**",
       // The local scratch folder (excluded from git in .git/info/exclude): it failed `npm run lint` on this
@@ -101,6 +100,22 @@ export default tseslint.config(
     languageOptions: {
       sourceType: "script",
       globals: { ...globals.browser, ...globals.webextensions },
+    },
+  },
+  {
+    // The launcher's modules (src/client/launcher, plain JavaScript built by Vite since 1.3.1): browser globals, the
+    // same leniency as the plain scripts in public/ they came from.
+    files: ["src/client/launcher/**/*.js"],
+    languageOptions: {
+      sourceType: "module",
+      globals: { ...globals.browser },
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" },
+      ],
+      "no-empty": ["warn", { allowEmptyCatch: true }],
     },
   },
   {

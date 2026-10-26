@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EDEXO — Launcher</title>
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="./launcher/launcher.css" />
+  </head>
+  <body>
+    <div class="frame">
+      <header class="brand">
+        <div class="emblem" aria-hidden="true">
+          <img class="logo" src="/edexo-icon-124.webp" alt="" width="56" height="56" />
+        </div>
+        <div class="brand-titles">
+          <h1>EDEXO</h1>
+          <div class="sub">Launcher · exobiology and colonisation companion</div>
+          <div class="version-line" id="versionLine">
+            <span id="versionText">Version —</span>
+            <button type="button" class="version-btn" id="btnCheckUpdate">Check for updates</button>
+            <button type="button" class="version-btn" id="btnUpdatePage" hidden>Release page</button>
+            <button type="button" class="version-btn quiet" id="btnWhatsNew" hidden>What's new</button>
+          </div>
+        </div>
+      </header>
+
+      <div id="main" class="ready">
+        <div class="status-row" id="statusRow">
+          <div class="panel">
+            <div class="panel__body">
+              <div class="panel-head">
+                <span class="panel-title">System status</span>
+                <span class="panel-aside"><label title="Show where you are and what is unsold"><input type="checkbox" id="toggleLiveStrip" /> Live</label></span>
+              </div>
+              <div class="status-inner">
+                <div class="lamp busy" id="statusLamp"></div>
+                <div>
+                  <div class="status-text" id="statusTitle">Connecting…</div>
+                  <div class="status-detail" id="statusDetail"></div>
+                </div>
+              </div>
+              <div class="boot-bar status-boot" id="statusBoot" aria-hidden="true" hidden><div class="boot-bar-fill" id="statusBootFill"></div></div>
+              <div class="journal-health" id="journalHealth" hidden></div>
+              <div class="live-strip" id="liveStrip" hidden>
+                <div class="live-cell live-cell--wide"><span class="k">System</span><span class="v dim" id="lsSystem">—</span></div>
+                <div class="live-cell"><span class="k">Body</span><span class="v dim" id="lsBody">—</span></div>
+                <div class="live-cell"><span class="k">Bio signals</span><span class="v dim" id="lsBio">—</span></div>
+                <div class="live-cell"><span class="k">Unsold</span><span class="v dim" id="lsUnsold">—</span></div>
+                <div class="live-cell live-cell--wide"><span class="k">Next jump</span><span class="v dim" id="lsJump">—</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="launcher-actions">
+          <!--
+            A split button: the big half does the chosen thing, the arrow chooses it.
+
+            It used to be one link that navigated *this* window to the app, which is the one place a
+            commander cannot get back from without restarting the launcher. The owner asked for the
+            choice, with the browser as the default: "button should have an integrated a drop down,
+            making you choose whatever you want to open, default should be in browser, second,
+            dedicated window like in the moment. Third, the Phone view."
+
+            The choice is remembered, so the second launch does what the first one taught it.
+          -->
+          <!--
+            Per-commander profiles (1.3.1, owner 2026-10-25): whose data Compare and Colonize show. Only with two or
+            more commanders in the journals; choosing one starts the app's server again for them.
+          -->
+          <div class="cmdr-pick" id="cmdrPick" hidden>
+            <label for="cmdrSelect">Commander</label>
+            <select id="cmdrSelect"></select>
+            <span class="cmdr-pick__note" id="cmdrNote" role="status"></span>
+          </div>
+          <div class="btn-split" id="mainUiSplit">
+            <button type="button" class="btn btn-split-main" id="btnMainUi">
+              <span class="btn-lines">
+                <strong id="btnMainUiTitle">Open Compare</strong>
+                <span class="subline" id="btnMainUiSub">In an app window</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-split-arrow"
+              id="btnMainUiMenu"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-label="Choose where Compare opens"
+            >
+              <span aria-hidden="true">▾</span>
+            </button>
+            <div class="btn-split-menu" id="mainUiMenu" role="menu" hidden>
+              <!-- Both apps' menus in one order (owner, 2026-10-22): the app window (the default) first, then the browser. -->
+              <button type="button" role="menuitem" data-open-mode="window">
+                <strong>App window</strong>
+                <span>Its own window — the launcher stays open</span>
+              </button>
+              <button type="button" role="menuitem" data-open-mode="browser">
+                <strong>In your browser</strong>
+                <span>Your default browser, on this PC</span>
+              </button>
+              <button type="button" role="menuitem" data-open-mode="phone">
+                <strong>Phone view</strong>
+                <span>Read-only triage, sized for a phone or tablet</span>
+              </button>
+              <!-- Streamer mode (owner, 2026-10-01): copies a link, does not change where the button opens. -->
+              <button type="button" role="menuitem" id="btnStreamLink">
+                <strong>Streamer view</strong>
+                <span>Opens it, and copies the link for OBS (Browser source): the app, nothing clickable</span>
+              </button>
+            </div>
+          </div>
+
+          <!--
+            Colonize (1.3.0, owner 2026-10-18): the second app, beside Compare. Its own choice of where it opens
+            (owner, 2026-10-22), remembered apart from Compare's: browser, app window, phone view, streamer view.
+          -->
+          <div class="btn-split" id="colonizeSplit">
+            <button type="button" class="btn btn-exomastery btn-split-main" id="btnColonize">
+              <span class="btn-lines">
+                <strong>Open Colonize</strong>
+                <span class="subline" id="btnColonizeSub">Your construction sites and the haul plan · in an app window</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-exomastery btn-split-arrow"
+              id="btnColonizeMenu"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-label="Choose where Colonize opens"
+            >
+              <span aria-hidden="true">▾</span>
+            </button>
+            <div class="btn-split-menu" id="colonizeMenu" role="menu" hidden>
+              <button type="button" role="menuitem" data-colonize-mode="window">
+                <strong>App window</strong>
+                <span>Its own window — the launcher stays open</span>
+              </button>
+              <button type="button" role="menuitem" data-colonize-mode="browser">
+                <strong>In your browser</strong>
+                <span>Your default browser, on this PC</span>
+              </button>
+              <button type="button" role="menuitem" data-colonize-mode="phone">
+                <strong>Phone view</strong>
+                <span>Read-only: the sites, the plan and its ticks, sized for a phone or tablet</span>
+              </button>
+              <button type="button" role="menuitem" id="btnColonizeStreamLink">
+                <strong>Streamer view</strong>
+                <span>Opens it, and copies the link for OBS (Browser source): the plan, nothing clickable</span>
+              </button>
+            </div>
+          </div>
+          <button type="button" class="btn btn-exomastery" id="btnOverlayMenu">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="1.5" /><path d="M3 9h18M8 21h8M12 17v4" /></svg>
+            </span>
+            <span class="btn-lines">
+              <strong>Overlay</strong>
+              <span class="subline">Click-through HUD over the game: tracker, radar, candidates, D-scan, data value</span>
+            </span>
+          </button>
+          <button type="button" class="btn secondary" id="btnOptions">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M3 7.5V19a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-8l-2-2.5H4a1 1 0 0 0-1 1z" /></svg>
+            </span>
+            <span class="btn-lines">
+              <strong>Journal folder &amp; polling</strong>
+              <span class="subline">Path to Journal.*.log — and how often it and Status.json are read</span>
+            </span>
+          </button>
+          <!--
+            Exomastery (owner, 2026-09-26): refresh, download your exomastery or your codex (a backup
+            for a reinstall, or to share), and the shared folder other commanders' files go into.
+          -->
+          <div class="btn-split btn-split--tile" id="exomasterySplit">
+            <button type="button" class="btn btn-exomastery btn-split-main" id="btnExomasteryRefresh">
+              <span class="glyph" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9" /><path d="M20 4v5h-5" /></svg>
+              </span>
+              <span class="btn-lines">
+                <strong>Exomastery</strong>
+                <span class="subline" id="exomasterySub">Refresh, download yours, or share with other commanders</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-exomastery btn-split-arrow"
+              id="btnExomasteryMenu"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-label="Exomastery options"
+            >
+              <span aria-hidden="true">▾</span>
+            </button>
+            <div class="btn-split-menu" id="exomasteryMenu" role="menu" hidden>
+              <button type="button" role="menuitem" data-exo-action="refresh">
+                <strong>Refresh exomastery</strong>
+                <span>Re-read the species data and the shared folder</span>
+              </button>
+              <button type="button" role="menuitem" data-exo-action="export-exomastery">
+                <strong>Download my exomastery (.json)</strong>
+                <span>Every species you confirmed, with the body it grew on</span>
+              </button>
+              <button type="button" role="menuitem" data-exo-action="export-codex">
+                <strong>Download my codex (.json)</strong>
+                <span>Your codex per region and colour</span>
+              </button>
+              <button type="button" role="menuitem" data-exo-action="open-shared">
+                <strong>Open shared folder</strong>
+                <span>Drop other commanders' files here — or your own backup after a reinstall</span>
+              </button>
+              <!-- Moved here from its own launcher button (owner, 2026-09-29). -->
+              <button type="button" role="menuitem" data-exo-action="import-dump" id="btnImportDump" hidden>
+                <strong>Import Spansh export</strong>
+                <span>Feed a galaxy_bio.jsonl.gz into the corpus — validate first, then apply</span>
+              </button>
+              <!-- The game's own visited list (plan 6.1, owner 2026-10-13): for journals you no longer have. -->
+              <button type="button" role="menuitem" data-exo-action="import-visited" id="btnImportVisited">
+                <strong>Import visited systems</strong>
+                <span>The game's own list of every system you visited, for journals you no longer have</span>
+              </button>
+            </div>
+          </div>
+          <!-- Backups (owner, 2026-09-28): journals, the app's data and the two exports, as zips. -->
+          <button type="button" class="btn secondary" id="btnBackups">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" /><path d="M3 4h18v3H3zM10 11h4" /></svg>
+            </span>
+            <span class="btn-lines">
+              <strong>Backups</strong>
+              <span class="subline" id="backupSub">Journals, your data and codex — kept as zips</span>
+            </span>
+          </button>
+          <button type="button" class="btn secondary" id="btnNetworkSettings">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17M12 3.5c-3 3-3 14 0 17" /></svg>
+            </span>
+            <span class="btn-lines">
+              <strong>Network settings</strong>
+              <span class="subline">This computer, LAN and public URLs — visibility and toggles</span>
+            </span>
+          </button>
+          <!-- Key binds (owner, 2026-10-02): global keys for the HUD and the body tabs. Electron only. -->
+          <button type="button" class="btn secondary" id="btnKeybinds" hidden>
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="3" y="6.5" width="18" height="11" rx="2" /><path d="M7 10h1M10.5 10h1M14 10h1M17 10h0.5M7.5 14h9" /></svg>
+            </span>
+            <span class="btn-lines">
+              <strong>Key binds</strong>
+              <span class="subline">Keys that work in the game: HUD show / hide, previous / next body</span>
+            </span>
+          </button>
+        </div>
+        <div class="msg-launcher" id="launcherActionMsg" aria-live="polite"></div>
+
+        <!-- Close to tray (owner, 2026-10-01; was "Minimise to tray"): the X hides the launcher in the
+             tray, like Discord; minimise stays an ordinary minimise. A quiet option, not a button;
+             greyed out with the reason when this system has no tray. Electron only — hidden in a browser. -->
+        <label class="tray-pref" id="trayPrefRow" hidden>
+          <input type="checkbox" id="trayPref" />
+          <span>Close to tray</span>
+        </label>
+        <!-- What "the tray" is (owner, 2026-10-01): a tester sent the launcher there and took the app for gone. -->
+        <p class="tray-note" id="trayNote" hidden></p>
+        <!-- Hardware acceleration (L1, Linux ticket 2026-10-23; electron/gpuSafeMode.cjs): off by hand, or turned off
+             by itself after the GPU process died at start; on again to try the graphics card. Electron only. -->
+        <label class="tray-pref" id="gfxPrefRow" hidden>
+          <input type="checkbox" id="gfxPref" />
+          <span>Hardware acceleration</span>
+        </label>
+        <p class="tray-note" id="gfxNote" hidden></p>
+        <button type="button" class="btn-mini gfx-restart" id="gfxRestart" hidden>Restart now</button>
+
+        <div class="foot">
+          <span>EDEXO · exobiology routing</span>
+          <span>Local server · WebSocket live link</span>
+        </div>
+        <!-- The owner's Ko-fi (2026-10-21), on a line of its own; opens in the browser (windowGuards.cjs). -->
+        <p class="foot-coffee-row">
+          <a class="foot-coffee" href="https://ko-fi.com/bahuckel" target="_blank" rel="noopener noreferrer">Buy me a coffee</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="keybindsModal">
+      <div class="modal modal--compact">
+        <div class="modal-in">
+          <h3>Key binds</h3>
+          <p class="hud-hint">
+            These keys work while Elite is in front: one key, or up to three with Ctrl, Alt or Shift. Windows gives a
+            bound key to this app and not to the game, so pick keys you do not use in Elite.
+          </p>
+          <div class="kb-groups" id="kbRows"></div>
+          <p class="hud-hint" id="kbMsg" aria-live="polite"></p>
+          <div class="modal-actions">
+            <button type="button" class="btn secondary" id="kbClose">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="networkSettingsModal">
+      <div class="modal modal--network">
+        <div class="modal-in">
+          <div class="modal-network-head">
+            <h3>Network settings</h3>
+            <p class="hint">
+              Enable each group with the checkbox. Use the <strong>lamp</strong> on each row to dim links. For <strong>LAN</strong> and
+              <strong>Public</strong>, use the eye to show or hide addresses. Hiding keeps your last-known public URL on this
+              device — <strong>Forget</strong> deletes it.
+            </p>
+          </div>
+
+          <div class="net-section" id="networkSectionLocal">
+            <div class="net-section-toolbar">
+              <label class="net-toggle-label">
+                <input type="checkbox" id="toggleSectionLocal" checked />
+                This computer
+              </label>
+            </div>
+            <ul class="link-list" id="modalLocalUrlList"></ul>
+          </div>
+
+          <div class="net-section" id="networkSectionLan">
+            <div class="net-section-toolbar">
+              <label class="net-toggle-label">
+                <input type="checkbox" id="toggleSectionLan" checked />
+                LAN
+              </label>
+              <button
+                type="button"
+                class="net-eye"
+                id="eyeLan"
+                title="Show or hide LAN addresses"
+                aria-label="Toggle LAN address visibility"
+              >
+                <span class="eye-icon eye-icon--open" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      fill="currentColor"
+                      d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"
+                    />
+                  </svg>
+                </span>
+                <span class="eye-icon eye-icon--slashed" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      fill="currentColor"
+                      d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-3.89-6-7-11-7-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10 1 12c1.73 3.89 6 7 11 7 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.3-.08.61-.08.65 0 2.48 2.02 4.5 4.5 4.5.04 0 .35-.03.65-.08l1.55 1.55c-.86.45-1.83.7-2.9.7-3.04 0-5.5-2.46-5.5-5.5 0-1.07.25-2.04.7-2.9zM11.84 9.02l3.15 3.15.02-.17c0-2.48-2.02-4.5-4.5-4.5l-.17.02z"
+                    />
+                  </svg>
+                </span>
+              </button>
+            </div>
+            <!-- LAN access (owner, 2026-10-01): off for a new install; applies at the next start. -->
+            <div class="net-lan-access" id="lanAccessBox" hidden>
+              <label>
+                <input type="checkbox" id="lanAccessToggle" />
+                <span>LAN access: let other devices on this network open the app (phone, tablet, second PC)</span>
+              </label>
+              <p id="lanAccessNote"></p>
+              <button type="button" class="btn-mini" id="lanAccessRestart" hidden>Restart now</button>
+            </div>
+            <p class="hint net-lan-warning" id="lanWarning" hidden></p>
+            <ul class="link-list" id="modalLanUrlList"></ul>
+          </div>
+
+          <div class="net-section" id="networkSectionPublic">
+            <div class="net-section-toolbar">
+              <label class="net-toggle-label">
+                <input type="checkbox" id="toggleSectionPublic" checked />
+                Public internet
+              </label>
+              <button
+                type="button"
+                class="net-eye"
+                id="eyePublic"
+                title="Show or hide public (WAN) address"
+                aria-label="Toggle public address visibility"
+              >
+                <span class="eye-icon eye-icon--open" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      fill="currentColor"
+                      d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"
+                    />
+                  </svg>
+                </span>
+                <span class="eye-icon eye-icon--slashed" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      fill="currentColor"
+                      d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-3.89-6-7-11-7-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10 1 12c1.73 3.89 6 7 11 7 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.3-.08.61-.08.65 0 2.48 2.02 4.5 4.5 4.5.04 0 .35-.03.65-.08l1.55 1.55c-.86.45-1.83.7-2.9.7-3.04 0-5.5-2.46-5.5-5.5 0-1.07.25-2.04.7-2.9zM11.84 9.02l3.15 3.15.02-.17c0-2.48-2.02-4.5-4.5-4.5l-.17.02z"
+                    />
+                  </svg>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="net-forget"
+                id="forgetPublic"
+                title="Delete the public (WAN) address stored on this device"
+              >
+                Forget
+              </button>
+            </div>
+            <p class="hint net-public-hint">Router may need port forwarding for this app’s port.</p>
+            <ul class="link-list" id="modalPublicUrlList"></ul>
+          </div>
+
+          <div class="msg-launcher" id="networkSettingsMsg" aria-live="polite"></div>
+          <button type="button" class="btn secondary" id="networkSettingsClose">
+            <span class="btn-lines"><strong>Close</strong></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="overlayPickModal">
+      <div class="modal modal--compact">
+        <div class="modal-in">
+          <h3>Overlays</h3>
+          <p class="hint" style="margin-top: 0">
+            Click-through HUD windows, stacked top-to-bottom at the right edge and aligned to one width. Tap the same
+            row again to close that HUD. Checkmark shows an active overlay.
+          </p>
+          <label class="overlay-merge" for="ovMerge">
+            <input type="checkbox" id="ovMerge" />
+            <span class="btn-lines">
+              <strong>Merge into one panel</strong>
+              <span class="subline">The chosen HUDs stack inside a single frame instead of separate windows</span>
+            </span>
+          </label>
+          <div class="overlay-menu-grid" role="group" aria-label="Overlay types">
+            <button type="button" class="btn secondary" id="ovExoDistance" data-overlay-path="/distance-overlay.html">
+              <span class="overlay-pick-row">
+                <span class="overlay-check" aria-hidden="true"></span>
+                <span class="btn-lines">
+                  <strong>Exo-distance tracker</strong>
+                  <span class="subline">Radar, sample distances and payout while on foot</span>
+                </span>
+              </span>
+            </button>
+            <button type="button" class="btn secondary" id="ovFssScan" data-overlay-path="/fss-scan-overlay.html">
+              <span class="overlay-pick-row">
+                <span class="overlay-check" aria-hidden="true"></span>
+                <span class="btn-lines">
+                  <strong>Discovery scan</strong>
+                  <span class="subline">Bodies found vs total after the honk (D-Scan)</span>
+                </span>
+              </span>
+            </button>
+            <button type="button" class="btn secondary" id="ovExoCandidates" data-overlay-path="/exo-candidates-overlay.html">
+              <span class="overlay-pick-row">
+                <span class="overlay-check" aria-hidden="true"></span>
+                <span class="btn-lines">
+                  <strong>Exo candidates</strong>
+                  <span class="subline">Genus · species · scan progress for the targeted or current body</span>
+                </span>
+              </span>
+            </button>
+            <button type="button" class="btn secondary" id="ovDataValue" data-overlay-path="/data-value-overlay.html">
+              <span class="overlay-pick-row">
+                <span class="overlay-check" aria-hidden="true"></span>
+                <span class="btn-lines">
+                  <strong>Data value</strong>
+                  <span class="subline">Unsold exobiology plus optional scan data, as in the header</span>
+                </span>
+              </span>
+            </button>
+            <button type="button" class="btn secondary" id="ovAchievement" data-overlay-path="/achievement-overlay.html">
+              <span class="overlay-pick-row">
+                <span class="overlay-check" aria-hidden="true"></span>
+                <span class="btn-lines">
+                  <strong>Achievement</strong>
+                  <span class="subline">The tracked achievement's progress and which plants here count toward it</span>
+                </span>
+              </span>
+            </button>
+            <button type="button" class="btn secondary" id="ovNotable" data-overlay-path="/notable-overlay.html">
+              <span class="overlay-pick-row">
+                <span class="overlay-check" aria-hidden="true"></span>
+                <span class="btn-lines">
+                  <strong>Notable planets</strong>
+                  <span class="subline">This system's Earth-likes, water and ammonia worlds, terraformables, with your unread notices</span>
+                </span>
+              </span>
+            </button>
+            <button type="button" class="btn secondary" id="ovNotices" data-overlay-path="/notices-overlay.html">
+              <span class="overlay-pick-row">
+                <span class="overlay-check" aria-hidden="true"></span>
+                <span class="btn-lines">
+                  <strong>Notices</strong>
+                  <span class="subline">What the app's mail icon collects (Options → Notify me), for 20 seconds as it arrives</span>
+                </span>
+              </span>
+            </button>
+            <button type="button" class="btn secondary" id="ovJump" data-overlay-path="/jump-overlay.html">
+              <span class="overlay-pick-row">
+                <span class="overlay-check" aria-hidden="true"></span>
+                <span class="btn-lines">
+                  <strong>Next jump</strong>
+                  <span class="subline">Target system and star class: scoopable, no fuel, black hole, neutron</span>
+                </span>
+              </span>
+            </button>
+            <button type="button" class="btn secondary" id="ovColonize" data-overlay-path="/colonize-overlay.html">
+              <span class="overlay-pick-row">
+                <span class="overlay-check" aria-hidden="true"></span>
+                <span class="btn-lines">
+                  <strong>Colonize</strong>
+                  <span class="subline">Your construction sites, what to unload when docked at one, and the haul plan's next stop</span>
+                </span>
+              </span>
+            </button>
+            <button type="button" class="btn secondary" id="ovShip" data-overlay-path="/ship-overlay.html">
+              <span class="overlay-pick-row">
+                <span class="overlay-check" aria-hidden="true"></span>
+                <span class="btn-lines">
+                  <strong>Ship</strong>
+                  <span class="subline">Your ship drawn part by part: hull and module damage, worst first</span>
+                </span>
+              </span>
+            </button>
+          </div>
+          <div class="hud-settings">
+            <!--
+              Grouped (owner, 2026-10-04: "the HUD options are quite a lot … less chaotic, with
+              hover-on details for each one"). Six folds, in the order a commander reaches for them;
+              each remembers whether it was open. Every control explains itself on hover.
+            -->
+            <p class="hud-warn" id="hudDisplayWarn" hidden></p>
+
+            <details class="hud-group" data-group="show" open>
+              <summary title="Whether the HUDs are on screen, and when they step aside by themselves">Show &amp; hide</summary>
+              <div class="hud-set-row">
+                <span id="hudVisSummary">HUDs are shown</span>
+                <span class="hud-vis" role="group" aria-label="Show or hide every HUD" title="Every HUD at once. Ctrl + Alt + H does the same in game (change it in Key binds); the choice is kept for the next start.">
+                  <button type="button" class="hud-vis-btn" id="hudVisShow" aria-pressed="true">Show</button>
+                  <button type="button" class="hud-vis-btn" id="hudVisHide" aria-pressed="false">Hide</button>
+                </span>
+              </div>
+              <div class="hud-set-row">
+                <label title="While Elite runs but another window is in front, the HUDs step aside, and come back when you return to the game. This app's own windows do not count. Without the game running they are always hidden; the hotkey still shows them."><input type="checkbox" id="hudHideUnfocused" /> Hide when Elite is not in front</label>
+              </div>
+              <div class="hud-set-row">
+                <label title="Exo candidates only for a body with biological signals, the distance tracker only near a surface, the discovery scan only while bodies are left to find, notable planets only where there are some, notices only while one is new. A HUD with nothing to show steps out of the stack and comes back by itself."><input type="checkbox" id="hudRelevant" /> Only when relevant</label>
+              </div>
+              <p class="hud-hint"><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>H</kbd> shows and hides them in game.</p>
+            </details>
+
+            <details class="hud-group" data-group="look">
+              <summary title="Style, colour, size and how much of the game shows through">Look</summary>
+              <div class="hud-set-row">
+                <label for="hudType" title="Original: the app's own panel. Title Background: flat, each title on a solid bar. Elite Style: the game's own panels — no plate, two neon lines round each title, status squares, an angle of its own.">Style</label>
+                <select id="hudType" aria-label="HUD type">
+                  <option value="original">HUD Type - Original (default)</option>
+                  <option value="title">HUD Type - Title Background</option>
+                  <option value="elite">HUD Type - Elite Style</option>
+                </select>
+              </div>
+              <div class="hud-sub" id="hudTiltRow">
+                <div class="hud-set-row">
+                  <label for="hudTiltMode" title="Turn: the panel swings like a door, its far edge going into the screen, like the cockpit's side panels. Slant: the panel stays the same width border to border; only its lines and text run at the angle.">Angle</label>
+                  <select id="hudTiltMode" aria-label="How the Elite Style is angled">
+                    <option value="turn">Turn (3D, swings like a door)</option>
+                    <option value="slant">Slant (flat, same width)</option>
+                  </select>
+                </div>
+                <div class="hud-set-row" id="hudTurnRow">
+                  <label for="hudTilt" title="Positive: the right edge goes into the screen — for a HUD on the left. Negative: the left edge — for a HUD on the right. 0: flat.">Turn <output id="hudTiltOut">15°</output></label>
+                  <input type="range" id="hudTilt" min="-35" max="35" step="1" value="15" />
+                </div>
+                <div class="hud-set-row" id="hudSlantRow">
+                  <label for="hudSlant" title="Positive: the lines rise to the right. Negative: they fall. The window grows a little above and below to hold the lift.">Slant <output id="hudSlantOut">6°</output></label>
+                  <input type="range" id="hudSlant" min="-15" max="15" step="1" value="6" />
+                </div>
+              </div>
+              <div class="hud-set-row hud-set-row--stack">
+                <span title="The accent colour of every HUD: lines, titles, labels. Your saved schemes are listed after the presets.">Colour</span>
+                <div class="hud-swatches" id="hudSwatches" role="radiogroup" aria-label="HUD colour preset"></div>
+              </div>
+              <div class="hud-set-row">
+                <label for="hudThemeAccent" title="Pick your own accent: lines, titles and labels.">Custom accent <input type="color" id="hudThemeAccent" value="#ff8a1f" /></label>
+                <label for="hudThemeText" title="Pick your own text colour: the readings themselves.">Custom text <input type="color" id="hudThemeText" value="#ffe6cf" /></label>
+              </div>
+              <div class="hud-set-row">
+                <input type="text" id="hudSchemeName" maxlength="24" placeholder="Name your colours to keep them" aria-label="Scheme name" title="Give the current colours a name to keep them as a swatch above." />
+                <button type="button" class="btn secondary" id="hudSchemeSave" title="Keep the current accent and text colours as a named swatch.">Save scheme</button>
+              </div>
+              <div class="hud-set-row">
+                <label for="hudScale" title="Every HUD's size: text, lines and the windows with them.">Size <output id="hudScaleOut">100 %</output></label>
+                <input type="range" id="hudScale" min="50" max="200" step="5" value="100" />
+              </div>
+              <div class="hud-set-row">
+                <label for="hudAlpha" title="How dark the panel behind the text is; the text and lines stay solid. The Elite Style has no panel, so this does nothing there.">Background opacity <output id="hudAlphaOut">45 %</output></label>
+                <input type="range" id="hudAlpha" min="10" max="100" step="1" value="45" />
+              </div>
+              <div class="hud-set-row">
+                <label title="Hides the explanatory lines under the readings, for a smaller HUD once you know what everything means."><input type="checkbox" id="hudCompact" /> Compact: readings only, no explanations</label>
+              </div>
+              <div class="hud-set-row">
+                <label for="hudCredit" title="A small &quot;HUD Overlay by EDEXO&quot; line on every HUD, for whoever watches your stream or your screenshots and wonders where it is from.">Credit line</label>
+                <select id="hudCredit">
+                  <option value="off">Off</option>
+                  <option value="top">Top</option>
+                  <option value="bottom">Bottom</option>
+                </select>
+              </div>
+              <div class="hud-set-row">
+                <label title="One line under the Next jump HUD: the boxel within 500 ly likely to pay most in first footfalls per jump, from the galaxy map's Expedition planner."><input type="checkbox" id="hudNextBoxel" /> Next boxel line on the jump HUD</label>
+              </div>
+            </details>
+
+            <details class="hud-group" data-group="position">
+              <summary title="Where the HUDs sit and in which order">Position</summary>
+              <div class="hud-set-row">
+                <label for="hudCorner" title="The corner of the game's screen the stack sits in. A stack taller than the screen goes on in a second column.">Screen corner</label>
+                <select id="hudCorner">
+                  <option value="tr">Top right</option>
+                  <option value="tl">Top left</option>
+                  <option value="br">Bottom right</option>
+                  <option value="bl">Bottom left</option>
+                </select>
+              </div>
+              <div class="hud-set-row" id="hudFreeRow">
+                <label title="The HUDs leave the corner and sit wherever you drag them, on any screen. The spot is kept for the next start."><input type="checkbox" id="hudFree" /> Free move: place them anywhere</label>
+                <span class="btn-mini-wrap" id="hudMoveWrap" title="Tick &quot;Free move&quot; first: the HUD can only be placed by hand in free move.">
+                  <button type="button" class="btn-mini" id="hudMove" disabled>Move HUD</button>
+                </span>
+              </div>
+              <p class="hud-hint" id="hudMoveHint" hidden>
+                Drag a HUD by its frame to where you want it, then press Done (on the HUD or here). Near the bottom of a
+                screen it grows upwards.
+              </p>
+              <p class="hud-hint" title="The first in the list is outermost: the top of a top-corner stack, the bottom of a bottom-corner one.">Order in the stack</p>
+              <ul class="hud-order" id="hudOrderList" aria-label="Order of the HUDs in the stack"></ul>
+            </details>
+
+            <details class="hud-group" data-group="content">
+              <summary title="What the HUDs list and how far the radar reaches">What they show</summary>
+              <div class="hud-set-row">
+                <label for="hudCandOrder" title="The Exo candidates HUD: by how likely each genus is (as in the app), or by value, highest first.">Candidate order</label>
+                <select id="hudCandOrder">
+                  <option value="likelihood">Genus likelihood (as in the app)</option>
+                  <option value="value">Value, highest CR first</option>
+                </select>
+              </div>
+              <div class="hud-set-row">
+                <label title="A line with the codex region you are in, on the Exo candidates HUD."><input type="checkbox" id="hudRegion" checked /> Show the current region</label>
+              </div>
+              <div class="hud-set-row" id="radarRadiusRow" hidden>
+                <label for="radarRadiusM" title="How far out the sample radar draws, in metres. Anything further becomes an arrow on its rim with the distance beside it.">Radar range</label>
+                <span>
+                  <input type="number" id="radarRadiusM" step="50" /> m
+                </span>
+              </div>
+            </details>
+
+            <details class="hud-group" data-group="colonize">
+              <summary title="What the Colonize HUD shows besides the next stop of the haul plan">Colonize</summary>
+              <div class="hud-set-row">
+                <label title="The site the HUD follows (docked at it, or the one the next trip delivers to): every material it still needs, with a bar that fills as it is delivered."><input type="checkbox" id="hudCzNeeds" checked /> The site's materials, with bars</label>
+              </div>
+              <div class="hud-set-row">
+                <label title="The other sites being built, with how far along each is."><input type="checkbox" id="hudCzSites" checked /> Other sites being built</label>
+              </div>
+              <div class="hud-set-row">
+                <label title="Lines already bought and materials delivered in full leave the HUD. Tick this to keep them, last in each list and in green."><input type="checkbox" id="hudCzFinished" /> Show finished lines (green, at the bottom)</label>
+              </div>
+            </details>
+
+            <details class="hud-group" data-group="sound">
+              <summary title="Sounds while sampling">Sound</summary>
+              <div class="hud-set-row">
+                <label title="A tone when you clear the sample distance from the last plant, and another on the third sample. Off by default."><input type="checkbox" id="hudAudio" /> Audio cues: distance cleared, third sample</label>
+              </div>
+            </details>
+
+            <details class="hud-group" data-group="advanced">
+              <summary title="How often the HUDs read the game">Advanced</summary>
+              <div class="hud-set-row">
+                <span id="hudPollSummary" title="The HUDs follow the game's Status.json and journal; this is how often the app reads them.">The HUDs follow Status.json</span>
+                <button type="button" class="btn-mini" id="btnPollFromOverlay" title="Change how often the app reads Status.json and the journal.">Change polling</button>
+              </div>
+            </details>
+          </div>
+          <button type="button" class="btn secondary" id="overlayPickClose">
+            <span class="btn-lines"><strong>Close</strong></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backups (owner, 2026-09-28; src/server/backup.ts). Settings apply as they change. -->
+    <div class="modal-bg" id="backupModal">
+      <div class="modal">
+        <div class="modal-in">
+          <h3>Backups</h3>
+          <p class="hint" style="margin-top: 0">
+            Your journals, this app's data (settings, on-foot scans, surface marks, statistics, the miss
+            log) and your exomastery and codex downloads, in one zip each time.
+          </p>
+          <div class="backup-state" id="backupState">…</div>
+          <div class="row">
+            <button type="button" class="btn secondary" id="backupOpenFolder"><span class="btn-lines"><strong>Open folder</strong></span></button>
+            <button type="button" class="btn" id="backupNow"><span class="btn-lines"><strong>Back up now</strong></span></button>
+          </div>
+          <div class="backup-state" id="backupMsg" hidden></div>
+          <div class="import-newer" id="backupRestartRow" hidden>
+            <span>A restore is ready. It is applied when the app starts again.</span>
+            <button type="button" class="btn-mini" id="backupRestart">Restart now</button>
+          </div>
+
+          <div class="modal-section">
+            <h4>When</h4>
+            <div class="hud-set-row">
+              <label><input type="checkbox" id="backupOnLeave" /> When I leave the game</label>
+            </div>
+            <div class="import-newer" id="backupNeedsFolder" hidden>
+              <span>
+                <strong>Confirm a folder first.</strong> Nothing is backed up on its own until you do. Any
+                folder works — the one below, another drive, or a USB drive.
+              </span>
+              <button type="button" class="btn-mini" id="backupUseFolder">Use this folder</button>
+            </div>
+            <div class="hud-set-row">
+              <label for="backupEvery">And while the app runs</label>
+              <select id="backupEvery">
+                <option value="0">Not on a timer</option>
+                <option value="6">Every 6 hours</option>
+                <option value="12">Every 12 hours</option>
+                <option value="24">Every 24 hours</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <h4>Where</h4>
+            <div class="backup-folder hud-set-row">
+              <input type="text" id="backupFolder" autocomplete="off" aria-label="Backup folder" />
+              <button type="button" class="btn-mini" id="backupBrowse">Browse…</button>
+            </div>
+            <div class="backup-risk" id="backupRisk" role="status" hidden></div>
+            <p class="hint">
+              A folder on another drive, or one OneDrive or Dropbox keeps, survives a failed disk or a
+              reinstall. The app data folder itself does not.
+            </p>
+            <p class="hint">
+              <strong>USB drives work</strong>, and are the best choice when the computer has only one
+              drive (most laptops). If it is not plugged in when a backup is due, the launcher says so,
+              and the next backup after you plug it in catches up.
+            </p>
+            <div class="hud-set-row">
+              <label for="backupKeep">Keep at least</label>
+              <span><input type="number" id="backupKeep" min="1" max="100" step="1" /> backups</span>
+            </div>
+            <p class="hint">
+              Every backup holds everything, so keeping 5 means 5 complete copies; the oldest goes when a
+              new one is made. Files that have not changed are copied from the backup before instead of
+              compressed again, which keeps it quick.
+            </p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Also include</h4>
+            <div class="hud-set-row">
+              <label><input type="checkbox" id="backupKeys" /> Your EDSM and LAN keys</label>
+            </div>
+            <div class="hud-set-row">
+              <label><input type="checkbox" id="backupBio" /> The bio-bodies file (about 0.5 GB)</label>
+            </div>
+            <p class="hint">
+              Keys are off by default: a backup gets copied around, and a key in it goes with it. The
+              bio-bodies file comes back by importing the Spansh export again.
+            </p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Restore</h4>
+            <p class="hint" style="margin-top: 6px">
+              <strong>App data</strong> is put back when the app next starts; every file it replaces is
+              kept in a <em>before-restore</em> folder. <strong>Journals</strong> go into a folder you
+              choose, and never replace a file that is already there.
+            </p>
+            <ul class="backup-list" id="backupList"></ul>
+          </div>
+
+          <div class="err-msg" id="backupErr" style="display: none"></div>
+          <div class="row">
+            <button type="button" class="btn secondary" id="backupClose"><span class="btn-lines"><strong>Close</strong></span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="importModal">
+      <div class="modal">
+        <div class="modal-in">
+          <h3>Import Spansh export</h3>
+          <p class="hint" style="margin-top: 0">
+            The same importer as <strong>feeder -- import-dump</strong>: four gates (probe, field lists, id identity, no
+            oversized ids), update-only. Validate first; nothing is written until you tick <strong>apply</strong>. A
+            galaxy-scale file takes minutes and the app is slower while it runs.
+          </p>
+          <input type="text" id="importFile" placeholder="Full path to galaxy_bio.jsonl.gz" autocomplete="off" />
+          <div class="hud-set-row"><label><input type="checkbox" id="importApply" /> Apply (write matched bodies)</label></div>
+          <div class="import-newer" id="importNewer" hidden>
+            <span id="importNewerText">A newer export is on disk.</span>
+            <button type="button" class="btn-mini" id="importNewerGo">Re-import now</button>
+          </div>
+          <div class="import-status" id="importStatus" hidden></div>
+          <div class="row">
+            <button type="button" class="btn secondary" id="importClose"><span class="btn-lines"><strong>Close</strong></span></button>
+            <button type="button" class="btn" id="importStart"><span class="btn-lines"><strong>Start</strong></span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import visited systems (plan 6.1): the game's VisitedStarsCache.dat, per account. -->
+    <div class="modal-bg" id="visitedModal">
+      <div class="modal">
+        <div class="modal-in">
+          <h3>Import visited systems</h3>
+          <p class="hint" style="margin-top: 0">
+            The game keeps a list of every system your account has visited, even ones your journals no longer have
+            (a reinstall, a new PC). Imported, those systems count as visited on the galaxy map, in Find and in the
+            expedition planner. The list has no bodies or biology, so your statistics and discoveries do not change.
+            Nothing leaves this PC.
+          </p>
+          <div class="import-status" id="visitedImported" hidden></div>
+          <ul class="visited-list" id="visitedList"></ul>
+          <div class="import-status" id="visitedStatus" hidden></div>
+          <div class="row">
+            <button type="button" class="btn secondary" id="visitedRemove" hidden><span class="btn-lines"><strong>Remove the import</strong></span></button>
+            <button type="button" class="btn" id="visitedClose"><span class="btn-lines"><strong>Close</strong></span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Linux setup (owner, 2026-09-28): what is missing here and the command for this distro. Shown at
+         start only when something fails, until closed for that set of problems. -->
+    <div class="modal-bg" id="linuxSetupModal">
+      <div class="modal">
+        <div class="modal-in">
+          <h3>Linux setup</h3>
+          <p class="hint" style="margin-top: 0" id="linuxSetupIntro"></p>
+          <ul class="linux-setup-list" id="linuxSetupList"></ul>
+          <div class="row" style="margin-top: 10px">
+            <button type="button" class="btn secondary" id="linuxSetupRecheck"><span class="btn-lines"><strong>Check again</strong></span></button>
+            <button type="button" class="btn" id="linuxSetupClose"><span class="btn-lines"><strong>Close</strong></span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- What's new (combined plan, Phase 5): once after an update, and from the version line. -->
+    <div class="modal-bg" id="whatsNewModal">
+      <div class="modal wide">
+        <div class="modal-in">
+          <h3 id="whatsNewTitle">What's new</h3>
+          <div class="whats-new-body" id="whatsNewBody"></div>
+          <div class="row">
+            <button type="button" class="btn secondary" id="whatsNewPage"><span class="btn-lines"><strong>Release page</strong></span></button>
+            <button type="button" class="btn" id="whatsNewClose"><span class="btn-lines"><strong>Got it</strong></span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="wizardModal">
+      <div class="modal">
+        <div class="modal-in">
+          <h3>First run</h3>
+          <p class="hint" style="margin-top: 0">
+            A few things and you are set. This shows once; all of it stays in the launcher after (HUDs in the Overlay
+            menu, LAN access under Network, Close to tray at the bottom).
+          </p>
+          <ol class="wizard-steps">
+            <li>
+              <div>
+                Journal folder
+                <span class="st" id="wzJournal">checking…</span>
+                <div class="hint" id="wzJournalDir" style="margin-top: 2px"></div>
+              </div>
+            </li>
+            <li>
+              <div>
+                Open a HUD to see the overlay over the game. Ctrl+Alt+H hides and shows them.
+                <span class="st" id="wzHud"></span>
+              </div>
+            </li>
+            <li>
+              <div>Open Compare from the big button when you are in a system with biology.</div>
+            </li>
+            <!-- First-run questions (combined plan, Phase 5 [O-B]): the two settings people trip over. -->
+            <li id="wzLanStep" hidden>
+              <div>
+                Use it on a phone, tablet or second PC as well?
+                <label class="wz-q"><input type="checkbox" id="wzLan" /> <span>Yes: LAN access on</span></label>
+                <span class="st" id="wzLanSt"></span>
+              </div>
+            </li>
+            <li id="wzTrayStep" hidden>
+              <div>
+                Keep it running in the tray when you close the window?
+                <label class="wz-q"><input type="checkbox" id="wzTray" /> <span>Yes: Close to tray</span></label>
+                <span class="hint" id="wzTrayNote"></span>
+              </div>
+            </li>
+          </ol>
+          <div class="row">
+            <button type="button" class="btn secondary" id="wzSetJournal"><span class="btn-lines"><strong>Set journal folder</strong></span></button>
+            <button type="button" class="btn secondary" id="wzOpenHud"><span class="btn-lines"><strong>Open a HUD</strong></span></button>
+          </div>
+          <div class="row" style="margin-top: 10px">
+            <button type="button" class="btn" id="wzDone"><span class="btn-lines"><strong>Done</strong></span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-bg" id="modal">
+      <div class="modal">
+        <div class="modal-in">
+          <h3>Journal folder &amp; polling</h3>
+          <p class="hint">Usually: Saved Games → Frontier Developments → Elite Dangerous</p>
+          <input type="text" id="journalInput" placeholder="Full path to folder containing Journal.*.log" autocomplete="off" />
+          <div class="err-msg" id="optErr" style="display: none"></div>
+
+          <div class="modal-section" id="pollSection" hidden>
+            <h4>How often the files are read</h4>
+            <p class="hint">
+              Applied as soon as you change them — no relaunch. Lower is quicker to react and costs
+              more disk reads; the journal also wakes early on its own when Elite writes to it.
+            </p>
+            <div class="hud-set-row">
+              <label for="pollStatusMs">Status.json <span class="hint" style="margin: 0">position, fuel, target</span></label>
+              <span>
+                <input type="number" id="pollStatusMs" step="50" /> ms
+              </span>
+            </div>
+            <div class="hud-set-row">
+              <label for="pollJournalMs">Journal log <span class="hint" style="margin: 0">events and rotation</span></label>
+              <span>
+                <input type="number" id="pollJournalMs" step="250" /> ms
+              </span>
+            </div>
+            <div class="hud-set-row">
+              <span class="poll-applied" id="pollApplied">Applied</span>
+              <button type="button" class="btn secondary" id="pollDefaults">
+                <span class="btn-lines"><strong>Defaults</strong></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="row">
+            <button type="button" class="btn secondary" id="modalCancel">
+              <span class="btn-lines"><strong>Cancel</strong></span>
+            </button>
+            <button type="button" class="btn" id="modalSave">
+              <span class="btn-lines"><strong>Save &amp; rescan</strong></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./launcher/main.js"></script>
+  </body>
+</html>

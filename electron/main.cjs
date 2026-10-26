@@ -330,6 +330,57 @@ function registerFootOverlayIpc(iconForChild) {
   );
 }
 
+/** The server child's options, kept for a restart (per-commander profiles, 1.3.1). */
+let serverOptions = null;
+let switchingCommander = false;
+
+/** What main listens to on the server's runtime; again after each restart. */
+function wireRuntime() {
+  // Boxel scanning: whatever the run, a jump or a boxel key picks goes on the clipboard.
+  if (runtime && typeof runtime.onBoxelNext === "function") runtime.onBoxelNext((name) => clipboard.writeText(name));
+  if (runtime && typeof runtime.onGameRunning === "function") {
+    if (runtime.gameRunning() === false) huds.setGameAway(true);
+    runtime.onGameRunning((running) => {
+      console.log(`[edexo-compare] Elite ${running ? "running" : "not running"}: overlays ${running ? "back" : "hidden"}`);
+      huds.setGameAway(!running);
+    });
+  }
+}
+
+/*
+  Show another commander (per-commander profiles, 1.3.1): the server runs for one commander at a time, so it is
+  stopped (it writes what it holds) and started again for this one, on the same address. The app's own windows load
+  again, so nothing on screen is the other commander's; browser tabs wait for the new commander and reload themselves.
+*/
+async function restartServerFor(fid) {
+  try {
+    process.env.EDEXO_COMMANDER = fid;
+    huds.log(`switching commander (${fid})`);
+    await runtime.shutdown();
+    runtime = await startServerChild(serverOptions);
+    wireRuntime();
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (w.isDestroyed()) continue;
+      let url = "";
+      try {
+        url = w.webContents.getURL();
+      } catch {
+        continue;
+      }
+      if (isOwnUrl(url, ownBase)) w.webContents.reload();
+    }
+  } catch (e) {
+    console.error("[edexo-compare] could not start the server for the other commander:", e);
+    try {
+      dialog.showErrorBox("EDEXO — switching commander failed", String(e && e.message ? e.message : e));
+    } catch {
+      /* ignore */
+    }
+  } finally {
+    switchingCommander = false;
+  }
+}
+
 async function start() {
   startDiagnostics();
   try {
@@ -413,7 +464,7 @@ async function start() {
       /* the server falls back to the home folder's */
     }
   }
-  runtime = await startServerChild({
+  serverOptions = {
     utilityProcess,
     bundle,
     mode,
@@ -441,7 +492,8 @@ async function start() {
       quitFlow.allowExit();
       app.quit();
     },
-  });
+  };
+  runtime = await startServerChild(serverOptions);
   diag?.mark("server started");
   /*
     The pages' files from disk while the server's journal boot holds its thread (staticShell.cjs; owner,
@@ -545,6 +597,15 @@ async function start() {
     toggleVisibility: (o) => ({
       hidden: huds.toggleVisibility(o && typeof o.hidden === "boolean" ? o.hidden : undefined),
     }),
+    // Per-commander profiles (1.3.1): answered now, the restart a moment later so the server's reply still goes out.
+    switchCommander: (o) => {
+      const fid = o && typeof o.fid === "string" ? o.fid : "";
+      if (!fid) return { ok: false, error: "No commander given." };
+      if (switchingCommander) return { ok: false, error: "Already switching." };
+      switchingCommander = true;
+      setTimeout(() => void restartServerFor(fid), 300);
+      return { ok: true };
+    },
   };
 
   huds.loadLayout();
@@ -601,15 +662,7 @@ async function start() {
   trayControl.create(winIcon);
   // Overlays step aside while Elite is not running and come back with it (server gamePresence.ts;
   // guild tester report, 2026-09-30). The hotkey still shows them on demand.
-  // Boxel scanning: whatever the run, a jump or a boxel key picks goes on the clipboard.
-  if (runtime && typeof runtime.onBoxelNext === "function") runtime.onBoxelNext((name) => clipboard.writeText(name));
-  if (runtime && typeof runtime.onGameRunning === "function") {
-    if (runtime.gameRunning() === false) huds.setGameAway(true);
-    runtime.onGameRunning((running) => {
-      console.log(`[edexo-compare] Elite ${running ? "running" : "not running"}: overlays ${running ? "back" : "hidden"}`);
-      huds.setGameAway(!running);
-    });
-  }
+  wireRuntime();
   /*
     ...and while it runs but another program is in front (owner, 2026-09-30). A short wait before
     hiding, so alt-tabbing past something does not flicker them; back at once with the game. This
