@@ -110,6 +110,12 @@ describe("the server's memory line (2026-10-26)", () => {
     expect(buildDiagnosticsText({ ...base, memory: never })).toContain("galaxy data not loaded since start");
   });
 
+  it("counts the galaxy files where Electron's Node reports them (external, arrayBuffers 0)", () => {
+    const electron = { ...usage, arrayBuffers: 0, external: 410 * mb };
+    const m = serverMemory({ held: false, lastTouch: 0, idleMs: 300_000, releasedCount: 0 }, electron, now);
+    expect(m.buffersMb).toBe(410);
+  });
+
   it("is left out when not given", () => {
     expect(buildDiagnosticsText(base)).not.toContain("Server memory");
   });

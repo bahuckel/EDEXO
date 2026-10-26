@@ -141,7 +141,8 @@ export function serverMemory(
   return {
     rssMb: mb(usage.rss),
     heapMb: mb(usage.heapUsed),
-    buffersMb: mb(usage.arrayBuffers),
+    // Electron's Node reports Buffers under `external` and 0 for `arrayBuffers` (probed 2026-10-26); plain Node fills both.
+    buffersMb: mb(Math.max(usage.arrayBuffers, usage.external)),
     galaxy: {
       held: galaxy.held,
       lastUsedAgoS: galaxy.lastTouch ? Math.round((now - galaxy.lastTouch) / 1000) : null,
