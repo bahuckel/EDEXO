@@ -626,6 +626,16 @@ describe("free move (owner, 2026-10-02: the HUD anywhere, on any screen)", () =>
     expect(a!.bounds).toMatchObject({ x: 1920 - 14 - 404, y: 14 });
   });
 
+  it("free move with no spot in the file keeps the corner, and saves no made-up spot (owner, 2026-10-26)", async () => {
+    // A layout file the Tauri test shell rewrote: free move on, its own `freePx`, no `free`.
+    writeFileSync(layoutFile, JSON.stringify({ corner: "tr", order: [], freeOn: true, freePx: { x: 2996, y: 534 } }));
+    const huds = make();
+    huds.loadLayout();
+    const [a] = await twoHuds(huds);
+    expect(a!.bounds).toMatchObject({ x: 1920 - 14 - 404, y: 14 });
+    expect(JSON.parse(readFileSync(layoutFile, "utf8")).free ?? null).toBeNull();
+  });
+
   it("comes back from the layout file at the saved spot", async () => {
     writeFileSync(layoutFile, JSON.stringify({ corner: "tr", order: [], freeOn: true, free: { x: 300, y: 200, bottom: false } }));
     const huds = make();

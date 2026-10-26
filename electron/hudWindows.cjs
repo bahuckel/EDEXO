@@ -338,7 +338,16 @@ function createHudWindows(deps) {
     const free = next.free === null ? null : (freePointFrom(next.free) ?? hudLayout.free);
     hudLayout = { corner, order, freeOn, free };
     // Switched on with no spot saved yet: it stays where it is now instead of jumping.
-    if (freeOn && !free) hudLayout.free = currentStackPoint();
+    /*
+      Only from windows on the screen. Read from the file at start there are none yet, and the fallback spot (the top
+      left of the main screen) was taken and saved as the commander's (owner, 2026-10-26: "always top right ... I had
+      to move it" after each rebuild; a layout file missing `free` came from the Tauri test shell). Free move with no
+      spot keeps the corner until the stack is placed.
+    */
+    if (freeOn && !free) {
+      const here = placedStackPoint();
+      if (here) hudLayout.free = here;
+    }
     if (!freeOn && moving) setMoveMode(false);
     if (typeof next.hideUnfocused === "boolean" && next.hideUnfocused !== hideUnfocused) {
       hideUnfocused = next.hideUnfocused;
@@ -603,6 +612,14 @@ function createHudWindows(deps) {
 
   /** Where the stack's top-left is now (its highest window's corner), as a free spot. */
   function currentStackPoint() {
+    const top = placedStackPoint();
+    if (top) return top;
+    const wa = screen.getPrimaryDisplay().workArea;
+    return { x: wa.x + 14, y: wa.y + 14, bottom: false };
+  }
+
+  /** The stack's top-left from windows that are on the screen, or null when none is (at start, before the restore). */
+  function placedStackPoint() {
     const { ordered } = orderedStack();
     let top = null;
     for (const s of ordered) {
@@ -613,9 +630,7 @@ function createHudWindows(deps) {
         /* a window going away */
       }
     }
-    if (top) return { x: top.x, y: top.y, bottom: false };
-    const wa = screen.getPrimaryDisplay().workArea;
-    return { x: wa.x + 14, y: wa.y + 14, bottom: false };
+    return top ? { x: top.x, y: top.y, bottom: false } : null;
   }
 
   /**
@@ -832,7 +847,7 @@ function createHudWindows(deps) {
    * as one column instead of four different boxes. The pages fill whatever width they are given.
    */
   function relayoutHudStack() {
-    if (hudLayout.freeOn) {
+    if (hudLayout.freeOn && hudLayout.free) {
       relayoutFreeStack();
       return;
     }
