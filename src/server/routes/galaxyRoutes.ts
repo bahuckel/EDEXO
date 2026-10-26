@@ -111,7 +111,7 @@ export function registerGalaxyRoutes(
    */
   /*
     What under /api/galaxy reads these keeps the map's memory alive (journal-only routes do not, see
-    JOURNAL_ONLY); five idle minutes lets it go (galaxyMemory.ts — the map is its own window, loaded
+    JOURNAL_ONLY); two idle minutes let it go (galaxyMemory.ts — the map is its own window, loaded
     fresh each time, owner 2026-09-28).
   */
   registerGalaxyCache("bio-index", clearBioIndexCache);

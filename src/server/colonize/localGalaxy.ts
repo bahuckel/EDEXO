@@ -8,7 +8,7 @@
  *   stations there; fleet carriers are not in it, and pads were known for 162 before, from Inara).
  *
  * The stations index is read on the first look-up that needs it (35 MB, about 10 ms) and only if downloaded, and let go
- * with the galaxy map's other caches five idle minutes after the last look-up (galaxyMemory.ts).
+ * with the galaxy map's other caches two idle minutes after the last look-up (galaxyMemory.ts).
  */
 import type { GameStateStore } from "../gameState.js";
 import { touchGalaxyMemory } from "../galaxyMemory.js";

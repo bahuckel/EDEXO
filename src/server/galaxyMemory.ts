@@ -17,10 +17,14 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 let lastTouch = 0;
 let releasedCount = 0;
 
-/** Default five minutes; `EDEXO_GALAXY_IDLE_MS` overrides it (tests, and anyone who wants it held). */
+/**
+ * Default two minutes (owner, 2026-10-26: was five; the map held ~360 MB in the server for five minutes after it
+ * closed, and opening it again after the release costs a second or two). `EDEXO_GALAXY_IDLE_MS` overrides it (tests,
+ * and anyone who wants it held).
+ */
 function idleMs(): number {
   const v = Number(process.env.EDEXO_GALAXY_IDLE_MS);
-  return Number.isFinite(v) && v > 0 ? v : 5 * 60_000;
+  return Number.isFinite(v) && v > 0 ? v : 2 * 60_000;
 }
 
 export function registerGalaxyCache(name: string, release: Release): void {
