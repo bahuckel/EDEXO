@@ -10,6 +10,14 @@ const expressViewStub = path.resolve(__dirname, "express-view-stub.cjs");
 
 mkdirSync("build", { recursive: true });
 
+/*
+  Minified (owner, 2026-10-26: server memory). V8 keeps every script's source text in memory for lazy compilation, and
+  the unminified app.cjs was 3.9 MB of it (7.5 MB in the heap snapshot); minified it parses faster too. Names are kept
+  (Function.name / class names stay what the code says), and a source map is written beside each bundle for reading a
+  crash log's stack; it is not packed (electron-builder.cjs lists the .cjs files only).
+*/
+const lean = { minify: true, keepNames: true, sourcemap: "external" };
+
 await esbuild.build({
   entryPoints: ["src/server/devEntry.ts"],
   bundle: true,
@@ -18,6 +26,7 @@ await esbuild.build({
   format: "cjs",
   outfile: "build/app.cjs",
   logLevel: "info",
+  ...lean,
   plugins: [
     {
       name: "express-view-stub",
@@ -48,6 +57,7 @@ await esbuild.build({
   format: "cjs",
   outfile: "build/browser-adblock.cjs",
   logLevel: "info",
+  ...lean,
 });
 console.info("Wrote build/browser-adblock.cjs");
 
@@ -63,6 +73,7 @@ await esbuild.build({
   format: "cjs",
   outfile: "build/finder-worker.cjs",
   logLevel: "info",
+  ...lean,
 });
 console.info("Wrote build/finder-worker.cjs");
 
