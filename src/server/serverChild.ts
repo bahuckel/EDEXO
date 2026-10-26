@@ -40,14 +40,57 @@ interface ParentPort {
   postMessage(msg: unknown): void;
 }
 
-/** The port to the main process, present only when started as an Electron utility process. */
+/** The port to the main process: Electron's utility-process port, or stdin/stdout for another shell. */
 function parentPort(): ParentPort | null {
+  if (process.env.EDEXO_SERVER_CHILD === "stdio") return stdioPort();
   return (process as unknown as { parentPort?: ParentPort }).parentPort ?? null;
 }
 
-/** True in the utility process electron/serverChild.cjs starts. */
+/** Marks the lines on stdout that are messages; anything else a library prints there is not one. */
+export const STDIO_MESSAGE_PREFIX = "@edexo ";
+
+/**
+ * The same messages over stdin and stdout, one JSON object per line (Tauri test shell, docs/plan-25102026-tauri-1.4.0.md
+ * phase 0). The server's own console output goes to stderr in this mode, so stdout carries only messages; a line read
+ * that is not JSON is ignored. stdin closing means the shell has gone: the server stops as on "shutdown".
+ */
+export function stdioPort(
+  input: NodeJS.ReadableStream = process.stdin,
+  write: (line: string) => void = (line) => void process.stdout.write(line),
+): ParentPort {
+  if (input === process.stdin) {
+    for (const k of ["log", "info", "debug"] as const) console[k] = console.error;
+  }
+  const listeners: ((e: { data: unknown }) => void)[] = [];
+  let buf = "";
+  const deliver = (data: unknown) => {
+    for (const cb of listeners) cb({ data });
+  };
+  input.setEncoding?.("utf8");
+  input.on("data", (chunk: string | Buffer) => {
+    buf += String(chunk);
+    let i: number;
+    while ((i = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (!line) continue;
+      try {
+        deliver(JSON.parse(line));
+      } catch {
+        /* not a message */
+      }
+    }
+  });
+  input.on("end", () => deliver({ type: "shutdown" }));
+  return {
+    on: (_event, cb) => void listeners.push(cb),
+    postMessage: (msg) => write(STDIO_MESSAGE_PREFIX + JSON.stringify(msg) + "\n"),
+  };
+}
+
+/** True in the utility process electron/serverChild.cjs starts, or under a shell that talks over stdio. */
 export function isServerChild(): boolean {
-  return process.env.EDEXO_SERVER_CHILD === "1";
+  return process.env.EDEXO_SERVER_CHILD === "1" || process.env.EDEXO_SERVER_CHILD === "stdio";
 }
 
 /** The runtime methods main may call. Anything else is refused, not looked up by name. */
@@ -68,7 +111,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export function runServerChild(): void {
   const port = parentPort();
   if (!port) {
-    console.error("[edexo-compare] EDEXO_SERVER_CHILD is set, but this is not an Electron utility process.");
+    console.error("[edexo-compare] EDEXO_SERVER_CHILD is set, but this is not an Electron utility process (set it to \"stdio\" for another shell).");
     process.exit(1);
   }
   const post = (m: Msg) => port.postMessage(m);

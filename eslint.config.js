@@ -20,6 +20,8 @@ export default tseslint.config(
       // The local scratch folder (excluded from git in .git/info/exclude): it failed `npm run lint` on this
       // machine with 23 errors that are nobody's code (code review A19).
       "tmp-t/**",
+      // The Tauri test shell (docs/plan-25102026-tauri-1.4.0.md): its own Rust project; the shim is checked by hand.
+      "tauri/**",
     ],
   },
   js.configs.recommended,
