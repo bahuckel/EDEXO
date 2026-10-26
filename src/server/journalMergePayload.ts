@@ -117,8 +117,11 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
       `Loadout` (a full re-read finds them in the journals).
   38: `shipDamage` — the ship's damage part by part from Loadout, HullDamage, AfmuRepairs and repairs, for the HUD's
       Ship section (shared/shipDamage.ts, discuss item 32; a full re-read finds the last Loadout).
+  39: comp scans of colour-first genera ("Prasinum Sinuous Tubers", "Aureum Brain Tree", "Luteolum Anemone") and of
+      Bark Mounds / Amphora Plant / Crystalline Shards lock their real genus (shared/codexLog.ts codexGenusOfSpecies);
+      cached locks had the first word ("Prasinum") as the genus.
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 38;
+export const JOURNAL_MERGE_CACHE_FORMAT = 39;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {

@@ -54,6 +54,9 @@ function genusKeyOf(localised: string | null | undefined, symbol: string | null 
 }
 
 function lockGenusDisplay(l: OrganicGenusLock): string {
+  // The token's name first: the game's ScanOrganic for Sinuous Tubers says Genus_Localised "Roseum Sinuous Tubers".
+  const named = genusNameForCodexToken(l.genusSymbol ?? "");
+  if (named) return named;
   const g = (l.genusLocalised || "").trim();
   if (g) return g;
   return (l.speciesLocalised || "").trim().split(/\s+/)[0] ?? "";
