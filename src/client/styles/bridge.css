@@ -144,9 +144,14 @@
 
 /* ---- from 1500 px rows 2 and 3 share one line: chips left, numbers right ----------------------- */
 @media (min-width: 1500px) {
+  /*
+    The system card keeps the width it needs and the tiles take the rest of the line, wrapping onto a second line
+    (right-aligned) when they do not fit (owner, 2026-10-26: at 1500 px the card's chips ran under the ⊕ and DATA
+    VALUE tiles — the tiles took their whole one-line width and squeezed the card's column to 166 px).
+  */
   .top {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: max-content minmax(0, 1fr);
     grid-template-areas:
       "appbar appbar"
       "context tray";
@@ -156,10 +161,19 @@
   .top > .appbar {
     grid-area: appbar;
   }
+  /* The star chip under the system card, as the shared line always had it: the column is the card's width. */
+  .top > .sys-row .sys-row__cards {
+    flex-direction: column;
+    align-items: flex-start;
+  }
   .top > .header-tray {
     grid-area: tray;
     width: auto;
     margin-top: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 0.35rem;
+    overflow: visible;
   }
   .top > .header-edsm-map-note,
   .top > .header-commander-away,
