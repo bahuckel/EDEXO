@@ -27,6 +27,7 @@ import {
 } from "./journalMergeCache.js";
 import { backfillCommanderPosition } from "./commanderPositionBackfill.js";
 import { journalFolderIsReadable, makeReplayLineApplier } from "./journalReplayGuards.js";
+import { collectGarbageSoon } from "./collectGarbage.js";
 
 export type JournalPipelineDeps = {
   store: GameStateStore;
@@ -402,6 +403,8 @@ export function createJournalPipeline({
       getJournalListFilterOpts,
       () => store.journalPollMs,
     );
+    // The merge's leftovers (the cache's decoded payload, the replay's lines) go now, not minutes later.
+    collectGarbageSoon();
   }
 
   return {

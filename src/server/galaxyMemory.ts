@@ -8,6 +8,8 @@
  * garbage collector can have it. The next request rebuilds what it needs (about half a second).
  */
 
+import { collectGarbageSoon } from "./collectGarbage.js";
+
 type Release = () => void;
 
 const releases = new Map<string, Release>();
@@ -39,6 +41,8 @@ export function releaseGalaxyMemory(): void {
   timer = null;
   for (const release of releases.values()) release();
   releasedCount++;
+  // Freed now, not when V8's idle reducer gets to it (collectGarbage.ts).
+  collectGarbageSoon();
 }
 
 /** For the perf log and tests. */
