@@ -15,6 +15,7 @@ import {
   siblingMoonBodyIdsUnified,
 } from "./gameStateHelpers.js";
 import type { GameStateStore } from "./gameState.js";
+import { intern, internNamedPercents } from "./intern.js";
 
 /**
  * Journal `ScanBaryCentre`: the orbit of the `{ Null: BodyID }` node in `Scan.Parents`.
@@ -56,7 +57,7 @@ export function mergeBarycentreJournalLine(store: GameStateStore, line: JournalL
     systemAddress,
     bodyId: syntheticId,
     bodyName: prev?.bodyName?.trim() ? prev.bodyName : `Bary ⊥${nullIdRaw}`,
-    starSystem: pickStr(line.StarSystem) ?? prev?.starSystem ?? (store.currentSystem ?? "").trim() ?? "",
+    starSystem: intern(pickStr(line.StarSystem) ?? prev?.starSystem ?? (store.currentSystem ?? "").trim() ?? ""),
     updatedAt: ts,
     isBarycentreJournal: true,
     journalBarycentreNullId: nullIdRaw,
@@ -113,13 +114,14 @@ export function mergeExplorationScan(store: GameStateStore, line: JournalLine, t
     systemAddress,
     bodyId,
     bodyName: bodyName.trim(),
-    starSystem: pickStr(line.StarSystem) ?? prev?.starSystem ?? (store.currentSystem ?? "").trim() ?? "",
+    starSystem: intern(pickStr(line.StarSystem) ?? prev?.starSystem ?? (store.currentSystem ?? "").trim() ?? ""),
     updatedAt: ts,
   };
 
+  // Interned: classes, atmospheres, volcanism and the like repeat across thousands of bodies (intern.ts).
   const setStr = (key: keyof ExplorationScanRecord, v: unknown) => {
     const s = pickStr(v);
-    if (s) (rec as unknown as Record<string, unknown>)[key as string] = s;
+    if (s) (rec as unknown as Record<string, unknown>)[key as string] = intern(s);
   };
   const setNum = (key: keyof ExplorationScanRecord, v: unknown) => {
     const n = pickNum(v);
@@ -221,6 +223,7 @@ export function mergeExplorationScan(store: GameStateStore, line: JournalLine, t
     ) {
       /* Keep prev detailed composition — later basic scans sometimes send empty arrays. */
     } else {
+      internNamedPercents(incoming);
       rec.atmosphereComposition = incoming;
     }
   }
@@ -234,6 +237,7 @@ export function mergeExplorationScan(store: GameStateStore, line: JournalLine, t
     ) {
       /* Keep prev detailed materials — basic / repeat scans often carry Materials: [] and would wipe Zinc etc. */
     } else {
+      internNamedPercents(incoming);
       rec.materials = incoming;
     }
   }
