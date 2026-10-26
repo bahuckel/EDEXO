@@ -17,19 +17,23 @@ function DataValue({ d }: { d: HudSnapshot }) {
           {fmtCr(org)}
         </span>
       </div>
-      <div className="row">
-        <span className="k">Exploration scans</span>
-        <span className={"v" + (scanOn ? "" : " off")} data-f="scan">
-          {scanOn ? fmtCr(scanCr) : "off"}
-        </span>
-      </div>
+      {/* Only while ⊕ adds them (owner, 2026-10-25: "off" read as a fault); the note below says how to. */}
+      {scanOn ? (
+        <div className="row">
+          <span className="k">Exploration scans</span>
+          <span className="v" data-f="scan">
+            {fmtCr(scanCr)}
+          </span>
+        </div>
+      ) : null}
       <div className="row row--rule row--total">
         <span className="k">Total</span>
         <span className="v" data-f="tot">
           {fmtCr(org + (scanOn ? scanCr : 0))}
         </span>
       </div>
-      <p className="hud-note hud-explain" data-f="hint">
+      {/* With ⊕ off this is the only word about scans, so compact mode keeps it, a little larger. */}
+      <p className={scanOn ? "hud-note hud-explain" : "hud-note hud-note--lead"} data-f="hint">
         {scanOn
           ? "Total = organic + merged FSS/DSS scan estimate (same ⊕ toggle as the main UI)."
           : "Total = organic only. Enable ⊕ scan data in the main UI to add exploration CR."}

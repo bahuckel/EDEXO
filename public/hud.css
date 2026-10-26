@@ -340,6 +340,11 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
   color: var(--hud-hi);
   opacity: 0.62;
 }
+/* A note that stands in for a hidden row (Data value with ⊕ off): read first, so a size up. */
+.hud-note--lead {
+  font-size: 0.72rem;
+  opacity: 0.78;
+}
 .pay-est {
   color: var(--hud-text);
 }
