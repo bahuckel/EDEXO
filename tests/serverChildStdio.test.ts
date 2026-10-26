@@ -4,7 +4,8 @@
  */
 import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vitest";
-import { STDIO_MESSAGE_PREFIX, stdioPort } from "../src/server/serverChild.js";
+import { spawnSync } from "node:child_process";
+import { STDIO_MESSAGE_PREFIX, stdioPort, watchParent } from "../src/server/serverChild.js";
 
 describe("the server's stdio port", () => {
   it("reads one message per line, across chunks, and skips what is not JSON", () => {
@@ -23,6 +24,16 @@ describe("the server's stdio port", () => {
     const lines: string[] = [];
     stdioPort(new PassThrough(), (l) => lines.push(l)).postMessage({ type: "started", baseUrl: "http://127.0.0.1:7111" });
     expect(lines).toEqual([`${STDIO_MESSAGE_PREFIX}{"type":"started","baseUrl":"http://127.0.0.1:7111"}\n`]);
+  });
+
+  it("notices when the shell that started it is gone, and only then", async () => {
+    const gone = spawnSync(process.execPath, ["-e", "0"]).pid!;
+    const calls: string[] = [];
+    watchParent(() => calls.push("gone"), gone, 10);
+    const alive = watchParent(() => calls.push("alive?"), process.pid, 10);
+    await new Promise((r) => setTimeout(r, 80));
+    clearInterval(alive);
+    expect(calls).toEqual(["gone"]);
   });
 
   it("treats stdin closing as a shutdown", () => {

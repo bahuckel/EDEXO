@@ -88,6 +88,25 @@ export function stdioPort(
   };
 }
 
+/**
+ * Calls `onGone` once the process `ppid` no longer exists: a shell that started the server over stdio and was killed
+ * (the owner ended the Tauri test shell in Task Manager and its server stayed, 2026-10-26). stdin closing and the
+ * shell's Job object should already end it; this does not depend on either.
+ */
+export function watchParent(onGone: () => void, ppid: number = process.ppid, everyMs = 2000): NodeJS.Timeout {
+  const t = setInterval(() => {
+    try {
+      process.kill(ppid, 0);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ESRCH") return;
+      clearInterval(t);
+      onGone();
+    }
+  }, everyMs);
+  t.unref();
+  return t;
+}
+
 /** True in the utility process electron/serverChild.cjs starts, or under a shell that talks over stdio. */
 export function isServerChild(): boolean {
   return process.env.EDEXO_SERVER_CHILD === "1" || process.env.EDEXO_SERVER_CHILD === "stdio";
@@ -117,6 +136,13 @@ export function runServerChild(): void {
   const post = (m: Msg) => port.postMessage(m);
   let runtime: EdexoRuntime | null = null;
   let shuttingDown = false;
+  // Started over stdio: stop when that shell is gone, and do not wait more than 10 s for a clean stop then.
+  if (process.env.EDEXO_SERVER_CHILD === "stdio") {
+    watchParent(() => {
+      setTimeout(() => process.exit(0), 10_000);
+      void shutdown();
+    });
+  }
 
   // HUD bridge calls go to main's windows and come back as hudReply.
   let hudSeq = 0;
