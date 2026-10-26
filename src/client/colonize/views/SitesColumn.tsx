@@ -136,7 +136,9 @@ function SiteCard({ d, m, readOnly = false, holdHint = false }: { d: DepotSnapsh
   const docked = m.snap?.liveDocked?.marketId === d.marketId;
   const finished = d.complete || d.failed || t.remaining <= 0;
   const colonies = m.snap?.ownColonies ?? [];
-  const yours = colonies.length && d.starSystem ? !!colonyOf(d, colonies) : null;
+  // A commander with no claim at all sees "Helping" too (a guild member, 2026-10-25: a site listed although he owns
+  // none). Unknown while the site's system is.
+  const yours = d.starSystem ? !!colonyOf(d, colonies) : null;
   const followed = m.ui.hudFollow === d.marketId;
   const you = (d.contributions ?? []).reduce((a, c) => a + c.totalTons, 0);
   const inHold = open.reduce((a, r) => a + r.aboard, 0);
@@ -157,7 +159,14 @@ function SiteCard({ d, m, readOnly = false, holdHint = false }: { d: DepotSnapsh
           <div className="cz-chiprow">
             {yours === true ? <span className="sys-chip sys-chip--accent">Your colony</span> : null}
             {yours === false ? (
-              <span className="sys-chip sys-chip--dim" title="A system another commander claimed: you are helping build it">
+              <span
+                className="sys-chip sys-chip--dim"
+                title={
+                  colonies.length
+                    ? "A system another commander claimed: you docked here or delivered, so you are helping build it. Put away hides the card."
+                    : "No claim of yours is in the journals on this PC: another commander's site you docked at or delivered to. Put away hides the card. (A claim made before these journals is not known.)"
+                }
+              >
                 Helping
               </span>
             ) : null}

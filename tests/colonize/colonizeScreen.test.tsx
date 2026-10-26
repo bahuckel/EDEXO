@@ -163,6 +163,22 @@ describe("the Colonize window", () => {
     expect(host.querySelector("article[aria-label='Hammond Port'] > .cz-mats")?.textContent).not.toContain("Aluminium");
   });
 
+  it("a commander with no claim sees every site as Helping, and how to hide one (guild member, 2026-10-25)", async () => {
+    answers.getSnapshot = { ...snapshot, ownColonies: [] };
+    try {
+      act(() => root.render(<ColonizeScreen />));
+      await settle();
+      for (const name of ["Hammond Port", "Their Port"]) {
+        const chip = [...host.querySelectorAll(`article[aria-label='${name}'] .sys-chip`)].find((c) => c.textContent === "Helping");
+        expect(chip?.getAttribute("title"), name).toMatch(/No claim of yours.*Put away/);
+      }
+      expect(host.textContent).not.toContain("Your colony");
+      expect(host.querySelector("[data-testid='colonies']")).toBeNull();
+    } finally {
+      answers.getSnapshot = snapshot;
+    }
+  });
+
   it("draws every tab", async () => {
     act(() => root.render(<ColonizeScreen />));
     await settle();
