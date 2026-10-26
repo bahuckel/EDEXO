@@ -38,6 +38,7 @@ import { notable } from "./sections/notable";
 import { notices } from "./sections/notices";
 import { colonize } from "./sections/colonize";
 import { ship } from "./sections/ship";
+import { tiltDepthPx } from "./tilt";
 
 export const SECTIONS: Record<string, HudSection> = {
   jump,
@@ -63,6 +64,14 @@ type ElectronHud = {
 };
 const electron = (): ElectronHud | undefined =>
   (window as unknown as { edexoElectron?: ElectronHud }).edexoElectron;
+
+/** The Elite Style's turn at the same angle on every panel: the depth follows the panel's height (hud/tilt.ts). */
+function trackTiltDepth(shell: HTMLElement | null): void {
+  if (!shell) return;
+  const set = () => document.documentElement.style.setProperty("--hud-tilt-depth", tiltDepthPx(shell.offsetHeight) + "px");
+  set();
+  if (typeof ResizeObserver === "function") new ResizeObserver(set).observe(shell);
+}
 
 /* ============================================================== HUD object ================== */
 HUD.SECTIONS = ORDER.slice();
@@ -385,6 +394,7 @@ HUD.mount = function (names: string[] | null | undefined, opts?: { noTimers?: bo
     /* the snapshot mirror still arrives; no free move outside the app */
   }
   if (single) document.title = SECTIONS[list[0]!]!.title;
+  trackTiltDepth(shell);
 
   /*
     Tell the host window how tall this overlay actually is. The window is transparent, so height it is not using

@@ -1490,13 +1490,14 @@ html.hud-type--elite {
   --hud-elite-shadow: 0 0 3px #000, 0 0 7px rgba(0, 0, 0, 0.85), 1px 1px 1px #000;
 }
 html.hud-type--elite .shell {
-  /* The far edge goes into the screen, so nothing grows past the window (origin from theme.js). */
-  transform: perspective(60rem) rotateY(var(--hud-tilt, 0deg));
+  /* The far edge goes into the screen, so nothing grows past the window (origin from theme.js). The depth follows
+     the panel's height (hud/main.tsx trackTiltDepth), so every panel turns at the same angle. */
+  transform: perspective(var(--hud-tilt-depth, 60rem)) rotateY(var(--hud-tilt, 0deg));
   transform-origin: var(--hud-tilt-origin, left) center;
   padding: 0.2rem 0.5rem 0.4rem;
 }
 html.hud-type--elite .shell.shell--off {
-  transform: perspective(60rem) rotateY(var(--hud-tilt, 0deg)) scale(0.97);
+  transform: perspective(var(--hud-tilt-depth, 60rem)) rotateY(var(--hud-tilt, 0deg)) scale(0.97);
 }
 /* Slant: skewed, not turned — the same width border to border; room above and below for the lift. */
 html.hud-type--elite.hud-tilt--slant .shell {
