@@ -128,25 +128,15 @@ export function registerGalaxyRoutes(
   // search kept it for the rest of the session (plan 4.1, 2026-10-10).
   registerGalaxyCache("bio-bodies", clearBioBodiesCache);
   /*
-    And the index is read off the main thread before a request that needs it (owner, 2026-10-07: the
-    app went "Not responding" for a moment as the map loaded — the server shares Electron's main
-    process, as Boxels found). The requests that only read the journal or the index's status go on.
+    And what a request reads synchronously is read off the main thread before it (owner, 2026-10-07: the app went
+    "Not responding" for a moment as the map loaded — the server shares Electron's main process, as Boxels found).
+    Only for the requests that read it (2026-10-26): every other galaxy request used to wait for the tile index and
+    the traits too, so the sector map's search panel asking for its region list (`/regions`, an answer from the body
+    file's summary) loaded ~360 MB it never read, held for five idle minutes. The rest load what they need themselves
+    (`loadBioIndexAsync`, `galaxyPointsAsync`) or read only the journal.
   */
-  const NO_INDEX = new Set([
-    "/index",
-    "/index/download",
-    "/route",
-    "/visited",
-    "/mine",
-    "/mine/system",
-    "/my-sectors",
-    "/layers",
-    "/own",
-    // The system finder reads its own file (finderRoutes.ts), not the bio index.
-    "/finder",
-    "/finder/status",
-    "/finder/download",
-  ]);
+  const NEEDS_TILES = new Set(["/cells", "/sector-names", "/sector", "/tile", "/find"]);
+  const NEEDS_TRAITS = new Set(["/traits", "/filter"]);
   /*
     These read only the journal store or the download's status, so they do not keep the map's memory
     alive (code review, 2026-10-14): the map's route and own-assets polls kept resetting the idle clock,
@@ -166,8 +156,10 @@ export function registerGalaxyRoutes(
   ]);
   app.use("/api/galaxy", (req, _res, next) => {
     if (!JOURNAL_ONLY.has(req.path)) touchGalaxyMemory();
-    if (NO_INDEX.has(req.path)) return next();
-    void Promise.all([tileIndexAsync(), loadSystemTraitsAsync()])
+    const tiles = NEEDS_TILES.has(req.path);
+    const traits = NEEDS_TRAITS.has(req.path);
+    if (!tiles && !traits) return next();
+    void Promise.all([tiles ? tileIndexAsync() : null, traits ? loadSystemTraitsAsync() : null])
       .catch(() => undefined)
       .then(() => next());
   });
@@ -575,7 +567,7 @@ export function registerGalaxyRoutes(
   app.get("/api/galaxy/mine/system", async (req, res) => {
     const addr = Number(req.query.addr);
     if (!Number.isFinite(addr)) return void res.status(400).json({ error: "addr must be a SystemAddress" });
-    // Not behind the index middleware (NO_INDEX), and getMySystem reads the index synchronously: read it here first.
+    // The middleware does not read the index for it, and getMySystem reads it synchronously: read it here first.
     await loadBioIndexAsync();
     const dto = opts.getMySystem?.(addr) ?? null;
     if (!dto) return void res.status(404).json({ error: "not one of your systems" });
