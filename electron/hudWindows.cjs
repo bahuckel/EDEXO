@@ -27,6 +27,7 @@ const {
   columnX,
 } = require("./hudGeometry.cjs");
 const { hudWindowOptions } = require("./hudWindowOptions.cjs");
+const { createHudHost } = require("./hudHost.cjs");
 
 const MAX_HUD_OVERLAYS = 9; // was 3; the owner wants every HUD selectable at once (9th: Colonize, 1.3.0)
 /** Ctrl+Alt+H hides and shows every HUD window at once (menus, screenshots), checked free by the owner. */
@@ -153,6 +154,20 @@ function createHudWindows(deps) {
   /** The HUD size multiplier from the launcher's slider; the pages report it, the stack width follows. */
   let hudScale = 1;
 
+  /*
+    The panel windows share one renderer process (hudHost.cjs; owner, 2026-10-26: memory), when main.cjs asks for it
+    (`shareRenderer`). Its process gone takes every panel with it: they are made again.
+  */
+  const hudHost = deps.shareRenderer
+    ? createHudHost({
+        BrowserWindow,
+        windowOptions: (w, h, icon) => hudWindowOptions(w, h, icon ?? lastIcon ?? hudChildIcon, deps.preloadPath),
+        baseUrl: () => deps.getRuntime()?.getLocalBaseUrl() ?? null,
+        log: (m) => hudLog(m),
+        onGone: () => void reopenAfterHostGone(),
+      })
+    : null;
+
   /**
    * The HUDs that were open when the app last ran, restored on the next launch in the state they
    * were left in — shown or hidden (owner, 2026-09-28; until then always hidden, 2026-09-13). Same
@@ -212,6 +227,7 @@ function createHudWindows(deps) {
   function disposeHudOverlays() {
     disposed = true;
     destroyAllHudOverlays();
+    hudHost?.dispose();
   }
 
   /**
@@ -718,7 +734,7 @@ function createHudWindows(deps) {
       await Promise.all(
         slots.map(async (slot) => {
           const old = slot.win;
-          const fresh = createHudOverlayWindow(slot.width || 404, slot.height || 330, lastIcon);
+          const fresh = await createHudOverlayWindow(slot.width || 404, slot.height || 330, lastIcon);
           try {
             await loadHudUrlWithRetry(fresh, `${rt.getLocalBaseUrl()}${slot.pathname}`);
           } catch {
@@ -1049,12 +1065,13 @@ function createHudWindows(deps) {
   }
 
   /** @param {number} width @param {number} height */
-  function createHudOverlayWindow(width, height, iconForChild) {
+  async function createHudOverlayWindow(width, height, iconForChild) {
     // No `parent`: a child window is minimised together with its parent on Windows, which took every
     // HUD off the screen whenever the launcher was minimised (owner, 2026-09-12). The HUDs are
     // always-on-top, click-through windows of their own; the launcher closing still closes them
     // through the app's own shutdown path.
-    const win = new BrowserWindow(hudWindowOptions(width, height, iconForChild, deps.preloadPath));
+    const shared = hudHost ? await hudHost.open(width, height, iconForChild) : null;
+    const win = shared ?? new BrowserWindow(hudWindowOptions(width, height, iconForChild, deps.preloadPath));
     deps.getDiag()?.watchWindow(win, "hud");
     if (typeof deps.guardWindow === "function") deps.guardWindow(win);
 
@@ -1072,7 +1089,14 @@ function createHudWindows(deps) {
       A window paints when it is ready, which may be after the stack was hidden (a restore, or the
       hotkey pressed while pages load). Raising it then put a HUD on screen behind the flag's back.
     */
-    win.once("ready-to-show", () => {
+    /*
+      A window from the shared host has shown its blank page before its panel's page loads, so its one ready-to-show
+      can pass before this listens: the panel page's first load does the same, once.
+    */
+    let readied = false;
+    const onReady = () => {
+      if (readied || !win || win.isDestroyed()) return;
+      readied = true;
       relayoutHudStack();
       if (hiddenNow() || hudOverlayStack.some((s) => s.win === win && outOfStack(s))) {
         try {
@@ -1084,7 +1108,8 @@ function createHudWindows(deps) {
       }
       raiseHudWindow(win);
       keepHudsOnTop();
-    });
+    };
+    win.once("ready-to-show", onReady);
 
     win.on("closed", () => {
       removeHudSlotForWindow(win);
@@ -1092,6 +1117,7 @@ function createHudWindows(deps) {
 
     win.webContents.on("did-finish-load", () => {
       if (!win || win.isDestroyed()) return;
+      if (shared && win.webContents.getURL() !== "about:blank") onReady();
       try {
         win.setIgnoreMouseEvents(!moving);
       } catch {
@@ -1161,6 +1187,28 @@ function createHudWindows(deps) {
    * @param {"toggle" | "open" | "set"} mode toggle: same page closes; open: already-open page is a
    *   no-op; set: an already-open page is pointed at the new URL (query string changes)
    */
+  /** Pages whose window is being made: key -> the request's answer. */
+  const creating = new Map();
+
+  /** The shared host's process went away and every panel window with it: make them again (hudHost.cjs). */
+  async function reopenAfterHostGone() {
+    if (disposed) return;
+    const lost = hudOverlayStack
+      .filter((s) => s.win)
+      .map((s) => ({ pathname: s.pathname, width: s.width || 404, height: s.height || 330 }));
+    hudLog(`hud host gone: reopening ${lost.length} window(s)`);
+    for (const s of hudOverlayStack) destroyHudWindow(s.win);
+    hudOverlayStack = [];
+    await new Promise((r) => setTimeout(r, 500));
+    for (const o of lost) {
+      try {
+        await requestHudOverlaySlot(o.pathname, o.width, o.height, hudChildIcon, "open");
+      } catch {
+        /* the rest still come back */
+      }
+    }
+  }
+
   async function requestHudOverlaySlot(pathNorm, width, height, iconForChild, mode) {
     if (iconForChild) lastIcon = iconForChild;
     if (disposed) return { opened: false, paths: [], error: "The app is closing." };
@@ -1225,41 +1273,55 @@ function createHudWindows(deps) {
       return { opened: true, paths: hudPathsFiltered() };
     }
 
-    while (hudOverlayStack.length >= MAX_HUD_OVERLAYS) {
-      const drop = hudOverlayStack.shift();
-      if (drop) destroyHudWindow(drop.win);
-    }
-
-    const url = `${runtime.getLocalBaseUrl()}${pathNorm}`;
-    const win = createHudOverlayWindow(width, height, iconForChild);
-    hudOverlayStack.push({ win, pathname: pathNorm, key, width, height });
-    deps.onChange();
-
-    win.webContents.on("did-fail-load", (_e, code, desc) => {
-      // Logged at every attempt, not just the first: a retry that succeeds leaves one of these behind
-      // and it should not read like the failure that was reported to the commander.
-      console.error("[edexo-compare] HUD overlay failed to load:", url, code, desc);
-    });
-
-    try {
-      await loadHudUrlWithRetry(win, url);
-      if (disposed) {
-        // Quitting began while it loaded: it goes with the rest.
-        destroyHudWindow(win);
-        hudOverlayStack = hudOverlayStack.filter((s) => s.win !== win);
-        return { opened: false, paths: [], error: "The app is closing." };
+    /*
+      Making a window waits on the shared host (hudHost.cjs), so a second ask for the same page meanwhile (the HTTP
+      bridge, a double click) would make a second window: it gets the first one's answer instead.
+    */
+    const making = creating.get(key);
+    if (making) return making;
+    const made = (async () => {
+      while (hudOverlayStack.length >= MAX_HUD_OVERLAYS) {
+        const drop = hudOverlayStack.shift();
+        if (drop) destroyHudWindow(drop.win);
       }
-      relayoutHudStack();
-      if (hiddenNow()) win.hide();
-      persistHudFile();
-      return { opened: true, paths: hudPathsFiltered() };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      const idx = hudOverlayStack.findIndex((s) => s.win === win);
-      if (idx >= 0) hudOverlayStack.splice(idx, 1);
-      destroyHudWindow(win);
-      relayoutHudStack();
-      return { opened: false, paths: hudPathsFiltered(), error: msg };
+
+      const url = `${runtime.getLocalBaseUrl()}${pathNorm}`;
+      const win = await createHudOverlayWindow(width, height, iconForChild);
+      hudOverlayStack.push({ win, pathname: pathNorm, key, width, height });
+      deps.onChange();
+
+      win.webContents.on("did-fail-load", (_e, code, desc) => {
+        // Logged at every attempt, not just the first: a retry that succeeds leaves one of these behind
+        // and it should not read like the failure that was reported to the commander.
+        console.error("[edexo-compare] HUD overlay failed to load:", url, code, desc);
+      });
+
+      try {
+        await loadHudUrlWithRetry(win, url);
+        if (disposed) {
+          // Quitting began while it loaded: it goes with the rest.
+          destroyHudWindow(win);
+          hudOverlayStack = hudOverlayStack.filter((s) => s.win !== win);
+          return { opened: false, paths: [], error: "The app is closing." };
+        }
+        relayoutHudStack();
+        if (hiddenNow()) win.hide();
+        persistHudFile();
+        return { opened: true, paths: hudPathsFiltered() };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const idx = hudOverlayStack.findIndex((s) => s.win === win);
+        if (idx >= 0) hudOverlayStack.splice(idx, 1);
+        destroyHudWindow(win);
+        relayoutHudStack();
+        return { opened: false, paths: hudPathsFiltered(), error: msg };
+      }
+    })();
+    creating.set(key, made);
+    try {
+      return await made;
+    } finally {
+      creating.delete(key);
     }
   }
 

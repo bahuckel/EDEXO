@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>EDEXO HUD host</title>
+  </head>
+  <!--
+    Never shown. The HUD panel windows are opened from this page (electron/hudHost.cjs), so they share its renderer
+    process instead of each starting one of its own (~27 MB per extra separate panel, measured 2026-10-26).
+  -->
+  <body></body>
+</html>

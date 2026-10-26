@@ -88,6 +88,7 @@ module.exports = {
     "electron/hudWindows.cjs",
     "electron/hudGeometry.cjs",
     "electron/hudWindowOptions.cjs",
+    "electron/hudHost.cjs",
     "electron/tray.cjs",
     "electron/childWindows.cjs",
     "electron/foregroundWatch.cjs",

@@ -118,6 +118,8 @@ const huds = createHudWindows({
   getRuntime: () => runtime,
   getDiag: () => diag,
   preloadPath: path.join(__dirname, "preload.cjs"),
+  // One renderer process for all the HUD panel windows (hudHost.cjs).
+  shareRenderer: true,
   guardWindow: (win) => guardWindowNavigation(win, ownBase, shell),
   onChange: () => {
     trayControl.refresh();
