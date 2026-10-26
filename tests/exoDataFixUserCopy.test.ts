@@ -52,7 +52,8 @@ afterEach(() => {
 
 describe("fix stubs in the user data folder", () => {
   it("lives beside the user settings, not in the species tree", () => {
-    expect(resolveSpeciesFixesDir().startsWith(process.env.EDEXO_USER_DATA_DIR!)).toBe(true);
+    // Resolved as the app resolves it: a Git Bash temp folder (/tmp/...) is not the path it becomes.
+    expect(resolveSpeciesFixesDir().startsWith(path.resolve(process.env.EDEXO_USER_DATA_DIR!))).toBe(true);
   });
 
   it("applies a stub that exists only in the user data folder", () => {

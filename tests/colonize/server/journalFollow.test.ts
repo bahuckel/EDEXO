@@ -132,7 +132,8 @@ describe("the service and its files", () => {
   });
 
   it("keeps its files in the profile's colonize folder", () => {
-    expect(resolveColonizeDataDir().startsWith(process.env.EDEXO_USER_DATA_DIR!)).toBe(true);
+    // Resolved as the app resolves it: a Git Bash temp folder (/tmp/...) is not the path it becomes.
+    expect(resolveColonizeDataDir().startsWith(path.resolve(process.env.EDEXO_USER_DATA_DIR!))).toBe(true);
     expect(path.basename(resolveColonizeDataDir())).toBe("colonize");
   });
 });
