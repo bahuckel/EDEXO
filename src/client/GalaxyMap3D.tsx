@@ -1261,7 +1261,8 @@ export function GalaxyMap3D() {
             In the desktop app: if <strong>Hardware acceleration</strong> is off in the launcher (it turns itself off
             when the graphics card crashes at start), ticking it again may bring the 3D map back.
           </p>
-          <a className="g3d-btn g3d-btn--primary" href="?screen=map">
+          {/* In a tab, a window of its own: in place it replaced the whole app window, tabs and all (2026-10-26). */}
+          <a className="g3d-btn g3d-btn--primary" href="?screen=map" {...(inTab ? { target: "_blank", rel: "noreferrer" } : {})}>
             Open the Classic map
           </a>
         </div>

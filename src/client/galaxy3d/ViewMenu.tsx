@@ -6,6 +6,7 @@ import type { GalaxyRouteDTO } from "@shared/types";
 import { Tooltip } from "../ui/Tooltip";
 import { GalaxyIndexRow } from "../GalaxyIndexDownload";
 import { G3D_HELP, MenuHead, MenuRow, MenuToggle } from "./G3dMenu";
+import { useInTab } from "../tabs/TabHost";
 import type { Colour } from "./mapConstants";
 
 const colours: [Colour, string][] = [
@@ -41,6 +42,7 @@ export function ViewMenu({
   exposure: number;
   setExposure: (v: number) => void;
 }) {
+  const inTab = useInTab() != null;
   return (
     <aside className="g3d-drawer g3d-menu" aria-label="View" data-testid="g3d-view">
       <MenuHead title="View" help={G3D_HELP.view} />
@@ -123,7 +125,11 @@ export function ViewMenu({
         label="Classic map"
         hint="The 2D sector map, for a machine without 3D graphics or a quick look"
       >
-        <a className="g3d-row__val g3d-classic" href="?screen=map">
+        {/*
+          From a tab (Tab view), a window of its own: in place, the link replaced the whole app window with the
+          Classic map, tabs and tab keys gone until Compare was restarted (owner, 2026-10-26).
+        */}
+        <a className="g3d-row__val g3d-classic" href="?screen=map" {...(inTab ? { target: "_blank", rel: "noreferrer" } : {})}>
           Open
         </a>
       </MenuRow>
