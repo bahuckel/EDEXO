@@ -9,13 +9,15 @@
  *
  * Topics: "galaxy-route", "galaxy-own", "neutron-live", "neutron-status", "commander-position", "ui-mirror".
  *
- * After a dropped connection every listener is called once, since a change may have gone by while it was down.
+ * Whenever the socket opens, every listener is called once: after a dropped connection a change may have gone by
+ * while it was down, and on the first open one may have gone by between the page's own first read and its watch
+ * reaching the server (the streamer view read the settings mirror at load and missed a change made in that second;
+ * e2e "streamer view … settings mirrored", 2026-10-26).
  */
 type Listener = () => void;
 
 const listeners = new Map<string, Set<Listener>>();
 let socket: WebSocket | null = null;
-let opened = false;
 let retryMs = 1000;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -38,9 +40,9 @@ function connect(): void {
   ws.onopen = () => {
     retryMs = 1000;
     sendWatch();
-    // A reconnect: whatever changed while the socket was down was not announced.
-    if (opened) callAll(topicsWanted());
-    opened = true;
+    // Whatever changed before the watch was in place (while the socket was down, or since the first read) was not
+    // announced.
+    callAll(topicsWanted());
   };
   ws.onmessage = (e) => {
     try {
@@ -71,7 +73,6 @@ function release(): void {
     retryTimer = null;
     const ws = socket;
     socket = null;
-    opened = false;
     ws?.close();
   }, 2000);
 }

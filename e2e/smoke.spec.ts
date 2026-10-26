@@ -1712,7 +1712,11 @@ test("streamer view: shows the app as the streamer has it set up (settings mirro
   await expect(compact).toHaveAttribute("aria-pressed", "true");
   await compact.click();
   await expect(page.locator(".srow")).toHaveCount(0);
-  await page.waitForTimeout(1500); // the app reports its settings once a second
+  /*
+    No wait for the app's report (it checks once a second): the view must end up with the streamer's settings
+    whether the report lands before it loads, while it starts, or after (serverChanges.ts calls every listener when
+    its socket opens; with a 1.5 s wait here instead, the view missed a report landing in its first second under load).
+  */
   // OBS is a browser of its own, with storage of its own.
   const obs = await browser.newContext({ baseURL: page.url() });
   const view = await obs.newPage();

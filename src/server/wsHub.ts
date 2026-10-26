@@ -143,12 +143,12 @@ export function createWsHub(deps: {
         const mine = new Set(msg.topics.filter((t): t is string => typeof t === "string" && topics.has(t)).slice(0, 32));
         const before = eventSockets.get(ws);
         eventSockets.set(ws, mine);
-        // A topic nobody else shows starts a fresh baseline: the page has just read it.
+        // A topic nobody else shows starts from what it is now: the page reads it as it subscribes.
         for (const t of mine) {
           if (before?.has(t)) continue;
           let elsewhere = false;
           for (const [other, theirs] of eventSockets) if (other !== ws && theirs.has(t)) elsewhere = true;
-          if (!elsewhere) topics.forget(t);
+          if (!elsewhere) topics.baseline(t);
         }
         scheduleTopicsCheck();
       } catch {

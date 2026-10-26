@@ -60,9 +60,12 @@ describe("onServerChange", () => {
     expect(ws.url).toBe("ws://127.0.0.1:7111/ws?channel=events");
     ws.open();
     expect(ws.sent.at(-1)).toEqual({ type: "watch", topics: ["galaxy-route", "galaxy-own"] });
-    ws.push(["galaxy-route"]);
+    // Once each on open (below), then only the topic that changed.
     expect(route).toHaveBeenCalledTimes(1);
-    expect(own).not.toHaveBeenCalled();
+    expect(own).toHaveBeenCalledTimes(1);
+    ws.push(["galaxy-route"]);
+    expect(route).toHaveBeenCalledTimes(2);
+    expect(own).toHaveBeenCalledTimes(1);
     stopRoute();
     expect(ws.sent.at(-1)).toEqual({ type: "watch", topics: ["galaxy-own"] });
   });
@@ -76,7 +79,16 @@ describe("onServerChange", () => {
     await vi.advanceTimersByTimeAsync(1000);
     expect(FakeSocket.all).toHaveLength(2);
     FakeSocket.all[1]!.open();
-    expect(fn).toHaveBeenCalledTimes(1);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("calls every listener once when the socket first opens: a change made between the page's first read and its watch is not lost", async () => {
+    const { onServerChange } = await import("../src/client/serverChanges");
+    const mirror = vi.fn();
+    onServerChange("ui-mirror", mirror);
+    expect(mirror).not.toHaveBeenCalled();
+    FakeSocket.all[0]!.open();
+    expect(mirror).toHaveBeenCalledTimes(1);
   });
 
   it("closes the socket once nothing listens", async () => {

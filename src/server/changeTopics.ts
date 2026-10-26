@@ -30,23 +30,28 @@ export class ChangeTopics {
     return this.readers.has(topic);
   }
 
+  /** The digest of a topic's answer now; undefined for an unknown topic or a reader that throws. */
+  private digest(topic: string): string | undefined {
+    const read = this.readers.get(topic);
+    if (!read) return undefined;
+    try {
+      return createHash("sha1")
+        .update(JSON.stringify(read()) ?? "")
+        .digest("base64");
+    } catch {
+      return undefined;
+    }
+  }
+
   /**
-   * Which of `topics` read differently from the last check. A topic's first check only sets its baseline (the page
-   * reads it when it subscribes); a reader that throws is skipped this time.
+   * Which of `topics` read differently from the last check. A topic with no baseline yet only gets one; a reader
+   * that throws is skipped this time.
    */
   changed(topics: Iterable<string>): string[] {
     const out: string[] = [];
     for (const topic of topics) {
-      const read = this.readers.get(topic);
-      if (!read) continue;
-      let digest: string;
-      try {
-        digest = createHash("sha1")
-          .update(JSON.stringify(read()) ?? "")
-          .digest("base64");
-      } catch {
-        continue;
-      }
+      const digest = this.digest(topic);
+      if (digest === undefined) continue;
       const prev = this.digests.get(topic);
       this.digests.set(topic, digest);
       if (prev !== undefined && prev !== digest) out.push(topic);
@@ -54,8 +59,14 @@ export class ChangeTopics {
     return out;
   }
 
-  /** A topic nobody watches any more: its baseline goes, so a page that subscribes later starts fresh. */
-  forget(topic: string): void {
-    this.digests.delete(topic);
+  /**
+   * A page starts watching a topic nobody else watches: its baseline is the answer now, the one the page reads as it
+   * subscribes. It used to be left to the next check, up to a second later, and a change in that second became the
+   * baseline and was never announced (the streamer view kept the settings it opened with; 2026-10-26).
+   */
+  baseline(topic: string): void {
+    const digest = this.digest(topic);
+    if (digest === undefined) this.digests.delete(topic);
+    else this.digests.set(topic, digest);
   }
 }

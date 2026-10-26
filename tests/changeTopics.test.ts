@@ -21,7 +21,7 @@ describe("ChangeTopics", () => {
     expect(t.changed(["commander-position"])).toEqual([]);
   });
 
-  it("skips unknown topics and a reader that throws, and starts over after forget", () => {
+  it("skips unknown topics and a reader that throws, and starts over from a new baseline", () => {
     const t = new ChangeTopics();
     let n = 0;
     t.watch("a", () => n);
@@ -30,10 +30,20 @@ describe("ChangeTopics", () => {
     });
     expect(t.changed(["a", "bad", "nope"])).toEqual([]);
     n = 1;
-    t.forget("a");
+    t.baseline("a");
     expect(t.changed(["a"])).toEqual([]);
     n = 2;
     expect(t.changed(["a", "bad"])).toEqual(["a"]);
+  });
+
+  it("a baseline is the answer when it is taken: a change before the next check is announced (2026-10-26)", () => {
+    const t = new ChangeTopics();
+    let rev = 1;
+    t.watch("ui-mirror", () => rev);
+    // The streamer view starts watching; the app saves a setting before the server's next check.
+    t.baseline("ui-mirror");
+    rev = 2;
+    expect(t.changed(["ui-mirror"])).toEqual(["ui-mirror"]);
   });
 });
 
@@ -65,7 +75,8 @@ describe("the events socket", () => {
     try {
       const ship = await open(["commander-position"]);
       const mirror = await open(["ui-mirror"]);
-      await new Promise((r) => setTimeout(r, 1200)); // the first check sets the baselines
+      // The baselines are taken as the watches arrive (no second's wait for a check): a change straight after counts.
+      await new Promise((r) => setTimeout(r, 150));
 
       // A jump: the next state push looks at the topics.
       pos = { x: 10, y: 0, z: 0 };
