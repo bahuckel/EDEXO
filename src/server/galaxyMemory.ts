@@ -45,7 +45,13 @@ export function releaseGalaxyMemory(): void {
   collectGarbageSoon();
 }
 
-/** For the perf log and tests. */
-export function galaxyMemoryState(): { lastTouch: number; releasedCount: number; caches: string[] } {
-  return { lastTouch, releasedCount, caches: [...releases.keys()] };
+/** For the perf log, Copy diagnostics and tests. `held`: touched and not let go since. */
+export function galaxyMemoryState(): {
+  lastTouch: number;
+  releasedCount: number;
+  caches: string[];
+  held: boolean;
+  idleMs: number;
+} {
+  return { lastTouch, releasedCount, caches: [...releases.keys()], held: timer !== null, idleMs: idleMs() };
 }

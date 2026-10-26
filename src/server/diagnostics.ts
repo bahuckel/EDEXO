@@ -118,6 +118,50 @@ export interface DiagnosticsInput {
   speciesDataWarnings: number;
   commander: string | null;
   log: LoggedLine[];
+  /**
+   * The server process's memory (owner, 2026-10-26: his server sat at 614 MB while a profile copy settled near
+   * 200 MB; the galaxy files are buffers outside the heap and stay until five idle minutes after the last map
+   * request). Absent in older callers and tests.
+   */
+  memory?: {
+    rssMb: number;
+    heapMb: number;
+    buffersMb: number;
+    galaxy: { held: boolean; lastUsedAgoS: number | null; idleMin: number; releasedCount: number };
+  };
+}
+
+/** The server's own numbers for {@link DiagnosticsInput.memory}. */
+export function serverMemory(
+  galaxy: { held: boolean; lastTouch: number; idleMs: number; releasedCount: number },
+  usage: NodeJS.MemoryUsage = process.memoryUsage(),
+  now = Date.now(),
+): NonNullable<DiagnosticsInput["memory"]> {
+  const mb = (n: number) => Math.round(n / 1048576);
+  return {
+    rssMb: mb(usage.rss),
+    heapMb: mb(usage.heapUsed),
+    buffersMb: mb(usage.arrayBuffers),
+    galaxy: {
+      held: galaxy.held,
+      lastUsedAgoS: galaxy.lastTouch ? Math.round((now - galaxy.lastTouch) / 1000) : null,
+      idleMin: Math.round(galaxy.idleMs / 60000),
+      releasedCount: galaxy.releasedCount,
+    },
+  };
+}
+
+const ago = (s: number) => (s < 90 ? `${s} s` : s < 5400 ? `${Math.round(s / 60)} min` : `${Math.round(s / 3600)} h`);
+
+function memoryLine(m: NonNullable<DiagnosticsInput["memory"]>): string {
+  const g = m.galaxy;
+  const galaxy = g.held
+    ? `galaxy data held, last used ${ago(g.lastUsedAgoS ?? 0)} ago (let go ${g.idleMin} min after the last use)`
+    : g.lastUsedAgoS === null
+      ? "galaxy data not loaded since start"
+      : `galaxy data let go (last used ${ago(g.lastUsedAgoS)} ago)`;
+  // The working set counts the program's own mapped files too: more than Task Manager's "Memory" column.
+  return `Server memory: working set ${m.rssMb} MB, heap ${m.heapMb} MB, buffers ${m.buffersMb} MB; ${galaxy}`;
 }
 
 const onOff = (b: boolean) => (b ? "on" : "off");
@@ -152,6 +196,7 @@ export function buildDiagnosticsText(d: DiagnosticsInput, home?: string): string
     }${d.update.download ? `, download ${d.update.download}` : ""}`,
     `Species data: ${d.speciesCount} species${d.speciesDataWarnings ? `, ${d.speciesDataWarnings} warning(s)` : ""}`,
   );
+  if (d.memory) lines.push(memoryLine(d.memory));
   if (d.log.length) {
     lines.push(`Last ${d.log.length} warning(s) / error(s):`);
     for (const l of d.log)

@@ -122,7 +122,8 @@ import { commanderSectorsDto } from "./galaxySectorTiers.js";
 import { createUpdateChecker, currentReleaseForm } from "./updateCheck.js";
 import { createAppUpdater, resolveUpdateDir } from "./appUpdater.js";
 import { createWhatsNew } from "./whatsNew.js";
-import { buildDiagnosticsText, installLogRing, loggedLines } from "./diagnostics.js";
+import { buildDiagnosticsText, installLogRing, loggedLines, serverMemory } from "./diagnostics.js";
+import { galaxyMemoryState } from "./galaxyMemory.js";
 import { createUnknownExobioLog } from "./exobioUnknown.js";
 import { fetchRemoteSystem, readRemoteSystemsCache, writeRemoteSystemToCache } from "./remoteSystems.js";
 import { parseHost, parsePort } from "./cliOptions.js";
@@ -1411,6 +1412,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         speciesDataWarnings: st.speciesDataWarnings?.length ?? 0,
         commander: store.commanderName,
         log: loggedLines(),
+        memory: serverMemory(galaxyMemoryState()),
       });
     },
     markWhatsNewSeen: () => whatsNew.seen(),

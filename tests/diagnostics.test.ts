@@ -3,7 +3,7 @@
  * private in it — the home folder as ~, the commander as CMDR, no access key.
  */
 import { describe, expect, it } from "vitest";
-import { buildDiagnosticsText, redact, type DiagnosticsInput } from "../src/server/diagnostics.js";
+import { buildDiagnosticsText, redact, serverMemory, type DiagnosticsInput } from "../src/server/diagnostics.js";
 
 const HOME = "C:\\Users\\Jane Doe";
 
@@ -89,5 +89,28 @@ describe("buildDiagnosticsText", () => {
   it("is one fenced block", () => {
     expect(t.startsWith("```\n")).toBe(true);
     expect(t.trimEnd().endsWith("```")).toBe(true);
+  });
+});
+
+describe("the server's memory line (2026-10-26)", () => {
+  const mb = 1048576;
+  const usage = { rss: 614 * mb, heapUsed: 98 * mb, arrayBuffers: 410 * mb, heapTotal: 0, external: 0 };
+  const now = 2_000_000_000_000;
+
+  it("says how much and whether the galaxy data is held, and since when", () => {
+    const m = serverMemory({ held: true, lastTouch: now - 120_000, idleMs: 300_000, releasedCount: 2 }, usage, now);
+    const t = buildDiagnosticsText({ ...base, memory: m });
+    expect(t).toContain("Server memory: working set 614 MB, heap 98 MB, buffers 410 MB; galaxy data held, last used 2 min ago (let go 5 min after the last use)");
+  });
+
+  it("says when the galaxy data was let go, or never loaded", () => {
+    const gone = serverMemory({ held: false, lastTouch: now - 45_000, idleMs: 300_000, releasedCount: 1 }, usage, now);
+    expect(buildDiagnosticsText({ ...base, memory: gone })).toContain("galaxy data let go (last used 45 s ago)");
+    const never = serverMemory({ held: false, lastTouch: 0, idleMs: 300_000, releasedCount: 0 }, usage, now);
+    expect(buildDiagnosticsText({ ...base, memory: never })).toContain("galaxy data not loaded since start");
+  });
+
+  it("is left out when not given", () => {
+    expect(buildDiagnosticsText(base)).not.toContain("Server memory");
   });
 });
