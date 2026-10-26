@@ -4,7 +4,9 @@
  */
 import { describe, expect, it } from "vitest";
 import { GameStateStore } from "../src/server/gameState.js";
-import { intern, internNamedPercents } from "../src/server/intern.js";
+import { intern, internNamedPercents, internParents, shareScanLists } from "../src/server/intern.js";
+import { decodeJournalMergeCache, encodeJournalMergeCache } from "../src/server/journalMergeCacheEncoding.js";
+import { deserialize, serialize } from "node:v8";
 import type { JournalLine } from "../src/shared/types.js";
 
 const scan = (bodyId: number): JournalLine =>
@@ -23,6 +25,8 @@ const scan = (bodyId: number): JournalLine =>
       AtmosphereComposition: [{ Name: "CarbonDioxide", Percent: 99 }],
       Volcanism: "major water geysers volcanism",
       Landable: true,
+      SurfaceGravity: 2.1,
+      SurfaceTemperature: 180.5,
       Materials: [
         { Name: "iron", Percent: 20.1 },
         { Name: "phosphorus", Percent: 12.3 },
@@ -51,5 +55,41 @@ describe("interning", () => {
     for (const k of ["planetClass", "atmosphereType", "volcanism", "starSystem"] as const) expect(a[k]).toEqual(b[k]);
     expect((a.materials as { Name: string }[]).map((m) => m.Name)).toEqual(["iron", "phosphorus"]);
     expect((a.atmosphereComposition as { Name: string }[])[0]!.Name).toBe("CarbonDioxide");
+  });
+});
+
+describe("one copy of each list", () => {
+  it("shares Parents entries by kind and id", () => {
+    const a = [{ Planet: 3 }, { Star: 0 }];
+    const b = [{ Planet: 3 }, { Null: 1 }];
+    internParents(a);
+    internParents(b);
+    expect(b[0]).toBe(a[0]);
+    expect(b).toEqual([{ Planet: 3 }, { Null: 1 }]);
+  });
+
+  it("points a body scan at its record's lists only when they are equal", () => {
+    const rec = { materials: [{ Name: "iron", Percent: 20.1 }], atmosphereComposition: [{ Name: "CarbonDioxide", Percent: 99 }] };
+    const scan = { materials: [{ Name: "iron", Percent: 20.1 }], atmosphereComposition: [{ Name: "CarbonDioxide", Percent: 98 }] };
+    expect(shareScanLists([["1:2", { scan }]], () => rec)).toBe(1);
+    expect(scan.materials).toBe(rec.materials);
+    expect(scan.atmosphereComposition).not.toBe(rec.atmosphereComposition);
+  });
+
+  it("after a load from the journal cache, a body's scan and its record hold the same lists (owner, 2026-10-26)", () => {
+    const store = new GameStateStore();
+    store.currentSystemAddress = 1234;
+    store.currentSystem = "Test Sys";
+    store.apply(scan(1));
+    const live = store.bodies.get("1234:1") as unknown as { scan?: { materials?: unknown } } | undefined;
+    expect(live?.scan?.materials).toBe(store.explorationScans.get("1234:1")!.materials);
+    const back = decodeJournalMergeCache(deserialize(serialize(encodeJournalMergeCache(store.serializeJournalMergePayload()))))!;
+    const again = new GameStateStore();
+    expect(again.hydrateJournalMergePayload(back)).toBe(true);
+    const body = again.bodies.get("1234:1") as unknown as { scan: { materials: unknown; atmosphereComposition: unknown } };
+    const rec = again.explorationScans.get("1234:1")!;
+    expect(body.scan.materials).toEqual(rec.materials);
+    expect(body.scan.materials).toBe(rec.materials);
+    expect(body.scan.atmosphereComposition).toBe(rec.atmosphereComposition);
   });
 });

@@ -15,7 +15,7 @@ import {
   siblingMoonBodyIdsUnified,
 } from "./gameStateHelpers.js";
 import type { GameStateStore } from "./gameState.js";
-import { intern, internNamedPercents } from "./intern.js";
+import { intern, internNamedPercents, internParents } from "./intern.js";
 
 /**
  * Journal `ScanBaryCentre`: the orbit of the `{ Null: BodyID }` node in `Scan.Parents`.
@@ -63,18 +63,15 @@ export function mergeBarycentreJournalLine(store: GameStateStore, line: JournalL
     journalBarycentreNullId: nullIdRaw,
   };
 
-  const setNum = (key: keyof ExplorationScanRecord, v: unknown) => {
-    const n = pickNum(v);
-    if (n !== undefined) (rec as unknown as Record<string, unknown>)[key as string] = n;
-  };
-
-  setNum("semiMajorAxis", line.SemiMajorAxis);
-  setNum("eccentricity", line.Eccentricity);
-  setNum("orbitalInclination", line.OrbitalInclination);
-  setNum("periapsis", line.Periapsis);
-  setNum("orbitalPeriod", line.OrbitalPeriod);
-  setNum("ascendingNode", line.AscendingNode);
-  setNum("meanAnomaly", line.MeanAnomaly);
+  // Written by name, as in noteScan below: a computed key turns the record into a hash table.
+  let n: number | undefined;
+  if ((n = pickNum(line.SemiMajorAxis)) !== undefined) rec.semiMajorAxis = n;
+  if ((n = pickNum(line.Eccentricity)) !== undefined) rec.eccentricity = n;
+  if ((n = pickNum(line.OrbitalInclination)) !== undefined) rec.orbitalInclination = n;
+  if ((n = pickNum(line.Periapsis)) !== undefined) rec.periapsis = n;
+  if ((n = pickNum(line.OrbitalPeriod)) !== undefined) rec.orbitalPeriod = n;
+  if ((n = pickNum(line.AscendingNode)) !== undefined) rec.ascendingNode = n;
+  if ((n = pickNum(line.MeanAnomaly)) !== undefined) rec.meanAnomaly = n;
 
   const fresh = store.scanIndexIsFresh();
   store.explorationScans.set(k, rec);
@@ -118,44 +115,44 @@ export function mergeExplorationScan(store: GameStateStore, line: JournalLine, t
     updatedAt: ts,
   };
 
-  // Interned: classes, atmospheres, volcanism and the like repeat across thousands of bodies (intern.ts).
-  const setStr = (key: keyof ExplorationScanRecord, v: unknown) => {
-    const s = pickStr(v);
-    if (s) (rec as unknown as Record<string, unknown>)[key as string] = intern(s);
+  /*
+    Each field is written by name. Written through a computed key (rec[key] = v), V8 turned every record into a hash
+    table once it had a dozen fields: ~750 bytes of property storage per body instead of ~150, for ~32,000 bodies
+    (owner, 2026-10-26: server memory). Strings are interned: classes, atmospheres, volcanism and the like repeat
+    across thousands of bodies (intern.ts).
+  */
+  const str = (v: unknown): string | undefined => {
+    const t = pickStr(v);
+    return t === undefined ? undefined : intern(t);
   };
-  const setNum = (key: keyof ExplorationScanRecord, v: unknown) => {
-    const n = pickNum(v);
-    if (n !== undefined) (rec as unknown as Record<string, unknown>)[key as string] = n;
-  };
-  const setBool = (key: keyof ExplorationScanRecord, v: unknown) => {
-    const b = pickBool(v);
-    if (b !== undefined) (rec as unknown as Record<string, unknown>)[key as string] = b;
-  };
+  let s: string | undefined;
+  let n: number | undefined;
+  let b: boolean | undefined;
 
-  setStr("scanType", line.ScanType);
+  if ((s = str(line.ScanType))) rec.scanType = s;
   rec.playerScanned = prev?.playerScanned === true || line.ScanType !== "NavBeaconDetail";
   if (prev?.fssResolved === true || line.ScanType === "Detailed") rec.fssResolved = true;
-  setStr("bodyType", line.BodyType);
-  setStr("planetClass", line.PlanetClass);
-  setStr("starType", line.StarType);
-  setNum("subclass", line.Subclass);
-  setStr("luminosity", (line as Record<string, unknown>).Luminosity);
-  setNum("stellarMass", line.StellarMass);
-  setNum("absoluteMagnitude", (line as Record<string, unknown>).AbsoluteMagnitude);
-  setNum("massEM", line.MassEM);
-  setStr("terraformState", line.TerraformState);
-  setBool("landable", line.Landable);
-  setNum("semiMajorAxis", line.SemiMajorAxis);
-  setNum("distanceFromArrivalLs", (line as Record<string, unknown>).DistanceFromArrivalLS);
-  setNum("surfaceTemperature", line.SurfaceTemperature);
-  setNum("surfaceGravity", line.SurfaceGravity);
-  setNum("surfacePressure", line.SurfacePressure);
-  setNum("radius", line.Radius);
-  setStr("atmosphereType", line.AtmosphereType);
-  setStr("atmosphere", line.Atmosphere);
-  setStr("volcanism", line.Volcanism);
-  setBool("tidalLock", line.TidalLock);
-  setBool("wasDiscovered", (line as Record<string, unknown>).WasDiscovered);
+  if ((s = str(line.BodyType))) rec.bodyType = s;
+  if ((s = str(line.PlanetClass))) rec.planetClass = s;
+  if ((s = str(line.StarType))) rec.starType = s;
+  if ((n = pickNum(line.Subclass)) !== undefined) rec.subclass = n;
+  if ((s = str((line as Record<string, unknown>).Luminosity))) rec.luminosity = s;
+  if ((n = pickNum(line.StellarMass)) !== undefined) rec.stellarMass = n;
+  if ((n = pickNum((line as Record<string, unknown>).AbsoluteMagnitude)) !== undefined) rec.absoluteMagnitude = n;
+  if ((n = pickNum(line.MassEM)) !== undefined) rec.massEM = n;
+  if ((s = str(line.TerraformState))) rec.terraformState = s;
+  if ((b = pickBool(line.Landable)) !== undefined) rec.landable = b;
+  if ((n = pickNum(line.SemiMajorAxis)) !== undefined) rec.semiMajorAxis = n;
+  if ((n = pickNum((line as Record<string, unknown>).DistanceFromArrivalLS)) !== undefined) rec.distanceFromArrivalLs = n;
+  if ((n = pickNum(line.SurfaceTemperature)) !== undefined) rec.surfaceTemperature = n;
+  if ((n = pickNum(line.SurfaceGravity)) !== undefined) rec.surfaceGravity = n;
+  if ((n = pickNum(line.SurfacePressure)) !== undefined) rec.surfacePressure = n;
+  if ((n = pickNum(line.Radius)) !== undefined) rec.radius = n;
+  if ((s = str(line.AtmosphereType))) rec.atmosphereType = s;
+  if ((s = str(line.Atmosphere))) rec.atmosphere = s;
+  if ((s = str(line.Volcanism))) rec.volcanism = s;
+  if ((b = pickBool(line.TidalLock)) !== undefined) rec.tidalLock = b;
+  if ((b = pickBool((line as Record<string, unknown>).WasDiscovered)) !== undefined) rec.wasDiscovered = b;
   /*
    * The arrival star's flag answers a question about the whole system, so it is lifted out here.
    *
@@ -196,22 +193,25 @@ export function mergeExplorationScan(store: GameStateStore, line: JournalLine, t
       }
     }
   }
-  setBool("wasMapped", (line as Record<string, unknown>).WasMapped);
-  setNum("eccentricity", line.Eccentricity);
-  setNum("orbitalInclination", line.OrbitalInclination);
-  setNum("periapsis", line.Periapsis);
-  setNum("orbitalPeriod", line.OrbitalPeriod);
-  setNum("ascendingNode", line.AscendingNode);
-  setNum("meanAnomaly", line.MeanAnomaly);
-  setNum("rotationPeriod", (line as Record<string, unknown>).RotationPeriod);
-  setNum("axialTilt", (line as Record<string, unknown>).AxialTilt);
+  if ((b = pickBool((line as Record<string, unknown>).WasMapped)) !== undefined) rec.wasMapped = b;
+  if ((n = pickNum(line.Eccentricity)) !== undefined) rec.eccentricity = n;
+  if ((n = pickNum(line.OrbitalInclination)) !== undefined) rec.orbitalInclination = n;
+  if ((n = pickNum(line.Periapsis)) !== undefined) rec.periapsis = n;
+  if ((n = pickNum(line.OrbitalPeriod)) !== undefined) rec.orbitalPeriod = n;
+  if ((n = pickNum(line.AscendingNode)) !== undefined) rec.ascendingNode = n;
+  if ((n = pickNum(line.MeanAnomaly)) !== undefined) rec.meanAnomaly = n;
+  if ((n = pickNum((line as Record<string, unknown>).RotationPeriod)) !== undefined) rec.rotationPeriod = n;
+  if ((n = pickNum((line as Record<string, unknown>).AxialTilt)) !== undefined) rec.axialTilt = n;
 
-  if (line.Parents !== undefined) rec.parents = line.Parents;
+  if (line.Parents !== undefined) {
+    internParents(line.Parents);
+    rec.parents = line.Parents;
+  }
   const ringCount = planetRingCount((line as Record<string, unknown>).Rings);
   if (ringCount !== undefined) rec.ringCount = ringCount;
   const rings = scanRings((line as Record<string, unknown>).Rings);
   if (rings !== undefined) rec.rings = rings;
-  setNum("ageMy", (line as Record<string, unknown>).Age_MY);
+  if ((n = pickNum((line as Record<string, unknown>).Age_MY)) !== undefined) rec.ageMy = n;
 
   if (line.AtmosphereComposition !== undefined) {
     const incoming = line.AtmosphereComposition;

@@ -83,6 +83,7 @@ import { signsOfLife } from "./gameStateHelpers.js";
 import * as journalEvents from "./gameStateEvents.js";
 import * as explorationSales from "./gameStateSales.js";
 import * as explorationMerge from "./gameStateExploration.js";
+import { internParents, shareScanLists } from "./intern.js";
 // tests/genusProgress.test.ts imports upsertFootOrganicLock from here.
 export { signsOfLife, upsertFootOrganicLock } from "./gameStateHelpers.js";
 
@@ -2032,6 +2033,9 @@ export class GameStateStore {
     for (const [k, v] of data.explorationScans) this.explorationScans.set(k, v);
     for (const [k, v] of data.soldExplorationScans ?? []) this.soldExplorationScans.set(k, v);
     for (const k of data.soldBodyKeys ?? []) this.soldBodyKeys.add(k);
+    // One copy of each list again: the cache wrote the body scans' and the records' lists apart (intern.ts).
+    for (const m of [this.explorationScans, this.soldExplorationScans]) for (const r of m.values()) internParents(r.parents);
+    shareScanLists(this.bodies, (k) => this.explorationScans.get(k) ?? this.soldExplorationScans.get(k));
     this.explorationScansRevision += 1;
     for (const k of data.fssBodySignalsBodyKeys) this.fssBodySignalsBodyKeys.add(k);
     for (const k of data.dssMappedBodyKeys) this.dssMappedBodyKeys.add(k);
