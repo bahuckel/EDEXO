@@ -385,6 +385,51 @@ h1 {
   outline: none;
   border-color: var(--hud);
 }
+/*
+  Every launcher dropdown opens its list in the cockpit look (owner, 2026-10-26: the commander's "theme specific",
+  then "theme all dropdowns"), not Windows' own: Chromium's customizable select (base-select, Electron 42 = Chromium
+  148). Each keeps its own box styles; a browser without it keeps the native list, dark.
+*/
+select,
+select::picker(select) {
+  appearance: base-select;
+  border-radius: 0;
+}
+select::picker-icon {
+  color: var(--hud);
+}
+select::picker(select) {
+  margin-top: 2px;
+  padding: 4px 0;
+  font-family: inherit;
+  color: var(--hud-text);
+  background: linear-gradient(180deg, var(--panel-2), transparent 60%), var(--ink);
+  border: 1px solid var(--hud-dim);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+}
+option {
+  padding: 6px 10px;
+  letter-spacing: 0.04em;
+  color: var(--hud-text);
+  background: transparent;
+}
+option::checkmark {
+  color: var(--hud);
+}
+option:checked {
+  color: var(--hud-hi);
+}
+/* Hover / keyboard focus: the launcher's "selected" look, solid orange with ink text. */
+option:hover,
+option:focus-visible {
+  outline: none;
+  color: var(--ink);
+  background: var(--hud);
+}
+option:hover::checkmark,
+option:focus-visible::checkmark {
+  color: var(--ink);
+}
 .cmdr-pick__note {
   flex-basis: 100%;
   font-size: 0.74rem;

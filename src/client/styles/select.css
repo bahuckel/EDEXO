@@ -112,3 +112,59 @@
   width: auto;
   min-width: 9rem;
 }
+
+/*
+  The plain <select>s left in the app (owner, 2026-10-26: "theme all dropdowns") open their list in the same look as
+  the menu above, in the colour scheme in use, instead of Windows' own: Chromium's customizable select (base-select;
+  Electron 42 is Chromium 148). Each keeps its own box styles; a browser without it shows the native list.
+*/
+select,
+select::picker(select) {
+  appearance: base-select;
+  border-radius: 0;
+}
+select::picker-icon {
+  color: var(--accent);
+}
+select::picker(select) {
+  margin-top: 2px;
+  padding: 0.25rem 0;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  background: linear-gradient(180deg, rgba(var(--shade-rgb), 0.4), transparent 40%), var(--panel-warm);
+  border: 1px solid var(--accent-dim);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.7);
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-dim) transparent;
+}
+select option {
+  padding: 0.34rem 0.6rem 0.34rem 0.45rem;
+  color: var(--text-dim);
+  background: transparent;
+  white-space: nowrap;
+}
+select option::checkmark {
+  color: var(--accent);
+}
+select option:checked {
+  color: var(--accent-bright);
+}
+select option:hover,
+select option:focus-visible {
+  outline: none;
+  color: var(--text);
+  background: var(--accent-a12);
+}
+select option:checked:hover,
+select option:checked:focus-visible {
+  color: var(--ink, #07060a);
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+}
+select option:checked:hover::checkmark,
+select option:checked:focus-visible::checkmark {
+  color: var(--ink, #07060a);
+}
+select option:disabled {
+  color: var(--muted);
+}
