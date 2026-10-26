@@ -10,6 +10,9 @@
  * the server works, this process — the one every window needs — only ever waits for a message.
  */
 
+const os = require("node:os");
+const path = require("node:path");
+
 const SHUTDOWN_WAIT_MS = 8000;
 
 /**
@@ -26,7 +29,17 @@ const SHUTDOWN_WAIT_MS = 8000;
 function startServerChild(o) {
   const child = o.utilityProcess.fork(o.bundle, [], {
     serviceName: "EDEXO server",
-    env: { ...process.env, EDEXO_SERVER_CHILD: "1" },
+    /*
+      NODE_COMPILE_CACHE: V8 keeps the bundle's compiled code between starts (item 20, measured 2026-10-25 on a
+      windowless probe of this fork: "started" 416 → 389 ms median, the journal boot after it unchanged). Node checks
+      each entry against the file's contents, so a new version compiles afresh; the folder is a cache, safe to delete.
+      A value already set (a test) is kept.
+    */
+    env: {
+      NODE_COMPILE_CACHE: path.join(os.tmpdir(), "edexo-v8-cache"),
+      ...process.env,
+      EDEXO_SERVER_CHILD: "1",
+    },
     stdio: "inherit",
   });
 

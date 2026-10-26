@@ -14,6 +14,7 @@ const {
 } = require("electron");
 const { startServerChild } = require("./serverChild.cjs");
 const { installStaticShell } = require("./staticShell.cjs");
+const { startGpuWarmup } = require("./gpuWarmup.cjs");
 const path = require("path");
 const fs = require("fs");
 const { writeFileAtomic } = require("./atomicWrite.cjs");
@@ -398,6 +399,14 @@ async function start() {
 
   applyPackagedResourcesEnv();
 
+  // The GPU readies the launcher's look while the server starts; the window closes once the launcher has loaded.
+  const packagedWeb = process.resourcesPath ? path.join(process.resourcesPath, "web") : null;
+  const gpuWarmup = startGpuWarmup({
+    BrowserWindow,
+    webRoot: packagedWeb && fs.existsSync(path.join(packagedWeb, "launcher.html")) ? packagedWeb : path.join(__dirname, "..", "dist", "web"),
+    log: (m) => console.warn(`[edexo-compare] ${m}`),
+  });
+
   /*
     Self-update (owner, 2026-10-02): only a packaged copy this file knows how to swap — the portable
     exe, the program folder, the AppImage (updater.cjs). The server downloads only when told so here.
@@ -718,6 +727,8 @@ async function start() {
     mainWindow.webContents.once("did-finish-load", () => setTimeout(restoreHuds, 250));
     setTimeout(restoreHuds, 5000);
   }
+  // Its first paint has the GPU warmed up (gpuWarmup.cjs); the hidden window goes a moment after.
+  mainWindow.webContents.once("did-finish-load", () => setTimeout(gpuWarmup.done, 500));
   mainWindow.on("close", (e) => {
     // With "Close to tray" on (and a tray to come back from), the X hides the launcher in the tray;
     // the server, the HUDs and the app window carry on. Quitting (tray menu) closes it for real.

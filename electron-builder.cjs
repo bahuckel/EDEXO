@@ -108,6 +108,7 @@ module.exports = {
     // The server's own process (2026-10-09): main.cjs starts app.cjs through it.
     "electron/serverChild.cjs",
     "electron/staticShell.cjs",
+    "electron/gpuWarmup.cjs",
     "electron/atomicWrite.cjs",
     // Safe graphics mode (L1, Linux ticket 2026-10-23).
     "electron/gpuSafeMode.cjs",
