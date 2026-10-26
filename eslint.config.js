@@ -134,5 +134,27 @@ export default tseslint.config(
       "no-empty": ["warn", { allowEmptyCatch: true }],
     },
   },
+  {
+    /*
+      File size cap (item 27, after the 1.3.1 splits): 1,200 code lines, blank lines and comments not counted. A warning,
+      so it fails `npm run lint`. The files still over it have their own cap, their size when the cap came in rounded up
+      to the next hundred: they may not grow past it, and a split brings the line down (lower it when one lands). Tests
+      and generated tables are not capped.
+    */
+    files: ["src/**/*.{ts,tsx,js}", "electron/**/*.cjs", "public/**/*.js", "scripts/**/*.{mjs,js,ts}"],
+    ignores: ["**/*.gen.ts"],
+    rules: { "max-lines": ["warn", { max: 1200, skipBlankLines: true, skipComments: true }] },
+  },
+  ...Object.entries({
+    "src/client/galaxy3d/GalaxyEngine.ts": 2000,
+    "src/client/GalaxyMap3D.tsx": 1800,
+    "src/server/exomasteryProfile.ts": 1500,
+    "src/server/edexoBootstrap.ts": 1400,
+    "src/server/gameState.ts": 1400,
+    "src/server/matchSpecies.ts": 1300,
+  }).map(([file, max]) => ({
+    files: [file],
+    rules: { "max-lines": ["warn", { max, skipBlankLines: true, skipComments: true }] },
+  })),
   prettier,
 );
