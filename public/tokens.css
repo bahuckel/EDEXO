@@ -43,9 +43,10 @@
 }
 
 /*
-  The EDEXO font (owner, 2026-10-27), chosen in Options > Look > Font: `<html data-font="edexo">` (src/client/uiFont.ts).
-  Four weights; the browser downloads one only when text uses it, so Classic costs nothing. Its caps and x-height
-  match Bahnschrift's at the same size; a character it lacks falls back to Bahnschrift, then the system.
+  The EDEXO font (owner, 2026-10-27), the default unless Options > Look > Font is Classic: `<html data-font="edexo">`
+  (src/client/uiFont.ts). Four weights; the browser downloads one only when text uses it, so Classic costs nothing. Its
+  caps and x-height match Bahnschrift's at the same size; a character it lacks falls back to Bahnschrift, then the
+  system. A page that never runs uiFont.ts (none today) keeps Bahnschrift.
 */
 @font-face {
   font-family: "EDEXO";

@@ -1,7 +1,8 @@
 /**
- * The interface font (owner, 2026-10-27: the EDEXO font, "careful with the scale"): Classic is Bahnschrift, as
- * before; EDEXO is the app's own face (public/fonts, public/tokens.css). Its capitals and lowercase stand as tall as
- * Bahnschrift's at the same size, so nothing grows taller; it is wider, so it starts as a choice, not the default.
+ * The interface font (owner, 2026-10-27: the EDEXO font, "careful with the scale"): EDEXO is the app's own face
+ * (public/fonts, public/tokens.css), the default since 1.3.1 ("make the EDEXO font the default one after an update");
+ * Classic is Bahnschrift, as before, for whoever picks it. Its capitals and lowercase stand as tall as Bahnschrift's
+ * at the same size, so nothing grows taller.
  *
  * The choice is `<html data-font>`; tokens.css swaps `--hud-font` on it, which the app, the launcher, the HUD
  * overlays and the second screen all read. Kept per PC (every window of the app follows), like Motion. No React here:
@@ -14,9 +15,10 @@ const EVENT = "edexo:ui-font";
 
 export function uiFont(): UiFont {
   try {
-    return localStorage.getItem(KEY) === "edexo" ? "edexo" : "classic";
+    // Only an explicit Classic keeps Bahnschrift: an update to 1.3.1 (nothing stored yet) lands on EDEXO.
+    return localStorage.getItem(KEY) === "classic" ? "classic" : "edexo";
   } catch {
-    return "classic";
+    return "edexo";
   }
 }
 

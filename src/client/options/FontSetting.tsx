@@ -1,14 +1,14 @@
 /**
- * Options › Look › Font (owner, 2026-10-27): Bahnschrift, as always, or the EDEXO font. Kept per PC (every window of
- * the app, the launcher and the HUD follow).
+ * Options › Look › Font (owner, 2026-10-27): the EDEXO font (the default) or Bahnschrift. Kept per PC (every window
+ * of the app, the launcher and the HUD follow).
  */
 import { useSyncExternalStore } from "react";
 import { FoldPanel } from "../ui/Fold";
 import { setUiFont, uiFont, UI_FONT_EVENT, type UiFont } from "../uiFont";
 
 const FONTS: { font: UiFont; label: string; note: string }[] = [
-  { font: "classic", label: "Classic", note: "Bahnschrift, the Windows face the app has always used" },
-  { font: "edexo", label: "EDEXO", note: "the app's own face: wider, squarer, the same on every PC (preview)" },
+  { font: "edexo", label: "EDEXO", note: "the app's own face: squarer and a little wider, the same on every PC" },
+  { font: "classic", label: "Classic", note: "Bahnschrift, the Windows face the app used before 1.3.1" },
 ];
 
 function useUiFont(): UiFont {
@@ -18,7 +18,7 @@ function useUiFont(): UiFont {
       return () => window.removeEventListener(UI_FONT_EVENT, cb);
     },
     uiFont,
-    () => "classic",
+    () => "edexo",
   );
 }
 
@@ -34,9 +34,9 @@ export function FontSetting() {
       summary={current.label}
       help={
         <p>
-          The typeface of the app, the launcher and the HUD. <strong>Classic</strong> is Bahnschrift, which comes with
-          Windows. <strong>EDEXO</strong> is the app&apos;s own, drawn for it: squarer and wider, with a dotted zero, and
-          the same on every PC (Bahnschrift is missing on Linux). It is a preview: some text sits a little wider.
+          The typeface of the app, the launcher and the HUD. <strong>EDEXO</strong> is the app&apos;s own, drawn for it:
+          squarer and a little wider, with a dotted zero, and the same on every PC (Bahnschrift is missing on Linux).
+          <strong> Classic</strong> is Bahnschrift, which comes with Windows and which the app used before 1.3.1.
         </p>
       }
     >
