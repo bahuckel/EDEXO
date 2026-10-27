@@ -30,6 +30,7 @@ import { LifelessEmblem } from "./LifelessEmblem";
 import { setSnapshotStamp } from "./panelSnapshot";
 import { ModalLoading } from "./SharedModals";
 import { AppLegalFooter } from "./AppLegalFooter";
+import { STREAMER_MODE } from "./streamerMode";
 
 /*
  * React first, above the `lazy()` calls below.
@@ -313,6 +314,8 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    // The streamer view shows the streamer's choice (below) and never sets it: its own pick moved the overlays.
+    if (STREAMER_MODE) return;
     const key = selectedBodyKey;
     const t = window.setTimeout(() => {
       void fetch("/api/ui/selected-body", {
@@ -323,6 +326,15 @@ export function App() {
     }, 160);
     return () => window.clearTimeout(t);
   }, [selectedBodyKey]);
+
+  /*
+    The streamer view follows the body tab the streamer opens in Compare (owner, 2026-10-27: "I click on something,
+    the view does not follow"): the server holds the app's choice and sends it with every snapshot.
+  */
+  const streamerBodyKey = STREAMER_MODE ? (snapshot?.uiSelectedBodyKey ?? null) : null;
+  useEffect(() => {
+    if (streamerBodyKey) setSelectedBodyKey(streamerBodyKey);
+  }, [streamerBodyKey]);
 
   useEffect(() => {
     const key = snapshot?.uiAutoSelectBodyKey ?? null;

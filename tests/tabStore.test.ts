@@ -3,7 +3,7 @@
  * Tab view's store (src/client/tabs/tabStore.ts; owner, 2026-10-06): one tab per screen, closing brings
  * the neighbour forward, the strip can be reordered, and the switch and the tabs are remembered.
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { tabStore } from "../src/client/tabs/tabStore.js";
 
 beforeEach(() => {
@@ -47,5 +47,18 @@ describe("tab view", () => {
     tabStore.setOn(false);
     expect(localStorage.getItem("edexo.tabView")).toBe("0");
     expect(tabStore.get()).toMatchObject({ on: false, active: "main" });
+  });
+
+  it("the streamer view shows the home screen with no tab strip, whatever tabs the mirror brought", async () => {
+    localStorage.setItem("edexo.tabView", "1");
+    localStorage.setItem("edexo.tabs", JSON.stringify({ tabs: ["galaxy", "boxels"], active: "galaxy" }));
+    window.history.replaceState(null, "", "/?view=stream");
+    try {
+      vi.resetModules();
+      const { tabStore: streamer } = await import("../src/client/tabs/tabStore.js");
+      expect(streamer.get()).toEqual({ on: false, tabs: [], active: "main" });
+    } finally {
+      window.history.replaceState(null, "", "/");
+    }
   });
 });

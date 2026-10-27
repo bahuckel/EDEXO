@@ -89,6 +89,11 @@ export const IS_DETACHED = params.has("tabwin");
 export const WINDOW_KEY = params.get("tabwin") ?? (TAB_APP === "colonize" ? "colonize" : "main");
 const LS_TABS_BASE = TAB_APP === "colonize" ? "edexo.colonize.tabs" : "edexo.tabs";
 const LS_TABS = IS_DETACHED ? `${LS_TABS_BASE}.${WINDOW_KEY}` : LS_TABS_BASE;
+/*
+  The streamer view (`?view=stream`) shows the home screen only, with no tab strip (owner, 2026-10-27: it took the
+  streamer's open tabs from the settings mirror, and every tab on top could be clicked).
+*/
+const STREAMER = params.get("view") === "stream";
 
 interface TabBridge {
   report(tabs: readonly string[]): void;
@@ -121,6 +126,7 @@ export function screenFitsHere(kind: TabKind): boolean {
 let elsewhere: Record<string, string[]> = {};
 
 function read(): TabState {
+  if (STREAMER) return { on: false, tabs: [], active: "main" };
   let on = true;
   let tabs: TabKind[] = [];
   let active: TabFront = "main";

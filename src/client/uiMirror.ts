@@ -16,6 +16,8 @@ const PREFIX = "edexo.";
 /** Not a setting of the picture: diagnostics switches. */
 const SKIP = new Set(["edexo.perf"]);
 const MAX_VALUE = 20_000;
+/** Storage's own read, kept before the streamer view starts recording reads (below): the mirror's reads are not the page's. */
+const rawGetItem = typeof Storage === "undefined" ? null : Storage.prototype.getItem;
 
 function snapshot(): Record<string, string> {
   const out: Record<string, string> = {};
@@ -23,7 +25,7 @@ function snapshot(): Record<string, string> {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k || !k.startsWith(PREFIX) || SKIP.has(k)) continue;
-      const v = localStorage.getItem(k);
+      const v = rawGetItem ? rawGetItem.call(localStorage, k) : localStorage.getItem(k);
       if (v != null && v.length <= MAX_VALUE) out[k] = v;
     }
   } catch {
@@ -55,9 +57,39 @@ export function startUiMirrorSource(): void {
   window.setInterval(tick, 1000);
 }
 
-interface Mirror {
+export interface Mirror {
   rev: number;
   values: Record<string, string>;
+}
+
+/*
+  The settings the streamer view has read (owner, 2026-10-27: "I see the page refresh when I change the window, but
+  nothing changes"). Switching Compare's tabs changes the tab list and the opened screen's filters, none of which the
+  streamer view shows; it redrew for them all the same. Only a changed setting it has read now redraws it; the others
+  are just stored, ready if a panel reads them later.
+*/
+const readKeys = new Set<string>();
+let recording = false;
+
+function recordReads(): void {
+  if (recording || typeof Storage === "undefined") return;
+  recording = true;
+  const getItem = Storage.prototype.getItem;
+  Storage.prototype.getItem = function (this: Storage, key: string) {
+    if (this === window.localStorage) readKeys.add(key);
+    return getItem.call(this, key);
+  };
+}
+
+/** The keys whose value `m` changes, compared with this page's storage. */
+export function changedKeys(m: Mirror, current: Record<string, string> = snapshot()): string[] {
+  const keys = new Set([...Object.keys(current), ...Object.keys(m.values)]);
+  return [...keys].filter((k) => current[k] !== m.values[k]);
+}
+
+/** Whether a change to `keys` alters what the page has drawn: one of them was read. */
+export function touchesWhatWasRead(keys: readonly string[], read: ReadonlySet<string> = readKeys): boolean {
+  return keys.some((k) => read.has(k));
 }
 
 function apply(m: Mirror): void {
@@ -77,6 +109,7 @@ export async function loadUiMirror(): Promise<number> {
     if (!r.ok) return -1;
     const m = (await r.json()) as Mirror;
     apply(m);
+    recordReads();
     return m.rev;
   } catch {
     return -1;
@@ -93,8 +126,9 @@ export function watchUiMirror(fromRev: number, onChange: () => void): void {
       .then((m) => {
         if (!m || m.rev === rev) return;
         rev = m.rev;
+        const redraw = touchesWhatWasRead(changedKeys(m));
         apply(m);
-        onChange();
+        if (redraw) onChange();
       })
       .catch(() => {});
   });
