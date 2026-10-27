@@ -152,7 +152,6 @@ export default tseslint.config(
     "src/client/GalaxyMap3D.tsx": 1800,
     "src/server/exomasteryProfile.ts": 1500,
     "src/server/gameState.ts": 1400,
-    "src/server/matchSpecies.ts": 1300,
   }).map(([file, max]) => ({
     files: [file],
     rules: { "max-lines": ["warn", { max, skipBlankLines: true, skipComments: true }] },
