@@ -11,7 +11,7 @@ import { RowContext, LiveRun } from "./rowContext";
 import { settledMultiplier } from "@shared/footfallValue";
 import { readableAtmosphereLead } from "@shared/atmosphereLabel";
 import { footfallCertainty } from "@shared/footfallValue";
-import { useCallback, memo, Suspense, useMemo, useState } from "react";
+import { Fragment, useCallback, memo, Suspense, useMemo, useState } from "react";
 import { ExoPayoutRangePanel, payoutHeadline } from "./ExoPayoutRangePanel";
 import { FoldPanel } from "./ui/Fold";
 import { SnapshotButton } from "./SnapshotButton";
@@ -362,7 +362,15 @@ export const BodyPane = memo(function BodyPane({
                 </div>
                 <div className="fact" style={Number.isFinite(gEarth) ? gravHeatStyle(gEarth) : undefined}>
                   <span className="fact-k">Gravity</span>
-                  <span className="fact-v">{gravLabel}</span>
+                  {/* A value that wraps breaks at the "≈", never inside "2.452 g" or "24.04 m/s²". */}
+                  <span className="fact-v">
+                    {gravLabel.split(" ≈ ").map((part, i) => (
+                      <Fragment key={i}>
+                        {i ? " " : null}
+                        <span className="fact-v__part">{i ? `≈ ${part}` : part}</span>
+                      </Fragment>
+                    ))}
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -405,12 +413,14 @@ export const BodyPane = memo(function BodyPane({
                 >
                   <span className="fact-k">From arrival</span>
                   <span className="fact-v">
-                    {fromArrivalDisplay}
+                    <span className="fact-v__part">{fromArrivalDisplay}</span>
                     {trip && trip.rank != null && trip.ranked > 1 ? (
-                      <small>
+                      <>
                         {" "}
-                        · {tripRankLabel(trip.rank)} of {trip.ranked}
-                      </small>
+                        <small>
+                          · {tripRankLabel(trip.rank)} of {trip.ranked}
+                        </small>
+                      </>
                     ) : null}
                   </span>
                 </div>

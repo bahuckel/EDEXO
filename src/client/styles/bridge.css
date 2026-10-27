@@ -177,6 +177,18 @@
 .body-pane .exo-payout-collapsible .facts {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+/* The planet card's values wrap onto a second line rather than lose their end to an ellipsis ("High metal content
+   body", "250,351.32 Ls · nearest of 7" at 1,280 px, more with the wider EDEXO font, 2026-10-27); the qualifier
+   after a value moves down first. The sell range's tiles keep their one line. */
+.body-pane .facts:not(.facts--payout) .fact-v {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.body-pane .facts:not(.facts--payout) .fact-v small,
+.body-pane .facts:not(.facts--payout) .fact-v__part {
+  white-space: nowrap;
+}
 
 /* ---- the candidate wall: genus boxes one column wide, two columns from 50 rem, never more. A genus
  * with several species stacks them inside its box, so the ranking order reads down each column. --- */
