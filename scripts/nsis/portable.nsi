@@ -1,5 +1,5 @@
 ; ED Exo Compare's portable launcher: electron-builder 26.8.1's templates/nsis/portable.nsi with one
-; change (combined plan 1.6a, 2026-10-01). scripts/dist-win.mjs copies it over the template before
+; change (combined plan 1.6a, 2026-10-01; the stock script is unchanged through 26.18.0, checked 2026-10-27). scripts/dist-win.mjs copies it over the template before
 ; every build, because electron-builder reads the portable script from its own folder and has no
 ; option for another.
 ;

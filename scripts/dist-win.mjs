@@ -114,9 +114,9 @@ try {
 function installPortableTemplate() {
   const libPkg = require.resolve("app-builder-lib/package.json");
   const libVersion = require(libPkg).version;
-  if (libVersion !== "26.8.1") {
+  if (libVersion !== "26.18.0") {
     console.error(
-      `[dist:win] app-builder-lib is ${libVersion}, scripts/nsis/portable.nsi is based on 26.8.1: ` +
+      `[dist:win] app-builder-lib is ${libVersion}, scripts/nsis/portable.nsi is based on 26.18.0: ` +
         "diff it against templates/nsis/portable.nsi of the new version, update it and this check.",
     );
     process.exit(1);

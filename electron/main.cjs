@@ -340,7 +340,7 @@ let switchingCommander = false;
 /** What main listens to on the server's runtime; again after each restart. */
 function wireRuntime() {
   // Boxel scanning: whatever the run, a jump or a boxel key picks goes on the clipboard.
-  if (runtime && typeof runtime.onBoxelNext === "function") runtime.onBoxelNext((name) => clipboard.writeText(name));
+  if (runtime && typeof runtime.onBoxelNext === "function") runtime.onBoxelNext((name) => void Promise.resolve(clipboard.writeText(name)).catch(() => {}));
   if (runtime && typeof runtime.onGameRunning === "function") {
     if (runtime.gameRunning() === false) huds.setGameAway(true);
     runtime.onGameRunning((running) => {

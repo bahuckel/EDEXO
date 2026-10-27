@@ -84,6 +84,8 @@ const COLLAPSE_TYPES = new Set(["subFrame", "image", "object", "media"]);
  */
 function createBrowserTabs(o) {
   const { BrowserWindow, WebContentsView, Menu, clipboard, session, app } = o.electron;
+  // Electron 44: the clipboard's calls return Promises; a failed copy is not worth a crash report.
+  const copyText = (t) => void Promise.resolve(clipboard.writeText(t)).catch(() => {});
   /** @type {Map<number, any>} */
   const tabs = new Map();
   let order = [];
@@ -499,12 +501,12 @@ function createBrowserTabs(o) {
       const items = [];
       if (p.linkURL && httpUrl(p.linkURL)) {
         items.push({ label: "Open link in a new tab", click: () => openTab(p.linkURL, t.id) });
-        items.push({ label: "Copy link address", click: () => clipboard.writeText(p.linkURL) });
+        items.push({ label: "Copy link address", click: () => copyText(p.linkURL) });
         items.push({ type: "separator" });
       }
       if (p.srcURL && p.mediaType === "image" && httpUrl(p.srcURL))
         items.push(
-          { label: "Copy image address", click: () => clipboard.writeText(p.srcURL) },
+          { label: "Copy image address", click: () => copyText(p.srcURL) },
           { type: "separator" },
         );
       if (p.isEditable)

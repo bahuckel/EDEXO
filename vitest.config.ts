@@ -26,7 +26,7 @@ function resolveTsFromJsSpecifier() {
 export default defineConfig({
   plugins: [resolveTsFromJsSpecifier()],
   resolve: {
-    alias: { "@shared": path.resolve(__dirname, "src/shared") },
+    alias: { "@shared": path.resolve(import.meta.dirname, "src/shared") },
   },
   test: {
     include: ["tests/**/*.test.{ts,tsx}"],

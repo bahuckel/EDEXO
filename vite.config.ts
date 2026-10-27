@@ -11,13 +11,13 @@ const API = `127.0.0.1:${process.env.EDEXO_DEV_API_PORT || "7111"}`;
 const DEV_PORT = Number(process.env.EDEXO_DEV_PORT || 5173);
 
 export default defineConfig({
-  // Tailwind compiles the utilities only; minifying stays with Vite (esbuild) as before 3.2, so the
-  // app's own rules are not rewritten by a second optimiser.
+  // Tailwind compiles the utilities only; minifying stays with Vite as before 3.2, so the app's own rules are not
+  // rewritten by a second optimiser.
   plugins: [react(), tailwindcss({ optimize: false })],
   root: "src/client",
   publicDir: "../../public",
   resolve: {
-    alias: { "@shared": path.resolve(__dirname, "src/shared") },
+    alias: { "@shared": path.resolve(import.meta.dirname, "src/shared") },
   },
   server: {
     port: DEV_PORT,
@@ -37,7 +37,7 @@ export default defineConfig({
     // What tsconfig targets, and what Electron and current phone browsers run; Vite's default
     // (es2020) down-levelled class fields and the like for nobody (plan 2.6, Fable 9.2).
     target: "es2022",
-    rollupOptions: {
+    rolldownOptions: {
       /*
         The app and the HUD overlay pages (React since 1.2.17, plan 3.8). The overlays keep their names, so their
         addresses — the Electron windows know them by path (electron/hudWindows.cjs), the phone by link — stay.
@@ -58,15 +58,18 @@ export default defineConfig({
           "notices-overlay",
           "colonize-overlay",
           "ship-overlay",
-        ].map((n) => [n, path.resolve(__dirname, "src/client", `${n}.html`)]),
+        ].map((n) => [n, path.resolve(import.meta.dirname, "src/client", `${n}.html`)]),
       ),
       output: {
         // React changes far less often than app code; keeping it in its own chunk means a release
         // only invalidates the app chunk in the browser cache. three.js likewise: 600 of the galaxy
-        // chunk's 620 kB, re-downloaded after every edit to the map's own code.
-        manualChunks: {
-          react: ["react", "react-dom", "react-dom/client"],
-          three: ["three"],
+        // chunk's 620 kB, re-downloaded after every edit to the map's own code. (Vite 8 / Rolldown: groups by module
+        // path; the object form of Rollup's manualChunks is gone.)
+        codeSplitting: {
+          groups: [
+            { name: "react", test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: "three", test: /[\\/]node_modules[\\/]three[\\/]/ },
+          ],
         },
       },
     },
