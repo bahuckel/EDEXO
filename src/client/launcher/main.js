@@ -20,7 +20,10 @@ import { start as linuxSetupStart } from "./linuxSetup.js";
 import { start as trayGraphicsStart } from "./trayGraphics.js";
 import { start as wizardStart } from "./wizard.js";
 import { connectWs, loopPoll } from "./status.js";
+import { applyUiFont } from "../uiFont";
 
+// The interface font chosen in the app's Options (Classic or EDEXO).
+applyUiFont();
 networkStart();
 updateStart();
 whatsNewStart();

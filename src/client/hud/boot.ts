@@ -4,6 +4,10 @@
   merged HUD names none and reads its query string.
 */
 import { HUD } from "./main";
+import { applyUiFont } from "../uiFont";
+
+// The interface font chosen in Options (Classic or EDEXO), before the first paint.
+applyUiFont();
 
 const mount = HUD.mount as (names: string[]) => HTMLElement;
 const fromUrl = HUD.sectionsFromUrl as () => string[];

@@ -4,6 +4,7 @@
 import { useToast } from "./ui/feedback";
 import { withTransition } from "./motion";
 import { MotionSetting } from "./options/MotionSetting";
+import { FontSetting } from "./options/FontSetting";
 import { ModalHead } from "./ui/ModalHead";
 import { ExoAlertsSetting } from "./options/ExoAlertsSetting";
 import { useModal } from "./ui/useModal";
@@ -303,6 +304,7 @@ export function MapOptionsModal({
           </h4>
           <ColourSchemePanel />
           <MotionSetting />
+          <FontSetting />
           {compare ? (
           <>
           {/*

@@ -39,5 +39,38 @@
   --unknown: rgba(176, 178, 188, 0.62);
 
   /* ---- type ------------------------------------------------------------------------------------ */
-  --hud-font: "Bahnschrift", "Eurostile", "Square721 BT", "Segoe UI", system-ui, sans-serif;
+  --hud-font: "Bahnschrift", "Eurostile", "Square721 BT", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/*
+  The EDEXO font (owner, 2026-10-27), chosen in Options > Look > Font: `<html data-font="edexo">` (src/client/uiFont.ts).
+  Four weights; the browser downloads one only when text uses it, so Classic costs nothing. Its caps and x-height
+  match Bahnschrift's at the same size; a character it lacks falls back to Bahnschrift, then the system.
+*/
+@font-face {
+  font-family: "EDEXO";
+  src: url("/fonts/EDEXO-Regular.woff2") format("woff2");
+  font-weight: 100 499;
+  font-display: block;
+}
+@font-face {
+  font-family: "EDEXO";
+  src: url("/fonts/EDEXO-SemiBold.woff2") format("woff2");
+  font-weight: 500 649;
+  font-display: block;
+}
+@font-face {
+  font-family: "EDEXO";
+  src: url("/fonts/EDEXO-Bold.woff2") format("woff2");
+  font-weight: 650 749;
+  font-display: block;
+}
+@font-face {
+  font-family: "EDEXO";
+  src: url("/fonts/EDEXO-ExtraBold.woff2") format("woff2");
+  font-weight: 750 1000;
+  font-display: block;
+}
+:root[data-font="edexo"] {
+  --hud-font: "EDEXO", "Bahnschrift", "Segoe UI", system-ui, -apple-system, sans-serif;
 }

@@ -12,7 +12,7 @@
 
   Tunables live in :root. Section markup comes from hud/ (one module per section); the page only supplies the shell.
 */
-@import url("tokens.css?v=5");
+@import url("tokens.css?v=6");
 :root {
   /* the palette comes from tokens.css (shared with the launcher and the app); these are HUD-only */
   --hud-bg: rgba(18, 9, 2, 0.42); /* the panel fill: mostly the game showing through */

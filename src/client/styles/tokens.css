@@ -188,16 +188,8 @@
   --fs-4xl: 32px;
   /* Match launcher honeycomb math; stroke uses UI accent */
   --hex-grid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27.7128 48'%3E%3Cpath d='M13.8564 0L27.7128 8L27.7128 24L13.8564 32L0 24L0 8ZM13.8564 32L13.8564 48' fill='none' stroke='%23ff8a1f' stroke-opacity='0.16' stroke-width='0.75'/%3E%3C/svg%3E");
-  /* Bahnschrift ships with Windows 10+ and is the closest stock face to the game's Eurostile;
-   * the launcher and the HUD use the same stack. */
-  font-family:
-    "Bahnschrift",
-    "Eurostile",
-    "Square721 BT",
-    "Segoe UI",
-    system-ui,
-    -apple-system,
-    sans-serif;
+  /* The shared stack (public/tokens.css): Bahnschrift, or the EDEXO font when chosen in Options > Look > Font. */
+  font-family: var(--hud-font);
 }
 
 * {

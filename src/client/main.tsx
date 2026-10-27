@@ -6,6 +6,7 @@ import { UiFeedbackProvider } from "./ui/feedback";
 import { LoadingNote } from "./ui/Loading";
 import { applyAppTheme, followAppThemeChanges } from "./appTheme";
 import { applyMotion } from "./motion";
+import { applyUiFont } from "./uiFont";
 import { applyStreamerMode, STREAMER_MODE } from "./streamerMode";
 import { loadUiMirror, startUiMirrorSource, watchUiMirror } from "./uiMirror";
 
@@ -28,6 +29,7 @@ const mirrorRev = STREAMER_MODE ? await loadUiMirror() : -1;
 applyAppTheme();
 followAppThemeChanges();
 applyMotion();
+applyUiFont();
 // `?view=stream`: the same app, as a picture for a stream (streamerMode.ts).
 applyStreamerMode();
 
