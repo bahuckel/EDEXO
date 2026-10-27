@@ -133,11 +133,11 @@
   row-gap: 0.22rem;
   align-items: baseline;
 }
+/* A long name ("Resonating Separators") takes a second line rather than an ellipsis (2026-10-27, the wider EDEXO font);
+   the amount stays on the first line's baseline. */
 .cz-mat__name {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
 }
 .cz-mat__v {
   white-space: nowrap;

@@ -765,22 +765,26 @@
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 0.6rem 0.8rem;
 }
+/* A caption too long for its chart puts "most at" on a second line (2026-10-27, the wider EDEXO font); the charts in a
+   row keep their bottoms level. */
 .fg-chart {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   margin: 0;
   min-width: 0;
 }
 .fg-chart figcaption {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 0.4rem;
+  gap: 0 0.4rem;
   font-size: var(--fs-2xs);
   color: var(--muted);
   margin-bottom: 0.2rem;
 }
 .fg-chart-k {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .fg-mode {
   white-space: nowrap;
