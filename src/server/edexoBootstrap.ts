@@ -1,4 +1,4 @@
-import { flushNavRouteLog, navRouteLog, recordNavRoute } from "./navRouteLog.js";
+import { flushNavRouteLog, navRouteLog } from "./navRouteLog.js";
 import { enablePredictionAudit, flushPredictionAudit, predictionRecords } from "./predictionAuditLog.js";
 import { predictionQuality } from "./predictionQuality.js";
 import { cardVerdictsFor } from "./cardVerdicts.js";
@@ -17,10 +17,8 @@ import {
 } from "./sharedExomastery.js";
 import { ownFootEntriesWithBackups } from "./footScannedCatalog.js";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import type { AppSnapshot, AppStatusDTO, ExoLiveDTO, JournalLine, UiCommand } from "../shared/types.js";
+import type { AppSnapshot, ExoLiveDTO, JournalLine, UiCommand } from "../shared/types.js";
 import { journalHistoryCutoffUtcMs } from "../shared/journalHistoryPreset.js";
-import { pollRatesDto } from "../shared/pollRates.js";
-import { radarRadiusDto } from "../shared/radarRadius.js";
 import { mergeCollectionFocus } from "../shared/collectionFocus.js";
 import {
   clearCollectionFocusCache,
@@ -43,7 +41,7 @@ import { scanJournalsForStatistics } from "./statisticsScan.js";
 import { createHttpServer, getLanIPv4s } from "./httpServer.js";
 import { appViewUrl } from "./appViews.js";
 import { describeUserDataMigration, migrateLegacyUserData } from "./userDataMigration.js";
-import { readLanAccess, resolveLanAccess } from "./launcherPrefs.js";
+import { resolveLanAccess } from "./launcherPrefs.js";
 import { isLoopbackHostName } from "./lanAuth.js";
 import { applyPendingRestore } from "./backup.js";
 import { createBackupService } from "./backupService.js";
@@ -60,7 +58,6 @@ import { buildEncyclopediaExomasteryPlanetsPayload } from "./exomasteryEdsmEncyc
 import {
   buildEncyclopediaPayload,
   buildSnapshot,
-  organicLiveSummary,
   findSpeciesEntryForEncyclopedia,
   getCachedSpeciesDatabase,
   setCodexFirstLowChanceKept,
@@ -74,14 +71,12 @@ import { createGamePresence } from "./gamePresence.js";
 import { buildFieldGuide } from "./fieldGuide.js";
 import { buildDiscoveries } from "./discoveries.js";
 import { flushFootScannedCatalog } from "./footScannedCatalog.js";
-import { getSpeciesDataWarnings } from "./speciesTreeLoader.js";
 import {
   parseStatusJsonDestination,
   parseStatusJsonFootFix,
   parseStatusJsonFuel,
   readStatusJsonFootFixText,
 } from "./footTravelStatus.js";
-import { parseNavRouteJson } from "./navRouteFuel.js";
 import {
   getProjectRoot,
   resolveCommanderDataDir,
@@ -125,13 +120,11 @@ import { createWhatsNew } from "./whatsNew.js";
 import { buildDiagnosticsText, installLogRing, loggedLines, serverMemory } from "./diagnostics.js";
 import { galaxyMemoryState } from "./galaxyMemory.js";
 import { createUnknownExobioLog } from "./exobioUnknown.js";
-import { fetchRemoteSystem, readRemoteSystemsCache, writeRemoteSystemToCache } from "./remoteSystems.js";
 import { parseHost, parsePort } from "./cliOptions.js";
 import type { CliOptions } from "./cliOptions.js";
 import { showEdexoNativeFixInfo, logFatal, assertResourceLayout } from "./startupChecks.js";
-import { fullJumpRange } from "../shared/jumpRange.js";
 import { createGggResearch } from "./gggResearch.js";
-import { createNoticesService, type CodexFirstFind, type NoticesContext, type RareColourFind } from "./notices.js";
+import { createNoticesService, type CodexFirstFind, type RareColourFind } from "./notices.js";
 import { isRareColour } from "../shared/rareColour.js";
 import { communityGoalNoticeText, startCommunityGoalPoller } from "./communityGoals.js";
 import { startDataAutoRefresh } from "./dataAutoRefresh.js";
@@ -141,20 +134,17 @@ import { createBoxelRun } from "./boxelRun.js";
 import { createSavedBoxels } from "./savedBoxels.js";
 import { createNeutronLive } from "./neutronLive.js";
 import { createNeutronReplanner } from "./neutronReplan.js";
-import { fsdWearEstimate, FSD_WARN } from "../shared/fsdWear.js";
-import { jumponiumView } from "../shared/jumponium.js";
-import { createGreenGiantMarks, greenGiantForRecord, type GreenGiantSources } from "./greenGiants.js";
-import { setNotableOptionsProvider } from "./notableOptions.js";
-import { BODY_FEATURES } from "../shared/bodyFeatures.js";
+import { createGreenGiantMarks, greenGiantForRecord } from "./greenGiants.js";
+import { createNoticesWiring } from "./noticesWiring.js";
+import { addSnapshotExtras } from "./snapshotExtras.js";
+import { createJournalSideFiles } from "./journalSideFiles.js";
+import { createRemoteSystemView } from "./remoteSystemView.js";
+import { createStatusReader } from "./appStatus.js";
 import type { NotifySettingsDTO } from "../shared/notices.js";
-import { queryPoi, readPoiStatus } from "./edastroPoi.js";
-import { queryCarriers, readCarrierStatus } from "./edastroCarriers.js";
-import { edastroGreenFor, nearbyNsp, nspK10Systems } from "./edastroNsp.js";
-import { nspOutlook } from "./nspOutlook.js";
-import { regionForSystem } from "./regionMapData.js";
-import { fetchGalacticRecords, galacticRecords, readGalacticRecordsStatus } from "./galacticRecords.js";
+import { readPoiStatus } from "./edastroPoi.js";
+import { readCarrierStatus } from "./edastroCarriers.js";
+import { fetchGalacticRecords, readGalacticRecordsStatus } from "./galacticRecords.js";
 import { bodyKey } from "../shared/bodyKey.js";
-import { mainStarRecord } from "../shared/mainStar.js";
 import {
   applyPersistedUserPrefs as applyUserPrefs,
   persistUserPreferences as writeUserPrefs,
@@ -254,35 +244,6 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   */
   await pickCommanderForRun(journalDir);
 
-  /** The live route into the store, and a new one into the NavRoute star finder's log (navRouteLog.ts). */
-  function applyNavRoute(waypoints: ReturnType<typeof readLiveNavRouteWaypoints>): boolean {
-    const changed = store.applyLiveNavRoute(waypoints);
-    if (changed && recordNavRoute(waypoints)) store.boxelsRevision++;
-    return changed;
-  }
-  /*
-    Read on every Status tick (10 a second at the commander's 100 ms, plus every watch event), and a
-    plotted route makes it a large file: re-read only when its size or mtime moved, the last parse
-    standing in between (code review D6, 2026-10-14). A missing file still reads as no route.
-  */
-  let navRouteFileSeen: { key: string; waypoints: NonNullable<ReturnType<typeof parseNavRouteJson>> } | null =
-    null;
-  function readLiveNavRouteWaypoints() {
-    const file = path.join(journalDir, "NavRoute.json");
-    try {
-      const st = statSync(file);
-      const key = `${file}|${st.size}|${st.mtimeMs}`;
-      if (navRouteFileSeen?.key === key) return navRouteFileSeen.waypoints;
-      const waypoints = parseNavRouteJson(readFileSync(file, "utf8"));
-      // Only a route is kept: no route also reads as null for a file caught mid-write, and that must retry.
-      navRouteFileSeen = waypoints ? { key, waypoints } : null;
-      return waypoints;
-    } catch {
-      navRouteFileSeen = null;
-      return null;
-    }
-  }
-
   const store = new GameStateStore();
   /*
     The radar's memory, before any journal is read.
@@ -296,18 +257,11 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     round.
   */
   store.loadSurfaceMarksFromDisk();
-
-  /** Re-read `NavRoute.json` + `Status.json` after a full journal replay (new log file / resync). */
-  function refreshLiveHudFromJournalDir(): void {
-    applyNavRoute(readLiveNavRouteWaypoints());
-    try {
-      const raw = readFileSync(path.join(journalDir, "Status.json"), "utf8");
-      const fuel = parseStatusJsonFuel(raw);
-      store.applyLiveShipFuel(fuel != null ? fuel.fuelMain : null, fuel != null ? fuel.fuelReserve : null);
-    } catch {
-      store.applyLiveShipFuel(null, null);
-    }
-  }
+  // NavRoute.json and Status.json beside the journals: the live route, the fuel, the per-batch read (journalSideFiles.ts).
+  const { applyNavRoute, readLiveNavRouteWaypoints, refreshLiveHudFromJournalDir, liveSideFiles } = createJournalSideFiles({
+    store,
+    getJournalDir: () => journalDir,
+  });
 
   const userSettingsPath = resolveUserSettingsJsonPath();
   const legacyUserSettingsPath = path.join(projectRoot, USER_SETTINGS_FILENAME);
@@ -462,66 +416,12 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   const greenMarks = createGreenGiantMarks({
     filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-ggg-marks.json"),
   });
-  const bodiesInSystem = function* (addr: number) {
-    yield* store.liveScansInSystem(addr);
-    yield* store.soldScansInSystem(addr);
-  };
-  const greenExtras = { k10FromEdastro: nspK10Systems, edastroGreenFor, bodiesInSystem, marks: greenMarks };
-  const greenSources = (): GreenGiantSources => ({
-    ...greenExtras,
-    greenCodexBodies: store.greenCodexBodies,
-    k10Systems: store.k10Systems,
+  // The green gas giants' sources, the Notable card's options and the notices' view of the store (noticesWiring.ts).
+  const { greenExtras, greenSources, scanOf, mainStarTypeOf, noticesContext } = createNoticesWiring({
+    store,
+    notices,
+    greenMarks,
   });
-  const scanOf = (k: string) => store.explorationScans.get(k) ?? store.soldExplorationScans.get(k) ?? null;
-  /** The arrival star's type (distance 0), else the lowest-numbered star scanned: the phenomena model's main star. */
-  const mainStarTypeOf = (addr: number): string | null =>
-    mainStarRecord([...store.liveScansInSystem(addr), ...store.soldScansInSystem(addr)])?.starType ?? null;
-  // The Notable card: green gas giants always (they are notable like an Earth-like), features as chosen.
-  setNotableOptionsProvider(() => {
-    const on = notices.prefs().features;
-    return {
-      green: greenExtras,
-      features: new Set(BODY_FEATURES.filter((f) => on[f.key]).map((f) => f.key)),
-    };
-  });
-  const noticesContext: NoticesContext = {
-    isKnownBody: (k) => store.explorationScans.has(k) || store.soldExplorationScans.has(k),
-    allScans: function* () {
-      yield* store.explorationScans.values();
-      yield* store.soldExplorationScans.values();
-    },
-    currentSystem: () => ({ name: store.currentSystem ?? "", address: store.currentSystemAddress ?? null }),
-    loadoutJumpLy: () => store.loadoutMaxJumpRangeLy,
-    fullJumpLy: () => fullJumpRange(store.jumpRange),
-    // Both read the commander's own EDAstro downloads; with none fetched they find nothing.
-    nearbyPois: (origin, radiusLy, groups) =>
-      queryPoi({ origin, groups, limit: 50 })
-        .filter((r) => r.distanceLy != null && r.distanceLy <= radiusLy)
-        .map((r) => ({
-          key: r.key,
-          name: r.name,
-          system: r.system,
-          typeLabel: r.typeLabel,
-          distanceLy: r.distanceLy!,
-        })),
-    nearbyCarriers: (origin, radiusLy) =>
-      queryCarriers({ origin, limit: 100 })
-        .filter((r) => r.distanceLy != null && r.distanceLy <= radiusLy)
-        .map((r) => ({
-          callsign: r.callsign,
-          name: r.name,
-          system: r.system,
-          systemAddress: r.systemAddress,
-          distanceLy: r.distanceLy!,
-          lastSeenDays: r.lastSeenDays,
-          services: r.services,
-        })),
-    nearbyNsps: (origin, radiusLy) => nearbyNsp(origin, radiusLy),
-    galacticRecord: (key) => galacticRecords().get(key) ?? null,
-    greenGiant: (rec) => greenGiantForRecord(rec, greenSources()),
-    scanOf,
-    rawStock: () => store.jumponium.raw,
-  };
   const notifySettings = (): NotifySettingsDTO => ({
     prefs: notices.prefs(),
     jumpLy: notices.jumpLy(noticesContext),
@@ -541,131 +441,16 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         journal.bootProgress(),
         sessionLog.toDto(),
       );
-      // Neither while the history replays: the boot screen covers both (plan 2.3, Opus 20).
-      snap.notices = snap.journalBoot
-        ? undefined
-        : notices.snapshot(store.viewingSystemAddress ?? store.currentSystemAddress ?? null);
-      {
-        // The NSP card (2026-09-30): what he saw, what EDAstro has, else a guess from the neighbourhood.
-        const addr = store.viewingSystemAddress ?? store.currentSystemAddress ?? null;
-        snap.nspOutlook =
-          addr == null || snap.journalBoot
-            ? null
-            : perfTime("snap.nspOutlook", () =>
-                nspOutlook({
-                  systemAddress: addr,
-                  position: store.systemPositions.get(addr) ?? null,
-                  seen: store.nspSeen.get(addr) ?? [],
-                  region: (() => {
-                    const pos = store.systemPositions.get(addr);
-                    return pos
-                      ? regionForSystem(getProjectRoot(), pos.x, pos.y, pos.z)
-                      : (snap.currentRegion?.name ?? null);
-                  })(),
-                  starType: mainStarTypeOf(addr),
-                }),
-              );
-      }
-      snap.neutronLive = snap.journalBoot ? null : neutronLive.view(shipHere());
-      {
-        const w = fsdWearEstimate(store.fsdWear);
-        snap.fsdHealth =
-          snap.journalBoot || w.health == null
-            ? null
-            : {
-                health: w.health,
-                warn: w.health < FSD_WARN,
-                boostsSince: w.boostsSince,
-                estimate: w.boostsSince > 0 && w.wearIsDefault,
-              };
-      }
-      snap.jumponium = snap.journalBoot ? null : jumponiumView(store.jumponium);
-      snap.bookmarksHere = bookmarks.forSystem(
-        store.viewingSystemAddress ?? store.currentSystemAddress ?? null,
-        snap.viewingSystemName ?? store.currentSystem ?? null,
-      );
-      snap.commanders = commanderWatch.state();
+      // What the journal store does not hold: notices, the NSP card, the neutron route, the FSD, bookmarks (snapshotExtras.ts).
+      addSnapshotExtras(snap, { store, notices, neutronLive, shipHere, bookmarks, commanderWatch, mainStarTypeOf });
       return snap;
     });
 
   // "Import Spansh export" from the launcher (importDumpJob.ts).
   const importDump = createImportDumpJob();
 
-  /**
-   * Show a system the journals know nothing about, from Spansh (owner, 2026-09-25). The 30-day cache
-   * answers first; a fetch is marked "loading" so the screen can say so, and a failure says why.
-   * A system with any bio body or mappable scan of his own is never replaced by somebody else's data.
-   */
-  async function ensureRemoteSystem(systemAddress: number, starSystem: string): Promise<void> {
-    if (store.hasMappableJournalExplorationForSystem(systemAddress)) return;
-    if (store.remoteSystems.has(systemAddress)) return;
-    if (store.remoteLookups.get(systemAddress)?.state === "loading") return;
-    const cached = readRemoteSystemsCache().find((r) => r.systemAddress === systemAddress);
-    if (cached) {
-      store.remoteSystems.set(systemAddress, cached);
-      push();
-      return;
-    }
-    store.remoteLookups.set(systemAddress, { starSystem, state: "loading" });
-    push();
-    const r = await fetchRemoteSystem(systemAddress, starSystem);
-    if (r.ok) {
-      store.remoteSystems.set(systemAddress, r.system);
-      store.remoteLookups.delete(systemAddress);
-      writeRemoteSystemToCache(r.system);
-    } else {
-      store.remoteLookups.set(systemAddress, { starSystem, state: "error", error: r.error });
-    }
-    push();
-  }
-
-  /** The same two rules before either galaxy source fills a system's map. */
-  function hydrateGate(systemAddress: number, source: string): { ok: false; error: string } | null {
-    if (!store.isKnownJournalSystem(systemAddress)) {
-      return { ok: false, error: "That system is not present in merged journal data." };
-    }
-    if (store.hasMappableJournalExplorationForSystem(systemAddress)) {
-      return {
-        ok: false,
-        error: `Journal already has mappable scan data for this system — no ${source} supplement needed.`,
-      };
-    }
-    return null;
-  }
-
-  /**
-   * Launcher-sized status. Reads store fields directly — no snapshot build, no one-shot state.
-   */
-  const getStatus = (): AppStatusDTO => {
-    let journalDirConfiguredOk = false;
-    try {
-      journalDirConfiguredOk = existsSync(journalDir) && statSync(journalDir).isDirectory();
-    } catch {
-      journalDirConfiguredOk = false;
-    }
-    return {
-      mode: lanExposed ? "server" : "client",
-      bindHost,
-      port,
-      lanUrls: lanExposed ? lanUrlsWithKey() : [],
-      lanKeyRequired: lanKey != null,
-      lanAccess: cli.lanToggle ? { saved: readLanAccess() ?? lanExposed, active: lanExposed } : null,
-      journalDir,
-      journalDirConfiguredOk,
-      journalPath: journal.path(),
-      journalFileCount: journal.filesMerged(),
-      journalHistoryPreset: store.journalHistoryPreset,
-      lastJournalEventIso: store.lastEventIso,
-      commanderName: store.commanderName,
-      journalBoot: journal.bootProgress(),
-      speciesDataWarnings: getSpeciesDataWarnings(),
-      pollRates: pollRatesDto(store.statusPollMs, store.journalPollMs),
-      radarRadius: radarRadiusDto(store.minimapRadiusM),
-      live: organicLiveSummary(store),
-      feederEnabled: store.feederEnabled,
-      commanders: commanderWatch.state(),
-    };
-  };
+  // A system the journals do not know, from Spansh; the gate before a galaxy source fills a map (remoteSystemView.ts).
+  const { ensureRemoteSystem, hydrateGate } = createRemoteSystemView({ store, push: () => push() });
 
   let broadcast: (s: AppSnapshot) => void = () => {};
 
@@ -827,29 +612,6 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   // Carriers & Stations refresh themselves once fetched (dataAutoRefresh.ts): 12 h / 24 h unless changed.
   const dataAutoRefresh = startDataAutoRefresh(() => push());
 
-  /*
-    Status.json and NavRoute.json for the live lines, read once per batch (plan 2.3, O-22 + F-8.2). A
-    honk writes dozens of Scan lines in one go, they arrive in one tail chunk and are applied in one
-    synchronous loop, and each line read both files from disk again. Forgotten on the next turn of the
-    event loop, so the next chunk reads them fresh.
-  */
-  let sideFiles: { status: string | null; route: ReturnType<typeof readLiveNavRouteWaypoints> } | null = null;
-  function liveSideFiles() {
-    if (!sideFiles) {
-      let status: string | null = null;
-      try {
-        status = readFileSync(path.join(journalDir, "Status.json"), "utf8");
-      } catch {
-        status = null;
-      }
-      sideFiles = { status, route: readLiveNavRouteWaypoints() };
-      setImmediate(() => {
-        sideFiles = null;
-      });
-    }
-    return sideFiles;
-  }
-
   function createLiveJournalLine(): (line: JournalLine, at: JournalLineAt) => void {
     return (line: JournalLine, at: JournalLineAt) => {
       /*
@@ -920,6 +682,20 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     pushFlush,
     refreshLiveHudFromJournalDir,
     primeEddnFromNewestJournal,
+  });
+
+  // The launcher's status (appStatus.ts).
+  const getStatus = createStatusReader({
+    store,
+    journal,
+    commanderWatch,
+    getJournalDir: () => journalDir,
+    bindHost,
+    port,
+    lanExposed,
+    lanKeyRequired: lanKey != null,
+    lanToggle: cli.lanToggle === true,
+    lanUrlsWithKey,
   });
 
   async function applyNewJournalDirectory(nextRaw: string): Promise<{ ok: boolean; error?: string }> {

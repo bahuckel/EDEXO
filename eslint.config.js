@@ -151,7 +151,6 @@ export default tseslint.config(
     "src/client/galaxy3d/GalaxyEngine.ts": 2000,
     "src/client/GalaxyMap3D.tsx": 1800,
     "src/server/exomasteryProfile.ts": 1500,
-    "src/server/edexoBootstrap.ts": 1400,
     "src/server/gameState.ts": 1400,
     "src/server/matchSpecies.ts": 1300,
   }).map(([file, max]) => ({
