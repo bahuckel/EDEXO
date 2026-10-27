@@ -154,22 +154,67 @@
   background: #ff4a4a;
   box-shadow: 0 0 6px rgba(255, 74, 74, 0.6);
 }
-/* One line like the star cards, the bodies side by side after the label, wrapping when there are many (owner,
-   2026-10-27: "horizontal display like the stars"). */
+/*
+  The star cards and the notable bodies, two cards to a column, each group as tall as the System card beside it (owner,
+  2026-10-27: "more than 1 per column, first star cards, then the notables cards, 2 per column to match the system
+  card; if only 1 star, make the star card bigger"). The row stretches the groups to the System card's height and
+  each grid shares it between its two rows.
+*/
+.sys-row__cards > .sys-stars,
+.sys-row__cards > .sys-notable-card {
+  align-self: stretch;
+}
+.sys-stars {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 0.35rem 0.5rem;
+}
+.sys-stars > .sys-star-card {
+  padding-block: 0.15rem;
+}
+/* A lone star: one card the full height, its class a size up. */
+.sys-stars--solo {
+  grid-template-rows: minmax(0, 1fr);
+}
+.sys-stars--solo > .sys-star-card {
+  padding-inline: 0.8rem;
+  gap: 0.6rem;
+}
+.sys-stars--solo .sys-star-card__cls {
+  font-size: var(--fs-2xl);
+}
+.sys-stars--solo .sys-star-dot {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
 .sys-notable-card {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 0.6rem;
-  max-width: 64rem;
 }
 .sys-notable-card ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.1rem 0.9rem;
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 0.35rem 0.5rem;
+  height: 100%;
   list-style: none;
   margin: 0;
   padding: 0;
+}
+.sys-notable-card__item {
+  display: flex;
+  align-items: center;
+  padding-block: 0.1rem;
+}
+/* One notable body: one card the full height, like a lone star. */
+.sys-notable-card--solo ul {
+  grid-template-rows: minmax(0, 1fr);
 }
 .sys-notable-card__row {
   font: inherit;
@@ -232,9 +277,30 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .top .sys-row__cards > .sys-star-card {
-    flex: 1 1 0;
-    min-width: 5.5rem;
+  /* The stars and the notable bodies each take a full-width row, their cards sharing it equally. */
+  .top .sys-row__cards > .sys-stars,
+  .top .sys-row__cards > .sys-notable-card {
+    flex: 1 1 100%;
+  }
+  .top .sys-stars {
+    grid-auto-columns: minmax(5.5rem, 1fr);
+  }
+  /* Notable bodies: one card per row under the label, so long names stay on the screen. */
+  .top .sys-notable-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3rem;
+  }
+  .top .sys-notable-card ul {
+    grid-auto-flow: row;
+    grid-template-rows: none;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .top .sys-notable-card__item .sys-notable-card__row {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

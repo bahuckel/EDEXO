@@ -146,35 +146,46 @@ export const SystemCardRow = memoOnSnapSlice(SYSTEM_CARD_FIELDS, function System
           </div>
         </section>
 
-        {stars.map((st, i) => {
-          const rec = st.bodyId != null ? (records.get(st.bodyId) ?? []) : [];
-          return (
-          <section
-            key={`${st.letter ?? "p"}-${i}`}
-            className={`sys-star-card cockpit-card${rec.length ? " sys-star-card--record" : ""}`}
-            title={
-              `${i === 0 ? "Main star · " : ""}${starDot(st).words} — ${primaryStarRoleTooltip(st.starRole)}` +
-              (rec.length ? `\n${recordMarksTitle(rec)}` : "")
-            }
-          >
-            <span className="sys-card__k">{st.letter ?? "★"}</span>
-            <span className="sys-star-card__cls">{st.fullSpectralNotation || st.shortLabel || "—"}</span>
-            <span
-              className={`sys-star-dot sys-star-dot--${starDot(st).kind}`}
-              aria-label={starDot(st).words}
-            />
-          </section>
-          );
-        })}
+        {/*
+          Stars, then the notable bodies, two cards to a column so each group is as tall as the System card; a lone
+          star is one card the full height, its class larger (owner, 2026-10-27).
+        */}
+        {stars.length ? (
+          <div className={`sys-stars${stars.length === 1 ? " sys-stars--solo" : ""}`}>
+            {stars.map((st, i) => {
+              const rec = st.bodyId != null ? (records.get(st.bodyId) ?? []) : [];
+              return (
+              <section
+                key={`${st.letter ?? "p"}-${i}`}
+                className={`sys-star-card cockpit-card${rec.length ? " sys-star-card--record" : ""}`}
+                title={
+                  `${i === 0 ? "Main star · " : ""}${starDot(st).words} — ${primaryStarRoleTooltip(st.starRole)}` +
+                  (rec.length ? `\n${recordMarksTitle(rec)}` : "")
+                }
+              >
+                <span className="sys-card__k">{st.letter ?? "★"}</span>
+                <span className="sys-star-card__cls">{st.fullSpectralNotation || st.shortLabel || "—"}</span>
+                <span
+                  className={`sys-star-dot sys-star-dot--${starDot(st).kind}`}
+                  aria-label={starDot(st).words}
+                />
+              </section>
+              );
+            })}
+          </div>
+        ) : null}
 
         <NspCard o={snap.nspOutlook} />
 
         {notable.length > 0 ? (
-          <section className="sys-notable-card cockpit-card">
-            <span className="sys-card__k">Notable</span>
+          <section
+            className={`sys-notable-card${notable.length === 1 ? " sys-notable-card--solo" : ""}`}
+            aria-label="Notable bodies"
+          >
+            <span className="sys-card__k sys-notable-card__k">Notable</span>
             <ul>
               {notable.map((n, i) => (
-                <li key={`${n.bodyId}-${i}`}>
+                <li key={`${n.bodyId}-${i}`} className="sys-notable-card__item cockpit-card">
                   <button
                     type="button"
                     className={`sys-notable-card__row${n.green ? ` sys-notable-card__row--ggg sys-notable-card__row--ggg-${n.green.level}` : ""}`}
