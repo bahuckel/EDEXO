@@ -38,17 +38,18 @@ export function NextBoxelCard({ systemAddress }: { systemAddress: number | null 
     >
       <button
         type="button"
-        className="d-scan-card d-scan-card--header-row header-route-mini header-next-boxel"
+        className="d-scan-card d-scan-card--header-row header-route-mini header-next-boxel tray-tile"
         data-testid="header-next-boxel"
         onClick={() => {
           requestExpeditionFocus(b);
           tabStore.open("galaxy");
         }}
       >
-        <span className="header-route-line header-route-line--compact">
-          <span className="header-metric-card-label">Next boxel:</span>{" "}
-          <span className="header-metric-card-value">
-            {name} <span className="dim">· {fmtLy(b.distanceLy)} · {crShort(b.evPerJump)}/jump</span>
+        <span className="tray-tile__label">Next boxel</span>
+        <span className="tray-tile__value">
+          {name}
+          <span className="tray-tile__meta">
+            {fmtLy(b.distanceLy)} · {crShort(b.evPerJump)}/jump
           </span>
         </span>
       </button>

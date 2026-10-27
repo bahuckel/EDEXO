@@ -1,0 +1,108 @@
+/*
+ * Compare's tray tiles (owner, 2026-10-27: "different font sizes there, and it looks off ... I want everything to be
+ * a better fit, more structured"). DATA VALUE, D-SCAN, FIRST DISCOVERY, ROUTE, NEXT BOXEL and the neutron route / FSD
+ * warnings are one kind of tile: a small tracked label over one value line, every tile the same height. What
+ * qualifies a value (the unsold samples, "bodies · Honk", the distance) follows it, smaller and dimmer. Each tile keeps
+ * its own colours (shell.css, header.css). Loaded last, so these win over the older per-card rules.
+ */
+.top > .header-tray {
+  --tray-tile-h: 3.3rem;
+  align-items: center;
+}
+
+.top > .header-tray .tray-tile.tray-tile {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.18rem;
+  height: var(--tray-tile-h);
+  min-height: 0;
+  margin: 0;
+  padding: 0 0.85rem;
+  box-sizing: border-box;
+  line-height: 1.15;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.top > .header-tray .tray-tile__label {
+  margin: 0;
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.15;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.top > .header-tray .tray-tile__value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45em;
+  min-width: 0;
+  max-width: 100%;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The value's own parts (the amount, the route's numbers) take the line's size, not their older ones. */
+.top > .header-tray .tray-tile__value > :not(.tray-tile__meta) {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.top > .header-tray .tray-tile__meta {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  opacity: 0.72;
+}
+
+/* The route card: its toggle button fills the tile, the fuel bar a hairline along the bottom edge. */
+.top > .header-tray .tray-tile .header-route-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.18rem;
+  height: 100%;
+  width: 100%;
+}
+.top > .header-tray .tray-tile .header-route-bar-track {
+  position: absolute;
+  left: 0.85rem;
+  right: 0.85rem;
+  bottom: 0.2rem;
+  width: auto;
+  height: 3px;
+}
+
+/* Next boxel may shrink in a narrow window: its value line is cut with an ellipsis (the tooltip has it all). */
+.top > .header-tray .tray-tile.header-next-boxel .tray-tile__value {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top > .header-tray .tray-tile.header-next-boxel .tray-tile__meta {
+  margin-left: 0.45em;
+}
+
+/* ⊕ beside them, as tall. */
+.top > .header-tray .header-scan-data-plus {
+  height: var(--tray-tile-h);
+  min-height: 0;
+  align-self: center;
+}
+
+/* A phone: each tile its own full-width row (bridge.css), label and value still stacked. */
+@media (max-width: 699px) {
+  .top > .header-tray .tray-tile.tray-tile {
+    width: 100%;
+  }
+}

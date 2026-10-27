@@ -65,3 +65,4 @@
 @import "./styles/tabs.css" layer(app);
 @import "./styles/chamfer.css" layer(app);
 @import "./styles/motion.css" layer(app);
+@import "./styles/tray-tiles.css" layer(app);

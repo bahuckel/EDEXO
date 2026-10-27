@@ -79,7 +79,7 @@ export function CompareTray({
       </button>
       <button
         type="button"
-        className="data-value-pill data-value-pill--clickable"
+        className="data-value-pill data-value-pill--clickable tray-tile"
         title={
           scanDataOn
             ? "Unsold exobiology plus your unsold planetary scans — click for a breakdown"
@@ -88,21 +88,20 @@ export function CompareTray({
         onClick={onOpenBreakdown}
       >
         {/* "Data value" either way (owner, 2026-09-30); the tooltip says what it holds. */}
-        <span className="data-value-label header-metric-card-label">Data value</span>
-        <span
-          className={`data-value-amount header-metric-card-value ${dataValueFlash}`.trim()}
-          title={fmtCrExact(totalDataCr)}
-        >
-          {fmtCrShort(totalDataCr)} CR
-        </span>
-        {snap.organicPendingSampleCount > 0 ? (
-          <span
-            className={`data-value-meta dim ${pendingSamplesFlash}`.trim()}
-            title="Completed samples not yet sold"
-          >
-            ({snap.organicPendingSampleCount})
+        <span className="data-value-label tray-tile__label">Data value</span>
+        <span className="tray-tile__value">
+          <span className={`data-value-amount ${dataValueFlash}`.trim()} title={fmtCrExact(totalDataCr)}>
+            {fmtCrShort(totalDataCr)} CR
           </span>
-        ) : null}
+          {snap.organicPendingSampleCount > 0 ? (
+            <span
+              className={`data-value-meta tray-tile__meta ${pendingSamplesFlash}`.trim()}
+              title="Completed samples not yet sold"
+            >
+              ({snap.organicPendingSampleCount})
+            </span>
+          ) : null}
+        </span>
       </button>
       <div className="header-dscan-cluster">
         <div className="header-dscan-pill">
@@ -112,11 +111,11 @@ export function CompareTray({
             <Tooltip text="No FSS honk line in merged journal for this system yet — if you already mapped everything, totals still come from Scan rows and the system map. Use “Load bodies from EDSM” next to the search when browsing a system, or widen journal history / re-honk in game if counts stay empty.">
               <button
                 type="button"
-                className="d-scan-card d-scan-card--placeholder d-scan-card--header-row"
+                className="d-scan-card d-scan-card--placeholder d-scan-card--header-row tray-tile"
               >
-                <span className="d-scan-card__label header-metric-card-label">D-Scan</span>
-                <span className="d-scan-card__placeholder-text header-metric-card-value">
-                  No body tally yet (honk, Scan data, or map)
+                <span className="tray-tile__label">D-Scan</span>
+                <span className="tray-tile__value">
+                  <span className="tray-tile__meta">No body tally yet</span>
                 </span>
               </button>
             </Tooltip>
@@ -124,14 +123,14 @@ export function CompareTray({
         </div>
         {snap.neutronLive ? (
           <div
-            className="d-scan-card d-scan-card--header-row header-route-mini d-scan-card--label-only header-neutron"
+            className="d-scan-card d-scan-card--header-row header-route-mini header-neutron tray-tile"
             title={
               snap.neutronLive.done
                 ? `Neutron route done: ${snap.neutronLive.destination}`
                 : `Neutron route to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop is on the clipboard after each jump onto a stop (F6 copies it again).`
             }
           >
-            <span className="d-scan-card__label header-metric-card-label">
+            <span className="tray-tile__label">
               {snap.neutronLive.done
                 ? "⚡ Route done"
                 : snap.neutronLive.refuelHere
@@ -140,28 +139,29 @@ export function CompareTray({
                     ? "⚡ Supercharge here"
                     : `⚡ ${snap.neutronLive.at}/${snap.neutronLive.total}`}
             </span>
-            {snap.neutronLive.next ? (
-              <span className="header-metric-card-value">{snap.neutronLive.next}</span>
-            ) : null}
+            <span className="tray-tile__value">{snap.neutronLive.next ?? snap.neutronLive.destination}</span>
           </div>
         ) : null}
         {snap.fsdHealth?.warn ? (
           <div
-            className="d-scan-card d-scan-card--header-row header-route-mini d-scan-card--label-only header-fsd-warn"
+            className="d-scan-card d-scan-card--header-row header-route-mini header-fsd-warn tray-tile"
             title={`The FSD is at ${snap.fsdHealth.estimate ? "about " : ""}${Math.round(snap.fsdHealth.health * 100)} % (the last Loadout, less ${snap.fsdHealth.boostsSince} supercharge${snap.fsdHealth.boostsSince === 1 ? "" : "s"} since): further jumps before a repair are not recommended. Carriers → Stations → Repair finds the nearest.${afmuNote(snap.jumponium)}`}
           >
-            <span className="d-scan-card__label header-metric-card-label">
-              ⚠ FSD {snap.fsdHealth.estimate ? "~" : ""}
+            <span className="tray-tile__label">FSD</span>
+            <span className="tray-tile__value">
+              ⚠ {snap.fsdHealth.estimate ? "~" : ""}
               {Math.round(snap.fsdHealth.health * 100)} %
             </span>
           </div>
         ) : null}
         {snap.focusedSystemUndiscovered ? (
           <div
-            className="d-scan-card d-scan-card--complete d-scan-card--header-row header-route-mini d-scan-card--label-only"
+            className="d-scan-card d-scan-card--complete d-scan-card--header-row header-route-mini tray-tile"
             title="You scanned this system's main star before anyone else had — the system is your discovery, and its cartographic data pays the first-discovery bonus."
           >
-            <span className="d-scan-card__label header-metric-card-label">◆ First discovery</span>
+            {/* On two lines like the other tiles (owner, 2026-10-27). */}
+            <span className="tray-tile__label">◆ First</span>
+            <span className="tray-tile__value">Discovery</span>
           </div>
         ) : null}
         {snap.remainingJumpsInRoute != null || snap.liveShipFuelRange != null
@@ -177,7 +177,7 @@ export function CompareTray({
               const barAria = routeHeaderBarAria(snap, routeHeaderMetricMode, barModel);
               let sepN = 0;
               const sep = () => (
-                <span key={`sep-${sepN++}`} className="dim">
+                <span key={`sep-${sepN++}`} className="tray-tile__meta">
                   {" · "}
                 </span>
               );
@@ -213,7 +213,7 @@ export function CompareTray({
               if (fr && !nav?.onPlot && fr.estJumpsRemaining != null && fr.hasLiveStatusFuel) {
                 if (compactLine.length) compactLine.push(sep());
                 compactLine.push(
-                  <span key="est" className="dim">
+                  <span key="est" className="tray-tile__meta">
                     ~{fr.estJumpsRemaining} max
                   </span>,
                 );
@@ -221,18 +221,18 @@ export function CompareTray({
               if (nav && !nav.onPlot) {
                 if (compactLine.length) compactLine.push(sep());
                 compactLine.push(
-                  <span key="off" className="dim">
+                  <span key="off" className="tray-tile__meta">
                     off plot
                   </span>,
                 );
               }
-              const lineContent = compactLine.length > 0 ? compactLine : <span className="dim">—</span>;
+              const lineContent = compactLine.length > 0 ? compactLine : <span className="tray-tile__meta">—</span>;
               const barBg = barModel.indeterminate
                 ? undefined
                 : `linear-gradient(to right, rgba(90, 170, 255, 0.95) 0%, rgba(90, 170, 255, 0.95) ${barModel.bluePct}%, rgba(220, 70, 70, 0.92) ${barModel.bluePct}%, rgba(220, 70, 70, 0.92) 100%)`;
               return (
                 <div
-                  className={`d-scan-card d-scan-card--route d-scan-card--header-row header-route-mini header-route-mini--stacked${routeCardRefuelClass}`}
+                  className={`d-scan-card d-scan-card--route d-scan-card--header-row header-route-mini header-route-mini--stacked tray-tile${routeCardRefuelClass}`}
                 >
                   <button
                     type="button"
@@ -243,10 +243,8 @@ export function CompareTray({
                       setRouteHeaderMetricMode((m) => (m === "distance" ? "refuel" : "distance"))
                     }
                   >
-                    <span className="header-route-line header-route-line--compact">
-                      <span className="header-metric-card-label">Route:</span>{" "}
-                      <span className="header-metric-card-value">{lineContent}</span>
-                    </span>
+                    <span className="tray-tile__label">Route</span>
+                    <span className="tray-tile__value">{lineContent}</span>
                     {barModel.showBar ? (
                       <div
                         className={`header-route-bar-track${barModel.indeterminate ? " header-route-bar-track--unknown" : ""}`}
