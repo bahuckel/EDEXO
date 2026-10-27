@@ -4,7 +4,7 @@
  * everything on the other half.
  *
  *   header      three locked rows that never wrap: command bar, context chips, metric cards
- *               (from 1500 px the last two share one row). Narrow windows scroll a row sideways.
+ *               (two rows at every width since 2026-10-27). Narrow windows scroll a row sideways.
  *   body strip  horizontal, on top, always (the vertical rail is gone: owner, round two).
  *   dossier     planetary body and sell range, side by side from 900 px, above the species
  *   wall        the candidates below, one or two cards wide
@@ -142,45 +142,9 @@
   min-height: 2.6rem;
 }
 
-/* ---- from 1500 px rows 2 and 3 share one line: chips left, numbers right ----------------------- */
-@media (min-width: 1500px) {
-  /*
-    The system card keeps the width it needs and the tiles take the rest of the line, wrapping onto a second line
-    (right-aligned) when they do not fit (owner, 2026-10-26: at 1500 px the card's chips ran under the ⊕ and DATA
-    VALUE tiles — the tiles took their whole one-line width and squeezed the card's column to 166 px).
-  */
-  .top {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
-    grid-template-areas:
-      "appbar appbar"
-      "context tray";
-    column-gap: 1.2rem;
-    align-items: center;
-  }
-  .top > .appbar {
-    grid-area: appbar;
-  }
-  /* The star chip under the system card, as the shared line always had it: the column is the card's width. */
-  .top > .sys-row .sys-row__cards {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .top > .header-tray {
-    grid-area: tray;
-    width: auto;
-    margin-top: 0;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    row-gap: 0.35rem;
-    overflow: visible;
-  }
-  .top > .header-edsm-map-note,
-  .top > .header-commander-away,
-  .top > .header-tray--app {
-    grid-column: 1 / -1;
-  }
-}
+/* ---- rows 2 and 3 stay two rows at every width (owner, 2026-10-27: "fixed positions", the narrow window's layout).
+   From 1500 px they used to share one line, cards left and tiles right; the tiles row is ~1,250 px, so it fitted
+   beside the cards only on some systems and the header changed shape from one jump to the next. ------------------ */
 
 /* ---- dossier: planetary body and sell range side by side from 900 px, both above the species ---- */
 @media (min-width: 900px) {
@@ -335,9 +299,9 @@
   margin: 0 auto;
 }
 
-/* ---- row 3 below 1500 px: two rows of cards rather than a sideways scroll that cropped Route at
+/* ---- row 3 from 700 px: two rows of cards rather than a sideways scroll that cropped Route at
    tablet widths (owner, 2026-09-30). ------------------------------------------------------------- */
-@media (min-width: 700px) and (max-width: 1499px) {
+@media (min-width: 700px) {
   .top > .header-tray {
     flex-wrap: wrap;
     row-gap: 0.35rem;

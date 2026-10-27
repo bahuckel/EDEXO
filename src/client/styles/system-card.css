@@ -10,13 +10,6 @@
   min-width: 0;
   margin: 0.35rem 0 0.2rem;
 }
-@media (min-width: 1500px) {
-  .top > .sys-row {
-    grid-area: context;
-    width: auto;
-    align-self: start;
-  }
-}
 .sys-row__cards {
   display: flex;
   flex-wrap: wrap;
@@ -161,13 +154,19 @@
   background: #ff4a4a;
   box-shadow: 0 0 6px rgba(255, 74, 74, 0.6);
 }
+/* One line like the star cards, the bodies side by side after the label, wrapping when there are many (owner,
+   2026-10-27: "horizontal display like the stars"). */
 .sys-notable-card {
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 11rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 64rem;
 }
 .sys-notable-card ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.9rem;
   list-style: none;
   margin: 0;
   padding: 0;
