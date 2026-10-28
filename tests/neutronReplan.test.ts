@@ -75,6 +75,14 @@ describe("re-plotting a neutron route", () => {
     expect(t.copied.at(-1)).toBe("PSR B");
   });
 
+  it("re-plots in flight with a short search: the next stop within a second, not the drawer's three", async () => {
+    const t = setup(() => INDEX);
+    await t.replanner.replan();
+    const budget = (t.planRoute.mock.calls[0] as unknown[])[3];
+    expect(budget).toBeTypeOf("number");
+    expect(budget as number).toBeLessThan(1000);
+  });
+
   it("runs again after the neutron index could not be read", async () => {
     const loadIndex = vi
       .fn()

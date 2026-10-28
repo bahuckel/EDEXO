@@ -107,4 +107,21 @@ describe("neutron index", () => {
       expect(kept.map((g) => g.toFixed(6))).toEqual(best.map((g) => g.toFixed(6)));
     }
   });
+
+  it("skips a sub-cube by its own floor: none taken further out, every close one still visited", () => {
+    // The planner keeps no more far ones (floor Infinity past 150 ly) but every one within 150 ly.
+    const to = { x: 5000, y: 200, z: -3000 };
+    for (const [p, r] of QUERIES) {
+      const left = d(p, to);
+      const seen = new Set<string>();
+      index.eachToward(p, r, to, (n) => seen.add(key(n)), (near) => (near > 150 ? Infinity : -Infinity));
+      for (const n of stars)
+        if (d(n, p) <= Math.min(r, 150) && left - d(n, to) > 0) expect(seen.has(key(n)), key(n)).toBe(true);
+      // Only sub-cubes that reach within 150 ly: nothing past 150 + the cube's diagonal (139 ly).
+      for (const k of seen) {
+        const [x, y, z] = k.split(",").map(Number) as [number, number, number];
+        expect(d({ x, y, z }, p)).toBeLessThanOrEqual(150 + 80 * Math.sqrt(3) + 1e-6);
+      }
+    }
+  });
 });

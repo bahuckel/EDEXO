@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   emptyJumpRange,
   fullJumpRange,
+  hydrateJumpRangeOthers,
   jumpRangeJump,
   jumpRangeLoadout,
   onEconomicalRoute,
@@ -71,5 +72,30 @@ describe("the full jump range as flown", () => {
     expect(fullJumpRange(st)).toBe(68);
     jumpRangeLoadout(st, 9, 33); // back to the other, refitted meanwhile: scaled
     expect(fullJumpRange(st)).toBeCloseTo((29 * 33) / 30, 6);
+  });
+
+  it("forgets the ships left longest ago, not the lowest ShipIDs (review 2026-10-28)", () => {
+    const st = emptyJumpRange();
+    // Ships 40 … 52 flown in turn, then ship 3, then ship 60: fourteen left behind, twelve kept.
+    for (const id of [40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 3, 60]) {
+      jumpRangeLoadout(st, id, 50);
+      fly(st, id, id, id);
+    }
+    jumpRangeLoadout(st, 3, 50);
+    expect(fullJumpRange(st)).toBe(3); // left recently: kept (the lowest ShipID went first before)
+    jumpRangeLoadout(st, 40, 50);
+    expect(fullJumpRange(st)).toBeNull(); // left first: forgotten
+  });
+
+  it("reads saved ships safely: bad entries dropped, old numeric keys taken", () => {
+    const others = hydrateJumpRangeOthers({
+      "7": { loadoutLy: 60, long: [55, 55, 55, "x", -1], recent: [50] },
+      s9: { long: {} },
+      s10: null,
+    });
+    expect(others).toEqual({ s7: { loadoutLy: 60, long: [55, 55, 55], recent: [50] } });
+    const st = { ...emptyJumpRange(), shipId: 1, others };
+    jumpRangeLoadout(st, 7, 66); // back to 7, refitted: 55 × 66 / 60
+    expect(fullJumpRange(st)).toBeCloseTo((55 * 66) / 60, 6);
   });
 });

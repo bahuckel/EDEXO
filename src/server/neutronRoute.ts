@@ -262,6 +262,8 @@ class TopByGain<T extends { gain: number }> {
 }
 
 type Cand = { n: NeutronStar; gain: number; d: number };
+/** A star's neighbours as the refining passes keep them, best gain first. */
+type Kept = { stars: NeutronStar[]; gain: Float64Array; d: Float64Array };
 type Leg = { nodes: Node[]; fuel: number; g: number };
 
 /** One leg, from a point (a neutron star or not) to a point, with `fuel` jumps in the tank. Null when no safe way. */
@@ -274,7 +276,7 @@ export async function planLeg(
   budgetMs = REFINE_MS,
 ): Promise<{ nodes: Node[]; fuel: number } | null> {
   // The neighbours of a star are the same in every pass: read once.
-  const lists = new Map<string, Cand[]>();
+  const lists = new Map<string, Kept>();
   let best: Leg | null = null;
   for (const pass of PASSES) {
     best = await searchLeg(index, from, to, ship, fuel, pass.weight, pass.expansions, lists);
@@ -305,7 +307,7 @@ async function searchLeg(
   fuel: number,
   weight: number,
   maxExpansions: number,
-  lists: Map<string, Cand[]>,
+  lists: Map<string, Kept>,
   /** Only a route cheaper than this is wanted (a refining pass). */
   bound = Infinity,
   deadline = Infinity,
@@ -375,8 +377,8 @@ async function searchLeg(
       */
       const most = boost * maxR;
       const sure = (isNeutron ? boost : 1) * minR;
-      const best = new TopByGain<Cand>(NEIGHBOURS * 3);
-      const inReach = new TopByGain<Cand>(NEIGHBOURS * 2);
+      const best = new TopByGain<Cand>(NEIGHBOURS * 1.5);
+      const inReach = new TopByGain<Cand>(NEIGHBOURS);
       for (const radius of [most, most * 2, most * 4, Math.max(most * 4, 1500)]) {
         best.clear();
         inReach.clear();
@@ -389,7 +391,9 @@ async function searchLeg(
           if (near) inReach.add(c);
         };
         if (index.eachToward)
-          index.eachToward(u.pos, radius, to, visit, () => Math.min(best.floor(), inReach.floor()));
+          index.eachToward(u.pos, radius, to, visit, (near) =>
+            near <= sure ? Math.min(best.floor(), inReach.floor()) : best.floor(),
+          );
         else
           for (const n of index.within(u.pos, radius)) {
             const gain = left - dist(n, to);
@@ -399,11 +403,19 @@ async function searchLeg(
         if (best.items.filter((c) => c.gain > minR * 0.5).length >= 8) break;
       }
       const seen = new Set<number>();
-      all = [...best.items, ...inReach.items].filter((c) => !seen.has(c.n.i) && seen.add(c.n.i));
-      all.sort((a, b) => b.gain - a.gain);
+      const merged = [...best.items, ...inReach.items].filter((c) => !seen.has(c.n.i) && seen.add(c.n.i));
+      merged.sort((a, b) => b.gain - a.gain);
+      // Kept compact for the whole leg (tens of thousands of stars on a long one): the stars and two number arrays.
+      all = {
+        stars: merged.map((c) => c.n),
+        gain: Float64Array.from(merged, (c) => c.gain),
+        d: Float64Array.from(merged, (c) => c.d),
+      };
       lists.set(u.key, all);
     }
-    return pick(all!, r, isNeutron ? reach : r);
+    const out: Cand[] = [];
+    for (let k = 0; k < all.stars.length; k++) out.push({ n: all.stars[k]!, gain: all.gain[k]!, d: all.d[k]! });
+    return pick(out, r, isNeutron ? reach : r);
   };
   /*
     The ones a supercharge reaches stay, however far the search looked: ranked by gain alone, a crowd further out

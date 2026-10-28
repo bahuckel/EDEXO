@@ -41,6 +41,31 @@ export interface JumpRangeState {
 
 /** Other ships remembered; the ones left longest ago go first. */
 const OTHER_SHIPS = 12;
+/**
+ * The key of a ship in `others`: "s" and its ShipID. A bare number is an integer-like key, which objects list in
+ * numeric order whatever the order set, so the lowest ShipIDs went first instead of the ships left longest ago.
+ */
+const shipKey = (id: number | string) => `s${id}`;
+
+type OtherShip = NonNullable<JumpRangeState["others"]>[string];
+
+/** `others` from a saved cache: only well-formed entries (a bad one would break the next refit). */
+export function hydrateJumpRangeOthers(raw: unknown): NonNullable<JumpRangeState["others"]> {
+  const out: NonNullable<JumpRangeState["others"]> = {};
+  if (!raw || typeof raw !== "object") return out;
+  const nums = (v: unknown) => (Array.isArray(v) ? v.filter((d): d is number => typeof d === "number" && d > 0) : []);
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!v || typeof v !== "object") continue;
+    const e = v as Record<string, unknown>;
+    const entry: OtherShip = {
+      loadoutLy: typeof e.loadoutLy === "number" && e.loadoutLy > 0 ? e.loadoutLy : null,
+      long: nums(e.long),
+      recent: nums(e.recent),
+    };
+    if (entry.long.length) out[k.startsWith("s") ? k : shipKey(k)] = entry;
+  }
+  return out;
+}
 
 export function emptyJumpRange(): JumpRangeState {
   return { shipId: null, loadoutLy: null, long: [], recent: [], others: {} };
@@ -59,13 +84,13 @@ export function jumpRangeLoadout(
   if (shipId != null && shipId !== st.shipId) {
     const others = (st.others ??= {});
     if (st.shipId != null && st.long.length) {
-      delete others[st.shipId];
-      others[st.shipId] = { loadoutLy: st.loadoutLy, long: st.long, recent: st.recent };
+      delete others[shipKey(st.shipId)];
+      others[shipKey(st.shipId)] = { loadoutLy: st.loadoutLy, long: st.long, recent: st.recent };
       const keys = Object.keys(others);
       for (const k of keys.slice(0, Math.max(0, keys.length - OTHER_SHIPS))) delete others[k];
     }
-    const back = others[shipId];
-    delete others[shipId];
+    const back = others[shipKey(shipId)];
+    delete others[shipKey(shipId)];
     st.shipId = shipId;
     st.loadoutLy = back?.loadoutLy ?? null;
     st.long = back?.long ?? [];

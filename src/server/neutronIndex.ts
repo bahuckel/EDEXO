@@ -60,7 +60,8 @@ interface LoadedCell {
   x: number;
   y: number;
   z: number;
-  buckets: (NeutronStar[] | undefined)[];
+  /** Only the sub-cubes with stars: a sector holds a few hundred, an array of all 4,096 cost 32 KB a cell. */
+  buckets: Map<number, NeutronStar[]>;
 }
 
 interface Cell {
@@ -158,10 +159,12 @@ export class NeutronIndex {
       });
     }
     // Bucketed by sub-cube, so a query reads the stars near it, not the whole sector's (tens of thousands near the core).
-    const buckets: (NeutronStar[] | undefined)[] = new Array(SUB ** 3);
+    const buckets = new Map<number, NeutronStar[]>();
     for (const n of out) {
       const b = subOf(n.x - cx) * SUB * SUB + subOf(n.y - cy) * SUB + subOf(n.z - cz);
-      (buckets[b] ??= []).push(n);
+      const list = buckets.get(b);
+      if (list) list.push(n);
+      else buckets.set(b, [n]);
     }
     const loaded = { x: cx, y: cy, z: cz, buckets };
     if (this.cache.size >= CELL_CACHE) this.cache.delete(this.cache.keys().next().value!);
@@ -172,9 +175,30 @@ export class NeutronIndex {
   /** Neutron stars within `r` ly of a point. */
   within(p: { x: number; y: number; z: number }, r: number): NeutronStar[] {
     const out: NeutronStar[] = [];
+    const r2 = r * r;
+    this.subCubes(p, r, (_x, _y, _z, stars) => {
+      for (const n of stars) {
+        const dx = n.x - p.x;
+        const dy = n.y - p.y;
+        const dz = n.z - p.z;
+        if (dx * dx + dy * dy + dz * dz <= r2) out.push(n);
+      }
+    });
+    return out;
+  }
+
+  /**
+   * Every sub-cube with stars in the box round `p` (± `r` a side), with its corner. Where the box covers more
+   * sub-cubes than the sector holds (a wide search), the sector's own are walked instead of each place looked up.
+   */
+  private subCubes(
+    p: { x: number; y: number; z: number },
+    r: number,
+    each: (x0: number, y0: number, z0: number, stars: NeutronStar[]) => void,
+  ): void {
+    const side = SECTOR_SIZE_LY / SUB;
     const lo = (v: number, o: number) => Math.floor((v - r - o) / SECTOR_SIZE_LY);
     const hi = (v: number, o: number) => Math.floor((v + r - o) / SECTOR_SIZE_LY);
-    const r2 = r * r;
     for (let sx = lo(p.x, SECTOR_ORIGIN.x); sx <= hi(p.x, SECTOR_ORIGIN.x); sx++)
       for (let sy = lo(p.y, SECTOR_ORIGIN.y); sy <= hi(p.y, SECTOR_ORIGIN.y); sy++)
         for (let sz = lo(p.z, SECTOR_ORIGIN.z); sz <= hi(p.z, SECTOR_ORIGIN.z); sz++) {
@@ -187,64 +211,54 @@ export class NeutronIndex {
           const y1 = subOf(p.y + r - cell.y);
           const z0 = subOf(p.z - r - cell.z);
           const z1 = subOf(p.z + r - cell.z);
-          for (let bx = x0; bx <= x1; bx++)
-            for (let by = y0; by <= y1; by++)
-              for (let bz = z0; bz <= z1; bz++) {
-                const bucket = cell.buckets[bx * SUB * SUB + by * SUB + bz];
-                if (!bucket) continue;
-                for (const n of bucket) {
-                  const dx = n.x - p.x;
-                  const dy = n.y - p.y;
-                  const dz = n.z - p.z;
-                  if (dx * dx + dy * dy + dz * dz <= r2) out.push(n);
+          if ((x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1) > cell.buckets.size) {
+            for (const [b, stars] of cell.buckets) {
+              const bx = Math.floor(b / (SUB * SUB));
+              const by = Math.floor(b / SUB) % SUB;
+              const bz = b % SUB;
+              if (bx < x0 || bx > x1 || by < y0 || by > y1 || bz < z0 || bz > z1) continue;
+              each(cell.x + bx * side, cell.y + by * side, cell.z + bz * side, stars);
+            }
+          } else
+            for (let bx = x0; bx <= x1; bx++)
+              for (let by = y0; by <= y1; by++)
+                for (let bz = z0; bz <= z1; bz++) {
+                  const stars = cell.buckets.get(bx * SUB * SUB + by * SUB + bz);
+                  if (stars) each(cell.x + bx * side, cell.y + by * side, cell.z + bz * side, stars);
                 }
-              }
         }
-    return out;
   }
 
   /**
    * Neutron stars within `r` ly of `p` that bring `to` nearer, the most promising first: sub-cubes go by the most
-   * distance to `to` they could gain, and the walk stops once that is no more than `floor()` (the planner's worst kept
-   * neighbour). Near the core a supercharge reaches tens of thousands of neutron stars; the planner wants a few dozen.
+   * distance to `to` they could gain, and one is skipped when that is no more than `floor(near)` (the gain the planner
+   * still takes from a star at least `near` ly from `p`: it keeps more of the close ones); the walk stops once
+   * `floor(0)` is reached. Near the core a supercharge reaches tens of thousands of neutron stars; the planner wants a
+   * few dozen.
    */
   eachToward(
     p: { x: number; y: number; z: number },
     r: number,
     to: { x: number; y: number; z: number },
     visit: (n: NeutronStar, gain: number, d: number) => void,
-    floor: () => number,
+    floor: (near: number) => number,
   ): void {
     const left = Math.hypot(to.x - p.x, to.y - p.y, to.z - p.z);
     const side = SECTOR_SIZE_LY / SUB;
     // Distance from a point to a box, per axis.
     const gap = (v: number, lo: number) => Math.max(lo - v, 0, v - (lo + side));
-    const boxes: { stars: NeutronStar[]; most: number }[] = [];
-    const lo = (v: number, o: number) => Math.floor((v - r - o) / SECTOR_SIZE_LY);
-    const hi = (v: number, o: number) => Math.floor((v + r - o) / SECTOR_SIZE_LY);
-    for (let sx = lo(p.x, SECTOR_ORIGIN.x); sx <= hi(p.x, SECTOR_ORIGIN.x); sx++)
-      for (let sy = lo(p.y, SECTOR_ORIGIN.y); sy <= hi(p.y, SECTOR_ORIGIN.y); sy++)
-        for (let sz = lo(p.z, SECTOR_ORIGIN.z); sz <= hi(p.z, SECTOR_ORIGIN.z); sz++) {
-          const c = this.byKey.get(`${sx},${sy},${sz}`);
-          if (c == null) continue;
-          const cell = this.cell(c);
-          for (let bx = subOf(p.x - r - cell.x); bx <= subOf(p.x + r - cell.x); bx++)
-            for (let by = subOf(p.y - r - cell.y); by <= subOf(p.y + r - cell.y); by++)
-              for (let bz = subOf(p.z - r - cell.z); bz <= subOf(p.z + r - cell.z); bz++) {
-                const stars = cell.buckets[bx * SUB * SUB + by * SUB + bz];
-                if (!stars) continue;
-                const x0 = cell.x + bx * side;
-                const y0 = cell.y + by * side;
-                const z0 = cell.z + bz * side;
-                if (Math.hypot(gap(p.x, x0), gap(p.y, y0), gap(p.z, z0)) > r) continue;
-                const most = left - Math.hypot(gap(to.x, x0), gap(to.y, y0), gap(to.z, z0));
-                if (most > 0) boxes.push({ stars, most });
-              }
-        }
+    const boxes: { stars: NeutronStar[]; most: number; near: number }[] = [];
+    this.subCubes(p, r, (x0, y0, z0, stars) => {
+      const near = Math.hypot(gap(p.x, x0), gap(p.y, y0), gap(p.z, z0));
+      if (near > r) return;
+      const most = left - Math.hypot(gap(to.x, x0), gap(to.y, y0), gap(to.z, z0));
+      if (most > 0) boxes.push({ stars, most, near });
+    });
     boxes.sort((a, b) => b.most - a.most);
     const r2 = r * r;
     for (const box of boxes) {
-      if (box.most <= floor()) return;
+      if (box.most <= floor(0)) return;
+      if (box.most <= floor(box.near)) continue;
       for (const n of box.stars) {
         const dx = n.x - p.x;
         const dy = n.y - p.y;

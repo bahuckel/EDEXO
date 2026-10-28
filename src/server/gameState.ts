@@ -46,7 +46,7 @@ import { codexEntryKey } from "../shared/codexLog.js";
 import { isLegacyPlantKey } from "../shared/achievements.js";
 import { regionForSystem } from "./regionMapData.js";
 import { parseBoxel } from "../shared/boxel.js";
-import { emptyFsdFuel, fsdFuelCargo, fsdFuelJump, type FsdFuelState } from "../shared/fsdFuel.js";
+import { emptyFsdFuel, fsdFuelCargo, fsdFuelJump, hydrateFsdFuelOthers, type FsdFuelState } from "../shared/fsdFuel.js";
 import { fsdWearJump, fsdWearRepair, hydrateFsdWear, newFsdWear, type FsdWearState } from "../shared/fsdWear.js";
 import { hydrateOwnAssets, newOwnAssets, ownAssetsLine, type OwnAssetsState } from "../shared/ownAssets.js";
 import { JUMPONIUM_EVENTS, hydrateJumponium, jumponiumLine, newJumponium, type JumponiumState } from "../shared/jumponium.js";
@@ -60,7 +60,7 @@ import {
   shipDamageVehicle,
   type ShipDamageState,
 } from "../shared/shipDamage.js";
-import { emptyJumpRange, jumpRangeJump, type JumpRangeState } from "../shared/jumpRange.js";
+import { emptyJumpRange, hydrateJumpRangeOthers, jumpRangeJump, type JumpRangeState } from "../shared/jumpRange.js";
 import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
 import { JOURNAL_MERGE_CACHE_FORMAT } from "./journalMergePayload.js";
 import { bodyKey, systemAddressOfBodyKey } from "../shared/bodyKey.js";
@@ -2148,7 +2148,7 @@ export class GameStateStore {
         loadoutLy: typeof jr.loadoutLy === "number" ? jr.loadoutLy : null,
         long: jr.long.filter((d) => typeof d === "number" && d > 0),
         recent: jr.recent.filter((d) => typeof d === "number" && d > 0),
-        others: jr.others && typeof jr.others === "object" ? jr.others : {},
+        others: hydrateJumpRangeOthers(jr.others),
       };
     }
     const ff = data.fsdFuel;
@@ -2161,7 +2161,7 @@ export class GameStateStore {
         cargoT: typeof ff.cargoT === "number" ? ff.cargoT : null,
         samples: ff.samples.filter((s) => s && s.ly > 0 && s.fuelT > 0 && s.massT > 0),
         fsd: typeof ff.fsd === "string" ? ff.fsd : null,
-        others: ff.others && typeof ff.others === "object" ? ff.others : {},
+        others: hydrateFsdFuelOthers(ff.others),
       };
     }
     this.fsdWear = hydrateFsdWear(data.fsdWear);
