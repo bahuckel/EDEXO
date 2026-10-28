@@ -29,6 +29,24 @@ export function ladenRangeLy(store: GameStateStore, model: FsdFuelModel | null):
   return (mjr * (unladen + oneJump)) / (unladen + tank + cargo);
 }
 
+/** Entries in `rangeByFuel`: the tank in twentieths. */
+const FUEL_STEPS = 20;
+
+/**
+ * The range by the fuel aboard, as multiples of the full tank's (neutronRoute.ts `rangeByFuel`). With at least one
+ * jump's fuel aboard the drive spends the same on its longest jump, so the reach goes as 1 / mass: the ship, the hold
+ * and the fuel. Below one jump's fuel the entries stay at one jump's (the planner never jumps on less).
+ */
+export function rangeByFuel(store: GameStateStore, model: FsdFuelModel | null): number[] | null {
+  const tank = store.loadoutFuelMainCapacityT;
+  const unladen = store.fsdFuel.unladenT;
+  if (!tank || unladen == null) return null;
+  const cargo = store.liveStatusCargoT ?? store.fsdFuel.cargoT ?? 0;
+  const oneJump = Math.min(tank, model?.maxFuelPerJumpT ?? store.fsdFuel.maxFuelPerJumpT ?? tank / FUEL_STEPS);
+  const full = unladen + tank + cargo;
+  return Array.from({ length: FUEL_STEPS + 1 }, (_, i) => full / (unladen + Math.max(oneJump, (tank * i) / FUEL_STEPS) + cargo));
+}
+
 /**
  * The range a plan goes by: as flown, but never past the full tank's. The jumps flown include ones on a nearly empty
  * tank, and a supercharge multiplies any excess by four or six (the Caspian's drive): a planned neutron jump out of
@@ -51,6 +69,7 @@ export function neutronShip(
   const wear = fsdWearEstimate(store.fsdWear);
   return {
     rangeLy: plannedRange(fullJumpRange(store.jumpRange), ladenRangeLy(store, model)),
+    rangeByFuel: rangeByFuel(store, model),
     fuelPerJumpT: perJump,
     jumpsPerTank: perJump && tank ? Math.floor(tank / perJump) : null,
     jumpsNow: perJump && now != null ? Math.floor(now / perJump) : null,

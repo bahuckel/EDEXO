@@ -116,6 +116,9 @@ export function registerNeutronRoutes(
     try {
       const route = await planNeutronRoute(index, ordered, {
         rangeLy,
+        // How the range grows as the tank empties: this ship's, also for a range typed in (it scales it).
+        rangeByFuel: s?.rangeByFuel ?? null,
+        halfTank: body.halfTank === true,
         jumpsPerTank,
         jumpsNow: Math.min(jumpsPerTank, Math.max(0, jumpsNow ?? jumpsPerTank)),
         boost,

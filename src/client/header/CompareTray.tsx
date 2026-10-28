@@ -134,7 +134,9 @@ export function CompareTray({
               {snap.neutronLive.done
                 ? "⚡ Route done"
                 : snap.neutronLive.refuelHere
-                  ? "⛽ Scoop here"
+                  ? snap.neutronLive.refuelHalf
+                    ? "⛽ Scoop to half"
+                    : "⛽ Scoop here"
                   : snap.neutronLive.superchargeHere
                     ? "⚡ Supercharge here"
                     : `⚡ ${snap.neutronLive.at}/${snap.neutronLive.total}`}

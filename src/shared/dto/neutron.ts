@@ -13,6 +13,8 @@ export interface NeutronLiveDTO {
   onStop: boolean;
   /** At that stop: scoop its own star first (this far), then supercharge. */
   refuelHere: boolean;
+  /** Scoop to half a tank there, not full: the plan's next jumps count on the lighter ship's range. */
+  refuelHalf: boolean;
   scoopLs: number | null;
   superchargeHere: boolean;
   /** The normal jumps to the next stop need a scoopable star on the way. */

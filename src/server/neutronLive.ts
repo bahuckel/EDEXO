@@ -26,8 +26,9 @@ export interface LiveHop {
   /** Jumps from the stop before, and whether the first of them is supercharged. */
   jumps: number;
   boosted: number;
-  /** Scoop this system's own star here (ls from arrival). */
+  /** Scoop this system's own star here (ls from arrival); to half a tank only, when `refuelHalf`. */
   refuel: boolean;
+  refuelHalf?: boolean;
   scoopLs: number | null;
   /** The normal jumps before this stop need a scoopable star on the way. */
   scoopOnWay: boolean;
@@ -41,6 +42,8 @@ export interface LivePlan {
   rangeLy: number;
   /** Planned with FSD injections: a re-plot from where the ship went keeps them. */
   useJumponium?: boolean;
+  /** Planned with refuels to half a tank: a re-plot keeps them. */
+  halfTank?: boolean;
   /** The supercharge it was planned with (×4 / ×6), kept by a re-plot; absent: the ship's own. */
   boost?: number;
 }
@@ -106,7 +109,13 @@ export function parseLivePlan(raw: unknown): LivePlan | null {
   const rangeLy = typeof r.rangeLy === "number" && r.rangeLy >= 5 && r.rangeLy <= 500 ? r.rangeLy : null;
   const boost = r.boost === 4 || r.boost === 6 ? r.boost : undefined;
   return targets.length && rangeLy
-    ? { targets, rangeLy, useJumponium: r.useJumponium === true, ...(boost ? { boost } : {}) }
+    ? {
+        targets,
+        rangeLy,
+        useJumponium: r.useJumponium === true,
+        ...(r.halfTank === true ? { halfTank: true } : {}),
+        ...(boost ? { boost } : {}),
+      }
     : null;
 }
 
@@ -155,6 +164,7 @@ export function parseLiveHops(raw: unknown): LiveHop[] | null {
       jumps: Math.max(0, Math.round(num(r.jumps) ?? 0)),
       boosted: num(r.boosted) ? 1 : 0,
       refuel: r.refuel === true,
+      ...(r.refuelHalf === true ? { refuelHalf: true } : {}),
       scoopLs: num(r.scoopLs),
       scoopOnWay: r.scoopOnWay === true,
       inject: parseInject(r.inject),
@@ -228,6 +238,7 @@ export function createNeutronLive(opts: {
             targets,
             rangeLy: st.plan.rangeLy,
             useJumponium: st.plan.useJumponium === true,
+            ...(st.plan.halfTank ? { halfTank: true } : {}),
             ...(st.plan.boost ? { boost: st.plan.boost } : {}),
           }
         : null;
@@ -296,6 +307,7 @@ export function createNeutronLive(opts: {
           nextBoosted: false,
           onStop: true,
           refuelHere: false,
+          refuelHalf: false,
           scoopLs: null,
           superchargeHere: false,
           scoopOnWay: false,
@@ -317,6 +329,7 @@ export function createNeutronLive(opts: {
         nextInject: next?.inject ?? null,
         onStop,
         refuelHere: onStop && cur.refuel,
+        refuelHalf: onStop && cur.refuel && cur.refuelHalf === true,
         scoopLs: onStop && cur.refuel ? cur.scoopLs : null,
         superchargeHere: onStop && !!next?.boosted,
         scoopOnWay: !!next?.scoopOnWay,

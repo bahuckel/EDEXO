@@ -66,6 +66,8 @@ export function createNeutronReplanner(deps: {
         {
           // The range the route was planned with (he may have typed one for another ship), else the journals'.
           rangeLy: left.rangeLy ?? s.rangeLy,
+          rangeByFuel: s.rangeByFuel,
+          halfTank: left.halfTank === true,
           boost: left.boost ?? s.boostFactor,
           jumpsPerTank,
           jumpsNow: Math.min(jumpsPerTank, Math.max(0, s.jumpsNow ?? jumpsPerTank)),

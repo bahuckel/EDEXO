@@ -56,6 +56,8 @@ export interface NeutronHopDTO {
   boosted: number;
   distanceLy: number;
   refuel: boolean;
+  /** Scoop to half a tank, not full: the plan counts on the lighter ship's range. */
+  refuelHalf?: boolean;
   scoopOnWay: boolean;
   scoopLs: number | null;
   jumpsLeft: number;
@@ -160,6 +162,7 @@ export function NeutronDrawer({
   const [boostNow, setBoostNow] = useState<number | null>(kept.boostNow);
   const [optimise, setOptimise] = useState(kept.optimise);
   const [useJump, setUseJump] = usePersistedState("galaxy.neutron.jumponium", false, isBool);
+  const [halfTank, setHalfTank] = usePersistedState("galaxy.neutron.halfTank", false, isBool);
   const [route, setRoute] = useState<RouteDTO | null>(kept.route);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -323,6 +326,7 @@ export function NeutronDrawer({
           boost: boost ?? undefined,
           optimise,
           useJumponium: useJump,
+          halfTank,
         }),
       });
       const j = (await r.json()) as RouteDTO & { error?: string };
@@ -340,14 +344,14 @@ export function NeutronDrawer({
       if (seq === planSeq.current) setBusy(false);
     }
   };
-  // Use Jumponium flipped with a route on screen: plan it again with (or without) the injections.
-  const jumpSeen = useRef(useJump);
+  // Use Jumponium or half a tank flipped with a route on screen: plan it again with (or without) it.
+  const jumpSeen = useRef({ useJump, halfTank });
   useEffect(() => {
-    if (jumpSeen.current === useJump) return;
-    jumpSeen.current = useJump;
+    if (jumpSeen.current.useJump === useJump && jumpSeen.current.halfTank === halfTank) return;
+    jumpSeen.current = { useJump, halfTank };
     if (route && waypoints.length >= 2) void plan();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the toggle replans
-  }, [useJump]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the toggles replan
+  }, [useJump, halfTank]);
   /*
     Fly: from where the ship is now. A plan made somewhere else is made again from here first; the destinations go
     with it, so the server can plot again from wherever the ship goes off the route.
@@ -365,6 +369,7 @@ export function NeutronDrawer({
         rangeLy: Number(range) || ship?.rangeLy || undefined,
         boost: boost ?? undefined,
         useJumponium: r.jumponium?.on === true,
+        halfTank,
       },
     });
   };
@@ -549,6 +554,19 @@ export function NeutronDrawer({
             </label>
             <label
               className="g3d-row g3d-row--check"
+              title="A lighter ship jumps further: refuel stops may scoop to half a tank where the next supercharges then reach further (Spansh's way). A few jumps fewer at most, for more scoop stops; the plan says “scoop to half” where it counts on it, and a full tank there falls short."
+            >
+              <input
+                type="checkbox"
+                className="g3d-row__box"
+                checked={halfTank}
+                disabled={busy}
+                onChange={(e) => setHalfTank(e.target.checked)}
+              />
+              <span className="g3d-row__label">Scoop to half a tank where it saves jumps</span>
+            </label>
+            <label
+              className="g3d-row g3d-row--check"
               title="Plan with FSD injections: on every hop where one takes a jump off its normal jumps (it never adds to a supercharged jump), the cheapest by material, one per jump. The HUD says which to synthesise on the way."
             >
               <input
@@ -660,10 +678,15 @@ export function NeutronDrawer({
                         {h.refuel ? (
                           <span
                             className="g3d-neutron-fuel"
-                            title="Scoop the system's own star before supercharging"
+                            title={
+                              h.refuelHalf
+                                ? "Scoop the system's own star to half a tank before supercharging: the lighter ship reaches the next stops, a full tank would not"
+                                : "Scoop the system's own star before supercharging"
+                            }
                           >
                             {" "}
-                            ⛽ scoop{h.scoopLs != null ? ` (${h.scoopLs.toLocaleString("en-US")} ls)` : ""}
+                            ⛽ {h.refuelHalf ? "scoop to half" : "scoop"}
+                            {h.scoopLs != null ? ` (${h.scoopLs.toLocaleString("en-US")} ls)` : ""}
                           </span>
                         ) : null}
                         {h.scoopOnWay ? (

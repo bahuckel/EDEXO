@@ -13,6 +13,9 @@
  *   chances, though the game's plot may pass scoopable stars.
  * - Each supercharge wears the FSD by `wearPerBoost`; the plan marks the jump after which it is expected under 80 %.
  *
+ * - The range grows as the tank empties (`rangeByFuel`): a hop goes by the fuel aboard where it starts; with
+ *   `halfTank` a refuel stop may scoop to half a tank, not full, where the lighter ship gets further (Spansh's way).
+ *
  * Search: weighted A* over (neutron star, jumps of fuel left), with neighbours cut to the ones that make progress
  * towards the leg's end (the best 32 by distance gained); it hands the event loop back as it goes, so a plan across
  * sparse space (3 s) never stalls the app.
@@ -30,8 +33,19 @@ import {
 type Pt = { x: number; y: number; z: number };
 
 export interface NeutronShip {
-  /** Laden jump range, unboosted (ly). */
+  /** Laden jump range, unboosted (ly), with a full tank. */
   rangeLy: number;
+  /**
+   * The range by the fuel aboard, as multiples of `rangeLy`: entry i for a tank i / (length - 1) full (the last is 1).
+   * A lighter tank jumps further (owner, 2026-10-28: "Spansh … intentionally keeps fuel below the half point so that
+   * jump ranges are higher"). Without it, `rangeLy` at every fuel level.
+   */
+  rangeByFuel?: number[] | null;
+  /**
+   * Refuel stops may scoop to half a tank (the drawer's switch, off by default): measured 2026-10-28 on Sol → Colonia /
+   * Sagittarius A* / Beagle Point, a few jumps fewer at most for nearly twice the scoop stops.
+   */
+  halfTank?: boolean;
   /** Supercharge factor (the game's neutron jet: 4). */
   boost?: number;
   jumpsPerTank: number;
@@ -53,6 +67,8 @@ export interface NeutronHop {
   distanceLy: number;
   /** Refuel here: the system's own scoopable star, this far from arrival (ls). */
   refuel: boolean;
+  /** Scoop to half a tank, not full: the plan counts on the lighter ship's range. */
+  refuelHalf?: boolean;
   /** The normal jumps before this hop are more than the tank holds: scoop a K G B F O A M star on the way. */
   scoopOnWay: boolean;
   scoopLs: number | null;
@@ -90,6 +106,8 @@ const PASSES: readonly { weight: number; expansions: number }[] = [
   { weight: 3, expansions: 60_000 },
 ];
 const REFUEL_COST = 0.15;
+/** A refuel to half a tank costs this much less than to full: the lighter ship's range is worth a little. */
+const HALF_TANK_EDGE = 0.05;
 /**
  * Scooping on a stretch of normal jumps costs this many jumps in the comparison: it takes time and the plot may not
  * pass a scoopable star where the tank needs one, so a neutron star with its own scoopable star wins when in reach.
@@ -103,6 +121,17 @@ export const MAX_SCOOP_LS = 5000;
 const FSD_WARN = 0.8;
 
 const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+
+/** The unboosted range (ly) with `fuel` jumps of fuel in a tank of `tank`: `rangeByFuel` read between its entries. */
+export function rangeAt(ship: Pick<NeutronShip, "rangeLy" | "rangeByFuel">, fuel: number, tank: number): number {
+  const r = Math.max(1, ship.rangeLy);
+  const t = ship.rangeByFuel;
+  if (!t || t.length < 2) return r;
+  const x = Math.min(1, Math.max(0, fuel / Math.max(1, tank))) * (t.length - 1);
+  const i = Math.min(t.length - 2, Math.floor(x));
+  const m = t[i]! + (t[i + 1]! - t[i]!) * (x - i);
+  return Number.isFinite(m) && m > 0 ? r * m : r;
+}
 
 function jumpsFrom(
   fromNeutron: boolean,
@@ -127,6 +156,8 @@ interface Node {
   jumps: number;
   boosted: number;
   refuel: boolean;
+  /** Scooped to half a tank (`refuel` and less than full). */
+  half?: boolean;
   onWay: boolean;
 }
 
@@ -196,18 +227,23 @@ async function searchLeg(
   weight: number,
   maxExpansions: number,
 ): Promise<{ nodes: Node[]; fuel: number } | null> {
-  const r = Math.max(1, ship.rangeLy);
   const boost = ship.boost ?? 4;
-  const reach = boost * r;
   const tank = Math.max(1, Math.floor(ship.jumpsPerTank));
-  const h = (p: Pt) => (weight * dist(p, to)) / reach;
+  const rangeWith = (fuel: number) => rangeAt(ship, fuel, tank);
+  // The heuristic by the full tank's reach, as before the range followed the fuel.
+  const h = (p: Pt) => (weight * dist(p, to)) / (boost * Math.max(1, ship.rangeLy));
   const open = new Heap();
-  /** Per star, the (jumps so far, fuel) pairs already reached: a new one is kept only if no pair dominates it. */
+  /*
+    Per star, the (jumps so far, fuel) pairs already reached: a new one is kept only if no pair dominates it. More fuel
+    is more jumps to come, less fuel a longer range: a pair dominates with fewer jumps, at least the fuel and at least
+    the range (the same fuel, once the range follows the fuel).
+  */
   const reached = new Map<string, { g: number; fuel: number }[]>();
-  const dominated = (key: string, g: number, f: number) =>
-    (reached.get(key) ?? []).some((p) => p.g <= g + 1e-9 && p.fuel >= f);
+  const better = (p: { g: number; fuel: number }, g: number, f: number) =>
+    p.g <= g + 1e-9 && p.fuel >= f && rangeWith(p.fuel) >= rangeWith(f) - 1e-9;
+  const dominated = (key: string, g: number, f: number) => (reached.get(key) ?? []).some((p) => better(p, g, f));
   const remember = (key: string, g: number, f: number) => {
-    const list = (reached.get(key) ?? []).filter((p) => !(p.g >= g && p.fuel <= f));
+    const list = (reached.get(key) ?? []).filter((p) => !better({ g, fuel: f }, p.g, p.fuel));
     list.push({ g, fuel: f });
     reached.set(key, list);
   };
@@ -233,12 +269,20 @@ async function searchLeg(
       for (let n: Node | null = u; n; n = n.prev) out.push(n);
       return { nodes: out.reverse(), fuel: u.fuel };
     }
-    if (u.key !== "start" && (reached.get(u.key) ?? []).some((p) => p.g < u.g - 1e-9 && p.fuel >= u.fuel))
+    if (
+      u.key !== "start" &&
+      (reached.get(u.key) ?? []).some(
+        (p) => p.g < u.g - 1e-9 && p.fuel >= u.fuel && rangeWith(p.fuel) >= rangeWith(u.fuel) - 1e-9,
+      )
+    )
       continue;
     expansions++;
     if (expansions % YIELD_EVERY === 0) await new Promise((r) => setImmediate(r));
     const isNeutron = u.star != null;
     const left = dist(u.pos, to);
+    // The range with the fuel aboard here: the hop's first jump, the longest of them (the conservative count).
+    const r = rangeWith(u.fuel);
+    const reach = boost * r;
     // The end itself.
     /*
       Fuel for a hop: its supercharged jump comes out of the tank; normal jumps beyond what the tank holds are only
@@ -297,10 +341,19 @@ async function searchLeg(
       const key = `n${n.i}`;
       // Arrive as is (with fuel for at least one more jump), or scoop the system's own star and leave full.
       const base = u.g + j.jumps + (arrive.onWay ? ON_WAY_COST : 0);
-      const options: { fuel: number; g: number; refuel: boolean }[] = [];
+      const options: { fuel: number; g: number; refuel: boolean; half?: boolean }[] = [];
       if (arrive.fuel >= 1) options.push({ fuel: arrive.fuel, g: base, refuel: false });
-      if (n.scoopLs != null && n.scoopLs <= MAX_SCOOP_LS && arrive.fuel < tank)
+      if (n.scoopLs != null && n.scoopLs <= MAX_SCOOP_LS && arrive.fuel < tank) {
         options.push({ fuel: tank, g: base + REFUEL_COST, refuel: true });
+        /*
+          Half a tank: fewer jumps before the next scoop, each of them longer (only where the range follows the fuel).
+          A shade cheaper than full: at the same count the weighted search went down the full tank's branch first and
+          never came back (a supercharge and a normal jump a hop where half a tank made one).
+        */
+        const half = Math.ceil(tank / 2);
+        if (ship.halfTank && ship.rangeByFuel && half > arrive.fuel && half < tank)
+          options.push({ fuel: half, g: base + REFUEL_COST - HALF_TANK_EDGE, refuel: true, half: true });
+      }
       for (const o of options) {
         if (dominated(key, o.g, o.fuel)) continue;
         remember(key, o.g, o.fuel);
@@ -315,6 +368,7 @@ async function searchLeg(
           jumps: j.jumps,
           boosted: j.boosted,
           refuel: o.refuel,
+          half: o.half,
           onWay: arrive.onWay,
         });
       }
@@ -374,7 +428,7 @@ export async function planNeutronRoute(
     if (!leg) {
       // No fuel-safe neutron way: the plain plot, flagged.
       unsafeLegs.push(w);
-      const j = jumpsFrom(from.star != null, dist(from.pos, to), r, ship.boost ?? 4);
+      const j = jumpsFrom(from.star != null, dist(from.pos, to), rangeAt(ship, fuel, tank), ship.boost ?? 4);
       if (j.boosted && health != null && wear != null) health -= wear;
       // More jumps than the fuel aboard: scooped on the way, so the tank is about full after (not empty).
       const onWay = j.jumps > fuel;
@@ -411,6 +465,7 @@ export async function planNeutronRoute(
         boosted: n.boosted,
         distanceLy: Math.round(dist(prevPos, n.pos)),
         refuel: n.refuel,
+        ...(n.half ? { refuelHalf: true } : {}),
         scoopOnWay: n.onWay,
         scoopLs: n.star?.scoopLs ?? null,
         jumpsLeft: n.fuel,

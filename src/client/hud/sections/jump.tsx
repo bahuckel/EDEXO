@@ -185,7 +185,8 @@ function NeutronLive({ d }: { d: HudSnapshot }) {
     todo.push(
       <span key="fuel" className="jump__neutron-do jump__neutron-do--fuel">
         <FuelPump level="yellow" />
-        Scoop here{n.scoopLs != null ? " (" + Math.round(n.scoopLs).toLocaleString("en-US") + " ls)" : ""}
+        {n.refuelHalf ? "Scoop to half a tank here" : "Scoop here"}
+        {n.scoopLs != null ? " (" + Math.round(n.scoopLs).toLocaleString("en-US") + " ls)" : ""}
       </span>,
     );
   if (n.superchargeHere)

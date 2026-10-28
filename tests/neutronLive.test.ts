@@ -65,6 +65,7 @@ describe("flying a neutron route", () => {
       next: "PSR B",
       onStop: true,
       refuelHere: true,
+      refuelHalf: false,
       scoopLs: 1234,
       superchargeHere: true,
     });

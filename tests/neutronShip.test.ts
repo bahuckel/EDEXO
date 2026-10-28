@@ -73,4 +73,18 @@ describe("the neutron planner's ship before a jump is flown", () => {
     );
     expect(neutronShip(s).jumpsPerTank).not.toBeNull();
   });
+
+  it("gives the range by the fuel aboard: an emptier tank, a lighter ship, further", () => {
+    const s = new GameStateStore();
+    s.apply(loadout() as never);
+    s.apply({ timestamp: ts, event: "Cargo", Vessel: "Ship", Count: 0 } as never);
+    const t = neutronShip(s).rangeByFuel!;
+    expect(t).toHaveLength(21);
+    expect(t[20]).toBe(1);
+    // Half a tank: 369.3 + 32 against 369.3 + 16.
+    expect(t[10]).toBeCloseTo(401.3 / 385.3, 6);
+    // Under one jump's fuel (5.72 t): never more than one jump's fuel allows.
+    expect(t[0]).toBeCloseTo(401.3 / 375.02, 6);
+    expect(t[1]).toBe(t[0]);
+  });
 });

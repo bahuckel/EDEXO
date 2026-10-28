@@ -4,7 +4,7 @@
  * where no neutron star helps, waypoints in order or optimised, and the FSD's wear from the journal.
  */
 import { describe, expect, it } from "vitest";
-import { optimiseOrder, planNeutronRoute } from "../src/server/neutronRoute.js";
+import { optimiseOrder, planNeutronRoute, rangeAt } from "../src/server/neutronRoute.js";
 import type { NeutronStar } from "../src/server/neutronIndex.js";
 import {
   DEFAULT_WEAR,
@@ -74,6 +74,32 @@ describe("neutron route", () => {
     const overReach = r.hops.filter((h) => h.kind === "neutron" && h.boosted && h.jumps > 1);
     expect(overReach).toEqual([]);
     expect(r.jumps).toBeLessThanOrEqual(11); // a supercharge a neutron star along the chain, then the end
+  });
+
+  it("reads the range by the fuel aboard between its entries", () => {
+    const ship = { rangeLy: 50, rangeByFuel: [1.2, 1.1, 1] };
+    expect(rangeAt(ship, 6, 6)).toBeCloseTo(50);
+    expect(rangeAt(ship, 3, 6)).toBeCloseTo(55);
+    expect(rangeAt(ship, 0, 6)).toBeCloseTo(60);
+    expect(rangeAt(ship, 9, 6)).toBeCloseTo(50);
+    expect(rangeAt({ rangeLy: 50 }, 1, 6)).toBe(50);
+  });
+
+  it("jumps further on a lighter tank, and scoops to half where that is what reaches (Spansh's way, 2026-10-28)", async () => {
+    // Range 50 full (a supercharge 200 ly), 55 on half a tank or less (220 ly); neutron stars every 210 ly, each
+    // with a scoopable star. Full tank: every hop is a supercharge and a normal jump. Lighter: one supercharge.
+    const idx = line(0, 2100, 210, 1);
+    const ship = { rangeLy: 50, jumpsPerTank: 6, jumpsNow: 3, halfTank: true };
+    const byFuel = [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.08, 1.06, 1.04, 1.02, 1, 1, 1, 1, 1, 1];
+    const B = { name: "B", x: 2150, y: 0, z: 0 };
+    const fixed = await planNeutronRoute(idx, [A, B], ship);
+    const lighter = await planNeutronRoute(idx, [A, B], { ...ship, rangeByFuel: byFuel });
+    expect(lighter.jumps).toBeLessThan(fixed.jumps);
+    expect(lighter.hops.filter((h) => h.kind === "neutron" && h.jumps > 1)).toEqual([]);
+    // Every refuel it makes is to half: a full tank would not reach the next neutron star in one supercharge.
+    const refuels = lighter.hops.filter((h) => h.refuel);
+    expect(refuels.length).toBeGreaterThan(0);
+    expect(refuels.every((h) => h.refuelHalf)).toBe(true);
   });
 
   it("goes by a neutron star with a scoopable star before the tank runs dry, and says to scoop there", async () => {
