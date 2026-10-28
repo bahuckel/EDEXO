@@ -96,7 +96,7 @@ describe("notices", () => {
     expect(n.observe(scan(9, { StarType: "K", Radius: 400_000_000 }), c)).toBe(true);
     expect(c.seeded()).toBe(1);
     const titles = n.list().map((x) => x.title);
-    expect(titles).toEqual(["Record: smallest K-type star", "Record: largest Icy body"]);
+    expect(titles).toEqual(["Your record: smallest K-type star", "Your record: largest Icy body"]);
     const marks = n.snapshot(ADDR).recordMarks;
     expect(marks.map((m) => [m.body, m.which, m.previous])).toEqual([
       ["8 a", "largest", 2_000_000],

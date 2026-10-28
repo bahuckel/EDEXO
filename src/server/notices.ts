@@ -198,6 +198,25 @@ function scanSubject(r: {
   return null;
 }
 
+/** EDAstro's record holder and the scan name the same body (case and spacing aside). */
+const sameBody = (a: string, b: string) => a.replace(/\s+/g, " ").trim().toLowerCase() === b.replace(/\s+/g, " ").trim().toLowerCase();
+/**
+ * EDAstro publishes radii rounded (the neutron star record: 13,335.87 m from a solar-radius figure), the journal to the
+ * metre and beyond: within this share of the record it is the same size, not a new record (a tester, 2026-10-28:
+ * "matched the galactic record but didn't beat it", announced as beyond at "13 km vs 13 km").
+ */
+const GALACTIC_TIE = 1e-5;
+/** A personal record against EDAstro's galactic one: past it, level with it (or the holder itself), or short of it. */
+export function versusGalactic(
+  radius: number,
+  bodyName: string,
+  g: { radius: number; body: string },
+  which: "largest" | "smallest",
+): "beyond" | "ties" | "short" {
+  if (sameBody(g.body, bodyName) || Math.abs(radius - g.radius) <= g.radius * GALACTIC_TIE) return "ties";
+  return (which === "largest" ? radius > g.radius : radius < g.radius) ? "beyond" : "short";
+}
+
 export interface NoticesService {
   prefs(): NotifyPrefsDTO;
   setPrefs(raw: unknown): NotifyPrefsDTO;
@@ -589,18 +608,25 @@ export function createNoticesService(opts: {
           state.records.push(mark);
           // EDAstro's galactic record, when downloaded: how this one compares.
           const g = ctx.galacticRecord?.(k)?.[which] ?? null;
-          const beatsGalaxy = g != null && (which === "largest" ? s.radius > g.radius : s.radius < g.radius);
+          const vs = g ? versusGalactic(s.radius, fullName, g, which) : null;
+          const label = `${which} ${recordTypeLabel(s.subject, s.type)}`;
           added =
             add({
               ...base,
               id: `record:${which}:${k}:${bodyKey}`,
               kind: "record",
-              title: beatsGalaxy
-                ? `Beyond EDAstro's galactic record: ${which} ${recordTypeLabel(s.subject, s.type)}`
-                : `Record: ${which} ${recordTypeLabel(s.subject, s.type)}`,
+              title:
+                vs === "beyond"
+                  ? `Beyond EDAstro's galactic record: ${label}`
+                  : vs === "ties"
+                    ? `Ties EDAstro's galactic record: ${label}`
+                    : `Your record: ${label}`,
               text:
                 `${body} in ${system} — ${formatRadius(mark.radius, mark.subject)} (was ${formatRadius(mark.previous, mark.subject)})` +
-                (g ? ` · galactic ${formatRadius(g.radius, mark.subject)}` : ""),
+                (g
+                  ? ` · galactic ${formatRadius(g.radius, mark.subject)}` +
+                    (vs === "ties" ? ` (${g.body}${sameBody(g.body, fullName) ? ", this body" : ", the same to EDAstro's precision"})` : "")
+                  : ""),
             }) || added;
         }
       }

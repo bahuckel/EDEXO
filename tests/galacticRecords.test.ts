@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { parseRecordsPage, recordKeyFor } from "../src/server/galacticRecords.js";
-import { createNoticesService, type NoticesContext } from "../src/server/notices.js";
+import { createNoticesService, versusGalactic, type NoticesContext } from "../src/server/notices.js";
 import type { ExplorationScanRecord } from "../src/shared/types.js";
 
 const row = (name: string, unit: string, hi: string, hiBody: string, lo: string, loBody: string) => `
@@ -86,5 +86,17 @@ describe("your records beside them", () => {
     expect(n.observe(beyond, ctx)).toBe(true);
     expect(n.list()[0]!.title).toBe("Beyond EDAstro's galactic record: largest Water world");
     expect(n.list()[0]!.text).toContain("galactic 20,000 km");
+  });
+
+  it("a radius level with EDAstro's record, or the record holder itself, ties it: not beyond (2026-10-28)", () => {
+    // EDAstro's largest neutron star, from its published solar-radius figure.
+    const g = { radius: 13_335.8733, body: "Flyiedgoe ML-Y d3 A" };
+    expect(versusGalactic(13_335.9, "Somewhere AB-C d1 A", g, "largest")).toBe("ties");
+    expect(versusGalactic(13_340, "Flyiedgoe ML-Y d3 A", g, "largest")).toBe("ties");
+    expect(versusGalactic(13_337, "Somewhere AB-C d1 A", g, "largest")).toBe("beyond");
+    expect(versusGalactic(13_000, "Somewhere AB-C d1 A", g, "largest")).toBe("short");
+    expect(versusGalactic(700, "Somewhere AB-C d1 A", { radius: 719.3, body: "Nova Aquila No 3" }, "smallest")).toBe(
+      "beyond",
+    );
   });
 });
