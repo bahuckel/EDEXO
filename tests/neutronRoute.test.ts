@@ -4,7 +4,7 @@
  * where no neutron star helps, waypoints in order or optimised, and the FSD's wear from the journal.
  */
 import { describe, expect, it } from "vitest";
-import { optimiseOrder, planNeutronRoute, rangeAt } from "../src/server/neutronRoute.js";
+import { optimiseOrder, planLeg, planNeutronRoute, rangeAt } from "../src/server/neutronRoute.js";
 import type { NeutronStar } from "../src/server/neutronIndex.js";
 import {
   DEFAULT_WEAR,
@@ -175,6 +175,39 @@ describe("neutron route", () => {
       { name: "end", x: 400, y: 0, z: 0 },
     ];
     expect(optimiseOrder(pts).map((p) => p.name)).toEqual(["start", "near", "far", "end"]);
+  });
+
+  /*
+    Owner, 2026-10-28: "should be the fastest route, A* or similar". The fast first pass (weighted A*) is a few jumps
+    off the fewest; the refining passes look for fewer in the time they get, and never hand back more.
+  */
+  it("refines the first route towards the fewest jumps, never to more", async () => {
+    const field = (seed: number) => {
+      let s = seed >>> 0;
+      const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32;
+      const stars: NeutronStar[] = Array.from({ length: 1500 }, (_, i) => ({
+        i,
+        x: rnd() * 4000,
+        y: (rnd() - 0.5) * 600,
+        z: (rnd() - 0.5) * 600,
+        scoopLs: rnd() < 0.4 ? 500 : null,
+      }));
+      return {
+        within: (p: { x: number; y: number; z: number }, r: number) =>
+          stars.filter((n) => Math.hypot(n.x - p.x, n.y - p.y, n.z - p.z) <= r),
+      };
+    };
+    const ship = { rangeLy: 50, boost: 4, jumpsPerTank: 6, jumpsNow: 6 };
+    const from = { pos: { x: 0, y: 0, z: 0 }, star: null };
+    const to = { x: 4000, y: 0, z: 0 };
+    const jumps = (leg: { nodes: { jumps: number }[] } | null) => leg!.nodes.reduce((a, n) => a + n.jumps, 0);
+    for (const seed of [1, 5, 8]) {
+      const first = jumps(await planLeg(field(seed), from, to, ship, 6, 0));
+      const refined = jumps(await planLeg(field(seed), from, to, ship, 6, 5000));
+      expect(refined).toBeLessThan(first);
+    }
+    // Seed 5: 27 jumps from the first pass, 25 refined.
+    expect(jumps(await planLeg(field(5), from, to, ship, 6, 5000))).toBe(25);
   });
 });
 

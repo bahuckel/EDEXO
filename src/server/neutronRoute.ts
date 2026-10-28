@@ -105,6 +105,19 @@ const PASSES: readonly { weight: number; expansions: number }[] = [
   // … and, where that runs out in sparse space, greedier.
   { weight: 3, expansions: 60_000 },
 ];
+/**
+ * Then towards the fewest jumps (owner, 2026-10-28: "should be the fastest route, A* or similar"): the first route
+ * was 117 jumps Sol to Colonia (60 ly x4) where plain A* finds 104, in four minutes. Passes at lower weights look for
+ * a cheaper route, skipping any state that cannot beat the best so far, each in its share of a time budget; the
+ * best found wins. Which weight finds it differs from route to route, and a lower one is not always slower
+ * (measured 2026-10-28, docs/perf/_neutron-optimal.mts: Colonia 60 ly x4 106 jumps at 1.2 in 0.3 s, 105 at 1.1;
+ * Colonia 93 ly x6 48 at 1.1 in 0.2 s, where 1.2 ran 30 s; Sagittarius A* 135 at 1.3), so each gets its turn.
+ * Plain A* (1) did not finish in 30 s on any of the six test routes.
+ */
+const REFINE_WEIGHTS: readonly number[] = [1.5, 1.3, 1.2, 1.1];
+/** The time for the refining passes of a whole plan (shared out between its legs). */
+const REFINE_MS = 3000;
+const REFINE_EXPANSIONS = 500_000;
 const REFUEL_COST = 0.15;
 /** A refuel to half a tank costs this much less than to full: the lighter ship's range is worth a little. */
 const HALF_TANK_EDGE = 0.05;
@@ -167,9 +180,14 @@ interface Node {
   onWay: boolean;
 }
 
+/** Before in the heap: lower f, and with `deeper` at equal f the state with more g, which reaches a goal sooner. */
+const before = (x: Node, y: Node, deeper: boolean) =>
+  x.f < y.f - 1e-9 || (deeper && x.f <= y.f + 1e-9 && x.g > y.g);
+
 /** A small binary heap on f. */
 class Heap {
   private a: Node[] = [];
+  constructor(private readonly deeper = false) {}
   get size() {
     return this.a.length;
   }
@@ -179,7 +197,7 @@ class Heap {
     let i = a.length - 1;
     while (i > 0) {
       const p = (i - 1) >> 1;
-      if (a[p]!.f <= a[i]!.f) break;
+      if (!before(a[i]!, a[p]!, this.deeper)) break;
       [a[p], a[i]] = [a[i]!, a[p]!];
       i = p;
     }
@@ -195,8 +213,8 @@ class Heap {
         const l = 2 * i + 1;
         const r = l + 1;
         let m = i;
-        if (l < a.length && a[l]!.f < a[m]!.f) m = l;
-        if (r < a.length && a[r]!.f < a[m]!.f) m = r;
+        if (l < a.length && before(a[l]!, a[m]!, this.deeper)) m = l;
+        if (r < a.length && before(a[r]!, a[m]!, this.deeper)) m = r;
         if (m === i) break;
         [a[m], a[i]] = [a[i]!, a[m]!];
         i = m;
@@ -206,39 +224,109 @@ class Heap {
   }
 }
 
+/** The `size` items with the largest gain seen so far, in no order. */
+class TopByGain<T extends { gain: number }> {
+  readonly items: T[] = [];
+  private min = 0;
+  constructor(private readonly size: number) {}
+  get count() {
+    return this.items.length;
+  }
+  clear() {
+    this.items.length = 0;
+  }
+  /** The gain an item needs to be kept: none while there is room. */
+  floor() {
+    return this.items.length < this.size ? -Infinity : this.items[this.min]!.gain;
+  }
+  /** Whether an item with this gain would be kept. */
+  takes(gain: number) {
+    return this.items.length < this.size || gain > this.items[this.min]!.gain;
+  }
+  add(c: T) {
+    const a = this.items;
+    if (a.length < this.size) {
+      a.push(c);
+      if (a.length === this.size) this.min = this.lowest();
+      return;
+    }
+    if (c.gain <= a[this.min]!.gain) return;
+    a[this.min] = c;
+    this.min = this.lowest();
+  }
+  private lowest() {
+    let m = 0;
+    for (let i = 1; i < this.items.length; i++) if (this.items[i]!.gain < this.items[m]!.gain) m = i;
+    return m;
+  }
+}
+
+type Cand = { n: NeutronStar; gain: number; d: number };
+type Leg = { nodes: Node[]; fuel: number; g: number };
+
 /** One leg, from a point (a neutron star or not) to a point, with `fuel` jumps in the tank. Null when no safe way. */
 export async function planLeg(
-  index: Pick<NeutronIndex, "within">,
+  index: Pick<NeutronIndex, "within"> & Partial<Pick<NeutronIndex, "eachToward">>,
   from: { pos: Pt; star: NeutronStar | null },
   to: Pt,
   ship: NeutronShip,
   fuel: number,
+  budgetMs = REFINE_MS,
 ): Promise<{ nodes: Node[]; fuel: number } | null> {
+  // The neighbours of a star are the same in every pass: read once.
+  const lists = new Map<string, Cand[]>();
+  let best: Leg | null = null;
   for (const pass of PASSES) {
-    const leg = await searchLeg(index, from, to, ship, fuel, pass.weight, pass.expansions);
-    if (leg) return leg;
+    best = await searchLeg(index, from, to, ship, fuel, pass.weight, pass.expansions, lists);
+    if (best) break;
   }
-  return null;
+  if (!best) return null;
+  const deadline = Date.now() + budgetMs;
+  for (let k = 0; k < REFINE_WEIGHTS.length; k++) {
+    const now = Date.now();
+    if (now >= deadline) break;
+    // Its share of what is left: a pass stuck on a plateau must not starve the next weight.
+    const until = now + (deadline - now) / (REFINE_WEIGHTS.length - k);
+    const leg = await searchLeg(index, from, to, ship, fuel, REFINE_WEIGHTS[k]!, REFINE_EXPANSIONS, lists, best.g, until);
+    // Null: out of time or steps, or nothing cheaper exists.
+    if (leg && leg.g < best.g - 1e-9) best = leg;
+  }
+  return best;
 }
 
 /** The server runs in Electron's main process: a search hands the event loop back this often (expansions). */
 const YIELD_EVERY = 1000;
 
 async function searchLeg(
-  index: Pick<NeutronIndex, "within">,
+  index: Pick<NeutronIndex, "within"> & Partial<Pick<NeutronIndex, "eachToward">>,
   from: { pos: Pt; star: NeutronStar | null },
   to: Pt,
   ship: NeutronShip,
   fuel: number,
   weight: number,
   maxExpansions: number,
-): Promise<{ nodes: Node[]; fuel: number } | null> {
+  lists: Map<string, Cand[]>,
+  /** Only a route cheaper than this is wanted (a refining pass). */
+  bound = Infinity,
+  deadline = Infinity,
+): Promise<Leg | null> {
   const boost = ship.boost ?? 4;
   const tank = Math.max(1, Math.floor(ship.jumpsPerTank));
   const rangeWith = (fuel: number) => rangeAt(ship, fuel, tank);
-  // The heuristic by the full tank's reach, as before the range followed the fuel.
-  const h = (p: Pt) => (weight * dist(p, to)) / (boost * Math.max(1, ship.rangeLy));
-  const open = new Heap();
+  const ranges = ship.rangeByFuel?.length ? ship.rangeByFuel : [1];
+  const maxR = Math.max(1, ship.rangeLy) * Math.max(1, ...ranges);
+  const minR = Math.max(1, ship.rangeLy) * Math.min(1, ...ranges);
+  /*
+    Jumps still needed, at least: a supercharge at the longest range any fuel gives, every jump. Never more than the
+    true count, so weight 1 finds the fewest, and a state whose g plus this reaches the bound cannot beat it.
+  */
+  const least = (p: Pt) => dist(p, to) / (boost * maxR);
+  // The first passes go by the full tank's reach, as before the range followed the fuel (greedier: they must finish
+  // across sparse space); the refining ones by the bound above.
+  const h = bound === Infinity ? (p: Pt) => (weight * dist(p, to)) / (boost * Math.max(1, ship.rangeLy)) : (p: Pt) => weight * least(p);
+  // The first passes order states as they always did, so their route is the one plans had before the refining
+  // passes (which can only improve on it); the refining ones go deeper first on a tie, a plateau of equal counts.
+  const open = new Heap(bound !== Infinity);
   /*
     Per star, the (jumps so far, fuel) pairs already reached: a new one is kept only if no pair dominates it. More fuel
     is more jumps to come, less fuel a longer range: a pair dominates with fewer jumps, at least the fuel and at least
@@ -252,6 +340,90 @@ async function searchLeg(
     const list = (reached.get(key) ?? []).filter((p) => !better({ g, fuel: f }, p.g, p.fuel));
     list.push({ g, fuel: f });
     reached.set(key, list);
+  };
+  /*
+    Neutron stars that bring the end nearer, the best by distance gained; further out when none is in reach (the
+    bubble has 2 within 240 ly of Sol), the extra distance in normal jumps. Kept per star and range: a star is
+    expanded again with other fuel, and building the list (thousands of stars near the core) was most of a plan's time.
+  */
+  const candidates = (u: Node, left: number, r: number, reach: number, isNeutron: boolean) =>
+    bound === Infinity ? firstCandidates(u, left, r, reach, isNeutron) : keptCandidates(u, left, r, reach, isNeutron);
+  /*
+    The first passes pick neighbours as plans always did, from the stars in reach at this fuel, so their route is the
+    one a plan had before the refining passes, which can then only improve on it.
+  */
+  const firstCandidates = (u: Node, left: number, r: number, reach: number, isNeutron: boolean) => {
+    let all: Cand[] = [];
+    for (const radius of [reach, reach * 2, reach * 4, Math.max(reach * 4, 1500)]) {
+      all = [];
+      for (const n of index.within(u.pos, radius)) {
+        const gain = left - dist(n, to);
+        if (gain > r * 0.5 && n.i !== u.star?.i) all.push({ n, gain, d: dist(u.pos, n) });
+      }
+      if (all.length >= 8) break;
+    }
+    all.sort((a, b) => b.gain - a.gain);
+    return pick(all, r, isNeutron ? reach : r);
+  };
+  const keptCandidates = (u: Node, left: number, r: number, reach: number, isNeutron: boolean) => {
+    let all = lists.get(u.key);
+    if (!all) {
+      /*
+        Read once per star at the longest range any fuel gives (a star is expanded again with other fuel), keeping
+        only the best by gain: overall, and among the ones in reach at any fuel. Near the core a supercharge reaches
+        thousands of neutron stars, and sorting them all on every expansion was most of a plan's time.
+      */
+      const most = boost * maxR;
+      const sure = (isNeutron ? boost : 1) * minR;
+      const best = new TopByGain<Cand>(NEIGHBOURS * 3);
+      const inReach = new TopByGain<Cand>(NEIGHBOURS * 2);
+      for (const radius of [most, most * 2, most * 4, Math.max(most * 4, 1500)]) {
+        best.clear();
+        inReach.clear();
+        const visit = (n: NeutronStar, gain: number, d: number) => {
+          if (n.i === u.star?.i) return;
+          const near = d <= sure;
+          if (!best.takes(gain) && !(near && inReach.takes(gain))) return;
+          const c = { n, gain, d };
+          best.add(c);
+          if (near) inReach.add(c);
+        };
+        if (index.eachToward)
+          index.eachToward(u.pos, radius, to, visit, () => Math.min(best.floor(), inReach.floor()));
+        else
+          for (const n of index.within(u.pos, radius)) {
+            const gain = left - dist(n, to);
+            if (gain > 0) visit(n, gain, dist(u.pos, n));
+          }
+        // Further out only where too few make progress (the best kept hold them if there are 8), as before.
+        if (best.items.filter((c) => c.gain > minR * 0.5).length >= 8) break;
+      }
+      const seen = new Set<number>();
+      all = [...best.items, ...inReach.items].filter((c) => !seen.has(c.n.i) && seen.add(c.n.i));
+      all.sort((a, b) => b.gain - a.gain);
+      lists.set(u.key, all);
+    }
+    return pick(all!, r, isNeutron ? reach : r);
+  };
+  /*
+    The ones a supercharge reaches stay, however far the search looked: ranked by gain alone, a crowd further out
+    took all 32 places, and the plan went by hops of one supercharge and the game's plot for the rest (a tester's
+    Caspian, 2026-10-28: "the next in line was 905 ly away", where a neutron star in reach went on).
+  */
+  const pick = (all: Cand[], r: number, hop: number) => {
+    const near: Cand[] = [];
+    const far: Cand[] = [];
+    for (const c of all) {
+      if (c.gain <= r * 0.5) break;
+      if (c.d <= hop) {
+        if (near.length < NEIGHBOURS) near.push(c);
+      } else if (far.length < NEIGHBOURS) far.push(c);
+      if (near.length >= NEIGHBOURS && far.length >= NEIGHBOURS / 4) break;
+    }
+    return {
+      cands: [...near, ...far.slice(0, Math.max(NEIGHBOURS / 4, NEIGHBOURS - near.length))],
+      anyNear: near.length > 0,
+    };
   };
   const start: Node = {
     key: "start",
@@ -273,7 +445,7 @@ async function searchLeg(
     if (u.key === "goal") {
       const out: Node[] = [];
       for (let n: Node | null = u; n; n = n.prev) out.push(n);
-      return { nodes: out.reverse(), fuel: u.fuel };
+      return { nodes: out.reverse(), fuel: u.fuel, g: u.g };
     }
     if (
       u.key !== "start" &&
@@ -283,7 +455,10 @@ async function searchLeg(
     )
       continue;
     expansions++;
-    if (expansions % YIELD_EVERY === 0) await new Promise((r) => setImmediate(r));
+    if (expansions % YIELD_EVERY === 0) {
+      if (Date.now() > deadline) break;
+      await new Promise((r) => setImmediate(r));
+    }
     const isNeutron = u.star != null;
     const left = dist(u.pos, to);
     // The range with the fuel aboard here: the hop's first jump, the longest of them (the conservative count).
@@ -303,8 +478,9 @@ async function searchLeg(
     };
     const toEnd = jumpsFrom(isNeutron, left, r, boost);
     const endFuel = afterHop(toEnd);
-    if (endFuel) {
-      const g = u.g + toEnd.jumps + (endFuel.onWay ? ON_WAY_COST : 0);
+    const endG = endFuel ? u.g + toEnd.jumps + (endFuel.onWay ? ON_WAY_COST : 0) : Infinity;
+    if (endFuel && endG < bound - 1e-9) {
+      const g = endG;
       open.push({
         key: "goal",
         star: null,
@@ -319,29 +495,10 @@ async function searchLeg(
         onWay: endFuel.onWay,
       });
     }
-    // Neutron stars that bring the end nearer, the best by distance gained; further out when none is in reach
-    // (the bubble has 2 within 240 ly of Sol), the extra distance in normal jumps.
-    let cands: { n: NeutronStar; gain: number }[] = [];
-    for (const radius of [reach, reach * 2, reach * 4, Math.max(reach * 4, 1500)]) {
-      cands = index
-        .within(u.pos, radius)
-        .map((n) => ({ n, gain: left - dist(n, to) }))
-        .filter((c) => c.gain > r * 0.5 && c.n.i !== u.star?.i);
-      if (cands.length >= 8) break;
-    }
-    /*
-      The ones a supercharge reaches stay, however far the search looked: ranked by gain alone, a crowd further out
-      took all 32 places, and the plan went by hops of one supercharge and the game's plot for the rest (a tester's
-      Caspian, 2026-10-28: "the next in line was 905 ly away", where a neutron star in reach went on).
-    */
-    cands.sort((a, b) => b.gain - a.gain);
-    const hop = isNeutron ? reach : r;
-    const near = cands.filter((c) => dist(u.pos, c.n) <= hop).slice(0, NEIGHBOURS);
-    const far = cands.filter((c) => dist(u.pos, c.n) > hop);
-    cands = [...near, ...far.slice(0, Math.max(NEIGHBOURS / 4, NEIGHBOURS - near.length))];
+    const { cands, anyNear } = candidates(u, left, r, reach, isNeutron);
     // A hop past reach costs more only where one in reach goes on: in sparse space every hop is past reach, and the
     // cost on each ran the search out of steps (Sol to Beagle Point, 60 ly x4: the plain plot).
-    const pastReach = isNeutron && near.length ? PAST_REACH_COST : 0;
+    const pastReach = isNeutron && anyNear ? PAST_REACH_COST : 0;
     for (const { n } of cands) {
       const d = dist(u.pos, n);
       const j = jumpsFrom(isNeutron, d, r, boost);
@@ -365,7 +522,7 @@ async function searchLeg(
           options.push({ fuel: half, g: base + REFUEL_COST - HALF_TANK_EDGE, refuel: true, half: true });
       }
       for (const o of options) {
-        if (dominated(key, o.g, o.fuel)) continue;
+        if (o.g + least(n) >= bound - 1e-9 || dominated(key, o.g, o.fuel)) continue;
         remember(key, o.g, o.fuel);
         open.push({
           key,
@@ -393,7 +550,7 @@ export let lastLegStats: { expansions: number; open: number } | null = null;
 
 /** The whole route through the waypoints in order (the first is where the ship starts). */
 export async function planNeutronRoute(
-  index: Pick<NeutronIndex, "within" | "nameOf">,
+  index: Pick<NeutronIndex, "within" | "nameOf"> & Partial<Pick<NeutronIndex, "eachToward">>,
   waypoints: { name: string; x: number; y: number; z: number }[],
   ship: NeutronShip,
 ): Promise<NeutronRoute> {
@@ -434,7 +591,7 @@ export async function planNeutronRoute(
   for (let w = 1; w < waypoints.length; w++) {
     const to = waypoints[w]!;
     plainJumps += Math.ceil(dist(from.pos, to) / r - 1e-9);
-    const leg = await planLeg(index, from, to, ship, fuel);
+    const leg = await planLeg(index, from, to, ship, fuel, REFINE_MS / (waypoints.length - 1));
     if (!leg) {
       // No fuel-safe neutron way: the plain plot, flagged.
       unsafeLegs.push(w);

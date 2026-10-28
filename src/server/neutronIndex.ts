@@ -51,6 +51,18 @@ export interface NeutronStar {
   scoopLs: number | null;
 }
 
+/** Sub-cubes a side in a loaded sector cell (80 ly each). */
+const SUB = 16;
+const subOf = (d: number) => Math.min(SUB - 1, Math.max(0, Math.floor((d * SUB) / SECTOR_SIZE_LY)));
+
+/** A sector cell's stars, by sub-cube, with the cell's corner. */
+interface LoadedCell {
+  x: number;
+  y: number;
+  z: number;
+  buckets: (NeutronStar[] | undefined)[];
+}
+
 interface Cell {
   sx: number;
   sy: number;
@@ -66,7 +78,7 @@ export class NeutronIndex {
   private readonly byKey = new Map<string, number>();
   private readonly recAt: number;
   private readonly named = new Map<number, string>();
-  private readonly cache = new Map<number, NeutronStar[]>();
+  private readonly cache = new Map<number, LoadedCell>();
   private readonly sectorOf: (x: number, y: number, z: number) => string | null;
 
   constructor(
@@ -124,7 +136,7 @@ export class NeutronIndex {
     this.sectorOf = (x, y, z) => names.byCell.get(`${x},${y},${z}`)?.name ?? null;
   }
 
-  private cell(c: number): NeutronStar[] {
+  private cell(c: number): LoadedCell {
     const hit = this.cache.get(c);
     if (hit) return hit;
     const cell = this.cells[c]!;
@@ -145,9 +157,16 @@ export class NeutronIndex {
         scoopLs: sc === 0 ? null : (sc - 1) * 10,
       });
     }
+    // Bucketed by sub-cube, so a query reads the stars near it, not the whole sector's (tens of thousands near the core).
+    const buckets: (NeutronStar[] | undefined)[] = new Array(SUB ** 3);
+    for (const n of out) {
+      const b = subOf(n.x - cx) * SUB * SUB + subOf(n.y - cy) * SUB + subOf(n.z - cz);
+      (buckets[b] ??= []).push(n);
+    }
+    const loaded = { x: cx, y: cy, z: cz, buckets };
     if (this.cache.size >= CELL_CACHE) this.cache.delete(this.cache.keys().next().value!);
-    this.cache.set(c, out);
-    return out;
+    this.cache.set(c, loaded);
+    return loaded;
   }
 
   /** Neutron stars within `r` ly of a point. */
@@ -161,14 +180,81 @@ export class NeutronIndex {
         for (let sz = lo(p.z, SECTOR_ORIGIN.z); sz <= hi(p.z, SECTOR_ORIGIN.z); sz++) {
           const c = this.byKey.get(`${sx},${sy},${sz}`);
           if (c == null) continue;
-          for (const n of this.cell(c)) {
-            const dx = n.x - p.x;
-            const dy = n.y - p.y;
-            const dz = n.z - p.z;
-            if (dx * dx + dy * dy + dz * dz <= r2) out.push(n);
-          }
+          const cell = this.cell(c);
+          const x0 = subOf(p.x - r - cell.x);
+          const x1 = subOf(p.x + r - cell.x);
+          const y0 = subOf(p.y - r - cell.y);
+          const y1 = subOf(p.y + r - cell.y);
+          const z0 = subOf(p.z - r - cell.z);
+          const z1 = subOf(p.z + r - cell.z);
+          for (let bx = x0; bx <= x1; bx++)
+            for (let by = y0; by <= y1; by++)
+              for (let bz = z0; bz <= z1; bz++) {
+                const bucket = cell.buckets[bx * SUB * SUB + by * SUB + bz];
+                if (!bucket) continue;
+                for (const n of bucket) {
+                  const dx = n.x - p.x;
+                  const dy = n.y - p.y;
+                  const dz = n.z - p.z;
+                  if (dx * dx + dy * dy + dz * dz <= r2) out.push(n);
+                }
+              }
         }
     return out;
+  }
+
+  /**
+   * Neutron stars within `r` ly of `p` that bring `to` nearer, the most promising first: sub-cubes go by the most
+   * distance to `to` they could gain, and the walk stops once that is no more than `floor()` (the planner's worst kept
+   * neighbour). Near the core a supercharge reaches tens of thousands of neutron stars; the planner wants a few dozen.
+   */
+  eachToward(
+    p: { x: number; y: number; z: number },
+    r: number,
+    to: { x: number; y: number; z: number },
+    visit: (n: NeutronStar, gain: number, d: number) => void,
+    floor: () => number,
+  ): void {
+    const left = Math.hypot(to.x - p.x, to.y - p.y, to.z - p.z);
+    const side = SECTOR_SIZE_LY / SUB;
+    // Distance from a point to a box, per axis.
+    const gap = (v: number, lo: number) => Math.max(lo - v, 0, v - (lo + side));
+    const boxes: { stars: NeutronStar[]; most: number }[] = [];
+    const lo = (v: number, o: number) => Math.floor((v - r - o) / SECTOR_SIZE_LY);
+    const hi = (v: number, o: number) => Math.floor((v + r - o) / SECTOR_SIZE_LY);
+    for (let sx = lo(p.x, SECTOR_ORIGIN.x); sx <= hi(p.x, SECTOR_ORIGIN.x); sx++)
+      for (let sy = lo(p.y, SECTOR_ORIGIN.y); sy <= hi(p.y, SECTOR_ORIGIN.y); sy++)
+        for (let sz = lo(p.z, SECTOR_ORIGIN.z); sz <= hi(p.z, SECTOR_ORIGIN.z); sz++) {
+          const c = this.byKey.get(`${sx},${sy},${sz}`);
+          if (c == null) continue;
+          const cell = this.cell(c);
+          for (let bx = subOf(p.x - r - cell.x); bx <= subOf(p.x + r - cell.x); bx++)
+            for (let by = subOf(p.y - r - cell.y); by <= subOf(p.y + r - cell.y); by++)
+              for (let bz = subOf(p.z - r - cell.z); bz <= subOf(p.z + r - cell.z); bz++) {
+                const stars = cell.buckets[bx * SUB * SUB + by * SUB + bz];
+                if (!stars) continue;
+                const x0 = cell.x + bx * side;
+                const y0 = cell.y + by * side;
+                const z0 = cell.z + bz * side;
+                if (Math.hypot(gap(p.x, x0), gap(p.y, y0), gap(p.z, z0)) > r) continue;
+                const most = left - Math.hypot(gap(to.x, x0), gap(to.y, y0), gap(to.z, z0));
+                if (most > 0) boxes.push({ stars, most });
+              }
+        }
+    boxes.sort((a, b) => b.most - a.most);
+    const r2 = r * r;
+    for (const box of boxes) {
+      if (box.most <= floor()) return;
+      for (const n of box.stars) {
+        const dx = n.x - p.x;
+        const dy = n.y - p.y;
+        const dz = n.z - p.z;
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 > r2) continue;
+        const gain = left - Math.hypot(to.x - n.x, to.y - n.y, to.z - n.z);
+        if (gain > 0) visit(n, gain, Math.sqrt(d2));
+      }
+    }
   }
 
   /** The system's name: stored where its address does not give it, else the procedural one. */
