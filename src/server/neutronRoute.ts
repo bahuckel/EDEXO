@@ -294,8 +294,8 @@ export async function planLeg(
   return best;
 }
 
-/** The server runs in Electron's main process: a search hands the event loop back this often (expansions). */
-const YIELD_EVERY = 1000;
+/** A search hands the server's event loop back this often (ms): the HUD and status keep flowing during a plan. */
+const YIELD_MS = 15;
 
 async function searchLeg(
   index: Pick<NeutronIndex, "within"> & Partial<Pick<NeutronIndex, "eachToward">>,
@@ -440,6 +440,7 @@ async function searchLeg(
   };
   open.push(start);
   let expansions = 0;
+  let lastYield = Date.now();
   while (open.size && expansions < maxExpansions) {
     const u = open.pop()!;
     if (u.key === "goal") {
@@ -455,9 +456,13 @@ async function searchLeg(
     )
       continue;
     expansions++;
-    if (expansions % YIELD_EVERY === 0) {
-      if (Date.now() > deadline) break;
-      await new Promise((r) => setImmediate(r));
+    if ((expansions & 63) === 0) {
+      const now = Date.now();
+      if (now > deadline) break;
+      if (now - lastYield >= YIELD_MS) {
+        await new Promise((r) => setImmediate(r));
+        lastYield = Date.now();
+      }
     }
     const isNeutron = u.star != null;
     const left = dist(u.pos, to);
@@ -553,6 +558,8 @@ export async function planNeutronRoute(
   index: Pick<NeutronIndex, "within" | "nameOf"> & Partial<Pick<NeutronIndex, "eachToward">>,
   waypoints: { name: string; x: number; y: number; z: number }[],
   ship: NeutronShip,
+  /** Time for the refining passes (ms): a re-plot in flight wants the next stop soon more than a jump less. */
+  refineMs = REFINE_MS,
 ): Promise<NeutronRoute> {
   const r = Math.max(1, ship.rangeLy);
   const hops: NeutronHop[] = [];
@@ -591,7 +598,7 @@ export async function planNeutronRoute(
   for (let w = 1; w < waypoints.length; w++) {
     const to = waypoints[w]!;
     plainJumps += Math.ceil(dist(from.pos, to) / r - 1e-9);
-    const leg = await planLeg(index, from, to, ship, fuel, REFINE_MS / (waypoints.length - 1));
+    const leg = await planLeg(index, from, to, ship, fuel, refineMs / (waypoints.length - 1));
     if (!leg) {
       // No fuel-safe neutron way: the plain plot, flagged.
       unsafeLegs.push(w);

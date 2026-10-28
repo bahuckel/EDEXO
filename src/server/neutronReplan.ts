@@ -17,6 +17,9 @@ import { applyJumponium, planNeutronRoute } from "./neutronRoute.js";
 import { neutronShip } from "./neutronShip.js";
 import { recipeFor } from "../shared/jumponium.js";
 
+/** Refining time for a re-plot (ms). */
+const REPLAN_REFINE_MS = 700;
+
 export interface NeutronReplanner {
   replan(): Promise<void>;
 }
@@ -74,6 +77,8 @@ export function createNeutronReplanner(deps: {
           fsdHealth: s.fsdHealth,
           wearPerBoost: s.wearPerBoost,
         },
+        // In flight: the next stop on the HUD within a second, not the three a plan in the drawer takes.
+        REPLAN_REFINE_MS,
       );
       // Planned with FSD injections: the re-plot keeps them (shared/jumponium.ts).
       const planned = left.useJumponium
