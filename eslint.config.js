@@ -148,7 +148,7 @@ export default tseslint.config(
     rules: { "max-lines": ["warn", { max: 1200, skipBlankLines: true, skipComments: true }] },
   },
   ...Object.entries({
-    "src/client/galaxy3d/GalaxyEngine.ts": 2000,
+    "src/client/galaxy3d/GalaxyEngine.ts": 1900,
     "src/client/GalaxyMap3D.tsx": 1600,
     "src/server/exomasteryProfile.ts": 1500,
     "src/server/gameState.ts": 1400,

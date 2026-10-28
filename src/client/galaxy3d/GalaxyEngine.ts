@@ -77,6 +77,15 @@ import {
   SYSTEM_DISTANCE,
   TOP_HEIGHT,
 } from "./engineGl";
+import { eggFade, makeEgg } from "./easterEgg";
+import {
+  applyControlMode,
+  FLIGHT_KEYS,
+  placeCrosshair,
+  raiseTarget,
+  stepHeldKeys,
+  turnAround,
+} from "./eliteControls";
 import type {
   EngineLabel,
   EngineOptions,
@@ -1719,25 +1728,7 @@ export class GalaxyEngine {
     this.elite = on;
     this.keys.clear();
     this.rightDrag = null;
-    const c = this.controls;
-    if (on) {
-      c.mouseButtons = {
-        LEFT: THREE.MOUSE.ROTATE,
-        MIDDLE: THREE.MOUSE.DOLLY,
-        RIGHT: null as unknown as THREE.MOUSE,
-      };
-      c.minPolarAngle = 0.01;
-      c.maxPolarAngle = Math.PI - 0.01;
-    } else {
-      c.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
-      c.minPolarAngle = 0;
-      c.maxPolarAngle = Math.PI * 0.47;
-      // Back on the plane, the way the default controls pan.
-      const dy = c.target.y;
-      c.target.y = 0;
-      this.camera.position.y -= dy;
-    }
-    c.update();
+    applyControlMode(this.controls, this.camera, on);
     if (!this.crosshair) this.crosshair = this.makeCrosshair();
     this.crosshair.visible = on;
     this.invalidate();
@@ -1752,7 +1743,7 @@ export class GalaxyEngine {
     const t = ev.target as HTMLElement | null;
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     const k = ev.code;
-    if (!["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "KeyR", "KeyF"].includes(k)) return;
+    if (!FLIGHT_KEYS.includes(k)) return;
     // Hidden (a tab behind another): the keys belong to whatever is in front.
     if (!this.host.offsetParent && getComputedStyle(this.host).position !== "fixed") return;
     this.keys.add(k);
@@ -1767,53 +1758,21 @@ export class GalaxyEngine {
     this.keys.clear();
   };
 
-  /** Turn the camera round the cross-hair by `angle` radians (positive: to the left). */
+  /** Right drag in Elite mode: turn round the cross-hair (radians), then raise it (ly). eliteControls.ts. */
   private turn(angle: number): void {
-    const c = this.controls;
-    const off = this.camera.position.clone().sub(c.target);
-    off.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-    this.camera.position.copy(c.target).add(off);
-    c.update();
+    turnAround(this.controls, this.camera, angle);
     this.invalidate();
   }
-
-  /** Raise (negative: lower) the cross-hair and the camera with it, in ly. */
   private raise(dy: number): void {
-    const c = this.controls;
-    const before = c.target.y;
-    c.target.y = Math.max(-12_000, Math.min(12_000, before + dy));
-    this.camera.position.y += c.target.y - before;
-    c.update();
+    raiseTarget(this.controls, this.camera, dy);
     this.invalidate();
   }
 
-  /** One frame of held keys: move along the plane, turn, raise, at a speed that follows the distance. */
+  /** One frame of held keys (eliteControls.ts). */
   private stepKeys(now: number): void {
     const dt = this.keyT ? Math.min(0.1, (now - this.keyT) / 1000) : 1 / 60;
     this.keyT = now;
-    const c = this.controls;
-    const dist = Math.max(20, this.camera.position.distanceTo(c.target));
-    const k = this.keys;
-    const fwd = c.target.clone().sub(this.camera.position);
-    fwd.y = 0;
-    if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1);
-    fwd.normalize();
-    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    const move = new THREE.Vector3();
-    if (k.has("KeyW")) move.add(fwd);
-    if (k.has("KeyS")) move.sub(fwd);
-    if (k.has("KeyD")) move.add(right);
-    if (k.has("KeyA")) move.sub(right);
-    if (move.lengthSq()) {
-      move.normalize().multiplyScalar(dist * 0.9 * dt);
-      c.target.add(move);
-      this.camera.position.add(move);
-    }
-    if (k.has("KeyQ")) this.turn(1.6 * dt);
-    if (k.has("KeyE")) this.turn(-1.6 * dt);
-    if (k.has("KeyR")) this.raise(dist * 0.6 * dt);
-    if (k.has("KeyF")) this.raise(-dist * 0.6 * dt);
-    c.update();
+    stepHeldKeys(this.keys, this.controls, this.camera, dt);
     this.needsRender = true;
   }
 
@@ -1822,23 +1781,6 @@ export class GalaxyEngine {
     const g = buildCrosshair(accentColour());
     this.overlay.add(g);
     return g;
-  }
-
-  /** Put the cross-hair on the target, its ring on the plane below (or above) it, sized to the view. */
-  private placeCrosshair(): void {
-    const g = this.crosshair;
-    if (!g || !g.visible) return;
-    const t = this.controls.target;
-    const size = Math.max(4, this.camera.position.distanceTo(t) * 0.035);
-    const cross = g.getObjectByName("cross")!;
-    const ring = g.getObjectByName("ring")!;
-    const stem = g.getObjectByName("stem")!;
-    cross.position.set(t.x, t.y, t.z);
-    cross.scale.setScalar(size);
-    ring.position.set(t.x, 0, t.z);
-    ring.scale.setScalar(size);
-    stem.position.set(t.x, 0, t.z);
-    stem.scale.set(1, Math.abs(t.y) < 0.01 ? 0.0001 : t.y, 1);
   }
 
   private loop = (): void => {
@@ -1945,7 +1887,7 @@ export class GalaxyEngine {
     r.setClearColor(0x05040a, 1);
     r.render(this.composite.scene, this.composite.camera);
     this.updateEasterEgg();
-    this.placeCrosshair();
+    if (this.crosshair?.visible) placeCrosshair(this.crosshair, this.controls.target, this.camera);
     r.render(this.overlay, this.camera);
     this.stats.frames++;
     this.stats.lastFrameMs = Math.round((performance.now() - t0) * 10) / 10;
@@ -1953,55 +1895,16 @@ export class GalaxyEngine {
     this.emitLabels();
   }
 
-  /*
-    An easter egg (owner, 2026-10-04): "Powered by EDAstro", written in the dark above the disc between
-    Sol and the core. It fades in only when the camera is near Sol, looking at Sagittarius A* across
-    the disc at a grazing angle — the view a commander gets lying the map nearly flat towards the
-    core — and is gone from every other view. The galaxy index this map draws is built from EDAstro's
-    codex data.
-  */
+  /** "Powered by EDAstro" over the disc, seen only from near Sol towards the core (easterEgg.ts). */
   private egg: THREE.Mesh | null = null;
   private updateEasterEgg(): void {
-    const cam = this.camera.position;
-    const nearSol = cam.length() < 4_000;
-    const polar = this.controls.getPolarAngle();
-    let f = 0;
-    if (nearSol && polar > Math.PI * 0.43) {
-      const look = this.controls.target.clone().sub(cam).normalize();
-      const toCore = CORE.clone().sub(cam).normalize();
-      const along = look.dot(toCore);
-      if (along > 0.96)
-        f = Math.min(1, (along - 0.96) / 0.03) * Math.min(1, (polar - Math.PI * 0.43) / (Math.PI * 0.03));
-    }
+    const f = eggFade(this.camera.position, this.controls.target, this.controls.getPolarAngle());
     if (f <= 0.01) {
       if (this.egg) this.egg.visible = false;
       return;
     }
     if (!this.egg) {
-      const c = document.createElement("canvas");
-      c.width = 2048;
-      c.height = 256;
-      const g = c.getContext("2d")!;
-      g.font = "600 120px Bahnschrift, 'Segoe UI', sans-serif";
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.shadowColor = "rgba(255, 150, 60, 0.9)";
-      g.shadowBlur = 28;
-      g.fillStyle = "rgba(255, 214, 170, 0.95)";
-      g.fillText("Powered by EDAstro", 1024, 128);
-      const tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      const mat = new THREE.MeshBasicMaterial({
-        map: tex,
-        transparent: true,
-        depthWrite: false,
-        depthTest: false,
-        opacity: 0,
-      });
-      this.egg = new THREE.Mesh(new THREE.PlaneGeometry(5_200, 650), mat);
-      // Galaxy (x, y, z) → world (x, y, -z): 9,000 ly towards the core, 2,200 ly above the plane, facing Sol.
-      this.egg.position.set(12, 2_200, -9_000);
-      this.egg.renderOrder = 10;
+      this.egg = makeEgg();
       this.overlay.add(this.egg);
     }
     this.egg.visible = true;
