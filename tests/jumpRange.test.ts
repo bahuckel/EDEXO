@@ -1,6 +1,6 @@
 /**
  * The full jump range as flown (shared/jumpRange.ts; owner, 2026-10-08): boosted jumps and
- * economical-route hops left out, a new ship or a refit starts over.
+ * economical-route hops left out; a refit scales them, each ship keeps its own.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -49,16 +49,27 @@ describe("the full jump range as flown", () => {
     expect(fullJumpRange(st)).toBe(25);
   });
 
-  it("starts over for another ship, or a refit that changes the loadout's own range", () => {
+  it("scales the jumps flown by a refit that moves the loadout's own range: no jumps needed first", () => {
     const st = emptyJumpRange();
     jumpRangeLoadout(st, 7, 71.63);
     fly(st, 66, 67, 68);
-    jumpRangeLoadout(st, 7, 71.7); // the same ship, fuel or a small change: kept
+    jumpRangeLoadout(st, 7, 71.7); // the same ship, fuel or a small change: kept as is
     expect(fullJumpRange(st)).toBe(68);
-    jumpRangeLoadout(st, 7, 60.1); // a refit
+    jumpRangeLoadout(st, 7, 60.1); // a refit: 68 × 60.1 / 71.7
+    expect(fullJumpRange(st)).toBeCloseTo((68 * 60.1) / 71.7, 6);
+  });
+
+  it("keeps each ship's jumps while another is flown, and takes them back when it returns", () => {
+    const st = emptyJumpRange();
+    jumpRangeLoadout(st, 7, 71.63);
+    fly(st, 66, 67, 68);
+    jumpRangeLoadout(st, 9, 30); // another ship: nothing flown in it yet
     expect(fullJumpRange(st)).toBeNull();
-    fly(st, 55, 56, 57);
-    jumpRangeLoadout(st, 9, 30); // another ship
-    expect(fullJumpRange(st)).toBeNull();
+    fly(st, 27, 28, 29);
+    expect(fullJumpRange(st)).toBe(29);
+    jumpRangeLoadout(st, 7, 71.63); // back
+    expect(fullJumpRange(st)).toBe(68);
+    jumpRangeLoadout(st, 9, 33); // back to the other, refitted meanwhile: scaled
+    expect(fullJumpRange(st)).toBeCloseTo((29 * 33) / 30, 6);
   });
 });

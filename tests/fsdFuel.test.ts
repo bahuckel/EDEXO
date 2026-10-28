@@ -65,6 +65,37 @@ describe("fuel per jump", () => {
     expect(st.samples).toEqual([]);
   });
 
+  it("keeps the samples through a refit that keeps the drive, not through another drive", () => {
+    const fsd = { Slot: "FrameShiftDrive", Item: "int_hyperdrive_size5_class5" };
+    const st = emptyFsdFuel();
+    fsdFuelLoadout(st, { ...loadout, Modules: [fsd] });
+    fsdFuelJump(st, { event: "FSDJump", JumpDist: 40, FuelUsed: 1.5, FuelLevel: 30 });
+    // Heavier (a shield, cargo racks): the range moves, the drive's law does not; each sample has its own mass.
+    fsdFuelLoadout(st, { ...loadout, UnladenMass: 420, MaxJumpRange: 63, Modules: [fsd] });
+    expect(st.samples).toHaveLength(1);
+    expect(fsdFuelModel(st)!.unladenT).toBe(420);
+    fsdFuelLoadout(st, { ...loadout, MaxJumpRange: 63, Modules: [{ ...fsd, Item: "int_hyperdrive_size5_class4" }] });
+    expect(st.samples).toEqual([]);
+  });
+
+  it("keeps each ship's samples while another is flown, and takes them back when it returns", () => {
+    const fsd = { Slot: "FrameShiftDrive", Item: "int_hyperdrive_size5_class5" };
+    const st = emptyFsdFuel();
+    fsdFuelLoadout(st, { ...loadout, Modules: [fsd] });
+    fsdFuelJump(st, { event: "FSDJump", JumpDist: 40, FuelUsed: 1.5, FuelLevel: 30 });
+    fsdFuelLoadout(st, { ...loadout, ShipID: 99, Modules: [{ ...fsd, Item: "int_hyperdrive_size3_class5" }] });
+    expect(st.samples).toEqual([]);
+    fsdFuelLoadout(st, { ...loadout, Modules: [fsd] });
+    expect(st.samples).toHaveLength(1);
+  });
+
+  it("a state from before drives were told apart: a login Loadout keeps the samples", () => {
+    const st = flown(5);
+    st.fsd = undefined;
+    fsdFuelLoadout(st, { ...loadout, Modules: [{ ...loadout.Modules[0], Item: "int_hyperdrive_size5_class5" }] });
+    expect(st.samples).toHaveLength(5);
+  });
+
   it("assumes the class A power until the jumps are varied enough to fit it", () => {
     const st = emptyFsdFuel();
     fsdFuelLoadout(st, loadout);

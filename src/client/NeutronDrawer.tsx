@@ -119,6 +119,25 @@ interface LiveDTO {
 
 const pct = (v: number | null) => (v == null ? "?" : `${Math.round(v * 100)} %`);
 
+/*
+  The plan, kept while another drawer is open (owner, 2026-10-28: "click on some other tab (i.e. Layers) … it forgets
+  the whole route", its line still on the map): the map unmounts a drawer it is not showing, so the stops, the
+  ship's numbers, the route and its line live here, for as long as the window.
+*/
+const kept = {
+  stops: [] as Stop[],
+  range: "",
+  tank: "",
+  /** The range and jumps a tank last filled in from the ship: a field still holding them follows the ship. */
+  rangeFromShip: null as string | null,
+  tankFromShip: null as string | null,
+  boostNow: null as number | null,
+  optimise: false,
+  route: null as RouteDTO | null,
+  line: [] as Pt[],
+  liveVersion: -1,
+};
+
 export function NeutronDrawer({
   onRoute,
   onFocus,
@@ -127,24 +146,39 @@ export function NeutronDrawer({
   onFocus: (p: Pt) => void;
 }) {
   const [status, setStatus] = useState<Status | null>(null);
-  const [stops, setStops] = useState<Stop[]>([]);
+  const [stops, setStops] = useState<Stop[]>(kept.stops);
   const [query, setQuery] = useState("");
   const [found, setFound] = useState<Stop[]>([]);
-  const [range, setRange] = useState("");
-  const [tank, setTank] = useState("");
+  const [range, setRange] = useState(kept.range);
+  const [tank, setTank] = useState(kept.tank);
   /*
     The supercharge (owner, 2026-10-15; by the drive since 2026-10-20): the FSD in the ship's Loadout picks it (×6 the
     Mk II SCO drive, ×4 every other drive), else the ship type; when neither says, it stays at ×4 and the commander's
     own pick is remembered.
   */
   const [boostPicked, setBoostPicked] = usePersistedState<number | null>("galaxy.neutron.boost", null, isBoost);
-  const [boostNow, setBoostNow] = useState<number | null>(null);
-  const [optimise, setOptimise] = useState(false);
+  const [boostNow, setBoostNow] = useState<number | null>(kept.boostNow);
+  const [optimise, setOptimise] = useState(kept.optimise);
   const [useJump, setUseJump] = usePersistedState("galaxy.neutron.jumponium", false, isBool);
-  const [route, setRoute] = useState<RouteDTO | null>(null);
+  const [route, setRoute] = useState<RouteDTO | null>(kept.route);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [live, setLive] = useState<LiveDTO | null>(null);
+  useEffect(() => {
+    Object.assign(kept, { stops, range, tank, boostNow, optimise, route });
+  }, [stops, range, tank, boostNow, optimise, route]);
+  const draw = useCallback(
+    (pts: Pt[]) => {
+      kept.line = pts;
+      onRoute(pts);
+    },
+    [onRoute],
+  );
+  // Back from another drawer, or the galaxy tab drawn again: the kept route's line with it.
+  useEffect(() => {
+    if (kept.line.length) onRoute(kept.line);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, as the drawer opens
+  }, []);
 
   const load = () =>
     void fetch("/api/neutron/status")
@@ -156,28 +190,27 @@ export function NeutronDrawer({
     A route being flown: shown and drawn on the map. Asked again every few seconds while one is flown, so a re-plot
     from where the ship went (server/neutronLive.ts) is drawn, and the end of the route clears the map.
   */
-  const liveVersion = useRef(-1);
   const readLive = useCallback(() => {
     void fetch("/api/neutron/live")
       .then((r) => (r.ok ? r.json() : null))
       .then((j: LiveDTO | null) => {
         if (!j) return;
         setLive(j);
-        if (j.version === liveVersion.current) return;
-        const first = liveVersion.current < 0;
-        liveVersion.current = j.version;
+        if (j.version === kept.liveVersion) return;
+        const first = kept.liveVersion < 0;
+        kept.liveVersion = j.version;
         if (j.active && j.hops) {
-          onRoute(j.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
+          draw(j.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
           // A re-plot replaced the plan in the table: the map shows the one being flown.
           if (!first) setRoute(null);
         } else {
           // Ended (arrived, stopped, a boxel run) — also while the drawer was closed: no line stays (review 1.2.16).
           if (!first) setRoute(null);
-          onRoute([]);
+          draw([]);
         }
       })
       .catch(() => undefined);
-  }, [onRoute]);
+  }, [draw]);
   useEffect(readLive, [readLive]);
   // A re-plot, an arrival or a stop from another window (R2, 2026-10-24: was asked every 4 s while flying).
   useEffect(() => onServerChange("neutron-live", readLive), [readLive]);
@@ -191,7 +224,7 @@ export function NeutronDrawer({
       });
       const j = (await r.json()) as LiveDTO & { error?: string };
       if (!r.ok) throw new Error(j.error ?? `Failed (${r.status})`);
-      liveVersion.current = j.version;
+      kept.liveVersion = j.version;
       setLive(j);
       return j;
     } catch (e) {
@@ -204,7 +237,7 @@ export function NeutronDrawer({
     const j = await setFlying({ stop: true });
     if (j && !j.active) {
       setRoute(null);
-      onRoute([]);
+      draw([]);
     }
   };
   useEffect(() => {
@@ -225,10 +258,18 @@ export function NeutronDrawer({
     setBoostNow(v);
     if (ship?.shipKnown === false) setBoostPicked(v);
   };
+  /*
+    The ship's range and jumps a tank fill the fields, and follow the ship (a refit, another ship) until typed over
+    (owner, 2026-10-28: after a refit they only showed after some jumps).
+  */
   useEffect(() => {
     if (!ship) return;
-    if (!range && ship.rangeLy) setRange(ship.rangeLy.toFixed(1));
-    if (!tank && ship.jumpsPerTank) setTank(String(ship.jumpsPerTank));
+    const r = ship.rangeLy ? ship.rangeLy.toFixed(1) : null;
+    const t = ship.jumpsPerTank ? String(ship.jumpsPerTank) : null;
+    if (r != null && (!range || range === kept.rangeFromShip)) setRange(r);
+    if (t != null && (!tank || tank === kept.tankFromShip)) setTank(t);
+    if (r != null) kept.rangeFromShip = r;
+    if (t != null) kept.tankFromShip = t;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ship]);
   // A jump or an outfitting changed the ship (R2, 2026-10-24: was asked every 5 s).
@@ -290,7 +331,7 @@ export function NeutronDrawer({
       if (!r.ok) throw new Error(j.error ?? `Plan failed (${r.status})`);
       setRoute(j);
       if (optimise) setStops(from ? j.waypoints.slice(1) : j.waypoints);
-      onRoute(j.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
+      draw(j.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
       return j;
     } catch (e) {
       if (seq === planSeq.current) setError(e instanceof Error ? e.message : String(e));
@@ -636,7 +677,19 @@ export function NeutronDrawer({
                         ) : null}
                       </td>
                       <td>
-                        {h.jumps ? `${h.jumps}${h.boosted ? " ⚡" : ""}` : ""}
+                        {/* Past a supercharge's reach: the supercharged jump, then the game's own plot (a tester
+                            read "905 ly" as one jump, 2026-10-28). */}
+                        {h.boosted && h.jumps > 1 ? (
+                          <span
+                            title={`One supercharged jump, then ${h.jumps - 1} normal jump${h.jumps === 2 ? "" : "s"}: plot the system in the game's galaxy map after supercharging`}
+                          >
+                            ⚡ + {h.jumps - 1}
+                          </span>
+                        ) : h.jumps ? (
+                          `${h.jumps}${h.boosted ? " ⚡" : ""}`
+                        ) : (
+                          ""
+                        )}
                         {h.inject ? (
                           <span
                             className="g3d-neutron-inject"

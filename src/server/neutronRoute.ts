@@ -279,7 +279,16 @@ async function searchLeg(
         .filter((c) => c.gain > r * 0.5 && c.n.i !== u.star?.i);
       if (cands.length >= 8) break;
     }
-    cands = cands.sort((a, b) => b.gain - a.gain).slice(0, NEIGHBOURS);
+    /*
+      The ones a supercharge reaches stay, however far the search looked: ranked by gain alone, a crowd further out
+      took all 32 places, and the plan went by hops of one supercharge and the game's plot for the rest (a tester's
+      Caspian, 2026-10-28: "the next in line was 905 ly away", where a neutron star in reach went on).
+    */
+    cands.sort((a, b) => b.gain - a.gain);
+    const hop = isNeutron ? reach : r;
+    const near = cands.filter((c) => dist(u.pos, c.n) <= hop).slice(0, NEIGHBOURS);
+    const far = cands.filter((c) => dist(u.pos, c.n) > hop);
+    cands = [...near, ...far.slice(0, Math.max(NEIGHBOURS / 4, NEIGHBOURS - near.length))];
     for (const { n } of cands) {
       const d = dist(u.pos, n);
       const j = jumpsFrom(isNeutron, d, r, boost);

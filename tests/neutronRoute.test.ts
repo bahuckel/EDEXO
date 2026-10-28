@@ -50,6 +50,32 @@ describe("neutron route", () => {
     expect(r.unsafeLegs).toEqual([]);
   });
 
+  it("keeps the neutron stars in a supercharge's reach when it looks further out (a 905 ly hop, 2026-10-28)", async () => {
+    // A Caspian: 93 ly, ×6 = 558 ly a supercharge. One neutron star in reach every 550 ly, and a crowd further out
+    // (gain ~900 ly each) that filled the 32 neighbours once the search widened: hops of 1 supercharge + 4 jumps.
+    const chain = line(0, 5500, 550).stars;
+    const crowd: NeutronStar[] = [];
+    for (let k = 0; k < 40; k++)
+      for (let x = 900; x < 5500; x += 550)
+        crowd.push({ i: 1000 + crowd.length, x: x + (k % 5), y: 20 + k, z: 0, scoopLs: null });
+    const stars = [...chain, ...crowd];
+    const idx = {
+      stars,
+      within: (p: { x: number; y: number; z: number }, r: number) =>
+        stars.filter((s) => Math.hypot(s.x - p.x, s.y - p.y, s.z - p.z) <= r),
+      nameOf: (i: number) => `N${i}`,
+    };
+    const r = await planNeutronRoute(idx, [A, { name: "B", x: 5600, y: 0, z: 0 }], {
+      rangeLy: 93,
+      boost: 6,
+      jumpsPerTank: 100,
+      jumpsNow: 100,
+    });
+    const overReach = r.hops.filter((h) => h.kind === "neutron" && h.boosted && h.jumps > 1);
+    expect(overReach).toEqual([]);
+    expect(r.jumps).toBeLessThanOrEqual(11); // a supercharge a neutron star along the chain, then the end
+  });
+
   it("goes by a neutron star with a scoopable star before the tank runs dry, and says to scoop there", async () => {
     // Tank: 3 jumps. Every third neutron star has a scoopable star.
     const idx = line(50, 1850, 200, 3);

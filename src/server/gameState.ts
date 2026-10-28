@@ -2148,6 +2148,7 @@ export class GameStateStore {
         loadoutLy: typeof jr.loadoutLy === "number" ? jr.loadoutLy : null,
         long: jr.long.filter((d) => typeof d === "number" && d > 0),
         recent: jr.recent.filter((d) => typeof d === "number" && d > 0),
+        others: jr.others && typeof jr.others === "object" ? jr.others : {},
       };
     }
     const ff = data.fsdFuel;
@@ -2159,6 +2160,8 @@ export class GameStateStore {
         maxFuelPerJumpT: typeof ff.maxFuelPerJumpT === "number" ? ff.maxFuelPerJumpT : null,
         cargoT: typeof ff.cargoT === "number" ? ff.cargoT : null,
         samples: ff.samples.filter((s) => s && s.ly > 0 && s.fuelT > 0 && s.massT > 0),
+        fsd: typeof ff.fsd === "string" ? ff.fsd : null,
+        others: ff.others && typeof ff.others === "object" ? ff.others : {},
       };
     }
     this.fsdWear = hydrateFsdWear(data.fsdWear);

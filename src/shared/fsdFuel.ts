@@ -9,7 +9,9 @@
  * at a fixed mass, came up 31 % short (median) for a leg 1.4 times the last one or more.
  *
  * A boosted jump (`BoostUsed`: neutron or white dwarf supercharge, injection) spends by other rules
- * and is left out. Another ship, or a refit that changes the loadout's range, starts over.
+ * and is left out. The samples carry the mass they were flown with, so a refit that keeps the drive keeps them
+ * (owner, 2026-10-28: jumps a tank stayed empty after a refit until a few jumps were made); another drive starts
+ * over, and each ship's samples are kept while another ship is flown.
  */
 
 /** Class A drives; used until the commander's own jumps pin `p` down. */
@@ -43,6 +45,10 @@ export interface FsdFuelState {
    */
   cargoT: number | null;
   samples: FsdFuelSample[];
+  /** The drive the samples are from: its module and engineering (`fsdKey`); null before a Loadout names one. */
+  fsd?: string | null;
+  /** The other ships' drives and samples, by `ShipID`, as they were when the commander left them. */
+  others?: Record<string, { fsd: string | null; samples: FsdFuelSample[] }>;
 }
 
 export interface FsdFuelModel {
@@ -55,21 +61,60 @@ export interface FsdFuelModel {
 }
 
 export function emptyFsdFuel(): FsdFuelState {
-  return { shipId: null, loadoutLy: null, unladenT: null, maxFuelPerJumpT: null, cargoT: null, samples: [] };
+  return {
+    shipId: null,
+    loadoutLy: null,
+    unladenT: null,
+    maxFuelPerJumpT: null,
+    cargoT: null,
+    samples: [],
+    fsd: null,
+    others: {},
+  };
 }
 
-/** A `Loadout`: the ship's mass and drive; another ship or a refit starts the samples over. */
+/** Other ships remembered; the ones left longest ago go first. */
+const OTHER_SHIPS = 12;
+
+/** The drive as its fuel law sees it: the module, and its engineering's values (optimal mass, fuel per jump, ...). */
+function fsdKey(fsd: Record<string, unknown> | undefined): string | null {
+  if (!fsd || typeof fsd.Item !== "string") return null;
+  const mods = (fsd.Engineering as { Modifiers?: { Label?: string; Value?: number }[] } | undefined)?.Modifiers ?? [];
+  return [fsd.Item.toLowerCase(), ...mods.map((m) => `${m.Label}=${m.Value}`).sort()].join("|");
+}
+
+/**
+ * A `Loadout`: the ship's mass and drive. Another ship: this one's samples are put by and that one's taken back,
+ * if it was flown before. Another drive (module or engineering) starts the samples over; a refit that keeps the
+ * drive keeps them, as each sample has its own mass.
+ */
 export function fsdFuelLoadout(st: FsdFuelState, line: Record<string, unknown>): void {
   const shipId = typeof line.ShipID === "number" ? line.ShipID : null;
   const mjr = typeof line.MaxJumpRange === "number" && line.MaxJumpRange > 0 ? line.MaxJumpRange : null;
+  const modules = Array.isArray(line.Modules) ? (line.Modules as Record<string, unknown>[]) : [];
+  const fsd = modules.find((m) => m.Slot === "FrameShiftDrive");
+  const key = fsdKey(fsd);
+  if (shipId != null && shipId !== st.shipId) {
+    const others = (st.others ??= {});
+    if (st.shipId != null && st.samples.length) {
+      delete others[st.shipId];
+      others[st.shipId] = { fsd: st.fsd ?? null, samples: st.samples };
+      const keys = Object.keys(others);
+      for (const k of keys.slice(0, Math.max(0, keys.length - OTHER_SHIPS))) delete others[k];
+    }
+    const back = others[shipId];
+    delete others[shipId];
+    st.samples = back?.samples ?? [];
+    st.fsd = back?.fsd ?? null;
+    st.shipId = shipId;
+  }
+  // Another drive: its law is another. A state from before drives were told apart: a refit moving the range.
   const refit = st.loadoutLy != null && mjr != null && Math.abs(mjr - st.loadoutLy) > 0.02 * st.loadoutLy;
-  if ((shipId != null && shipId !== st.shipId) || refit) st.samples = [];
-  if (shipId != null) st.shipId = shipId;
+  if (st.fsd != null ? key !== st.fsd : refit) st.samples = [];
+  st.fsd = key;
   if (mjr != null) st.loadoutLy = mjr;
   if (typeof line.UnladenMass === "number" && line.UnladenMass > 0) st.unladenT = line.UnladenMass;
   st.maxFuelPerJumpT = null;
-  const modules = Array.isArray(line.Modules) ? (line.Modules as Record<string, unknown>[]) : [];
-  const fsd = modules.find((m) => m.Slot === "FrameShiftDrive");
   const mods = (fsd?.Engineering as { Modifiers?: { Label?: string; Value?: number }[] } | undefined)
     ?.Modifiers;
   const mf = mods?.find((m) => m.Label === "MaxFuelPerJump")?.Value;
