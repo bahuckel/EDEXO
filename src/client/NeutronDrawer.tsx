@@ -409,7 +409,8 @@ export function NeutronDrawer({
                 {live.view.total}
                 {live.view.next ? (
                   <>
-                    , next <strong>{live.view.next}</strong> (on the clipboard; F6 copies it again)
+                    , next <strong>{live.view.next}</strong> (on the clipboard: target it in the galaxy map, don't plot to it; F6
+                    copies it again)
                   </>
                 ) : null}
                 .
@@ -603,7 +604,7 @@ export function NeutronDrawer({
               <button
                 type="button"
                 className="btn-top-toggle"
-                title="From where you are now: after each jump onto a stop the next stop goes to the clipboard (paste it in the galaxy map; F6 copies it again), and the HUD's Next jump says where to scoop and supercharge. Off the route, it is plotted again from where you are. Ends at the last stop, with Stop, or with a boxel run."
+                title="From where you are now: after each jump onto a stop the next stop goes to the clipboard (target it in the game's galaxy map, don't plot a route to it: the game can refuse to plot a full-range jump on a part tank; F6 copies it again), and the HUD's Next jump says where to scoop and supercharge. Off the route, it is plotted again from where you are. Ends at the last stop, with Stop, or with a boxel run."
                 disabled={busy}
                 onClick={() => void fly()}
               >

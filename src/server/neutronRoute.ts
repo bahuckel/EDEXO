@@ -114,6 +114,12 @@ const HALF_TANK_EDGE = 0.05;
  */
 const ON_WAY_COST = 3;
 /**
+ * A hop past a supercharge's reach (the supercharge, then the game's plot for the rest) costs this many jumps more in
+ * the comparison (owner, 2026-10-28): the game's plot may need more jumps than the count, it is one more plot by hand,
+ * and a tester took a 905 ly hop for a broken one. A neutron star in reach wins whenever the counts are close.
+ */
+const PAST_REACH_COST = 0.5;
+/**
  * A neutron star's scoopable companion is a refuel stop only this close to arrival (ls): the first live plan put one
  * at 47,050 ls, a long supercruise for a tank of fuel (2026-10-13).
  */
@@ -333,6 +339,9 @@ async function searchLeg(
     const near = cands.filter((c) => dist(u.pos, c.n) <= hop).slice(0, NEIGHBOURS);
     const far = cands.filter((c) => dist(u.pos, c.n) > hop);
     cands = [...near, ...far.slice(0, Math.max(NEIGHBOURS / 4, NEIGHBOURS - near.length))];
+    // A hop past reach costs more only where one in reach goes on: in sparse space every hop is past reach, and the
+    // cost on each ran the search out of steps (Sol to Beagle Point, 60 ly x4: the plain plot).
+    const pastReach = isNeutron && near.length ? PAST_REACH_COST : 0;
     for (const { n } of cands) {
       const d = dist(u.pos, n);
       const j = jumpsFrom(isNeutron, d, r, boost);
@@ -340,7 +349,8 @@ async function searchLeg(
       if (!arrive) continue;
       const key = `n${n.i}`;
       // Arrive as is (with fuel for at least one more jump), or scoop the system's own star and leave full.
-      const base = u.g + j.jumps + (arrive.onWay ? ON_WAY_COST : 0);
+      const base =
+        u.g + j.jumps + (arrive.onWay ? ON_WAY_COST : 0) + (j.boosted && j.jumps > 1 ? pastReach : 0);
       const options: { fuel: number; g: number; refuel: boolean; half?: boolean }[] = [];
       if (arrive.fuel >= 1) options.push({ fuel: arrive.fuel, g: base, refuel: false });
       if (n.scoopLs != null && n.scoopLs <= MAX_SCOOP_LS && arrive.fuel < tank) {

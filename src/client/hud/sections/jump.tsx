@@ -134,7 +134,7 @@ function BoxelCopied({ d }: { d: HudSnapshot }) {
           {c.source === "neutron" ? (
             <>
               {" "}
-              <span className="jump__copied-run">· neutron route</span>
+              <span className="jump__copied-run">· neutron route: target it, don't plot</span>
             </>
           ) : c.run ? (
             <>
@@ -191,8 +191,12 @@ function NeutronLive({ d }: { d: HudSnapshot }) {
     );
   if (n.superchargeHere)
     todo.push(
-      <span key="boost" className="jump__neutron-do jump__neutron-do--boost">
-        ⚡ Supercharge here
+      <span
+        key="boost"
+        className="jump__neutron-do jump__neutron-do--boost"
+        title="Then target the next stop in the galaxy map, don't plot to it: the game can refuse to plot a full-range jump on a part tank (Spansh's advice, 2026-10-28)"
+      >
+        ⚡ Supercharge here, then target (don't plot)
       </span>,
     );
   return (

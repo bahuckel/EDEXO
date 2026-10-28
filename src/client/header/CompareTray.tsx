@@ -127,7 +127,7 @@ export function CompareTray({
             title={
               snap.neutronLive.done
                 ? `Neutron route done: ${snap.neutronLive.destination}`
-                : `Neutron route to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop is on the clipboard after each jump onto a stop (F6 copies it again).`
+                : `Neutron route to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop is on the clipboard after each jump onto a stop: target it in the game's galaxy map, don't plot a route to it: the game can refuse to plot a full-range jump on a part tank (F6 copies it again).`
             }
           >
             <span className="tray-tile__label">
