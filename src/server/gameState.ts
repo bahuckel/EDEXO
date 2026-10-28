@@ -46,12 +46,11 @@ import { codexEntryKey } from "../shared/codexLog.js";
 import { isLegacyPlantKey } from "../shared/achievements.js";
 import { regionForSystem } from "./regionMapData.js";
 import { parseBoxel } from "../shared/boxel.js";
-import { emptyFsdFuel, fsdFuelCargo, fsdFuelJump, hydrateFsdFuelOthers, type FsdFuelState } from "../shared/fsdFuel.js";
-import { fsdWearJump, fsdWearRepair, hydrateFsdWear, newFsdWear, type FsdWearState } from "../shared/fsdWear.js";
-import { hydrateOwnAssets, newOwnAssets, ownAssetsLine, type OwnAssetsState } from "../shared/ownAssets.js";
-import { JUMPONIUM_EVENTS, hydrateJumponium, jumponiumLine, newJumponium, type JumponiumState } from "../shared/jumponium.js";
+import { emptyFsdFuel, fsdFuelCargo, fsdFuelJump, type FsdFuelState } from "../shared/fsdFuel.js";
+import { fsdWearJump, fsdWearRepair, newFsdWear, type FsdWearState } from "../shared/fsdWear.js";
+import { newOwnAssets, ownAssetsLine, type OwnAssetsState } from "../shared/ownAssets.js";
+import { JUMPONIUM_EVENTS, jumponiumLine, newJumponium, type JumponiumState } from "../shared/jumponium.js";
 import {
-  hydrateShipDamage,
   newShipDamage,
   shipDamageAfmu,
   shipDamageForget,
@@ -60,9 +59,8 @@ import {
   shipDamageVehicle,
   type ShipDamageState,
 } from "../shared/shipDamage.js";
-import { emptyJumpRange, hydrateJumpRangeOthers, jumpRangeJump, type JumpRangeState } from "../shared/jumpRange.js";
+import { emptyJumpRange, jumpRangeJump, type JumpRangeState } from "../shared/jumpRange.js";
 import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
-import { JOURNAL_MERGE_CACHE_FORMAT } from "./journalMergePayload.js";
 import { bodyKey, systemAddressOfBodyKey } from "../shared/bodyKey.js";
 import type {
   PendingOrganicSample,
@@ -78,12 +76,12 @@ export type {
   JournalMergeCachePayload,
 } from "./journalMergePayload.js";
 import { signsOfLife } from "./gameStateHelpers.js";
-// The event handlers, data sales and scan merging are functions over the store in these modules (item 30, 1.3.1);
-// the members they read are not `private` for that reason.
+// The event handlers, data sales, scan merging (item 30, 1.3.1) and the cache payload (1.3.2) are functions over the
+// store in these modules; the members they read are not `private` for that reason.
 import * as journalEvents from "./gameStateEvents.js";
 import * as explorationSales from "./gameStateSales.js";
 import * as explorationMerge from "./gameStateExploration.js";
-import { internParents, shareScanLists } from "./intern.js";
+import * as journalPayload from "./gameStatePayload.js";
 // tests/genusProgress.test.ts imports upsertFootOrganicLock from here.
 export { signsOfLife, upsertFootOrganicLock } from "./gameStateHelpers.js";
 
@@ -136,7 +134,7 @@ export class GameStateStore {
   }
 
   /** Lazily built from {@link visitedSystems}; invalidated whenever that map changes. */
-  private visitedSystemNames: Set<string> | null = null;
+  visitedSystemNames: Set<string> | null = null;
   readonly bodies = new Map<string, BodyExoState>();
   /**
    * Merged `Scan` rows for bodies in-system (basic + detailed) for system map / exploration estimates.
@@ -1761,7 +1759,7 @@ export class GameStateStore {
     added, or all cleared: the index is rebuilt when the count moves and dropped on clear/load.
     Keys, not objects, so a body replaced in the map is still read fresh.
   */
-  private bodyKeysBySystem: Map<number, string[]> | null = null;
+  bodyKeysBySystem: Map<number, string[]> | null = null;
   /**
    * Bumped whenever a body gains a confirmed colour variant, or the bodies are cleared or loaded:
    * the colour-outlier sweep (snapshot.ts) skips its pass over every body when this has not moved.
@@ -1910,266 +1908,16 @@ export class GameStateStore {
     return true;
   }
 
-  /** Journal replay snapshot for disk cache (`format` must match {@link JOURNAL_MERGE_CACHE_FORMAT}). */
+  /** Journal replay snapshot for the disk cache (gameStatePayload.ts). */
   serializeJournalMergePayload(): JournalMergeCachePayload {
-    return {
-      format: JOURNAL_MERGE_CACHE_FORMAT,
-      commanderName: this.commanderName,
-      commanderFid: this.commanderFid,
-      currentSystem: this.currentSystem,
-      currentSystemAddress: this.currentSystemAddress,
-      viewingSystemAddress: this.viewingSystemAddress,
-      visitedSystems: [...this.visitedSystems.entries()],
-      systemVisitedAt: [...this.systemVisitedAt.entries()],
-      systemStarClass: [...this.systemStarClass.entries()],
-      targetedSystems: [...this.targetedSystems.entries()].map(([a, t]) => [a, t.name, t.starClass]),
-      bodies: [...this.bodies.entries()],
-      explorationScans: [...this.explorationScans.entries()],
-      soldExplorationScans: [...this.soldExplorationScans.entries()],
-      soldBodyKeys: [...this.soldBodyKeys],
-      fssBodySignalsBodyKeys: [...this.fssBodySignalsBodyKeys],
-      dssMappedBodyKeys: [...this.dssMappedBodyKeys],
-      archivedDssMappedBodyKeys: [...this.archivedDssMappedBodyKeys],
-      dssFirstMapperEligibleByBodyKey: [...this.dssFirstMapperEligibleByBodyKey.entries()],
-      dssMappingEfficientByBodyKey: [...this.dssMappingEfficientByBodyKey.entries()],
-      orbitParentPlanetByBody: [...this.orbitParentPlanetByBody.entries()],
-      lastEventIso: this.lastEventIso,
-      footJournalContextBuffer: this.footJournalContextBuffer.slice(),
-      organicAnalyseByKey: [...this.organicAnalyseByKey.entries()],
-      bodyDetailedFootfallState: [...this.bodyDetailedFootfallState.entries()],
-      commanderPos: this.commanderPos,
-      bodyFootfallFlag: [...this.bodyFootfallFlag.entries()],
-      bodyMappedFlag: [...this.bodyMappedFlag.entries()],
-      firstFootfallBodies: [...this.firstFootfallBodies],
-      codexLoggedSpecies: [...this.codexLoggedSpecies],
-      codexRegionLogged: [...this.codexRegionLogged],
-      codexRegionBySystem: [...this.codexRegionBySystem.entries()],
-      organicRunStartedAt: [...this.organicRunStartedAt.entries()],
-      fsdTarget: this.fsdTarget,
-      lastJumpTarget: this.lastJumpTarget,
-      codexMapLogged: [...this.codexMapLogged],
-      codexSightings: [...this.codexSightings],
-      achievementDone: [...this.achievementDone],
-      greenCodexBodies: [...this.greenCodexBodies],
-      k10Systems: [...this.k10Systems],
-      nspSeen: [...this.nspSeen],
-      landingMinutesSamples: [...this.landingMinutesSamples],
-      samplingMinutesSamples: [...this.samplingMinutesSamples],
-      pendingOrganicSales: this.pendingOrganicSales.map((p) => ({ ...p })),
-      surfaceShipMark: this.surfaceShipMark ? { ...this.surfaceShipMark } : null,
-      overlayTouchdownBodyKey: this.overlayTouchdownBodyKey,
-      currentBodyKey: this.currentBodyKey,
-      fssAllBodiesCompleteSystems: [...this.fssAllBodiesCompleteSystems],
-      systemLife: [...this.systemLife.entries()],
-      fssDiscoveryScanBySystem: [...this.fssDiscoveryScanBySystem.entries()],
-      fssAllBodiesFoundCountBySystem: [...this.fssAllBodiesFoundCountBySystem.entries()],
-      soldExplorationBySystem: [...this.soldExplorationBySystem.entries()],
-      soldOrganicBySystem: [...this.soldOrganicBySystem.entries()],
-      mainStarWasDiscoveredBySystem: [...this.mainStarWasDiscoveredBySystem.entries()],
-      mainStarSourceRankBySystem: [...this.mainStarSourceRankBySystem.entries()],
-      systemPositions: [...this.systemPositions.entries()],
-      remainingJumpsInRoute: this.remainingJumpsInRoute,
-      loadoutMaxJumpRangeLy: this.loadoutMaxJumpRangeLy,
-      loadoutFuelMainCapacityT: this.loadoutFuelMainCapacityT,
-      loadoutFuelReserveCapacityT: this.loadoutFuelReserveCapacityT,
-      lastFsdJumpFuelUsedT: this.lastFsdJumpFuelUsedT,
-      lastFsdJumpDistLy: this.lastFsdJumpDistLy,
-      jumpRange: structuredClone(this.jumpRange),
-      fsdFuel: structuredClone(this.fsdFuel),
-      fsdWear: structuredClone(this.fsdWear),
-      shipDamage: structuredClone(this.shipDamage),
-      ownAssets: structuredClone(this.ownAssets),
-      jumponium: structuredClone(this.jumponium),
-    };
+    return journalPayload.serializeJournalMergePayload(this);
   }
 
   /**
-   * Restores journal-derived state after {@link resetAll}. User prefs on the store are unchanged
-   * (they were not cleared by `resetAll`).
+   * Restores journal-derived state after {@link resetAll}; user prefs are unchanged. False = not this cache format or
+   * not a payload: treat it as a cache miss and replay the logs (gameStatePayload.ts says why that matters).
    */
   hydrateJournalMergePayload(data: JournalMergeCachePayload): boolean {
-    /**
-     * **Returns whether it restored anything**, and the return value is not decoration.
-     *
-     * This used to return `void` and bail silently on a payload it did not recognise, leaving the
-     * store exactly as empty as it started. The caller could not tell that apart from a cache that
-     * legitimately held nothing, so it went on to apply the new journal lines and *save* — writing an
-     * empty history, with a complete file manifest, over a good cache. That is how the owner's
-     * 7.8 MB cache became 538 bytes at 11:18 on 2026-09-07, taking the whole system view and the
-     * accuracy probe's ground truth with it.
-     *
-     * A false here means "treat this as a cache miss and replay the logs".
-     */
-    // Exactly the current format, nothing else. This was an explicit allowlist (`!== 1 && !== 2`),
-    // a third place the version had to be remembered: bumping the constant without editing it here
-    // turns every cache into a permanent miss and replays 245 logs on every launch.
-    if (data.format !== JOURNAL_MERGE_CACHE_FORMAT) return false;
-    if (
-      !Array.isArray(data.bodies) ||
-      !Array.isArray(data.explorationScans) ||
-      !Array.isArray(data.visitedSystems)
-    ) {
-      return false;
-    }
-    this.resetAll();
-    this.commanderName = data.commanderName;
-    this.commanderFid = data.commanderFid ?? null;
-    this.currentSystem = data.currentSystem;
-    this.currentSystemAddress = data.currentSystemAddress;
-    this.viewingSystemAddress = data.viewingSystemAddress;
-    this.lastEventIso = data.lastEventIso;
-    for (const [addr, name] of data.visitedSystems) this.visitedSystems.set(addr, name);
-    this.systemVisitedAt.clear();
-    for (const [a, t] of data.systemVisitedAt ?? []) if (typeof a === "number" && typeof t === "string") this.systemVisitedAt.set(a, t);
-    this.systemStarClass.clear();
-    for (const [a, c] of data.systemStarClass ?? []) if (typeof a === "number" && typeof c === "string") this.systemStarClass.set(a, c);
-    this.targetedSystems.clear();
-    for (const [a, n, c] of data.targetedSystems ?? [])
-      if (typeof a === "number" && typeof n === "string") this.targetedSystems.set(a, { name: n, starClass: typeof c === "string" ? c : "" });
-    this.visitedSystemNames = null;
-    for (const [k, v] of data.bodies) this.bodies.set(k, v);
-    this.bodyKeysBySystem = null;
-    this.confirmedVariantsRevision += 1;
-    for (const [k, v] of data.explorationScans) this.explorationScans.set(k, v);
-    for (const [k, v] of data.soldExplorationScans ?? []) this.soldExplorationScans.set(k, v);
-    for (const k of data.soldBodyKeys ?? []) this.soldBodyKeys.add(k);
-    // One copy of each list again: the cache wrote the body scans' and the records' lists apart (intern.ts).
-    for (const m of [this.explorationScans, this.soldExplorationScans]) for (const r of m.values()) internParents(r.parents);
-    shareScanLists(this.bodies, (k) => this.explorationScans.get(k) ?? this.soldExplorationScans.get(k));
-    this.explorationScansRevision += 1;
-    for (const k of data.fssBodySignalsBodyKeys) this.fssBodySignalsBodyKeys.add(k);
-    for (const k of data.dssMappedBodyKeys) this.dssMappedBodyKeys.add(k);
-    for (const k of data.archivedDssMappedBodyKeys ?? []) this.archivedDssMappedBodyKeys.add(k);
-    for (const [k, v] of data.dssFirstMapperEligibleByBodyKey) this.dssFirstMapperEligibleByBodyKey.set(k, v);
-    for (const [k, v] of data.dssMappingEfficientByBodyKey) this.dssMappingEfficientByBodyKey.set(k, v);
-    for (const [k, v] of data.orbitParentPlanetByBody) this.orbitParentPlanetByBody.set(k, v);
-    this.orbitParentRevision += 1;
-    this.footJournalContextBuffer.length = 0;
-    this.footJournalContextBuffer.push(...data.footJournalContextBuffer);
-    for (const [k, v] of data.organicAnalyseByKey) this.organicAnalyseByKey.set(k, v);
-    for (const [k, v] of data.bodyDetailedFootfallState) this.bodyDetailedFootfallState.set(k, v);
-    this.commanderPos = data.commanderPos ?? null;
-    for (const [k, v] of data.bodyFootfallFlag ?? []) this.bodyFootfallFlag.set(k, v);
-    for (const [k, v] of data.bodyMappedFlag ?? []) this.bodyMappedFlag.set(k, v);
-    for (const k of data.firstFootfallBodies) this.firstFootfallBodies.add(k);
-    for (const k of data.codexLoggedSpecies ?? []) this.codexLoggedSpecies.add(k);
-    for (const k of data.codexRegionLogged ?? []) this.codexRegionLogged.add(k);
-    for (const [k, r] of data.codexRegionBySystem ?? []) this.codexRegionBySystem.set(k, r);
-    for (const [k, t] of data.organicRunStartedAt ?? []) this.organicRunStartedAt.set(k, t);
-    this.fsdTarget = data.fsdTarget ?? null;
-    this.lastJumpTarget = data.lastJumpTarget ?? null;
-    for (const k of data.codexMapLogged ?? []) this.codexMapLogged.add(k);
-    for (const [k, t] of data.codexSightings ?? []) this.codexSightings.set(k, t);
-    for (const [k, t] of data.achievementDone ?? []) this.achievementDone.set(k, t);
-    for (const [k, id] of data.greenCodexBodies ?? []) this.greenCodexBodies.set(k, id);
-    for (const a of data.k10Systems ?? []) this.k10Systems.add(a);
-    for (const [a, names] of data.nspSeen ?? []) this.nspSeen.set(a, [...names]);
-    this.landingMinutesSamples.push(...(data.landingMinutesSamples ?? []));
-    this.samplingMinutesSamples.push(...(data.samplingMinutesSamples ?? []));
-    this.pendingOrganicSales = data.pendingOrganicSales.map((p) => ({ ...p }));
-    /*
-      Format 6+. Two sources can know where the ship is parked and they arrive in a fixed order:
-      the marks file is read when the store is built, this cache lands on top of it.
-
-      So "last one wins" would mean the cache always wins, including when it is the older answer —
-      a full cache hit skips the journal entirely, so a Touchdown made after the cache was written
-      is not replayed and could be silently overwritten by a stale one. Whichever was recorded later
-      wins instead, and an absent cache value never clears a mark the file supplied.
-    */
-    const cachedShip = data.surfaceShipMark ? { ...data.surfaceShipMark } : null;
-    if (cachedShip) {
-      const have = this.surfaceShipMark;
-      if (!have || !have.atIso || (cachedShip.atIso ?? "") >= have.atIso) this.surfaceShipMark = cachedShip;
-    }
-    this.overlayTouchdownBodyKey = data.overlayTouchdownBodyKey ?? null;
-    this.currentBodyKey = data.currentBodyKey ?? null;
-    for (const addr of data.fssAllBodiesCompleteSystems) this.fssAllBodiesCompleteSystems.add(addr);
-    for (const [addr, life] of data.systemLife ?? []) this.systemLife.set(addr, life);
-    for (const [addr, row] of data.fssDiscoveryScanBySystem) {
-      this.fssDiscoveryScanBySystem.set(addr, { ...row });
-    }
-    this.fssAllBodiesFoundCountBySystem.clear();
-    for (const [addr, cnt] of data.fssAllBodiesFoundCountBySystem ?? []) {
-      if (typeof addr === "number" && typeof cnt === "number" && cnt > 0) {
-        this.fssAllBodiesFoundCountBySystem.set(addr, cnt);
-      }
-    }
-    for (const [target, rows] of [
-      [this.soldExplorationBySystem, data.soldExplorationBySystem],
-      [this.soldOrganicBySystem, data.soldOrganicBySystem],
-    ] as const) {
-      target.clear();
-      for (const [addr, t] of rows ?? []) {
-        if (typeof addr !== "number" || !t || typeof t.credits !== "number") continue;
-        target.set(addr, {
-          credits: t.credits,
-          items: typeof t.items === "number" ? t.items : 0,
-          sales: typeof t.sales === "number" ? t.sales : 0,
-          lastAt: typeof t.lastAt === "string" ? t.lastAt : "",
-        });
-      }
-    }
-    // No version branch here on purpose: the loader admits a payload only when its `format` equals
-    // JOURNAL_MERGE_CACHE_FORMAT exactly, so anything reaching this point is current. A `>= n` test
-    // reads as though older caches still flow through and quietly excuses a missing field — which is
-    // how `mainStarWasDiscoveredBySystem` shipped restoring nothing. Trust the per-value type checks.
-    this.systemPositions.clear();
-    for (const [a, p] of data.systemPositions ?? []) {
-      if (typeof a === "number" && p && typeof p.x === "number") this.systemPositions.set(a, p);
-    }
-    this.mainStarWasDiscoveredBySystem.clear();
-    for (const [a, w] of data.mainStarWasDiscoveredBySystem ?? []) {
-      if (typeof a === "number" && typeof w === "boolean") this.mainStarWasDiscoveredBySystem.set(a, w);
-    }
-    this.mainStarSourceRankBySystem.clear();
-    for (const [a, r] of data.mainStarSourceRankBySystem ?? []) {
-      if (typeof a === "number" && typeof r === "number") this.mainStarSourceRankBySystem.set(a, r);
-    }
-    // A cache from before the ranks were saved: every stored answer counts as already taken.
-    for (const a of this.mainStarWasDiscoveredBySystem.keys()) {
-      if (!this.mainStarSourceRankBySystem.has(a)) this.mainStarSourceRankBySystem.set(a, 0);
-    }
-    const rj = data.remainingJumpsInRoute;
-    this.remainingJumpsInRoute =
-      typeof rj === "number" && Number.isFinite(rj) ? Math.max(0, Math.floor(rj)) : null;
-    const lmj = data.loadoutMaxJumpRangeLy;
-    this.loadoutMaxJumpRangeLy = typeof lmj === "number" && Number.isFinite(lmj) && lmj > 0 ? lmj : null;
-    const lfm = data.loadoutFuelMainCapacityT;
-    this.loadoutFuelMainCapacityT = typeof lfm === "number" && Number.isFinite(lfm) && lfm > 0 ? lfm : null;
-    const lfr = data.loadoutFuelReserveCapacityT;
-    this.loadoutFuelReserveCapacityT =
-      typeof lfr === "number" && Number.isFinite(lfr) && lfr >= 0 ? lfr : null;
-    const lff = data.lastFsdJumpFuelUsedT;
-    this.lastFsdJumpFuelUsedT = typeof lff === "number" && Number.isFinite(lff) && lff > 0 ? lff : null;
-    const jr = data.jumpRange;
-    if (jr && Array.isArray(jr.long) && Array.isArray(jr.recent)) {
-      this.jumpRange = {
-        shipId: typeof jr.shipId === "number" ? jr.shipId : null,
-        loadoutLy: typeof jr.loadoutLy === "number" ? jr.loadoutLy : null,
-        long: jr.long.filter((d) => typeof d === "number" && d > 0),
-        recent: jr.recent.filter((d) => typeof d === "number" && d > 0),
-        others: hydrateJumpRangeOthers(jr.others),
-      };
-    }
-    const ff = data.fsdFuel;
-    if (ff && Array.isArray(ff.samples)) {
-      this.fsdFuel = {
-        shipId: typeof ff.shipId === "number" ? ff.shipId : null,
-        loadoutLy: typeof ff.loadoutLy === "number" ? ff.loadoutLy : null,
-        unladenT: typeof ff.unladenT === "number" ? ff.unladenT : null,
-        maxFuelPerJumpT: typeof ff.maxFuelPerJumpT === "number" ? ff.maxFuelPerJumpT : null,
-        cargoT: typeof ff.cargoT === "number" ? ff.cargoT : null,
-        samples: ff.samples.filter((s) => s && s.ly > 0 && s.fuelT > 0 && s.massT > 0),
-        fsd: typeof ff.fsd === "string" ? ff.fsd : null,
-        others: hydrateFsdFuelOthers(ff.others),
-      };
-    }
-    this.fsdWear = hydrateFsdWear(data.fsdWear);
-    this.shipDamage = hydrateShipDamage(data.shipDamage);
-    this.ownAssets = hydrateOwnAssets(data.ownAssets);
-    this.jumponium = hydrateJumponium(data.jumponium);
-    const ljd = data.lastFsdJumpDistLy;
-    this.lastFsdJumpDistLy = typeof ljd === "number" && Number.isFinite(ljd) && ljd > 0 ? ljd : null;
-    return true;
+    return journalPayload.hydrateJournalMergePayload(this, data);
   }
 }

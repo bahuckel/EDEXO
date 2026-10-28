@@ -35,12 +35,12 @@ Windows will say the publisher is unrecognised: the executable is not code-signe
 not know it. "More info" → "Run anyway". GitHub shows each release file's SHA-256 digest, to check a download
 against.
 
-### Linux — ![Untested](https://img.shields.io/badge/Linux-untested-orange)
+### Linux — ![Tested on WSL Ubuntu](https://img.shields.io/badge/Linux-tested%20on%20WSL%20Ubuntu-yellowgreen)
 
-**Linux builds have shipped since 1.2.4, but none has been tried on a real Linux desktop with the game
-running yet.** It starts, finds a Proton journal folder and serves the app on Ubuntu 24.04; the HUD windows
-themselves have not been seen over the game yet. If you try it, an issue saying what worked and what did not —
-distro, desktop, X11 or Wayland — is the most useful thing you can send.
+**The AppImage has been tested on Ubuntu under WSL:** the launcher, the update check and the app window run,
+it finds a Proton journal folder and serves the app on Ubuntu 24.04. It has not been tried on a Linux desktop of
+its own with the game running, so the HUD windows have not been seen over the game yet. If you try it, an issue
+saying what worked and what did not — distro, desktop, X11 or Wayland — is the most useful thing you can send.
 
 |                                                                                                                                         |                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
