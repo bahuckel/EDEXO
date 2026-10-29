@@ -9,6 +9,7 @@
  * and addresses are shown as text, never as markup, so nothing from a page reaches the app's own page.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { Lock, Shield, TriangleAlert } from "lucide-react";
 import { IconKey } from "./ui/icons";
 import { UnlockLoginsChip } from "./BrowserMasterPassword";
 import { BrowserPrivacyPanel } from "./BrowserPrivacyPanel";
@@ -504,7 +505,13 @@ export function BrowserScreen() {
           title={tab && !tab.startPage ? (tab.secure ? "HTTPS" : "Not encrypted (plain HTTP)") : ""}
           aria-hidden="true"
         >
-          {tab && !tab.startPage ? (tab.secure ? "🔒" : "⚠") : ""}
+          {tab && !tab.startPage ? (
+            tab.secure ? (
+              <Lock className="ebr-ico" />
+            ) : (
+              <TriangleAlert className="ebr-ico" />
+            )
+          ) : null}
         </span>
         <form className="ebr-address-form" onSubmit={go}>
           <input
@@ -540,7 +547,7 @@ export function BrowserScreen() {
               }
               onClick={() => void api.siteBlocking(tab.id, !tab.blocking)}
             >
-              🛡 {tab.blocking ? tab.blocked : "off"}
+              <Shield className="ebr-ico" aria-hidden="true" /> {tab.blocking ? tab.blocked : "off"}
             </button>
             <button
               type="button"

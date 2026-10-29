@@ -9,6 +9,7 @@ import { formatCount, formatValue } from "./clusters";
 import type { HoverInfo } from "./engineTypes";
 import { jumpLine } from "./jumpRow";
 import { MINE_IMPORTED, mineStatus } from "./mapConstants";
+import { neutronStopLine } from "./neutronMarks";
 import { extraPoint, navPoint, type MapLookups } from "./pointLookup";
 import { StationNames } from "./StationsAt";
 
@@ -26,6 +27,7 @@ export function hoverTip(
     spanshPicked,
     searchHits,
     codexSystems,
+    neutronHops,
   }: MapLookups,
 ) {
   if (!hover) return null;
@@ -80,6 +82,16 @@ export function hoverTip(
           {formatValue(p.valueCr / 100_000)}
         </span>
         <em>Plan stop · click for details</em>
+      </>
+    ) : null;
+  }
+  if (hover.layer === "neutron") {
+    const h = neutronHops[Number(hover.id)];
+    return h ? (
+      <>
+        <strong>{h.name}</strong>
+        <span>{neutronStopLine(neutronHops, Number(hover.id))}</span>
+        <em>Neutron route · click for details</em>
       </>
     ) : null;
   }

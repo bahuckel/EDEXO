@@ -154,6 +154,12 @@
 .ebr-lock.is-secure {
   color: var(--text-dim);
 }
+/* lucide's lock, warning and shield (owner, 2026-10-28: no emoji). */
+.ebr-ico {
+  width: 0.95rem;
+  height: 0.95rem;
+  vertical-align: -0.15rem;
+}
 .ebr-address {
   flex: 1;
   min-width: 6rem;

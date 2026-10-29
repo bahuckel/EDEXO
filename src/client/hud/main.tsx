@@ -169,7 +169,10 @@ function mountPhoneBar(onPick: (next: string[]) => void): (list: string[]) => vo
   fs.className = "phone-chip phone-chip--fs";
   fs.setAttribute("aria-label", "Full screen");
   fs.title = "Full screen (tap again, or the back button, to leave). iPhone: use Add to Home Screen.";
-  fs.textContent = "⛶";
+  // lucide's maximize (owner, 2026-10-28: no emoji), as markup: this chip is built without React.
+  fs.innerHTML =
+    '<svg class="phone-chip__ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
   const canFs = !!(de.requestFullscreen || de.webkitRequestFullscreen);
   if (!canFs) fs.classList.add("phone-chip--dim");
   fs.addEventListener("click", () => {

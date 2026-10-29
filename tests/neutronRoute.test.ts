@@ -102,6 +102,36 @@ describe("neutron route", () => {
     expect(refuels.every((h) => h.refuelHalf)).toBe(true);
   });
 
+  it("never plans more jumps with half tanks allowed than without (2026-10-28 test round: 94 for 93)", async () => {
+    // Neutron stars every 205 ly, a scoopable star on every third: half a tank sometimes reaches, sometimes not.
+    const idx = line(0, 4100, 205, 3);
+    const byFuel = [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.08, 1.06, 1.04, 1.02, 1, 1, 1, 1, 1, 1];
+    const ship = { rangeLy: 50, jumpsPerTank: 5, jumpsNow: 5, rangeByFuel: byFuel };
+    const B = { name: "B", x: 4150, y: 0, z: 0 };
+    const full = await planNeutronRoute(idx, [A, B], ship, 200);
+    const half = await planNeutronRoute(idx, [A, B], { ...ship, halfTank: true }, 200);
+    expect(half.jumps).toBeLessThanOrEqual(full.jumps);
+  });
+
+  it("says each hop's range, so a hop past the full tank's ×4 reads as the lighter tank's (2026-10-28 test round)", async () => {
+    const idx = line(0, 2100, 210, 1);
+    const byFuel = [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.08, 1.06, 1.04, 1.02, 1, 1, 1, 1, 1, 1];
+    const r = await planNeutronRoute(idx, [A, { name: "B", x: 2150, y: 0, z: 0 }], {
+      rangeLy: 50,
+      jumpsPerTank: 6,
+      jumpsNow: 3,
+      halfTank: true,
+      rangeByFuel: byFuel,
+    });
+    const single = r.hops.filter((h) => h.boosted && h.jumps === 1);
+    expect(single.some((h) => h.distanceLy > 200)).toBe(true); // past 50 ly × 4
+    for (const h of single) {
+      expect(h.rangeLy).toBeGreaterThanOrEqual(50);
+      // Within the range it says it was planned with, give or take the rounding to whole light years.
+      expect(h.distanceLy).toBeLessThanOrEqual(h.rangeLy! * 4 + 0.5);
+    }
+  });
+
   it("goes by a neutron star with a scoopable star before the tank runs dry, and says to scoop there", async () => {
     // Tank: 3 jumps. Every third neutron star has a scoopable star.
     const idx = line(50, 1850, 200, 3);

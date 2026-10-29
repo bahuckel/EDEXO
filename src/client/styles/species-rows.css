@@ -417,6 +417,11 @@
   font-weight: 800;
   cursor: help;
 }
+.species-colour-miss__ico {
+  width: 0.9em;
+  height: 0.9em;
+  vertical-align: -0.1em;
+}
 
 /* What decided a predicted colour, "Emerald [G]" (review F-5.2): there for checking, not for reading. */
 .colour-cause {

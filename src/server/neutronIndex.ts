@@ -54,6 +54,9 @@ export interface NeutronStar {
 /** Sub-cubes a side in a loaded sector cell (80 ly each). */
 const SUB = 16;
 const subOf = (d: number) => Math.min(SUB - 1, Math.max(0, Math.floor((d * SUB) / SECTOR_SIZE_LY)));
+/** A sector cell's key: 16 bits an axis, -1 (no cell) off the grid. */
+const cellKey = (x: number, y: number, z: number) =>
+  x < 0 || y < 0 || z < 0 || x > 0xffff || y > 0xffff || z > 0xffff ? -1 : (x * 0x10000 + y) * 0x10000 + z;
 
 /** A sector cell's stars, by sub-cube, with the cell's corner. */
 interface LoadedCell {
@@ -62,6 +65,8 @@ interface LoadedCell {
   z: number;
   /** Only the sub-cubes with stars: a sector holds a few hundred, an array of all 4,096 cost 32 KB a cell. */
   buckets: Map<number, NeutronStar[]>;
+  /** One bit a sub-cube, set where it has stars (512 bytes): a query skips the empty ones without a lookup. */
+  filled: Uint32Array;
 }
 
 interface Cell {
@@ -76,7 +81,8 @@ export class NeutronIndex {
   readonly meta: { neutrons: number; dump?: string; builtAt?: string; named?: number };
   readonly count: number;
   private readonly cells: Cell[];
-  private readonly byKey = new Map<string, number>();
+  /** Sector cell → its index; the key a number (cells are 16-bit a side), not a string made on every query. */
+  private readonly byKey = new Map<number, number>();
   private readonly recAt: number;
   private readonly named = new Map<number, string>();
   private readonly cache = new Map<number, LoadedCell>();
@@ -112,7 +118,7 @@ export class NeutronIndex {
         count: cellBuf.readUInt32LE(o + 10),
       };
       this.cells.push(cell);
-      this.byKey.set(`${cell.sx},${cell.sy},${cell.sz}`, c);
+      this.byKey.set(cellKey(cell.sx, cell.sy, cell.sz), c);
       total += cell.count;
     }
     this.count = total;
@@ -166,7 +172,9 @@ export class NeutronIndex {
       if (list) list.push(n);
       else buckets.set(b, [n]);
     }
-    const loaded = { x: cx, y: cy, z: cz, buckets };
+    const filled = new Uint32Array((SUB * SUB * SUB) / 32);
+    for (const b of buckets.keys()) filled[b >>> 5]! |= 1 << (b & 31);
+    const loaded = { x: cx, y: cy, z: cz, buckets, filled };
     if (this.cache.size >= CELL_CACHE) this.cache.delete(this.cache.keys().next().value!);
     this.cache.set(c, loaded);
     return loaded;
@@ -202,7 +210,7 @@ export class NeutronIndex {
     for (let sx = lo(p.x, SECTOR_ORIGIN.x); sx <= hi(p.x, SECTOR_ORIGIN.x); sx++)
       for (let sy = lo(p.y, SECTOR_ORIGIN.y); sy <= hi(p.y, SECTOR_ORIGIN.y); sy++)
         for (let sz = lo(p.z, SECTOR_ORIGIN.z); sz <= hi(p.z, SECTOR_ORIGIN.z); sz++) {
-          const c = this.byKey.get(`${sx},${sy},${sz}`);
+          const c = this.byKey.get(cellKey(sx, sy, sz));
           if (c == null) continue;
           const cell = this.cell(c);
           const x0 = subOf(p.x - r - cell.x);
@@ -223,8 +231,9 @@ export class NeutronIndex {
             for (let bx = x0; bx <= x1; bx++)
               for (let by = y0; by <= y1; by++)
                 for (let bz = z0; bz <= z1; bz++) {
-                  const stars = cell.buckets.get(bx * SUB * SUB + by * SUB + bz);
-                  if (stars) each(cell.x + bx * side, cell.y + by * side, cell.z + bz * side, stars);
+                  const b = bx * SUB * SUB + by * SUB + bz;
+                  if (!(cell.filled[b >>> 5]! & (1 << (b & 31)))) continue;
+                  each(cell.x + bx * side, cell.y + by * side, cell.z + bz * side, cell.buckets.get(b)!);
                 }
         }
   }
@@ -248,11 +257,13 @@ export class NeutronIndex {
     // Distance from a point to a box, per axis.
     const gap = (v: number, lo: number) => Math.max(lo - v, 0, v - (lo + side));
     const boxes: { stars: NeutronStar[]; most: number; near: number }[] = [];
+    // What a box must beat already, before any star is kept: most of the boxes round a point lie behind or beside it.
+    const least = Math.max(0, floor(0));
     this.subCubes(p, r, (x0, y0, z0, stars) => {
       const near = Math.hypot(gap(p.x, x0), gap(p.y, y0), gap(p.z, z0));
       if (near > r) return;
       const most = left - Math.hypot(gap(to.x, x0), gap(to.y, y0), gap(to.z, z0));
-      if (most > 0) boxes.push({ stars, most, near });
+      if (most > least) boxes.push({ stars, most, near });
     });
     boxes.sort((a, b) => b.most - a.most);
     const r2 = r * r;

@@ -1,4 +1,5 @@
 import { Fragment, useLayoutEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { FlaskConical, Zap } from "lucide-react";
 import type { HudSnapshot } from "../types";
 import { api, esc } from "../core";
 import { pref } from "../theme";
@@ -196,7 +197,8 @@ function NeutronLive({ d }: { d: HudSnapshot }) {
         className="jump__neutron-do jump__neutron-do--boost"
         title="Then target the next stop in the galaxy map, don't plot to it: the game can refuse to plot a full-range jump on a part tank (Spansh's advice, 2026-10-28)"
       >
-        ⚡ Supercharge here, then target (don't plot)
+        <Zap className="jump__ico" aria-hidden="true" />
+        Supercharge here, then target (don't plot)
       </span>,
     );
   return (
@@ -216,7 +218,13 @@ function NeutronLive({ d }: { d: HudSnapshot }) {
           › {n.next}
           {n.nextJumps > 1 ? " · " + n.nextJumps + " jumps" : ""}
           {n.scoopOnWay ? " · scoop on the way" : ""}
-          {n.nextInject ? " · ⚗ " + n.nextInject.count + " " + INJECT_NAME[n.nextInject.tier] + injectStock(d, n.nextInject) : ""}
+          {n.nextInject ? (
+            <>
+              {" · "}
+              <FlaskConical className="jump__ico" aria-hidden="true" />
+              {n.nextInject.count + " " + INJECT_NAME[n.nextInject.tier] + injectStock(d, n.nextInject)}
+            </>
+          ) : null}
         </span>
       ) : null}
     </div>
@@ -250,7 +258,7 @@ function FsdHealth({ d }: { d: HudSnapshot }) {
 /*
   The route strip under the card (owner, 2026-09-13): the next hops as star-class letters in the
   KGBFOAM colours, a fuel pump on the star where the tank says to scoop — yellow to plan on it,
-  red when skipping it means running dry. `⛽ +N` when that star is beyond the hops shown.
+  red when skipping it means running dry. A pump and `+N` when that star is beyond the hops shown.
 
   An imperative island, like the radar: the strip is built, then hops are dropped off its end until it fits one
   row (owner, 2026-09-14), which needs the laid-out widths. React renders the element and nothing in it.

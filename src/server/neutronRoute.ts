@@ -74,6 +74,11 @@ export interface NeutronHop {
   scoopLs: number | null;
   /** Fuel left after arriving, in jumps. */
   jumpsLeft: number;
+  /**
+   * The unboosted range this hop is planned with (ly): the fuel aboard as it leaves sets it, so a part tank reaches
+   * past the full tank's ×4 (a tester read 305-317 ly hops on a 74 ly ×4 ship as wrong, 2026-10-28).
+   */
+  rangeLy?: number;
   /** FSD health after this hop, when known. */
   fsdHealth: number | null;
 }
@@ -277,13 +282,25 @@ export async function planLeg(
 ): Promise<{ nodes: Node[]; fuel: number } | null> {
   // The neighbours of a star are the same in every pass: read once.
   const lists = new Map<string, Kept>();
+  const began = Date.now();
   let best: Leg | null = null;
+  /*
+    The first route scoops to a full tank: the refining passes take a half tank only where it makes the route
+    cheaper. Offered half tanks from the start, the greedy first passes took them where they cost jumps, and the
+    switch made a route worse (owner's Mandalay, Sagittarius-Carina arm to Colonia: 94 jumps for 93, 7 more stops).
+  */
+  const first = ship.halfTank ? { ...ship, halfTank: false } : ship;
   for (const pass of PASSES) {
-    best = await searchLeg(index, from, to, ship, fuel, pass.weight, pass.expansions, lists);
+    best = await searchLeg(index, from, to, first, fuel, pass.weight, pass.expansions, lists);
     if (best) break;
   }
   if (!best) return null;
-  const deadline = Date.now() + budgetMs;
+  /*
+    The budget counts the first route's time too, the refining passes getting what is left and never less than a
+    third: from the Sagittarius-Carina arm to Colonia the first route alone took 4 s, and the plan 7 (owner,
+    2026-10-28 test round). Where the first route comes quickly (Sol to Colonia, under a second) nothing changes.
+  */
+  const deadline = Math.max(began + budgetMs, Date.now() + budgetMs / 3);
   for (let k = 0; k < REFINE_WEIGHTS.length; k++) {
     const now = Date.now();
     if (now >= deadline) break;
@@ -355,6 +372,33 @@ async function searchLeg(
     one a plan had before the refining passes, which can then only improve on it.
   */
   const firstCandidates = (u: Node, left: number, r: number, reach: number, isNeutron: boolean) => {
+    const hop = isNeutron ? reach : r;
+    if (index.eachToward) {
+      /*
+        The same picks, without reading every star in reach: pick() takes the best 32 by gain in reach and the best
+        32 further out, so only those are kept, and the walk skips what cannot beat them. Reading and sorting all of
+        them took a plan from the Sagittarius-Carina arm to Colonia over 6 s before the time budget began (owner's
+        route, 2026-10-28; docs/perf/_nr-bench.mts).
+      */
+      const min = r * 0.5;
+      const inHop = new TopByGain<Cand>(NEIGHBOURS);
+      const out = new TopByGain<Cand>(NEIGHBOURS);
+      for (const radius of [reach, reach * 2, reach * 4, Math.max(reach * 4, 1500)]) {
+        inHop.clear();
+        out.clear();
+        index.eachToward(
+          u.pos,
+          radius,
+          to,
+          (n, gain, d) => {
+            if (gain > min && n.i !== u.star?.i) (d <= hop ? inHop : out).add({ n, gain, d });
+          },
+          (near) => Math.max(min, near <= hop ? Math.min(inHop.floor(), out.floor()) : out.floor()),
+        );
+        if (inHop.count + out.count >= 8) break;
+      }
+      return pick([...inHop.items, ...out.items].sort((a, b) => b.gain - a.gain), r, hop);
+    }
     let all: Cand[] = [];
     for (const radius of [reach, reach * 2, reach * 4, Math.max(reach * 4, 1500)]) {
       all = [];
@@ -365,7 +409,7 @@ async function searchLeg(
       if (all.length >= 8) break;
     }
     all.sort((a, b) => b.gain - a.gain);
-    return pick(all, r, isNeutron ? reach : r);
+    return pick(all, r, hop);
   };
   const keptCandidates = (u: Node, left: number, r: number, reach: number, isNeutron: boolean) => {
     let all = lists.get(u.key);
@@ -614,7 +658,8 @@ export async function planNeutronRoute(
     if (!leg) {
       // No fuel-safe neutron way: the plain plot, flagged.
       unsafeLegs.push(w);
-      const j = jumpsFrom(from.star != null, dist(from.pos, to), rangeAt(ship, fuel, tank), ship.boost ?? 4);
+      const legRange = rangeAt(ship, fuel, tank);
+      const j = jumpsFrom(from.star != null, dist(from.pos, to), legRange, ship.boost ?? 4);
       if (j.boosted && health != null && wear != null) health -= wear;
       // More jumps than the fuel aboard: scooped on the way, so the tank is about full after (not empty).
       const onWay = j.jumps > fuel;
@@ -632,12 +677,15 @@ export async function planNeutronRoute(
         scoopOnWay: onWay,
         scoopLs: null,
         jumpsLeft: fuel,
+        rangeLy: Math.round(legRange * 10) / 10,
         fsdHealth: health,
       });
       from = { pos: to, star: neutronAt(to) };
       continue;
     }
     let prevPos = from.pos;
+    // The fuel aboard as each hop leaves: the leg's start, then what the hop before arrived with (or scooped to).
+    let leaving = fuel;
     for (const n of leg.nodes.slice(1)) {
       if (n.boosted && health != null && wear != null) health = Math.max(0, health - wear * n.boosted);
       const isEnd = n.key === "goal";
@@ -655,9 +703,11 @@ export async function planNeutronRoute(
         scoopOnWay: n.onWay,
         scoopLs: n.star?.scoopLs ?? null,
         jumpsLeft: n.fuel,
+        rangeLy: Math.round(rangeAt(ship, leaving, tank) * 10) / 10,
         fsdHealth: health,
       });
       prevPos = n.pos;
+      leaving = n.fuel;
     }
     fuel = leg.fuel;
     from = { pos: to, star: neutronAt(to) };

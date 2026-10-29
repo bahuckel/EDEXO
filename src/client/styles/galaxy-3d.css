@@ -1555,6 +1555,15 @@
   color: #e48cff;
   cursor: help;
 }
+/* lucide's lightning, pump and flask in the text (owner, 2026-10-28: no emoji). */
+.g3d-neutron-ico {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+}
+.g3d-neutron-table .lucide-zap {
+  color: var(--accent-bright);
+}
 
 /* The Laboratory's crafting view (LabCrafting.tsx, owner 2026-10-15): materials | lines | recipe cards. */
 .lab-views {

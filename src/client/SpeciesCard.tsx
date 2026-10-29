@@ -16,6 +16,7 @@ import { WhyChanceStrip } from "./WhyChanceStrip";
 import { ChanceWhyList } from "./ChanceWhyList";
 import { useToast } from "./ui/feedback";
 import { memo, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Flag } from "lucide-react";
 import type {
   BodyComputed,
   EstimatedSurfaceTempBand,
@@ -527,7 +528,7 @@ export const SpeciesCard = memo(function SpeciesCard({
             title={`Logged ${m.confirmedColour}, predicted ${m.colourMismatchPredicted} — recorded in the miss log (edexo-outliers.jsonl).`}
           >
             {" "}
-            ⚑
+            <Flag className="species-colour-miss__ico" aria-hidden="true" />
           </span>
         ) : null}
         {m.unlikely ? (

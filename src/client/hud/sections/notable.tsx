@@ -1,5 +1,6 @@
 import type { HudSnapshot } from "../types";
 import { listRowLimit } from "../core";
+import { Mail, Medal } from "lucide-react";
 import { Head, type HudSection } from "../parts";
 import { unreadCount } from "./notices";
 
@@ -11,8 +12,6 @@ import { unreadCount } from "./notices";
   that broke one of the commander's records. The header carries the unread count of the app's mail
   icon, so there is one place to glance at.
 */
-const MEDAL = "🏅";
-
 function Notable({ d }: { d: HudSnapshot }) {
   const list = d.notableBodies || [];
   const records: Record<number, unknown[]> = {};
@@ -32,7 +31,8 @@ function Notable({ d }: { d: HudSnapshot }) {
             {unread ? (
               <>
                 <span className="hud-mail" title="Unread notices in the app">
-                  {`✉ ${unread}`}
+                  <Mail className="hud-mail__ico" aria-hidden="true" />
+                  {unread}
                 </span>
               </>
             ) : null}
@@ -53,7 +53,7 @@ function Notable({ d }: { d: HudSnapshot }) {
                 </span>
                 {(records[n.bodyId] || []).length ? (
                   <span className="notable-medal" title="Personal record">
-                    {MEDAL}
+                    <Medal className="hud-medal" aria-hidden="true" />
                   </span>
                 ) : null}
               </li>

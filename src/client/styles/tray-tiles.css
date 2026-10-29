@@ -38,6 +38,14 @@
   opacity: 0.85;
 }
 
+/* lucide's lightning, pump and warning before a tile's words (owner, 2026-10-28: no emoji). */
+.tray-tile__ico {
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 0.3em;
+  vertical-align: -0.2em;
+}
+
 .top > .header-tray .tray-tile__value {
   display: flex;
   align-items: baseline;

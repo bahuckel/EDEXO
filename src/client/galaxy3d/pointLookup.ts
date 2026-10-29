@@ -10,6 +10,7 @@ import type { GalaxySearchApplied } from "../GalaxySearchPanel";
 import type { NavRouteSystemDTO } from "../GalaxyNavRoutePanel";
 import type { JumpRow } from "./jumpRow";
 import type { MineRow, SpanshFindHit } from "./mapConstants";
+import type { NeutronMark } from "./neutronMarks";
 
 /** A stop of the Targets plan, numbered from 1. */
 export type PlanStop = NonNullable<GalaxyNextDTO["plan"]>["stops"][number] & { n: number };
@@ -27,6 +28,8 @@ export interface MapLookups {
   spanshPicked: Map<string, SpanshFindHit>;
   searchHits: Map<string, GalaxySearchApplied["hits"][number]>;
   codexSystems: Map<string, CodexMapSystemDTO>;
+  /** The neutron route's stops; a marker's id is its index. */
+  neutronHops: NeutronMark[];
 }
 
 /** A point of one of the extra layers (`x-poi`, `x-ggg` …) by its index. */

@@ -6,7 +6,7 @@
  */
 import type { ReactNode } from "react";
 import { CoriolisPaths } from "../ui/icons";
-import { BookOpen, Compass, Crosshair, Eye, Filter, FlaskConical, Layers, Route, ScanSearch, Search, type LucideIcon } from "lucide-react";
+import { BookOpen, Check, Compass, Crosshair, Eye, Filter, FlaskConical, Layers, Route, ScanSearch, Search, type LucideIcon } from "lucide-react";
 import { InfoPopover, Tooltip } from "../ui/Tooltip";
 
 export type G3dTabKey =
@@ -166,6 +166,45 @@ export function MenuRow({ label, hint, children }: { label: string; hint: string
       </Tooltip>
       <span className="g3d-row__ctl">{children}</span>
     </div>
+  );
+}
+
+/**
+ * A ticked row, the Filter's way: the tick fills and shows a check when on (owner, 2026-10-28: the neutron route's
+ * switches showed nothing when picked). `note` goes after the label, dimmed.
+ */
+export function MenuCheck({
+  label,
+  hint,
+  on,
+  set,
+  disabled,
+  note,
+}: {
+  label: string;
+  hint: string;
+  on: boolean;
+  set: (v: boolean) => void;
+  disabled?: boolean;
+  note?: string;
+}) {
+  return (
+    <label className={`g3d-row g3d-row--check g3d-row--tick${disabled ? " g3d-row--disabled" : ""}`} title={hint}>
+      <input
+        type="checkbox"
+        className="g3d-row__box"
+        checked={on}
+        disabled={disabled}
+        onChange={(ev) => set(ev.target.checked)}
+      />
+      <span className="g3d-row__label">
+        {label}
+        {note ? <span className="dim"> {note}</span> : null}
+      </span>
+      <span className={on ? "g3d-tick g3d-tick--on" : "g3d-tick"} aria-hidden="true">
+        {on ? <Check size={14} strokeWidth={3} /> : null}
+      </span>
+    </label>
   );
 }
 

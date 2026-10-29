@@ -4,6 +4,7 @@
 import { useToast } from "./ui/feedback";
 import { Popover } from "./ui/Popover";
 import { useCallback, useEffect, useMemo, useState, ReactNode } from "react";
+import { TriangleAlert } from "lucide-react";
 import type { ExoDataAlertDTO } from "@shared/types";
 import {
   EXO_ALERT_DETECT_FEEDER_LS,
@@ -188,7 +189,7 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
         {visible.map((a) => (
           <div key={a.id} className={`exo-data-alert exo-data-alert--${a.severity}`} role="listitem">
             <span className={`exo-data-alert__icon exo-data-alert__icon--${a.severity}`} aria-hidden>
-              {a.severity === "error" ? "!" : "⚠"}
+              {a.severity === "error" ? "!" : <TriangleAlert className="exo-data-alert__ico" />}
             </span>
             <div className="exo-data-alert__text">
               <div className="exo-data-alert__meta">{a.bodyTabLabel}</div>
@@ -278,7 +279,7 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
               </span>
             ) : topSeverity === "warning" ? (
               <span className="exo-data-alerts-trigger__glyph exo-data-alerts-trigger__glyph--warn" aria-hidden>
-                ⚠
+                <TriangleAlert className="exo-data-alert__ico" />
               </span>
             ) : null}
           </button>

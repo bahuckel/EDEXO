@@ -57,6 +57,7 @@ import {
   preloadGalaxyDrawers,
 } from "./galaxy3d/lazyDrawers";
 import { clearStationsAtCache } from "./galaxy3d/StationsAt";
+import { keptNeutronMarks, neutronMarkers, NEUTRON_LINE_COLOUR, type NeutronMark } from "./galaxy3d/neutronMarks";
 import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
 import {
   drawnGalaxyFrame,
@@ -84,6 +85,7 @@ import {
   type GalaxyLayerKind,
 } from "@shared/galaxyLayers.js";
 import { isBool, usePersistedState } from "./usePersistedState";
+import { keptValue, useKeptState } from "./useKeptState";
 import { Tooltip } from "./ui/Tooltip";
 import { G3D_HELP, G3D_TABS, G3dIcon, MenuHead } from "./galaxy3d/G3dMenu";
 import {
@@ -123,6 +125,12 @@ const isColour = (v: unknown): v is Colour => v === 0 || v === 1 || v === 2;
 /** The Brightness slider's range. */
 const isExposure = (v: unknown): v is number => typeof v === "number" && v >= 0.2 && v <= 4;
 const isWaitMinM = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0;
+/*
+  Where the camera was when the map last closed: a map started again opens there, for as long as the window. Behind
+  other tabs for ten minutes the map gives its memory back (TabSlot), and it came back zoomed out over the core
+  (a tester, 2026-10-29: "zoomed in in an area … comes back … he has to zoom in again").
+*/
+let keptCamera: { target: number[]; position: number[] } | null = null;
 
 /*
   The constants, the hover card, the side panel's records, why a dot is lit, and the View, Layers and
@@ -144,12 +152,13 @@ export function GalaxyMap3D() {
   const [stats, setStats] = useState<EngineStats | null>(null);
   // The View menu and the base layers, remembered between opens like the extra layers below (owner, 2026-10-23:
   // "activated or deactivated layers and other options in the galaxy map should be remembered on close"). Drawers and
-  // the plan list still start closed.
+  // the plan list start closed in a new window; the map drawn again in the same one finds them as it left them
+  // (useKeptState: the selection, the open drawer, the search, the plans, the Codex region).
   const [colour, setColour] = usePersistedState<Colour>("galaxy.view.colour", 0, isColour);
   const [exposure, setExposure] = usePersistedState("galaxy.view.exposure", 1.2, isExposure);
   const [layers, setLayers] = usePersistedState("galaxy.layer.base", BASE_LAYERS, isBaseLayers);
   const [hover, setHover] = useState<HoverInfo | null>(null);
-  const [selection, setSelection] = useState<Selection | null>(null);
+  const [selection, setSelection] = useKeptState<Selection | null>("galaxy.selection", null);
   /*
     Carriers & Stations measures from the picked system, else the ship (R4, owner 2026-10-23). A row picked in the
     drawer selects its own system, and that pick must not re-sort the list under the cursor: the drawer's own picks
@@ -166,22 +175,22 @@ export function GalaxyMap3D() {
     setCsFrom({ x: selection.x, y: selection.y, z: selection.z });
   }, [selection]);
   // The expedition planner (plan 2.5): its scored boxels, the plan's stops and the ordered plan.
-  const [expField, setExpField] = useState<ExpeditionFieldDTO | null>(null);
-  const [expPlanKeys, setExpPlanKeys] = useState<string[]>([]);
-  const [expPlan, setExpPlan] = useState<ExpeditionPlanDTO | null>(null);
-  // The neutron route's line (plan 8), drawn while the drawer has one.
-  const [neutronLine, setNeutronLine] = useState<{ x: number; y: number; z: number }[]>([]);
+  const [expField, setExpField] = useKeptState<ExpeditionFieldDTO | null>("galaxy.expField", null);
+  const [expPlanKeys, setExpPlanKeys] = useKeptState<string[]>("galaxy.expPlanKeys", []);
+  const [expPlan, setExpPlan] = useKeptState<ExpeditionPlanDTO | null>("galaxy.expPlan", null);
+  // The neutron route (plan 8): its line and stops, drawn whichever drawer is open (owner, 2026-10-28).
+  const [neutronHops, setNeutronHops] = useState<NeutronMark[]>(keptNeutronMarks);
   // The Jumponium tab's results (1.2.16), drawn while it is open.
   const [jumpRows, setJumpRows] = useState<JumpRow[]>([]);
   // The picked one is kept apart, so its card stays when the list changes or the tab closes (review 1.2.16).
-  const [jumpPicked, setJumpPicked] = useState<JumpRow | null>(null);
+  const [jumpPicked, setJumpPicked] = useKeptState<JumpRow | null>("galaxy.jumpPicked", null);
   const jumpById = useMemo(() => new Map(jumpRows.map((r) => [r.id, r])), [jumpRows]);
   // The colonisation candidate search's hits (renamed from Find systems, owner 2026-10-19) and the references they
   // were measured from (plan-finder-1.2.20), drawn while open;
   // the picked hit kept apart like the Laboratory's, so its card outlives the list.
   const [finderHits, setFinderHits] = useState<FinderHit[]>([]);
   const [finderRefs, setFinderRefs] = useState<FinderResult["references"]>([]);
-  const [finderPicked, setFinderPicked] = useState<FinderHit | null>(null);
+  const [finderPicked, setFinderPicked] = useKeptState<FinderHit | null>("galaxy.finderPicked", null);
   const finderById = useMemo(() => new Map(finderHits.map((h) => [h.id64, h])), [finderHits]);
   /** A finder marker's hit: from the list, else the picked one when it is that marker. */
   const finderHitFor = useCallback(
@@ -198,7 +207,7 @@ export function GalaxyMap3D() {
   const [mine, setMine] = useState<Map<string, MineRow>>(new Map());
   const [route, setRoute] = useState<GalaxyRouteDTO | null>(null);
   // Peeked, not taken: this render may be thrown away (galaxyDrawerRequest.ts); taken below once the map is on screen.
-  const [drawer, setDrawer] = useState<Drawer>(() => peekGalaxyDrawer() ?? drawerFromUrl());
+  const [drawer, setDrawer] = useKeptState<Drawer>("galaxy.drawer", (kept) => peekGalaxyDrawer() ?? kept ?? drawerFromUrl());
   // A drawer asked for from another screen while the map is open (Colonize's "Find colony sites", in the Galaxy tab).
   useEffect(() => {
     takeGalaxyDrawer();
@@ -208,26 +217,26 @@ export function GalaxyMap3D() {
     };
     window.addEventListener(GALAXY_DRAWER_EVENT, take);
     return () => window.removeEventListener(GALAXY_DRAWER_EVENT, take);
-  }, []);
+  }, [setDrawer]);
   const codexOn = drawer === "codex";
-  const [codexKind, setCodexKind] = useState<CodexMapKind>("bio");
+  const [codexKind, setCodexKind] = useKeptState<CodexMapKind>("galaxy.codexKind", "bio");
   const [codexRegions, setCodexRegions] = useState<CodexMapRegionsDTO | null>(null);
   const [codexAsk, setCodexAsk] = useState(0);
   /** The region names Find offers, once the outlines have arrived. */
   const [regionAnchors, setRegionAnchors] = useState<RegionOutlines["anchors"]>([]);
-  const [codexRegion, setCodexRegion] = useState<string | null>(null);
+  const [codexRegion, setCodexRegion] = useKeptState<string | null>("galaxy.codexRegion", null);
   const [codexSystems, setCodexSystems] = useState<Map<string, CodexMapSystemDTO>>(new Map());
-  const [search, setSearch] = useState<GalaxySearchApplied | null>(null);
+  const [search, setSearch] = useKeptState<GalaxySearchApplied | null>("galaxy.search", null);
   const [waitMinM, setWaitMinM] = usePersistedState("galaxy.layer.waitMinM", 0, isWaitMinM);
-  const [findText, setFindText] = useState("");
-  const [find, setFind] = useState<GalaxyFindDTO | null>(null);
+  const [findText, setFindText] = useKeptState("galaxy.findText", "");
+  const [find, setFind] = useKeptState<GalaxyFindDTO | null>("galaxy.find", null);
   const [findOpen, setFindOpen] = useState(false);
   // Follow the ship as it jumps (owner, 2026-10-04): the camera keeps its distance and moves with you.
   const [follow, setFollow] = usePersistedState("galaxy.follow", true, isBool);
   // Elite-style controls (owner, 2026-10-06): W/A/S/D, Q/E, R/F, a cross-hair over the plane. Remembered.
   const [elite, setElite] = usePersistedState("galaxy.eliteControls", false, isBool);
   // The plan list inside the Targets menu (it was a drawer of its own).
-  const [planOn, setPlanOn] = useState(false);
+  const [planOn, setPlanOn] = useKeptState("galaxy.planOn", false);
   /*
     The extra layers (D10): points of interest, phenomena, carriers and bookmarks, each from a list
     already on this PC, fetched when switched on. Remembered between opens of the map.
@@ -285,14 +294,14 @@ export function GalaxyMap3D() {
     stations: setStationsOn,
   };
   const [extraData, setExtraData] = useState<Partial<Record<GalaxyLayerKind, GalaxyLayerDTO>>>({});
-  const [worthStep, setWorthStep] = useState(0);
+  const [worthStep, setWorthStep] = useKeptState("galaxy.worthStep", 0);
   const [worthCount, setWorthCount] = useState<number | null>(null);
-  const [target, setTarget] = useState<GalaxyNextDTO | null>(null);
+  const [target, setTarget] = useKeptState<GalaxyNextDTO | null>("galaxy.target", null);
   const [targetBusy, setTargetBusy] = useState(false);
-  const [skipped, setSkipped] = useState<number[]>([]);
-  const [skipVisited, setSkipVisited] = useState(false);
+  const [skipped, setSkipped] = useKeptState<number[]>("galaxy.skipped", []);
+  const [skipVisited, setSkipVisited] = useKeptState("galaxy.skipVisited", false);
   const [copied, setCopied] = useState(false);
-  const [planSize, setPlanSize] = useState(5);
+  const [planSize, setPlanSize] = useKeptState("galaxy.planSize", 5);
   // Back to where the ship is (plan 5.8): a carrier, a station to sell at. Remembered.
   const [planLoop, setPlanLoop] = usePersistedState("galaxy.planLoop", false, isBool);
   const [planCopied, setPlanCopied] = useState(false);
@@ -384,6 +393,15 @@ export function GalaxyMap3D() {
       },
     });
     engine.current = e;
+    if (keptCamera) {
+      e.controls.target.fromArray(keptCamera.target);
+      e.camera.position.fromArray(keptCamera.position);
+      e.controls.update();
+      e.invalidate();
+    }
+    // The system picked before the map was let go: its marker and card again.
+    const keptSelection = keptValue<Selection | null>("galaxy.selection");
+    if (keptSelection) e.select(keptSelection);
     const debugHandle = {
       stats: () => e.getStats(),
       bench: (n?: number) => e.bench(n),
@@ -477,12 +495,13 @@ export function GalaxyMap3D() {
       window.removeEventListener("keydown", onKey);
       ro.disconnect();
       engine.current = null;
+      keptCamera = { target: e.controls.target.toArray(), position: e.camera.position.toArray() };
       // The handle closes over the engine: left on window it kept the whole galaxy alive after the tab closed.
       if (win.__galaxy === debugHandle) delete win.__galaxy;
       e.dispose();
       pool.forEach((d) => d.remove());
     };
-  }, [graphics.tier, track]);
+  }, [graphics.tier, track, setSelection, setCodexRegion]);
 
   /*
     Where the ship is and this session's jumps, while the map is in front: behind another tab it stays
@@ -625,7 +644,7 @@ export function GalaxyMap3D() {
               x: b.x,
               y: b.y,
               z: b.z,
-              text: `${b.carrier ? "⚓" : ""}${b.colony ? "⌂" : ""} ${b.carrier && b.colony ? "Your carrier · colony" : b.carrier ? "Your carrier" : "Your colony"}`,
+              text: b.carrier && b.colony ? "Your carrier · colony" : b.carrier ? "Your carrier" : "Your colony",
             })),
           );
         })
@@ -687,7 +706,7 @@ export function GalaxyMap3D() {
       expFlown.current = null;
       setExpFocus(null);
     }
-  }, [expFocus, expByKey, stats?.phase]);
+  }, [expFocus, expByKey, stats?.phase, setDrawer]);
 
   // A picked species' position rule: a ring round every point it is measured from, while the drawer is open.
   useEffect(() => {
@@ -716,8 +735,13 @@ export function GalaxyMap3D() {
     if (!e) return;
     const to = drawer === "expedition" ? expField?.to : null;
     e.setPathLine("expedition-route", to && expField ? [expField.from, to] : [], 0x4fd0ff);
-    e.setPathLine("neutron-route", drawer === "neutron" ? neutronLine : [], 0x9a7bff);
-  }, [expField, drawer, neutronLine, stats?.phase]);
+  }, [expField, drawer, stats?.phase]);
+  useEffect(() => {
+    const e = engine.current;
+    if (!e) return;
+    e.setPathLine("neutron-route", neutronHops, NEUTRON_LINE_COLOUR);
+    e.setMarkers("neutron", neutronMarkers(neutronHops), 4);
+  }, [neutronHops, stats?.phase]);
 
   // Jumponium bodies (1.2.16): violet-pink, the commander's own scans brighter, while the tab is open.
   useEffect(() => {
@@ -934,7 +958,7 @@ export function GalaxyMap3D() {
   }, [navShown, drawer]);
 
   // ------------------------------------------------------------------------------ the Search drawer
-  const onApply = useCallback((applied: GalaxySearchApplied | null) => setSearch(applied), []);
+  const onApply = useCallback((applied: GalaxySearchApplied | null) => setSearch(applied), [setSearch]);
   useEffect(() => {
     const items: MarkerItem[] = (search?.hits ?? []).map((h) => ({
       id: String(h.systemAddress),
@@ -1129,7 +1153,7 @@ export function GalaxyMap3D() {
       live = false;
       clearTimeout(t);
     };
-  }, [findText]);
+  }, [findText, setFind]);
   const findRegions = useMemo(() => {
     const q = findText.trim().toLowerCase();
     if (q.length < 2) return [];
@@ -1163,7 +1187,7 @@ export function GalaxyMap3D() {
     hits: [],
     busy: false,
   });
-  const [spanshPicked, setSpanshPicked] = useState<Map<string, SpanshFindHit>>(new Map());
+  const [spanshPicked, setSpanshPicked] = useKeptState<Map<string, SpanshFindHit>>("galaxy.spanshPicked", (kept) => kept ?? new Map());
   useEffect(() => {
     const q = findText.trim();
     if (q.length < 3) {
@@ -1291,6 +1315,7 @@ export function GalaxyMap3D() {
     spanshPicked,
     searchHits,
     codexSystems,
+    neutronHops,
   };
   const tip = hoverTip(hover, lookups);
 
@@ -1520,7 +1545,7 @@ export function GalaxyMap3D() {
 
       {drawer === "neutron" ? (
         <NeutronDrawer
-          onRoute={setNeutronLine}
+          onRoute={setNeutronHops}
           onFocus={(p) => engine.current?.flyTo({ x: p.x, y: p.y, z: p.z }, 400)}
         />
       ) : null}

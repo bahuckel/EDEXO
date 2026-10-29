@@ -861,6 +861,51 @@ test("galaxy 3D: the game-style menus open and close, each with its help, and th
   and the drawer — round a system typed by name, at least one Earth-like world, the colonised left out; a row shows
   the system's card.
 */
+/*
+  Ten minutes behind other tabs the galaxy map gives its memory back (TabSlot); its tab draws it again. It came back
+  zoomed out over the core, where the commander had zoomed in (a tester, 2026-10-29): it opens where it was now.
+*/
+test("galaxy 3D: a galaxy tab let go behind another tab opens where it was, as it was", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.clock.install();
+  await page.goto("/");
+  type G = { stats: () => { phase: string }; lookAt: (x: number, y: number, z: number, d: number) => void };
+  const ready = () =>
+    expect
+      .poll(() => page.evaluate(() => (window as unknown as { __galaxy?: G }).__galaxy?.stats().phase), { timeout: 60_000 })
+      .toBe("ready");
+  const camera = () =>
+    page.evaluate(() => (window as unknown as { __galaxy?: { camera: () => unknown } }).__galaxy?.camera() ?? null);
+  await page.getByRole("button", { name: "Open a screen in a tab" }).click();
+  await page.getByRole("menuitem", { name: /^Galaxy map/ }).click();
+  await ready();
+  // A menu open with a setting changed, and a system picked (2026-10-29: all of it was gone, not only the zoom).
+  await page.getByRole("button", { name: "Targets", exact: true }).click();
+  const worth = () => page.getByRole("slider", { name: "Worth at least (million CR)", exact: true });
+  await worth().fill("8");
+  const find = page.getByRole("searchbox", { name: "Find" });
+  await find.fill("Eol Prou IW");
+  const list = page.getByTestId("g3d-find");
+  await expect(list.getByRole("button").first()).toContainText("Eol Prou IW", { timeout: 15_000 });
+  await list.getByRole("button").first().click();
+  const panel = page.getByTestId("g3d-panel");
+  await expect(panel.locator("h2")).toContainText("Eol Prou IW", { timeout: 10_000 });
+  await page.evaluate(() => (window as unknown as { __galaxy: G }).__galaxy.lookAt(-1500, 0, 22500, 900));
+  const before = await camera();
+  await page.locator(".tab-strip__tab").first().click();
+  await page.clock.fastForward("11:00");
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __galaxy?: G }).__galaxy == null)).toBe(true);
+  await page.locator(".tab-strip__tab", { hasText: "Galaxy" }).first().click();
+  await ready();
+  expect(await camera()).toEqual(before);
+  await expect(page.getByTestId("g3d-targets")).toBeVisible();
+  await expect(worth()).toHaveValue("8");
+  await expect(panel.locator("h2")).toContainText("Eol Prou IW", { timeout: 10_000 });
+  await expect(find).toHaveValue("Eol Prou IW");
+  await closeScreen(page, "Galaxy");
+  expect(errors).toEqual([]);
+});
+
 test("galaxy 3D: the colonisation candidate search lists the systems round a picked one and shows a hit's card", async ({ page, request }) => {
   const errors = watchErrors(page);
   const dir = path.join(tmpdir(), "edexo-e2e-profile", "galaxy");

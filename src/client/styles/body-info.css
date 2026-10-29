@@ -175,6 +175,12 @@
   background: rgba(40, 32, 8, 0.5);
 }
 
+/* lucide's warning and a notice's kind inside the round icon (owner, 2026-10-28: no emoji). */
+.exo-data-alert__ico,
+.exo-data-alert__icon .notice__ico {
+  width: 0.85em;
+  height: 0.85em;
+}
 .exo-data-alert__icon {
   flex: 0 0 auto;
   width: 1.35rem;

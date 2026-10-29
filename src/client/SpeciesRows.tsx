@@ -1,5 +1,6 @@
 import { achievementMarkTitle, codexFirstTitle, codexMarkTitle, rareColourOf, rareColourTitle } from "./codexMark";
 import { useState, type ReactNode } from "react";
+import { Flag } from "lucide-react";
 import type { BodyComputed, PlanetScan } from "@shared/types";
 import { settledMultiplier } from "@shared/footfallValue";
 import {
@@ -210,7 +211,7 @@ export function SpeciesRow({
               className="srow-tag srow-tag--colour-miss"
               title={`Logged ${m.confirmedColour}, predicted ${m.colourMismatchPredicted} — recorded in the miss log (edexo-outliers.jsonl).`}
             >
-              ⚑
+              <Flag className="species-colour-miss__ico" aria-hidden="true" />
             </span>
           ) : null}
           {m.codexNew && m.codexFirst ? (

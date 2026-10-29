@@ -37,6 +37,10 @@ const route = {
   ms: 3,
 };
 
+/** A plan answer held back until the test lets it go (a plan that takes seconds). */
+let held: { release: () => void } | null = null;
+let planAnswer: unknown = route;
+
 function answer(url: string): unknown {
   if (url.startsWith("/api/neutron/status"))
     return {
@@ -63,7 +67,7 @@ function answer(url: string): unknown {
     };
   if (url.startsWith("/api/neutron/live")) return { active: false, view: null, hops: null, version: 0 };
   if (url.startsWith("/api/galaxy/find")) return { systems: [{ name: "Colonia", x: 900, y: 0, z: 0 }] };
-  if (url.startsWith("/api/neutron/plan")) return route;
+  if (url.startsWith("/api/neutron/plan")) return planAnswer;
   return {};
 }
 
@@ -77,7 +81,10 @@ beforeEach(() => {
   Element.prototype.scrollIntoView ??= () => {};
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => answer(url) })),
+    vi.fn(async (url: string) => {
+      if (url.startsWith("/api/neutron/plan") && held) await new Promise<void>((r) => (held!.release = r));
+      return { ok: true, status: 200, json: async () => answer(url) };
+    }),
   );
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -135,7 +142,10 @@ describe("Neutron drawer", () => {
 
     expect(host.querySelector(".g3d-neutron-stops")!.textContent).toContain("Colonia");
     expect(host.querySelector(".g3d-neutron-table")!.textContent).toContain("Colonia");
-    expect(onRoute).toHaveBeenCalledWith(route.hops.map((h) => ({ x: h.x, y: h.y, z: h.z })));
+    // The stops go to the map with what each one is (its dots, owner 2026-10-28), and stay kept for the map itself.
+    expect(onRoute).toHaveBeenCalledWith(route.hops);
+    const { keptNeutronMarks } = await import("../src/client/galaxy3d/neutronMarks");
+    expect(keptNeutronMarks()).toEqual(route.hops);
   });
 
   it("follows the ship's range after a refit, until it is typed over", async () => {
@@ -147,5 +157,25 @@ describe("Neutron drawer", () => {
     ship = { rangeLy: 52, jumpsPerTank: 7 };
     await mount();
     expect(rangeField().value).toBe("50"); // typed: kept
+  });
+
+  it("shows a plan that came back after its drawer was closed for another (2026-10-29)", async () => {
+    const later = { ...route, hops: [route.hops[0]!, { ...route.hops[1]!, name: "Jaques", jumps: 3 }], jumps: 3 };
+    planAnswer = later;
+    held = { release: () => {} };
+    await mount();
+    act(() => button("Plan").click());
+    await settle();
+    unmount(); // Layers opened while the plan runs
+    onRoute.mockClear();
+    await mount(); // back to Neutron before the answer
+    act(() => held!.release());
+    held = null;
+    await settle();
+    await settle();
+    expect(host.querySelector(".g3d-neutron-table")!.textContent).toContain("Jaques");
+    expect(button("Plan").disabled).toBe(false);
+    const { keptNeutronMarks } = await import("../src/client/galaxy3d/neutronMarks");
+    expect(keptNeutronMarks()).toEqual(later.hops);
   });
 });

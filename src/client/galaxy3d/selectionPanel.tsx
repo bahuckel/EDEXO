@@ -15,6 +15,7 @@ import { FinderHitCard } from "./FinderHitCard";
 import { CodexRecord, IndexRecord, MySystemRecord, SectorRecord } from "./GalaxyPanels";
 import { jumpLine, type JumpRow } from "./jumpRow";
 import { dist } from "./mapConstants";
+import { neutronStopLine } from "./neutronMarks";
 import { extraPoint, navPoint, type MapLookups } from "./pointLookup";
 import { whyLit, type WhyLitContext } from "./whyLit";
 
@@ -39,6 +40,7 @@ export function selectionPanel(selection: Selection | null, ctx: SelectionPanelC
     spanshPicked,
     searchHits,
     codexSystems,
+    neutronHops,
     go,
     jumpPicked,
     finderHitFor,
@@ -66,6 +68,18 @@ export function selectionPanel(selection: Selection | null, ctx: SelectionPanelC
   }
   if (selection.layer === "you") return <MySystemRecord addr={selection.id} />;
   if (selection.layer === "plan") return <IndexRecord ordinal={Number(selection.id)} heading />;
+  if (selection.layer === "neutron") {
+    const h = neutronHops[Number(selection.id)];
+    return h ? (
+      <div>
+        <h2 className="g3d-panel__name">
+          {h.name} <CopySystemButton system={h.name} />
+        </h2>
+        <p className="g3d-panel__meta">{neutronStopLine(neutronHops, Number(selection.id))}</p>
+        {route?.position ? <p className="dim">{fmtLy(dist(route.position, h))} from your ship</p> : null}
+      </div>
+    ) : null;
+  }
   if (selection.layer === "jumponium") {
     const r = jumpById.get(selection.id) ?? (jumpPicked?.id === selection.id ? jumpPicked : null);
     return r ? (

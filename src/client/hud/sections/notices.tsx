@@ -1,5 +1,7 @@
 import type { HudSnapshot } from "../types";
+import { Mail } from "lucide-react";
 import { Head, type HudSection } from "../parts";
+import { NoticeIcon } from "../../noticeIcons";
 
 /* ============================================================== Notices ===================== */
 /*
@@ -12,16 +14,6 @@ import { Head, type HudSection } from "../parts";
   list when the overlay opens is not news.
 */
 const FRESH_MS = 20000;
-const ICON: Record<string, string> = {
-  notable: "★",
-  record: "🏅",
-  nsp: "✦",
-  poi: "◈",
-  carrier: "▣",
-  codex: "◆",
-  achievement: "🏆",
-  jumponium: "⚗",
-};
 const firstSeen: Record<string, number> = {};
 let primed = false;
 
@@ -53,11 +45,21 @@ function Notices({ d }: { d: HudSnapshot }) {
   const unread = unreadCount(d);
   return (
     <>
-      <Head title="Notices" status={"✉ " + unread + " unread"} />
+      <Head
+        title="Notices"
+        status={
+          <>
+            <Mail className="hud-mail__ico" aria-hidden="true" />
+            {unread + " unread"}
+          </>
+        }
+      />
       <ul className="hud-list notices-list" data-f="list">
         {fresh.slice(0, 3).map((n) => (
           <li key={n.id} className={"notice notice--" + n.kind}>
-            <span className="notice__icon">{ICON[n.kind] || "•"}</span>
+            <span className="notice__icon">
+              <NoticeIcon kind={n.kind} />
+            </span>
             <span className="notice__text">
               <b>{n.title}</b>
               <small>{n.text}</small>

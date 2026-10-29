@@ -961,6 +961,16 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
 .jump__neutron-next {
   color: var(--bio);
 }
+/* lucide's lightning and flask in the line (owner, 2026-10-28: no emoji). */
+.jump__ico {
+  width: 0.85rem;
+  height: 0.85rem;
+  vertical-align: -0.15rem;
+  margin-right: 0.15rem;
+}
+.jump__neutron-next .lucide-zap {
+  color: #8fd8ff;
+}
 .jump__fsd--warn {
   color: var(--bad);
   font-weight: 700;
@@ -1425,6 +1435,26 @@ body.phone .jump__body {
 .hud-mail {
   margin-left: 0.5em;
   color: #f5b83d;
+}
+/* lucide's icons in the text (owner, 2026-10-28: no emoji): the mail, a record's medal, a notice's kind, the
+   phone's full-screen chip. */
+.hud-mail__ico,
+.hud-medal,
+.notice__ico {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.15em;
+}
+.hud-mail__ico {
+  margin-right: 0.2em;
+}
+.hud-medal {
+  color: #f5b83d;
+}
+.phone-chip__ico {
+  width: 1.1rem;
+  height: 1.1rem;
+  vertical-align: middle;
 }
 
 /* "Unknown plant" rows in the candidate list (shared/unknownPlants.ts). */

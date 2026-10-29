@@ -7,6 +7,7 @@ import { Tooltip } from "../ui/Tooltip";
 import { NextBoxelCard } from "../NextBoxelCard";
 import { fmtCrExact, fmtCrShort, fmtLy } from "@shared/format";
 import { useEffect, useState, type ReactNode } from "react";
+import { Fuel, TriangleAlert, Zap } from "lucide-react";
 import { DScanBodiesBadge } from "../DScanBodiesBadge";
 import type { AppSnapshot } from "@shared/types";
 import {
@@ -131,15 +132,20 @@ export function CompareTray({
             }
           >
             <span className="tray-tile__label">
+              {snap.neutronLive.refuelHere && !snap.neutronLive.done ? (
+                <Fuel className="tray-tile__ico" aria-hidden="true" />
+              ) : (
+                <Zap className="tray-tile__ico" aria-hidden="true" />
+              )}
               {snap.neutronLive.done
-                ? "⚡ Route done"
+                ? "Route done"
                 : snap.neutronLive.refuelHere
                   ? snap.neutronLive.refuelHalf
-                    ? "⛽ Scoop to half"
-                    : "⛽ Scoop here"
+                    ? "Scoop to half"
+                    : "Scoop here"
                   : snap.neutronLive.superchargeHere
-                    ? "⚡ Supercharge here"
-                    : `⚡ ${snap.neutronLive.at}/${snap.neutronLive.total}`}
+                    ? "Supercharge here"
+                    : `${snap.neutronLive.at}/${snap.neutronLive.total}`}
             </span>
             <span className="tray-tile__value">{snap.neutronLive.next ?? snap.neutronLive.destination}</span>
           </div>
@@ -151,7 +157,8 @@ export function CompareTray({
           >
             <span className="tray-tile__label">FSD</span>
             <span className="tray-tile__value">
-              ⚠ {snap.fsdHealth.estimate ? "~" : ""}
+              <TriangleAlert className="tray-tile__ico" aria-hidden="true" />
+              {snap.fsdHealth.estimate ? "~" : ""}
               {Math.round(snap.fsdHealth.health * 100)} %
             </span>
           </div>
