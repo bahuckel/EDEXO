@@ -17,6 +17,7 @@ import { fsdWearEstimate, FSD_WARN } from "../shared/fsdWear.js";
 import { jumponiumView } from "../shared/jumponium.js";
 import { neutronShip } from "./neutronShip.js";
 import { refuelWindow } from "./neutronFuelWindow.js";
+import { fsdFuelModel, fuelForJump, maxJumpLy } from "../shared/fsdFuel.js";
 
 /** How much to scoop at the refuel stop the ship is at, with the ship as it is now (cargo, refit). */
 function refuelWindowHere(store: GameStateStore, live: ReturnType<typeof createNeutronLive>, at: number) {
@@ -24,6 +25,12 @@ function refuelWindowHere(store: GameStateStore, live: ReturnType<typeof createN
   const ship = neutronShip(store);
   const tankT = store.loadoutFuelMainCapacityT;
   if (!hops || ship.rangeLy == null || !ship.fuelPerJumpT || !tankT) return null;
+  // The drive's own law when its module is known (fsdDrives.ts): each supercharge's fuel at the mass aboard.
+  const model = fsdFuelModel(store.fsdFuel);
+  const cargo = store.liveStatusCargoT ?? store.fsdFuel.cargoT ?? 0;
+  const law = model?.drive
+    ? { fuelT: (ly: number, t: number) => fuelForJump(model, ly, t, cargo), rangeLy: (t: number) => maxJumpLy(model, t, cargo) ?? 0 }
+    : null;
   return refuelWindow(
     hops,
     at,
@@ -33,6 +40,7 @@ function refuelWindowHere(store: GameStateStore, live: ReturnType<typeof createN
       boost: live.remaining()?.boost ?? ship.boostFactor,
       fuelPerJumpT: ship.fuelPerJumpT,
       tankT,
+      law,
     },
     store.liveStatusFuelMainT,
   );

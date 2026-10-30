@@ -234,7 +234,8 @@ export function buildLiveShipFuelRangeDTO(
   const hasLiveStatusFuel = (main != null && Number.isFinite(main)) || (res != null && Number.isFinite(res));
   const fuelMain = main != null && Number.isFinite(main) ? Math.max(0, main) : 0;
   const fuelRes = res != null && Number.isFinite(res) ? Math.max(0, res) : 0;
-  const fuelTotalTForNav = hasLiveStatusFuel ? fuelMain + fuelRes : null;
+  // Jumps burn the main tank only, and the reserve is not part of the jump's mass (fsdDrives.ts).
+  const fuelTotalTForNav = hasLiveStatusFuel ? fuelMain : null;
 
   /*
     Ask about the systems ahead before the route is analysed, so the verdicts are in the cache by the
@@ -263,7 +264,7 @@ export function buildLiveShipFuelRangeDTO(
 
   if (!hasLiveStatusFuel && !navRoute) return null;
 
-  const fuelTotal = hasLiveStatusFuel ? fuelMain + fuelRes : 0;
+  const fuelTotal = hasLiveStatusFuel ? fuelMain : 0;
   const maxR = store.loadoutMaxJumpRangeLy;
   const fu = store.lastFsdJumpFuelUsedT;
   const jd = store.lastFsdJumpDistLy;
@@ -293,7 +294,7 @@ export function buildLiveShipFuelRangeDTO(
     hasLiveStatusFuel,
     fuelMainT: fuelMain,
     fuelReserveT: fuelRes,
-    fuelTotalT: fuelTotal,
+    fuelTotalT: fuelMain + fuelRes,
     maxJumpRangeLy: maxR,
     ladenMaxJumpLy,
     estFuelPerMaxJumpT: estFuelPerMaxJump,

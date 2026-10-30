@@ -3,6 +3,7 @@
   disk cache, and read back after resetAll() so a launch with nothing new in the logs skips the replay.
 */
 import { hydrateFsdFuelOthers } from "../shared/fsdFuel.js";
+import { hydrateFsdDrive } from "../shared/fsdDrives.js";
 import { hydrateFsdWear } from "../shared/fsdWear.js";
 import { hydrateOwnAssets } from "../shared/ownAssets.js";
 import { hydrateJumponium } from "../shared/jumponium.js";
@@ -261,6 +262,7 @@ export function hydrateJournalMergePayload(store: GameStateStore, data: JournalM
       unladenT: typeof ff.unladenT === "number" ? ff.unladenT : null,
       maxFuelPerJumpT: typeof ff.maxFuelPerJumpT === "number" ? ff.maxFuelPerJumpT : null,
       boosterLy: typeof ff.boosterLy === "number" && ff.boosterLy > 0 ? ff.boosterLy : 0,
+      drive: hydrateFsdDrive(ff.drive),
       cargoT: typeof ff.cargoT === "number" ? ff.cargoT : null,
       samples: ff.samples.filter((s) => s && s.ly > 0 && s.fuelT > 0 && s.massT > 0),
       fsd: typeof ff.fsd === "string" ? ff.fsd : null,

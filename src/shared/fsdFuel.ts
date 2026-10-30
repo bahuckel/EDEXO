@@ -14,6 +14,8 @@
  * over, and each ship's samples are kept while another ship is flown.
  */
 
+import { driveFuelT, driveRangeLy, fsdDriveFromLoadout, type FsdDrive } from "./fsdDrives.js";
+
 /** Class A drives; used until the commander's own jumps pin `p` down. */
 export const DEFAULT_POWER = 2.45;
 const SAMPLES = 60;
@@ -38,6 +40,8 @@ export interface FsdFuelState {
   maxFuelPerJumpT: number | null;
   /** The Guardian FSD Booster's bonus in the last `Loadout` (`guardianBoosterLy`); 0 or absent without one. */
   boosterLy?: number;
+  /** The last `Loadout`'s drive by its module's constants (fsdDrives.ts), when they give back its range; else null. */
+  drive?: FsdDrive | null;
   /**
    * What the ship carries (t), from the journal's last `Cargo` line; null until one is read, and again
    * after a ship change or a death. The journal writes one at every login and after every change to the
@@ -63,6 +67,8 @@ export interface FsdFuelModel {
   /** The Guardian booster's bonus (ly), and the mass the law was fitted around (the samples' median, t). */
   boosterLy: number;
   refMassT: number;
+  /** The drive's own law, when its module is known (fsdDrives.ts): then `k` and `p` are not used. */
+  drive?: FsdDrive | null;
 }
 
 export function emptyFsdFuel(): FsdFuelState {
@@ -72,6 +78,7 @@ export function emptyFsdFuel(): FsdFuelState {
     unladenT: null,
     maxFuelPerJumpT: null,
     boosterLy: 0,
+    drive: null,
     cargoT: null,
     samples: [],
     fsd: null,
@@ -167,7 +174,8 @@ export function fsdFuelLoadout(st: FsdFuelState, line: Record<string, unknown>):
   if (mjr != null) st.loadoutLy = mjr;
   if (typeof line.UnladenMass === "number" && line.UnladenMass > 0) st.unladenT = line.UnladenMass;
   st.boosterLy = guardianBoosterLy(modules);
-  st.maxFuelPerJumpT = null;
+  st.drive = fsdDriveFromLoadout(line, st.boosterLy);
+  st.maxFuelPerJumpT = st.drive?.maxFuelT ?? null;
   const mods = (fsd?.Engineering as { Modifiers?: { Label?: string; Value?: number }[] } | undefined)
     ?.Modifiers;
   const mf = mods?.find((m) => m.Label === "MaxFuelPerJump")?.Value;
@@ -196,9 +204,18 @@ export function fsdFuelJump(st: FsdFuelState, line: Record<string, unknown>, car
   if (st.samples.length > SAMPLES) st.samples.splice(0, st.samples.length - SAMPLES);
 }
 
-/** `k` and `p` from the samples; null without a ship mass or a single usable jump. */
+/**
+ * The drive's law: its module's own when known (no jump needed), else `k` and `p` from the samples; null without a ship
+ * mass, or without either.
+ */
 export function fsdFuelModel(st: FsdFuelState): FsdFuelModel | null {
-  if (st.unladenT == null || !st.samples.length) return null;
+  if (st.unladenT == null) return null;
+  const d = st.drive;
+  if (d) {
+    const k = d.mul / d.optMassT ** d.pow;
+    return { k, p: d.pow, fitted: true, unladenT: st.unladenT, maxFuelPerJumpT: d.maxFuelT, boosterLy: d.boosterLy, refMassT: st.unladenT, drive: d };
+  }
+  if (!st.samples.length) return null;
   let p = DEFAULT_POWER;
   let fitted = false;
   const ds = st.samples.map((s) => s.ly);
@@ -249,7 +266,9 @@ function boosterShift(boosterLy: number, refMassT: number, massT: number): numbe
 
 /** Fuel (t) for a jump of `ly` with `fuelT` in the tank and `cargoT` aboard. */
 export function fuelForJump(m: FsdFuelModel, ly: number, fuelT: number, cargoT = 0): number {
-  return m.k * (ly * (m.unladenT + fuelT + cargoT)) ** m.p;
+  const mass = m.unladenT + fuelT + cargoT;
+  if (m.drive) return driveFuelT(m.drive, ly, mass);
+  return m.k * (ly * mass) ** m.p;
 }
 
 /** The longest jump (ly) on this tank: the drive's most fuel per jump, or what is left. */
@@ -258,5 +277,6 @@ export function maxJumpLy(m: FsdFuelModel, fuelT: number, cargoT = 0): number | 
   const f = Math.min(m.maxFuelPerJumpT, fuelT);
   if (!(f > 0)) return 0;
   const mass = m.unladenT + fuelT + cargoT;
+  if (m.drive) return driveRangeLy(m.drive, f, mass);
   return (f / m.k) ** (1 / m.p) / mass + boosterShift(m.boosterLy, m.refMassT, mass);
 }

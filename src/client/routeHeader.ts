@@ -32,7 +32,7 @@ export function routeNavCardTitle(snap: AppSnapshot): string {
       if (fr?.hasLiveStatusFuel) {
         if (nav.fuelCanFinishPlottedRoute === true) {
           parts.push(
-            `Fuel: estimated sufficient to finish the route (Status.json tank against each leg's fuel by your drive's own law, fitted on your jumps; the ship gets lighter as it burns).`,
+            `Fuel: estimated sufficient to finish the route (Status.json tank against each leg's fuel by your drive's own law, from its module or fitted on your jumps; the ship gets lighter as it burns).`,
           );
         } else if (nav.fuelCanFinishPlottedRoute === false && nav.fuelJumpsReachableOnPlottedRoute != null) {
           parts.push(
@@ -83,7 +83,7 @@ export function routeNavCardTitle(snap: AppSnapshot): string {
   if (nav?.onPlot && nav.routeJumpsRemaining != null && nav.routeJumpsRemaining > 0) {
     if (nav.jumpsToLastScoopableOnRoute != null) {
       parts.push(
-        `Furthest main-sequence scoop reachable on current tank (NavRoute leg distances, your drive's fitted fuel law, the longest jump each tank allows): ${nav.jumpsToLastScoopableOnRoute} jump(s) ahead.`,
+        `Furthest main-sequence scoop reachable on current tank (NavRoute leg distances, your drive's own fuel law, the longest jump each tank allows): ${nav.jumpsToLastScoopableOnRoute} jump(s) ahead.`,
       );
     } else {
       parts.push(

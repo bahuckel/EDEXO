@@ -12,7 +12,8 @@ import type { GameStateStore } from "./gameState.js";
  * The unboosted range with a full tank and the hold as it is, for a ship without jumps to go by (a new ship, a first
  * start). The Loadout's `MaxJumpRange` is the empty ship's, with only one jump's fuel aboard: planned with it, a
  * supercharge fell short of the next neutron star (a tester, 2026-10-28: "it seems to be using the unladen vs
- * current jump range"). From the drive's law when fitted, else the Loadout's range for the mass it was given with.
+ * current jump range"). From the drive's law (its module's, or fitted), else the Loadout's range for the mass it was
+ * given with.
  */
 export function ladenRangeLy(store: GameStateStore, model: FsdFuelModel | null): number | null {
   const tank = store.loadoutFuelMainCapacityT;
@@ -46,6 +47,13 @@ export function rangeByFuel(store: GameStateStore, model: FsdFuelModel | null, r
   if (!tank || unladen == null) return null;
   const cargo = store.liveStatusCargoT ?? store.fsdFuel.cargoT ?? 0;
   const oneJump = Math.min(tank, model?.maxFuelPerJumpT ?? store.fsdFuel.maxFuelPerJumpT ?? tank / FUEL_STEPS);
+  if (model?.drive && rangeLy && rangeLy > 0) {
+    // The drive's own law: each entry is the longest jump on that tank.
+    return Array.from({ length: FUEL_STEPS + 1 }, (_, i) => {
+      const r = maxJumpLy(model, Math.max(oneJump, (tank * i) / FUEL_STEPS), cargo);
+      return r ? r / rangeLy : 1;
+    });
+  }
   const full = unladen + tank + cargo;
   // The bonus as a share of the full tank's range; unknown range: none (the whole range scales).
   const flat = rangeLy && rangeLy > 0 ? Math.min(1, (store.fsdFuel.boosterLy ?? 0) / rangeLy) : 0;
@@ -75,7 +83,8 @@ export function neutronShip(
   const tank = store.loadoutFuelMainCapacityT;
   const now = store.liveStatusFuelMainT;
   const wear = fsdWearEstimate(store.fsdWear);
-  const rangeLy = plannedRange(fullJumpRange(store.jumpRange), ladenRangeLy(store, model));
+  // A known drive's law is exact (fsdDrives.ts): the jumps flown only stand in for it.
+  const rangeLy = model?.drive ? ladenRangeLy(store, model) : plannedRange(fullJumpRange(store.jumpRange), ladenRangeLy(store, model));
   return {
     rangeLy,
     rangeByFuel: rangeByFuel(store, model, rangeLy),
