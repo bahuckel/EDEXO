@@ -15,6 +15,8 @@ import { PickList, type PickOption } from "./galaxy3d/PickList";
 import { CopySystemButton } from "./CopySystemButton";
 import { isBool, usePersistedState } from "./usePersistedState";
 import { onServerChange } from "./serverChanges";
+import { routeTotals, routeValueLine, useRouteValues } from "./routeValues";
+import { fmtCrShort } from "@shared/format";
 
 const isBoost = (v: unknown): v is number | null => v === null || v === 4 || v === 6;
 
@@ -68,6 +70,8 @@ export interface NeutronHopDTO {
   inject?: { tier: "basic" | "standard" | "premium"; count: number } | null;
   /** The unboosted range the hop is planned with: the fuel aboard as it leaves sets it. */
   rangeLy?: number;
+  /** The neutron star's system address: its worth from Spansh (plan 1.3.3 R-3). */
+  address?: number;
 }
 interface RouteDTO {
   hops: NeutronHopDTO[];
@@ -325,6 +329,17 @@ export function NeutronDrawer({
     };
   }, [query]);
   const options: PickOption[] = useMemo(() => found.map((s) => ({ value: s.name, label: s.name })), [found]);
+  // Each hop's system valued from Spansh while a route is shown (routeValues.ts), at most the first 150 hops.
+  const valued = useMemo(
+    () =>
+      (route?.hops ?? [])
+        .filter((h): h is NeutronHopDTO & { address: number } => typeof h.address === "number")
+        .slice(0, 150)
+        .map((h) => ({ addr: h.address, name: h.name })),
+    [route],
+  );
+  const { values: hopValues, read: hopsRead } = useRouteValues(valued, valued.length > 0);
+  const hopTotals = routeTotals(hopValues.values());
 
   const move = (i: number, d: number) =>
     setStops((prev) => {
@@ -705,6 +720,16 @@ export function NeutronDrawer({
                   there.
                 </p>
               ) : null}
+              {valued.length ? (
+                <p className="g3d-panel__note" title="From Spansh (others' scans, at 1×): every body scanned, the worthwhile planets mapped, the expected exobiology">
+                  {hopsRead < valued.length ? `Reading the stops… ${hopsRead} of ${valued.length}. ` : ""}
+                  {hopTotals.known
+                    ? `${hopTotals.known} discovered: scan ${fmtCrShort(hopTotals.fss)} · map ${fmtCrShort(hopTotals.dss)} · bio ${fmtCrShort(hopTotals.bio)}${hopTotals.missing ? ` · ${hopTotals.missing} bodies missing` : ""}`
+                    : hopsRead
+                      ? "None of the stops is on Spansh yet."
+                      : ""}
+                </p>
+              ) : null}
               <table className="fdb-table g3d-neutron-table">
                 <thead>
                   <tr>
@@ -724,6 +749,9 @@ export function NeutronDrawer({
                           {h.name}
                         </button>{" "}
                         <CopySystemButton system={h.name} />
+                        {h.address != null && routeValueLine(hopValues.get(h.address)) ? (
+                          <small className="g3d-neutron-worth">{routeValueLine(hopValues.get(h.address))}</small>
+                        ) : null}
                         {h.refuel ? (
                           <span
                             className="g3d-neutron-fuel"

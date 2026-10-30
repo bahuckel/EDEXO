@@ -66,36 +66,38 @@ export function refuelWindow(
     const needT = s.scoopOnWay ? first + (s.boosted ? per : 0) : burnT + (s.last ? 0 : per);
     return { burnT, needT };
   };
-  const run = (fuelT: number, checkRange: boolean): boolean => {
+  // Every hop's need covered and every supercharge in reach on this tank; a hair of slack for rounding on both.
+  const fits = (fuelT: number): boolean => {
     let left = fuelT;
     for (const s of stretch) {
       const f = hopFuel(s, left);
-      // The search for the least fuel goes exact; the check keeps a hair of slack for rounding.
-      if (left + (checkRange ? 1e-6 : 0) < f.needT) return false;
-      // A hair of slack: at the least fuel the supercharge's reach is the hop, to the last bit.
-      if (checkRange && jumpsFrom(s.boosted, s.d, range(left) + 1e-6, ship.boost).jumps > s.jumps) return false;
+      if (left + 1e-6 < f.needT) return false;
+      if (jumpsFrom(s.boosted, s.d, range(left) + 1e-6, ship.boost).jumps > s.jumps) return false;
       left -= f.burnT;
     }
     return true;
   };
-  const fits = (fuelT: number) => run(fuelT, true);
-  // The least fuel that covers every hop's need: a lighter tank burns less, so search it rather than add it up.
-  let lo = 0;
-  let hi = tank;
-  if (!run(hi, false)) return null;
-  for (let i = 0; i < 40; i++) {
-    const mid = (lo + hi) / 2;
-    if (run(mid, false)) hi = mid;
-    else lo = mid;
-  }
-  const minT = hi;
-  if (minT > tank + 1e-6 || !fits(minT)) return null;
-  let maxT = minT;
-  for (let f = tank; f > minT; f -= STEP_T)
+  /*
+    The tanks that work are one stretch: enough for every hop's need from below, and from above light enough for each
+    supercharge to reach (on less than a jump's fuel the reach shrinks too, which the margin of the plan,
+    neutronRoute.ts SUPERCHARGE_MARGIN, can make the limit at the bottom as well). The heaviest that works first, down
+    from a full tank; then the least, between nothing and that.
+  */
+  let maxT = -1;
+  for (let f = tank; f > 0; f -= STEP_T)
     if (fits(f)) {
       maxT = f;
       break;
     }
+  if (maxT < 0) return null;
+  let lo = 0;
+  let hi = maxT;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (fits(mid)) hi = mid;
+    else lo = mid;
+  }
+  const minT = hi;
   // Then to the hundredth of a tonne between that step and the next, which did not fit.
   if (maxT < tank) {
     let bad = Math.min(tank, maxT + STEP_T);

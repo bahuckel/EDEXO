@@ -35,10 +35,11 @@ const A = { name: "A", x: 0, y: 0, z: 0 };
 
 describe("neutron route", () => {
   it("supercharges from neutron star to neutron star, four times the range a jump", async () => {
-    // Range 50: a supercharge reaches 200 ly; neutron stars every 200 ly from 50 to 1,850, the end at 2,050.
+    // Range 51.1: a supercharge is planned to 200.3 ly (4 × 51.1 less the 2 % margin); neutron stars every 200 ly
+    // from 50 to 1,850, the end at 2,050.
     const idx = line(50, 1850, 200);
     const r = await planNeutronRoute(idx, [A, { name: "B", x: 2050, y: 0, z: 0 }], {
-      rangeLy: 50,
+      rangeLy: 51.1,
       jumpsPerTank: 100,
       jumpsNow: 100,
     });
@@ -51,7 +52,7 @@ describe("neutron route", () => {
   });
 
   it("keeps the neutron stars in a supercharge's reach when it looks further out (a 905 ly hop, 2026-10-28)", async () => {
-    // A Caspian: 93 ly, ×6 = 558 ly a supercharge. One neutron star in reach every 550 ly, and a crowd further out
+    // A Caspian: 95 ly, ×6 less 2 % = 558.6 ly a supercharge. One neutron star in reach every 550 ly, and a crowd further out
     // (gain ~900 ly each) that filled the 32 neighbours once the search widened: hops of 1 supercharge + 4 jumps.
     const chain = line(0, 5500, 550).stars;
     const crowd: NeutronStar[] = [];
@@ -66,7 +67,7 @@ describe("neutron route", () => {
       nameOf: (i: number) => `N${i}`,
     };
     const r = await planNeutronRoute(idx, [A, { name: "B", x: 5600, y: 0, z: 0 }], {
-      rangeLy: 93,
+      rangeLy: 95,
       boost: 6,
       jumpsPerTank: 100,
       jumpsNow: 100,
@@ -147,10 +148,10 @@ describe("neutron route", () => {
   });
 
   it("supercharges at the start when the ship sits at a neutron star (review 1.2.16)", async () => {
-    // The start is the first neutron star itself: its first jump reaches 200 ly, not 50.
+    // The start is the first neutron star itself: its first jump reaches 200 ly (51.1 × 4 less 2 %), not 51.
     const idx = line(0, 1800, 200);
     const r = await planNeutronRoute(idx, [A, { name: "B", x: 2000, y: 0, z: 0 }], {
-      rangeLy: 50,
+      rangeLy: 51.1,
       jumpsPerTank: 100,
       jumpsNow: 100,
     });
@@ -236,8 +237,8 @@ describe("neutron route", () => {
       const refined = jumps(await planLeg(field(seed), from, to, ship, 6, 5000));
       expect(refined).toBeLessThan(first);
     }
-    // Seed 5: 27 jumps from the first pass, 25 refined.
-    expect(jumps(await planLeg(field(5), from, to, ship, 6, 5000))).toBe(25);
+    // Seed 5: 26 refined (25 before the supercharge margin, 2026-10-30).
+    expect(jumps(await planLeg(field(5), from, to, ship, 6, 5000))).toBe(26);
   });
 });
 

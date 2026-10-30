@@ -16,6 +16,8 @@ import type { GalaxyRouteDTO, GalaxyVisitedDTO } from "@shared/types";
 import { SystemBookmarkButton } from "./BookmarkButton";
 import { CopySystemButton } from "./CopySystemButton";
 import { isNum, oneOf, usePersistedState } from "./usePersistedState";
+import { routeTotals, routeValueLine, useRouteValues } from "./routeValues";
+import { fmtCrShort } from "@shared/format";
 
 /** A system as the map marks it. */
 export interface NavRouteSystemDTO {
@@ -43,6 +45,8 @@ const RANGES: { days: number; label: string }[] = [
 ];
 /** Rows drawn at once; the filters narrow the rest. */
 const ROW_CAP = 400;
+/** Systems valued from Spansh at most (one request each, one at a time): a narrowed list values the rest. */
+const VALUE_CAP = 150;
 
 const classKey = (sc: string) => {
   const i = starClassIndex(sc);
@@ -179,6 +183,17 @@ export function GalaxyNavRoutePanel({
     });
   const unchecked = shown.filter((s) => s.edsm === undefined);
   const ck = log?.checking ?? null;
+  // Each listed system's worth from Spansh, read in the background while Next is open (routeValues.ts).
+  // The systems ahead first: the ones already flown through are read last.
+  const valued = useMemo(
+    () =>
+      half === "next"
+        ? [...shown.filter((s) => !s.visited), ...shown.filter((s) => s.visited)].slice(0, VALUE_CAP).map((s) => ({ addr: s.address, name: s.name }))
+        : [],
+    [half, shown],
+  );
+  const { values, read } = useRouteValues(valued, half === "next");
+  const totals = routeTotals(values.values());
 
   const halfButton = (h: Exclude<Half, "none">, label: string, sub: string) => {
     const other = half !== "none" && half !== h;
@@ -314,6 +329,14 @@ export function GalaxyNavRoutePanel({
               ) : null}
             </div>
           ) : null}
+          {half === "next" && valued.length ? (
+            <p className="g3d-panel__note" title="From Spansh (others' scans, at 1×): every body scanned, the worthwhile planets mapped, the expected exobiology">
+              {read < valued.length ? `Reading the systems… ${read} of ${valued.length}. ` : ""}
+              {totals.known
+                ? `${totals.known} discovered: scan ${fmtCrShort(totals.fss)} · map ${fmtCrShort(totals.dss)} · bio ${fmtCrShort(totals.bio)}${totals.missing ? ` · ${totals.missing} bodies missing` : ""}`
+                : read ? "None of them is on Spansh yet." : ""}
+            </p>
+          ) : null}
           <ul className="g3d-navroute__list">
             {shown.slice(0, ROW_CAP).map((s) => (
               <li key={s.address} className="g3d-navroute__item">
@@ -322,7 +345,9 @@ export function GalaxyNavRoutePanel({
                 </span>
                 <button type="button" className="g3d-navroute__name" onClick={() => onFly(s)} title={`Show it on the map · ${coords(s.pos)}`}>
                   {s.name}
-                  <small className="g3d-navroute__sub">{s.at ? s.at.slice(0, 16).replace("T", " ") : coords(s.pos)}</small>
+                  <small className="g3d-navroute__sub">
+                    {s.at ? s.at.slice(0, 16).replace("T", " ") : (half === "next" ? routeValueLine(values.get(s.address)) : null) ?? coords(s.pos)}
+                  </small>
                 </button>
                 {half === "next" ? (
                   <span

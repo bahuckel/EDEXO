@@ -170,7 +170,7 @@ export function selectionPanel(selection: Selection | null, ctx: SelectionPanelC
         </h2>
         <p className="g3d-panel__meta">
           {ns.starClass ? `${ns.starClass} star · ` : ""}
-          {ns.visited ? "visited" : "on your plotted route, not visited yet"}
+          {ns.tag ?? (ns.visited ? "visited" : "on your plotted route, not visited yet")}
         </p>
         {route?.position ? <p className="dim">{fmtLy(dist(route.position, ns))} from your ship</p> : null}
         <p className="g3d-panel__bm">
@@ -180,7 +180,7 @@ export function selectionPanel(selection: Selection | null, ctx: SelectionPanelC
             pos={{ x: ns.x, y: ns.y, z: ns.z }}
           />
         </p>
-        <IndexRecord addr={String(ns.address)} fallbackName={ns.name} />
+        <IndexRecord addr={String(ns.address)} quiet />
       </div>
     );
   }

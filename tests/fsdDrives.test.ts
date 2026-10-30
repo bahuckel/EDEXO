@@ -16,7 +16,7 @@ import {
 import { GameStateStore } from "../src/server/gameState.js";
 import { lawFor, neutronShip } from "../src/server/neutronShip.js";
 import { refuelWindow } from "../src/server/neutronFuelWindow.js";
-import { planNeutronRoute } from "../src/server/neutronRoute.js";
+import { planNeutronRoute, superchargeReach } from "../src/server/neutronRoute.js";
 import type { NeutronStar } from "../src/server/neutronIndex.js";
 import type { LiveHop } from "../src/server/neutronLive.js";
 
@@ -196,25 +196,25 @@ describe("the planner with the drive's law", () => {
     rangeLy: (t: number) => maxJumpLy(m, t) ?? 0,
   };
   const table = Array.from({ length: 21 }, (_, i) => maxJumpLy(m, Math.max(6.8, (128 * i) / 20))! / maxJumpLy(m, 128)!);
-  // Neutron stars every 300 ly (a full tank's ×6 is 513 ly: none can be skipped), then one 530 ly on, no scooping.
-  const stars: NeutronStar[] = [...Array.from({ length: 9 }, (_, i) => i * 300), 2930].map((x, i) => ({ i, x, y: 0, z: 0, scoopLs: null }));
+  // Neutron stars every 300 ly (a full tank's ×6 is 513 ly: none can be skipped), then one 518 ly on, no scooping.
+  const stars: NeutronStar[] = [...Array.from({ length: 9 }, (_, i) => i * 300), 2918].map((x, i) => ({ i, x, y: 0, z: 0, scoopLs: null }));
   const idx = {
     within: (p: { x: number; y: number; z: number }, r: number) => stars.filter((s) => Math.abs(s.x - p.x) <= r && p.y === 0),
     nameOf: (i: number) => `N${i}`,
   };
   const ship = { rangeLy: maxJumpLy(m, 128)!, rangeByFuel: table, boost: 6, jumpsPerTank: 18, jumpsNow: 18 };
   const plan = (withLaw: boolean) =>
-    planNeutronRoute(idx, [{ name: "A", x: 0, y: 0, z: 0 }, { name: "B", x: 2930, y: 0, z: 0 }], {
+    planNeutronRoute(idx, [{ name: "A", x: 0, y: 0, z: 0 }, { name: "B", x: 2918, y: 0, z: 0 }], {
       ...ship,
       ...(withLaw ? { law, fuelNowT: 128 } : {}),
     });
 
   it("counts each short supercharge at its own fuel, so the long one is planned on the range the ship has", async () => {
-    // Eight 300 ly supercharges spend about 1.7 t each: 114 t left, a reach of 517 ly, short of 530.
+    // Eight 300 ly supercharges spend about 1.7 t each: 114 t left, a planned reach of 507 ly, short of 518.
     let fuel = 128;
     for (let k = 0; k < 8; k++) fuel -= fuelForJump(m, 50, fuel);
-    expect(6 * maxJumpLy(m, fuel)!).toBeLessThan(530);
-    // Counted at 6.8 t a jump the tank looked 71 t full, the ship lighter, and the 530 ly hop one supercharge.
+    expect(superchargeReach(maxJumpLy(m, fuel)!, 6)).toBeLessThan(518);
+    // Counted at 6.8 t a jump the tank looked 71 t full, the ship lighter, and the 518 ly hop one supercharge.
     expect((await plan(false)).hops.at(-1)!.jumps).toBe(1);
     // By the law: the supercharge and a jump.
     const last = (await plan(true)).hops.at(-1)!;
@@ -245,14 +245,14 @@ describe("the refuel window with the drive's law", () => {
     expect(exact.maxT).toBe(128);
   });
 
-  it("caps the tank where a long supercharge stops reaching", () => {
-    // 530 ly: 88.33 ly a jump, which the Caspian makes on about 70 t or less.
-    const route = [hop("A", 0, { refuel: true, scoopLs: 10 }), hop("B", 530, { refuel: true })];
+  it("caps the tank where a long supercharge stops reaching, with the plan's margin", () => {
+    // 520 ly: 88.4 ly a jump with the 2 % margin, which the Caspian makes on about 70 t or less.
+    const route = [hop("A", 0, { refuel: true, scoopLs: 10 }), hop("B", 520, { refuel: true })];
     const w = refuelWindow(route, 0, ship, 100)!;
-    expect(w.maxT).toBeGreaterThan(60);
+    expect(w.maxT).toBeGreaterThan(50);
     expect(w.maxT).toBeLessThan(81);
-    expect(6 * law.rangeLy(w.maxT)).toBeGreaterThanOrEqual(530 - 1e-6);
+    expect(superchargeReach(law.rangeLy(w.maxT), 6)).toBeGreaterThanOrEqual(520 - 1e-6);
     // To the tenth of a tonne: 0.2 t more and it falls short.
-    expect(6 * law.rangeLy(w.maxT + 0.2)).toBeLessThan(530);
+    expect(superchargeReach(law.rangeLy(w.maxT + 0.2), 6)).toBeLessThan(520);
   });
 });

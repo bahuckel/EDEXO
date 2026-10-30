@@ -110,6 +110,42 @@ function mapMaterialsToJournal(materials: unknown): ExplorationScanRecord["mater
  * plants were coloured for the M where the game, and the EDDN ScanOrganic set, coloured them for the
  * F arrival star; 2026-10-03).
  */
+/**
+ * A time as EDSM and Spansh write it, in ms: Spansh "2026-09-04 22:55:03+00" (an hour-only offset `Date.parse`
+ * refuses), EDSM "2026-09-04 22:55:03" (UTC, without saying so: read as local time it was hours off). NaN when not a
+ * time.
+ */
+export function parseSourceTime(v: unknown): number {
+  if (typeof v !== "string") return NaN;
+  let t = v.trim().replace(" ", "T");
+  if (t.includes("T") && /[+-]\d{2}$/.test(t)) t += ":00";
+  else if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(t)) t += "Z";
+  return Date.parse(t);
+}
+
+/**
+ * The rest of an orbit EDSM and Spansh give (the scan view places bodies by it, scanRoute.ts): the plane, and where
+ * the body was at a time (Spansh's `timestamps.meanAnomaly`; EDSM's `updateTime` else).
+ */
+function orbitFromBody(rec: ExplorationScanRecord, body: Record<string, unknown>): void {
+  const e = pickNum(body.orbitalEccentricity);
+  if (e !== undefined) rec.eccentricity = e;
+  const i = pickNum(body.orbitalInclination);
+  if (i !== undefined) rec.orbitalInclination = i;
+  const w = pickNum(body.argOfPeriapsis);
+  if (w !== undefined) rec.periapsis = w;
+  const p = edsmPeriodToJournalSeconds(pickNum(body.orbitalPeriod));
+  if (p !== undefined) rec.orbitalPeriod = p;
+  const node = pickNum(body.ascendingNode);
+  if (node !== undefined) rec.ascendingNode = node;
+  const m = pickNum(body.meanAnomaly);
+  if (m === undefined) return;
+  rec.meanAnomaly = m;
+  const stamps = body.timestamps && typeof body.timestamps === "object" ? (body.timestamps as Record<string, unknown>) : {};
+  const at = parseSourceTime(stamps.meanAnomaly ?? body.updateTime);
+  if (Number.isFinite(at)) rec.orbitEpochMs = at;
+}
+
 export function mapBarycentreBodyToExplorationRecord(
   body: Record<string, unknown>,
   systemAddress: number,
@@ -135,6 +171,10 @@ export function mapBarycentreBodyToExplorationRecord(
     orbitalPeriod: edsmPeriodToJournalSeconds(pickNum(body.orbitalPeriod)),
     ascendingNode: pickNum(body.ascendingNode),
     meanAnomaly: pickNum(body.meanAnomaly),
+    ...(() => {
+      const at = parseSourceTime((body.timestamps as Record<string, unknown> | undefined)?.meanAnomaly ?? body.updateTime);
+      return Number.isFinite(at) ? { orbitEpochMs: at } : {};
+    })(),
   };
 }
 
@@ -191,6 +231,7 @@ export function mapEdsmBodyToExplorationRecord(
     if (mag !== undefined) rec.absoluteMagnitude = mag;
     const stSemi = edsmSemiMajorAxisToM(pickNum(body.semiMajorAxis));
     if (stSemi !== undefined) rec.semiMajorAxis = stSemi;
+    orbitFromBody(rec, body);
     rec.rotationPeriod = edsmPeriodToJournalSeconds(pickNum(body.rotationalPeriod));
     const tilt = pickNum(body.axialTilt);
     if (tilt !== undefined) rec.axialTilt = tilt;
@@ -236,6 +277,7 @@ export function mapEdsmBodyToExplorationRecord(
   rec.orbitalInclination = pickNum(body.orbitalInclination);
   rec.periapsis = pickNum(body.argOfPeriapsis);
   rec.orbitalPeriod = edsmPeriodToJournalSeconds(pickNum(body.orbitalPeriod));
+  orbitFromBody(rec, body);
   rec.rotationPeriod = edsmPeriodToJournalSeconds(pickNum(body.rotationalPeriod));
   const tilt = pickNum(body.axialTilt);
   if (tilt !== undefined) rec.axialTilt = tilt;

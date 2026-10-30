@@ -30,10 +30,11 @@ const ship = {
   tankT: 100,
 };
 
-// Refuel at A; B is 492 ly on (a 82 ly supercharge: 75 t aboard or less), then C, then the next refuel at D.
+// Refuel at A; B is 482.16 ly on (an 82 ly supercharge less the 2 % margin: 75 t aboard or less), then C, then the
+// next refuel at D.
 const route = [
   hop("A", 0, { refuel: true, scoopLs: 12 }),
-  hop("B", 492),
+  hop("B", 482.16),
   hop("C", 892),
   hop("D", 1192, { refuel: true }),
   // Past the next refuel: not this stop's business, however far.

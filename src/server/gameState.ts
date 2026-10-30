@@ -1783,6 +1783,11 @@ export class GameStateStore {
     return this.bodyKeysBySystem.get(systemAddress) ?? [];
   }
 
+  /** A system's bio bodies from the journals (the scan route, scanRouteView.ts), whichever system is in view. */
+  bioBodiesInSystem(systemAddress: number): BodyExoState[] {
+    return this.journalBioBodies(systemAddress);
+  }
+
   private journalBioBodies(focus: number): BodyExoState[] {
     const inSystem: BodyExoState[] = [];
     for (const k of this.bodyKeysIn(focus)) {

@@ -18,6 +18,7 @@ import {
   type MarkerItem,
   type Selection,
 } from "./galaxy3d/GalaxyEngine";
+import { usePlotted } from "./galaxy3d/plottedSystems";
 import { detectGraphics, type Graphics } from "./galaxy3d/capabilities";
 import { SYSTEM_CHANGED_EVENT } from "./useLiveSnapshot";
 import { placeLabels } from "./galaxy3d/labelPlacement";
@@ -125,6 +126,8 @@ const isColour = (v: unknown): v is Colour => v === 0 || v === 1 || v === 2;
 /** The Brightness slider's range. */
 const isExposure = (v: unknown): v is number => typeof v === "number" && v >= 0.2 && v <= 4;
 const isWaitMinM = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0;
+/** Plotted systems marked at most, the most recently plotted (the engine's marker layers take thousands, not 10^5). */
+const PLOTTED_MARKERS = 20_000;
 /*
   Where the camera was when the map last closed: a map started again opens there, for as long as the window. Behind
   other tabs for ten minutes the map gives its memory back (TabSlot), and it came back zoomed out over the core
@@ -250,6 +253,8 @@ export function GalaxyMap3D() {
   const [stationsOn, setStationsOn] = usePersistedState("galaxy.layer.stations", false, isBool);
   // The plotted route's systems you have not been to (owner, 2026-10-04): placed from NavRoute.json.
   const [navUnvisitedOn, setNavUnvisitedOn] = usePersistedState("galaxy.layer.navUnvisited", true, isBool);
+  // Every plotted route's systems not visited (plan 1.3.3 R-2): on unless switched off.
+  const [plottedOn, setPlottedOn] = usePersistedState("galaxy.layer.plotted", true, isBool);
   /* The status bar's legend folds away (owner, 2026-10-04, plan 3.7), remembered. */
   const [legendOn, setLegendOn] = usePersistedState("galaxy.legendOpen", true, isBool);
   /* The Filter drawer (owner, 2026-10-04): remembered between opens, so the button says when one is on. */
@@ -939,6 +944,25 @@ export function GalaxyMap3D() {
     engine.current?.setMarkers("navUnvisited", items, 2);
   }, [route?.navRoute, navUnvisitedOn]);
 
+  // ------------------------------------------------------------- every plotted route's systems, not visited
+  // Read again on a new route or a jump (visited moves), not on every scan: the list runs to 200,000 systems.
+  const plotted = usePlotted(`${route?.navRoute?.length ?? 0}|${route?.navRoute?.[0]?.address ?? ""}|${route?.system ?? ""}`);
+  const plottedLeft = useMemo(() => plotted.filter((s) => !s.visited), [plotted]);
+  useEffect(() => {
+    const items: MarkerItem[] = plottedOn
+      ? plottedLeft.slice(-PLOTTED_MARKERS).map((s) => ({
+          id: String(s.address),
+          x: s.x,
+          y: s.y,
+          z: s.z,
+          // The finder's green where EDSM does not know it: a system nobody has reported.
+          color: s.edsm === false ? [0.36, 0.9, 0.46] : [0.55, 0.45, 0.95],
+          size: 4,
+        }))
+      : [];
+    engine.current?.setMarkers("plotted", items, 1);
+  }, [plottedLeft, plottedOn]);
+
   // -------------------------------------------------------------------------- the NavRoute finder
   /* The systems its filters leave, marked on the map (owner, 2026-10-04); none while it is closed. */
   const [navShown, setNavShown] = useState<NavRouteSystemDTO[]>([]);
@@ -1426,6 +1450,9 @@ export function GalaxyMap3D() {
           extraSet={extraSet}
           navUnvisitedOn={navUnvisitedOn}
           setNavUnvisitedOn={setNavUnvisitedOn}
+          plottedOn={plottedOn}
+          setPlottedOn={setPlottedOn}
+          plottedCount={plottedLeft.length}
           waitMinM={waitMinM}
           setWaitMinM={setWaitMinM}
         />
@@ -1663,12 +1690,14 @@ export function GalaxyMap3D() {
                         400,
                         s.mine
                           ? { kind: "marker", layer: "you", id: s.addr!, x: s.x, y: s.y, z: s.z }
-                          : { kind: "index", ordinal: s.ordinal!, x: s.x, y: s.y, z: s.z },
+                          : s.plotted
+                            ? { kind: "marker", layer: "plotted", id: s.addr!, x: s.x, y: s.y, z: s.z }
+                            : { kind: "index", ordinal: s.ordinal!, x: s.x, y: s.y, z: s.z },
                       )
                     }
                   >
                     <span>{s.name}</span>
-                    <em>{s.mine ? "yours" : "system"}</em>
+                    <em title={s.plotted}>{s.mine ? "yours" : s.plotted ? "plotted" : "system"}</em>
                   </button>
                 </li>
               ))}

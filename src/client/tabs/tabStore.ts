@@ -22,6 +22,7 @@ import { flushSync } from "react-dom";
 export type TabKind =
   | "galaxy"
   | "systemMap"
+  | "scanRoute"
   | "boxels"
   | "myExo"
   | "encyclopedia"
@@ -47,6 +48,8 @@ export const TAB_SCREENS: readonly { kind: TabKind; label: string }[] = [
   { kind: "galaxy", label: "Galaxy map" },
   // Owner, 2026-10-09: the system map opens in a tab of its own.
   { kind: "systemMap", label: "System map" },
+  // Owner, 2026-10-30 (plan 1.3.3 R-4): the route's systems from above, the shortest way over the bodies worth it.
+  { kind: "scanRoute", label: "Scan route" },
   { kind: "boxels", label: "Boxels" },
   { kind: "myExo", label: "My discoveries" },
   { kind: "encyclopedia", label: "Encyclopedia" },
@@ -118,9 +121,9 @@ export const TAB_BRIDGE: TabBridge | null =
     ? ((window as unknown as { edexoElectron?: { tabs?: TabBridge } }).edexoElectron?.tabs ?? null)
     : null;
 
-/** Screens this window can show: Colonize has no system map (it follows Compare's chosen body). */
+/** Screens this window can show: Colonize has no system map (it follows Compare's chosen body) nor scan route. */
 export function screenFitsHere(kind: TabKind): boolean {
-  return TAB_APP === "compare" || kind !== "systemMap";
+  return TAB_APP === "compare" || (kind !== "systemMap" && kind !== "scanRoute");
 }
 /** Which tabs every other window holds (from the main process). */
 let elsewhere: Record<string, string[]> = {};

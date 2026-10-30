@@ -293,6 +293,13 @@ export class NeutronIndex {
     );
   }
 
+  /** The system's address (id64), for what is known about it elsewhere (the route's values, plan 1.3.3 R-3). */
+  addressOf(i: number): number {
+    const buf = Buffer.alloc(8);
+    readSync(this.fd, buf, 0, 8, this.recAt + i * REC_B + 8);
+    return Number(buf.readBigUInt64LE(0));
+  }
+
   close(): void {
     this.cache.clear();
     closeSync(this.fd);

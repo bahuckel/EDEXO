@@ -24,7 +24,7 @@ export interface NavRouteSystem {
   pos: [number, number, number];
   firstSeen: string;
   lastSeen: string;
-  /** How many kept routes passed through it. */
+  /** How many plotted routes passed through it (every plot, the routes no longer kept too). */
   routes: number;
   /** EDSM's answer: true it knows the system, false it does not, absent not asked. */
   edsm?: boolean;
@@ -47,6 +47,12 @@ interface FileShape {
 
 /** Routes kept; the oldest go first. Systems seen only on dropped routes go with them. */
 export const MAX_ROUTES = 200;
+/**
+ * Systems kept past their routes (plan 1.3.3 R-2, owner 2026-10-30: "plotted route systems get added to the db as not
+ * visited … if someone plots 500 routes, he will get those entries in his searches"): a route record leaves after
+ * MAX_ROUTES, its systems stay, the least recently plotted leaving past this many.
+ */
+export const MAX_SYSTEMS = 200_000;
 /** EDSM politeness, the same as the route strip's first-footfall lookup. */
 const NAMES_PER_REQUEST = 40;
 const REQUEST_GAP_MS = 5_000;
@@ -127,6 +133,9 @@ export function recordNavRoute(waypoints: NavRouteWaypointDTO[] | null, nowIso =
     if (s) {
       s.lastSeen = nowIso;
       s.routes += 1;
+      // Last in the map's order: the most recently plotted are the ones the map marks when it marks only some.
+      systems.delete(w.systemAddress);
+      systems.set(w.systemAddress, s);
       if (w.starClass) s.starClass = w.starClass;
     } else {
       systems.set(w.systemAddress, {
@@ -140,12 +149,10 @@ export function recordNavRoute(waypoints: NavRouteWaypointDTO[] | null, nowIso =
       });
     }
   }
-  while (routes.length > MAX_ROUTES) {
-    const old = routes.shift()!;
-    for (const a of old.systems) {
-      const s = systems.get(a);
-      if (s && --s.routes <= 0) systems.delete(a);
-    }
+  while (routes.length > MAX_ROUTES) routes.shift();
+  if (systems.size > MAX_SYSTEMS) {
+    const oldest = [...systems.values()].sort((a, b) => a.lastSeen.localeCompare(b.lastSeen));
+    for (const s of oldest.slice(0, systems.size - MAX_SYSTEMS)) systems.delete(s.address);
   }
   saveSoon();
   return true;
@@ -170,6 +177,31 @@ export function navRouteLog(): {
     systems: [...systems.values()].sort((a, b) => b.lastSeen.localeCompare(a.lastSeen)),
     checking,
   };
+}
+
+/** One kept system, by address. */
+export function plottedSystem(address: number): NavRouteSystem | null {
+  ensureLoaded();
+  return systems.get(address) ?? null;
+}
+
+/**
+ * Every kept system, compact for the map's layer and the search: [address, name, star class, x, y, z, EDSM (0 not
+ * asked, 1 knows it, 2 does not), routes].
+ */
+export function plottedSystemsCompact(): [number, string, string, number, number, number, 0 | 1 | 2, number][] {
+  ensureLoaded();
+  return [...systems.values()].map((s) => [s.address, s.name, s.starClass, s.pos[0], s.pos[1], s.pos[2], s.edsm === undefined ? 0 : s.edsm ? 1 : 2, s.routes]);
+}
+
+/** Kept systems whose name holds `q` (at least 3 letters), most recently plotted first. */
+export function findPlottedSystems(q: string, max = 20): NavRouteSystem[] {
+  ensureLoaded();
+  const needle = q.trim().toLowerCase();
+  if (needle.length < 3) return [];
+  const out: NavRouteSystem[] = [];
+  for (const s of systems.values()) if (s.name.toLowerCase().includes(needle)) out.push(s);
+  return out.sort((a, b) => b.lastSeen.localeCompare(a.lastSeen)).slice(0, max);
 }
 
 /** The last route kept, in order, for drawing on the map. */

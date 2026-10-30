@@ -562,6 +562,7 @@ export function App() {
           </Suspense>
         </TabSlot>
       ) : null}
+
       <AppLegalFooter />
     </div>
     </TabHost>

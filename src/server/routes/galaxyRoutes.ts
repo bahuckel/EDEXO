@@ -37,7 +37,16 @@ import {
   systemTraitCounts,
 } from "../galaxyTraits.js";
 import { downloadGalaxyIndex, galaxyIndexStatus, probeGalaxyIndexSize } from "../galaxyIndexFiles.js";
-import { checkNavRouteSystemsOnEdsm, clearNavRouteLog, lastNavRoute, navRouteLog } from "../navRouteLog.js";
+import {
+  checkNavRouteSystemsOnEdsm,
+  clearNavRouteLog,
+  findPlottedSystems,
+  lastNavRoute,
+  navRouteLog,
+  plottedSystem,
+  plottedSystemsCompact,
+} from "../navRouteLog.js";
+import { plottedTag } from "../../shared/plottedTag.js";
 import { BODY_TRAIT_GROUP, BODY_TRAITS, STAR_CLASSES } from "../../shared/galaxyTraits.js";
 import { loadRegionMap } from "../regionMapData.js";
 import { galaxyFind, galaxySector } from "../galaxyFind.js";
@@ -358,7 +367,26 @@ export function registerGalaxyRoutes(
    * clock: it is the commander's own small list.
    */
   app.get("/api/navroutes", (_req, res) => {
-    res.json({ ...navRouteLog(), last: lastNavRoute().map((s) => s.address) });
+    // EDSM's answers for the route plotted now (the finder's Next): the kept systems now run to 200,000.
+    const last = lastNavRoute();
+    const ids = new Set(last.map((s) => s.address));
+    const log = navRouteLog();
+    res.json({ ...log, systems: log.systems.filter((s) => ids.has(s.address)), last: last.map((s) => s.address) });
+  });
+  /**
+   * Every system on a route the commander plotted in the game (plan 1.3.3 R-2), for the map's "Plotted systems"
+   * layer: compact rows (navRouteLog.ts `plottedSystemsCompact`) with whether the journals have him there.
+   */
+  app.get("/api/navroutes/plotted", (_req, res) => {
+    const store = opts.getJournalStore?.() ?? null;
+    res.json({ systems: plottedSystemsCompact().map((r) => [...r, store?.visitedSystems.has(r[0]) ? 1 : 0]) });
+  });
+  /** One plotted system with its tag (`?addr=`): the map's panel for a system the galaxy index does not have. */
+  app.get("/api/navroutes/system", (req, res) => {
+    const s = plottedSystem(Number(req.query.addr));
+    if (!s) return void res.status(404).json({ error: "not on a plotted route" });
+    const visited = !!opts.getJournalStore?.()?.visitedSystems.has(s.address);
+    res.json({ ...s, visited, tag: plottedTag({ visited, edsm: s.edsm }) });
   });
   /** `{ addresses: number[] }` — ask EDSM about these (at most 2,000), in the background. */
   app.post("/api/navroutes/edsm-check", (req, res) => {
@@ -486,7 +514,24 @@ export function registerGalaxyRoutes(
     const t = tileIndex();
     if (!t) return void noIndex(res);
     const q = String(req.query.q ?? "").slice(0, 80);
-    const found = galaxyFind(t, opts.getJournalStore?.() ?? null, q, opts.getImportedSystems?.() ?? []);
+    const store = opts.getJournalStore?.() ?? null;
+    const found = galaxyFind(t, store, q, opts.getImportedSystems?.() ?? []);
+    // Systems only a plotted route knows (plan 1.3.3 R-2): after the index's and his own, tagged.
+    const have = new Set(found.systems.map((s) => s.name.toLowerCase()));
+    for (const p of findPlottedSystems(q)) {
+      if (have.has(p.name.toLowerCase())) continue;
+      const visited = !!store?.visitedSystems.has(p.address);
+      found.systems.push({
+        name: p.name,
+        x: p.pos[0],
+        y: p.pos[1],
+        z: p.pos[2],
+        ordinal: null,
+        addr: String(p.address),
+        mine: false,
+        plotted: plottedTag({ visited, edsm: p.edsm }) ?? "Plotted in-game, visited",
+      });
+    }
     // Stations by name, when they are downloaded (owner, 2026-10-13); a duplicated name says its system.
     let stations: NonNullable<GalaxyFindDTO["stations"]> = [];
     if (stationsStatus().present) {

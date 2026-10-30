@@ -372,7 +372,7 @@ function abbreviateNotablePlanetClass(pc: string): string {
   return n.split(/\s+/).slice(0, 3).join(" ");
 }
 
-function notableTagForRecord(rec: ExplorationScanRecord): string | null {
+export function notableTagForRecord(rec: ExplorationScanRecord): string | null {
   const pc = (rec.planetClass ?? "").trim();
   const norm = pc.toLowerCase().replace(/\s+/g, " ");
   const tf = explorationRecordIsTerraformable(rec);

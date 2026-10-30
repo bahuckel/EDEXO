@@ -71,7 +71,12 @@ export function mergeBarycentreJournalLine(store: GameStateStore, line: JournalL
   if ((n = pickNum(line.Periapsis)) !== undefined) rec.periapsis = n;
   if ((n = pickNum(line.OrbitalPeriod)) !== undefined) rec.orbitalPeriod = n;
   if ((n = pickNum(line.AscendingNode)) !== undefined) rec.ascendingNode = n;
-  if ((n = pickNum(line.MeanAnomaly)) !== undefined) rec.meanAnomaly = n;
+  if ((n = pickNum(line.MeanAnomaly)) !== undefined) {
+    rec.meanAnomaly = n;
+    // Where the body was at the scan: the scan view (scanRoute) moves it on from here.
+    const at = Date.parse(ts);
+    if (Number.isFinite(at)) rec.orbitEpochMs = at;
+  }
 
   const fresh = store.scanIndexIsFresh();
   store.explorationScans.set(k, rec);
@@ -199,7 +204,12 @@ export function mergeExplorationScan(store: GameStateStore, line: JournalLine, t
   if ((n = pickNum(line.Periapsis)) !== undefined) rec.periapsis = n;
   if ((n = pickNum(line.OrbitalPeriod)) !== undefined) rec.orbitalPeriod = n;
   if ((n = pickNum(line.AscendingNode)) !== undefined) rec.ascendingNode = n;
-  if ((n = pickNum(line.MeanAnomaly)) !== undefined) rec.meanAnomaly = n;
+  if ((n = pickNum(line.MeanAnomaly)) !== undefined) {
+    rec.meanAnomaly = n;
+    // Where the body was at the scan: the scan view (scanRoute) moves it on from here.
+    const at = Date.parse(ts);
+    if (Number.isFinite(at)) rec.orbitEpochMs = at;
+  }
   if ((n = pickNum((line as Record<string, unknown>).RotationPeriod)) !== undefined) rec.rotationPeriod = n;
   if ((n = pickNum((line as Record<string, unknown>).AxialTilt)) !== undefined) rec.axialTilt = n;
 

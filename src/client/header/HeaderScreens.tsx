@@ -33,6 +33,9 @@ const GalaxyMap3D = memo(lazy(() => import("../GalaxyMap3D").then((m) => ({ defa
 /** A galaxy map left behind other tabs this long gives its memory back (discuss item 23); its tab redraws it. */
 const GALAXY_RELEASE_MS = 10 * 60_000;
 
+/** The scan route (plan 1.3.3 R-4): a WebGL view, freed in the background as the galaxy map is. */
+const ScanRouteScreen = lazy(() => import("../scanRoute/ScanRouteScreen").then((m) => ({ default: m.ScanRouteScreen })));
+
 /** The EDEXO browser's tab (plan 9): its code loads only when the tab opens. */
 const BrowserScreen = lazy(() => import("../BrowserScreen").then((m) => ({ default: m.BrowserScreen })));
 
@@ -72,6 +75,8 @@ export interface HeaderScreensProps {
   closeMyExo: () => void;
   sessionOpen: boolean;
   closeSession: () => void;
+  scanRouteOpen: boolean;
+  closeScanRoute: () => void;
   dataBreakdownOpen: boolean;
   setDataBreakdownOpen: (open: boolean) => void;
   scanDataOn: boolean;
@@ -116,6 +121,8 @@ export function HeaderScreens({
   closeMyExo,
   sessionOpen,
   closeSession,
+  scanRouteOpen,
+  closeScanRoute,
   dataBreakdownOpen,
   setDataBreakdownOpen,
   scanDataOn,
@@ -256,6 +263,13 @@ export function HeaderScreens({
             onClose={() => setDataBreakdownOpen(false)}
           />
         </Suspense>
+      ) : null}
+      {scanRouteOpen ? (
+        <TabSlot kind="scanRoute" releaseAfterMs={GALAXY_RELEASE_MS}>
+          <Suspense fallback={<ModalLoading />}>
+            <ScanRouteScreen onClose={closeScanRoute} />
+          </Suspense>
+        </TabSlot>
       ) : null}
       {sessionOpen ? (
         <TabSlot kind="session">

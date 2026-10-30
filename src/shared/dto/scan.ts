@@ -204,6 +204,8 @@ export interface ExplorationScanRecord {
   orbitalPeriod?: number;
   ascendingNode?: number;
   meanAnomaly?: number;
+  /** When `meanAnomaly` was true (ms since 1970): the Scan's time, or Spansh's `timestamps.meanAnomaly`. */
+  orbitEpochMs?: number;
   /** Planet `Scan.RotationPeriod` (s). */
   rotationPeriod?: number;
   /** Planet `Scan.AxialTilt` (rad). */

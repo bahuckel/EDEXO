@@ -204,6 +204,7 @@ export async function fetchRemoteSystem(
       records: shaped.records,
       bio: out,
       signalBodyCount: bio.size,
+      bodyCount: num(dumpSys?.bodyCount) ?? null,
     },
   };
 }
@@ -214,8 +215,12 @@ export function remoteSystemsCachePath(): string {
   return join(dirname(resolveUserSettingsJsonPath()), "edexo-remote-systems.json");
 }
 
-/** Format 2 (2026-09-27): body pressures in pascals, not Spansh's atmospheres — format 1 is refetched. */
-type CacheFile = { format: 2; systems: RemoteSystemRecord[] };
+/**
+ * Format 2 (2026-09-27): body pressures in pascals, not Spansh's atmospheres — format 1 is refetched. Format 3
+ * (2026-10-30): every body's whole orbit with its time, and the system's body count (the scan view, R-4); 4: the
+ * orbit times read right (Spansh's "+00" was not).
+ */
+type CacheFile = { format: 4; systems: RemoteSystemRecord[] };
 
 function fresh(r: RemoteSystemRecord, nowMs: number): boolean {
   const t = Date.parse(r.fetchedAt);
@@ -228,7 +233,7 @@ export function readRemoteSystemsCache(nowMs = Date.now()): RemoteSystemRecord[]
   if (!existsSync(p)) return [];
   try {
     const j = JSON.parse(readFileSync(p, "utf8").replace(/^\uFEFF/, "")) as CacheFile;
-    if (j?.format !== 2 || !Array.isArray(j.systems)) return [];
+    if (j?.format !== 4 || !Array.isArray(j.systems)) return [];
     return j.systems.filter((r) => r && typeof r.systemAddress === "number" && fresh(r, nowMs));
   } catch {
     return [];
@@ -245,7 +250,7 @@ export function writeRemoteSystemToCache(system: RemoteSystemRecord, nowMs = Dat
   try {
     mkdirSync(dirname(p), { recursive: true });
     const tmp = `${p}.tmp`;
-    writeFileSync(tmp, JSON.stringify({ format: 2, systems } satisfies CacheFile), "utf8");
+    writeFileSync(tmp, JSON.stringify({ format: 4, systems } satisfies CacheFile), "utf8");
     renameSync(tmp, p);
   } catch {
     /* a cache that cannot be written only costs a fetch next time */

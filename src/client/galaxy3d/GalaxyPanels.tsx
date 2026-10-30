@@ -9,6 +9,7 @@ import { fmtCrExact, fmtLy } from "@shared/format";
 import type { CodexMapSystemDTO } from "@shared/dto/codexMap.js";
 import { CopySystemButton } from "../CopySystemButton";
 import { SystemBookmarkButton } from "../BookmarkButton";
+import { SystemValues } from "./SystemValues";
 
 const cr = fmtCrExact;
 
@@ -42,16 +43,20 @@ export function IndexRecord({
   addr,
   heading,
   fallbackName,
+  quiet,
 }: {
   ordinal?: number;
   addr?: string;
   heading?: boolean;
   fallbackName?: string;
+  /** Nothing when the index does not have it: the panel above says what is known (a plotted system, R-2). */
+  quiet?: boolean;
 }) {
   const d = useJson<GalaxySystemDTO>(
     ordinal != null ? `/api/galaxy/system?i=${ordinal}` : `/api/galaxy/system?addr=${encodeURIComponent(addr ?? "")}`,
   );
   if (d === null || d === "loading") return <p>Loading…</p>;
+  if (d === "error" && quiet) return null;
   if (d === "error")
     return fallbackName ? (
       <h2 className="g3d-panel__name">
@@ -110,6 +115,8 @@ export function IndexRecord({
       <p className="g3d-panel__note">
         Recorded by other commanders, so first footfall (×5) has most likely been taken — values are at 1×.
       </p>
+      {/* Its bodies from Spansh, valued (plan 1.3.3 R-1 / R-3): not only "signals seen, bodies catalogued". */}
+      {d.evidence.bodiesKnown || d.evidence.fss || d.bodyCount ? <SystemValues addr={d.id64} name={d.name} /> : null}
     </>
   );
 }

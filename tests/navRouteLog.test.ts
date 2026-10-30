@@ -8,11 +8,16 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   checkNavRouteSystemsOnEdsm,
+  findPlottedSystems,
   lastNavRoute,
+  MAX_ROUTES,
   navRouteLog,
+  plottedSystem,
+  plottedSystemsCompact,
   recordNavRoute,
   resetNavRouteLogForTests,
 } from "../src/server/navRouteLog.js";
+import { plottedTag } from "../src/shared/plottedTag.js";
 import type { NavRouteWaypointDTO } from "../src/server/navRouteFuel.js";
 
 let dir: string;
@@ -51,6 +56,24 @@ describe("the NavRoute log", () => {
     const wolf = log.systems.find((s) => s.address === 3)!;
     expect(wolf).toMatchObject({ starClass: "W", routes: 2, firstSeen: "2026-10-04T10:00:00Z", lastSeen: "2026-10-04T11:00:00Z" });
     expect(lastNavRoute().map((s) => s.name)).toEqual(["Wolf B", "Hole C"]);
+  });
+
+  it("keeps every plotted system past the routes kept, to find by name (plan 1.3.3 R-2: 500 routes)", () => {
+    for (let k = 0; k < MAX_ROUTES + 50; k++) {
+      recordNavRoute([wp(10_000 + k, `Plotted ${k} A`, "K"), wp(20_000 + k, `Plotted ${k} B`, "N")], `2026-10-30T00:${String(k % 60).padStart(2, "0")}:00Z`);
+    }
+    expect(navRouteLog().routes).toHaveLength(MAX_ROUTES);
+    // The first route's systems stay after its record has gone.
+    expect(plottedSystem(10_000)?.name).toBe("Plotted 0 A");
+    expect(plottedSystemsCompact()).toHaveLength(2 * (MAX_ROUTES + 50));
+    expect(findPlottedSystems("plotted 7 b").map((s) => s.address)).toEqual([20_007]);
+    expect(findPlottedSystems("pl")).toEqual([]);
+  });
+
+  it("tags a plotted system by what is known of it", () => {
+    expect(plottedTag({ visited: false, edsm: false })).toBe("Plotted in-game, not visited · not on EDSM");
+    expect(plottedTag({ visited: false, edsm: undefined })).toBe("Plotted in-game, not visited · EDSM not asked");
+    expect(plottedTag({ visited: true, edsm: false })).toBeNull();
   });
 
   it("asks EDSM forty names at a time, and remembers which it knows", async () => {

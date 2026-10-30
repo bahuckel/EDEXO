@@ -33,6 +33,8 @@ export interface RemoteSystemRecord {
    * of the system, so "no biology" is unknown rather than known. Absent on records cached before it.
    */
   signalBodyCount?: number;
+  /** The system's bodies as its honk counted them (Spansh `bodyCount`); null or absent when nobody reported it. */
+  bodyCount?: number | null;
 }
 
 /** What the main screen shows about a looked-up system that is not in the journals. */

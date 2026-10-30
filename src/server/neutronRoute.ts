@@ -100,6 +100,8 @@ export interface NeutronHop {
   rangeLy?: number;
   /** FSD health after this hop, when known. */
   fsdHealth: number | null;
+  /** The neutron star's system address (id64), when the index gives it: its values from Spansh (plan 1.3.3 R-3). */
+  address?: number;
 }
 
 export interface NeutronRoute {
@@ -178,6 +180,20 @@ export function rangeAt(ship: Pick<NeutronShip, "rangeLy" | "rangeByFuel">, fuel
   return Number.isFinite(m) && m > 0 ? r * m : r;
 }
 
+/**
+ * The share of a supercharge's reach a plan leaves unused (owner, 2026-10-30: "make our math a bit on the safe side …
+ * better a Neutron > Normal > Neutron than Neutron > Neutron, even if it's within range, but only if the jump range is
+ * close to the maximum"). A hop within this of the reach is a supercharge and a normal jump: the law matched the
+ * tester's 68 supercharges to 0.000 % (docs/perf/_tester-caspian.mts), but the ship flown is not always the ship
+ * planned (cargo taken on, a fuel level misread, a module swapped).
+ */
+export const SUPERCHARGE_MARGIN = 0.02;
+
+/** How far one supercharge is planned to go: its reach, less the margin. */
+export function superchargeReach(r: number, boost: number): number {
+  return boost * r * (1 - SUPERCHARGE_MARGIN);
+}
+
 export function jumpsFrom(
   fromNeutron: boolean,
   d: number,
@@ -186,8 +202,9 @@ export function jumpsFrom(
 ): { jumps: number; boosted: number } {
   if (d <= 0) return { jumps: 0, boosted: 0 };
   if (!fromNeutron) return { jumps: Math.ceil(d / r - 1e-9), boosted: 0 };
-  if (d <= boost * r) return { jumps: 1, boosted: 1 };
-  return { jumps: 1 + Math.ceil((d - boost * r) / r - 1e-9), boosted: 1 };
+  const reach = superchargeReach(r, boost);
+  if (d <= reach) return { jumps: 1, boosted: 1 };
+  return { jumps: 1 + Math.ceil((d - reach) / r - 1e-9), boosted: 1 };
 }
 
 /**
@@ -579,7 +596,7 @@ async function searchLeg(
     const left = dist(u.pos, to);
     // The range with the fuel aboard here: the hop's first jump, the longest of them (the conservative count).
     const r = rangeWith(u.fuel);
-    const reach = boost * r;
+    const reach = superchargeReach(r, boost);
     // The end itself.
     /*
       Fuel for a hop: its supercharged jump comes out of the tank; normal jumps beyond what the tank holds are only
@@ -668,7 +685,7 @@ export let lastLegStats: { expansions: number; open: number } | null = null;
 
 /** The whole route through the waypoints in order (the first is where the ship starts). */
 export async function planNeutronRoute(
-  index: Pick<NeutronIndex, "within" | "nameOf"> & Partial<Pick<NeutronIndex, "eachToward">>,
+  index: Pick<NeutronIndex, "within" | "nameOf"> & Partial<Pick<NeutronIndex, "eachToward" | "addressOf">>,
   waypoints: { name: string; x: number; y: number; z: number }[],
   ship: NeutronShip,
   /** Time for the refining passes (ms): a re-plot in flight wants the next stop soon more than a jump less. */
@@ -765,6 +782,7 @@ export async function planNeutronRoute(
         jumpsLeft: fuelModel.jumpsLeft(n.fuel),
         rangeLy: Math.round(fuelModel.rangeWith(leaving) * 10) / 10,
         fsdHealth: health,
+        ...(!isEnd && index.addressOf ? { address: index.addressOf(n.star!.i) } : {}),
       });
       prevPos = n.pos;
       leaving = n.fuel;
@@ -823,7 +841,7 @@ export function routeInjections(hops: readonly NeutronHop[], rangeLy: number, bo
   return hops.map((h, i) => {
     if (i === 0 || h.jumps < 2) return [];
     const d = dist(hops[i - 1]!, h);
-    const normalLy = h.boosted ? d - boost * rangeLy : d;
+    const normalLy = h.boosted ? d - superchargeReach(rangeLy, boost) : d;
     return injectionsToSaveJump(normalLy, h.jumps - h.boosted, rangeLy);
   });
 }

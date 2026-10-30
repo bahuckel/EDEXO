@@ -491,7 +491,17 @@ export interface GalaxyFindDTO {
   /** Sector columns (every height merged) whose name matches, with their centroid and size. */
   sectors: { name: string; x: number; y: number; z: number; systems: number }[];
   /** The commander's systems first (`mine`, by `addr`), then the galaxy index's (by `ordinal`). */
-  systems: { name: string; x: number; y: number; z: number; ordinal: number | null; addr: string | null; mine: boolean }[];
+  systems: {
+    name: string;
+    x: number;
+    y: number;
+    z: number;
+    ordinal: number | null;
+    addr: string | null;
+    mine: boolean;
+    /** Known only from a route plotted in the game (plan 1.3.3 R-2): its tag ("Plotted in-game, not visited · …"). */
+    plotted?: string;
+  }[];
   /** The index scan stopped at its time budget: there may be more. */
   partial: boolean;
   /**

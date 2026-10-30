@@ -11,6 +11,7 @@ import type { NavRouteSystemDTO } from "../GalaxyNavRoutePanel";
 import type { JumpRow } from "./jumpRow";
 import type { MineRow, SpanshFindHit } from "./mapConstants";
 import type { NeutronMark } from "./neutronMarks";
+import { plottedByAddr } from "./plottedSystems";
 
 /** A stop of the Targets plan, numbered from 1. */
 export type PlanStop = NonNullable<GalaxyNextDTO["plan"]>["stops"][number] & { n: number };
@@ -48,8 +49,15 @@ export function extraPoint(
 }
 
 /** A NavRoute marker (the finder's, or the plotted route's unvisited ones) by its address. */
-export function navPoint(route: GalaxyRouteDTO | null, navShown: NavRouteSystemDTO[], layer: string, id: string) {
+export function navPoint(
+  route: GalaxyRouteDTO | null,
+  navShown: NavRouteSystemDTO[],
+  layer: string,
+  id: string,
+): { address: number; name: string; starClass: string; x: number; y: number; z: number; visited: boolean; tag?: string | null } | null {
   if (layer === "navUnvisited") return route?.navRoute.find((s) => String(s.address) === id) ?? null;
+  // A system of any route plotted in the game (plan 1.3.3 R-2), with its "plotted, not visited" tag.
+  if (layer === "plotted") return plottedByAddr(id);
   if (layer === "navroute") {
     const s = navShown.find((x) => String(x.address) === id);
     return s

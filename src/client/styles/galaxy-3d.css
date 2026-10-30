@@ -1857,3 +1857,10 @@
   color: var(--accent-bright);
   font-variant-numeric: tabular-nums;
 }
+
+/* A neutron stop's worth from Spansh (plan 1.3.3 R-3), under its name. */
+.g3d-neutron-worth {
+  display: block;
+  color: var(--text-dim);
+  font-size: var(--fs-2xs);
+}

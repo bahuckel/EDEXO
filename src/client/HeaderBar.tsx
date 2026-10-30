@@ -77,6 +77,7 @@ export const HeaderBar = memo(function HeaderBar({
   const [dataBreakdownOpen, setDataBreakdownOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [sessionOpen, setSessionOpen] = useScreenOpen("session");
+  const [scanRouteOpen, setScanRouteOpen] = useScreenOpen("scanRoute");
   const [feederOpen, setFeederOpen] = useState(false);
   /**
    * §11.3. The button appears only when this machine actually has a corpus — otherwise it would
@@ -109,6 +110,7 @@ export const HeaderBar = memo(function HeaderBar({
       setEncyclopediaOpen,
       setAchievementsOpen,
       setSessionOpen,
+      setScanRouteOpen,
       setOptionsOpen,
     }),
     [
@@ -122,6 +124,7 @@ export const HeaderBar = memo(function HeaderBar({
       setEncyclopediaOpen,
       setAchievementsOpen,
       setSessionOpen,
+      setScanRouteOpen,
     ],
   );
   const [notableQuick, setNotableQuick] = useState<{
@@ -141,6 +144,7 @@ export const HeaderBar = memo(function HeaderBar({
   const closeAchievements = useCallback(() => setAchievementsOpen(false), [setAchievementsOpen]);
   const closeEncyclopedia = useCallback(() => setEncyclopediaOpen(false), [setEncyclopediaOpen]);
   const closeSession = useCallback(() => setSessionOpen(false), [setSessionOpen]);
+  const closeScanRoute = useCallback(() => setScanRouteOpen(false), [setScanRouteOpen]);
   // One function for the header's life, so the system card's memo holds (snapSlice.ts).
   const openNotableQuick = useCallback((n: NotableBodyInfo, ev: ReactMouseEvent) => {
     ev.stopPropagation();
@@ -463,6 +467,8 @@ export const HeaderBar = memo(function HeaderBar({
         closeMyExo={closeMyExo}
         sessionOpen={sessionOpen}
         closeSession={closeSession}
+        scanRouteOpen={scanRouteOpen}
+        closeScanRoute={closeScanRoute}
         dataBreakdownOpen={dataBreakdownOpen}
         setDataBreakdownOpen={setDataBreakdownOpen}
         scanDataOn={scanDataOn}

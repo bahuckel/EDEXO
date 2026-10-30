@@ -16,6 +16,9 @@ export function LayersMenu({
   extraSet,
   navUnvisitedOn,
   setNavUnvisitedOn,
+  plottedOn,
+  setPlottedOn,
+  plottedCount,
   waitMinM,
   setWaitMinM,
 }: {
@@ -26,6 +29,9 @@ export function LayersMenu({
   extraSet: Record<GalaxyLayerKind, (v: boolean) => void>;
   navUnvisitedOn: boolean;
   setNavUnvisitedOn: (v: boolean) => void;
+  plottedOn: boolean;
+  setPlottedOn: (v: boolean) => void;
+  plottedCount: number;
   waitMinM: number;
   setWaitMinM: (v: number) => void;
 }) {
@@ -89,6 +95,12 @@ export function LayersMenu({
         hint="The systems on the route you plotted in the game that you have not been to, placed from NavRoute.json"
         on={navUnvisitedOn}
         set={setNavUnvisitedOn}
+      />
+      <MenuToggle
+        label={`Plotted systems – not visited${plottedCount ? ` (${plottedCount.toLocaleString()})` : ""}`}
+        hint="Every system on a route you plotted in the game and have not been to, kept from each plot: green where EDSM does not know it"
+        on={plottedOn}
+        set={setPlottedOn}
       />
       {layers.you ? (
         <MenuRow

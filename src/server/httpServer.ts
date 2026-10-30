@@ -15,6 +15,7 @@ import { registerBoxelRoutes } from "./routes/boxelRoutes.js";
 import { registerDiscoveriesRoutes } from "./routes/discoveriesRoutes.js";
 import { registerExpeditionRoutes } from "./routes/expeditionRoutes.js";
 import { registerNeutronRoutes } from "./routes/neutronRoutes.js";
+import { registerRouteSystemRoutes } from "./routes/routeSystemRoutes.js";
 import { registerFinderRoutes } from "./routes/finderRoutes.js";
 import { registerColonizeRoutes } from "./routes/colonizeRoutes.js";
 import { registerSystemInfoRoutes } from "./routes/systemInfoRoutes.js";
@@ -131,6 +132,7 @@ export function createHttpServer(opts: HttpServerOptions): {
   registerDiscoveriesRoutes(app, opts, routeCtx);
   registerExpeditionRoutes(app, opts, routeCtx);
   registerNeutronRoutes(app, opts, routeCtx);
+  registerRouteSystemRoutes(app, opts);
   registerFinderRoutes(app, opts, routeCtx);
   registerColonizeRoutes(app, opts, routeCtx);
 
