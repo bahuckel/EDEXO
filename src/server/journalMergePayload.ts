@@ -120,8 +120,11 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
   39: comp scans of colour-first genera ("Prasinum Sinuous Tubers", "Aureum Brain Tree", "Luteolum Anemone") and of
       Bark Mounds / Amphora Plant / Crystalline Shards lock their real genus (shared/codexLog.ts codexGenusOfSpecies);
       cached locks had the first word ("Prasinum") as the genus.
+  40: `lastFuelMainT` / `lastFuelAt` — the main tank's last known level (the neutron planner without the game running,
+      owner 2026-10-30); and the scans' `orbitEpochMs`, when their mean anomaly was true (the scan route's positions,
+      plan 1.3.3 R-4): cached scans had no time for it and sat at a fixed angle.
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 39;
+export const JOURNAL_MERGE_CACHE_FORMAT = 40;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {
@@ -229,6 +232,9 @@ export type JournalMergeCachePayload = {
   loadoutFuelReserveCapacityT?: number | null;
   lastFsdJumpFuelUsedT?: number | null;
   lastFsdJumpDistLy?: number | null;
+  /** The main tank's last known level and when (gameState.ts `lastFuelMainT`). */
+  lastFuelMainT?: number | null;
+  lastFuelAt?: string | null;
   jumpRange?: JumpRangeState;
   fsdFuel?: FsdFuelState;
   /** The FSD's health and wear per supercharge (shared/fsdWear.ts, plan 8.4). */

@@ -136,7 +136,10 @@ function renderSwatches() {
     b.setAttribute("role", "radio");
     b.setAttribute("aria-pressed", cur === name ? "true" : "false");
     b.addEventListener("click", function () {
-      writeTheme({ preset: name });
+      // A text colour of one's own and the last custom accent stay through a preset (owner, 2026-10-31: the custom
+      // text colour was lost when switching between the HUD colours).
+      var now = readTheme();
+      writeTheme({ preset: name, accent: now.accent, text: now.text });
     });
     hudSwatches.appendChild(b);
   });
@@ -170,11 +173,24 @@ function renderSwatches() {
     wrap.appendChild(x);
     hudSwatches.appendChild(wrap);
   });
-  if (hudThemeAccent && t.preset === "custom" && t.accent) hudThemeAccent.value = t.accent;
-  if (hudThemeText && t.preset === "custom" && t.text) hudThemeText.value = t.text;
+  if (hudThemeAccent && t.accent) hudThemeAccent.value = t.accent;
+  if (hudThemeText) hudThemeText.value = t.text || (PRESETS[cur] && PRESETS[cur].text) || hudThemeText.value;
+  var reset = document.getElementById("hudThemeTextReset");
+  if (reset) reset.disabled = !t.text;
 }
+/* The accent of one's own: the custom scheme, the text colour kept as it is. */
 function customTheme() {
-  writeTheme({ preset: "custom", accent: hudThemeAccent.value, text: hudThemeText.value });
+  var now = readTheme();
+  writeTheme({ preset: "custom", accent: hudThemeAccent.value, text: now.text });
+}
+/* A text colour of one's own: over whichever scheme is on, preset or custom, until "Scheme's text". */
+function customText() {
+  var now = readTheme();
+  writeTheme({ preset: now.preset || "orange", accent: now.accent, text: hudThemeText.value });
+}
+function schemeText() {
+  var now = readTheme();
+  writeTheme({ preset: now.preset || "orange", accent: now.accent });
 }
 var hudSchemeName = document.getElementById("hudSchemeName");
 var hudSchemeSave = document.getElementById("hudSchemeSave");
@@ -410,7 +426,9 @@ export function start() {
       if (ev.key === "Enter") saveScheme();
     });
   }
-  if (hudThemeText) hudThemeText.addEventListener("input", customTheme);
+  if (hudThemeText) hudThemeText.addEventListener("input", customText);
+  var hudThemeTextReset = document.getElementById("hudThemeTextReset");
+  if (hudThemeTextReset) hudThemeTextReset.addEventListener("click", schemeText);
   if (hudScale) {
     hudScale.addEventListener("input", function () {
       showSizeOutputs();

@@ -109,7 +109,10 @@ export function neutronShip(
   // An engineered drive names its fuel per jump in the Loadout: jumps a tank without a jump flown yet.
   const perJump = model?.maxFuelPerJumpT ?? store.fsdFuel.maxFuelPerJumpT ?? null;
   const tank = store.loadoutFuelMainCapacityT;
-  const now = store.liveStatusFuelMainT;
+  // Live while the game runs; else the last the journals or Status.json said (not a full tank assumed).
+  // A closed game leaves its last Status.json behind: that tank is the last known, not live.
+  const live = store.gameRunning === false ? null : store.liveStatusFuelMainT;
+  const now = live ?? store.lastFuelMainT;
   const wear = fsdWearEstimate(store.fsdWear);
   // A known drive's law is exact (fsdDrives.ts): the jumps flown only stand in for it.
   const rangeLy = model?.drive ? ladenRangeLy(store, model) : plannedRange(fullJumpRange(store.jumpRange), ladenRangeLy(store, model));
@@ -120,6 +123,8 @@ export function neutronShip(
     jumpsPerTank: perJump && tank ? Math.floor(tank / perJump) : null,
     jumpsNow: perJump && now != null ? Math.floor(now / perJump) : null,
     fuelNowT: now ?? null,
+    fuelNowFrom: live != null ? ("live" as const) : now != null ? ("last" as const) : null,
+    fuelNowAt: live != null ? null : store.lastFuelAt,
     fsdHealth: wear.health,
     wearPerBoost: wear.wearPerBoost,
     wearIsDefault: wear.wearIsDefault,

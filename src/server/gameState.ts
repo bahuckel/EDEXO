@@ -513,6 +513,15 @@ export class GameStateStore {
 
   /** From live `Status.json` poll (tonnes); null when file missing or parse failed. */
   liveStatusFuelMainT: number | null = null;
+  /**
+   * The main tank's last known level (t) and when (owner, 2026-10-30: "log the last known fuel level instead of
+   * assuming the fuel is full if the game is not running"): live Status.json while it has fuel, else the journal's
+   * last word on it (LoadGame, FSDJump, FuelScoop, refuels, the reservoir). Another ship or a death: unknown.
+   */
+  lastFuelMainT: number | null = null;
+  lastFuelAt: string | null = null;
+  /** Whether Elite runs (gamePresence.ts, the desktop app only); null when not known. */
+  gameRunning: boolean | null = null;
   liveStatusFuelReserveT: number | null = null;
   private lastLiveShipFuelPushKey: string | null = null;
 
@@ -1442,6 +1451,8 @@ export class GameStateStore {
     this.jumponium = newJumponium();
     this.liveStatusFuelMainT = null;
     this.liveStatusFuelReserveT = null;
+    this.lastFuelMainT = null;
+    this.lastFuelAt = null;
     this.lastLiveShipFuelPushKey = null;
     this.liveNavRoute = null;
     this.lastLiveNavRoutePushKey = null;
@@ -1583,6 +1594,8 @@ export class GameStateStore {
       // The ship's SRVs, fighters and the Nomad (1.3.1): launched, docked, lost, rebuilt, taken over. First, because
       // LoadGame and others return early below.
       shipDamageVehicle(this.shipDamage, line as Record<string, unknown>);
+      // The tank's last known level, before LoadGame and others return early below.
+      if (event) this.noteJournalFuel(event, line as Record<string, unknown>, ts);
       if (event === "Commander") return journalEvents.onCommander(this, line);
 
       if (event === "LoadGame") return journalEvents.onLoadGame(this, line);
@@ -1832,11 +1845,33 @@ export class GameStateStore {
     return Math.abs(t - this.liveStatusCargoAtMs) <= 5 * 60_000 ? this.liveStatusCargoT : null;
   }
 
+  /** A journal line's word on the main tank (see `lastFuelMainT`). */
+  private noteJournalFuel(event: string, line: Record<string, unknown>, ts: string | null): void {
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null);
+    let t: number | null | undefined;
+    if (event === "LoadGame" || event === "FSDJump") t = num(line.FuelLevel);
+    else if (event === "FuelScoop") t = num(line.Total);
+    else if (event === "ReservoirReplenished") t = num(line.FuelMain);
+    else if (event === "RefuelAll") t = this.loadoutFuelMainCapacityT;
+    else if (event === "RefuelPartial") {
+      const add = num(line.Amount);
+      t = add != null && this.lastFuelMainT != null ? Math.min(this.loadoutFuelMainCapacityT ?? Infinity, this.lastFuelMainT + add) : null;
+    } else if (event === "ShipyardSwap" || event === "ShipyardNew" || event === "Died") t = null;
+    else return;
+    this.lastFuelMainT = t ?? null;
+    this.lastFuelAt = t != null ? ts : null;
+  }
+
   /**
    * Live `Status.json` fuel — returns true when main/reserve changed (for snapshot push).
    */
   applyLiveShipFuel(mainT: number | null, reserveT: number | null, cargoT?: number | null): boolean {
     this.liveStatusFuelMainT = mainT;
+    // A closed game's leftover Status.json says nothing new: the journal had the last word (and its time).
+    if (mainT != null && Number.isFinite(mainT) && mainT >= 0 && this.gameRunning !== false) {
+      this.lastFuelMainT = mainT;
+      this.lastFuelAt = new Date().toISOString();
+    }
     this.liveStatusFuelReserveT = reserveT;
     if (cargoT !== undefined) {
       this.liveStatusCargoT = cargoT;

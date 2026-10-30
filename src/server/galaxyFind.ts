@@ -127,7 +127,8 @@ export function galaxyFind(
       const name = index.nameOf(i);
       if (!name.toLowerCase().includes(q)) continue;
       const [x, y, z] = index.pointAt(i);
-      push({ name, x, y, z, ordinal: i, addr: null, mine: false });
+      // The address too: a stop of a route valued by it (the neutron drawer's destination, plan 1.3.3 R-3).
+      push({ name, x, y, z, ordinal: i, addr: (index.id64At ? index.id64At(i) : index.systemAt(i).id64).toString(), mine: false });
     }
     return true;
   };

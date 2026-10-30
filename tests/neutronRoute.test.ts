@@ -77,6 +77,16 @@ describe("neutron route", () => {
     expect(r.jumps).toBeLessThanOrEqual(11); // a supercharge a neutron star along the chain, then the end
   });
 
+  it("gives the destination its address when the stop came with one (its worth in the drawer, 2026-10-31)", async () => {
+    const idx = line(50, 1850, 200);
+    const r = await planNeutronRoute(idx, [A, { name: "B", x: 2050, y: 0, z: 0, address: 123456789 }], {
+      rangeLy: 51.1,
+      jumpsPerTank: 100,
+      jumpsNow: 100,
+    });
+    expect(r.hops.at(-1)).toMatchObject({ name: "B", address: 123456789 });
+  });
+
   it("reads the range by the fuel aboard between its entries", () => {
     const ship = { rangeLy: 50, rangeByFuel: [1.2, 1.1, 1] };
     expect(rangeAt(ship, 6, 6)).toBeCloseTo(50);

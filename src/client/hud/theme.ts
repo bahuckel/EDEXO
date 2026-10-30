@@ -99,8 +99,10 @@ export function readTheme(): { accent: Rgb; text: Rgb } {
   const accent =
     hexRgb(t.preset === "custom" ? t.accent : preset ? preset.accent : PRESETS.orange!.accent) ||
     hexRgb(PRESETS.orange!.accent)!;
+  // A text colour of one's own goes over any scheme (owner, 2026-10-31: it was lost when switching presets).
   const text =
-    hexRgb(t.preset === "custom" ? t.text : preset ? preset.text : PRESETS.orange!.text) ||
+    hexRgb(t.text) ||
+    hexRgb(t.preset === "custom" ? undefined : preset ? preset.text : PRESETS.orange!.text) ||
     mix(accent, [255, 255, 255], 0.78);
   return { accent, text };
 }

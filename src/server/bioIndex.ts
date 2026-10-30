@@ -75,6 +75,8 @@ export interface BioIndex {
   systemAt(i: number): BioIndexSystem;
   /** Just the name, for labels. */
   nameOf(i: number): string;
+  /** The address alone, without building the record (absent: `systemAt(i).id64`). */
+  id64At?(i: number): bigint;
   /** The system's mass code index (0 = a … 7 = h): its address's low 3 bits, read without building a record. */
   massCodeAt?(i: number): number;
   /** Allocation-free pass over every (region, species) pair; see the implementation for why. */
@@ -218,6 +220,11 @@ class Index implements BioIndex {
 
   nameOf(i: number): string {
     return this.nameAt(i);
+  }
+
+  /** The system's address, without reading the rest of its record. */
+  id64At(i: number): bigint {
+    return this.view.getBigUint64(this.tableAt + i * RECORD, true);
   }
 
   massCodeAt(i: number): number {

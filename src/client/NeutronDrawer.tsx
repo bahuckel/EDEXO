@@ -21,12 +21,17 @@ import { fmtCrShort } from "@shared/format";
 const isBoost = (v: unknown): v is number | null => v === null || v === 4 || v === 6;
 
 type Pt = { x: number; y: number; z: number };
-type Stop = Pt & { name: string };
+/** A stop: its place, and its address when the search gave one (its worth from Spansh, plan 1.3.3 R-3). */
+type Stop = Pt & { name: string; address?: number };
 
 interface Ship {
   rangeLy: number | null;
   jumpsPerTank: number | null;
   jumpsNow: number | null;
+  /** The main tank the plan starts from (t): live, or the last known with its time; null unknown (a full tank). */
+  fuelNowT?: number | null;
+  fuelNowFrom?: "live" | "last" | null;
+  fuelNowAt?: string | null;
   fsdHealth: number | null;
   wearPerBoost: number;
   wearIsDefault: boolean;
@@ -335,7 +340,11 @@ export function NeutronDrawer({
       void fetch(`/api/galaxy/find?q=${encodeURIComponent(q)}`, { signal: ac.signal })
         .then((r) => (r.ok ? r.json() : null))
         .then((j: GalaxyFindDTO | null) => {
-          add((j?.systems ?? []).slice(0, 30).map((s) => ({ name: s.name, x: s.x, y: s.y, z: s.z })));
+          add(
+            (j?.systems ?? [])
+              .slice(0, 30)
+              .map((s) => ({ name: s.name, x: s.x, y: s.y, z: s.z, ...(s.addr ? { address: Number(s.addr) } : {}) })),
+          );
           add((j?.stations ?? []).slice(0, 10).map((s) => ({ name: s.system, x: s.x, y: s.y, z: s.z, label: `${s.name} · ${s.system}` })));
         })
         .catch(() => undefined)
@@ -343,14 +352,18 @@ export function NeutronDrawer({
           q.length < 3
             ? null
             : fetch(`/api/system/spansh-search?q=${encodeURIComponent(q)}`, { signal: ac.signal })
-                .then((r) => (r.ok ? (r.json() as Promise<{ systems?: { starSystem: string; x?: number; y?: number; z?: number }[] }>) : null))
+                .then((r) =>
+                  r.ok
+                    ? (r.json() as Promise<{ systems?: { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number }[] }>)
+                    : null,
+                )
                 .then((j) =>
                   add(
                     (j?.systems ?? [])
                       .filter((s) => s.x != null && s.y != null && s.z != null)
                       // The name typed in full first: Spansh's completion lists near names in its own order.
                       .sort((a, b) => Number(b.starSystem.toLowerCase() === q.toLowerCase()) - Number(a.starSystem.toLowerCase() === q.toLowerCase()))
-                      .map((s) => ({ name: s.starSystem, x: s.x!, y: s.y!, z: s.z!, label: `${s.starSystem} · Spansh` })),
+                      .map((s) => ({ name: s.starSystem, x: s.x!, y: s.y!, z: s.z!, address: s.systemAddress, label: `${s.starSystem} · Spansh` })),
                   ),
                 ),
         )
@@ -580,7 +593,7 @@ export function NeutronDrawer({
               onQuery={setQuery}
               onChange={(name) => {
                 const s = found.find((x) => x.name === name);
-                if (s) setStops((p) => [...p, { name: s.name, x: s.x, y: s.y, z: s.z }]);
+                if (s) setStops((p) => [...p, { name: s.name, x: s.x, y: s.y, z: s.z, ...(s.address ? { address: s.address } : {}) }]);
               }}
               placeholder="Search a system"
             />
@@ -627,6 +640,16 @@ export function NeutronDrawer({
                 onChange={(e) => setTank(e.target.value)}
                 aria-label="Jumps per tank"
               />
+            </MenuRow>
+            <MenuRow
+              label="Fuel now"
+              hint="The main tank the plan starts from: live while the game runs, else the last your journals said (a jump, a scoop, a refuel); a full tank only when nothing is known"
+            >
+              <span className="g3d-row__val">
+                {ship?.fuelNowT != null
+                  ? `${ship.fuelNowT.toFixed(1)} t${ship.fuelNowFrom === "last" ? ` · last known${ship.fuelNowAt ? ` ${new Date(ship.fuelNowAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""}` : ""}`
+                  : "Full tank (unknown)"}
+              </span>
             </MenuRow>
             <MenuRow
               label="FSD health"

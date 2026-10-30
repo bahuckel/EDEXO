@@ -686,7 +686,7 @@ export let lastLegStats: { expansions: number; open: number } | null = null;
 /** The whole route through the waypoints in order (the first is where the ship starts). */
 export async function planNeutronRoute(
   index: Pick<NeutronIndex, "within" | "nameOf"> & Partial<Pick<NeutronIndex, "eachToward" | "addressOf">>,
-  waypoints: { name: string; x: number; y: number; z: number }[],
+  waypoints: { name: string; x: number; y: number; z: number; address?: number }[],
   ship: NeutronShip,
   /** Time for the refining passes (ms): a re-plot in flight wants the next stop soon more than a jump less. */
   refineMs = REFINE_MS,
@@ -743,6 +743,7 @@ export async function planNeutronRoute(
       fuel = onWay ? Math.max(0, tank - 1) : fuel - used;
       hops.push({
         name: to.name,
+        ...(to.address ? { address: to.address } : {}),
         x: to.x,
         y: to.y,
         z: to.z,
@@ -782,7 +783,7 @@ export async function planNeutronRoute(
         jumpsLeft: fuelModel.jumpsLeft(n.fuel),
         rangeLy: Math.round(fuelModel.rangeWith(leaving) * 10) / 10,
         fsdHealth: health,
-        ...(!isEnd && index.addressOf ? { address: index.addressOf(n.star!.i) } : {}),
+        ...(isEnd ? (to.address ? { address: to.address } : {}) : index.addressOf ? { address: index.addressOf(n.star!.i) } : {}),
       });
       prevPos = n.pos;
       leaving = n.fuel;

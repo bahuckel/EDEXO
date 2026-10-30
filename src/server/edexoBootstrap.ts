@@ -771,6 +771,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
 
   // The process check only matters to the desktop app's overlays; a plain server does not poll.
   const gamePresence = createGamePresence({ autoStart: process.env.EDEXO_ELECTRON === "1" });
+  // The fuel's "live" only while the game runs: a closed game leaves its last Status.json behind (neutronShip.ts).
+  gamePresence.onChange((running) => {
+    store.gameRunning = running;
+  });
 
   const backupService = createBackupService({
     appDataDir: path.dirname(userSettingsPath),

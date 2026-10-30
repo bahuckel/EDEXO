@@ -512,10 +512,12 @@ export function registerGalaxyRoutes(
   /** Regions are the client's; this finds sectors and systems by name: `?q=`. */
   app.get("/api/galaxy/find", (req, res) => {
     const t = tileIndex();
-    if (!t) return void noIndex(res);
     const q = String(req.query.q ?? "").slice(0, 80);
     const store = opts.getJournalStore?.() ?? null;
-    const found = galaxyFind(t, store, q, opts.getImportedSystems?.() ?? []);
+    // Without the galaxy index downloaded the plotted systems below are still found (plan 1.3.3 R-2).
+    const found: GalaxyFindDTO = t
+      ? galaxyFind(t, store, q, opts.getImportedSystems?.() ?? [])
+      : { query: q, sectors: [], systems: [], partial: false };
     // Systems only a plotted route knows (plan 1.3.3 R-2): after the index's and his own, tagged.
     const have = new Set(found.systems.map((s) => s.name.toLowerCase()));
     for (const p of findPlottedSystems(q)) {

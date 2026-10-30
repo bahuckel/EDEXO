@@ -77,6 +77,8 @@ export function serializeJournalMergePayload(store: GameStateStore): JournalMerg
     loadoutFuelReserveCapacityT: store.loadoutFuelReserveCapacityT,
     lastFsdJumpFuelUsedT: store.lastFsdJumpFuelUsedT,
     lastFsdJumpDistLy: store.lastFsdJumpDistLy,
+    lastFuelMainT: store.lastFuelMainT,
+    lastFuelAt: store.lastFuelAt,
     jumpRange: structuredClone(store.jumpRange),
     fsdFuel: structuredClone(store.fsdFuel),
     fsdWear: structuredClone(store.fsdWear),
@@ -276,5 +278,8 @@ export function hydrateJournalMergePayload(store: GameStateStore, data: JournalM
   store.jumponium = hydrateJumponium(data.jumponium);
   const ljd = data.lastFsdJumpDistLy;
   store.lastFsdJumpDistLy = typeof ljd === "number" && Number.isFinite(ljd) && ljd > 0 ? ljd : null;
+  const lf = data.lastFuelMainT;
+  store.lastFuelMainT = typeof lf === "number" && Number.isFinite(lf) && lf >= 0 ? lf : null;
+  store.lastFuelAt = store.lastFuelMainT != null && typeof data.lastFuelAt === "string" ? data.lastFuelAt : null;
   return true;
 }

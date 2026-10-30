@@ -12,7 +12,7 @@ import { jumponiumView, recipeFor } from "../../shared/jumponium.js";
 import { parseLiveHops, parseLivePlan } from "../neutronLive.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
-type Waypoint = { name: string; x: number; y: number; z: number };
+type Waypoint = { name: string; x: number; y: number; z: number; address?: number };
 
 const finite = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
@@ -91,7 +91,8 @@ export function registerNeutronRoutes(
       const z = finite(w.z);
       if (x == null || y == null || z == null)
         return void res.status(400).json({ error: "Every stop needs x, y and z." });
-      waypoints.push({ name: String(w.name ?? "").slice(0, 80) || "Stop", x, y, z });
+      const address = finite(w.address);
+      waypoints.push({ name: String(w.name ?? "").slice(0, 80) || "Stop", x, y, z, ...(address != null && address > 0 ? { address } : {}) });
     }
     if (waypoints.length < 2)
       return void res.status(400).json({ error: "A route needs at least two systems." });
