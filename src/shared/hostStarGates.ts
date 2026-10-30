@@ -291,13 +291,19 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
      * on the body's host it would demote araneamus on its own ground. The profile's host-star
      * determinism (0.154, from 35 bodies) sits just under the observation term's floor, so nothing
      * else said this.
+     *
+     * Any star in the system since 2026-10-29: of 2,000 araneamus bodies in the EDDN year, 12 sit under
+     * an O, F or G main star, and every one has an A, neutron, B or black hole elsewhere in the system;
+     * the 21 fresh days (to 2026-10-28) added 2 more of the same (Aidown FL-P d5-0 ABCD 5 d, main F with
+     * an A VI companion; HD 15137 B 3 e, main O, round a T dwarf that orbits the black hole B).
      */
     idIncludes: "stratum_araneamus",
     gate: {
       allowed: ["A", "N", "B", "H"],
       judgedOn: "main",
+      anyStar: true,
       evidence:
-        "main star of 13,732 araneamus sightings: A 74.2 %, neutron 16.8 %, B 6.7 %, black hole 1.2 % — 98.9 %; those four are 9.4 % of all life",
+        "main star of 13,732 araneamus sightings: A 74.2 %, neutron 16.8 %, B 6.7 %, black hole 1.2 % — 98.9 %; those four are 9.4 % of all life; an A, neutron, B or black hole somewhere in the system on 14 of 14 EDDN bodies under any other main star",
     },
   },
   {
@@ -336,12 +342,21 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
      * carbon dioxide at 180–190 K. At body level the host is M on 3 of 1,923 labiata bodies (Spansh
      * corpus, EDDN capture, the commander's journals) against 64 of about 1,030 renibus. Written as
      * an allow-list of everything else, so an unknown class or a mixed M + K pair still passes.
+     *
+     * Judged on the main star or the host since 2026-10-29, so it fails only when both are M. The 21
+     * fresh EDDN days (to 2026-10-28) had labiata on 6 moons round an M dwarf in 2 systems whose main
+     * star is a neutron star (Wepae AM-D d12-195 B 2 a-d, Slegeae BP-R d4-0 BC 1 a-b), coloured after
+     * the neutron star. Over the year and fresh samples, labiata's host is M on 18 of 3,322 bodies and
+     * the main star is never M there (neutron 17, A 1); renibus's host is M on 265 of 2,902, with an M
+     * main star on 124 of them.
      */
     idIncludes: "concha_labiata",
     gate: {
       allowed: ["O", "B", "A", "F", "G", "K", "L", "T", "Y", "TTS", "D", "W", "N", "H", "other"],
+      judgedOn: "main",
+      orHost: true,
       evidence:
-        "main star of 86,565 labiata sightings is M on 1.2 %, against 22.7 % of all life; host M on 3 of 1,923 labiata bodies",
+        "main star of 86,565 labiata sightings is M on 1.2 %, against 22.7 % of all life; host and main star both M on 0 of 3,322 labiata bodies in EDDN (host M on 18, every one under a neutron or A main star)",
     },
   },
   {
@@ -369,12 +384,17 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
      * Or the body's own host (2026-10-03): HIP 118062's main star is a G, and pluma was logged on
      * B 6 g, a moon of a planet round the DBV white dwarf B, 81,587 ls out. Swoilz still fails: its
      * one star is the M3.
+     *
+     * Or any star in the system (2026-10-29): 11 of 2,000 pluma bodies in the EDDN year sit under a
+     * B, G or O main star; 9 have an A, neutron, white dwarf or black hole elsewhere in the system. The
+     * other 2 are one system (Pru Euq JC-V e2-0, a B with two T Tauri stars), so B stays out.
      */
     idIncludes: "electricae_pluma",
     gate: {
       allowed: ["A", "N", "D", "H"],
       judgedOn: "main",
       orHost: true,
+      anyStar: true,
       evidence:
         "10,139 pluma sightings: neutron 46.0 %, white dwarf 30.6 %, A 14.2 %, black hole 8.3 % — 99.1 %; B 0.2 %, O 0.0 %",
     },

@@ -34,12 +34,6 @@
     "speciesBodies": 1271
    }
   },
-  "brain_trees_brain_tree_roseum": {
-   "N": {
-    "expected": 34.7,
-    "speciesBodies": 1435
-   }
-  },
   "cactoida_cactoida_pullulanta": {
    "K": {
     "expected": 425.2,
@@ -129,10 +123,6 @@
   "osseus_osseus_spiralis": {
    "N": {
     "expected": 288.3,
-    "speciesBodies": 12329
-   },
-   "B": {
-    "expected": 12.4,
     "speciesBodies": 12329
    }
   },
@@ -302,12 +292,6 @@
    "N": {
     "expected": 11.7,
     "speciesBodies": 461
-   }
-  },
-  "frutexa_frutexa_acus": {
-   "T": {
-    "expected": 10.6,
-    "speciesBodies": 9509
    }
   },
   "sinuous_tuber_sinuous_tubers_caeruleum": {

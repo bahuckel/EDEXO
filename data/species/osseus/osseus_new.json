@@ -196,8 +196,8 @@
         ],
         "max_gravity": 0.275,
         "atmospherePressureCategory": "thin",
-        "soft_no_volcanism": true,
         "matchContextNotes": [
+          "Volcanism no longer demotes it (2026-10-29): the whole EDDN year has it on 14 volcanic ammonia bodies in 14 systems (29 % of the count its usual rate gives), against discus on 124; 38,029 of its 38,043 bodies have none.",
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
           "Morph colour follows host star type (genus meta.color_variants)."
         ]

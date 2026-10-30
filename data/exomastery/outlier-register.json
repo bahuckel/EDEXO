@@ -114,20 +114,6 @@
     }
    ]
   },
-  "frutexa_frutexa_metallicum": {
-   "bodies": 1,
-   "systems": 1,
-   "status": "lone outlier: never sets a range",
-   "rows": [
-    {
-     "src": "holdD (judge)",
-     "key": "110956252107:20",
-     "body": "Bya Eup ZQ-L d8-3 B 6",
-     "kind": "demoted",
-     "field": "AtmosphereType"
-    }
-   ]
-  },
   "fungoida_fungoida_stabitis": {
    "bodies": 1,
    "systems": 1,
@@ -359,6 +345,44 @@
      "body": "HIP 64848 1 b",
      "kind": "demoted",
      "field": "Colour star G (Indigo = its Y-dwarf colour; body orbits a planet-slot Y dwarf)"
+    }
+   ]
+  },
+  "frutexa_frutexa_flabellum": {
+   "bodies": 3,
+   "systems": 3,
+   "status": "pattern examined 2026-10-29: kept. 3 systems inside 'orbit <= 49.92 d, parent star K' against about 3,380 bodies its usual rate expects over the whole EDDN year (0.1 %), under the 1 % floor",
+   "rows": [
+    {
+     "src": "fresh EDDN 2026-10-08..28",
+     "body": "Thraikiae NX-K d8-28 B 10 b",
+     "kind": "demoted",
+     "field": "Never found here (orbit <= 49.92 d, parent star K); the K is a companion 206,620 ls from a neutron primary and the body's plants are coloured N"
+    },
+    {
+     "src": "EDDN year, whole (2026-10-29 probe)",
+     "body": "Lysoosms TA-E d12-81 B 10 b",
+     "kind": "demoted",
+     "field": "Never found here (orbit <= 49.92 d, parent star K)"
+    },
+    {
+     "src": "EDDN year, whole (2026-10-29 probe)",
+     "body": "Sleguae WP-M d8-13 B 2 b",
+     "kind": "demoted",
+     "field": "Never found here (orbit <= 49.92 d, parent star K)"
+    }
+   ]
+  },
+  "concha_concha_aureolas": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "fresh EDDN 2026-10-08..28",
+     "body": "Gria Eohm QT-Z d13-0 C 7 a",
+     "kind": "demoted",
+     "field": "Never found here (<= 21,750 ls, parent star M); the M is a companion 19,222 ls from a neutron primary and the body's plants are coloured N"
     }
    ]
   }

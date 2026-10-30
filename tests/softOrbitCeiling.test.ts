@@ -87,11 +87,19 @@ describe("soft_max_semi_major_axis_ls", () => {
 });
 
 describe("labiata's host-star gate", () => {
-  it("fails an M host and passes every other class, an unknown one and a mixed M + K pair", () => {
-    expect(evaluateHostStarGate("concha_concha_labiata", ["M"])?.passes).toBe(false);
-    for (const c of ["F", "G", "K", "A", "N", "Y", "L"]) expect(evaluateHostStarGate("concha_concha_labiata", [c])?.passes, c).toBe(true);
-    expect(evaluateHostStarGate("concha_concha_labiata", ["M", "K"])?.passes).toBe(true);
-    expect(evaluateHostStarGate("concha_concha_labiata", [])).toBeNull();
-    expect(evaluateHostStarGate("concha_concha_renibus", ["M"])).toBeNull();
+  const gate = (host: string[], main: string | null) => evaluateHostStarGate("concha_concha_labiata", host, main);
+
+  it("fails only when the host and the main star are both M", () => {
+    expect(gate(["M"], "M")?.passes).toBe(false);
+    for (const c of ["F", "G", "K", "A", "N", "Y", "L"]) expect(gate([c], c)?.passes, c).toBe(true);
+    expect(gate(["M", "K"], "M")?.passes).toBe(true);
+    expect(gate([], "M")?.passes).toBe(false);
+    expect(gate(["M"], null)).toBeNull();
+    expect(evaluateHostStarGate("concha_concha_renibus", ["M"], "M")).toBeNull();
+  });
+
+  it("passes an M host under a neutron main star (Wepae AM-D d12-195 B 2 a, fresh EDDN 2026-10)", () => {
+    expect(gate(["M"], "N")?.passes).toBe(true);
+    expect(gate(["K"], "M")?.passes).toBe(true);
   });
 });

@@ -69,15 +69,18 @@ export function moonPairBarycentreId(parents: unknown): number | null {
 
 /**
  * True when a body orbits a star (or a barycentre of stars), not a planet: `Parents` read past any
- * barycentre to the first planet or star. Unknown parents: false.
+ * barycentre to the first planet or star. A chain of barycentres only ends at the system's root, a
+ * barycentre of stars, so it is a star orbit too (fresh EDDN, 2026-10-29: Concha labiata on
+ * "Pleia Aoc JH-T c17-0 BC 2", `[{Null:2},{Null:0}]`, 137 ls round its stars, was demoted as a wide moon).
+ * Unknown parents: false.
  */
 export function orbitsAStar(parents: unknown): boolean {
-  if (!Array.isArray(parents)) return false;
+  if (!Array.isArray(parents) || !parents.length) return false;
   for (const p of parents as Record<string, unknown>[]) {
     if (typeof p?.Planet === "number") return false;
     if (typeof p?.Star === "number") return true;
   }
-  return false;
+  return (parents as Record<string, unknown>[]).every((p) => typeof p?.Null === "number");
 }
 
 /** Immediate orbit body when this object is a moon of a planet — excludes primary-only orbits of a star. */

@@ -313,7 +313,8 @@ export interface SpeciesCriterion {
   offListAtmosphereNeedsVolcanism?: boolean;
   /**
    * A **measured** absence: the species is recorded almost only on bodies with no volcanism, so a
-   * volcanic body demotes it. Never hides. Osseus spiralis: 1,763 of 1,765 bodies have none.
+   * volcanic body demotes it. Never hides. (Osseus spiralis had it until 2026-10-29: 1,763 of 1,765
+   * bodies have none, but the whole EDDN year has it on 14 volcanic bodies in 14 systems.)
    */
   softNoVolcanism?: boolean;
   /**

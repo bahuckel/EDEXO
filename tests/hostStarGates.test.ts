@@ -359,6 +359,15 @@ describe("a gate measured on the main star", () => {
     expect(evaluateHostStarGate(ARANEAMUS, ["A"], "F")!.passes).toBe(false);
   });
 
+  it("passes on any A, neutron, B or black hole in the system (fresh EDDN, 2026-10)", () => {
+    // Aidown FL-P d5-0 ABCD 5 d: main star F, an A VI companion.
+    const aidown = [{ type: "F", luminosity: "Vb" }, { type: "A", luminosity: "VI" }, { type: "M" }, { type: "G" }];
+    expect(evaluateHostStarGate(ARANEAMUS, [], "F", null, aidown)!.passes).toBe(true);
+    // HD 15137 B 3 e: main star O, round a T dwarf that orbits the black hole B.
+    expect(evaluateHostStarGate(ARANEAMUS, ["T"], "O", null, [{ type: "O" }, { type: "T" }, { type: "H" }])!.passes).toBe(true);
+    expect(evaluateHostStarGate(ARANEAMUS, [], "F", null, [{ type: "F" }, { type: "M" }])!.passes).toBe(false);
+  });
+
   it("abstains when the main star is not known, however the host reads", () => {
     expect(evaluateHostStarGate(ARANEAMUS, ["F"], null)).toBeNull();
     expect(evaluateHostStarGate(ARANEAMUS, ["F"], undefined)).toBeNull();

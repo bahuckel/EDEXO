@@ -66,13 +66,11 @@ describe("Osseus discus off its water list", () => {
 });
 
 describe("Osseus spiralis", () => {
-  it("is shown without volcanism and demoted, never hidden, with it", () => {
+  it("is shown with and without volcanism (whole EDDN year: 14 volcanic bodies in 14 systems)", () => {
     // 165 K: inside spiralis' observed 160-224 K, so only the volcanism can speak.
     const at165 = (v: string) => ({ ...body("Ammonia", v), SurfaceTemperature: 165 });
     expect(judge("osseus_osseus_spiralis", at165("")).ok).toBe(true);
-    const r = judge("osseus_osseus_spiralis", at165("minor rocky magma volcanism"));
-    expect(r.ok).toBe(false);
-    expect(r.softOnly).toBe(true);
+    expect(judge("osseus_osseus_spiralis", at165("minor rocky magma volcanism")).ok).toBe(true);
   });
 });
 

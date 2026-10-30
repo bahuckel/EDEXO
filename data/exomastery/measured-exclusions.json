@@ -937,22 +937,6 @@
     ],
     "speciesBodies": 6080,
     "expected": 43.2
-   },
-   {
-    "when": [
-     {
-      "value": "temp",
-      "op": ">=",
-      "is": 171.139236
-     },
-     {
-      "value": "main",
-      "op": "=",
-      "is": "H"
-     }
-    ],
-    "speciesBodies": 6080,
-    "expected": 18.2
    }
   ],
   "tubus_tubus_compagibus": [

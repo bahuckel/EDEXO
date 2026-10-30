@@ -98,12 +98,16 @@
       "conditions": {
         "atmosphere": [
           "Ammonia",
-          "Carbon Dioxide"
+          "Carbon Dioxide",
+          "Water"
         ],
         "max_gravity": 0.275,
         "planet_types": [
           "High Metal Content"
         ],
+        "temperature_K": {
+          "max": 400
+        },
         "atmospherePressureCategory": "thin",
         "whenAtmosphereLinkedMaxTempK": 195,
         "whenAtmosphereLinkedAtmosphereAnyOf": [
@@ -111,6 +115,7 @@
         ],
         "matchContextNotes": [
           "For carbon dioxide atmospheres, codex mean temperature must stay below ~195 K (matcher uses upper bound of estimated band).",
+          "Thin water added 2026-10-29: the EDDN year logged it on 27 water HMC bodies (27 systems, 4 by ScanOrganic), all 391.9-399.8 K, the only Frutexa there (27 of 86 such bodies at 390-400 K); none on the 5,500 water HMC bodies above 400 K.",
           "Codex: prefers exposed rocky terrain (not a separate planet-class gate).",
           "Shrub colour follows host star type (see genus meta.color_variants)."
         ]
