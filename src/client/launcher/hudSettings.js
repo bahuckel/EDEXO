@@ -19,6 +19,8 @@ var LS_HUD_RELEVANT = "edexoHudRelevant";
 var LS_HUD_TYPE = "edexoHudType";
 var LS_HUD_CREDIT = "edexoHudCredit";
 var LS_HUD_NEXT_BOXEL = "edexoHudNextBoxel";
+/* The fuel bar at a neutron route's refuel stop (2026-10-29): on unless switched off. */
+var LS_HUD_REFUEL_BAR = "edexoHudRefuelBar";
 /* Colonize HUD (1.3.0): materials and other sites on unless switched off; finished lines off unless switched on. */
 var HUD_CZ_PREFS = [
   { id: "hudCzNeeds", ls: "edexoHudCzNeeds", key: "czNeeds", def: true },
@@ -60,6 +62,7 @@ function hudPrefsNow() {
   try { prefs.hudType = localStorage.getItem(LS_HUD_TYPE) || "original"; } catch (e) {}
   try { prefs.credit = localStorage.getItem(LS_HUD_CREDIT) || "off"; } catch (e) {}
   try { prefs.nextBoxel = localStorage.getItem(LS_HUD_NEXT_BOXEL) === "1"; } catch (e) {}
+  try { prefs.refuelBar = localStorage.getItem(LS_HUD_REFUEL_BAR) !== "0"; } catch (e) {}
   HUD_CZ_PREFS.forEach(function (p) { prefs[p.key] = readCzPref(p); });
   try { var tl = parseFloat(localStorage.getItem(LS_HUD_TILT) || ""); prefs.tilt = isFinite(tl) ? tl : 15; } catch (e) {}
   try { prefs.tiltMode = localStorage.getItem(LS_HUD_TILT_MODE) === "slant" ? "slant" : "turn"; } catch (e) {}
@@ -215,6 +218,7 @@ function syncHudTypeUi() {
 var hudCredit = document.getElementById("hudCredit");
 /* "Next boxel" under the Next jump HUD (plan 2.7): off unless chosen. */
 var hudNextBoxel = document.getElementById("hudNextBoxel");
+var hudRefuelBar = document.getElementById("hudRefuelBar");
 var hudCompact = document.getElementById("hudCompact");
 var hudRelevant = document.getElementById("hudRelevant");
 var hudAudio = document.getElementById("hudAudio");
@@ -361,6 +365,7 @@ async function loadHudSettingsIntoModal() {
   if (hudType) hudType.value = (function () { try { return localStorage.getItem(LS_HUD_TYPE) || "original"; } catch (e) { return "original"; } })();
   if (hudCredit) hudCredit.value = (function () { try { var v = localStorage.getItem(LS_HUD_CREDIT); return v === "top" || v === "bottom" ? v : "off"; } catch (e) { return "off"; } })();
   if (hudNextBoxel) hudNextBoxel.checked = (function () { try { return localStorage.getItem(LS_HUD_NEXT_BOXEL) === "1"; } catch (e) { return false; } })();
+  if (hudRefuelBar) hudRefuelBar.checked = (function () { try { return localStorage.getItem(LS_HUD_REFUEL_BAR) !== "0"; } catch (e) { return true; } })();
   HUD_CZ_PREFS.forEach(function (p) {
     var box = document.getElementById(p.id);
     if (box) box.checked = readCzPref(p);
@@ -469,6 +474,12 @@ export function start() {
   if (hudNextBoxel) {
     hudNextBoxel.addEventListener("change", function () {
       try { localStorage.setItem(LS_HUD_NEXT_BOXEL, hudNextBoxel.checked ? "1" : "0"); } catch (e) {}
+      syncHudPrefs();
+    });
+  }
+  if (hudRefuelBar) {
+    hudRefuelBar.addEventListener("change", function () {
+      try { localStorage.setItem(LS_HUD_REFUEL_BAR, hudRefuelBar.checked ? "1" : "0"); } catch (e) {}
       syncHudPrefs();
     });
   }

@@ -16,6 +16,8 @@ export interface NeutronLiveDTO {
   /** Scoop to half a tank there, not full: the plan's next jumps count on the lighter ship's range. */
   refuelHalf: boolean;
   scoopLs: number | null;
+  /** At a refuel stop: how much to scoop (server/neutronFuelWindow.ts); null elsewhere or when unknown. */
+  refuelWindow?: RefuelWindowDTO | null;
   superchargeHere: boolean;
   /** The normal jumps to the next stop need a scoopable star on the way. */
   scoopOnWay: boolean;
@@ -27,6 +29,18 @@ export interface NeutronLiveDTO {
   done: boolean;
   /** The route's last stop. */
   destination: string;
+}
+
+/**
+ * The fuel to scoop to at a refuel stop (t): at least `minT` to reach the next refuel, at most `maxT` for every
+ * supercharge before it to reach as planned; the tank, the fuel aboard now, and the stops until the next refuel.
+ */
+export interface RefuelWindowDTO {
+  minT: number;
+  maxT: number;
+  tankT: number;
+  nowT: number | null;
+  toStop: number;
 }
 
 /** The FSD's health now (shared/fsdWear.ts): from the last Loadout, less the supercharges since. */

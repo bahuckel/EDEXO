@@ -157,7 +157,7 @@ export function rangeAt(ship: Pick<NeutronShip, "rangeLy" | "rangeByFuel">, fuel
   return Number.isFinite(m) && m > 0 ? r * m : r;
 }
 
-function jumpsFrom(
+export function jumpsFrom(
   fromNeutron: boolean,
   d: number,
   r: number,

@@ -231,6 +231,54 @@ function NeutronLive({ d }: { d: HudSnapshot }) {
   );
 }
 
+/*
+  At a refuel stop of the route being flown (owner, 2026-10-29): the tank as a bar, green where the fuel takes the
+  ship to the next refuel and every supercharge before it still reaches (server/neutronFuelWindow.ts), and the fuel
+  aboard as it fills. On unless switched off in the launcher (edexoHudRefuelBar).
+*/
+const tons = (t: number) => (Math.round(t * 10) / 10).toLocaleString("en-US") + " t";
+
+function RefuelBar({ d }: { d: HudSnapshot }) {
+  const w = d.neutronLive?.refuelWindow;
+  if (!w || pref("edexoHudRefuelBar", "1") !== "1") return <div className="jump__refuel" data-f="refuel" hidden />;
+  const pct = (t: number) => Math.max(0, Math.min(100, (t / w.tankT) * 100));
+  const fullOk = w.maxT >= w.tankT - 0.05;
+  const now = w.nowT;
+  const state = now == null ? "" : now < w.minT - 0.05 ? "low" : now > w.maxT + 0.05 ? "high" : "ok";
+  const status =
+    state === "low"
+      ? tons(w.minT - now!) + " more"
+      : state === "high"
+        ? "over " + tons(w.maxT) + ": too heavy"
+        : state === "ok"
+          ? "enough"
+          : "";
+  const stops = w.toStop === 1 ? "the next stop" : "the next " + w.toStop + " stops";
+  return (
+    <div
+      className="jump__refuel"
+      data-f="refuel"
+      title={
+        "At least " +
+        tons(w.minT) +
+        " to reach " +
+        stops +
+        (fullOk ? "; a full tank is fine" : "; above " + tons(w.maxT) + " the ship is too heavy for a planned supercharge")
+      }
+    >
+      <div className="jump__refuel-txt">
+        {fullOk ? "Scoop to " + tons(w.minT) + " or more" : "Scoop to " + tons(w.minT) + " – " + tons(w.maxT)}
+        {" of " + tons(w.tankT)}
+        {status ? <span className={"jump__refuel-st jump__refuel-st--" + state}>{" · " + status}</span> : null}
+      </div>
+      <div className="jump__refuel-bar" aria-hidden="true">
+        <span className="jump__refuel-zone" style={{ left: pct(w.minT) + "%", width: pct(w.maxT) - pct(w.minT) + "%" }} />
+        {now != null ? <span className={"jump__refuel-fill jump__refuel-fill--" + state} style={{ width: pct(now) + "%" }} /> : null}
+      </div>
+    </div>
+  );
+}
+
 /* An AFMU fitted (the Laboratory, 1.2.16): it repairs the FSD in flight; how many refills the hold makes. */
 function afmuHint(d: HudSnapshot): string {
   const j = d.jumponium;
@@ -438,6 +486,7 @@ function Jump({ d }: { d: HudSnapshot }) {
       </div>
       <RouteStrip d={d} />
       <NeutronLive d={d} />
+      <RefuelBar d={d} />
       <FsdHealth d={d} />
       <BoxelCopied d={d} />
       <NextBoxel d={d} />

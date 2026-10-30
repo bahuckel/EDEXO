@@ -263,6 +263,8 @@ export interface HudPrefsDTO {
   credit?: "off" | "top" | "bottom";
   /** "Next boxel" line under the Next jump HUD (plan 2.7). */
   nextBoxel?: boolean;
+  /** The fuel bar at a neutron route's refuel stop: how much to scoop (2026-10-29; default on). */
+  refuelBar?: boolean;
   /** Colonize HUD (1.3.0): the followed site's materials with bars (default on). */
   czNeeds?: boolean;
   /** Colonize HUD: the other sites being built (default on). */

@@ -24,27 +24,35 @@ export function ladenRangeLy(store: GameStateStore, model: FsdFuelModel | null):
   const mjr = store.loadoutMaxJumpRangeLy;
   const unladen = store.fsdFuel.unladenT;
   if (mjr == null || unladen == null || tank == null) return mjr ?? null;
-  // A jump's reach goes as 1 / mass for the same fuel: the Loadout's mass carries one jump's fuel (unknown: none).
+  // The drive's reach goes as 1 / mass for the same fuel: the Loadout's mass carries one jump's fuel (unknown: none).
+  // The Guardian booster's bonus is flat: it stays out of the scaling.
   const oneJump = model?.maxFuelPerJumpT ?? store.fsdFuel.maxFuelPerJumpT ?? 0;
-  return (mjr * (unladen + oneJump)) / (unladen + tank + cargo);
+  const bonus = Math.min(store.fsdFuel.boosterLy ?? 0, mjr);
+  return ((mjr - bonus) * (unladen + oneJump)) / (unladen + tank + cargo) + bonus;
 }
 
 /** Entries in `rangeByFuel`: the tank in twentieths. */
 const FUEL_STEPS = 20;
 
 /**
- * The range by the fuel aboard, as multiples of the full tank's (neutronRoute.ts `rangeByFuel`). With at least one
- * jump's fuel aboard the drive spends the same on its longest jump, so the reach goes as 1 / mass: the ship, the hold
- * and the fuel. Below one jump's fuel the entries stay at one jump's (the planner never jumps on less).
+ * The range by the fuel aboard, as multiples of the full tank's `rangeLy` (neutronRoute.ts `rangeByFuel`). With at
+ * least one jump's fuel aboard the drive spends the same on its longest jump, so its reach goes as 1 / mass: the ship,
+ * the hold and the fuel. The Guardian booster's bonus does not: it is the same on any tank, so only the rest grows.
+ * Below one jump's fuel the entries stay at one jump's (the planner never jumps on less).
  */
-export function rangeByFuel(store: GameStateStore, model: FsdFuelModel | null): number[] | null {
+export function rangeByFuel(store: GameStateStore, model: FsdFuelModel | null, rangeLy: number | null): number[] | null {
   const tank = store.loadoutFuelMainCapacityT;
   const unladen = store.fsdFuel.unladenT;
   if (!tank || unladen == null) return null;
   const cargo = store.liveStatusCargoT ?? store.fsdFuel.cargoT ?? 0;
   const oneJump = Math.min(tank, model?.maxFuelPerJumpT ?? store.fsdFuel.maxFuelPerJumpT ?? tank / FUEL_STEPS);
   const full = unladen + tank + cargo;
-  return Array.from({ length: FUEL_STEPS + 1 }, (_, i) => full / (unladen + Math.max(oneJump, (tank * i) / FUEL_STEPS) + cargo));
+  // The bonus as a share of the full tank's range; unknown range: none (the whole range scales).
+  const flat = rangeLy && rangeLy > 0 ? Math.min(1, (store.fsdFuel.boosterLy ?? 0) / rangeLy) : 0;
+  return Array.from({ length: FUEL_STEPS + 1 }, (_, i) => {
+    const drive = full / (unladen + Math.max(oneJump, (tank * i) / FUEL_STEPS) + cargo);
+    return (1 - flat) * drive + flat;
+  });
 }
 
 /**
@@ -67,9 +75,10 @@ export function neutronShip(
   const tank = store.loadoutFuelMainCapacityT;
   const now = store.liveStatusFuelMainT;
   const wear = fsdWearEstimate(store.fsdWear);
+  const rangeLy = plannedRange(fullJumpRange(store.jumpRange), ladenRangeLy(store, model));
   return {
-    rangeLy: plannedRange(fullJumpRange(store.jumpRange), ladenRangeLy(store, model)),
-    rangeByFuel: rangeByFuel(store, model),
+    rangeLy,
+    rangeByFuel: rangeByFuel(store, model, rangeLy),
     fuelPerJumpT: perJump,
     jumpsPerTank: perJump && tank ? Math.floor(tank / perJump) : null,
     jumpsNow: perJump && now != null ? Math.floor(now / perJump) : null,

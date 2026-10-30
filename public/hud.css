@@ -936,6 +936,11 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* With something to do there (scoop, supercharge) the line wraps: one line cut the next stop off at 420 px (2026-10-29). */
+.jump__neutron--act {
+  white-space: normal;
+  line-height: 1.45;
+}
 .jump__neutron-k {
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -974,6 +979,55 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
 .jump__fsd--warn {
   color: var(--bad);
   font-weight: 700;
+}
+/* The refuel stop's fuel bar (2026-10-29): green where the tank should end up, the fuel aboard filling over it. */
+.jump__refuel {
+  margin-top: 0.35rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: #ffd23f;
+}
+.jump__refuel-txt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jump__refuel-st--ok {
+  color: var(--bio);
+}
+.jump__refuel-st--low {
+  color: var(--hud-hi);
+}
+.jump__refuel-st--high {
+  color: var(--bad);
+  font-weight: 700;
+}
+.jump__refuel-bar {
+  position: relative;
+  height: 0.45rem;
+  margin-top: 0.2rem;
+  border: 1px solid var(--hud-dim, rgba(255, 255, 255, 0.25));
+  background: rgba(0, 0, 0, 0.35);
+}
+.jump__refuel-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(123, 224, 123, 0.3);
+  box-shadow: inset 0 0 0 1px var(--bio);
+}
+.jump__refuel-fill {
+  position: absolute;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  background: #ffd23f;
+}
+.jump__refuel-fill--ok {
+  background: var(--bio);
+}
+.jump__refuel-fill--high {
+  background: var(--bad);
 }
 /* "Next boxel" (plan 2.7): the expedition planner's pick, off unless chosen in the launcher. */
 .jump__boxel {

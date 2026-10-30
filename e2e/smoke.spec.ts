@@ -776,6 +776,80 @@ test("hud: Ship draws the vehicle you are in, with the ship and the other vehicl
 });
 
 /*
+  The refuel bar (2026-10-29): at a neutron route's refuel stop the jump HUD shows the tank with the green window and
+  the fuel aboard; in every HUD style, in the EDEXO font, nothing cut off or wider than the HUD (owner: "make sure the
+  HUD looks good in all styles and uses the new font").
+*/
+test("hud: a refuel stop shows the fuel bar in every HUD style, in the EDEXO font", async ({ page }) => {
+  const errors = watchErrors(page);
+  const neutronLive = {
+    at: 12,
+    total: 40,
+    next: "Dryua Prou ZM-H d11-97",
+    nextJumps: 1,
+    nextBoosted: true,
+    onStop: true,
+    refuelHere: true,
+    refuelHalf: false,
+    scoopLs: 12,
+    refuelWindow: { minT: 52, maxT: 100, tankT: 128, nowT: 21, toStop: 3 },
+    superchargeHere: true,
+    scoopOnWay: false,
+    nextInject: null,
+    replanning: false,
+    done: false,
+    destination: "Colonia",
+  };
+  let payload: Record<string, unknown> = { port: 7119, neutronLive };
+  await page.setViewportSize({ width: 420, height: 520 });
+  await page.route(/\/api\/state\?channel=hud/, (r) => r.fulfill({ json: payload }));
+  await page.routeWebSocket(/channel=hud/, (ws) => {
+    ws.onMessage(() => {});
+    setTimeout(() => ws.send(JSON.stringify({ type: "state", payload })), 300);
+  });
+  const styles: [string, Record<string, string>][] = [
+    ["original", {}],
+    ["title", { edexoHudType: "title" }],
+    ["elite-turn", { edexoHudType: "elite", edexoHudTiltMode: "turn" }],
+    ["elite-slant", { edexoHudType: "elite", edexoHudTiltMode: "slant" }],
+    ["compact", { edexoHudCompact: "1" }],
+  ];
+  await page.goto("/jump-overlay.html");
+  for (const [name, prefs] of styles) {
+    for (const nowT of [21, 70, 115]) {
+      payload = { port: 7119, neutronLive: { ...neutronLive, refuelWindow: { ...neutronLive.refuelWindow, nowT } } };
+      await page.evaluate((p) => {
+        for (const k of ["edexoHudType", "edexoHudTiltMode", "edexoHudCompact"]) localStorage.removeItem(k);
+        for (const [k, v] of Object.entries(p)) localStorage.setItem(k, v);
+      }, prefs);
+      await page.reload();
+      const bar = page.locator('[data-section="jump"] [data-f="refuel"]');
+      await expect(bar).toContainText("Scoop to 52 t – 100 t of 128 t");
+      await expect(bar).toContainText(nowT === 21 ? "31 t more" : nowT === 70 ? "enough" : "over 100 t");
+      await expect(bar.locator(".jump__refuel-zone")).toBeVisible();
+      expect(await bar.locator(".jump__refuel-txt").evaluate((e) => getComputedStyle(e).fontFamily)).toMatch(/^"?EDEXO/);
+      expect(await page.evaluate(() => document.fonts.check('12px "EDEXO"'))).toBe(true);
+      expect(
+        await page.evaluate(
+          () =>
+            [...document.querySelectorAll('[data-section="jump"] *')].filter(
+              (e) => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== "visible",
+            ).length,
+        ),
+      ).toBe(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      if (nowT === 21) await page.screenshot({ path: `${OUT}/hud-refuel-${name}.png`, fullPage: true });
+    }
+  }
+  // Off in the launcher: no bar.
+  await page.evaluate(() => localStorage.setItem("edexoHudRefuelBar", "0"));
+  await page.reload();
+  await expect(page.locator('[data-section="jump"] [data-f="neutron"]')).toContainText("Scoop here");
+  await expect(page.locator('[data-section="jump"] [data-f="refuel"]')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+/*
   The 3D galaxy map (G1, docs/galaxy-plan-28092026.md): the whole index loads, region names are
   placed, and moving close to Sol swaps the overview for precise tiles there.
 */

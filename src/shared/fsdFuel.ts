@@ -36,6 +36,8 @@ export interface FsdFuelState {
   unladenT: number | null;
   /** The drive's most fuel per jump (`Loadout` FSD `MaxFuelPerJump` when engineered), when known. */
   maxFuelPerJumpT: number | null;
+  /** The Guardian FSD Booster's bonus in the last `Loadout` (`guardianBoosterLy`); 0 or absent without one. */
+  boosterLy?: number;
   /**
    * What the ship carries (t), from the journal's last `Cargo` line; null until one is read, and again
    * after a ship change or a death. The journal writes one at every login and after every change to the
@@ -58,6 +60,9 @@ export interface FsdFuelModel {
   fitted: boolean;
   unladenT: number;
   maxFuelPerJumpT: number | null;
+  /** The Guardian booster's bonus (ly), and the mass the law was fitted around (the samples' median, t). */
+  boosterLy: number;
+  refMassT: number;
 }
 
 export function emptyFsdFuel(): FsdFuelState {
@@ -66,6 +71,7 @@ export function emptyFsdFuel(): FsdFuelState {
     loadoutLy: null,
     unladenT: null,
     maxFuelPerJumpT: null,
+    boosterLy: 0,
     cargoT: null,
     samples: [],
     fsd: null,
@@ -99,6 +105,25 @@ export function hydrateFsdFuelOthers(raw: unknown): NonNullable<FsdFuelState["ot
     };
   }
   return out;
+}
+
+/** The Guardian FSD Booster's bonus (ly) by module size 1-5; it cannot be engineered. */
+const GUARDIAN_BOOSTER_LY = [0, 4, 6, 7.75, 9.25, 10.5];
+
+/**
+ * The Guardian FSD Booster's bonus from a `Loadout`'s modules (`int_guardianfsdbooster_size5`), 0 without one or with
+ * it switched off. A flat bonus: the longest jump is the drive's own reach, which goes as 1 / mass, plus the bonus,
+ * which does not grow as the ship gets lighter; a supercharge multiplies both (a tester, 2026-10-29: a Caspian with
+ * the size 5 one reaches 532.75 ly, 6 × 88.79, and a planner that scaled the bonus with the lighter tank too planned
+ * a 534 ly hop it could not make).
+ */
+export function guardianBoosterLy(modules: unknown): number {
+  if (!Array.isArray(modules)) return 0;
+  for (const m of modules as Record<string, unknown>[]) {
+    const size = /^int_guardianfsdbooster_size(\d)/i.exec(typeof m?.Item === "string" ? m.Item : "")?.[1];
+    if (size) return m.On === false ? 0 : (GUARDIAN_BOOSTER_LY[Number(size)] ?? 0);
+  }
+  return 0;
 }
 
 /** The drive as its fuel law sees it: the module, and its engineering's values (optimal mass, fuel per jump, ...). */
@@ -141,6 +166,7 @@ export function fsdFuelLoadout(st: FsdFuelState, line: Record<string, unknown>):
   st.fsd = key;
   if (mjr != null) st.loadoutLy = mjr;
   if (typeof line.UnladenMass === "number" && line.UnladenMass > 0) st.unladenT = line.UnladenMass;
+  st.boosterLy = guardianBoosterLy(modules);
   st.maxFuelPerJumpT = null;
   const mods = (fsd?.Engineering as { Modifiers?: { Label?: string; Value?: number }[] } | undefined)
     ?.Modifiers;
@@ -197,14 +223,28 @@ export function fsdFuelModel(st: FsdFuelState): FsdFuelModel | null {
   }
   const ks = st.samples.map((s) => s.fuelT / (s.ly * s.massT) ** p).sort((a, b) => a - b);
   const k = ks[Math.floor(ks.length / 2)]!;
+  const masses = st.samples.map((s) => s.massT).sort((a, b) => a - b);
+  const refMassT = masses[Math.floor(masses.length / 2)]!;
+  const boosterLy = st.boosterLy ?? 0;
   let maxFuel = st.maxFuelPerJumpT;
   if (maxFuel == null && st.loadoutLy != null) {
     // The loadout's range is the jump that spends the most fuel per jump with only that much aboard.
     maxFuel = 1;
-    for (let i = 0; i < 20; i++) maxFuel = k * (st.loadoutLy * (st.unladenT + maxFuel)) ** p;
+    for (let i = 0; i < 20; i++) {
+      const mass: number = st.unladenT + maxFuel;
+      maxFuel = k * ((st.loadoutLy - boosterShift(boosterLy, refMassT, mass)) * mass) ** p;
+    }
     if (!Number.isFinite(maxFuel) || maxFuel <= 0) maxFuel = null;
   }
-  return { k, p, fitted, unladenT: st.unladenT, maxFuelPerJumpT: maxFuel };
+  return { k, p, fitted, unladenT: st.unladenT, maxFuelPerJumpT: maxFuel, boosterLy, refMassT };
+}
+
+/**
+ * What the law's 1 / mass gets wrong with a Guardian booster: the law holds around the mass it was fitted at, but
+ * the booster's part of the range does not scale, so at another mass the true longest jump is the law's plus this.
+ */
+function boosterShift(boosterLy: number, refMassT: number, massT: number): number {
+  return boosterLy * (1 - refMassT / massT);
 }
 
 /** Fuel (t) for a jump of `ly` with `fuelT` in the tank and `cargoT` aboard. */
@@ -217,5 +257,6 @@ export function maxJumpLy(m: FsdFuelModel, fuelT: number, cargoT = 0): number | 
   if (m.maxFuelPerJumpT == null) return null;
   const f = Math.min(m.maxFuelPerJumpT, fuelT);
   if (!(f > 0)) return 0;
-  return (f / m.k) ** (1 / m.p) / (m.unladenT + fuelT + cargoT);
+  const mass = m.unladenT + fuelT + cargoT;
+  return (f / m.k) ** (1 / m.p) / mass + boosterShift(m.boosterLy, m.refMassT, mass);
 }

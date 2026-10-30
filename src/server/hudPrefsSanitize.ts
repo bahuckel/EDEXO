@@ -29,6 +29,7 @@ export function sanitizeHudPrefs(raw: unknown): HudPrefsDTO | null {
   if (r.hudType === "original" || r.hudType === "title" || r.hudType === "elite") out.hudType = r.hudType;
   if (r.credit === "off" || r.credit === "top" || r.credit === "bottom") out.credit = r.credit;
   if (typeof r.nextBoxel === "boolean") out.nextBoxel = r.nextBoxel;
+  if (typeof r.refuelBar === "boolean") out.refuelBar = r.refuelBar;
   if (typeof r.czNeeds === "boolean") out.czNeeds = r.czNeeds;
   if (typeof r.czSites === "boolean") out.czSites = r.czSites;
   if (typeof r.czFinished === "boolean") out.czFinished = r.czFinished;

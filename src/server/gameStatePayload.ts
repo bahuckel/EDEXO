@@ -260,6 +260,7 @@ export function hydrateJournalMergePayload(store: GameStateStore, data: JournalM
       loadoutLy: typeof ff.loadoutLy === "number" ? ff.loadoutLy : null,
       unladenT: typeof ff.unladenT === "number" ? ff.unladenT : null,
       maxFuelPerJumpT: typeof ff.maxFuelPerJumpT === "number" ? ff.maxFuelPerJumpT : null,
+      boosterLy: typeof ff.boosterLy === "number" && ff.boosterLy > 0 ? ff.boosterLy : 0,
       cargoT: typeof ff.cargoT === "number" ? ff.cargoT : null,
       samples: ff.samples.filter((s) => s && s.ly > 0 && s.fuelT > 0 && s.massT > 0),
       fsd: typeof ff.fsd === "string" ? ff.fsd : null,

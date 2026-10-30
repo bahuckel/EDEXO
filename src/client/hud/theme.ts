@@ -65,6 +65,8 @@ export function serverPref(key: string): string | null {
       return str(p.credit);
     case "edexoHudNextBoxel":
       return bool(p.nextBoxel);
+    case "edexoHudRefuelBar":
+      return bool(p.refuelBar);
     case "edexoHudCzNeeds":
       return bool(p.czNeeds);
     case "edexoHudCzSites":
