@@ -14,8 +14,10 @@ import {
   maxJumpLy,
 } from "../src/shared/fsdFuel.js";
 import { GameStateStore } from "../src/server/gameState.js";
-import { neutronShip } from "../src/server/neutronShip.js";
+import { lawFor, neutronShip } from "../src/server/neutronShip.js";
 import { refuelWindow } from "../src/server/neutronFuelWindow.js";
+import { planNeutronRoute } from "../src/server/neutronRoute.js";
+import type { NeutronStar } from "../src/server/neutronIndex.js";
 import type { LiveHop } from "../src/server/neutronLive.js";
 
 const caspian = {
@@ -118,6 +120,9 @@ describe("the fuel model with a known drive", () => {
     // The table's last entry is the full tank; an emptier one jumps further.
     expect(ship.rangeByFuel!.at(-1)).toBeCloseTo(1, 6);
     expect(ship.rangeByFuel![10]! * ship.rangeLy!).toBeCloseTo(89.342, 2);
+    // The planner gets the law for this ship's range (as the drawer sends it, to a tenth), not for one typed in.
+    expect(lawFor(s, 85.5)!.rangeLy(64)).toBeCloseTo(89.342, 2);
+    expect(lawFor(s, 60)).toBeNull();
   });
 });
 
@@ -177,6 +182,44 @@ describe("an engineer's roll before the next Loadout", () => {
     fsdFuelEngineerCraft(st, craft("FrameShiftDrive", fsd.Item, [...before, { Label: "MaxFuelPerJump", Value: 5.72 }]));
     expect(st.drive).toBeNull();
     expect(st.maxFuelPerJumpT).toBe(5.72);
+  });
+});
+
+describe("the planner with the drive's law", () => {
+  const st = emptyFsdFuel();
+  fsdFuelLoadout(st, caspian);
+  const m = fsdFuelModel(st)!;
+  const law = {
+    tankT: 128,
+    perJumpT: 6.8,
+    fuelT: (ly: number, t: number) => fuelForJump(m, ly, t),
+    rangeLy: (t: number) => maxJumpLy(m, t) ?? 0,
+  };
+  const table = Array.from({ length: 21 }, (_, i) => maxJumpLy(m, Math.max(6.8, (128 * i) / 20))! / maxJumpLy(m, 128)!);
+  // Neutron stars every 300 ly (a full tank's ×6 is 513 ly: none can be skipped), then one 530 ly on, no scooping.
+  const stars: NeutronStar[] = [...Array.from({ length: 9 }, (_, i) => i * 300), 2930].map((x, i) => ({ i, x, y: 0, z: 0, scoopLs: null }));
+  const idx = {
+    within: (p: { x: number; y: number; z: number }, r: number) => stars.filter((s) => Math.abs(s.x - p.x) <= r && p.y === 0),
+    nameOf: (i: number) => `N${i}`,
+  };
+  const ship = { rangeLy: maxJumpLy(m, 128)!, rangeByFuel: table, boost: 6, jumpsPerTank: 18, jumpsNow: 18 };
+  const plan = (withLaw: boolean) =>
+    planNeutronRoute(idx, [{ name: "A", x: 0, y: 0, z: 0 }, { name: "B", x: 2930, y: 0, z: 0 }], {
+      ...ship,
+      ...(withLaw ? { law, fuelNowT: 128 } : {}),
+    });
+
+  it("counts each short supercharge at its own fuel, so the long one is planned on the range the ship has", async () => {
+    // Eight 300 ly supercharges spend about 1.7 t each: 114 t left, a reach of 517 ly, short of 530.
+    let fuel = 128;
+    for (let k = 0; k < 8; k++) fuel -= fuelForJump(m, 50, fuel);
+    expect(6 * maxJumpLy(m, fuel)!).toBeLessThan(530);
+    // Counted at 6.8 t a jump the tank looked 71 t full, the ship lighter, and the 530 ly hop one supercharge.
+    expect((await plan(false)).hops.at(-1)!.jumps).toBe(1);
+    // By the law: the supercharge and a jump.
+    const last = (await plan(true)).hops.at(-1)!;
+    expect(last).toMatchObject({ jumps: 2, boosted: 1 });
+    expect(last.rangeLy!).toBeCloseTo(maxJumpLy(m, fuel)!, 1);
   });
 });
 

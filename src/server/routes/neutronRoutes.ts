@@ -5,7 +5,7 @@
 import type express from "express";
 import { localOnly } from "../lanAuth.js";
 import { touchGalaxyMemory } from "../galaxyMemory.js";
-import { neutronShip } from "../neutronShip.js";
+import { lawFor, neutronShip } from "../neutronShip.js";
 import { downloadNeutrons, loadNeutronIndex, neutronsStatus, probeNeutronsRelease } from "../neutronIndex.js";
 import { applyJumponium, optimiseOrder, planNeutronRoute } from "../neutronRoute.js";
 import { jumponiumView, recipeFor } from "../../shared/jumponium.js";
@@ -124,6 +124,9 @@ export function registerNeutronRoutes(
         boost,
         fsdHealth: finite(body.fsdHealth) ?? s?.fsdHealth ?? null,
         wearPerBoost: finite(body.wearPerBoost) ?? s?.wearPerBoost ?? null,
+        // The drive's own law for this ship's range (neutronShip.ts): each supercharge's fuel at the mass aboard.
+        law: lawFor(opts.getJournalStore?.() ?? null, rangeLy),
+        fuelNowT: finite(body.jumpsNow) == null ? (s?.fuelNowT ?? null) : null,
       });
       // "Use Jumponium" (owner, 2026-10-13: a toggle): the route flown with FSD injections where one saves a jump.
       const store = opts.getJournalStore?.() ?? null;

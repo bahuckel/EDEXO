@@ -14,7 +14,7 @@ import type { NeutronIndex } from "./neutronIndex.js";
 import { loadNeutronIndex } from "./neutronIndex.js";
 import { parseLiveHops, type Here, type NeutronLive } from "./neutronLive.js";
 import { applyJumponium, planNeutronRoute } from "./neutronRoute.js";
-import { neutronShip } from "./neutronShip.js";
+import { lawFor, neutronShip } from "./neutronShip.js";
 import { recipeFor } from "../shared/jumponium.js";
 
 /** Refining time for a re-plot (ms). */
@@ -76,6 +76,8 @@ export function createNeutronReplanner(deps: {
           jumpsNow: Math.min(jumpsPerTank, Math.max(0, s.jumpsNow ?? jumpsPerTank)),
           fsdHealth: s.fsdHealth,
           wearPerBoost: s.wearPerBoost,
+          law: lawFor(store, left.rangeLy ?? s.rangeLy),
+          fuelNowT: s.fuelNowT,
         },
         // In flight: the next stop on the HUD within a second, not the three a plan in the drawer takes.
         REPLAN_REFINE_MS,

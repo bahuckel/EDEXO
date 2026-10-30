@@ -4,7 +4,8 @@
  * being flown when it plans again from where the ship is (server/neutronLive.ts).
  */
 import { fullJumpRange } from "../shared/jumpRange.js";
-import { fsdFuelModel, maxJumpLy, type FsdFuelModel } from "../shared/fsdFuel.js";
+import { fsdFuelModel, fuelForJump, maxJumpLy, type FsdFuelModel } from "../shared/fsdFuel.js";
+import type { DriveLaw } from "./neutronRoute.js";
 import { fsdWearEstimate, FSD_WARN } from "../shared/fsdWear.js";
 import type { GameStateStore } from "./gameState.js";
 
@@ -30,6 +31,33 @@ export function ladenRangeLy(store: GameStateStore, model: FsdFuelModel | null):
   const oneJump = model?.maxFuelPerJumpT ?? store.fsdFuel.maxFuelPerJumpT ?? 0;
   const bonus = Math.min(store.fsdFuel.boosterLy ?? 0, mjr);
   return ((mjr - bonus) * (unladen + oneJump)) / (unladen + tank + cargo) + bonus;
+}
+
+/**
+ * The drive's own law with the hold as it is (fsdDrives.ts), for the planner and the refuel window: null when the
+ * drive's module is not known, or the tank or its fuel per jump.
+ */
+export function driveLaw(store: GameStateStore): DriveLaw | null {
+  const model = fsdFuelModel(store.fsdFuel);
+  const tankT = store.loadoutFuelMainCapacityT;
+  if (!model?.drive || !tankT || !model.maxFuelPerJumpT) return null;
+  const cargo = store.liveStatusCargoT ?? store.fsdFuel.cargoT ?? 0;
+  return {
+    tankT,
+    perJumpT: model.maxFuelPerJumpT,
+    fuelT: (ly, t) => fuelForJump(model, ly, t, cargo),
+    rangeLy: (t) => maxJumpLy(model, t, cargo) ?? 0,
+  };
+}
+
+/**
+ * The law for a plan with `rangeLy`: only when it is this ship's (within 0.1 ly). A range typed in for another ship
+ * goes by jumps of fuel, as before.
+ */
+export function lawFor(store: GameStateStore | null, rangeLy: number | null | undefined): DriveLaw | null {
+  if (!store || rangeLy == null) return null;
+  const own = ladenRangeLy(store, fsdFuelModel(store.fsdFuel));
+  return own != null && Math.abs(own - rangeLy) <= 0.1 ? driveLaw(store) : null;
 }
 
 /** Entries in `rangeByFuel`: the tank in twentieths. */
@@ -91,6 +119,7 @@ export function neutronShip(
     fuelPerJumpT: perJump,
     jumpsPerTank: perJump && tank ? Math.floor(tank / perJump) : null,
     jumpsNow: perJump && now != null ? Math.floor(now / perJump) : null,
+    fuelNowT: now ?? null,
     fsdHealth: wear.health,
     wearPerBoost: wear.wearPerBoost,
     wearIsDefault: wear.wearIsDefault,

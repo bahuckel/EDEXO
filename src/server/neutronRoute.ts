@@ -15,6 +15,10 @@
  *
  * - The range grows as the tank empties (`rangeByFuel`): a hop goes by the fuel aboard where it starts; with
  *   `halfTank` a refuel stop may scoop to half a tank, not full, where the lighter ship gets further (Spansh's way).
+ * - With the drive's own law (`law`, fsdDrives.ts) a supercharge spends what its distance takes at the mass aboard,
+ *   not the most a jump can: counted at the most, the tank was planned up to 26 t emptier than it would be, and the
+ *   lighter ship's range put 7 to 10 hops a route up to 3.7 ly past the true reach (a Caspian, x6, Sol to Colonia,
+ *   Sagittarius A* and Beagle Point, 2026-10-30). Normal jumps still count at the most (the game picks their stars).
  *
  * Search: weighted A* over (neutron star, jumps of fuel left), with neighbours cut to the ones that make progress
  * towards the leg's end (the best 32 by distance gained); it hands the event loop back as it goes, so a plan across
@@ -53,6 +57,21 @@ export interface NeutronShip {
   /** FSD health now (0..1) and its wear per supercharge (0..1); both optional. */
   fsdHealth?: number | null;
   wearPerBoost?: number | null;
+  /**
+   * The drive's own law with the ship's cargo, when its module is known and the range is this ship's (neutronShip.ts
+   * `driveLaw`). Fuel is then counted by it; without it, in jumps.
+   */
+  law?: DriveLaw | null;
+  /** The fuel aboard now (t), with `law`; else `jumpsNow` stands for it. */
+  fuelNowT?: number | null;
+}
+
+/** The tank (t), the most fuel a jump takes (t), fuel (t) for an unboosted jump and the longest jump (ly), by the fuel aboard (t). */
+export interface DriveLaw {
+  tankT: number;
+  perJumpT: number;
+  fuelT: (ly: number, fuelAboardT: number) => number;
+  rangeLy: (fuelAboardT: number) => number;
 }
 
 export interface NeutronHop {
@@ -143,6 +162,8 @@ const PAST_REACH_COST = 0.5;
  */
 export const MAX_SCOOP_LS = 5000;
 const FSD_WARN = 0.8;
+/** The tank's share a hop leaves spare when fuel is counted by the drive's law (1 %: the Caspian's 1.3 t). */
+const SPARE_TANK = 0.01;
 
 const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
@@ -167,6 +188,41 @@ export function jumpsFrom(
   if (!fromNeutron) return { jumps: Math.ceil(d / r - 1e-9), boosted: 0 };
   if (d <= boost * r) return { jumps: 1, boosted: 1 };
   return { jumps: 1 + Math.ceil((d - boost * r) / r - 1e-9), boosted: 1 };
+}
+
+/**
+ * The tank as the search counts it: in units of a `tank`-th of it (whole jumps a tank), what a hop burns in them, and
+ * the range by them. Without the law a jump burns one unit and `rangeByFuel` gives the range; with it a supercharge
+ * burns what its distance takes and the law gives the range.
+ */
+function tankModel(ship: NeutronShip) {
+  const tank = Math.max(1, Math.floor(ship.jumpsPerTank));
+  const law = ship.law && ship.law.tankT > 0 && ship.law.perJumpT > 0 ? ship.law : null;
+  const unitT = law ? law.tankT / tank : 1;
+  // A jump's most fuel, in units: 1 without the law.
+  const perU = law ? Math.min(1, law.perJumpT / unitT) : 1;
+  const boost = ship.boost ?? 4;
+  const rangeWith = law
+    ? (fuel: number) => Math.max(1, law.rangeLy(fuel * unitT))
+    : (fuel: number) => rangeAt(ship, fuel, tank);
+  /** The supercharge's own burn (units), its distance capped at its reach `boost * r`. */
+  const boostBurn = (d: number, fuel: number, r: number) =>
+    law ? Math.min(perU, law.fuelT(Math.min(d, boost * r) / boost, fuel * unitT) / unitT) : 1;
+  /** What a hop of `j` jumps over `d` ly burns (units), leaving with `fuel`; `r` is the range it was planned on. */
+  const burn = (j: { jumps: number; boosted: number }, d: number, fuel: number, r: number) =>
+    j.boosted ? boostBurn(d, fuel, r) + (j.jumps - 1) * perU : j.jumps * perU;
+  const start =
+    law && ship.fuelNowT != null && ship.fuelNowT >= 0
+      ? Math.min(tank, ship.fuelNowT / unitT)
+      : Math.max(0, Math.floor(ship.jumpsNow));
+  /** Whole jumps of fuel left, for the table. */
+  const jumpsLeft = (fuel: number) => Math.max(0, Math.floor(fuel / perU + 1e-9));
+  /*
+    Counted exactly, a plan arrived at a refuel star with 0.1 t (counted in whole jumps, the rounding had left tonnes
+    spare): a hop keeps this share of the tank (units), for a jump that spends a little more than the law.
+  */
+  const spare = law ? SPARE_TANK * tank : 0;
+  return { tank, perU, rangeWith, boostBurn, burn, start, jumpsLeft, spare };
 }
 
 interface Node {
@@ -330,8 +386,7 @@ async function searchLeg(
   deadline = Infinity,
 ): Promise<Leg | null> {
   const boost = ship.boost ?? 4;
-  const tank = Math.max(1, Math.floor(ship.jumpsPerTank));
-  const rangeWith = (fuel: number) => rangeAt(ship, fuel, tank);
+  const { tank, perU, rangeWith, boostBurn, burn, spare } = tankModel(ship);
   const ranges = ship.rangeByFuel?.length ? ship.rangeByFuel : [1];
   const maxR = Math.max(1, ship.rangeLy) * Math.max(1, ...ranges);
   const minR = Math.max(1, ship.rangeLy) * Math.min(1, ...ranges);
@@ -531,14 +586,16 @@ async function searchLeg(
       possible scooping on the way (the game's plot passes ordinary K G B F O A M stars, a third of all systems),
       and leave the tank about full. A hop that is all supercharge must fit the fuel aboard.
     */
-    const afterHop = (j: { jumps: number; boosted: number }): { fuel: number; onWay: boolean } | null => {
-      if (j.jumps <= u.fuel) return { fuel: u.fuel - j.jumps, onWay: false };
+    const afterHop = (j: { jumps: number; boosted: number }, d: number): { fuel: number; onWay: boolean } | null => {
+      const used = burn(j, d, u.fuel, r);
+      if (used + spare <= u.fuel + 1e-9) return { fuel: Math.max(0, u.fuel - used), onWay: false };
       // Reaching a scoopable star on the way takes a jump of fuel itself, on top of the supercharge (review 1.2.16).
-      if (j.jumps - j.boosted >= 2 && u.fuel >= j.boosted + 1) return { fuel: tank - 1, onWay: true };
+      if (j.jumps - j.boosted >= 2 && u.fuel >= (j.boosted ? boostBurn(d, u.fuel, r) : 0) + perU)
+        return { fuel: tank - 1, onWay: true };
       return null;
     };
     const toEnd = jumpsFrom(isNeutron, left, r, boost);
-    const endFuel = afterHop(toEnd);
+    const endFuel = afterHop(toEnd, left);
     const endG = endFuel ? u.g + toEnd.jumps + (endFuel.onWay ? ON_WAY_COST : 0) : Infinity;
     if (endFuel && endG < bound - 1e-9) {
       const g = endG;
@@ -563,14 +620,14 @@ async function searchLeg(
     for (const { n } of cands) {
       const d = dist(u.pos, n);
       const j = jumpsFrom(isNeutron, d, r, boost);
-      const arrive = afterHop(j);
+      const arrive = afterHop(j, d);
       if (!arrive) continue;
       const key = `n${n.i}`;
       // Arrive as is (with fuel for at least one more jump), or scoop the system's own star and leave full.
       const base =
         u.g + j.jumps + (arrive.onWay ? ON_WAY_COST : 0) + (j.boosted && j.jumps > 1 ? pastReach : 0);
       const options: { fuel: number; g: number; refuel: boolean; half?: boolean }[] = [];
-      if (arrive.fuel >= 1) options.push({ fuel: arrive.fuel, g: base, refuel: false });
+      if (arrive.fuel >= perU - 1e-9) options.push({ fuel: arrive.fuel, g: base, refuel: false });
       if (n.scoopLs != null && n.scoopLs <= MAX_SCOOP_LS && arrive.fuel < tank) {
         options.push({ fuel: tank, g: base + REFUEL_COST, refuel: true });
         /*
@@ -637,7 +694,8 @@ export async function planNeutronRoute(
     jumpsLeft: ship.jumpsNow,
     fsdHealth: health,
   });
-  let fuel = Math.max(0, Math.floor(ship.jumpsNow));
+  const fuelModel = tankModel(ship);
+  let fuel = fuelModel.start;
   /*
     A leg that starts at a neutron star (the ship sits at one, or a stop is one) supercharges there: without it the
     first hop was planned as normal jumps (review 1.2.16).
@@ -647,7 +705,7 @@ export async function planNeutronRoute(
     for (const n of index.within(p, 0.25)) if (!best || dist(n, p) < dist(best, p)) best = n;
     return best;
   };
-  const tank = Math.max(1, Math.floor(ship.jumpsPerTank));
+  const tank = fuelModel.tank;
   let from: { pos: Pt; star: NeutronStar | null } = { pos: first, star: neutronAt(first) };
   const unsafeLegs: number[] = [];
   let plainJumps = 0;
@@ -658,12 +716,14 @@ export async function planNeutronRoute(
     if (!leg) {
       // No fuel-safe neutron way: the plain plot, flagged.
       unsafeLegs.push(w);
-      const legRange = rangeAt(ship, fuel, tank);
-      const j = jumpsFrom(from.star != null, dist(from.pos, to), legRange, ship.boost ?? 4);
+      const legRange = fuelModel.rangeWith(fuel);
+      const legLy = dist(from.pos, to);
+      const j = jumpsFrom(from.star != null, legLy, legRange, ship.boost ?? 4);
       if (j.boosted && health != null && wear != null) health -= wear;
       // More jumps than the fuel aboard: scooped on the way, so the tank is about full after (not empty).
-      const onWay = j.jumps > fuel;
-      fuel = onWay ? Math.max(0, tank - 1) : fuel - j.jumps;
+      const used = fuelModel.burn(j, legLy, fuel, legRange);
+      const onWay = used > fuel + 1e-9;
+      fuel = onWay ? Math.max(0, tank - 1) : fuel - used;
       hops.push({
         name: to.name,
         x: to.x,
@@ -676,7 +736,7 @@ export async function planNeutronRoute(
         refuel: false,
         scoopOnWay: onWay,
         scoopLs: null,
-        jumpsLeft: fuel,
+        jumpsLeft: fuelModel.jumpsLeft(fuel),
         rangeLy: Math.round(legRange * 10) / 10,
         fsdHealth: health,
       });
@@ -702,8 +762,8 @@ export async function planNeutronRoute(
         ...(n.half ? { refuelHalf: true } : {}),
         scoopOnWay: n.onWay,
         scoopLs: n.star?.scoopLs ?? null,
-        jumpsLeft: n.fuel,
-        rangeLy: Math.round(rangeAt(ship, leaving, tank) * 10) / 10,
+        jumpsLeft: fuelModel.jumpsLeft(n.fuel),
+        rangeLy: Math.round(fuelModel.rangeWith(leaving) * 10) / 10,
         fsdHealth: health,
       });
       prevPos = n.pos;
