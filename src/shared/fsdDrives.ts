@@ -107,20 +107,9 @@ const LOADOUT_TOLERANCE_LY = 0.02;
 export function fsdDriveFromLoadout(line: Record<string, unknown>, boosterLy: number): FsdDrive | null {
   const modules = Array.isArray(line.Modules) ? (line.Modules as Record<string, unknown>[]) : [];
   const fsd = modules.find((m) => m.Slot === "FrameShiftDrive");
-  const row = typeof fsd?.Item === "string" ? FSD[fsd.Item.toLowerCase()] : undefined;
-  if (!row) return null;
-  const mods = (fsd!.Engineering as { Modifiers?: { Label?: string; Value?: number }[] } | undefined)?.Modifiers ?? [];
-  const value = (label: string) => {
-    const v = mods.find((m) => m.Label === label)?.Value;
-    return typeof v === "number" && v > 0 ? v : null;
-  };
-  const drive: FsdDrive = {
-    optMassT: value("FSDOptimalMass") ?? row[0],
-    maxFuelT: value("MaxFuelPerJump") ?? row[1],
-    mul: row[2],
-    pow: row[3],
-    boosterLy,
-  };
+  const mods = (fsd?.Engineering as { Modifiers?: unknown } | undefined)?.Modifiers;
+  const drive = fsdDriveOf(fsd?.Item, mods, boosterLy);
+  if (!drive) return null;
   const unladen = line.UnladenMass;
   const mjr = line.MaxJumpRange;
   const tank = (line.FuelCapacity as { Main?: unknown } | undefined)?.Main;
@@ -128,6 +117,27 @@ export function fsdDriveFromLoadout(line: Record<string, unknown>, boosterLy: nu
   // The Loadout's range is the empty ship's with one jump's fuel aboard (or the tank, when it holds less).
   const fuel = typeof tank === "number" && tank > 0 ? Math.min(drive.maxFuelT, tank) : drive.maxFuelT;
   return Math.abs(driveRangeLy(drive, fuel, unladen + fuel) - mjr) <= LOADOUT_TOLERANCE_LY ? drive : null;
+}
+
+/**
+ * A drive module (`Item`) with its engineering's `Modifiers` applied (a `Loadout`'s, or an `EngineerCraft`'s); null for
+ * a module not in the table. Unchecked: fsdDriveFromLoadout checks it against the Loadout's range.
+ */
+export function fsdDriveOf(item: unknown, modifiers: unknown, boosterLy: number): FsdDrive | null {
+  const row = typeof item === "string" ? FSD[item.toLowerCase()] : undefined;
+  if (!row) return null;
+  const mods = Array.isArray(modifiers) ? (modifiers as { Label?: string; Value?: number }[]) : [];
+  const value = (label: string) => {
+    const v = mods.find((m) => m.Label === label)?.Value;
+    return typeof v === "number" && v > 0 ? v : null;
+  };
+  return {
+    optMassT: value("FSDOptimalMass") ?? row[0],
+    maxFuelT: value("MaxFuelPerJump") ?? row[1],
+    mul: row[2],
+    pow: row[3],
+    boosterLy,
+  };
 }
 
 /** The drive's own longest jump at this mass, booster left out. */

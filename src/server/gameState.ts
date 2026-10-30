@@ -46,7 +46,7 @@ import { codexEntryKey } from "../shared/codexLog.js";
 import { isLegacyPlantKey } from "../shared/achievements.js";
 import { regionForSystem } from "./regionMapData.js";
 import { parseBoxel } from "../shared/boxel.js";
-import { emptyFsdFuel, fsdFuelCargo, fsdFuelJump, type FsdFuelState } from "../shared/fsdFuel.js";
+import { emptyFsdFuel, fsdFuelCargo, fsdFuelEngineerCraft, fsdFuelJump, type FsdFuelState } from "../shared/fsdFuel.js";
 import { fsdWearJump, fsdWearRepair, newFsdWear, type FsdWearState } from "../shared/fsdWear.js";
 import { newOwnAssets, ownAssetsLine, type OwnAssetsState } from "../shared/ownAssets.js";
 import { JUMPONIUM_EVENTS, jumponiumLine, newJumponium, type JumponiumState } from "../shared/jumponium.js";
@@ -1590,6 +1590,8 @@ export class GameStateStore {
       if (event === "Loadout") return journalEvents.onLoadout(this, line);
       // The hold, for the fuel model's jump mass (fsdFuel.ts cargoT); another ship's or after a death: unknown.
       if (event === "Cargo") fsdFuelCargo(this.fsdFuel, line as Record<string, unknown>);
+      // An engineer's roll changes the drive and the mass at once; the next Loadout comes at the next login (fsdFuel.ts).
+      if (event === "EngineerCraft") fsdFuelEngineerCraft(this.fsdFuel, line as Record<string, unknown>);
       if (event === "ShipyardSwap" || event === "ShipyardNew" || event === "Died") this.fsdFuel.cargoT = null;
       if (event === "Repair" || event === "RepairAll") {
         fsdWearRepair(this.fsdWear, line as Record<string, unknown>);

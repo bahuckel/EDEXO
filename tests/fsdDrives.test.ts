@@ -4,8 +4,15 @@
  * tester's EDSY export (Caspian, Mk II SCO drive, size 5 Guardian booster) and the owner's Mandalay Loadout.
  */
 import { describe, expect, it } from "vitest";
-import { driveFuelT, driveRangeLy, fsdDriveFromLoadout } from "../src/shared/fsdDrives.js";
-import { emptyFsdFuel, fsdFuelLoadout, fsdFuelModel, fuelForJump, maxJumpLy } from "../src/shared/fsdFuel.js";
+import { driveFuelT, driveRangeLy, fsdDriveFromLoadout, fsdDriveOf } from "../src/shared/fsdDrives.js";
+import {
+  emptyFsdFuel,
+  fsdFuelEngineerCraft,
+  fsdFuelLoadout,
+  fsdFuelModel,
+  fuelForJump,
+  maxJumpLy,
+} from "../src/shared/fsdFuel.js";
 import { GameStateStore } from "../src/server/gameState.js";
 import { neutronShip } from "../src/server/neutronShip.js";
 import { refuelWindow } from "../src/server/neutronFuelWindow.js";
@@ -111,6 +118,65 @@ describe("the fuel model with a known drive", () => {
     // The table's last entry is the full tank; an emptier one jumps further.
     expect(ship.rangeByFuel!.at(-1)).toBeCloseTo(1, 6);
     expect(ship.rangeByFuel![10]! * ship.rangeLy!).toBeCloseTo(89.342, 2);
+  });
+});
+
+describe("an engineer's roll before the next Loadout", () => {
+  // The Mandalay before its Deep Charge roll: the module's 5.2 t a jump, its range as the game would give it.
+  const fsd = { Slot: "FrameShiftDrive", Item: "int_hyperdrive_overcharge_size5_class5" };
+  const before = [{ Label: "Mass", Value: 26, OriginalValue: 20 }, { Label: "FSDOptimalMass", Value: 1997.5, OriginalValue: 1175 }];
+  const loadout = () => {
+    const mods = { ...fsd, Engineering: { Modifiers: before } };
+    const d = fsdDriveOf(fsd.Item, before, 7.75)!;
+    return { ...mandalay, MaxJumpRange: driveRangeLy(d, 5.2, 329.299988 + 5.2), Modules: [mods, mandalay.Modules[1]!] };
+  };
+  const craft = (slot: string, module: string, modifiers: object[]) => ({ event: "EngineerCraft", Slot: slot, Module: module, Modifiers: modifiers });
+
+  it("takes the drive's new fuel per jump and optimal mass at once", () => {
+    const st = emptyFsdFuel();
+    fsdFuelLoadout(st, loadout());
+    expect(st.drive!.maxFuelT).toBe(5.2);
+    st.samples = [{ ly: 40, fuelT: 2, massT: 360 }];
+    fsdFuelEngineerCraft(st, craft("FrameShiftDrive", fsd.Item, [...before, { Label: "MaxFuelPerJump", Value: 5.72, OriginalValue: 5.2 }]));
+    expect(st.drive).toMatchObject({ optMassT: 1997.5, maxFuelT: 5.72, boosterLy: 7.75 });
+    expect(st.maxFuelPerJumpT).toBe(5.72);
+    // The drive's mass did not change; its samples are another drive's.
+    expect(st.unladenT).toBeCloseTo(329.299988, 6);
+    expect(st.samples).toEqual([]);
+    expect(maxJumpLy(fsdFuelModel(st)!, 5.72)).toBeCloseTo(79.261566, 2);
+  });
+
+  it("moves the ship's mass by the module's, from its engineered mass or else the craft's base", () => {
+    const st = emptyFsdFuel();
+    fsdFuelLoadout(st, loadout());
+    // Heavy duty armour on a module the Loadout did not list as engineered: from its base 20 t to 30 t.
+    fsdFuelEngineerCraft(st, craft("Armour", "mandalay_armour_grade1", [{ Label: "Mass", Value: 30, OriginalValue: 20 }]));
+    expect(st.unladenT).toBeCloseTo(339.299988, 6);
+    // Rolled again: from the 30 t it now has.
+    fsdFuelEngineerCraft(st, craft("Armour", "mandalay_armour_grade1", [{ Label: "Mass", Value: 28, OriginalValue: 20 }]));
+    expect(st.unladenT).toBeCloseTo(337.299988, 6);
+    // The drive's 26 t was in the Loadout: a lighter roll takes 2 t off.
+    fsdFuelEngineerCraft(st, craft("FrameShiftDrive", fsd.Item, [{ Label: "Mass", Value: 24, OriginalValue: 20 }, before[1]!]));
+    expect(st.unladenT).toBeCloseTo(335.299988, 6);
+  });
+
+  it("is read from the journal", () => {
+    const s = new GameStateStore();
+    s.apply({ ...loadout(), timestamp: "2026-10-30T08:00:00Z" } as never);
+    s.apply({
+      timestamp: "2026-10-30T08:05:00Z",
+      ...craft("FrameShiftDrive", fsd.Item, [...before, { Label: "MaxFuelPerJump", Value: 5.72 }]),
+    } as never);
+    expect(s.fsdFuel.drive!.maxFuelT).toBe(5.72);
+  });
+
+  it("leaves an unproven drive to the fitted law", () => {
+    const st = emptyFsdFuel();
+    fsdFuelLoadout(st, { ...loadout(), MaxJumpRange: 70 });
+    expect(st.drive).toBeNull();
+    fsdFuelEngineerCraft(st, craft("FrameShiftDrive", fsd.Item, [...before, { Label: "MaxFuelPerJump", Value: 5.72 }]));
+    expect(st.drive).toBeNull();
+    expect(st.maxFuelPerJumpT).toBe(5.72);
   });
 });
 

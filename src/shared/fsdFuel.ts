@@ -14,7 +14,7 @@
  * over, and each ship's samples are kept while another ship is flown.
  */
 
-import { driveFuelT, driveRangeLy, fsdDriveFromLoadout, type FsdDrive } from "./fsdDrives.js";
+import { driveFuelT, driveRangeLy, fsdDriveFromLoadout, fsdDriveOf, type FsdDrive } from "./fsdDrives.js";
 
 /** Class A drives; used until the commander's own jumps pin `p` down. */
 export const DEFAULT_POWER = 2.45;
@@ -42,6 +42,8 @@ export interface FsdFuelState {
   boosterLy?: number;
   /** The last `Loadout`'s drive by its module's constants (fsdDrives.ts), when they give back its range; else null. */
   drive?: FsdDrive | null;
+  /** Engineered modules' mass (t) by slot, as the last `Loadout` or `EngineerCraft` gave it (fsdFuelEngineerCraft). */
+  moduleMassT?: Record<string, number>;
   /**
    * What the ship carries (t), from the journal's last `Cargo` line; null until one is read, and again
    * after a ship change or a death. The journal writes one at every login and after every change to the
@@ -79,6 +81,7 @@ export function emptyFsdFuel(): FsdFuelState {
     maxFuelPerJumpT: null,
     boosterLy: 0,
     drive: null,
+    moduleMassT: {},
     cargoT: null,
     samples: [],
     fsd: null,
@@ -114,6 +117,16 @@ export function hydrateFsdFuelOthers(raw: unknown): NonNullable<FsdFuelState["ot
   return out;
 }
 
+/** `moduleMassT` from a saved cache: only positive masses. */
+export function hydrateModuleMass(raw: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) out[k] = v;
+  }
+  return out;
+}
+
 /** The Guardian FSD Booster's bonus (ly) by module size 1-5; it cannot be engineered. */
 const GUARDIAN_BOOSTER_LY = [0, 4, 6, 7.75, 9.25, 10.5];
 
@@ -133,11 +146,21 @@ export function guardianBoosterLy(modules: unknown): number {
   return 0;
 }
 
+type Modifier = { Label?: string; Value?: number; OriginalValue?: number };
+
+const modifiersOf = (module: Record<string, unknown> | undefined): Modifier[] =>
+  (module?.Engineering as { Modifiers?: Modifier[] } | undefined)?.Modifiers ?? [];
+
 /** The drive as its fuel law sees it: the module, and its engineering's values (optimal mass, fuel per jump, ...). */
-function fsdKey(fsd: Record<string, unknown> | undefined): string | null {
-  if (!fsd || typeof fsd.Item !== "string") return null;
-  const mods = (fsd.Engineering as { Modifiers?: { Label?: string; Value?: number }[] } | undefined)?.Modifiers ?? [];
-  return [fsd.Item.toLowerCase(), ...mods.map((m) => `${m.Label}=${m.Value}`).sort()].join("|");
+function fsdKey(item: unknown, mods: Modifier[]): string | null {
+  if (typeof item !== "string") return null;
+  return [item.toLowerCase(), ...mods.map((m) => `${m.Label}=${m.Value}`).sort()].join("|");
+}
+
+/** A modifier's value when it is a positive number. */
+function modValue(mods: Modifier[], label: string, key: "Value" | "OriginalValue" = "Value"): number | null {
+  const v = mods.find((m) => m.Label === label)?.[key];
+  return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null;
 }
 
 /**
@@ -150,7 +173,7 @@ export function fsdFuelLoadout(st: FsdFuelState, line: Record<string, unknown>):
   const mjr = typeof line.MaxJumpRange === "number" && line.MaxJumpRange > 0 ? line.MaxJumpRange : null;
   const modules = Array.isArray(line.Modules) ? (line.Modules as Record<string, unknown>[]) : [];
   const fsd = modules.find((m) => m.Slot === "FrameShiftDrive");
-  const key = fsdKey(fsd);
+  const key = fsdKey(fsd?.Item, modifiersOf(fsd));
   if (shipId != null && shipId !== st.shipId) {
     const others = (st.others ??= {});
     if (st.shipId != null && st.samples.length) {
@@ -175,11 +198,40 @@ export function fsdFuelLoadout(st: FsdFuelState, line: Record<string, unknown>):
   if (typeof line.UnladenMass === "number" && line.UnladenMass > 0) st.unladenT = line.UnladenMass;
   st.boosterLy = guardianBoosterLy(modules);
   st.drive = fsdDriveFromLoadout(line, st.boosterLy);
-  st.maxFuelPerJumpT = st.drive?.maxFuelT ?? null;
-  const mods = (fsd?.Engineering as { Modifiers?: { Label?: string; Value?: number }[] } | undefined)
-    ?.Modifiers;
-  const mf = mods?.find((m) => m.Label === "MaxFuelPerJump")?.Value;
-  if (typeof mf === "number" && mf > 0) st.maxFuelPerJumpT = mf;
+  st.maxFuelPerJumpT = modValue(modifiersOf(fsd), "MaxFuelPerJump") ?? st.drive?.maxFuelT ?? null;
+  st.moduleMassT = {};
+  for (const m of modules) {
+    const mass = modValue(modifiersOf(m), "Mass");
+    if (typeof m.Slot === "string" && mass != null) st.moduleMassT[m.Slot] = mass;
+  }
+}
+
+/**
+ * An `EngineerCraft`: the module's new values at once. The game writes no `Loadout` after one until the next login or
+ * outfitting, and the drive and the mass of the last one were wrong until then (the owner's journals, 2026-10-30: a
+ * Deep Charge roll took the Mandalay's fuel per jump from 5.2 t to 5.72 t, an increased-range roll the Panther's
+ * optimal mass from 3,000 t to 3,450 t, and each ship's next jumps spent up to 30 % off the law for hours).
+ * The ship's mass moves by the module's: from its last engineered mass (else the craft's base) to the new one. A
+ * drive crafted anew starts its samples over, as another drive would.
+ */
+export function fsdFuelEngineerCraft(st: FsdFuelState, line: Record<string, unknown>): void {
+  const slot = line.Slot;
+  if (typeof slot !== "string") return;
+  const mods = Array.isArray(line.Modifiers) ? (line.Modifiers as Modifier[]) : [];
+  const mass = modValue(mods, "Mass");
+  if (mass != null) {
+    const masses = (st.moduleMassT ??= {});
+    const before = masses[slot] ?? modValue(mods, "Mass", "OriginalValue");
+    if (before != null && st.unladenT != null) st.unladenT += mass - before;
+    masses[slot] = mass;
+  }
+  if (slot !== "FrameShiftDrive") return;
+  // Only a drive the last Loadout proved (its range given back) is trusted with the table's values for the rest.
+  if (st.drive) st.drive = fsdDriveOf(line.Module, mods, st.drive.boosterLy);
+  st.maxFuelPerJumpT = modValue(mods, "MaxFuelPerJump") ?? st.drive?.maxFuelT ?? null;
+  const key = fsdKey(line.Module, mods);
+  if (key !== st.fsd) st.samples = [];
+  st.fsd = key;
 }
 
 /** A `Cargo` line: the ship's hold in tonnes (the SRV's has its own lines, and is not the ship's mass). */

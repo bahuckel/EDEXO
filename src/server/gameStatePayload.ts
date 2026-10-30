@@ -2,7 +2,7 @@
   The journal cache's payload (split out of gameState.ts, 1.3.2): the store's journal-derived state written for the
   disk cache, and read back after resetAll() so a launch with nothing new in the logs skips the replay.
 */
-import { hydrateFsdFuelOthers } from "../shared/fsdFuel.js";
+import { hydrateFsdFuelOthers, hydrateModuleMass } from "../shared/fsdFuel.js";
 import { hydrateFsdDrive } from "../shared/fsdDrives.js";
 import { hydrateFsdWear } from "../shared/fsdWear.js";
 import { hydrateOwnAssets } from "../shared/ownAssets.js";
@@ -263,6 +263,7 @@ export function hydrateJournalMergePayload(store: GameStateStore, data: JournalM
       maxFuelPerJumpT: typeof ff.maxFuelPerJumpT === "number" ? ff.maxFuelPerJumpT : null,
       boosterLy: typeof ff.boosterLy === "number" && ff.boosterLy > 0 ? ff.boosterLy : 0,
       drive: hydrateFsdDrive(ff.drive),
+      moduleMassT: hydrateModuleMass(ff.moduleMassT),
       cargoT: typeof ff.cargoT === "number" ? ff.cargoT : null,
       samples: ff.samples.filter((s) => s && s.ly > 0 && s.fuelT > 0 && s.massT > 0),
       fsd: typeof ff.fsd === "string" ? ff.fsd : null,
