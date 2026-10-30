@@ -196,3 +196,65 @@
     border-top: 1px solid var(--accent-a20);
   }
 }
+/* The search (owner, 2026-10-30): a system by name, its hits under the box. */
+.scan-route__search {
+  position: relative;
+}
+.scan-route__search input {
+  width: 180px;
+  padding: 2px 6px;
+  border: 1px solid var(--accent-a30);
+  background: transparent;
+  color: var(--text);
+}
+.scan-route__hits {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 3;
+  width: max(100%, 280px);
+  max-height: 50vh;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--accent-a30);
+  background: var(--panel, var(--bg));
+}
+.scan-route__hits button {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 3px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-xs);
+  text-align: left;
+  cursor: pointer;
+}
+.scan-route__hits button:hover {
+  background: var(--accent-a12);
+}
+.scan-route__hits em {
+  color: var(--text-dim);
+  font-style: normal;
+}
+.scan-route__hits .scan-route__note {
+  padding: 3px 8px;
+}
+/* The grid's square size (true scale), bottom left of the view. */
+.scan-route__grid {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  z-index: 2;
+  padding: 1px 6px;
+  border: 1px solid var(--accent-a20);
+  background: rgba(5, 7, 12, 0.75);
+  color: var(--text-dim);
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}

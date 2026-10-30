@@ -60,6 +60,8 @@ export interface ScanRouteBodyDTO {
   viewPos: { x: number; y: number; z: number };
   /** The view's place of what it orbits (a barycentre too): the centre of its ring; null for the root. */
   ringCentre: { x: number; y: number; z: number } | null;
+  /** The true place of what it orbits (ls), for the true-scale view's ring; null for the root. */
+  parentPos: { x: number; y: number; z: number } | null;
   /** The body it orbits (journal id; a barycentre's Null id), and that orbit's size (ls): for the view's rings. */
   parentId: number | null;
   /** A planet somewhere up its Parents chain: a moon (drawn smaller, named only on the route). */

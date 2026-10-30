@@ -161,7 +161,8 @@ export function NeutronDrawer({
   const [status, setStatus] = useState<Status | null>(null);
   const [stops, setStops] = useState<Stop[]>(kept.stops);
   const [query, setQuery] = useState("");
-  const [found, setFound] = useState<Stop[]>([]);
+  // What the search found: the galaxy map's systems, the stations' (by station name), then Spansh's (any system).
+  const [found, setFound] = useState<(Stop & { label?: string })[]>([]);
   const [range, setRange] = useState(kept.range);
   const [tank, setTank] = useState(kept.tank);
   /*
@@ -310,17 +311,49 @@ export function NeutronDrawer({
   // Without a position from the journals (no jump yet), the first stop is where the route starts.
   const waypoints = from ? [from, ...stops] : stops;
 
+  /*
+    The galaxy map's index holds systems with biology recorded (and the commander's own): a system without, the
+    destination of a trip to a station, was "Nothing matches" (owner, 2026-10-30: Stuemeae FG-Y d7561, Explorer's
+    Anchorage). The stations by name, then Spansh's name search, which gives any system it knows with its place.
+  */
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) return setFound([]);
     const ac = new AbortController();
+    const merged: (Stop & { label?: string })[] = [];
+    const have = new Set<string>();
+    const add = (rows: (Stop & { label?: string })[]) => {
+      for (const r of rows) {
+        const k = r.name.toLowerCase();
+        if (have.has(k)) continue;
+        have.add(k);
+        merged.push(r);
+      }
+      if (!ac.signal.aborted) setFound(merged.slice(0, 40));
+    };
     const t = window.setTimeout(() => {
       void fetch(`/api/galaxy/find?q=${encodeURIComponent(q)}`, { signal: ac.signal })
         .then((r) => (r.ok ? r.json() : null))
         .then((j: GalaxyFindDTO | null) => {
-          if (!ac.signal.aborted)
-            setFound((j?.systems ?? []).slice(0, 30).map((s) => ({ name: s.name, x: s.x, y: s.y, z: s.z })));
+          add((j?.systems ?? []).slice(0, 30).map((s) => ({ name: s.name, x: s.x, y: s.y, z: s.z })));
+          add((j?.stations ?? []).slice(0, 10).map((s) => ({ name: s.system, x: s.x, y: s.y, z: s.z, label: `${s.name} · ${s.system}` })));
         })
+        .catch(() => undefined)
+        .then(() =>
+          q.length < 3
+            ? null
+            : fetch(`/api/system/spansh-search?q=${encodeURIComponent(q)}`, { signal: ac.signal })
+                .then((r) => (r.ok ? (r.json() as Promise<{ systems?: { starSystem: string; x?: number; y?: number; z?: number }[] }>) : null))
+                .then((j) =>
+                  add(
+                    (j?.systems ?? [])
+                      .filter((s) => s.x != null && s.y != null && s.z != null)
+                      // The name typed in full first: Spansh's completion lists near names in its own order.
+                      .sort((a, b) => Number(b.starSystem.toLowerCase() === q.toLowerCase()) - Number(a.starSystem.toLowerCase() === q.toLowerCase()))
+                      .map((s) => ({ name: s.starSystem, x: s.x!, y: s.y!, z: s.z!, label: `${s.starSystem} · Spansh` })),
+                  ),
+                ),
+        )
         .catch(() => undefined);
     }, 250);
     return () => {
@@ -328,7 +361,7 @@ export function NeutronDrawer({
       clearTimeout(t);
     };
   }, [query]);
-  const options: PickOption[] = useMemo(() => found.map((s) => ({ value: s.name, label: s.name })), [found]);
+  const options: PickOption[] = useMemo(() => found.map((s) => ({ value: s.name, label: s.label ?? s.name })), [found]);
   // Each hop's system valued from Spansh while a route is shown (routeValues.ts), at most the first 150 hops.
   const valued = useMemo(
     () =>
@@ -540,14 +573,14 @@ export function NeutronDrawer({
             </ol>
             <PickList
               label="Add"
-              hint="A system from the galaxy map's search: it goes at the end of the stops"
+              hint="A system by name (the galaxy map's, a station's, or any Spansh knows): it goes at the end of the stops"
               value=""
               valueLabel="Add a system"
               options={options}
               onQuery={setQuery}
               onChange={(name) => {
                 const s = found.find((x) => x.name === name);
-                if (s) setStops((p) => [...p, s]);
+                if (s) setStops((p) => [...p, { name: s.name, x: s.x, y: s.y, z: s.z }]);
               }}
               placeholder="Search a system"
             />

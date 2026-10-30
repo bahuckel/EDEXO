@@ -120,6 +120,10 @@ export function buildScanRoute(input: ScanRouteInput): ScanRouteDTO {
         const pid = parentIds(r.parents)[0];
         return pid != null ? (view.get(pid) ?? null) : null;
       })(),
+      parentPos: (() => {
+        const pid = parentIds(r.parents)[0];
+        return pid != null ? (positions.get(pid) ?? null) : null;
+      })(),
       parentId: parentIds(r.parents)[0] ?? null,
       moon: Array.isArray(r.parents) && r.parents.some((p) => !!p && typeof p === "object" && "Planet" in (p as object)),
       orbitLs: r.semiMajorAxis ? r.semiMajorAxis / METRES_PER_LS : null,
