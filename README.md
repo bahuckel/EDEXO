@@ -20,8 +20,8 @@ Windows; everything the app saves lives in `%LOCALAPPDATA%\ED Exo Compare\`.
 
 |                                                                                                                |                                                                       |
 | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **[Portable — one file](https://github.com/bahuckel/EDEXO/releases/download/v1.3.2/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
-| **[Program folder — .zip](https://github.com/bahuckel/EDEXO/releases/tag/v1.3.2-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
+| **[Portable — one file](https://github.com/bahuckel/EDEXO/releases/download/v1.3.3/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
+| **[Program folder — .zip](https://github.com/bahuckel/EDEXO/releases/tag/v1.3.3-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
 
 Both are the same version and the same code — [all releases](https://github.com/bahuckel/EDEXO/releases).
 
@@ -44,10 +44,10 @@ saying what worked and what did not — distro, desktop, X11 or Wayland — is t
 
 |                                                                                                                                         |                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO/releases/download/v1.3.2-zip/EDExoCompare-1.3.2-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
-| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO/releases/download/v1.3.2-zip/EDExoCompare-1.3.2-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
+| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO/releases/download/v1.3.3-zip/EDExoCompare-1.3.3-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
+| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO/releases/download/v1.3.3-zip/EDExoCompare-1.3.3-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
 
-**AppImage:** `chmod +x EDExoCompare-1.3.2-x86_64.AppImage`, then run it. It needs FUSE 2:
+**AppImage:** `chmod +x EDExoCompare-1.3.3-x86_64.AppImage`, then run it. It needs FUSE 2:
 
 | Distro                                            | Command                                   |
 | ------------------------------------------------- | ----------------------------------------- |
@@ -58,7 +58,7 @@ saying what worked and what did not — distro, desktop, X11 or Wayland — is t
 | openSUSE                                          | `sudo zypper install libfuse2`            |
 | Arch, CachyOS, Manjaro                            | `sudo pacman -S --needed fuse2`           |
 
-Without FUSE, `./EDExoCompare-1.3.2-x86_64.AppImage --appimage-extract-and-run` works too.
+Without FUSE, `./EDExoCompare-1.3.3-x86_64.AppImage --appimage-extract-and-run` works too.
 
 On start the launcher checks your desktop and lists anything the HUD needs that is missing, with the
 install command for your distro: XWayland on a Wayland session, a compositor on a bare window
@@ -70,13 +70,13 @@ and starts again by itself; tick it to try the graphics card again later. If it 
 once with the graphics card off:
 
 ```bash
-./EDExoCompare-1.3.2-x86_64.AppImage --disable-gpu --disable-gpu-sandbox
+./EDExoCompare-1.3.3-x86_64.AppImage --disable-gpu --disable-gpu-sandbox
 ```
 
 or set `EDEXO_SAFE_GRAPHICS=1` to keep it off. Without the graphics card the 3D galaxy map draws in
 software (slower); the Classic map is unaffected.
 
-**Browser build:** `tar xzf EDExoCompare-1.3.2-linux-x64.tar.gz`, then `./edexo-client.sh` in the
+**Browser build:** `tar xzf EDExoCompare-1.3.3-linux-x64.tar.gz`, then `./edexo-client.sh` in the
 folder it makes. Its `README.txt` has the rest.
 
 **Both:** the journals are found inside the game's Proton or Wine prefix — every Steam library
