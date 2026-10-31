@@ -21,7 +21,11 @@ import { recipeFor } from "../shared/jumponium.js";
 const REPLAN_REFINE_MS = 700;
 
 export interface NeutronReplanner {
-  replan(): Promise<void>;
+  /**
+   * `why`: the HUD's reason when it is not the ship leaving the route; `fuelT`: the tank to plan from, when the caller
+   * read it from the journal line (neutronFuelWatch.ts), else the ship's as the store has it.
+   */
+  replan(opts?: { why?: string; fuelT?: number }): Promise<void>;
 }
 
 export function createNeutronReplanner(deps: {
@@ -42,7 +46,7 @@ export function createNeutronReplanner(deps: {
     the new route — it lands only if the route is still the one it was asked for (its version).
   */
   let busy = false;
-  const replan = async (): Promise<void> => {
+  const replan = async (opts: { why?: string; fuelT?: number } = {}): Promise<void> => {
     if (busy) return;
     const here = shipHere();
     const left = neutronLive.remaining();
@@ -61,7 +65,10 @@ export function createNeutronReplanner(deps: {
     try {
       const s = neutronShip(store);
       const jumpsPerTank = s.jumpsPerTank ?? 4;
-      neutronLive.setReplanning(true);
+      const fuelNowT = opts.fuelT ?? s.fuelNowT;
+      const jumpsNow =
+        opts.fuelT != null && s.fuelPerJumpT ? Math.floor(opts.fuelT / s.fuelPerJumpT + 1e-9) : s.jumpsNow;
+      neutronLive.setReplanning(true, opts.why ?? null);
       push();
       const route = await planRoute(
         index,
@@ -71,13 +78,14 @@ export function createNeutronReplanner(deps: {
           rangeLy: left.rangeLy ?? s.rangeLy,
           rangeByFuel: s.rangeByFuel,
           halfTank: left.halfTank === true,
+          reserve: left.reserve ?? 0,
           boost: left.boost ?? s.boostFactor,
           jumpsPerTank,
-          jumpsNow: Math.min(jumpsPerTank, Math.max(0, s.jumpsNow ?? jumpsPerTank)),
+          jumpsNow: Math.min(jumpsPerTank, Math.max(0, jumpsNow ?? jumpsPerTank)),
           fsdHealth: s.fsdHealth,
           wearPerBoost: s.wearPerBoost,
           law: lawFor(store, left.rangeLy ?? s.rangeLy),
-          fuelNowT: s.fuelNowT,
+          fuelNowT,
         },
         // In flight: the next stop on the HUD within a second, not the three a plan in the drawer takes.
         REPLAN_REFINE_MS,

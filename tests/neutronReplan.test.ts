@@ -57,7 +57,7 @@ function setup(loadIndex: () => { within: never; nameOf: never } | null) {
     loadIndex,
     planRoute,
   });
-  return { live, copied, planRoute, push, replanner };
+  return { live, copied, planRoute, push, replanner, store };
 }
 
 const INDEX = { within: undefined as never, nameOf: undefined as never };
@@ -121,6 +121,23 @@ describe("re-plotting a neutron route", () => {
     expect(t.live.view({ name: "Somewhere", pos: null })?.replanning).toBe(false);
     await t.replanner.replan();
     expect(t.planRoute).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-plots for the fuel from the tank it was told, and the HUD says why meanwhile (plan 1.3.4 S-9)", async () => {
+    const t = setup(() => INDEX);
+    // A 40 t tank at 5 t a jump; Status.json still says 20 t from before the jump.
+    t.store.loadoutFuelMainCapacityT = 40;
+    t.store.fsdFuel.maxFuelPerJumpT = 5;
+    t.store.lastFuelMainT = 20;
+    const run = t.replanner.replan({ why: "8 t more fuel than planned", fuelT: 38 });
+    expect(t.live.view({ name: "Somewhere", pos: null })).toMatchObject({
+      replanning: true,
+      replanWhy: "8 t more fuel than planned",
+    });
+    await run;
+    const ship = (t.planRoute.mock.calls[0] as unknown[])[2] as { fuelNowT: number; jumpsNow: number };
+    expect(ship).toMatchObject({ fuelNowT: 38, jumpsNow: 7 });
+    expect(t.live.view({ name: "Somewhere", pos: null })?.replanWhy).toBeUndefined();
   });
 
   it("leaves a route started meanwhile alone", async () => {

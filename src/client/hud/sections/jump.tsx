@@ -178,7 +178,7 @@ function NeutronLive({ d }: { d: HudSnapshot }) {
   if (n.replanning)
     return (
       <div className="jump__neutron" data-f="neutron">
-        <span className="jump__neutron-k">Neutron</span> off the route · re-plotting from here…
+        <span className="jump__neutron-k">Neutron</span> {n.replanWhy ?? "off the route"} · re-plotting from here…
       </div>
     );
   const todo: ReactNode[] = [];

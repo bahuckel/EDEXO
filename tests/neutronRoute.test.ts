@@ -170,6 +170,64 @@ describe("neutron route", () => {
     expect(r.jumps).toBe(10);
   });
 
+  it("says the fuel it plans aboard at each stop, on arrival and on leaving (plan 1.3.4 S-9)", async () => {
+    // Tank: 3 jumps, counted in whole jumps (no drive law): each hop burns its jumps, a refuel fills the tank.
+    const idx = line(50, 1850, 200, 3);
+    const r = await planNeutronRoute(idx, [A, { name: "B", x: 2050, y: 0, z: 0 }], {
+      rangeLy: 50,
+      jumpsPerTank: 3,
+      jumpsNow: 2,
+    });
+    expect(r.hops[0]).toMatchObject({ fuelArrive: 2, fuelLeave: 2 });
+    for (let i = 1; i < r.hops.length; i++) {
+      const h = r.hops[i]!;
+      if (!h.scoopOnWay) expect(h.fuelArrive).toBe(r.hops[i - 1]!.fuelLeave! - h.jumps);
+      expect(h.fuelLeave).toBe(h.refuel ? 3 : h.fuelArrive);
+    }
+  });
+
+  it("scoops at the start when it is a neutron star with its own scoopable star and the tank is low (plan 1.3.4 S-9)", async () => {
+    // The ship sits at the first neutron star, scoopable, with no jump of fuel: a re-plot made on a refuel stop.
+    const idx = line(0, 1850, 200, 3);
+    const r = await planNeutronRoute(idx, [A, { name: "B", x: 2050, y: 0, z: 0 }], {
+      rangeLy: 50,
+      jumpsPerTank: 3,
+      jumpsNow: 0,
+    });
+    expect(r.unsafeLegs).toEqual([]);
+    expect(r.hops[0]).toMatchObject({ refuel: true, scoopLs: 500, fuelArrive: 0, fuelLeave: 3, jumpsLeft: 3 });
+    expect(r.hops[1]!.boosted).toBe(1);
+  });
+
+  it("keeps the reserve asked for: no hop arrives under it, and it scoops sooner for it (plan 1.3.4 S-7)", async () => {
+    // Every neutron star scoopable, hops of a supercharge and a jump (2 jumps of fuel), a 6-jump tank: the fast plan
+    // arrives at its refuels with nothing left, a 30 % reserve (1.8 jumps) every second hop with 2.
+    const idx = line(50, 1850, 200, 1);
+    const ship = { rangeLy: 50, jumpsPerTank: 6, jumpsNow: 6 };
+    const fast = await planNeutronRoute(idx, [A, { name: "B", x: 2050, y: 0, z: 0 }], ship);
+    const calm = await planNeutronRoute(idx, [A, { name: "B", x: 2050, y: 0, z: 0 }], { ...ship, reserve: 0.3 });
+    expect(Math.min(...fast.hops.slice(1).map((h) => h.fuelArrive!))).toBe(0);
+    for (const h of calm.hops.slice(1)) expect(h.fuelArrive).toBeGreaterThanOrEqual(1.8);
+    expect(calm.refuels).toBeGreaterThan(fast.refuels);
+    expect(calm.reserveDropped).toBeUndefined();
+    // No reserve is the plan as before, hop for hop.
+    expect(await planNeutronRoute(idx, [A, { name: "B", x: 2050, y: 0, z: 0 }], { ...ship, reserve: 0 })).toEqual(fast);
+  });
+
+  it("plans without the reserve where no way keeps it, and says on which leg (plan 1.3.4 S-7)", async () => {
+    // One jump of fuel aboard, the end one jump away, half a tank asked for: that jump arrives empty, and nothing on
+    // the way can be scooped. The plan without the reserve, and the leg named.
+    const idx = line(100_000, 100_000, 1);
+    const r = await planNeutronRoute(idx, [A, { name: "B", x: 40, y: 0, z: 0 }], {
+      rangeLy: 50,
+      jumpsPerTank: 3,
+      jumpsNow: 1,
+      reserve: 0.5,
+    });
+    expect(r.reserveDropped).toEqual([1]);
+    expect(r.unsafeLegs).toEqual([]);
+  });
+
   it("never plans to scoop on the way with an empty tank (review 1.2.16)", async () => {
     // Nothing aboard and no neutron star near: the only way is the plain plot, flagged unsafe.
     const idx = line(100_000, 100_000, 1);

@@ -134,6 +134,7 @@ import { createBoxelRun } from "./boxelRun.js";
 import { createSavedBoxels } from "./savedBoxels.js";
 import { createNeutronLive } from "./neutronLive.js";
 import { createNeutronReplanner } from "./neutronReplan.js";
+import { createNeutronFuelWatch, storeFuel } from "./neutronFuelWatch.js";
 import { createGreenGiantMarks, greenGiantForRecord } from "./greenGiants.js";
 import { createNoticesWiring } from "./noticesWiring.js";
 import { addSnapshotExtras } from "./snapshotExtras.js";
@@ -409,6 +410,9 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   };
   /* Off the route: planned again from where the ship is (server/neutronReplan.ts). */
   const neutronReplanner = createNeutronReplanner({ store, neutronLive, push: () => push(), shipHere });
+  /* More or less fuel than the plan had: planned again from here too (plan 1.3.4 S-9, server/neutronFuelWatch.ts). */
+  const fuelReplan = (why: string, fuelT: number) => void neutronReplanner.replan({ why, fuelT });
+  const neutronFuelWatch = createNeutronFuelWatch({ neutronLive, shipHere, fuel: () => storeFuel(store) }, fuelReplan);
   const bookmarks = createBookmarksService({
     filePath: path.join(resolveCommanderDataDir(), "edexo-bookmarks.json"),
   });
@@ -656,6 +660,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
           // A run can end on a jump (its last system flown): the HUD line says so.
           if (store.boxelCopied) store.boxelCopied.run = savedBoxels.runId() != null;
         }
+        neutronFuelWatch.onLine(line);
         const footFix = side.status ? parseStatusJsonFootFix(side.status) : null;
         ingestExoOrganicJournalLine(store, ownLine, footFix, projectRoot, getCachedSpeciesDatabase());
         sessionLog.record(line, store, getCachedPrices());

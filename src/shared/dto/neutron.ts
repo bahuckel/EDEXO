@@ -25,6 +25,8 @@ export interface NeutronLiveDTO {
   nextInject: { tier: "basic" | "standard" | "premium"; count: number } | null;
   /** The ship left the route: it is being planned again from here. */
   replanning: boolean;
+  /** Why, when it is not the ship leaving the route: the tank differs from the plan's (plan 1.3.4 S-9). */
+  replanWhy?: string;
   /** The last stop is reached: shown until the next jump. */
   done: boolean;
   /** The route's last stop. */

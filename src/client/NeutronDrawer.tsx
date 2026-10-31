@@ -19,6 +19,8 @@ import { routeTotals, routeValueLine, useRouteValues } from "./routeValues";
 import { fmtCrShort } from "@shared/format";
 
 const isBoost = (v: unknown): v is number | null => v === null || v === 4 || v === 6;
+/** The fuel reserve, in per cent of the tank (plan 1.3.4 S-7). */
+const isReservePct = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 50;
 
 type Pt = { x: number; y: number; z: number };
 /** A stop: its place, and its address when the search gave one (its worth from Spansh, plan 1.3.3 R-3). */
@@ -70,6 +72,9 @@ export interface NeutronHopDTO {
   scoopOnWay: boolean;
   scoopLs: number | null;
   jumpsLeft: number;
+  /** The plan's fuel there in jumps, on arrival and on leaving: sent back with "Fly this route" (plan 1.3.4 S-9). */
+  fuelArrive?: number;
+  fuelLeave?: number;
   fsdHealth: number | null;
   /** "Use Jumponium": the FSD injections planned for this hop's normal jumps (one jump fewer), else null. */
   inject?: { tier: "basic" | "standard" | "premium"; count: number } | null;
@@ -87,6 +92,8 @@ interface RouteDTO {
   refuels: number;
   repairBefore: number | null;
   unsafeLegs: number[];
+  /** Legs planned without the reserve: no way kept it (plan 1.3.4 S-7). */
+  reserveDropped?: number[];
   waypoints: Stop[];
   ms: number;
   /** "Use Jumponium" (owner, 2026-10-13: a toggle): what the injections do on this route and what they take. */
@@ -126,6 +133,8 @@ interface LiveDTO {
     destination: string;
     done: boolean;
     replanning: boolean;
+    /** Why the re-plot, when it is the fuel aboard and not the ship leaving the route. */
+    replanWhy?: string;
   } | null;
   hops: NeutronMark[] | null;
   /** Bumped with every new route, a re-plot from where the ship went included. */
@@ -180,6 +189,7 @@ export function NeutronDrawer({
   const [optimise, setOptimise] = useState(kept.optimise);
   const [useJump, setUseJump] = usePersistedState("galaxy.neutron.jumponium", false, isBool);
   const [halfTank, setHalfTank] = usePersistedState("galaxy.neutron.halfTank", false, isBool);
+  const [reservePct, setReservePct] = usePersistedState("galaxy.neutron.reservePct", 0, isReservePct);
   const [route, setRoute] = useState<RouteDTO | null>(kept.route);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -428,6 +438,7 @@ export function NeutronDrawer({
           optimise,
           useJumponium: useJump,
           halfTank,
+          reservePct,
         }),
       });
       const j = (await r.json()) as RouteDTO & { error?: string };
@@ -456,6 +467,17 @@ export function NeutronDrawer({
     if (route && waypoints.length >= 2) void plan();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only the toggles replan
   }, [useJump, halfTank]);
+  // The reserve changed with a route on screen: planned again once the typing stops.
+  const reserveSeen = useRef(reservePct);
+  useEffect(() => {
+    if (reserveSeen.current === reservePct) return;
+    const t = setTimeout(() => {
+      reserveSeen.current = reservePct;
+      if (route && waypoints.length >= 2) void plan();
+    }, 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the reserve replans
+  }, [reservePct]);
   /*
     Fly: from where the ship is now. A plan made somewhere else is made again from here first; the destinations go
     with it, so the server can plot again from wherever the ship goes off the route.
@@ -474,6 +496,7 @@ export function NeutronDrawer({
         boost: boost ?? undefined,
         useJumponium: r.jumponium?.on === true,
         halfTank,
+        ...(reservePct ? { reserve: reservePct / 100 } : {}),
       },
     });
   };
@@ -535,7 +558,10 @@ export function NeutronDrawer({
                 .
               </p>
               {live.view.replanning ? (
-                <p className="g3d-panel__note">Off the route: re-plotting from where you are…</p>
+                <p className="g3d-panel__note">
+                  {live.view.replanWhy ? `${live.view.replanWhy[0]!.toUpperCase()}${live.view.replanWhy.slice(1)}` : "Off the route"}:
+                  re-plotting from where you are…
+                </p>
               ) : null}
               <button
                 type="button"
@@ -687,6 +713,24 @@ export function NeutronDrawer({
               disabled={busy}
               note={route && halfTank ? `(${route.hops.filter((h) => h.refuelHalf).length} of ${route.refuels} stops)` : undefined}
             />
+            <MenuRow
+              label="Keep in the tank"
+              hint="No jump arrives with less than this share of the tank (up to 50 %), so the plan scoops sooner: 0 % is the fastest (a jump's fuel to spare), more is calmer. A re-plot in flight keeps it."
+            >
+              <input
+                className="g3d-input g3d-row__val"
+                type="number"
+                min={0}
+                max={50}
+                step={5}
+                value={reservePct}
+                onChange={(e) => {
+                  const v = Math.round(Number(e.target.value));
+                  if (Number.isFinite(v)) setReservePct(Math.min(50, Math.max(0, v)));
+                }}
+                aria-label="Fuel reserve (per cent of the tank)"
+              />
+            </MenuRow>
             <MenuCheck
               label="Use Jumponium"
               hint="Plan with FSD injections: on every hop where one takes a jump off its normal jumps (it never adds to a supercharged jump), the cheapest by material, one per jump. The HUD says which to synthesise on the way."
@@ -714,8 +758,15 @@ export function NeutronDrawer({
               <p className="g3d-panel__note">
                 <strong>{route.jumps}</strong> jumps ({route.boosted} supercharged) instead of{" "}
                 {route.plainJumps} · {fmtLy(route.distanceLy)} · {route.refuels} refuel stop
-                {route.refuels === 1 ? "" : "s"} · {route.ms} ms
+                {route.refuels === 1 ? "" : "s"}
+                {reservePct ? ` · ${reservePct} % kept in the tank` : ""} · {route.ms} ms
               </p>
+              {route.reserveDropped?.length ? (
+                <p className="g3d-panel__note g3d-panel__note--warn">
+                  No way keeps {reservePct} % in the tank on leg {route.reserveDropped.join(", ")} (too little aboard, or no
+                  scoopable neutron star in reach): planned without it there.
+                </p>
+              ) : null}
               <button
                 type="button"
                 className="btn-top-toggle"

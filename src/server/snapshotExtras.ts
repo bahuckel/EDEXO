@@ -36,6 +36,7 @@ function refuelWindowHere(store: GameStateStore, live: ReturnType<typeof createN
       fuelPerJumpT: ship.fuelPerJumpT,
       tankT,
       law,
+      reserveT: (live.remaining()?.reserve ?? 0) * tankT,
     },
     store.liveStatusFuelMainT,
   );

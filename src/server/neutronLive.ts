@@ -34,6 +34,9 @@ export interface LiveHop {
   scoopOnWay: boolean;
   /** "Use Jumponium": the FSD injections planned for the normal jumps to this stop (one jump fewer). */
   inject?: { tier: "basic" | "standard" | "premium"; count: number } | null;
+  /** The plan's fuel here in jumps, on arrival and on leaving (neutronRoute.ts NeutronHop); absent in older routes. */
+  fuelArrive?: number;
+  fuelLeave?: number;
 }
 
 /** The commander's own stops (not the neutron stars between) and the ship the route was planned for. */
@@ -44,6 +47,8 @@ export interface LivePlan {
   useJumponium?: boolean;
   /** Planned with refuels to half a tank: a re-plot keeps them. */
   halfTank?: boolean;
+  /** The share of the tank kept as a reserve (neutronRoute.ts `reserve`): a re-plot keeps it. */
+  reserve?: number;
   /** The supercharge it was planned with (×4 / ×6), kept by a re-plot; absent: the ship's own. */
   boost?: number;
 }
@@ -54,10 +59,15 @@ export interface NeutronLive {
   remaining(): LivePlan | null;
   /** The ship is far off the way from the stop reached to the next (more than twice its range, 100 ly at least). */
   offRoute(here: Here): boolean;
-  /** A new plan from where the ship is (hops[0] = here) to `targets`: the next stop is copied. */
+  /**
+   * A new plan from where the ship is (hops[0] = here) to `targets`: the next stop is copied, unless it is the one
+   * already on the clipboard (a re-plot for the fuel often keeps it).
+   */
   replace(hops: LiveHop[], targets: LivePlan["targets"]): string | null;
-  /** Planning again from here is under way (the HUD says so). */
-  setReplanning(on: boolean): void;
+  /** Planning again from here is under way (the HUD says so), and why, when it is not the ship leaving the route. */
+  setReplanning(on: boolean, why?: string | null): void;
+  /** The stop reached last, the one after, and whether the ship is in that stop's system; null with no route. */
+  position(here: Here): { at: number; hop: LiveHop; next: LiveHop | null; onStop: boolean } | null;
   /** Bumped with every new route, for the galaxy map to draw the new one. */
   version(): number;
   stop(): void;
@@ -108,6 +118,7 @@ export function parseLivePlan(raw: unknown): LivePlan | null {
   const targets = parseTargets(r.targets);
   const rangeLy = typeof r.rangeLy === "number" && r.rangeLy >= 5 && r.rangeLy <= 500 ? r.rangeLy : null;
   const boost = r.boost === 4 || r.boost === 6 ? r.boost : undefined;
+  const reserve = typeof r.reserve === "number" && r.reserve > 0 && r.reserve <= 0.5 ? r.reserve : undefined;
   return targets.length && rangeLy
     ? {
         targets,
@@ -115,6 +126,7 @@ export function parseLivePlan(raw: unknown): LivePlan | null {
         useJumponium: r.useJumponium === true,
         ...(r.halfTank === true ? { halfTank: true } : {}),
         ...(boost ? { boost } : {}),
+        ...(reserve ? { reserve } : {}),
       }
     : null;
 }
@@ -155,6 +167,8 @@ export function parseLiveHops(raw: unknown): LiveHop[] | null {
     const name = typeof r.name === "string" ? r.name.trim().slice(0, 80) : "";
     if (x == null || y == null || z == null || !name) return null;
     const kind = r.kind === "start" || r.kind === "neutron" || r.kind === "waypoint" ? r.kind : "waypoint";
+    const fuelArrive = num(r.fuelArrive);
+    const fuelLeave = num(r.fuelLeave);
     out.push({
       name,
       x,
@@ -168,6 +182,7 @@ export function parseLiveHops(raw: unknown): LiveHop[] | null {
       scoopLs: num(r.scoopLs),
       scoopOnWay: r.scoopOnWay === true,
       inject: parseInject(r.inject),
+      ...(fuelArrive != null && fuelArrive >= 0 && fuelLeave != null && fuelLeave >= 0 ? { fuelArrive, fuelLeave } : {}),
     });
   }
   return out;
@@ -186,6 +201,7 @@ export function createNeutronLive(opts: {
   let st = load(opts.filePath);
   let done: { destination: string } | null = null;
   let replanning = false;
+  let replanWhy: string | null = null;
   let version = 1;
 
   const persist = (): void => {
@@ -224,6 +240,7 @@ export function createNeutronLive(opts: {
       st = { hops, at, startedAt: now(), plan: plan ?? null };
       // A re-plot of the route before is not this route's: it neither shows nor lands here (version below).
       replanning = false;
+      replanWhy = null;
       version++;
       persist();
       return copyNext();
@@ -240,6 +257,7 @@ export function createNeutronLive(opts: {
             useJumponium: st.plan.useJumponium === true,
             ...(st.plan.halfTank ? { halfTank: true } : {}),
             ...(st.plan.boost ? { boost: st.plan.boost } : {}),
+            ...(st.plan.reserve ? { reserve: st.plan.reserve } : {}),
           }
         : null;
     },
@@ -253,19 +271,28 @@ export function createNeutronLive(opts: {
     },
     replace(hops, targets) {
       if (!st) return null;
+      const was = st.hops[st.at + 1]?.name ?? null;
       st = { hops, at: 0, startedAt: st.startedAt, plan: st.plan ? { ...st.plan, targets } : null };
       version++;
       persist();
-      return copyNext();
+      const next = hops[1]?.name ?? null;
+      return next != null && next === was ? next : copyNext();
     },
-    setReplanning(on) {
+    setReplanning(on, why = null) {
       replanning = on;
+      replanWhy = on ? why : null;
+    },
+    position(here) {
+      if (!st) return null;
+      const hop = st.hops[st.at]!;
+      return { at: st.at, hop, next: st.hops[st.at + 1] ?? null, onStop: sameSystem(hop, here) };
     },
     version: () => version,
     stop() {
       st = null;
       done = null;
       replanning = false;
+      replanWhy = null;
       version++;
       persist();
     },
@@ -335,6 +362,7 @@ export function createNeutronLive(opts: {
         scoopOnWay: !!next?.scoopOnWay,
         done: false,
         replanning,
+        ...(replanning && replanWhy ? { replanWhy } : {}),
         destination: st.hops[st.hops.length - 1]!.name,
       };
     },

@@ -47,6 +47,11 @@ describe("refuelWindow", () => {
     expect(refuelWindow(route, 0, ship, 42)).toEqual({ minT: 30, maxT: 75, tankT: 100, nowT: 42, toStop: 3 });
   });
 
+  it("keeps the route's reserve on every arrival, the next refuel's included (plan 1.3.4 S-7)", () => {
+    // 25 t kept: B and C are left with 25 t (not a jump's 10), D reached with 25 t (not none).
+    expect(refuelWindow(route, 0, { ...ship, reserveT: 25 }, 42)).toEqual({ minT: 55, maxT: 75, tankT: 100, nowT: 42, toStop: 3 });
+  });
+
   it("says a full tank is fine when every hop reaches on it", () => {
     const easy = route.map((h, i) => (i === 1 ? { ...h, x: 400 } : i === 2 ? { ...h, x: 800 } : h));
     expect(refuelWindow(easy, 0, ship, null)?.maxT).toBe(100);

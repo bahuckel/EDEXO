@@ -127,6 +127,8 @@ export function registerNeutronRoutes(
         // How the range grows as the tank empties: this ship's, also for a range typed in (it scales it).
         rangeByFuel: s?.rangeByFuel ?? null,
         halfTank: body.halfTank === true,
+        // The reserve, in per cent of the tank (plan 1.3.4 S-7): 0-50 (neutronRoute.ts MAX_RESERVE).
+        reserve: Math.min(50, Math.max(0, finite(body.reservePct) ?? 0)) / 100,
         jumpsPerTank,
         jumpsNow: Math.min(jumpsPerTank, Math.max(0, jumpsNow ?? jumpsPerTank)),
         boost,

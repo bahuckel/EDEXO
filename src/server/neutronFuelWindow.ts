@@ -23,6 +23,8 @@ export interface FuelWindowShip extends Pick<NeutronShip, "rangeLy" | "rangeByFu
   tankT: number;
   /** The drive's own law with the ship's cargo: fuel (t) for an unboosted jump, longest jump (ly), by the tank aboard. */
   law?: { fuelT: (ly: number, tankT: number) => number; rangeLy: (tankT: number) => number } | null;
+  /** The fuel no hop may arrive under (t): the route's reserve (neutronRoute.ts `reserve`); 0 or absent: none. */
+  reserveT?: number;
 }
 
 /** The tank is tried this finely (t) for the most it may hold. */
@@ -41,6 +43,7 @@ export function refuelWindow(
   const tank = ship.tankT;
   if (!hops[at]?.refuel || !(per > 0) || !(tank > 0)) return null;
   const law = ship.law ?? null;
+  const reserveT = Math.max(0, ship.reserveT ?? 0);
   const range = (fuelT: number) => (law ? law.rangeLy(fuelT) : rangeAt(ship, fuelT, tank));
   const stretch: { d: number; jumps: number; boosted: boolean; scoopOnWay: boolean; last: boolean }[] = [];
   for (let k = at + 1; k < hops.length; k++) {
@@ -63,7 +66,8 @@ export function refuelWindow(
       first = Math.min(per, law.fuelT(Math.min(s.d, reach) / ship.boost, left));
     }
     const burnT = first + (s.jumps - 1) * per;
-    const needT = s.scoopOnWay ? first + (s.boosted ? per : 0) : burnT + (s.last ? 0 : per);
+    // Arriving with a jump to spare (none on the last), or the reserve where it is more (plan 1.3.4 S-7).
+    const needT = s.scoopOnWay ? first + (s.boosted ? per : 0) : burnT + Math.max(s.last ? 0 : per, reserveT);
     return { burnT, needT };
   };
   // Every hop's need covered and every supercharge in reach on this tank; a hair of slack for rounding on both.
