@@ -164,6 +164,11 @@ const PAST_REACH_COST = 0.5;
  */
 export const MAX_SCOOP_LS = 5000;
 const FSD_WARN = 0.8;
+/**
+ * How much shorter a state's range may be and still beat one with less fuel, the same jumps or fewer (0.5 %: under a
+ * light year on a ×6 supercharge; the 2 % supercharge margin is four times it).
+ */
+const RANGE_SLACK = 0.005;
 /** The tank's share a hop leaves spare when fuel is counted by the drive's law (1 %: the Caspian's 1.3 t). */
 const SPARE_TANK = 0.01;
 
@@ -424,8 +429,14 @@ async function searchLeg(
     the range (the same fuel, once the range follows the fuel).
   */
   const reached = new Map<string, { g: number; fuel: number }[]>();
-  const better = (p: { g: number; fuel: number }, g: number, f: number) =>
-    p.g <= g + 1e-9 && p.fuel >= f && rangeWith(p.fuel) >= rangeWith(f) - 1e-9;
+  /*
+    With the drive's law fuel is counted in tonnes, and more fuel is always a heavier ship and a shorter range: no state
+    ever beat another, and a plan across the galaxy kept them all (Sol to Beagle Point, 15.8 s for its first route,
+    plan 1.3.4 S-3). Within RANGE_SLACK of the range the one with more fuel wins: the heavier, the safer of the two.
+  */
+  const slack = ship.law ? RANGE_SLACK : 0;
+  const near = (a: number, b: number) => rangeWith(a) >= rangeWith(b) * (1 - slack) - 1e-9;
+  const better = (p: { g: number; fuel: number }, g: number, f: number) => p.g <= g + 1e-9 && p.fuel >= f && near(p.fuel, f);
   const dominated = (key: string, g: number, f: number) => (reached.get(key) ?? []).some((p) => better(p, g, f));
   const remember = (key: string, g: number, f: number) => {
     const list = (reached.get(key) ?? []).filter((p) => !better({ g, fuel: f }, p.g, p.fuel));
@@ -579,7 +590,7 @@ async function searchLeg(
     if (
       u.key !== "start" &&
       (reached.get(u.key) ?? []).some(
-        (p) => p.g < u.g - 1e-9 && p.fuel >= u.fuel && rangeWith(p.fuel) >= rangeWith(u.fuel) - 1e-9,
+        (p) => p.g < u.g - 1e-9 && p.fuel >= u.fuel && near(p.fuel, u.fuel),
       )
     )
       continue;
