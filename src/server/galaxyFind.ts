@@ -71,10 +71,11 @@ export function sectorOrdinals(t: TileIndex, sectorName: string): number[] {
 
 /**
  * `imported`: the game's visited list (visitedCache.ts), his own as much as the journals' — the launcher says they
- * count as visited in Find (review 1.2.16: they never came up as "yours").
+ * count as visited in Find (review 1.2.16: they never came up as "yours"). Without the galaxy index (`t` null) his
+ * own systems are still found (plan 1.3.4 S-4: the neutron drawer's stops).
  */
 export function galaxyFind(
-  t: TileIndex,
+  t: TileIndex | null,
   store: GameStateStore | null,
   query: string,
   imported: readonly { addr: number; name: string; x: number; y: number; z: number }[] = [],
@@ -82,7 +83,7 @@ export function galaxyFind(
   const q = query.trim().toLowerCase();
   const empty: GalaxyFindDTO = { query, sectors: [], systems: [], partial: false };
   if (q.length < 2) return empty;
-  const cols = sectorColumns(t);
+  const cols = t ? sectorColumns(t) : new Map<string, SectorColumn>();
 
   // Sectors: starts-with before contains.
   const sectors = [...cols.values()]
@@ -117,6 +118,7 @@ export function galaxyFind(
       push({ name: s.name, x: s.x, y: s.y, z: s.z, ordinal: null, addr: String(s.addr), mine: true });
   }
 
+  if (!t) return { query, sectors, systems, partial: false };
   // The index: inside the named sector when the query names one, else a bounded scan.
   const index = t.index;
   const scanRange = (from: number, to: number, deadline: number): boolean => {

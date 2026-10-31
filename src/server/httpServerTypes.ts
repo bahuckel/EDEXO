@@ -5,6 +5,7 @@
  * edexoBootstrap and the tests.
  */
 import type { SpanshSystemHit } from "./spanshSystemHydration.js";
+import type { SearchEdsmSystemsResult } from "./edsmSystemHydration.js";
 import type { GreenGiantVerdict } from "../shared/greenGasGiant.js";
 import type { OwnGreenGiant } from "./galaxyLayers.js";
 import type { SavedBoxelsService } from "./savedBoxels.js";
@@ -303,12 +304,8 @@ export interface HttpServerOptions {
   setCanonnUploadEnabled?: (enabled: boolean) => { ok: boolean; error?: string };
   /** POST /api/settings/eddn-upload — JSON { enabled }. The switch is the whole consent. */
   setEddnUploadEnabled?: (enabled: boolean) => { ok: boolean; error?: string };
-  /** GET /api/system/edsm-search?q= — galaxy name prefix via EDSM (returns id64 as systemAddress). */
-  searchEdsmSystems?: (
-    query: string,
-  ) => Promise<
-    { ok: true; systems: { systemAddress: number; starSystem: string }[] } | { ok: false; error: string }
-  >;
+  /** GET /api/system/edsm-search?q= — galaxy name prefix via EDSM (returns id64 as systemAddress, x y z when known). */
+  searchEdsmSystems?: (query: string) => Promise<SearchEdsmSystemsResult>;
   /** GET /api/system/spansh-search?q= — the same shape from Spansh (id64 = SystemAddress). */
   searchSpanshSystems?: (
     query: string,

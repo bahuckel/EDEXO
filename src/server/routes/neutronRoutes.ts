@@ -10,6 +10,8 @@ import { downloadNeutrons, loadNeutronIndex, neutronsStatus, probeNeutronsReleas
 import { applyJumponium, optimiseOrder, planNeutronRoute } from "../neutronRoute.js";
 import { jumponiumView, recipeFor } from "../../shared/jumponium.js";
 import { parseLiveHops, parseLivePlan } from "../neutronLive.js";
+import { localStopLookup, remoteStopLookup, withStopAddresses } from "../neutronStops.js";
+import { tileIndexAsync } from "../galaxyTiles.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 type Waypoint = { name: string; x: number; y: number; z: number; address?: number };
@@ -112,7 +114,12 @@ export function registerNeutronRoutes(
       return void res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }
     if (!index) return void res.status(404).json({ error: "No neutron star data yet: download it first." });
-    const ordered = body.optimise === true ? optimiseOrder(waypoints) : waypoints;
+    // Any system a stop (S-4): one with a name and a place only gets its address, for its worth in the drawer.
+    const addressed = await withStopAddresses(waypoints, {
+      local: localStopLookup(await tileIndexAsync(), opts.getJournalStore?.() ?? null, opts.getImportedSystems?.() ?? []),
+      remote: remoteStopLookup,
+    });
+    const ordered = body.optimise === true ? optimiseOrder(addressed) : addressed;
     const t0 = Date.now();
     try {
       const route = await planNeutronRoute(index, ordered, {

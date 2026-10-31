@@ -21,8 +21,14 @@ import type { SystemTraits } from "./galaxyTraits.js";
 import { BODY_TRAITS, STAR_CLASSES, STAR_NONE, starClassIndex } from "../shared/galaxyTraits.js";
 import type { BoxelLookupRecord } from "./boxelLookup.js";
 
-/** Listing more than this is not a boxel anyone flies by hand. */
-export const BOXEL_MAX_ROWS = 2000;
+/*
+  No cap in practice (ticket T-MVS9JTOP-A782, owner 2026-10-31: "some boxels have above 10000 systems, there should
+  be functionally no cap"). It was 2,000, and a core boxel past -1999 could not be extended: the end was cut back to
+  -1999 and "Extend to" did nothing. In Spansh's galaxy 2.29 million boxels go past -1999 (mass codes c to g), the
+  longest to -17,719 (a d boxel). The table draws only the rows in view; this only keeps a mistyped number from
+  listing millions of rows.
+*/
+export const BOXEL_MAX_ROWS = 100_000;
 
 /** A visited system: its name, or `[systemAddress, name]` when the address is known (for the stats). */
 export type VisitedSystem = string | readonly [number, string];

@@ -363,10 +363,12 @@ export async function fetchEdsmBodiesAsExplorationRecords(
 }
 
 export type SearchEdsmSystemsResult =
-  { ok: true; systems: { systemAddress: number; starSystem: string }[] } | { ok: false; error: string };
+  | { ok: true; systems: { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number }[] }
+  | { ok: false; error: string };
 
 /**
- * Prefix search against EDSM’s public systems API (`id64` matches in-game `SystemAddress`).
+ * Prefix search against EDSM’s public systems API (`id64` matches in-game `SystemAddress`), with the place when EDSM
+ * has one (the neutron drawer's stops, plan 1.3.4 S-4).
  */
 export async function searchEdsmSystemsByName(
   query: string,
@@ -374,7 +376,7 @@ export async function searchEdsmSystemsByName(
 ): Promise<SearchEdsmSystemsResult> {
   const q = query.trim();
   if (q.length < 2) return { ok: false, error: "Enter at least 2 characters." };
-  const url = `${EDSM_SYSTEMS_URL}?systemName=${encodeURIComponent(q)}&showId=1&showCoordinates=0`;
+  const url = `${EDSM_SYSTEMS_URL}?systemName=${encodeURIComponent(q)}&showId=1&showCoordinates=1`;
   let res: Response;
   try {
     res = await fetch(url, {
@@ -399,14 +401,22 @@ export async function searchEdsmSystemsByName(
   if (!Array.isArray(data)) {
     return { ok: false, error: "Unexpected EDSM system search shape." };
   }
-  const out: { systemAddress: number; starSystem: string }[] = [];
+  const out: { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number }[] = [];
   for (const row of data) {
     if (!row || typeof row !== "object") continue;
     const rec = row as Record<string, unknown>;
     const id64 = pickNum(rec.id64);
     const name = pickStr(rec.name);
     if (id64 === undefined || !Number.isFinite(id64) || !name) continue;
-    out.push({ systemAddress: Math.trunc(id64), starSystem: name });
+    const c = rec.coords && typeof rec.coords === "object" ? (rec.coords as Record<string, unknown>) : null;
+    const x = pickNum(c?.x);
+    const y = pickNum(c?.y);
+    const z = pickNum(c?.z);
+    out.push({
+      systemAddress: Math.trunc(id64),
+      starSystem: name,
+      ...(x !== undefined && y !== undefined && z !== undefined ? { x, y, z } : {}),
+    });
     if (out.length >= maxResults) break;
   }
   return { ok: true, systems: out };

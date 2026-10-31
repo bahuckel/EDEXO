@@ -152,6 +152,20 @@ describe("saved boxels (owner, 2026-09-30)", () => {
   });
 });
 
+describe("a large core boxel (ticket T-MVS9JTOP-A782)", () => {
+  it("lists and extends past -1999: the end was cut back there and Extend did nothing", async () => {
+    const { createSavedBoxels } = await import("../src/server/savedBoxels.js");
+    const s = createSavedBoxels({ filePath: null });
+    s.add("Synuefe XO-P c22-1800");
+    expect(s.list(["Synuefe XO-P c22-17719"])[0]).toMatchObject({ end: 17719, total: 17720, flownBeyond: [] });
+    // What the Extend button sends: the boxel ends there now.
+    s.add("Synuefe XO-P c22-12000");
+    expect(s.list([])[0]).toMatchObject({ end: 12000, lastSystem: "Synuefe XO-P c22-12000", probe: "Synuefe XO-P c22-12001" });
+    const rows = boxelSystems({ query: "Synuefe XO-P c22-12000", end: 12000, index: null, visited: [], speciesName: (id) => id });
+    expect(rows?.rows).toHaveLength(12001);
+  });
+});
+
 describe("a saved boxel follows the jumps (owner, 2026-10-05)", () => {
   it("lists to the highest system flown, past the end it was saved with", async () => {
     const { createSavedBoxels } = await import("../src/server/savedBoxels.js");

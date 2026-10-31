@@ -166,7 +166,7 @@ export function NeutronDrawer({
   const [status, setStatus] = useState<Status | null>(null);
   const [stops, setStops] = useState<Stop[]>(kept.stops);
   const [query, setQuery] = useState("");
-  // What the search found: the galaxy map's systems, the stations' (by station name), then Spansh's (any system).
+  // What the search found: the galaxy map's systems, the stations' (by station name), then Spansh's and EDSM's.
   const [found, setFound] = useState<(Stop & { label?: string })[]>([]);
   const [range, setRange] = useState(kept.range);
   const [tank, setTank] = useState(kept.tank);
@@ -319,7 +319,8 @@ export function NeutronDrawer({
   /*
     The galaxy map's index holds systems with biology recorded (and the commander's own): a system without, the
     destination of a trip to a station, was "Nothing matches" (owner, 2026-10-30: Stuemeae FG-Y d7561, Explorer's
-    Anchorage). The stations by name, then Spansh's name search, which gives any system it knows with its place.
+    Anchorage). The stations by name, then Spansh's name search, which gives any system it knows with its place, and
+    EDSM's (plan 1.3.4 S-4: any system a stop, "even Spansh/EDSM found systems"), asked at the same time, listed after.
   */
   useEffect(() => {
     const q = query.trim();
@@ -336,7 +337,23 @@ export function NeutronDrawer({
       }
       if (!ac.signal.aborted) setFound(merged.slice(0, 40));
     };
+    type Hit = { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number };
+    const named = (url: string): Promise<Hit[]> =>
+      fetch(url, { signal: ac.signal })
+        .then((r) => (r.ok ? (r.json() as Promise<{ systems?: Hit[] }>) : null))
+        .then((j) => j?.systems ?? [])
+        .catch(() => []);
+    // The name typed in full first: Spansh's and EDSM's completion list near names in their own order.
+    const rows = (hits: Hit[], source: string) =>
+      hits
+        .filter((s) => s.x != null && s.y != null && s.z != null)
+        .sort((a, b) => Number(b.starSystem.toLowerCase() === q.toLowerCase()) - Number(a.starSystem.toLowerCase() === q.toLowerCase()))
+        .map((s) => ({ name: s.starSystem, x: s.x!, y: s.y!, z: s.z!, address: s.systemAddress, label: `${s.starSystem} · ${source}` }));
     const t = window.setTimeout(() => {
+      const remote =
+        q.length < 3
+          ? null
+          : { spansh: named(`/api/system/spansh-search?q=${encodeURIComponent(q)}`), edsm: named(`/api/system/edsm-search?q=${encodeURIComponent(q)}`) };
       void fetch(`/api/galaxy/find?q=${encodeURIComponent(q)}`, { signal: ac.signal })
         .then((r) => (r.ok ? r.json() : null))
         .then((j: GalaxyFindDTO | null) => {
@@ -348,25 +365,11 @@ export function NeutronDrawer({
           add((j?.stations ?? []).slice(0, 10).map((s) => ({ name: s.system, x: s.x, y: s.y, z: s.z, label: `${s.name} · ${s.system}` })));
         })
         .catch(() => undefined)
-        .then(() =>
-          q.length < 3
-            ? null
-            : fetch(`/api/system/spansh-search?q=${encodeURIComponent(q)}`, { signal: ac.signal })
-                .then((r) =>
-                  r.ok
-                    ? (r.json() as Promise<{ systems?: { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number }[] }>)
-                    : null,
-                )
-                .then((j) =>
-                  add(
-                    (j?.systems ?? [])
-                      .filter((s) => s.x != null && s.y != null && s.z != null)
-                      // The name typed in full first: Spansh's completion lists near names in its own order.
-                      .sort((a, b) => Number(b.starSystem.toLowerCase() === q.toLowerCase()) - Number(a.starSystem.toLowerCase() === q.toLowerCase()))
-                      .map((s) => ({ name: s.starSystem, x: s.x!, y: s.y!, z: s.z!, address: s.systemAddress, label: `${s.starSystem} · Spansh` })),
-                  ),
-                ),
-        )
+        .then(async () => {
+          if (!remote) return;
+          add(rows(await remote.spansh, "Spansh"));
+          add(rows(await remote.edsm, "EDSM"));
+        })
         .catch(() => undefined);
     }, 250);
     return () => {
@@ -432,7 +435,8 @@ export function NeutronDrawer({
       if (seq !== kept.planSeq) return null;
       if (!r.ok) throw new Error(j.error ?? `Plan failed (${r.status})`);
       kept.route = j;
-      if (optimise) kept.stops = from ? j.waypoints.slice(1) : j.waypoints;
+      // In the plan's order (optimised), with the addresses the server found for stops picked by name (S-4).
+      kept.stops = from ? j.waypoints.slice(1) : j.waypoints;
       setRoute(j);
       setStops(kept.stops);
       draw(j.hops);
@@ -586,7 +590,7 @@ export function NeutronDrawer({
             </ol>
             <PickList
               label="Add"
-              hint="A system by name (the galaxy map's, a station's, or any Spansh knows): it goes at the end of the stops"
+              hint="Any system by name (yours, the galaxy map's, a station's, or any Spansh or EDSM knows): it goes at the end of the stops"
               value=""
               valueLabel="Add a system"
               options={options}
