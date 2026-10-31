@@ -15,6 +15,9 @@ export interface RouteSystemBodyDTO {
   bioCr: number | null;
   /** The likeliest species, best first: logged by others, or predicted. */
   species: { name: string; cr: number | null; chancePct: number | null; logged: boolean }[];
+  /** CODEX ×N: the likeliest species of each genus not yet in the commander's codex here; of them, firsts (shared/codexCount.ts). */
+  codexNew: number;
+  codexFirst: number;
 }
 
 export interface RouteSystemValuesDTO {
@@ -38,6 +41,9 @@ export interface RouteSystemValuesDTO {
   totalCr: number;
   /** Expected exobiology at 1×, all bodies. */
   bioCr: number;
+  /** CODEX ×N for the system: its bodies' counts summed. */
+  codexNew: number;
+  codexFirst: number;
   /** Notable planets and bodies with biology, most valuable first. */
   bodies: RouteSystemBodyDTO[];
   fetchedAt: string | null;
@@ -75,8 +81,16 @@ export interface ScanRouteBodyDTO {
   bioSignals: number | null;
   /** Expected exobiology (Σ chance × price × the footfall multiplier this commander would get). */
   bioCr: number | null;
-  /** In the route: DSS value at least the minimum, or biology left to sample. */
-  target: "dss" | "bio" | "both" | null;
+  /**
+   * In the route: DSS value at least the minimum, biology left worth at least the bio minimum, or (with the codex
+   * switch) a CODEX entry under it.
+   */
+  target: "dss" | "bio" | "both" | "codex" | null;
+  /** CODEX ×N on this body (the likeliest species per genus not in the codex here), and the firsts among them. */
+  codexNew: number;
+  codexFirst: number;
+  /** Known only from EDSM / Spansh: others discovered it, the commander has not scanned it (plan 1.3.4 S-1). */
+  others: boolean;
 }
 
 export interface ScanRouteDTO {
@@ -88,6 +102,14 @@ export interface ScanRouteDTO {
   error?: string;
   atMs: number;
   minDssCr: number;
+  /** A bio body's expected value it must reach to be a stop, and whether CODEX bodies are stops under it. */
+  bioMinCr: number;
+  codexOn: boolean;
+  /**
+   * The system map's header (plan 1.3.4 S-1): every body scanned (the honk included), every planet mapped, what the
+   * commander's own scans here sell for now (null for a system not in the journals), and CODEX ×N.
+   */
+  totals: { scanCr: number; mappedCr: number; currentCr: number | null; codexNew: number; codexFirst: number };
   /** The arrival star: where the route starts. */
   startId: number | null;
   bodies: ScanRouteBodyDTO[];

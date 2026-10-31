@@ -112,6 +112,7 @@ export function routeValueLine(v: RouteSystemValuesDTO | null | undefined): stri
   const parts = [`scan ${fmtCrShort(v.fssCr)}`];
   if (v.dssBodies) parts.push(`map ${fmtCrShort(v.dssCr)} (${v.dssBodies})`);
   if (v.bioCr) parts.push(`bio ${fmtCrShort(v.bioCr)}`);
+  if (v.codexNew) parts.push(`CODEX ×${v.codexNew}`);
   if (v.missing) parts.push(`${v.missing} missing`);
   return parts.join(" · ");
 }

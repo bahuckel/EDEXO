@@ -258,3 +258,12 @@
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
+/* CODEX ×N (plan 1.3.4 S-1): the codex purple, as its halo in the view. */
+.scan-route__codex,
+.scan-route-label--codex,
+.scan-route__stop--codex strong {
+  color: #dcc2ff;
+}
+.scan-route__legend .k-codex {
+  background: #c792ff;
+}

@@ -26,6 +26,9 @@ import { bodyExpectedValue } from "../shared/systemTriage.js";
 import { routeSystemValues, systemScanValues } from "./routeSystemValues.js";
 import type { RouteSystemBodyDTO, RouteSystemValuesDTO } from "../shared/dto/routeSystem.js";
 import { bodyKey } from "../shared/bodyKey.js";
+import { likelyCodex } from "../shared/codexCount.js";
+import { systemHonkCredits, type HonkBody } from "./explorationValue.js";
+import { explorationDataValueBreakdown } from "./explorationDataEstimate.js";
 
 const isBelt = (r: ExplorationScanRecord) =>
   /asteroidcluster/i.test((r.bodyType ?? "").replace(/\s+/g, "")) || /belt cluster/i.test(r.bodyName ?? "");
@@ -33,8 +36,8 @@ const isBelt = (r: ExplorationScanRecord) =>
 const shortName = (body: string, system: string) =>
   system && body.toLowerCase().startsWith(system.toLowerCase() + " ") ? body.slice(system.length + 1) : body;
 
-/** Bio per body id: signals, expected value, and whether biology is left to sample. */
-type Bio = Map<number, { signals: number | null; cr: number | null; left: boolean }>;
+/** Bio per body id: signals, expected value, whether biology is left to sample, and CODEX ×N. */
+type Bio = Map<number, { signals: number | null; cr: number | null; left: boolean; codexNew: number; codexFirst: number }>;
 
 /** The journals' bio bodies of a system, with what this commander would get for them. */
 function journalBio(store: GameStateStore, addr: number): Bio {
@@ -48,7 +51,7 @@ function journalBio(store: GameStateStore, addr: number): Bio {
     const signals = state.biologicalSignals ?? null;
     // Sampled out: every signal has an analysed species.
     const left = signals == null || signals <= 0 || state.confirmedVariants.length < signals;
-    out.set(state.bodyId, { signals, cr: bodyExpectedValue(computed)?.expectedCredits ?? null, left });
+    out.set(state.bodyId, { signals, cr: bodyExpectedValue(computed)?.expectedCredits ?? null, left, ...likelyCodex(computed.matches) });
   }
   return out;
 }
@@ -59,7 +62,7 @@ function spanshBio(store: GameStateStore, sys: RemoteSystemRecord): Bio {
   const out: Bio = new Map();
   for (const r of sys.records) {
     const b = byName.get(r.bodyName);
-    if (b?.bioSignals) out.set(r.bodyId, { signals: b.bioSignals, cr: b.bioCr, left: true });
+    if (b?.bioSignals) out.set(r.bodyId, { signals: b.bioSignals, cr: b.bioCr, left: true, codexNew: b.codexNew, codexFirst: b.codexFirst });
   }
   return out;
 }
@@ -75,12 +78,26 @@ export interface ScanRouteInput {
   firstDiscovered?: (r: ExplorationScanRecord) => boolean;
   totalBodies: number | null;
   minDssCr: number;
+  /** A bio body's expected value it must reach to be a stop (0: every one), and CODEX bodies under it with the switch. */
+  bioMinCr?: number;
+  codexOn?: boolean;
+  /** Body ids known only from EDSM / Spansh (others discovered them; the commander has not scanned them). */
+  others?: ReadonlySet<number>;
+  /** What the commander's own scans here sell for now; null for a system not in the journals. */
+  currentCr?: number | null;
   atMs: number;
 }
 
 /** The view from records: positions, values, targets and the route. Pure, for tests. */
 export function buildScanRoute(input: ScanRouteInput): ScanRouteDTO {
   const { records, bio, minDssCr, atMs } = input;
+  const bioMinCr = input.bioMinCr ?? 0;
+  const codexOn = input.codexOn ?? false;
+  // The header's totals: every body scanned, every planet mapped in place of its scan, and the honk with them.
+  let scanCr = 0;
+  let mappedCr = 0;
+  const honk: HonkBody[] = [];
+  let arrivalFd: boolean | null = null;
   const positions = systemPositions(records, atMs);
   const view = systemViewPositions(records, atMs);
   const name = input.name || records.find((r) => r.starSystem)?.starSystem || `System ${input.addr}`;
@@ -103,9 +120,21 @@ export function buildScanRoute(input: ScanRouteInput): ScanRouteDTO {
       fssCr = v.fss;
       dssCr = v.dssMapped;
     }
+    scanCr += fssCr;
+    mappedCr += dssCr ?? fssCr;
+    if (star && !((r.distanceFromArrivalLs ?? 0) > 0)) arrivalFd = fd;
+    else
+      honk.push(
+        star
+          ? { kind: "star", stellarMass: r.stellarMass ?? 1, starType: r.starType }
+          : { kind: "planet", planetClass: r.planetClass, terraformable: isTerraformableState(r.terraformState), massEM: r.massEM ?? 1 },
+      );
     const b = bio.get(r.bodyId);
     const dssTarget = !star && !mapped && (dssCr ?? 0) >= minDssCr;
-    const bioTarget = !!b && (b.signals ?? 0) > 0 && b.left;
+    const bioLeft = !!b && (b.signals ?? 0) > 0 && b.left;
+    const bioTarget = bioLeft && (b!.cr ?? 0) >= bioMinCr;
+    // Under the bio minimum, a body with a CODEX entry still goes when the switch is on (owner, 2026-10-31).
+    const codexTarget = !bioTarget && codexOn && bioLeft && (b?.codexNew ?? 0) > 0;
     if (star && (r.distanceFromArrivalLs === 0 || (startId == null && r.bodyId === 0))) startId = r.bodyId;
     bodies.push({
       id: r.bodyId,
@@ -133,7 +162,10 @@ export function buildScanRoute(input: ScanRouteInput): ScanRouteDTO {
       mapped,
       bioSignals: b?.signals ?? null,
       bioCr: b?.cr ?? null,
-      target: dssTarget && bioTarget ? "both" : dssTarget ? "dss" : bioTarget ? "bio" : null,
+      target: dssTarget && (bioTarget || codexTarget) ? "both" : dssTarget ? "dss" : bioTarget ? "bio" : codexTarget ? "codex" : null,
+      codexNew: b?.codexNew ?? 0,
+      codexFirst: b?.codexFirst ?? 0,
+      others: input.others?.has(r.bodyId) ?? false,
     });
   }
   // No arrival star in the records: the first star, else the root.
@@ -149,12 +181,21 @@ export function buildScanRoute(input: ScanRouteInput): ScanRouteDTO {
     state: "ok",
     atMs,
     minDssCr,
+    bioMinCr,
+    codexOn,
+    totals: {
+      scanCr: Math.round(scanCr + (arrivalFd != null ? systemHonkCredits(honk, arrivalFd) : 0)),
+      mappedCr: Math.round(mappedCr + (arrivalFd != null ? systemHonkCredits(honk, arrivalFd) : 0)),
+      currentCr: input.currentCr ?? null,
+      codexNew: bodies.reduce((a, x) => a + x.codexNew, 0),
+      codexFirst: bodies.reduce((a, x) => a + x.codexFirst, 0),
+    },
     startId,
     bodies,
     route: { order: route.order.map((s) => s.item), totalLs: route.totalLs },
     bodyCount: { known: bodies.length, total, missing: total != null ? Math.max(0, total - bodies.length) : 0 },
     routeDssCr: targets.reduce((a, b) => a + (b.target === "dss" || b.target === "both" ? (b.dssCr ?? 0) : 0), 0),
-    routeBioCr: targets.reduce((a, b) => a + (b.target === "bio" || b.target === "both" ? (b.bioCr ?? 0) : 0), 0),
+    routeBioCr: targets.reduce((a, b) => a + (b.target === "bio" || b.target === "both" || b.target === "codex" ? (b.bioCr ?? 0) : 0), 0),
   };
 }
 
@@ -170,7 +211,7 @@ export function journalSystemValues(store: GameStateStore, addr: number, name: s
   const db = getCachedSpeciesDatabase();
   const prices = getCachedPrices();
   const names = new Map(records.map((r) => [r.bodyId, r.bodyName]));
-  const bio = new Map<number, Pick<RouteSystemBodyDTO, "bioSignals" | "bioCr" | "species">>();
+  const bio = new Map<number, Pick<RouteSystemBodyDTO, "bioSignals" | "bioCr" | "species" | "codexNew" | "codexFirst">>();
   const compute = addr === store.currentSystemAddress ? computeBody : computeBodyUncached;
   for (const state of store.bioBodiesInSystem(addr)) {
     const computed = compute(state, db, prices, store);
@@ -185,7 +226,12 @@ export function journalSystemValues(store: GameStateStore, addr: number, name: s
       }))
       .sort((a, b) => Number(b.logged) - Number(a.logged) || (b.chancePct ?? -1) - (a.chancePct ?? -1))
       .slice(0, 4);
-    bio.set(state.bodyId, { bioSignals: state.biologicalSignals ?? null, bioCr: row?.expectedCredits ?? null, species });
+    bio.set(state.bodyId, {
+      bioSignals: state.biologicalSignals ?? null,
+      bioCr: row?.expectedCredits ?? null,
+      species,
+      ...likelyCodex(computed.matches),
+    });
   }
   const bodies: RouteSystemBodyDTO[] = [];
   for (const id of new Set([...scan.bodies.keys(), ...bio.keys()])) {
@@ -200,6 +246,8 @@ export function journalSystemValues(store: GameStateStore, addr: number, name: s
       bioSignals: b?.bioSignals ?? null,
       bioCr: b?.bioCr ?? null,
       species: b?.species ?? [],
+      codexNew: b?.codexNew ?? 0,
+      codexFirst: b?.codexFirst ?? 0,
     });
   }
   const worth = (x: RouteSystemBodyDTO) => (x.tag ? (x.dssCr ?? 0) : 0) + (x.bioCr ?? 0);
@@ -218,32 +266,69 @@ export function journalSystemValues(store: GameStateStore, addr: number, name: s
     dssBodies: scan.dssBodies,
     totalCr: scan.totalCr,
     bioCr: bodies.reduce((a, x) => a + (x.bioCr ?? 0), 0),
+    codexNew: bodies.reduce((a, x) => a + x.codexNew, 0),
+    codexFirst: bodies.reduce((a, x) => a + x.codexFirst, 0),
     bodies,
     fetchedAt: null,
   };
 }
 
-/** A system in the journals: its records, the commander's values, its honk's count. Null when there are none. */
-export function journalScanRoute(store: GameStateStore, addr: number, name: string, minDssCr: number, atMs: number): ScanRouteDTO | null {
-  const records = explorationRecordsForSystem(store, addr);
+/** The route's settings: the DSS minimum, the bio minimum, the codex switch. */
+export interface ScanRouteOptions {
+  minDssCr: number;
+  bioMinCr: number;
+  codexOn: boolean;
+}
+
+/**
+ * A system in the journals: its records, the commander's values, its honk's count. Null when there are none. The
+ * bodies his scans lack are filled in from EDSM's and Spansh's (`others`, owner 2026-10-31: "Scan value should also
+ * detect non-FSS-ed planets if they were previously discovered"): placed, valued at the base rate (others discovered
+ * them), counted in the totals, marked as not scanned by him; his own record wins for a body both have.
+ */
+export function journalScanRoute(
+  store: GameStateStore,
+  addr: number,
+  name: string,
+  opts: ScanRouteOptions,
+  atMs: number,
+  spansh: RemoteSystemRecord | null = null,
+): ScanRouteDTO | null {
+  const own = explorationRecordsForSystem(store, addr);
   // A Spansh lookup's records (the map's last resort) are the other path: here only own scans and EDSM's.
-  if (!records.length || records[0] === store.remoteSystems.get(addr)?.records[0]) return null;
+  if (!own.length || own[0] === store.remoteSystems.get(addr)?.records[0]) return null;
+  const records = [...own];
+  const have = new Set(own.map((r) => r.bodyId));
+  const others = new Set<number>();
+  const prefix = `${addr}:`;
+  const edsm = [...store.edsmExplorationByKey].filter(([k]) => k.startsWith(prefix)).map(([, r]) => r);
+  for (const r of [...edsm, ...(spansh?.records ?? [])]) {
+    if (have.has(r.bodyId)) continue;
+    have.add(r.bodyId);
+    records.push(r);
+    if (!r.isBarycentreJournal) others.add(r.bodyId);
+  }
+  const bio = journalBio(store, addr);
+  if (spansh && others.size)
+    for (const [id, b] of spanshBio(store, spansh)) if (others.has(id) && !bio.has(id)) bio.set(id, b);
   return buildScanRoute({
     addr,
     name,
     records,
     source: "journal",
-    bio: journalBio(store, addr),
+    bio,
     mapped: (k) => store.dssMappedBodyKeys.has(k),
     firstDiscovered: (r) => !r.edsmHydrated && commanderFirstDiscoveredBody(addr, r.wasDiscovered),
-    totalBodies: store.fssDiscoveryScanBySystem.get(addr)?.bodyCount ?? null,
-    minDssCr,
+    totalBodies: store.fssDiscoveryScanBySystem.get(addr)?.bodyCount ?? spansh?.bodyCount ?? null,
+    ...opts,
+    others,
+    currentCr: explorationDataValueBreakdown(store, addr).totalCredits,
     atMs,
   });
 }
 
 /** A route system from Spansh, at the base rate. */
-export function spanshScanRoute(store: GameStateStore, sys: RemoteSystemRecord, minDssCr: number, atMs: number): ScanRouteDTO {
+export function spanshScanRoute(store: GameStateStore, sys: RemoteSystemRecord, opts: ScanRouteOptions, atMs: number): ScanRouteDTO {
   return buildScanRoute({
     addr: sys.systemAddress,
     name: sys.starSystem,
@@ -251,7 +336,7 @@ export function spanshScanRoute(store: GameStateStore, sys: RemoteSystemRecord, 
     source: "spansh",
     bio: spanshBio(store, sys),
     totalBodies: sys.bodyCount ?? null,
-    minDssCr,
+    ...opts,
     atMs,
   });
 }

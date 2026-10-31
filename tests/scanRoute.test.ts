@@ -116,7 +116,7 @@ describe("the scan view", () => {
     name: "Test",
     records: [star, elw, icy, hmc],
     source: "journal" as const,
-    bio: new Map([[3, { signals: 2, cr: 9_000_000, left: true }]]),
+    bio: new Map([[3, { signals: 2, cr: 9_000_000, left: true, codexNew: 0, codexFirst: 0 }]]),
     totalBodies: 6,
     minDssCr: 300_000,
     atMs: EPOCH,
@@ -140,9 +140,48 @@ describe("the scan view", () => {
     const v = buildScanRoute({
       ...input,
       mapped: (k) => k.endsWith(":1"),
-      bio: new Map([[3, { signals: 2, cr: 9_000_000, left: false }]]),
+      bio: new Map([[3, { signals: 2, cr: 9_000_000, left: false, codexNew: 0, codexFirst: 0 }]]),
     });
     expect(v.route.order).toEqual([]);
+  });
+
+  it("keeps a bio body under the bio minimum out, unless the codex switch lets its CODEX entries in", () => {
+    const cheap = new Map([[3, { signals: 2, cr: 1_500_000, left: true, codexNew: 2, codexFirst: 1 }]]);
+    const off = buildScanRoute({ ...input, bio: cheap, bioMinCr: 5_000_000 });
+    expect(off.bodies.find((b) => b.id === 3)!.target).toBeNull();
+    const on = buildScanRoute({ ...input, bio: cheap, bioMinCr: 5_000_000, codexOn: true });
+    expect(on.bodies.find((b) => b.id === 3)).toMatchObject({ target: "codex", codexNew: 2, codexFirst: 1 });
+    expect(on.route.order).toEqual([3, 1]);
+    expect(on.totals.codexNew).toBe(2);
+  });
+
+  it("totals the system as the system map does: every body scanned, every planet mapped, the honk with both", () => {
+    const v = buildScanRoute({ ...input, others: new Set([2]), currentCr: 12_345 });
+    const fss = v.bodies.reduce((a, b) => a + b.fssCr, 0);
+    const mapped = v.bodies.reduce((a, b) => a + (b.dssCr ?? b.fssCr), 0);
+    expect(v.totals.scanCr).toBeGreaterThan(fss);
+    expect(v.totals.mappedCr - mapped).toBe(v.totals.scanCr - fss);
+    expect(v.totals.currentCr).toBe(12_345);
+    expect(v.bodies.find((b) => b.id === 2)!.others).toBe(true);
+    expect(v.bodies.find((b) => b.id === 1)!.others).toBe(false);
+  });
+});
+
+describe("the likely species' CODEX entries", () => {
+  it("counts each genus' likeliest candidate only, and the firsts among them", async () => {
+    const { likelyCodex } = await import("../src/shared/codexCount.js");
+    const m = (genus: string, pct: number, codexNew: boolean, codexFirst = false) =>
+      ({ entry: { genus, displayName: `${genus} ${pct}` }, presenceProbabilityPercent: pct, codexNew, codexFirst, priceCredits: 1 }) as never;
+    expect(
+      likelyCodex([
+        m("Bacterium", 80, true, true),
+        m("Bacterium", 20, false),
+        // The likeliest Stratum is logged: its new runner-up does not count.
+        m("Stratum", 70, false),
+        m("Stratum", 30, true),
+        m("Tussock", 55, true),
+      ]),
+    ).toEqual({ codexNew: 2, codexFirst: 1 });
   });
 });
 
@@ -155,5 +194,37 @@ describe("times as EDSM and Spansh write them", () => {
     expect(parseSourceTime("2026-09-04T22:55:03Z")).toBe(utc);
     expect(parseSourceTime("2026-09-05 00:55:03+02")).toBe(utc);
     expect(parseSourceTime(undefined)).toBeNaN();
+  });
+});
+
+describe("a system half scanned", () => {
+  it("fills in the bodies others discovered, marks them, and leaves only the unknown ones missing", async () => {
+    const { GameStateStore } = await import("../src/server/gameState.js");
+    const { journalScanRoute } = await import("../src/server/scanRouteView.js");
+    const s = new GameStateStore();
+    const T = "2026-10-31T10:00:00Z";
+    const base = { timestamp: T, StarSystem: "Half", SystemAddress: 4242, ScanType: "Detailed" };
+    s.apply({ timestamp: T, event: "FSSDiscoveryScan", SystemAddress: 4242, SystemName: "Half", BodyCount: 4, Progress: 0.5 } as never);
+    s.apply({ ...base, event: "Scan", BodyName: "Half A", BodyID: 0, StarType: "K", StellarMass: 0.8, DistanceFromArrivalLS: 0 } as never);
+    s.apply({ ...base, event: "Scan", BodyName: "Half 1", BodyID: 1, PlanetClass: "Icy body", MassEM: 0.1, DistanceFromArrivalLS: 100, Parents: [{ Star: 0 }], SemiMajorAxis: 100 * METRES_PER_LS } as never);
+    const spansh = {
+      systemAddress: 4242,
+      starSystem: "Half",
+      coords: null,
+      fetchedAt: T,
+      sourceUpdatedAt: null,
+      bio: [],
+      bodyCount: 4,
+      records: [
+        rec(1, { systemAddress: 4242, bodyName: "Half 1", planetClass: "Rocky body", edsmHydrated: true }),
+        rec(2, { systemAddress: 4242, bodyName: "Half 2", planetClass: "Earthlike body", massEM: 1, edsmHydrated: true, parents: [{ Star: 0 }], ...orbit(400) }),
+      ],
+    };
+    const v = journalScanRoute(s, 4242, "Half", { minDssCr: 300_000, bioMinCr: 0, codexOn: false }, EPOCH, spansh as never)!;
+    // His Half 1 wins over Spansh's; Half 2 comes from Spansh, marked, worth mapping.
+    expect(v.bodies.map((b) => [b.id, b.others])).toEqual([[0, false], [1, false], [2, true]]);
+    expect(v.bodies.find((b) => b.id === 1)!.cls).toBe("Icy body");
+    expect(v.bodies.find((b) => b.id === 2)!.target).toBe("dss");
+    expect(v.bodyCount).toEqual({ known: 3, total: 4, missing: 1 });
   });
 });

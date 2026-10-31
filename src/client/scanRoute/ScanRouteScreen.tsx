@@ -14,6 +14,26 @@ import { createScanRouteScene, type ScanRouteScene, type ScanScale } from "./sca
 import "../styles/scan-route.css";
 
 const MIN_KEY = "edexo.scanRoute.minDssCr";
+/** A bio body's expected value for a stop (0: every one), and CODEX bodies under it (owner, 2026-10-31). */
+const BIO_MIN_KEY = "edexo.scanRoute.bioMinCr";
+const CODEX_KEY = "edexo.scanRoute.codex";
+
+function readNum(key: string, def: number): number {
+  try {
+    const raw = localStorage.getItem(key);
+    const v = Number(raw);
+    return raw != null && Number.isFinite(v) && v >= 0 ? v : def;
+  } catch {
+    return def;
+  }
+}
+function keep(key: string, v: string): void {
+  try {
+    localStorage.setItem(key, v);
+  } catch {
+    /* this session only */
+  }
+}
 const SCALE_KEY = "edexo.scanRoute.scale";
 
 function readScale(): ScanScale {
@@ -85,6 +105,13 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
   const [gridLs, setGridLs] = useState<number | null>(null);
   // What the box says, and the minimum asked for 400 ms after the last key (each one re-plans the route).
   const [minText, setMinText] = useState(String(readMin()));
+  const [bioMin, setBioMin] = useState(() => readNum(BIO_MIN_KEY, 0));
+  const [bioMinText, setBioMinText] = useState(() => String(readNum(BIO_MIN_KEY, 0)));
+  const [codexOn, setCodexOnState] = useState(() => readNum(CODEX_KEY, 0) === 1);
+  const setCodexOn = (v: boolean) => {
+    setCodexOnState(v);
+    keep(CODEX_KEY, v ? "1" : "0");
+  };
   const [route, setRoute] = useState<GalaxyRouteDTO | null>(null);
   // The system shown, by address (null: the current system): a jump moves the route on, not the view.
   const [sel, setSel] = useState<number | null>(null);
@@ -185,7 +212,7 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
       shownKey.current = key;
       setView("loading");
     }
-    const q = new URLSearchParams({ min: String(min) });
+    const q = new URLSearchParams({ min: String(min), bioMin: String(bioMin), codex: codexOn ? "1" : "0" });
     if (stop.addr != null) {
       q.set("addr", String(stop.addr));
       q.set("name", stop.name);
@@ -197,7 +224,7 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
     return () => {
       live = false;
     };
-  }, [stop.addr, stop.name, min, rev]);
+  }, [stop.addr, stop.name, min, bioMin, codexOn, rev]);
 
   useEffect(() => {
     if (!host.current) return;
@@ -225,6 +252,14 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
     }, 400);
     return () => clearTimeout(t);
   }, [minText]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const v = Math.max(0, Number(bioMinText) || 0);
+      setBioMin(v);
+      keep(BIO_MIN_KEY, String(v));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [bioMinText]);
 
   const d = typeof view === "object" ? view : null;
   const byId = new Map(d?.bodies.map((b) => [b.id, b]) ?? []);
@@ -309,6 +344,21 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
           />
           cr
         </label>
+        <label className="scan-route__min" title="A body with biology joins when its expected exobiology is at least this (0: every one)">
+          Bio worth at least
+          <input
+            type="number"
+            min={0}
+            step={1_000_000}
+            value={bioMinText}
+            onChange={(e) => setBioMinText(e.target.value)}
+          />
+          cr
+        </label>
+        <label className="scan-route__min" title="A body whose likely species include one not yet in your codex for this region joins the route, whatever its value">
+          <input type="checkbox" checked={codexOn} onChange={(e) => setCodexOn(e.target.checked)} />
+          Include codex bodies
+        </label>
         <button
           type="button"
           onClick={() => setScale(scale === "true" ? "compact" : "true")}
@@ -350,6 +400,33 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
               ) : null}
               <table className="scan-route__sum">
                 <tbody>
+                  <tr title="Every star and planet scanned with the FSS, the honk included">
+                    <td>System scan value</td>
+                    <td>{fmtCrExact(d.totals.scanCr)}</td>
+                  </tr>
+                  <tr title="Every planet mapped (in place of its scan), the stars scanned, the honk">
+                    <td>System mapped value</td>
+                    <td>{fmtCrExact(d.totals.mappedCr)}</td>
+                  </tr>
+                  {d.totals.currentCr != null ? (
+                    <tr title="What your own scans here sell for now">
+                      <td>Current value</td>
+                      <td>{fmtCrExact(d.totals.currentCr)}</td>
+                    </tr>
+                  ) : null}
+                  {d.totals.codexNew ? (
+                    <tr title="The likeliest species of each genus on its bodies not yet in your codex for this region; first: nobody has logged it here">
+                      <td>Codex</td>
+                      <td className="scan-route__codex">
+                        CODEX ×{d.totals.codexNew}
+                        {d.totals.codexFirst ? ` · ${d.totals.codexFirst} first` : ""}
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+              <table className="scan-route__sum">
+                <tbody>
                   <tr>
                     <td>Route</td>
                     <td>{legs.length ? `${legs.length} stops · ${fmtLs(d.route.totalLs)}` : "nothing to fly to"}</td>
@@ -376,25 +453,38 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
                       <span>{fmtLs(leg)}</span>
                     </div>
                     <div className="scan-route__why">
-                      {b.target !== "bio" && b.dssCr != null ? <span>{b.tag ?? b.cls} · map {fmtCrShort(b.dssCr)}</span> : null}
-                      {b.target !== "dss" && b.bioSignals ? (
+                      <span>
+                        {b.tag ?? b.cls} · Scan {fmtCrShort(b.fssCr)}
+                        {b.dssCr != null ? ` · Mapped ${fmtCrShort(b.dssCr)}` : ""}
+                      </span>
+                      {b.bioSignals ? (
                         <span>
                           {b.bioSignals} bio{b.bioCr != null ? ` · ${fmtCrShort(b.bioCr)}` : ""}
                         </span>
                       ) : null}
+                      {b.codexNew ? (
+                        <span className="scan-route__codex">
+                          CODEX ×{b.codexNew}
+                          {b.codexFirst ? " (first)" : ""}
+                        </span>
+                      ) : null}
+                      {b.others ? <span className="dim">not scanned by you</span> : null}
                     </div>
                   </li>
                 ))}
               </ol>
               {picked != null && byId.get(picked) && !byId.get(picked)!.target ? (
                 <p className="scan-route__note">
-                  {byId.get(picked)!.short}: {byId.get(picked)!.cls} · scan {fmtCrShort(byId.get(picked)!.fssCr)}
-                  {byId.get(picked)!.dssCr != null ? ` · map ${fmtCrShort(byId.get(picked)!.dssCr)}` : ""}
+                  {byId.get(picked)!.short}: {byId.get(picked)!.cls} · Scan {fmtCrShort(byId.get(picked)!.fssCr)}
+                  {byId.get(picked)!.dssCr != null ? ` · Mapped ${fmtCrShort(byId.get(picked)!.dssCr)}` : ""}
                   {byId.get(picked)!.mapped ? " · mapped" : ""}
+                  {byId.get(picked)!.codexNew ? ` · CODEX ×${byId.get(picked)!.codexNew}` : ""}
+                  {byId.get(picked)!.others ? " · not scanned by you" : ""}
                 </p>
               ) : null}
               <p className="scan-route__legend">
-                <i className="k-dss" /> worth mapping <i className="k-bio" /> biology <i className="k-both" /> both · ? not scanned yet
+                <i className="k-dss" /> worth mapping <i className="k-bio" /> biology <i className="k-both" /> both{" "}
+                <i className="k-codex" /> codex · ? not scanned yet
               </p>
             </>
           ) : null}

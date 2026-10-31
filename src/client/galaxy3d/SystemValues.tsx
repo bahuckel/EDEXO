@@ -57,6 +57,15 @@ export function SystemValues({ addr, name }: { addr: string; name: string }) {
             <td>Exobiology, expected</td>
             <td className="g3d-num">{fmtCrExact(d.bioCr)}</td>
           </tr>
+          {d.codexNew ? (
+            <tr title="The likeliest species of each genus on its bodies not yet in your codex for this region">
+              <td>Codex</td>
+              <td className="g3d-num">
+                CODEX ×{d.codexNew}
+                {d.codexFirst ? ` · ${d.codexFirst} first` : ""}
+              </td>
+            </tr>
+          ) : null}
         </tbody>
         <tfoot>
           <tr>
@@ -75,6 +84,7 @@ export function SystemValues({ addr, name }: { addr: string; name: string }) {
                   {[
                     b.tag ? `${b.tag} · map ${fmtCrShort(b.dssCr)}` : null,
                     b.bioSignals ? `${b.bioSignals} bio · ${b.bioCr != null ? fmtCrShort(b.bioCr) : "?"}` : null,
+                    b.codexNew ? `CODEX ×${b.codexNew}` : null,
                   ]
                     .filter(Boolean)
                     .join(" · ")}

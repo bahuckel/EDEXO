@@ -22,6 +22,7 @@ import { statSync } from "node:fs";
 import { remoteSystemsCachePath } from "./remoteSystems.js";
 import { getCachedPrices, getCachedSpeciesDatabase } from "./speciesDb.js";
 import { triageInputsFromBodies, triageRow } from "../shared/systemTriage.js";
+import { likelyCodex } from "../shared/codexCount.js";
 
 /** Species listed per body. */
 const SPECIES_SHOWN = 4;
@@ -101,7 +102,7 @@ export function routeSystemValues(store: GameStateStore, sys: RemoteSystemRecord
   const scan = systemScanValues(sys.records);
   const had = store.remoteSystems.get(sys.systemAddress);
   store.remoteSystems.set(sys.systemAddress, sys);
-  const bio = new Map<number, Pick<RouteSystemBodyDTO, "bioSignals" | "bioCr" | "species">>();
+  const bio = new Map<number, Pick<RouteSystemBodyDTO, "bioSignals" | "bioCr" | "species" | "codexNew" | "codexFirst">>();
   try {
     const db = getCachedSpeciesDatabase();
     const prices = getCachedPrices();
@@ -120,7 +121,12 @@ export function routeSystemValues(store: GameStateStore, sys: RemoteSystemRecord
         }))
         .sort((a, b) => Number(b.logged) - Number(a.logged) || (b.chancePct ?? -1) - (a.chancePct ?? -1) || (b.cr ?? 0) - (a.cr ?? 0))
         .slice(0, SPECIES_SHOWN);
-      bio.set(state.bodyId, { bioSignals: state.biologicalSignals ?? null, bioCr: row ? row.expectedCredits : null, species });
+      bio.set(state.bodyId, {
+        bioSignals: state.biologicalSignals ?? null,
+        bioCr: row ? row.expectedCredits : null,
+        species,
+        ...likelyCodex(computed.matches),
+      });
     }
   } finally {
     if (had) store.remoteSystems.set(sys.systemAddress, had);
@@ -140,6 +146,8 @@ export function routeSystemValues(store: GameStateStore, sys: RemoteSystemRecord
       bioSignals: b?.bioSignals ?? null,
       bioCr: b?.bioCr ?? null,
       species: b?.species ?? [],
+      codexNew: b?.codexNew ?? 0,
+      codexFirst: b?.codexFirst ?? 0,
     });
   }
   const worth = (x: RouteSystemBodyDTO) => (x.tag ? (x.dssCr ?? 0) : 0) + (x.bioCr ?? 0);
@@ -156,6 +164,8 @@ export function routeSystemValues(store: GameStateStore, sys: RemoteSystemRecord
     dssBodies: scan.dssBodies,
     totalCr: scan.totalCr,
     bioCr: out.reduce((a, x) => a + (x.bioCr ?? 0), 0),
+    codexNew: out.reduce((a, x) => a + x.codexNew, 0),
+    codexFirst: out.reduce((a, x) => a + x.codexFirst, 0),
     bodies: out,
     fetchedAt: sys.fetchedAt,
   };
@@ -191,7 +201,7 @@ export function createRouteSystemValues(store: () => GameStateStore | null, fetc
 
   /** One system valued, or why not. */
   async function values(addr: number, name: string): Promise<RouteSystemValuesDTO> {
-    const empty = { addr: String(addr), name, bodyCount: 0, bodyTotal: null, missing: 0, fssCr: 0, dssCr: 0, dssBodies: 0, totalCr: 0, bioCr: 0, bodies: [], fetchedAt: null };
+    const empty = { addr: String(addr), name, bodyCount: 0, bodyTotal: null, missing: 0, codexNew: 0, codexFirst: 0, fssCr: 0, dssCr: 0, dssBodies: 0, totalCr: 0, bioCr: 0, bodies: [], fetchedAt: null };
     const s = store();
     if (!s) return { ...empty, state: "error", error: "The journals are not loaded yet." };
     const sys = await system(addr, name);

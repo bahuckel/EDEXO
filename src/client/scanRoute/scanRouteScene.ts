@@ -56,7 +56,7 @@ const LABEL_MIN_PX = 28;
 const GRID_MIN = 1;
 const GRID_MAX = 100_000;
 
-const TARGET_COLOUR = { dss: "#40d9cc", bio: "#5ce675", both: "#ffd166" } as const;
+const TARGET_COLOUR = { dss: "#40d9cc", bio: "#5ce675", both: "#ffd166", codex: "#c792ff" } as const;
 
 export interface ScanRouteScene {
   show(d: ScanRouteDTO, scale: ScanScale): void;
