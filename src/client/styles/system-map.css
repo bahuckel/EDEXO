@@ -627,6 +627,13 @@ button.body-detail-kv-value.body-detail-kv-interactive:hover {
   margin-bottom: 0.35rem;
 }
 
+/* What makes a notable body notable (the Notable card's old tooltip), above the facts (plan 1.3.4 S-8). */
+.planet-quick-notes {
+  margin: 0 1.6rem 0.4rem 0;
+  padding-left: 1rem;
+  line-height: 1.35;
+}
+
 .system-map-popup-close {
   position: absolute;
   top: 0.3rem;

@@ -16,6 +16,10 @@
  *
  * `at` instead of `trigger`: a panel opened at a point (a click on a map or a strip), not by a button
  * of its own. It hangs off that point, and on closing focus goes back to what had it when it opened.
+ *
+ * `preview`: shown while something is hovered (plan 1.3.4 S-8): focus stays where it is, the pointer goes through it
+ * (it opens beside the pointer and would otherwise take the hover from what opened it), and nothing outside closes it.
+ * `stay`: a click outside or focus leaving does not close it either; Escape and its own close button still do.
  */
 import * as RP from "@radix-ui/react-popover";
 import { useLayoutEffect, useMemo, useRef, type ReactElement, type ReactNode } from "react";
@@ -33,6 +37,8 @@ export function Popover({
   sideOffset = 6,
   alignOffset = 0,
   contained = false,
+  preview = false,
+  stay = false,
   children,
 }: {
   open: boolean;
@@ -53,6 +59,8 @@ export function Popover({
   /** Along the edge, from where `align` puts it. */
   alignOffset?: number;
   contained?: boolean;
+  preview?: boolean;
+  stay?: boolean;
   children: ReactNode;
 }) {
   // A point as Radix's anchor: a rectangle of no size there.
@@ -82,13 +90,18 @@ export function Popover({
       alignOffset={alignOffset}
       collisionPadding={8}
       onClick={contained ? (ev) => ev.stopPropagation() : undefined}
+      style={preview ? { pointerEvents: "none" } : undefined}
+      onOpenAutoFocus={preview ? (ev) => ev.preventDefault() : undefined}
+      onInteractOutside={preview || stay ? (ev) => ev.preventDefault() : undefined}
       onCloseAutoFocus={
-        at
-          ? (ev) => {
-              ev.preventDefault();
-              opener.current?.focus({ preventScroll: true });
-            }
-          : undefined
+        preview
+          ? (ev) => ev.preventDefault()
+          : at
+            ? (ev) => {
+                ev.preventDefault();
+                opener.current?.focus({ preventScroll: true });
+              }
+            : undefined
       }
     >
       {children}

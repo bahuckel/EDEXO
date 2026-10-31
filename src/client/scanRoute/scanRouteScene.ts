@@ -85,6 +85,8 @@ export function createScanRouteScene(
   host: HTMLElement,
   onPick: (id: number) => void,
   onGrid?: (lsPerSquare: number | null) => void,
+  /** The body under the pointer, or null when it left them all (plan 1.3.4 S-8: its facts while hovered). */
+  onHover?: (id: number | null) => void,
 ): ScanRouteScene {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, logarithmicDepthBuffer: true });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
@@ -206,6 +208,32 @@ export function createScanRouteScene(
     if (hit) onPick(meshes.get(hit.object)!);
   };
   renderer.domElement.addEventListener("click", onClick);
+  // Once a frame at most, and only when the body under the pointer changes; not while dragging the view.
+  let hovered: number | null = null;
+  let hoverFrame = 0;
+  const setHovered = (id: number | null) => {
+    if (id === hovered) return;
+    hovered = id;
+    renderer.domElement.style.cursor = id == null ? "" : "pointer";
+    onHover?.(id);
+  };
+  const onMove = (e: PointerEvent) => {
+    if (e.buttons || hoverFrame) return;
+    const at = { clientX: e.clientX, clientY: e.clientY };
+    hoverFrame = requestAnimationFrame(() => {
+      hoverFrame = 0;
+      raycaster.setFromCamera(ndc(at), camera);
+      const hit = raycaster.intersectObjects([...meshes.keys()], false)[0];
+      setHovered(hit ? meshes.get(hit.object)! : null);
+    });
+  };
+  const onLeave = () => {
+    cancelAnimationFrame(hoverFrame);
+    hoverFrame = 0;
+    setHovered(null);
+  };
+  renderer.domElement.addEventListener("pointermove", onMove);
+  renderer.domElement.addEventListener("pointerleave", onLeave);
 
   /*
     The wheel: towards the point under the mouse on the system's plane, by a factor a notch. The factor grows with how
@@ -395,6 +423,9 @@ export function createScanRouteScene(
       ro.disconnect();
       controls.removeEventListener("change", render);
       renderer.domElement.removeEventListener("click", onClick);
+      renderer.domElement.removeEventListener("pointermove", onMove);
+      renderer.domElement.removeEventListener("pointerleave", onLeave);
+      cancelAnimationFrame(hoverFrame);
       renderer.domElement.removeEventListener("wheel", onWheel);
       clear();
       clearGroup(grid);

@@ -559,8 +559,17 @@ export function PlanetQuickFactsPopup({
   onGoToBioBody,
   pos,
   records,
+  mode = "click",
+  notes,
 }: {
   records?: readonly RecordMarkDTO[];
+  /**
+   * `click`: opened by a click, closed by Escape, a click outside or focus leaving (the system map's). `preview`: shown
+   * while the body is hovered. `pinned`: clicked, and kept until its close button, Escape or a jump (plan 1.3.4 S-8).
+   */
+  mode?: "click" | "preview" | "pinned";
+  /** Lines the strip entry used to carry in its tooltip (what makes it notable), above the facts. */
+  notes?: readonly string[];
   detail: SystemMapBodyDetailDTO | null;
   fallbackTitle: string;
   /** e.g. notable strip tag line */
@@ -593,16 +602,27 @@ export function PlanetQuickFactsPopup({
       side="right"
       sideOffset={12}
       alignOffset={12}
+      preview={mode === "preview"}
+      stay={mode === "pinned"}
     >
-      <button
-        type="button"
-        className="system-map-popup-close"
-        onClick={onClose}
-        aria-label="Close detail"
-        title="Close quick facts"
-      >
-        ×
-      </button>
+      {mode === "preview" ? null : (
+        <button
+          type="button"
+          className="system-map-popup-close"
+          onClick={onClose}
+          aria-label="Close detail"
+          title="Close quick facts"
+        >
+          ×
+        </button>
+      )}
+      {notes?.length ? (
+        <ul className="planet-quick-notes dim tiny">
+          {notes.map((t) => (
+            <li key={t}>{t}</li>
+          ))}
+        </ul>
+      ) : null}
       {detail ? (
         <DetailBody detail={detail} onGoToBioBody={onGoToBioBody} records={records} />
       ) : (

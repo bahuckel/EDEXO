@@ -142,4 +142,49 @@ describe("Popover", () => {
     await settle();
     expect(document.activeElement).toBe(before);
   });
+
+  /*
+    A notable body's quick facts (plan 1.3.4 S-8): `preview` while it is hovered (focus stays, the pointer goes through,
+    nothing outside closes it), `stay` once clicked (a click outside or focus leaving no longer close it; Escape does).
+  */
+  function AtPointMode(props: { preview?: boolean; stay?: boolean; onShown: (open: boolean) => void }) {
+    const [open, setOpen] = useState(true);
+    props.onShown(open);
+    return open
+      ? createElement(Popover, {
+          open,
+          onOpenChange: setOpen,
+          at: { left: 100, top: 100 },
+          label: "Quick facts: Notable 1",
+          portal: true,
+          preview: props.preview,
+          stay: props.stay,
+          children: createElement("button", { type: "button", id: "inside" }, "Go"),
+        })
+      : null;
+  }
+  const outside = () => {
+    const b = document.createElement("button");
+    b.id = "elsewhere";
+    document.body.appendChild(b);
+    return b;
+  };
+
+  it("the preview leaves focus where it was and lets the pointer through", async () => {
+    const strip = outside();
+    strip.focus();
+    await act(async () => root!.render(createElement(AtPointMode, { preview: true, onShown: () => {} })));
+    expect(panel()).not.toBeNull();
+    expect(document.activeElement).toBe(strip);
+    expect(panel()!.style.pointerEvents).toBe("none");
+  });
+
+  it("the kept one still closes on Escape", async () => {
+    let shown = true;
+    await act(async () => root!.render(createElement(AtPointMode, { stay: true, onShown: (o) => (shown = o) })));
+    await act(async () => {
+      document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(shown).toBe(false);
+  });
 });

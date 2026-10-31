@@ -65,6 +65,7 @@ export const BodyTabStrip = memo(function BodyTabStrip({
   notableTabs = false,
   onToggleNotableTabs,
   onNotableClick,
+  onNotableHover,
   notableValue,
 }: {
   sections: TabSection[];
@@ -85,6 +86,8 @@ export const BodyTabStrip = memo(function BodyTabStrip({
   notableTabs?: boolean;
   onToggleNotableTabs?: () => void;
   onNotableClick?: (n: NotableBodyInfo, ev: ReactMouseEvent) => void;
+  /** Hovered at this point, or left (null): the quick facts while it lasts (plan 1.3.4 S-8). */
+  onNotableHover?: (n: NotableBodyInfo | null, at?: { x: number; y: number }) => void;
   /** A notable body's scan value, when the system map has it. */
   notableValue?: (bodyId: number) => number | null;
 }) {
@@ -345,7 +348,9 @@ export const BodyTabStrip = memo(function BodyTabStrip({
                       className={`tab tab--notable${n.dssMapped ? " tab--done" : ""}`}
                       tabIndex={-1}
                       onClick={(ev) => onNotableClick?.(n, ev)}
-                      title={`${n.bodyLabelShort}: ${n.tag} — ${n.dssMapped ? "mapped" : "not mapped yet"}; no biology. Click for quick facts.`}
+                      onMouseEnter={(ev) => onNotableHover?.(n, { x: ev.clientX, y: ev.clientY })}
+                      onMouseLeave={() => onNotableHover?.(null)}
+                      aria-label={`${n.bodyLabelShort}: ${n.tag}, ${n.dssMapped ? "mapped" : "not mapped yet"}, no biology: quick facts`}
                     >
                       <span className="tab-label">{n.bodyLabelShort}</span>
                       <span className="tab-meta">

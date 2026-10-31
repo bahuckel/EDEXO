@@ -70,10 +70,13 @@ export const SystemCardRow = memoOnSnapSlice(SYSTEM_CARD_FIELDS, function System
   snap,
   onOpenSystemMap,
   onNotableClick,
+  onNotableHover,
 }: {
   snap: SnapSlice<(typeof SYSTEM_CARD_FIELDS)[number]>;
   onOpenSystemMap: () => void;
   onNotableClick: (n: NotableBodyInfo, ev: ReactMouseEvent) => void;
+  /** Hovered (or focused) at this point, or left (null): the quick facts while it lasts (plan 1.3.4 S-8). */
+  onNotableHover?: (n: NotableBodyInfo | null, at?: { x: number; y: number }) => void;
 }) {
   const header = snap.primaryStarsHeader;
   const name = header?.systemName ?? snap.viewingSystemName ?? snap.currentSystem ?? null;
@@ -189,15 +192,15 @@ export const SystemCardRow = memoOnSnapSlice(SYSTEM_CARD_FIELDS, function System
                   <button
                     type="button"
                     className={`sys-notable-card__row${n.green ? ` sys-notable-card__row--ggg sys-notable-card__row--ggg-${n.green.level}` : ""}`}
-                    title={
-                      (n.sold ? "Data sold — " : "") +
-                      (n.dssMapped ? "Mapped (DSS)" : "Scanned, not mapped") +
-                      " — click for quick facts" +
-                      (n.green ? `\n${n.green.why}` : "") +
-                      (n.features ?? []).map((f) => `\n${f.label}: ${f.why}`).join("") +
-                      (records.has(n.bodyId) ? `\n${recordMarksTitle(records.get(n.bodyId)!)}` : "")
-                    }
+                    aria-label={`${n.bodyLabelShort}, ${n.tag}: quick facts (a click keeps them)`}
                     onClick={(ev) => onNotableClick(n, ev)}
+                    onMouseEnter={(ev) => onNotableHover?.(n, { x: ev.clientX, y: ev.clientY })}
+                    onMouseLeave={() => onNotableHover?.(null)}
+                    onFocus={(ev) => {
+                      const r = ev.currentTarget.getBoundingClientRect();
+                      onNotableHover?.(n, { x: r.right, y: r.top });
+                    }}
+                    onBlur={() => onNotableHover?.(null)}
                   >
                     <span className={n.dssMapped ? "sys-notable-card__dot--dss" : "sys-notable-card__dot"}>
                       ●

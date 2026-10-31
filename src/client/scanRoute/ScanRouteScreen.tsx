@@ -120,7 +120,27 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Hit[] | null>(null);
   const [view, setView] = useState<ScanRouteDTO | "loading" | "error">("loading");
+  /*
+    A body's facts (owner, 2026-10-31, plan 1.3.4 S-8): shown while it is hovered, in the list or the view, and gone
+    when the pointer leaves it; a click keeps them (and turns the camera to it) until another system is shown, a jump
+    included. Hovering another body while one is kept shows that one, and the kept one again on leaving.
+  */
   const [picked, setPicked] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const hoverTimer = useRef<number | null>(null);
+  const hoverList = (id: number | null) => {
+    if (hoverTimer.current != null) window.clearTimeout(hoverTimer.current);
+    hoverTimer.current = null;
+    if (id == null) return setHovered(null);
+    // A moment's rest first: moving down the list flashes no facts for the rows crossed.
+    hoverTimer.current = window.setTimeout(() => {
+      hoverTimer.current = null;
+      setHovered(id);
+    }, 150);
+  };
+  useEffect(() => () => {
+    if (hoverTimer.current != null) window.clearTimeout(hoverTimer.current);
+  }, []);
   const host = useRef<HTMLDivElement>(null);
   const shownKey = useRef("");
   const scene = useRef<ScanRouteScene | null>(null);
@@ -228,7 +248,7 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
 
   useEffect(() => {
     if (!host.current) return;
-    const s = createScanRouteScene(host.current, setPicked, setGridLs);
+    const s = createScanRouteScene(host.current, setPicked, setGridLs, setHovered);
     scene.current = s;
     return () => {
       s.dispose();
@@ -262,7 +282,15 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
   }, [bioMinText]);
 
   const d = typeof view === "object" ? view : null;
+  // Another system shown (a jump moves the view on): what was kept or hovered belonged to the one before.
+  const shownAddr = d?.addr ?? null;
+  useEffect(() => {
+    setPicked(null);
+    setHovered(null);
+  }, [shownAddr]);
   const byId = new Map(d?.bodies.map((b) => [b.id, b]) ?? []);
+  const factsId = hovered ?? picked;
+  const facts = factsId != null ? byId.get(factsId) : undefined;
   const start = d?.startId != null ? byId.get(d.startId) : undefined;
   let prev = start?.pos ?? null;
   const legs = (d?.route.order ?? []).map((id) => {
@@ -382,6 +410,20 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
               □ {fmtSquare(gridLs)}
             </span>
           ) : null}
+          {/* Over the view, top left: in the side panel it could sit scrolled out of sight. */}
+          {facts ? (
+            <div className={`scan-route__facts${factsId === picked ? " is-picked" : ""}`} role="status">
+              <strong>{facts.short}</strong> {facts.tag ?? facts.cls}
+              <br />
+              Scan {fmtCrShort(facts.fssCr)}
+              {facts.dssCr != null ? ` · Mapped ${fmtCrShort(facts.dssCr)}` : ""}
+              {facts.mapped ? " · mapped" : ""}
+              {facts.bioSignals ? ` · ${facts.bioSignals} bio${facts.bioCr != null ? ` ${fmtCrShort(facts.bioCr)}` : ""}` : ""}
+              {facts.codexNew ? ` · CODEX ×${facts.codexNew}${facts.codexFirst ? " (first)" : ""}` : ""}
+              {facts.others ? " · not scanned by you" : ""}
+              {factsId === picked ? <span className="scan-route__facts-kept">kept until a jump · click it again to put it away</span> : null}
+            </div>
+          ) : null}
         </div>
         <aside className="scan-route__side">
           {view === "loading" ? <p className="scan-route__note">Loading…</p> : null}
@@ -444,10 +486,17 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
               {start ? <p className="scan-route__start">◎ Arrival star{start.short !== d.name ? ` · ${start.short}` : ""}</p> : null}
               <ol className="scan-route__list">
                 {legs.map(({ b, leg }) => (
-                  <li key={b.id} className={`scan-route__stop scan-route__stop--${b.target}${picked === b.id ? " is-picked" : ""}`} onClick={() => {
-                      setPicked(b.id);
-                      scene.current?.focus(b.id);
-                    }}>
+                  <li
+                    key={b.id}
+                    className={`scan-route__stop scan-route__stop--${b.target}${picked === b.id ? " is-picked" : ""}${hovered === b.id ? " is-hovered" : ""}`}
+                    onClick={() => {
+                      hoverList(null);
+                      setPicked(picked === b.id ? null : b.id);
+                      if (picked !== b.id) scene.current?.focus(b.id);
+                    }}
+                    onMouseEnter={() => hoverList(b.id)}
+                    onMouseLeave={() => hoverList(null)}
+                  >
                     <div className="scan-route__head">
                       <strong>{b.short}</strong>
                       <span>{fmtLs(leg)}</span>
@@ -473,15 +522,6 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
                   </li>
                 ))}
               </ol>
-              {picked != null && byId.get(picked) && !byId.get(picked)!.target ? (
-                <p className="scan-route__note">
-                  {byId.get(picked)!.short}: {byId.get(picked)!.cls} · Scan {fmtCrShort(byId.get(picked)!.fssCr)}
-                  {byId.get(picked)!.dssCr != null ? ` · Mapped ${fmtCrShort(byId.get(picked)!.dssCr)}` : ""}
-                  {byId.get(picked)!.mapped ? " · mapped" : ""}
-                  {byId.get(picked)!.codexNew ? ` · CODEX ×${byId.get(picked)!.codexNew}` : ""}
-                  {byId.get(picked)!.others ? " · not scanned by you" : ""}
-                </p>
-              ) : null}
               <p className="scan-route__legend">
                 <i className="k-dss" /> worth mapping <i className="k-bio" /> biology <i className="k-both" /> both{" "}
                 <i className="k-codex" /> codex · ? not scanned yet

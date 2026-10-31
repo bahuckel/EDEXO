@@ -244,6 +244,34 @@
 .scan-route__hits .scan-route__note {
   padding: 3px 8px;
 }
+/* A body's facts, top left of the view: while hovered, or kept by a click (plan 1.3.4 S-8). */
+.scan-route__facts {
+  position: absolute;
+  left: 10px;
+  top: 8px;
+  z-index: 2;
+  max-width: min(360px, calc(100% - 20px));
+  padding: 4px 8px;
+  border: 1px solid var(--accent-a20);
+  background: rgba(5, 7, 12, 0.82);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  pointer-events: none;
+}
+.scan-route__facts strong {
+  color: var(--text);
+}
+.scan-route__facts.is-picked {
+  border-color: var(--accent-a45);
+}
+.scan-route__facts-kept {
+  display: block;
+  font-size: var(--fs-2xs);
+}
+.scan-route__stop.is-hovered {
+  outline: 1px dashed var(--accent-a20);
+}
 /* The grid's square size (true scale), bottom left of the view. */
 .scan-route__grid {
   position: absolute;
