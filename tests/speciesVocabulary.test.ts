@@ -39,6 +39,8 @@ const ATMOSPHERES = new Set([
   "CO2-rich",
   "Carbon dioxide-rich",
   "Carbon dioxide rich (thin)",
+  // The metal-world Anemones on hot thin silicate vapour (plan 1.3.4); the journal's SilicateVapour.
+  "Silicate Vapour",
 ]);
 
 describe("the species files' vocabulary", () => {

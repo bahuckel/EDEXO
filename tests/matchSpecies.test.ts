@@ -416,3 +416,29 @@ describe("matchDatabaseToScan", () => {
     expect(r.genusFilterActive).toBe(true);
   });
 });
+
+describe("Anemone on hot thin silicate vapour (plan 1.3.4)", () => {
+  it("lists the three metal-world Anemones logged there, and not Roseum bioluminescent", () => {
+    // Hypoae Briae LR-W e1-300 A 2 as EDDN carries it: metal-rich, 1,789 K, major metallic magma.
+    const scan: PlanetScan = {
+      BodyName: "Hypoae Briae LR-W e1-300 A 2",
+      BodyID: 2,
+      StarSystem: "Hypoae Briae LR-W e1-300",
+      SystemAddress: 623379621,
+      PlanetClass: "Metal rich body",
+      Atmosphere: "hot thin silicate vapour atmosphere",
+      AtmosphereType: "SilicateVapour",
+      atmosphereComposition: [{ Name: "Silicates", Percent: 100 }],
+      Volcanism: "major metallic magma volcanism",
+      SurfaceGravity: 1.466 * 9.80665,
+      SurfaceTemperature: 1789,
+      SurfacePressure: 0.0247 * 101_325,
+      Landable: true,
+    };
+    const ids = shown(matchDatabaseToScan(db, scan, null, null, { includeBacterium: true })).map((m) => m.entry.id);
+    expect(ids).toEqual(
+      expect.arrayContaining(["anemone_blatteum_bioluminescent", "anemone_rubeum_bioluminescent", "anemone_prasinum_bioluminescent"]),
+    );
+    expect(ids).not.toContain("anemone_roseum_bioluminescent");
+  });
+});
