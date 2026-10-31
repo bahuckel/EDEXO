@@ -29,6 +29,7 @@ import { hostStarClassKey } from "../shared/hostStarClass.js";
 import type { BodyExoState, PlanetScan, SpeciesMatch, SpeciesMatchContext } from "../shared/types.js";
 import { gateForSpeciesId } from "../shared/spatialGates.js";
 import { atmosphereKey, bodyFacts, volcanismKind } from "./genusBodySplit.js";
+import { measuredPastPrior } from "./measuredOdds.js";
 
 /** How hard the dump's genus frequencies pull against the ranking model (0 = model only, 1 = prior only). */
 export const GENUS_PRIOR_WEIGHT = 0.75;
@@ -168,10 +169,10 @@ export function genusPriorFor(
  */
 export function vetoUnseenGenera(
   // Any match rows: the body tab's, the system map's and the backlog's (owner, 2026-10-07).
-  matches: Pick<SpeciesMatch, "entry" | "unlikely" | "unlikelyReasons" | "organicAnalysisComplete">[],
+  matches: Pick<SpeciesMatch, "entry" | "unlikely" | "unlikelyReasons" | "organicAnalysisComplete" | "spatialGateUnresolved">[],
   b: Pick<BodyExoState, "genusHints" | "biologicalSignals">,
   scan: PlanetScan | null,
-  ctx: Pick<SpeciesMatchContext, "parentStarType"> | null | undefined,
+  ctx: Pick<SpeciesMatchContext, "parentStarType" | "systemMainStarClass"> | null | undefined,
   root: string,
   confirmedIds: ReadonlySet<string>,
 ): void {
@@ -187,7 +188,12 @@ export function vetoUnseenGenera(
   const protectedGenera = new Set<string>();
   for (const m of shown) {
     const k = genusPriorKey(m.entry.genus);
-    if (gateForSpeciesId(m.entry.id) || confirmedIds.has(m.entry.id) || m.organicAnalysisComplete === true) {
+    if (
+      gateForSpeciesId(m.entry.id) ||
+      confirmedIds.has(m.entry.id) ||
+      m.organicAnalysisComplete === true ||
+      measuredPastPrior(m, scan, ctx?.systemMainStarClass)
+    ) {
       protectedGenera.add(k);
     }
   }

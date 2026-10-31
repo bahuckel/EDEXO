@@ -114,7 +114,7 @@ export function rankCandidates(
 ): Set<string> {
   const { scan, rec, ctx, journalHost } = inputs;
   const locked = () => new Set(collectResolvedOrganicLockSpeciesIds(b.organicGenusLocks, db));
-  attachPresenceProbability(matches, b, scan, rec, journalHost, root, store);
+  attachPresenceProbability(matches, b, scan, rec, journalHost, root, store, ctx.systemMainStarClass ?? null);
   // Which species of a genus, where the ranking model cannot tell them apart (Phase A.6).
   applyGenusBodySplit(matches, scan, ctx.regionName ?? null, root, locked());
   // After the ranking, because the floor is a rule about the ranking's own output.
@@ -136,7 +136,7 @@ export function rankCandidates(
     genus's mass with the dump's cell share, which re-diluted Recepta's measured rate. The first pass,
     inside attachPresenceProbability, is what the 1 % floors judged; this one is what is shown.
   */
-  if (scan) applyMeasuredOdds(matches.filter((m) => !m.unlikely), scan, !!b.genusHints?.length);
+  if (scan) applyMeasuredOdds(matches.filter((m) => !m.unlikely), scan, !!b.genusHints?.length, ctx.systemMainStarClass ?? null);
   /*
     Which species of the genus, from the fitted tables, for the five genera where they order better
     than the model (speciesSplit.ts; owner, 2026-10-10). The genus keeps its chance.

@@ -201,7 +201,7 @@ export function explainChances(
           kind: "genus",
         });
       }
-      const measured = measuredOddsNote(m, scan);
+      const measured = measuredOddsNote(m, scan, inputs.ctx.systemMainStarClass ?? null);
       if (measured) lines.push({ label: measured, weight: null, kind: "measured" });
       lines.push(...(fields.get(m.entry.id) ?? []));
       const regional = regionalSpeciesCount(root, inputs.ctx.regionIndex, m.entry.id);

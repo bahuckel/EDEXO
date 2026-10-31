@@ -73,6 +73,8 @@ export function attachPresenceProbability(
   journalHost: JournalHostStarObservation | null,
   root: string,
   store: GameStateStore,
+  /** The system's main star (the match context's), for a measured rate that rests on it (measuredOdds.ts). */
+  mainStarClass: string | null = null,
 ): void {
   if (!scan) return;
   const shown = matches.filter((m) => !m.unlikely);
@@ -135,6 +137,7 @@ export function attachPresenceProbability(
     ranked.map((r) => r.match),
     scan,
     !!b.genusHints?.length,
+    mainStarClass,
   );
 }
 

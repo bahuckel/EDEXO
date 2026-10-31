@@ -12,7 +12,10 @@
  *    and calm, so the model fines its cold volcanic bodies: 3.7 % on one-signal cold volcanic neon bodies
  *    where it is a third of the Bacterium.
  *
- * Both are applied after the model has shared out the body's probability, and both keep what the model
+ * And since 1.3.4 (S-5) Anemone prasinum on rocky bodies with a thin ammonia atmosphere: its profile is hot and
+ * airless, so the model put it at 0.1 % on these cold bodies where the DSS finds Anemone on half of them.
+ *
+ * All are applied after the model has shared out the body's probability, and all keep what the model
  * got right: Recepta's split among its three species, and Bacterium's total, of which tela's and
  * omentum's measured shares are all that changes (omentum since 2026-10-10, the same evidence for it;
  * verrata and scopulum with them on cold volcanic bodies since 2026-10-11, COLD_VOLCANIC_SHARE).
@@ -37,6 +40,43 @@ export const RECEPTA_BY_SO2: readonly (readonly [number, number])[] = [
   [3.0, 89],
   [Infinity, 95],
 ];
+
+/**
+ * Anemone prasinum on a rocky body with a thin ammonia atmosphere (plan 1.3.4 S-5, 2026-10-31): Spansh's DSS lists
+ * name the Anemone on 6 of the 11 such bio bodies in systems with an O, Herbig or Wolf-Rayet main star (the only
+ * systems the matcher's star gate lets prasinum into), and a year of EDDN Codex logs has prasinum on 3 of the same 11
+ * (CD-26 1339, S171 19, HIP 1727; 164-171 K, 0.14-0.16 g). The model read 0.1 %, under the 1 % floor, on each.
+ */
+export const PRASINUM_THIN_AMMONIA_PCT = 55;
+const PRASINUM = "anemone_prasinum_bioluminescent";
+/*
+  Only with the system's main star known: an unknown one abstains in the star gate (hostStarGates.ts), and the rate
+  would then reach every rocky thin ammonia body, which is common; with it known, a shown prasinum row has passed.
+*/
+const prasinumOnThinAmmonia = (
+  m: Pick<SpeciesMatch, "entry" | "spatialGateUnresolved">,
+  scan: PlanetScan,
+  atmo: string,
+  mainStarClass: string | null | undefined,
+) =>
+  m.entry.id === PRASINUM &&
+  !!mainStarClass &&
+  m.spatialGateUnresolved !== true &&
+  atmo === "ammonia" &&
+  String(scan.PlanetClass ?? "").toLowerCase() === "rocky body";
+
+/**
+ * A row whose measured rate rests on what the genus prior's cells cannot see, so the prior's veto leaves it be:
+ * prasinum on thin ammonia grows by the system's main star, and the cells know only the body's parent star (a brown
+ * dwarf or black hole on all three EDDN finds), where Anemone is 0.0 % of 2,972 to 40,860 such bodies.
+ */
+export function measuredPastPrior(
+  m: Pick<SpeciesMatch, "entry" | "spatialGateUnresolved">,
+  scan: PlanetScan,
+  mainStarClass: string | null | undefined,
+): boolean {
+  return prasinumOnThinAmmonia(m, scan, atmosphereTypeKeyOf(scan), mainStarClass);
+}
 
 /**
  * Bacterium tela's share of the Bacterium on bodies that meet its rule, by atmosphere and branch ("hot":
@@ -127,8 +167,14 @@ function hasVolcanism(scan: PlanetScan): boolean {
  * Lays the measured odds over the model's `presenceProbabilityPercent` / `genusSharePercent` on the shown rows.
  * `afterDss`: the body's genera are named. Recepta's rate answers "is Recepta here at all", so it stands down once a
  * DSS has said (1.2.19 review: a named Recepta read 24 % × its share instead of adding up to the genus).
+ * `mainStarClass`: the system's main star (the match context's), for prasinum's rate.
  */
-export function applyMeasuredOdds(shown: SpeciesMatch[], scan: PlanetScan, afterDss = false): void {
+export function applyMeasuredOdds(
+  shown: SpeciesMatch[],
+  scan: PlanetScan,
+  afterDss = false,
+  mainStarClass: string | null = null,
+): void {
   const atmo = atmosphereTypeKeyOf(scan);
 
   // Recepta where sulphur dioxide is a trace in another gas: the genus at its measured rate, the species
@@ -143,6 +189,13 @@ export function applyMeasuredOdds(shown: SpeciesMatch[], scan: PlanetScan, after
         m.presenceProbabilityPercent = Math.round((rate * shares[i]!) / sum * 10) / 10;
       });
     }
+  }
+
+  // Anemone prasinum on rocky thin ammonia: the genus at its measured rate (one Anemone a body; prasinum the only one
+  // here), before a DSS, like Recepta.
+  if (!afterDss) {
+    for (const m of shown)
+      if (prasinumOnThinAmmonia(m, scan, atmo, mainStarClass)) m.presenceProbabilityPercent = PRASINUM_THIN_AMMONIA_PCT;
   }
 
   // Measured shares of the Bacterium (tela, omentum); the other Bacterium rows keep their order and the rest.
@@ -190,13 +243,15 @@ export function applyMeasuredOdds(shown: SpeciesMatch[], scan: PlanetScan, after
  * What the measured odds say about one row, in words, for the candidate row's "why this chance"
  * (plan 1.7, 2026-10-11): null where no measured table applies to it.
  */
-export function measuredOddsNote(m: SpeciesMatch, scan: PlanetScan): string | null {
+export function measuredOddsNote(m: SpeciesMatch, scan: PlanetScan, mainStarClass: string | null = null): string | null {
   const atmo = atmosphereTypeKeyOf(scan);
   if (m.entry.genusDataDir === "recepta" && (atmo === "carbondioxide" || atmo === "oxygen")) {
     const so2 = gasSharePercent(scan, "SulphurDioxide") ?? 0;
     const rate = receptaRate(so2);
     if (rate != null) return `Recepta grows on ${rate} % of such bodies with ${so2.toFixed(2)} % sulphur dioxide (a year of EDDN finds)`;
   }
+  if (prasinumOnThinAmmonia(m, scan, atmo, mainStarClass))
+    return `Anemone is on 6 of 11 rocky thin ammonia bodies in O, Herbig and Wolf-Rayet systems (Spansh's DSS lists)`;
   const cell = coldVolcanicCell(scan, atmo);
   if (cell && m.entry.genusDataDir === "bacterium") {
     const sp = m.entry.id.replace(/^bacterium_bacterium_/, "");

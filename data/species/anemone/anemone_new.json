@@ -267,7 +267,8 @@
           "Argon",
           "Argon-rich",
           "Helium",
-          "Nitrogen"
+          "Nitrogen",
+          "Ammonia"
         ],
         "parent_star_types": [
           "O",
@@ -279,7 +280,8 @@
         "gravity_constraints": null,
         "matchContextNotes": [
           "Measured 2026-10-05 on 552 confirmed bodies (Spansh dump; the only Anemone body in its system, and EDAstro's codex logs exactly this Anemone species there): metal-rich 63 %, rocky 22 %, high metal content 16 %; airless 98.2 %; main star O V 494, Herbig VI 15, Herbig V 14, Wolf-Rayet I 10. An O, Wolf-Rayet or A / Herbig Ae/Be star is the main star on 547 of 551 and some star in the system on 550 (any-star gate); 175-10206 K, median 1113 K.",
-          "Thin atmospheres listed since 2026-10-07 (no misses first): 10 of 313 known-spawn Anemone bodies in the precision sample (new Spansh export) had one and were hidden. The genus prior keeps their chance at what the dump shows (0.6 % of Anemone bodies) and still hides Anemone where the dump has none. Before: airless only. A thin atmosphere (sulphur dioxide, carbon dioxide and others) is under 4 % of each colour's bodies; allowing sulphur dioxide cost 17 bodies whose genera the signal count had decided, on the owner's journals (accuracy probe 2026-09-28), for no species found. The single Anemone row before the split was airless in effect too: its 'Thin (rare, Sulfur Dioxide confirmed)' never parsed to a journal atmosphere."
+          "Thin atmospheres listed since 2026-10-07 (no misses first): 10 of 313 known-spawn Anemone bodies in the precision sample (new Spansh export) had one and were hidden. The genus prior keeps their chance at what the dump shows (0.6 % of Anemone bodies) and still hides Anemone where the dump has none. Before: airless only. A thin atmosphere (sulphur dioxide, carbon dioxide and others) is under 4 % of each colour's bodies; allowing sulphur dioxide cost 17 bodies whose genera the signal count had decided, on the owner's journals (accuracy probe 2026-09-28), for no species found. The single Anemone row before the split was airless in effect too: its 'Thin (rare, Sulfur Dioxide confirmed)' never parsed to a journal atmosphere.",
+          "Ammonia since 2026-10-31 (plan 1.3.4 S-5): EDDN year, Codex logs on 3 bodies in 3 systems (CD-26 1339 B 2 a c, S171 19 B 3 b, HIP 1727 AB 1 h a): rocky, thin ammonia, 164-171 K, 0.14-0.16 g, main star O, each body orbiting a brown dwarf or black hole, 5-7 species on it. Of the 11 rocky bio bodies on ammonia in a system with an O, Herbig or Wolf-Rayet main star, 3 have it (27 %; airless 582 of 3,009, 19 %). Before: hidden as a low-probability find in FSS, shown by the DSS."
         ]
       }
     },

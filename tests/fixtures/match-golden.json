@@ -30,6 +30,7 @@
       ],
       "candidates": [
         "aleoida_aleoida_laminiae",
+        "anemone_prasinum_bioluminescent",
         "bacterium_bacterium_alcyoneum",
         "cactoida_cactoida_lapis",
         "cactoida_cactoida_peperatis",
@@ -45,7 +46,6 @@
       "unlikely": [
         "aleoida_aleoida_spica",
         "anemone_blatteum_bioluminescent",
-        "anemone_prasinum_bioluminescent",
         "anemone_puniceum",
         "anemone_roseum_bioluminescent",
         "anemone_rubeum_bioluminescent",
@@ -122,12 +122,12 @@
         "stratum_stratum_tectonicas"
       ],
       "candidates": [
+        "anemone_prasinum_bioluminescent",
         "bacterium_bacterium_alcyoneum",
         "stratum_stratum_tectonicas"
       ],
       "unlikely": [
         "anemone_blatteum_bioluminescent",
-        "anemone_prasinum_bioluminescent",
         "anemone_puniceum",
         "anemone_roseum_bioluminescent",
         "anemone_rubeum_bioluminescent",

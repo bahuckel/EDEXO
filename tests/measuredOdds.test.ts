@@ -3,7 +3,7 @@
  * the sulphur dioxide in a carbon dioxide or oxygen atmosphere, Bacterium tela by atmosphere and branch.
  */
 import { describe, expect, it } from "vitest";
-import { applyMeasuredOdds } from "../src/server/measuredOdds.js";
+import { applyMeasuredOdds, measuredPastPrior, PRASINUM_THIN_AMMONIA_PCT } from "../src/server/measuredOdds.js";
 import type { PlanetScan, SpeciesMatch } from "../src/shared/types.js";
 
 const m = (id: string, genus: string, pct: number, share: number): SpeciesMatch =>
@@ -134,5 +134,37 @@ describe("the cold volcanic Bacterium (verrata, scopulum; 2026-10-11)", () => {
     const rows = [m("bacterium_bacterium_verrata", "bacterium", 30, 30), m("bacterium_bacterium_tela", "bacterium", 20, 20), m("bacterium_bacterium_cerbrus", "bacterium", 50, 50)];
     applyMeasuredOdds(rows, body("SulphurDioxide", "minor water geysers volcanism", 320));
     expect(rows[1]!.genusSharePercent).toBe(53);
+  });
+});
+
+describe("Anemone prasinum on rocky thin ammonia (plan 1.3.4 S-5)", () => {
+  const ammonia = (planetClass: string) =>
+    scan({ AtmosphereType: "Ammonia", PlanetClass: planetClass, SurfaceTemperature: 170, atmosphereComposition: [{ Name: "Ammonia", Percent: 100 }] });
+  it("reads its measured rate before a DSS, and passes the genus prior's veto", () => {
+    const rows = [m("anemone_prasinum_bioluminescent", "anemone", 0.1, 100), m("bacterium_bacterium_alcyoneum", "bacterium", 90, 100)];
+    applyMeasuredOdds(rows, ammonia("Rocky body"), false, "O");
+    expect(rows.map((x) => x.presenceProbabilityPercent)).toEqual([PRASINUM_THIN_AMMONIA_PCT, 90]);
+    expect(measuredPastPrior(rows[0]!, ammonia("Rocky body"), "O")).toBe(true);
+    expect(measuredPastPrior(rows[1]!, ammonia("Rocky body"), "O")).toBe(false);
+  });
+
+  it("not while the system's main star is unknown: the star gate abstains then, and the body could be anywhere", () => {
+    const unknown = [m("anemone_prasinum_bioluminescent", "anemone", 0.1, 100)];
+    applyMeasuredOdds(unknown, ammonia("Rocky body"));
+    expect(unknown[0]!.presenceProbabilityPercent).toBe(0.1);
+    const unresolved = [{ ...m("anemone_prasinum_bioluminescent", "anemone", 0.1, 100), spatialGateUnresolved: true }];
+    applyMeasuredOdds(unresolved, ammonia("Rocky body"), false, "O");
+    expect(unresolved[0]!.presenceProbabilityPercent).toBe(0.1);
+    expect(measuredPastPrior(unknown[0]!, ammonia("Rocky body"), null)).toBe(false);
+  });
+
+  it("not after a DSS, nor on another planet class or atmosphere", () => {
+    const named = [m("anemone_prasinum_bioluminescent", "anemone", 100, 100)];
+    applyMeasuredOdds(named, ammonia("Rocky body"), true, "O");
+    expect(named[0]!.presenceProbabilityPercent).toBe(100);
+    const hmc = [m("anemone_prasinum_bioluminescent", "anemone", 0.1, 100)];
+    applyMeasuredOdds(hmc, ammonia("High metal content body"), false, "O");
+    expect(hmc[0]!.presenceProbabilityPercent).toBe(0.1);
+    expect(measuredPastPrior(hmc[0]!, co2(0), "O")).toBe(false);
   });
 });
