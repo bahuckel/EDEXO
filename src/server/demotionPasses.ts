@@ -138,6 +138,8 @@ export function restoreDemotionsBelowSignalCount(
   unlikely: PendingMatch[],
   signalCount: number | null,
   dssGenera: ReadonlySet<string> | null,
+  /** The arrival star is known, so a `firm` gate's "no fitting star in the system" holds (hostStarGates.ts). */
+  firmHolds = false,
 ): void {
   const generaOf = (rows: PendingMatch[]) =>
     new Set(rows.filter((m) => !m.entry.predictionUnsupported).map((m) => m.entry.genusDataDir));
@@ -167,9 +169,15 @@ export function restoreDemotionsBelowSignalCount(
   const byTemperature = unlikely
     .map((m, i) => ({ m, i }))
     .filter(({ m }) => solely(m, "ObservedTemperature"));
+  /*
+    Not a gate that holds whatever the count says (`firm`: the Anemone colours, no fitting star in the system), once
+    the arrival star is known. Without it the main star is a stand-in (the lowest-numbered star scanned): Qaugnaae
+    CL-Y e1 2 grows Roseum bioluminescent, and with only its T dwarfs scanned the gate failed it there (probe
+    2026-11-01).
+  */
   const byStar = unlikely
     .map((m, i) => ({ m, i }))
-    .filter(({ m }) => solely(m, "StarType"))
+    .filter(({ m }) => solely(m, "StarType") && !(firmHolds && hostStarGateForSpeciesId(m.entry.id)?.firm))
     .sort((a, b) => hostStarDeterminism(a.m.entry) - hostStarDeterminism(b.m.entry));
   const eligible = [...byTemperature, ...byStar];
 
@@ -637,5 +645,12 @@ export function runDemotionPasses(
   demoteRegionallyRareSiblings(strict, unlikely, o.matchContext);
   demoteDeltahedronixOnOneSignalIcy(strict, unlikely, o.planetClass, o.biologicalSignals, o.signalCountAssumed);
   dropUnprovenStrictSpecies(strict, unlikely, o.matchContext, o.dssNamed);
-  if (o.restore) restoreDemotionsBelowSignalCount(strict, unlikely, o.biologicalSignals, o.restoreGenera);
+  if (o.restore)
+    restoreDemotionsBelowSignalCount(
+      strict,
+      unlikely,
+      o.biologicalSignals,
+      o.restoreGenera,
+      o.matchContext?.systemMainStarIsArrival === true,
+    );
 }

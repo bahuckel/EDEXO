@@ -86,6 +86,13 @@ export interface HostStarGate {
    */
   anyStar?: true;
   /**
+   * Never put back to make up the signal count (demotionPasses.ts `restoreDemotionsBelowSignalCount`) once the gate
+   * has failed: with `anyStar`, that means no star in the system fits. The Anemone colours (a fitting star in the
+   * system on 97-100 % of confirmed bodies): Phrua Flyi WQ-B d14-14 B 1, one signal, its Amphora hidden on the
+   * atmosphere, listed Prasinum under an A V main star in its place (plan 1.3.4, 2026-11-01).
+   */
+  firm?: true;
+  /**
    * Yerkes luminosity classes allowed per star class, judged on the system's main star (so only on
    * `judgedOn: "main"` gates) — the Anemone colours split on it: a B dwarf makes Luteolum, a B giant
    * Roseum. Keyed by {@link hostStarClassKey}, or `AeBe` for a Herbig star, which that key folds into
@@ -206,6 +213,7 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
     gate: {
       judgedOn: "main",
       anyStar: true,
+      firm: true,
       allowed: ["B"],
       luminosity: B_DWARF,
       evidence:
@@ -217,6 +225,7 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
     gate: {
       judgedOn: "main",
       anyStar: true,
+      firm: true,
       allowed: ["B"],
       luminosity: B_DWARF,
       evidence:
@@ -229,6 +238,7 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
     gate: {
       judgedOn: "main",
       anyStar: true,
+      firm: true,
       allowed: ["B"],
       luminosity: B_GIANT,
       evidence:
@@ -240,6 +250,7 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
     gate: {
       judgedOn: "main",
       anyStar: true,
+      firm: true,
       allowed: ["B", "A"],
       luminosity: B_SUBDWARF_A_GIANT,
       evidence:
@@ -251,6 +262,7 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
     gate: {
       judgedOn: "main",
       anyStar: true,
+      firm: true,
       allowed: ["B", "A"],
       luminosity: { ...B_SUBDWARF_A_GIANT, B: ["IV", "VI"] },
       evidence:
@@ -262,6 +274,7 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
     gate: {
       judgedOn: "main",
       anyStar: true,
+      firm: true,
       allowed: ["O", "W"],
       evidence:
         "An O or Wolf-Rayet star in the system on 34 of 34 confirmed Puniceum bodies (100.0 %; the main star on 91.2 %; EDAstro codex)",
@@ -272,6 +285,7 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
     gate: {
       judgedOn: "main",
       anyStar: true,
+      firm: true,
       allowed: ["O", "W", "A"],
       luminosity: O_STAR,
       evidence:

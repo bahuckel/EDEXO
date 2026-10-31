@@ -727,6 +727,7 @@ export function buildSpeciesMatchContextFromRecords(i: MatchContextInputs): Spec
   const mainRec = mainStarOf(byId);
   if (mainRec?.starType?.trim()) ctx.systemMainStarType = mainRec.starType.trim();
   if (mainRec?.luminosity?.trim()) ctx.systemMainStarLuminosity = mainRec.luminosity.trim();
+  if (mainRec?.distanceFromArrivalLs === 0) ctx.systemMainStarIsArrival = true;
   const stars = [...byId.values()]
     .filter((r) => r.starType?.trim())
     .map((r) => ({ type: r.starType!.trim(), ...(r.luminosity?.trim() ? { luminosity: r.luminosity.trim() } : {}) }));

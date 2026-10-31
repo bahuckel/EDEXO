@@ -190,6 +190,9 @@ export function NeutronDrawer({
   const [useJump, setUseJump] = usePersistedState("galaxy.neutron.jumponium", false, isBool);
   const [halfTank, setHalfTank] = usePersistedState("galaxy.neutron.halfTank", false, isBool);
   const [reservePct, setReservePct] = usePersistedState("galaxy.neutron.reservePct", 0, isReservePct);
+  // The reserve as typed: a slider and a box (owner, 2026-11-01: "a slider with the percent field fillable as text").
+  const [reserveText, setReserveText] = useState(String(reservePct));
+  useEffect(() => setReserveText(String(reservePct)), [reservePct]);
   const [route, setRoute] = useState<RouteDTO | null>(kept.route);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -717,19 +720,33 @@ export function NeutronDrawer({
               label="Keep in the tank"
               hint="No jump arrives with less than this share of the tank (up to 50 %), so the plan scoops sooner: 0 % is the fastest (a jump's fuel to spare), more is calmer. A re-plot in flight keeps it."
             >
-              <input
-                className="g3d-input g3d-row__val"
-                type="number"
-                min={0}
-                max={50}
-                step={5}
-                value={reservePct}
-                onChange={(e) => {
-                  const v = Math.round(Number(e.target.value));
-                  if (Number.isFinite(v)) setReservePct(Math.min(50, Math.max(0, v)));
-                }}
-                aria-label="Fuel reserve (per cent of the tank)"
-              />
+              <span className="g3d-reserve">
+                <input
+                  type="range"
+                  className="g3d-row__range"
+                  min={0}
+                  max={50}
+                  step={1}
+                  value={reservePct}
+                  onChange={(e) => setReservePct(Number(e.target.value))}
+                  aria-label="Fuel reserve slider"
+                />
+                <input
+                  className="g3d-input g3d-reserve__num"
+                  type="text"
+                  inputMode="numeric"
+                  value={reserveText}
+                  onChange={(e) => {
+                    setReserveText(e.target.value);
+                    const t = e.target.value.replace("%", "").trim();
+                    const v = Math.round(Number(t));
+                    if (t !== "" && Number.isFinite(v)) setReservePct(Math.min(50, Math.max(0, v)));
+                  }}
+                  onBlur={() => setReserveText(String(reservePct))}
+                  aria-label="Fuel reserve (per cent of the tank)"
+                />
+                <span aria-hidden="true">%</span>
+              </span>
             </MenuRow>
             <MenuCheck
               label="Use Jumponium"

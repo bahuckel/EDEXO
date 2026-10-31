@@ -57,6 +57,11 @@ export interface SpeciesMatchContext {
    */
   systemMainStarType?: string;
   systemMainStarLuminosity?: string;
+  /**
+   * The main star above is the arrival star itself (scanned, 0 ls from arrival), not the lowest-numbered star known
+   * standing in for it (shared/mainStar.ts). A `firm` host-star gate holds only then (demotionPasses.ts).
+   */
+  systemMainStarIsArrival?: true;
   /** Every star in the system as the journal writes it, for gates with `anyStar` (the Anemone colours). */
   systemStars?: { type: string; luminosity?: string }[];
   /**

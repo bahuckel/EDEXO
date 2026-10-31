@@ -243,6 +243,21 @@
   width: 110px;
   accent-color: var(--accent);
 }
+/* The neutron route's fuel reserve: a slider and the per cent typed (plan 1.3.4 S-7). */
+.g3d-reserve {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Narrower than the other sliders, so "Keep in the tank" stays on one line. */
+.g3d-reserve .g3d-row__range {
+  width: 80px;
+}
+.g3d-reserve .g3d-reserve__num {
+  width: 3.2em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 /* Round 2 (owner, 2026-10-04): Filter, Search and Codex insides as rows too. */
 .g3d-row__num {
   min-width: 4.5rem;

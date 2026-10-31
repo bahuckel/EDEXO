@@ -410,6 +410,38 @@ describe("a DSS-named genus restores the row the star allows", () => {
   });
 });
 
+/*
+ * Phrua Flyi WQ-B d14-14 B 1 (EDDN, 2026-10-31): one signal, its Amphora hidden on the silicate vapour, and the
+ * signal-count restore listed Prasinum Bioluminescent under an A V main star in its place. An Anemone colour's gate is
+ * firm once the arrival star is known: no fitting star in the system, no row. With the arrival star unscanned the main
+ * star is a stand-in (Qaugnaae CL-Y e1 2, Roseum bioluminescent with only its T dwarfs scanned), and the row comes back.
+ */
+describe("the signal-count restore and the Anemone colours' star (plan 1.3.4)", () => {
+  type Row = Omit<SpeciesMatch, "photoUrl" | "photoNote" | "priceCredits">;
+  const rows = (): Row[] =>
+    [{ entry: { id: "anemone_prasinum_bioluminescent", displayName: "P", genusDataDir: "anemone" } as SpeciesEntry, reasons: [] }] as Row[];
+  const ctx = (arrival: boolean) =>
+    ({
+      hostStarClasses: ["A"],
+      systemMainStarClass: "A",
+      systemMainStarType: "A",
+      systemMainStarLuminosity: "Vb",
+      systemStars: [{ type: "A", luminosity: "Vb" }, { type: "F", luminosity: "Vb" }],
+      ...(arrival ? { systemMainStarIsArrival: true } : {}),
+    }) as SpeciesMatchContext;
+
+  it("restores it with no arrival star, and holds with one", () => {
+    for (const arrival of [false, true]) {
+      const strict: Row[] = rows();
+      const unlikely: Row[] = [];
+      demoteFailedHostStarGates(strict, unlikely, ctx(arrival));
+      expect(unlikely.map((m) => m.unlikelyReasons?.map((r) => r.field))).toEqual([["StarType"]]);
+      restoreDemotionsBelowSignalCount(strict, unlikely, 1, null, arrival);
+      expect(strict.map((m) => m.entry.id)).toEqual(arrival ? [] : ["anemone_prasinum_bioluminescent"]);
+    }
+  });
+});
+
 // Amphora on a companion in an A-star system (2026-10-03, known-spawn bodies Flyauduae TE-Q d5-4 B 1 etc.).
 describe("Amphora's star", () => {
   it("is read on the main star, or the body's own host", () => {
