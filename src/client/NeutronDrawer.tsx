@@ -678,12 +678,16 @@ export function NeutronDrawer({
               label="Fuel now"
               hint="The main tank the plan starts from: live while the game runs, else the last your journals said (a jump, a scoop, a refuel); a full tank only when nothing is known"
             >
-              <span className="g3d-row__val">
-                {ship?.fuelNowT != null
-                  ? `${ship.fuelNowT.toFixed(1)} t${ship.fuelNowFrom === "last" ? ` · last known${ship.fuelNowAt ? ` ${new Date(ship.fuelNowAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""}` : ""}`
-                  : "Full tank (unknown)"}
-              </span>
+              <span className="g3d-row__val">{ship?.fuelNowT != null ? `${ship.fuelNowT.toFixed(1)} t` : "Full tank"}</span>
             </MenuRow>
+            {/* Where the figure comes from on a line of its own: in the value box it ran over the label (1.3.4 tour). */}
+            {ship?.fuelNowT == null || ship.fuelNowFrom === "last" ? (
+              <p className="g3d-panel__note">
+                {ship?.fuelNowT == null
+                  ? "Fuel unknown: planned from a full tank."
+                  : `Last known${ship.fuelNowAt ? ` ${new Date(ship.fuelNowAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""} (the game is not running).`}
+              </p>
+            ) : null}
             <MenuRow
               label="FSD health"
               hint="The last Loadout's, less the supercharges since; under 80 % the plan says to repair"

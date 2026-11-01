@@ -375,6 +375,24 @@ type Cand = { n: NeutronStar; gain: number; d: number };
 type Kept = { stars: NeutronStar[]; gain: Float64Array; d: Float64Array };
 type Leg = { nodes: Node[]; fuel: number; g: number };
 
+/**
+ * The fuel along a route found on the pessimistic model, recounted on the drive's law: what each hop really burns
+ * and what is left, as the route being flown checks it (NeutronHop `fuelArrive`). The hops and their jumps stay.
+ */
+function replayOnLaw(nodes: Node[], ship: NeutronShip): void {
+  const { tank, perU, rangeWith, burn } = tankModel(ship);
+  for (let k = 1; k < nodes.length; k++) {
+    const prev = nodes[k - 1]!;
+    const n = nodes[k]!;
+    const d = dist(prev.pos, n.pos);
+    const left = prev.fuel;
+    const used = burn({ jumps: n.jumps, boosted: n.boosted }, d, left, rangeWith(left));
+    const arrive = n.onWay ? Math.max(0, tank - perU) : Math.max(0, left - used);
+    n.arrive = arrive;
+    n.fuel = n.refuel ? (n.half ? Math.max(arrive, Math.ceil(tank / 2)) : tank) : arrive;
+  }
+}
+
 /** One leg, from a point (a neutron star or not) to a point, with `fuel` jumps in the tank. Null when no safe way. */
 export async function planLeg(
   index: Pick<NeutronIndex, "within"> & Partial<Pick<NeutronIndex, "eachToward">>,
@@ -394,9 +412,37 @@ export async function planLeg(
     switch made a route worse (owner's Mandalay, Sagittarius-Carina arm to Colonia: 94 jumps for 93, 7 more stops).
   */
   const first = ship.halfTank ? { ...ship, halfTank: false } : ship;
-  for (const pass of PASSES) {
+  const law = ship.law;
+  /*
+    On the law only the first, closer pass runs exact before the pessimistic one below: the greedier exact pass ran its
+    60,000 steps out wherever the first one had (a plan from Lyaisa AU-R d4-1964 keeping 25 % took 11 s), and on the
+    test routes the first one always found the route (docs/perf/_neutron-time.mts, unchanged).
+  */
+  for (const pass of law ? PASSES.slice(0, 1) : PASSES) {
     best = await searchLeg(index, from, to, first, fuel, pass.weight, pass.expansions, lists);
     if (best) break;
+  }
+  /*
+    No route on the drive's law (plan 1.3.5): a supercharge burns what its distance takes, so every hop leaves a
+    slightly different tank and short supercharges keep more branches alive. On a ×4 ship with a 5-jump tank the passes
+    ran out of steps before the end: the owner's own ship, Lyaisa AU-R d4-1964 to Colonia, got the game's plot (262
+    jumps, none supercharged). Then the search runs pessimistic both ways, every supercharge at the drive's most fuel a
+    jump and every jump at a full tank's range (the most fuel alone assumed a lighter ship than the real one, which
+    reaches less far), and the route found is replayed on the law: the fuel the plan expects at each stop, and each
+    hop's range, as the ship will have them. The real tank always holds at least the pessimistic one.
+  */
+  if (!best && law) {
+    const safe = { ...first, law: { ...law, fuelT: () => law.perJumpT, rangeLy: () => law.rangeLy(law.tankT) } };
+    for (const pass of PASSES) {
+      best = await searchLeg(index, from, to, safe, fuel, pass.weight, pass.expansions, lists);
+      if (best) break;
+    }
+    if (best) replayOnLaw(best.nodes, ship);
+    // Nothing even so: the greedier exact pass, as before.
+    for (const pass of best ? [] : PASSES.slice(1)) {
+      best = await searchLeg(index, from, to, first, fuel, pass.weight, pass.expansions, lists);
+      if (best) break;
+    }
   }
   if (!best) return null;
   /*
