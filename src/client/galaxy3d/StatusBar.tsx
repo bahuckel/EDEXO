@@ -50,7 +50,7 @@ export function StatusBar({
             : `Could not load the galaxy: ${stats.error}`}
         </span>
       ) : loading ? (
-        <span>Loading 5.3 million systems…</span>
+        <span>Loading 5.4 million systems…</span>
       ) : (
         <span>
           {stats.overviewPoints.toLocaleString()} systems

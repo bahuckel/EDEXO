@@ -170,7 +170,7 @@ export const AppMenuEntries = memo(function AppMenuEntries({
         text={
           indexDue
             ? "Galaxy map — a newer galaxy index (the codex data) is ready: open the map, View, Galaxy index, Update."
-            : "Galaxy map — 5.3 million systems with recorded biology, your own travels, search and codex, in 3D. Opens in its own window."
+            : "Galaxy map — 5.4 million systems with recorded biology, your own travels, search and codex, in 3D. Opens in its own window."
         }
       >
         <a

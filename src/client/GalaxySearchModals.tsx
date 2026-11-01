@@ -177,7 +177,7 @@ function RecordedHelp() {
         somebody logged, not a prediction.
       </p>
       <p>
-        The species come from EDAstro's codex and the body counts from Spansh's export.{" "}
+        The species come from EDAstro's and EDSM's codex and the body counts from Spansh's export.{" "}
         <strong>Evidence</strong> says how much is known: a species logged on
         foot, a genus from a probe-mapped body, or only an FSS signal count. Hover it for the detail.
       </p>

@@ -477,7 +477,7 @@ export function GalaxySearchPanel({
               ) : (
                 <>
                   Where anybody has recorded biology, across{" "}
-                  {cat ? crFmt.format(cat.systemCount) : "5.3 million"} systems. These are sightings somebody
+                  {cat ? crFmt.format(cat.systemCount) : "5.4 million"} systems. These are sightings somebody
                   logged, not predictions — nearest to you first, and the map below follows what you search
                   for.
                 </>

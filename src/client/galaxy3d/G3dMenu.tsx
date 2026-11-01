@@ -101,13 +101,13 @@ export const G3D_HELP: Record<G3dTabKey, string[]> = {
     "With the mouse: left drag pans, right drag tilts and turns, the wheel zooms. Click a ring to open a group, a dot to open a system.",
   ],
   layers: [
-    "What is drawn over the 5.3 million systems. Your systems: amber where signals still wait for you, green where you mapped or sampled, grey where you only passed through.",
+    "What is drawn over the 5.4 million systems. Your systems: amber where signals still wait for you, green where you mapped or sampled, grey where you only passed through.",
     "Region borders and names, the groups that stand for many systems when zoomed out, and the Milky Way drawn behind them.",
     "Points of interest, notable phenomena, fleet carriers, your bookmarks and green gas giants come from lists already on this PC; a layer that needs a download says so.",
   ],
   filter: [
     "Tick what you are after — a star class, a planet type, a genus or a species — and the systems that have it light up while the rest dim. Several ticks in one group mean any of them; across groups, all of them.",
-    "Star and planet types come from Spansh's galaxy dump; the plants from EDAstro's codex records.",
+    "Star and planet types come from Spansh's galaxy dump; the plants from EDAstro's and EDSM's codex records.",
   ],
   search: [
     "Where has a species been recorded? Pick one, or a minimum value, and the map shows the systems where commanders logged it, nearest first.",
