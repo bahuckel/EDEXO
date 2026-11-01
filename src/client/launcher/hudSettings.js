@@ -176,7 +176,13 @@ function renderSwatches() {
   if (hudThemeAccent && t.accent) hudThemeAccent.value = t.accent;
   if (hudThemeText) hudThemeText.value = t.text || (PRESETS[cur] && PRESETS[cur].text) || hudThemeText.value;
   var reset = document.getElementById("hudThemeTextReset");
-  if (reset) reset.disabled = !t.text;
+  if (reset) {
+    reset.disabled = !t.text;
+    // Off, it says why rather than looking busy (owner, 2026-11-01: "loads forever").
+    reset.title = t.text
+      ? "Back to the text colour of the scheme picked above."
+      : "The text is already the scheme's own colour; pick a custom text colour first.";
+  }
 }
 /* The accent of one's own: the custom scheme, the text colour kept as it is. */
 function customTheme() {

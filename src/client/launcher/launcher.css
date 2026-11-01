@@ -547,6 +547,10 @@ option:focus-visible::checkmark {
   opacity: 0.55;
   cursor: wait;
 }
+/* Off because there is nothing to undo, not busy: no wait cursor (owner, 2026-11-01). */
+#hudThemeTextReset:disabled {
+  cursor: default;
+}
 .btn .glyph {
   display: block;
   width: 18px;

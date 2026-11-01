@@ -27,3 +27,17 @@ describe("the HUD's turn depth", () => {
     expect(css.match(/perspective\(var\(--hud-tilt-depth, 60rem\)\)/g)).toHaveLength(2);
   });
 });
+
+describe("one door for every panel (owner, 2026-11-01: separate panels fanned out)", () => {
+  it("gives every panel on a screen the same depth and the same vanishing point, the screen's middle", async () => {
+    const { sharedTiltDepthPx, tiltOriginYPx } = await import("../src/client/hud/tilt");
+    // Three panels stacked on a 1080 px screen, at 40, 300 and 700 px.
+    const tops = [40, 300, 700];
+    const depths = tops.map(() => sharedTiltDepthPx(1080));
+    expect(new Set(depths).size).toBe(1);
+    // Each panel's origin, put back on the screen, is the same point: the middle.
+    expect(tops.map((t) => t + tiltOriginYPx(0, 1080, t))).toEqual([540, 540, 540]);
+    // On a second screen below another, its own middle.
+    expect(1080 + 200 + tiltOriginYPx(1080, 1440, 1080 + 200)).toBe(1080 + 720);
+  });
+});
