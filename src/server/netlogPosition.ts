@@ -19,7 +19,7 @@ import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, s
 import { dirname, join } from "node:path";
 import { writeFileAtomic } from "./atomicWrite.js";
 import { resolveUserSettingsJsonPath } from "./paths.js";
-import type { NetlogStatusDTO } from "../shared/dto/routeSystem.js";
+import { SHIP_NEAR_LS, type NetlogStatusDTO } from "../shared/dto/routeSystem.js";
 
 export interface NetlogFix {
   system: string;
@@ -129,6 +129,8 @@ const readText = (f: string): string | null => {
 
 export interface NetlogPosition {
   fix(): NetlogFix | null;
+  /** The last fix within SHIP_NEAR_LS of its body: the body the ship was last near. */
+  near(): NetlogFix | null;
   status(): NetlogStatusDTO;
   setOn(on: boolean): NetlogStatusDTO;
   dispose(): void;
@@ -143,6 +145,7 @@ export function createNetlogPosition(opts: { pollMs?: number; findDirs?: () => s
   let dirs: string[] = [];
   let failed = false;
   let last: NetlogFix | null = null;
+  let lastNear: NetlogFix | null = null;
   let file: string | null = null;
   let offset = 0;
   let rest = "";
@@ -207,7 +210,9 @@ export function createNetlogPosition(opts: { pollMs?: number; findDirs?: () => s
       for (const l of lines) {
         if (!l.includes("RelPos:")) continue;
         const f = parseNetlogFix(l, now);
-        if (f) last = f;
+        if (!f) continue;
+        last = f;
+        if (f.distLs <= SHIP_NEAR_LS) lastNear = f;
       }
     } finally {
       closeSync(fd);
@@ -235,6 +240,7 @@ export function createNetlogPosition(opts: { pollMs?: number; findDirs?: () => s
     if (timer) clearInterval(timer);
     timer = null;
     last = null;
+    lastNear = null;
     file = null;
   };
 
@@ -293,5 +299,5 @@ export function createNetlogPosition(opts: { pollMs?: number; findDirs?: () => s
   };
 
   if (saved.on) start();
-  return { fix: () => last, status, setOn, dispose: stop };
+  return { fix: () => last, near: () => lastNear, status, setOn, dispose: stop };
 }

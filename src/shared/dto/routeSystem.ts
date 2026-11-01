@@ -109,11 +109,21 @@ export interface NetlogStatusDTO {
   folder: string | null;
 }
 
+/**
+ * Within this of a body (ls) the netlog's fix puts the ship at it (owner, 2026-11-01: "remembers the closest one you
+ * were near even if you overshoot it and only get back to the main star if I physically go near it again"). Passing a
+ * planet in supercruise the game measures from it at 0.2-1.6 ls; past it, from a star tens of thousands of ls away.
+ */
+export const SHIP_NEAR_LS = 10;
+
 /** `/api/scan-route/ship`: where the ship is in the current system (plan 1.3.5 R-1). */
 export interface ScanRouteShipDTO {
   /** The current system, as the scan view's `addr`. */
   addr: string | null;
-  /** The body the ship is at (arrival star, approached, dropped at, landed on, mapped). */
+  /**
+   * The body the ship is at (arrival star, approached, dropped at, landed on, mapped), or the last body the netlog put
+   * it within {@link SHIP_NEAR_LS} of, whichever is newer; it stays there however far the ship flies on.
+   */
   atId: number | null;
   /** The body targeted in the game (Status.json Destination), when it is in this system. */
   targetId: number | null;

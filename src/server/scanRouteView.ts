@@ -310,6 +310,8 @@ export function journalScanRoute(
   opts: ScanRouteOptions,
   atMs: number,
   spansh: RemoteSystemRecord | null = null,
+  /** The body the ship is at, when the caller knows better than the journal (the netlog's last near body). */
+  hereId?: number | null,
 ): ScanRouteDTO | null {
   const own = explorationRecordsForSystem(store, addr);
   // A Spansh lookup's records (the map's last resort) are the other path: here only own scans and EDSM's.
@@ -340,13 +342,19 @@ export function journalScanRoute(
     ...opts,
     others,
     currentCr: explorationDataValueBreakdown(store, addr).totalCredits,
-    hereId: shipBodyIn(store, addr),
+    hereId: hereId !== undefined ? hereId : shipBodyIn(store, addr),
     atMs,
   });
 }
 
 /** A route system from Spansh, at the base rate. */
-export function spanshScanRoute(store: GameStateStore, sys: RemoteSystemRecord, opts: ScanRouteOptions, atMs: number): ScanRouteDTO {
+export function spanshScanRoute(
+  store: GameStateStore,
+  sys: RemoteSystemRecord,
+  opts: ScanRouteOptions,
+  atMs: number,
+  hereId?: number | null,
+): ScanRouteDTO {
   return buildScanRoute({
     addr: sys.systemAddress,
     name: sys.starSystem,
@@ -355,7 +363,7 @@ export function spanshScanRoute(store: GameStateStore, sys: RemoteSystemRecord, 
     bio: spanshBio(store, sys),
     totalBodies: sys.bodyCount ?? null,
     ...opts,
-    hereId: shipBodyIn(store, sys.systemAddress),
+    hereId: hereId !== undefined ? hereId : shipBodyIn(store, sys.systemAddress),
     atMs,
   });
 }

@@ -58,13 +58,15 @@ export function registerRouteSystemRoutes(app: express.Express, opts: HttpServer
     const min = Math.max(0, Number(req.query.min) || 0);
     const settings = { minDssCr: min, bioMinCr: Math.max(0, Number(req.query.bioMin) || 0), codexOn: req.query.codex === "1" };
     const now = Date.now();
+    // The ship's body in the current system: the journal's, or the netlog's last near one when newer.
+    const hereId = addr === store.currentSystemAddress ? scanRouteShip(store, netlog).atId : null;
     try {
       // His own system: the bodies others discovered fill in what his scans lack (Spansh's, cached for the session).
       const own = explorationRecordsForSystem(store, addr);
       if (own.length && own[0] !== store.remoteSystems.get(addr)?.records[0]) {
         const fetched = await values.system(addr, name).catch(() => null);
         const spansh = fetched && !("none" in fetched) && !("error" in fetched) ? fetched : null;
-        const view = journalScanRoute(store, addr, name, settings, now, spansh);
+        const view = journalScanRoute(store, addr, name, settings, now, spansh, hereId);
         if (view) return void res.json(view);
       }
       const sys = await values.system(addr, name);
@@ -76,7 +78,7 @@ export function registerRouteSystemRoutes(app: express.Express, opts: HttpServer
           startId: null, bodies: [], route: { order: [], totalLs: 0 }, bodyCount: { known: 0, total: null, missing: 0 }, routeDssCr: 0, routeBioCr: 0,
         });
       }
-      res.json(spanshScanRoute(store, sys, settings, now));
+      res.json(spanshScanRoute(store, sys, settings, now, hereId));
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }

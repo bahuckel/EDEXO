@@ -14,7 +14,7 @@
 import * as THREE from "three";
 import { MapControls } from "three/examples/jsm/controls/MapControls.js";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
-import type { ScanRouteBodyDTO, ScanRouteDTO } from "@shared/dto/routeSystem.js";
+import { SHIP_NEAR_LS, type ScanRouteBodyDTO, type ScanRouteDTO } from "@shared/dto/routeSystem.js";
 
 export type ScanScale = "true" | "compact";
 
@@ -424,9 +424,10 @@ export function createScanRouteScene(
   }
 
   /*
-    The ship: at the body the journal last put it at (else where the route starts). With the netlog's fix: while the
-    body it is measured from is the target, on the straight line to the target at that distance (supercruise flies
-    mostly straight at it); else at that body. The fix's direction is in the game's axes, which the orbits' are not
+    The ship: at the body the journal or the netlog last put it near (else where the route starts). With the netlog's
+    fix: while the body it is measured from is the target, on the straight line to the target at that distance
+    (supercruise flies mostly straight at it); else at that body only when near it — a star tens of thousands of ls
+    off, which the game measures from once a planet is overshot, leaves the ship where it was. The fix's direction is in the game's axes, which the orbits' are not
     (plan 1.3.5 R-1), so only the distance is used. A line runs on to the body targeted.
   */
   function drawShip(): void {
@@ -442,7 +443,7 @@ export function createScanRouteScene(
       const len = Math.hypot(target.pos.x - base.pos.x, target.pos.y - base.pos.y, target.pos.z - base.pos.z);
       const t = len > 0 ? Math.max(0, Math.min(1, 1 - ship.fix.distLs / len)) : 1;
       at = placeOf(base).lerp(placeOf(target), t);
-    } else if (ref) at = placeOf(ref);
+    } else if (ref && ship.fix && ship.fix.distLs <= SHIP_NEAR_LS) at = placeOf(ref);
     if (!at) return;
     if (target) {
       const line = new THREE.Line(

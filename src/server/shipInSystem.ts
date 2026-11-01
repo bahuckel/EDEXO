@@ -7,7 +7,7 @@
  */
 import type { GameStateStore } from "./gameState.js";
 import type { ScanRouteShipDTO, ShipFlight } from "../shared/dto/routeSystem.js";
-import type { NetlogPosition } from "./netlogPosition.js";
+import type { NetlogFix, NetlogPosition } from "./netlogPosition.js";
 
 /** The flight state after a journal event; the state before for any other event. */
 export function nextShipFlight(event: string, line: Record<string, unknown>, prev: ShipFlight): ShipFlight {
@@ -43,15 +43,17 @@ function bodyIn(key: string | null, addr: number): number | null {
 export function scanRouteShip(store: GameStateStore, netlog: NetlogPosition | null): ScanRouteShipDTO {
   const addr = store.currentSystemAddress;
   const dest = store.statusDestination;
+  // A netlog line for this system, newer than the journal's last word on where the ship is.
+  const here = (f: NetlogFix | null): f is NetlogFix =>
+    !!f && addr != null && f.system.toLowerCase() === (store.currentSystem ?? "").toLowerCase() && f.atMs >= store.shipEventMs - 1000;
   const fix = netlog?.fix() ?? null;
-  // The netlog's line is for this system, and newer than the journal's last word on where the ship is.
-  const own =
-    fix && addr != null && fix.system.toLowerCase() === (store.currentSystem ?? "").toLowerCase() && fix.atMs >= store.shipEventMs - 1000
-      ? { refId: fix.bodyId, distLs: fix.distLs, mode: fix.mode, atMs: fix.atMs }
-      : null;
+  const own = here(fix) ? { refId: fix.bodyId, distLs: fix.distLs, mode: fix.mode, atMs: fix.atMs } : null;
+  // The body last flown near (netlog) when that is newer than the journal's body; a far fix moves nothing.
+  const near = netlog?.near() ?? null;
+  const journalAt = addr != null ? bodyIn(store.currentBodyKey, addr) : null;
   return {
     addr: addr != null ? String(addr) : null,
-    atId: addr != null ? bodyIn(store.currentBodyKey, addr) : null,
+    atId: here(near) ? near.bodyId : journalAt,
     targetId: addr != null && dest && dest.systemAddress === addr ? dest.bodyId : null,
     flight: store.shipFlight,
     fix: own,

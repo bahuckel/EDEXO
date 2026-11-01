@@ -96,3 +96,34 @@ describe("the netlog's position lines", () => {
     n.dispose();
   });
 });
+
+describe("the body the ship was last near (owner, 2026-11-01: overshooting a planet put the ship at the main star)", () => {
+  const fix = (bodyId: number, distLs: number, atMs: number) => ({ system: "Here", bodyId, distLs, mode: "supercruise" as const, atMs });
+  const netlog = (last: ReturnType<typeof fix>, near: ReturnType<typeof fix> | null) => ({
+    fix: () => last,
+    near: () => near,
+    status: () => ({ on: true, state: "reading" as const, folder: null }),
+    setOn: () => ({ on: true, state: "reading" as const, folder: null }),
+    dispose: () => undefined,
+  });
+
+  it("stays at the body flown near when the game measures from a far star after it", () => {
+    const s = new GameStateStore();
+    s.apply({ timestamp: "2026-11-01T15:10:00Z", event: "FSDJump", StarSystem: "Here", SystemAddress: 77, StarPos: [0, 0, 0], BodyID: 0, Body: "Here A" } as never);
+    const t = Date.parse("2026-11-01T15:13:31Z");
+    // Past B 2 (body 9, 0.9 ls), then the game measures from body 0, 47,000 ls off.
+    const v = scanRouteShip(s, netlog(fix(0, 47_000, t + 60_000), fix(9, 0.9, t)));
+    expect(v.atId).toBe(9);
+    expect(v.fix).toMatchObject({ refId: 0, distLs: 47_000 });
+    // Near the main star again: there.
+    expect(scanRouteShip(s, netlog(fix(0, 3, t + 120_000), fix(0, 3, t + 120_000))).atId).toBe(0);
+  });
+
+  it("takes the journal's body when it is newer than the near fix", () => {
+    const s = new GameStateStore();
+    s.apply({ timestamp: "2026-11-01T15:10:00Z", event: "FSDJump", StarSystem: "Here", SystemAddress: 77, StarPos: [0, 0, 0], BodyID: 0, Body: "Here A" } as never);
+    const t = Date.parse("2026-11-01T15:11:00Z");
+    s.apply({ timestamp: "2026-11-01T15:14:38Z", event: "ApproachBody", StarSystem: "Here", SystemAddress: 77, Body: "Here 4", BodyID: 4 } as never);
+    expect(scanRouteShip(s, netlog(fix(9, 0.9, t), fix(9, 0.9, t))).atId).toBe(4);
+  });
+});
