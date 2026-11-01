@@ -14,16 +14,14 @@ export function tiltDepthPx(height: number): number {
 }
 
 /*
-  One door for every panel (owner, 2026-11-01: separate panels "fan out", "it should keep the same angle/swing to all of
-  them"). Each panel converged on its own middle, so a stack splayed like blinds. Now every panel on a screen shares
-  one vanishing point, the middle of that screen, and one depth (as for a panel half the screen's height): each is a
-  slice of the same turned plane, at the same angle wherever it sits.
+  One swing for every panel (owner, 2026-11-01: separate panels "fan out", "it should keep the same angle/swing to all of
+  them"). With the depth from each panel's own height, a short panel had a shallow depth and its top and bottom edges
+  closed in hard toward its middle, so a stack splayed like blinds. Every panel now has one depth, as for a panel half
+  the screen tall (1,440 px on a 1440 px screen; a 130 px panel was 260): the same turn, and edges that close in only a
+  few pixels, so neighbours stay near parallel. Each still turns about its own middle: a shared vanishing point at the
+  screen's middle (tried the same day) moved a panel near the top of the screen ~60 px toward it and out of its own
+  window, which cut it off.
 */
 export function sharedTiltDepthPx(screenHeight: number): number {
   return tiltDepthPx((Number.isFinite(screenHeight) ? screenHeight : 0) / 2);
-}
-
-/** Where the screen's middle is, from the panel's own top (px): the shared vanishing point's height. */
-export function tiltOriginYPx(screenTop: number, screenHeight: number, panelScreenTop: number): number {
-  return Math.round(screenTop + screenHeight / 2 - panelScreenTop);
 }

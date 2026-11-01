@@ -995,3 +995,40 @@ describe("chaining HUDs while placing", () => {
     expect((await huds.chainFromPage(a, "below")).ok).toBe(false);
   });
 });
+
+describe("the combine buttons follow a drop (owner, 2026-11-01: sometimes none by a HUD dropped next to another)", () => {
+  const settle = async () => {
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+  };
+  const lastOffers = (w: { sent: unknown[][] }) =>
+    w.sent.filter((m) => m[0] === "edexo:hud-chain-offers").map((m) => m[1] as { below: boolean }).at(-1);
+
+  it("offers combining once a HUD is dropped beside another, and stops once it is dragged away", async () => {
+    const huds = make();
+    await huds.request("/fss-scan-overlay.html", 404, 120, null, "open");
+    await huds.request("/jump-overlay.html", 404, 200, null, "open");
+    huds.setLayout({ freeOn: true });
+    huds.setMoveMode(true);
+    await settle();
+    huds.relayout();
+    const [top, bottom] = live().filter((w) => w.visible).sort((x, y) => x.bounds.y - y.bounds.y);
+    expect(lastOffers(top!)?.below).toBe(true);
+    // The lower one far off: no offer once it is dropped.
+    cursor = { x: 0, y: 0 };
+    huds.dragFromPage(bottom, "start");
+    cursor = { x: -600, y: 500 };
+    huds.dragFromPage(bottom, "move");
+    huds.dragFromPage(bottom, "end");
+    expect(lastOffers(top!)?.below).toBe(false);
+    // Back under it, 30 px apart: offered again the moment it is dropped.
+    const t = top!.bounds;
+    const b = bottom!.bounds;
+    cursor = { x: 0, y: 0 };
+    huds.dragFromPage(bottom, "start");
+    cursor = { x: t.x - b.x, y: t.y + t.height + 30 - b.y };
+    huds.dragFromPage(bottom, "move");
+    huds.dragFromPage(bottom, "end");
+    expect(lastOffers(top!)?.below).toBe(true);
+    huds.setMoveMode(false);
+  });
+});

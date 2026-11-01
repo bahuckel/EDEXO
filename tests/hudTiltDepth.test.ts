@@ -29,15 +29,13 @@ describe("the HUD's turn depth", () => {
 });
 
 describe("one door for every panel (owner, 2026-11-01: separate panels fanned out)", () => {
-  it("gives every panel on a screen the same depth and the same vanishing point, the screen's middle", async () => {
-    const { sharedTiltDepthPx, tiltOriginYPx } = await import("../src/client/hud/tilt");
-    // Three panels stacked on a 1080 px screen, at 40, 300 and 700 px.
-    const tops = [40, 300, 700];
-    const depths = tops.map(() => sharedTiltDepthPx(1080));
-    expect(new Set(depths).size).toBe(1);
-    // Each panel's origin, put back on the screen, is the same point: the middle.
-    expect(tops.map((t) => t + tiltOriginYPx(0, 1080, t))).toEqual([540, 540, 540]);
-    // On a second screen below another, its own middle.
-    expect(1080 + 200 + tiltOriginYPx(1080, 1440, 1080 + 200)).toBe(1080 + 720);
+  it("gives every panel the same depth, deep enough that short panels close in only a little", async () => {
+    const { sharedTiltDepthPx } = await import("../src/client/hud/tilt");
+    expect(sharedTiltDepthPx(1440)).toBe(1440);
+    // The far edge's inward pull for a 130 px panel, 404 px wide, turned 22 degrees: (h / 2) * (1 - d / (d + w sin t)).
+    const pull = (d: number) => 65 * (1 - d / (d + 404 * Math.sin((22 * Math.PI) / 180)));
+    expect(pull(sharedTiltDepthPx(1440))).toBeLessThan(7);
+    // With the depth from its own height, as before: about four times that.
+    expect(pull(tiltDepthPx(130))).toBeGreaterThan(20);
   });
 });

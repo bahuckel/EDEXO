@@ -998,6 +998,9 @@ function createHudWindows(deps) {
           /* keep the spot as dragged */
         }
         hudLog(`drag ${key} end after ${dragMoves} moves`);
+        // The drop is where the buttons are worked out: during the drag they are not (owner, 2026-11-01: sometimes no
+        // button by a HUD dropped next to another, or one that did nothing — the offers were from before the drag).
+        relayoutFreeStack();
         persistHudFile();
         deps.onChange();
       }
@@ -1027,6 +1030,7 @@ function createHudWindows(deps) {
       }
       const lower = area ? (top.y + bottomEdge) / 2 > area.y + area.height / 2 : false;
       hudLayout.free = lower ? { x: top.x, y: bottomEdge, bottom: true } : top;
+      sendChainOffers();
       persistHudFile();
       deps.onChange();
     }

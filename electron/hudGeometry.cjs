@@ -112,8 +112,8 @@ function hudGroupPath(sections, g) {
   return `${HUD_MERGED_PAGE}?s=${sections.join(",")}&g=${g}`;
 }
 
-/** Pixels between two HUDs' edges for them to count as touching, and the overlap along the edge they need. */
-const HUD_CHAIN_GAP = 24;
+/** Pixels between two HUDs' edges for them to count as touching (a drop by hand lands a little apart). */
+const HUD_CHAIN_GAP = 40;
 
 /**
  * Which HUDs touch, for the chain buttons: for each window, the one right below it (`below`) and the one right of it

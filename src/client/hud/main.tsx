@@ -38,7 +38,7 @@ import { notable } from "./sections/notable";
 import { notices } from "./sections/notices";
 import { colonize } from "./sections/colonize";
 import { ship } from "./sections/ship";
-import { sharedTiltDepthPx, tiltOriginYPx } from "./tilt";
+import { sharedTiltDepthPx } from "./tilt";
 
 export const SECTIONS: Record<string, HudSection> = {
   jump,
@@ -69,27 +69,20 @@ const electron = (): ElectronHud | undefined =>
   (window as unknown as { edexoElectron?: ElectronHud }).edexoElectron;
 
 /**
- * The Elite Style's turn as one door for every panel (hud/tilt.ts): the depth from the screen's height, the vanishing
- * point at the screen's middle, measured from where this panel is. A window moved (free move, a chain) moves its
- * panel on the plane, so the place is read again twice a second, and written only when it changed.
+ * The Elite Style's turn with one depth for every panel (hud/tilt.ts): from the height of the screen the window is on,
+ * read again as the window moves (free move, another monitor), written only when it changed.
  */
 function trackTiltDepth(shell: HTMLElement | null): void {
   if (!shell) return;
   let last = "";
   const set = () => {
-    const sc = window.screen as Screen & { availTop?: number };
-    const depth = sharedTiltDepthPx(sc.availHeight);
-    const y = tiltOriginYPx(sc.availTop ?? 0, sc.availHeight, window.screenY + shell.offsetTop);
-    const key = `${depth}|${y}`;
-    if (key === last) return;
-    last = key;
-    const st = document.documentElement.style;
-    st.setProperty("--hud-tilt-depth", depth + "px");
-    st.setProperty("--hud-tilt-origin-y", y + "px");
+    const depth = `${sharedTiltDepthPx(window.screen.availHeight)}px`;
+    if (depth === last) return;
+    last = depth;
+    document.documentElement.style.setProperty("--hud-tilt-depth", depth);
   };
   set();
-  if (typeof ResizeObserver === "function") new ResizeObserver(set).observe(shell);
-  window.setInterval(set, 500);
+  window.setInterval(set, 1000);
 }
 
 /* ============================================================== HUD object ================== */
@@ -308,11 +301,11 @@ function drawChainButtons(): void {
     f.appendChild(b);
   };
   if (chainOffers.below && typeof ee.hudChain === "function")
-    add("\u26d3 Chain", "Join this HUD with the one below into one panel", "left:50%;bottom:4px;transform:translateX(-50%);", () => void ee.hudChain!("below"));
+    add("\u26d3 Combine", "Combine this HUD with the one below into one panel", "left:50%;bottom:4px;transform:translateX(-50%);", () => void ee.hudChain!("below"));
   if (chainOffers.right && typeof ee.hudChain === "function")
-    add("\u26d3", "Join this HUD with the one to its right into one panel", "right:4px;top:50%;transform:translateY(-50%);", () => void ee.hudChain!("right"));
+    add("\u26d3 Combine", "Combine this HUD with the one to its right into one panel", "right:4px;top:50%;transform:translateY(-50%);", () => void ee.hudChain!("right"));
   if (chainOffers.group && typeof ee.hudUnchain === "function")
-    add("Unchain", "Split this panel back into its separate HUDs", "", () => void ee.hudUnchain!(), true);
+    add("Split", "Split this panel back into its separate HUDs", "", () => void ee.hudUnchain!(), true);
 }
 HUD.setMoveMode = function (on: boolean): void {
   const ee = electron();
