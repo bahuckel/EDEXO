@@ -48,7 +48,8 @@
   color: var(--text-dim);
   font-size: var(--fs-xs);
 }
-.scan-route__min input {
+/* Number fields only: the codex switch beside them keeps the app's square checkbox with its tick. */
+.scan-route__min input[type="number"] {
   width: 110px;
   padding: 2px 6px;
   border: 1px solid var(--accent-a30);
