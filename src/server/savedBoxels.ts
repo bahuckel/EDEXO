@@ -57,7 +57,8 @@ export interface SavedBoxelsService {
   /**
    * The systems of a saved boxel still to fly (neither flown nor skipped), in order, -0 to its end, and
    * the end (known: checked in the galaxy map that nothing follows it). `anchor`: where "next in line"
-   * counts from — the system he is in when it is in this boxel, else the highest one flown (-1: none).
+   * counts from — the system he is in when it is in this boxel, else the one of it he was in last
+   * (-1: none).
    */
   remaining(
     id: string,
@@ -72,6 +73,8 @@ export function createSavedBoxels(opts: {
   now?: () => number;
   /** A run starts (id) or ends (null): a neutron route being flown stops, the clipboard has one owner. */
   onRun?: (id: string | null) => void;
+  /** systemAddress → when he last arrived there: which system of a boxel he was in last. */
+  visitedAt?: (systemAddress: number) => string | null;
 }): SavedBoxelsService {
   const now = opts.now ?? Date.now;
   let { items, autoCopy, run } = load(opts.filePath);
@@ -100,6 +103,7 @@ export function createSavedBoxels(opts: {
       const flownBy = new Map(parsed.map((x) => [x.s.id, new Set<number>()]));
       const addrsBy = new Map(parsed.map((x) => [x.s.id, [] as { n: number; addr: number }[]]));
       const routedBy = new Map(parsed.map((x) => [x.s.id, new Set<number>()]));
+      const lastBy = new Map(parsed.map((x) => [x.s.id, createLastFlown(opts.visitedAt)]));
       for (const r of routed ?? []) {
         for (const { s, e } of parsed) {
           const n = boxelIndexOf(r.name, e.b.prefix);
@@ -112,6 +116,7 @@ export function createSavedBoxels(opts: {
           const n = boxelIndexOf(name, e.b.prefix);
           if (n == null) continue;
           flownBy.get(s.id)!.add(n);
+          lastBy.get(s.id)!.add(n, addr);
           if (addr != null) addrsBy.get(s.id)!.push({ n, addr });
         }
       }
@@ -134,9 +139,11 @@ export function createSavedBoxels(opts: {
         /*
           Next in line (owner, 2026-10-06: "if someone skips the first 10 and wants to scan 10 to 20 first,
           [the lowest unflown] is useless"): the first one still to fly after the system he is in, else
-          after the highest flown; past the end it starts again from -0.
+          after the one of it he was in last (owner, 2026-11-01: between two systems of a run it copied
+          the one after the highest he had flown, Eembaids EG-Y g286 after g285, not g6 after g5); past
+          the end it starts again from -0.
         */
-        const anchor = anchorOf(b.prefix, flownAll, current);
+        const anchor = anchorOf(b.prefix, lastBy.get(s.id)!.n, current);
         let next: number | null = null;
         for (let k = 1; k <= end + 1 && next == null; k++) {
           const n = (anchor + k + end + 1) % (end + 1);
@@ -240,9 +247,13 @@ export function createSavedBoxels(opts: {
       const e = s ? endOf(s) : null;
       if (!s || !e) return null;
       const flown = new Set<number>();
+      const last = createLastFlown(opts.visitedAt);
       for (const v of visited) {
-        const n = boxelIndexOf(visitedEntry(v).name, e.b.prefix);
-        if (n != null) flown.add(n);
+        const { name, addr } = visitedEntry(v);
+        const n = boxelIndexOf(name, e.b.prefix);
+        if (n == null) continue;
+        flown.add(n);
+        last.add(n, addr);
       }
       let end = Math.max(e.end, ...flown);
       for (const r of routed ?? []) {
@@ -253,7 +264,7 @@ export function createSavedBoxels(opts: {
       const skip = new Set(s.skipped ?? []);
       const todo: number[] = [];
       for (let n = 0; n <= end; n++) if (!flown.has(n) && !skip.has(n)) todo.push(n);
-      return { prefix: e.b.prefix, todo, end, endKnown: !!s.endKnown && end === e.end, anchor: anchorOf(e.b.prefix, flown, current) };
+      return { prefix: e.b.prefix, todo, end, endKnown: !!s.endKnown && end === e.end, anchor: anchorOf(e.b.prefix, last.n, current) };
     },
     setSkipped(id, n, skipped) {
       const s = items.find((x) => x.id === id);
@@ -269,10 +280,27 @@ export function createSavedBoxels(opts: {
   };
 }
 
-/** Where next in line counts from: the system he is in when it is in this boxel, else the highest flown (-1). */
-function anchorOf(prefix: string, flown: Set<number>, current: string | null | undefined): number {
+/** Where next in line counts from: the system he is in when it is in this boxel, else the last flown (-1). */
+function anchorOf(prefix: string, lastFlown: number, current: string | null | undefined): number {
   const here = current ? boxelIndexOf(current, prefix) : null;
-  return here ?? Math.max(-1, ...flown);
+  return here ?? lastFlown;
+}
+
+/**
+ * The system of a boxel he was in last: the latest arrival, else (no times) the last one listed.
+ * Not the highest number: a run that started at -285 and went on from -0 counts on from where it is.
+ */
+function createLastFlown(visitedAt: ((systemAddress: number) => string | null) | undefined) {
+  let at = "";
+  return {
+    n: -1,
+    add(n: number, addr: number | null) {
+      const t = (addr != null ? visitedAt?.(addr) : null) ?? "";
+      if (t < at) return;
+      at = t;
+      this.n = n;
+    },
+  };
 }
 
 function load(filePath: string | null): { items: Stored[]; autoCopy: boolean; run: string | null } {

@@ -73,18 +73,46 @@ describe("a boxel run", () => {
 });
 
 describe("next in line (owner, 2026-10-06: Aishaist OE-H d10-0 copied instead of the next after -10)", () => {
-  it("counts from the system he is in, then the highest flown, and starts again from -0 at the end", () => {
+  it("counts from the system he is in, then the last flown, and starts again from -0 at the end", () => {
     const t = setup();
     t.saved.add("Aishaist OE-H d10-20");
     expect(t.jump("Aishaist OE-H d10-10")).toBe("Aishaist OE-H d10-11");
     expect(t.saved.list(["Aishaist OE-H d10-10"], undefined, "Aishaist OE-H d10-10")[0]!.next).toBe(
       "Aishaist OE-H d10-11",
     );
-    // Out of the boxel: after the highest flown.
+    // Out of the boxel: after the last one flown.
     expect(t.saved.list(["Aishaist OE-H d10-10"], undefined, "Sol")[0]!.next).toBe("Aishaist OE-H d10-11");
     // At the end (-20 flown, the end known): back to -0.
     t.saved.confirmEnd(t.saved.list([])[0]!.id, 20);
     expect(t.jump("Aishaist OE-H d10-20")).toBe("Aishaist OE-H d10-0");
+  });
+
+  it("between two systems of a run, counts from the one he was in last, not the highest flown (owner, 2026-11-01)", () => {
+    const t = setup();
+    t.saved.add("Eembaids EG-Y g728");
+    t.jump("Eembaids EG-Y g285");
+    for (let n = 0; n <= 5; n++) t.jump(`Eembaids EG-Y g${n}`);
+    t.run.toggle();
+    // The jumps on the way to -6 (g boxels are far apart): -6 each time, not -286.
+    expect(t.jump("Eembaids OI-T e3-4163")).toBe("Eembaids EG-Y g6");
+    expect(t.jump("Eembaids FN-J d9-5889")).toBe("Eembaids EG-Y g6");
+  });
+
+  it("takes the latest arrival when the journals give times, whatever order the systems are listed in", () => {
+    const at = new Map([
+      [1, "2026-11-01T10:00:00Z"],
+      [2, "2026-11-01T12:00:00Z"],
+      [3, "2026-11-01T11:00:00Z"],
+    ]);
+    const saved = createSavedBoxels({ filePath: null, visitedAt: (a) => at.get(a) ?? null });
+    const { id } = saved.add("Eembaids EG-Y g728")!;
+    const visited = [
+      [1, "Eembaids EG-Y g285"],
+      [2, "Eembaids EG-Y g5"],
+      [3, "Eembaids EG-Y g40"],
+    ] as const;
+    expect(saved.remaining(id, visited, [], "Sol")!.anchor).toBe(5);
+    expect(saved.list(visited, undefined, "Sol")[0]!.next).toBe("Eembaids EG-Y g6");
   });
 });
 

@@ -42,7 +42,7 @@ import { createHttpServer, getLanIPv4s } from "./httpServer.js";
 import { appViewUrl } from "./appViews.js";
 import { describeUserDataMigration, migrateLegacyUserData } from "./userDataMigration.js";
 import { resolveLanAccess } from "./launcherPrefs.js";
-import { isLoopbackHostName } from "./lanAuth.js";
+import { isLoopbackHostName, lanUrlWithKey, loadOrCreateLanKey } from "./lanAuth.js";
 import { applyPendingRestore } from "./backup.js";
 import { createBackupService } from "./backupService.js";
 import { APP_USER_AGENT, APP_VERSION } from "./appVersion.js";
@@ -53,7 +53,6 @@ import {
   readEdsmCredentials,
   saveEdsmCredentials,
 } from "./edsmCredentials.js";
-import { lanUrlWithKey, loadOrCreateLanKey } from "./lanAuth.js";
 import { buildEncyclopediaExomasteryPlanetsPayload } from "./exomasteryEdsmEncyclopedia.js";
 import {
   buildEncyclopediaPayload,
@@ -345,6 +344,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   });
   const savedBoxels = createSavedBoxels({
     filePath: path.join(resolveCommanderDataDir(), "edexo-boxels.json"),
+    visitedAt: (addr) => store.systemVisitedAt.get(addr) ?? null,
     // A boxel run takes the clipboard over from a neutron route being flown (plan 8.5).
     onRun: (id) => {
       if (id && neutronLive.active()) {
