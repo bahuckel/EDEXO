@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 import {
   REGION_ABSENCE_MAX_SHARE,
   REGION_ABSENCE_MIN_BIO_SYSTEMS,
+  REGION_DEPLETION_MAX_RATIO,
+  REGION_DEPLETION_MIN_EXPECTED,
   REGION_GENUS_MIN_RECORDS,
   REGION_GENUS_SHARE_MIN,
   REGION_SIBLING_DEPLETION,
@@ -19,9 +21,10 @@ import {
 } from "../src/shared/regionAbsence.js";
 import { getProjectRoot } from "../src/server/paths.js";
 import { demoteRegionallyRareSiblings } from "../src/server/matchSpecies.js";
+import { demoteRegionallyDepleted } from "../src/server/demotionPasses.js";
 import { loadSpeciesDatabase } from "../src/server/snapshot.js";
 import type { SpeciesEntry } from "../src/shared/types.js";
-import { regionalGenusEnrichment, regionalGenusShare, regionalPresence } from "../src/server/regionSpeciesData.js";
+import { regionalDepletion, regionalGenusEnrichment, regionalGenusShare, regionalPresence } from "../src/server/regionSpeciesData.js";
 
 /** Inner Orion Spur — where the owner was, and the best-sampled region in the corpus. */
 const INNER_ORION_SPUR = 18;
@@ -246,5 +249,47 @@ describe("the sibling out of place", () => {
     demoteRegionallyRareSiblings(strict as never, unlikely as never, { regionIndex: ISC, regionName: "Inner Scutum-Centaurus Arm" });
     expect(strict).toHaveLength(2);
     expect(unlikely).toHaveLength(0);
+  });
+});
+
+/*
+ * Plan 1.3.5 (2026-11-01): Lyaisa AU-R d4-1964 8 c, Empyrean Straits, listed Cactoida cortexum and pullulanta for six
+ * signals. Cactoida is region-locked, and a year of EDDN finds holds neither there (only vermis); the table's 20 and 18
+ * systems are strays, against about 1,093 and 489 the galaxy-wide shares would put there.
+ */
+describe("a species its region records far below what it should", () => {
+  const root = getProjectRoot();
+  const EMPYREAN_STRAITS = 2;
+  const db = loadSpeciesDatabase() as unknown as { species: SpeciesEntry[] };
+  const entry = (id: string) => db.species.find((e) => e.id === id)!;
+  const shown = (...ids: string[]) => ids.map((id) => ({ entry: entry(id), reasons: [] as never[] }));
+
+  it("reads cortexum and pullulanta as strays in Empyrean Straits, pennatis as at home", () => {
+    for (const id of ["cactoida_cactoida_cortexum", "cactoida_cactoida_pullulanta"]) {
+      const d = regionalDepletion(root, EMPYREAN_STRAITS, id)!;
+      expect(d.expected).toBeGreaterThanOrEqual(REGION_DEPLETION_MIN_EXPECTED);
+      expect(d.ratio).toBeLessThan(REGION_DEPLETION_MAX_RATIO);
+    }
+    expect(regionalDepletion(root, EMPYREAN_STRAITS, "tussock_tussock_pennatis")!.ratio).toBeGreaterThan(1);
+    expect(regionalDepletion(root, INNER_ORION_SPUR, "cactoida_cactoida_cortexum")!.ratio).toBeGreaterThan(1);
+  });
+
+  it("demotes both Cactoida on 8 c's list and keeps the rest", () => {
+    const strict = shown("cactoida_cactoida_cortexum", "cactoida_cactoida_pullulanta", "tussock_tussock_pennatis", "bacterium_bacterium_aurasus");
+    const unlikely: typeof strict = [];
+    demoteRegionallyDepleted(strict as never, unlikely as never, { regionIndex: EMPYREAN_STRAITS, regionName: "Empyrean Straits" });
+    expect(strict.map((m) => m.entry.id)).toEqual(["tussock_tussock_pennatis", "bacterium_bacterium_aurasus"]);
+    expect(unlikely.map((m) => m.entry.id).sort()).toEqual(["cactoida_cactoida_cortexum", "cactoida_cactoida_pullulanta"]);
+    const why = (unlikely[0] as unknown as { unlikelyReasons: { field: string; detail: string }[] }).unlikelyReasons[0]!;
+    expect(why.field).toBe("Region");
+    expect(why.detail).toMatch(/^Not growing in Empyrean Straits: \d+ systems there record it, where about [\d,]+ would be expected/);
+  });
+
+  it("keeps cortexum where it grows, and says nothing without a region", () => {
+    const strict = shown("cactoida_cactoida_cortexum");
+    demoteRegionallyDepleted(strict as never, [] as never, { regionIndex: INNER_ORION_SPUR, regionName: "Inner Orion Spur" });
+    expect(strict).toHaveLength(1);
+    demoteRegionallyDepleted(strict as never, [] as never, {});
+    expect(strict).toHaveLength(1);
   });
 });

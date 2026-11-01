@@ -7,6 +7,9 @@ import {
   hostStarGateForSpeciesId,
 } from "../shared/hostStarGates.js";
 import {
+  REGION_DEPLETION_MAX_RATIO,
+  REGION_DEPLETION_MIN_EXPECTED,
+  regionDepletionDetail,
   REGION_SIBLING_DEPLETION,
   REGION_SIBLING_DEPLETION_MAX_SHARE,
   regionGenusShareDetail,
@@ -22,7 +25,7 @@ import { describeSystemBodyVerdict, evaluateSystemBodyGate } from "../shared/sys
 import { atmosphereAllowlistMeansAnyThinCompositionOnly } from "../shared/scanAtmosphereMatch.js";
 import type { MatchReason, SpeciesEntry, SpeciesMatch, SpeciesMatchContext } from "../shared/types.js";
 import { getProjectRoot } from "./paths.js";
-import { regionalGenusEnrichment, regionalGenusShare } from "./regionSpeciesData.js";
+import { regionalDepletion, regionalGenusEnrichment, regionalGenusShare } from "./regionSpeciesData.js";
 import { speciesHostStarObservations } from "./speciesHostStarObservations.js";
 import { evaluateStarlightGate, formatStarlight, starlightOutsideFactor } from "./starlightRanges.js";
 
@@ -506,6 +509,30 @@ export function weighOutsideStarlight(
  */
 export const OBSERVED_TEMP_TOLERANCE_K = 0.5;
 
+/**
+ * Demote a species its region records far below what it should (`REGION_DEPLETION_MAX_RATIO`): region-locked species
+ * whose few records there are strays. Unlike the sibling test it may take a whole genus out (Cactoida on Lyaisa
+ * AU-R d4-1964 8 c, where neither cortexum nor pullulanta grows); a DSS that names the genus brings its row back
+ * (`restoreNamedGenera`), and a row the commander scanned is never demoted by the matcher.
+ */
+export function demoteRegionallyDepleted(
+  strict: Omit<SpeciesMatch, "photoUrl" | "photoNote" | "priceCredits">[],
+  unlikely: Omit<SpeciesMatch, "photoUrl" | "photoNote" | "priceCredits">[],
+  matchContext: SpeciesMatchContext | null | undefined,
+): void {
+  const regionIndex = matchContext?.regionIndex;
+  if (!regionIndex) return;
+  const root = getProjectRoot();
+  for (let i = strict.length - 1; i >= 0; i--) {
+    const m = strict[i]!;
+    const d = regionalDepletion(root, regionIndex, m.entry.id);
+    if (!d || d.expected < REGION_DEPLETION_MIN_EXPECTED || d.ratio >= REGION_DEPLETION_MAX_RATIO) continue;
+    const reason: MatchReason = { field: "Region", soft: true, detail: regionDepletionDetail(d.regionName, d.count, d.expected) };
+    strict.splice(i, 1);
+    unlikely.push({ ...m, reasons: [...m.reasons, reason], unlikely: true, unlikelyReasons: [...(m.unlikelyReasons ?? []), reason] });
+  }
+}
+
 export function demoteRegionallyRareSiblings(
   strict: Omit<SpeciesMatch, "photoUrl" | "photoNote" | "priceCredits">[],
   unlikely: Omit<SpeciesMatch, "photoUrl" | "photoNote" | "priceCredits">[],
@@ -643,6 +670,7 @@ export function runDemotionPasses(
   demoteFailedSystemBodyGates(strict, unlikely, o.matchContext);
   weighOutsideStarlight(strict, unlikely, o.matchContext);
   demoteRegionallyRareSiblings(strict, unlikely, o.matchContext);
+  demoteRegionallyDepleted(strict, unlikely, o.matchContext);
   demoteDeltahedronixOnOneSignalIcy(strict, unlikely, o.planetClass, o.biologicalSignals, o.signalCountAssumed);
   dropUnprovenStrictSpecies(strict, unlikely, o.matchContext, o.dssNamed);
   if (o.restore)

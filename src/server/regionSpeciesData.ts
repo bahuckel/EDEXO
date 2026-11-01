@@ -197,8 +197,46 @@ export function regionalGenusShare(
   return { ...judgeRegionalGenusShare(row.species[speciesId] ?? 0, genusRecords), regionName: row.name };
 }
 
-/** Galaxy-wide: species id → records, genus key → records. Summed once over every region. */
-let galaxyTotals: { species: Map<string, number>; genus: Map<string, number> } | null = null;
+/** Galaxy-wide: species id → records, genus key → records, and bio systems. Summed once over every region. */
+let galaxyTotals: { species: Map<string, number>; genus: Map<string, number>; bioSystems: number } | null = null;
+
+function galaxy(projectRoot: string) {
+  if (!galaxyTotals) {
+    const species = new Map<string, number>();
+    const genus = new Map<string, number>();
+    let bioSystems = 0;
+    for (const row of Object.values(loadRegionSpecies(projectRoot)?.regions ?? {})) {
+      if (Number.isFinite(row.bioSystems) && row.bioSystems > 0) bioSystems += row.bioSystems;
+      for (const [id, n] of Object.entries(row.species)) {
+        if (!Number.isFinite(n) || n <= 0) continue;
+        species.set(id, (species.get(id) ?? 0) + n);
+        genus.set(genusKeyOf(id), (genus.get(genusKeyOf(id)) ?? 0) + n);
+      }
+    }
+    galaxyTotals = { species, genus, bioSystems };
+  }
+  return galaxyTotals;
+}
+
+/**
+ * The systems this region records with the species against what it should, from the species' share of the galaxy's
+ * biology (`REGION_DEPLETION_MAX_RATIO`). Null outside the rollup's vocabulary or without a region.
+ */
+export function regionalDepletion(
+  projectRoot: string,
+  regionIndex: number | null | undefined,
+  speciesId: string,
+): { count: number; expected: number; ratio: number; regionName: string } | null {
+  if (regionIndex == null || regionIndex <= 0) return null;
+  const row = loadRegionSpecies(projectRoot)?.regions?.[String(regionIndex)];
+  if (!row || !cachedVocabulary?.has(speciesId) || !(row.bioSystems > 0)) return null;
+  const g = galaxy(projectRoot);
+  const total = g.species.get(speciesId) ?? 0;
+  if (!total || !g.bioSystems) return null;
+  const expected = (total / g.bioSystems) * row.bioSystems;
+  const count = row.species[speciesId] ?? 0;
+  return { count, expected, ratio: expected > 0 ? count / expected : 1, regionName: row.name };
+}
 
 /**
  * This species' share of its genus in the region, divided by its share of the genus galaxy-wide.
@@ -215,20 +253,9 @@ export function regionalGenusEnrichment(
 ): number | null {
   const v = regionalGenusShare(projectRoot, regionIndex, speciesId);
   if (!v || v.genusRecords < REGION_GENUS_MIN_RECORDS) return null;
-  if (!galaxyTotals) {
-    const species = new Map<string, number>();
-    const genus = new Map<string, number>();
-    for (const row of Object.values(loadRegionSpecies(projectRoot)?.regions ?? {})) {
-      for (const [id, n] of Object.entries(row.species)) {
-        if (!Number.isFinite(n) || n <= 0) continue;
-        species.set(id, (species.get(id) ?? 0) + n);
-        genus.set(genusKeyOf(id), (genus.get(genusKeyOf(id)) ?? 0) + n);
-      }
-    }
-    galaxyTotals = { species, genus };
-  }
-  const g = galaxyTotals.genus.get(genusKeyOf(speciesId)) ?? 0;
-  const s = galaxyTotals.species.get(speciesId) ?? 0;
+  const totals = galaxy(projectRoot);
+  const g = totals.genus.get(genusKeyOf(speciesId)) ?? 0;
+  const s = totals.species.get(speciesId) ?? 0;
   if (!g || !s) return null;
   return v.share / (s / g);
 }
