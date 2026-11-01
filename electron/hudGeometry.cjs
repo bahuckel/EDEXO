@@ -58,9 +58,87 @@ function hudHeightFrom(opts) {
   return Number.isFinite(n) && n > 0 ? Math.max(HUD_MIN_HEIGHT, Math.min(HUD_MAX_HEIGHT, Math.floor(n))) : HUD_DEFAULT_HEIGHT;
 }
 
-/** The slot identity: the page, not its query string (the merged HUD changes sections via the query). */
+/**
+ * The slot identity: the page, not its query string (the merged HUD changes sections via the query) — except a
+ * chained group's `g`, so several groups can be open at once (owner, 2026-11-01: chain two panels into one).
+ */
 function hudSlotKey(pathNorm) {
-  return String(pathNorm).split("?")[0];
+  const [page, query = ""] = String(pathNorm).split("?");
+  const g = /(?:^|&)g=(\d+)/.exec(query);
+  return g ? `${page}?g=${g[1]}` : page;
+}
+
+/*
+  Chained HUDs (owner, 2026-11-01: "if two panels of HUD are close to each other, a 'chain' button appears there,
+  allowing you to click it and merge only those panels ... Merging is dependent on their initial order"). A group is
+  the merged page with only its sections and an id: /hud-overlay.html?s=jump,fss&g=2. The section of each separate
+  page is the launcher's table (src/client/launcher/hudOverlays.js HUD_SECTION_BY_PATH; tests/hudChain.test.ts keeps
+  the two equal).
+*/
+const HUD_MERGED_PAGE = "/hud-overlay.html";
+const HUD_SECTION_BY_PATH = {
+  "/jump-overlay.html": "jump",
+  "/fss-scan-overlay.html": "fss",
+  "/exo-candidates-overlay.html": "candidates",
+  "/distance-overlay.html": "distance",
+  "/data-value-overlay.html": "datavalue",
+  "/achievement-overlay.html": "achievement",
+  "/notable-overlay.html": "notable",
+  "/notices-overlay.html": "notices",
+  "/colonize-overlay.html": "colonize",
+  "/ship-overlay.html": "ship",
+};
+const HUD_PATH_BY_SECTION = Object.fromEntries(Object.entries(HUD_SECTION_BY_PATH).map(([p, s]) => [s, p]));
+
+/** The sections a window shows: its own one, or the merged page's `s` (every section when absent). */
+function hudSectionsOf(pathNorm) {
+  const [page, query = ""] = String(pathNorm).split("?");
+  if (page !== HUD_MERGED_PAGE) return HUD_SECTION_BY_PATH[page] ? [HUD_SECTION_BY_PATH[page]] : [];
+  const m = /(?:^|&)s=([^&]*)/.exec(query);
+  const all = Object.values(HUD_SECTION_BY_PATH);
+  if (!m) return all;
+  return decodeURIComponent(m[1]).split(",").filter((x) => all.includes(x));
+}
+
+/** A chained group's id, or null for any other window. */
+function hudGroupOf(pathNorm) {
+  const query = String(pathNorm).split("?")[1] || "";
+  const g = /(?:^|&)g=(\d+)/.exec(query);
+  return g ? Number(g[1]) : null;
+}
+
+/** The page of a group: its sections in the order given, and its id. */
+function hudGroupPath(sections, g) {
+  return `${HUD_MERGED_PAGE}?s=${sections.join(",")}&g=${g}`;
+}
+
+/** Pixels between two HUDs' edges for them to count as touching, and the overlap along the edge they need. */
+const HUD_CHAIN_GAP = 24;
+
+/**
+ * Which HUDs touch, for the chain buttons: for each window, the one right below it (`below`) and the one right of it
+ * (`right`), by key; the nearest when several are. `rects`: { key, x, y, width, height } in screen pixels.
+ */
+function hudChainOffers(rects) {
+  const out = {};
+  const overlap = (a0, a1, b0, b1) => Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
+  for (const a of rects) {
+    let below = null;
+    let right = null;
+    for (const b of rects) {
+      if (b === a) continue;
+      const dy = b.y - (a.y + a.height);
+      if (dy >= -HUD_CHAIN_GAP && dy <= HUD_CHAIN_GAP && overlap(a.x, a.x + a.width, b.x, b.x + b.width) >= 0.5 * Math.min(a.width, b.width)) {
+        if (!below || Math.abs(dy) < below.d) below = { key: b.key, d: Math.abs(dy) };
+      }
+      const dx = b.x - (a.x + a.width);
+      if (dx >= -HUD_CHAIN_GAP && dx <= HUD_CHAIN_GAP && overlap(a.y, a.y + a.height, b.y, b.y + b.height) >= 0.3 * Math.min(a.height, b.height)) {
+        if (!right || Math.abs(dx) < right.d) right = { key: b.key, d: Math.abs(dx) };
+      }
+    }
+    out[a.key] = { below: below ? below.key : null, right: right ? right.key : null };
+  }
+  return out;
 }
 
 /** A saved free spot, or null when it is not one (a hand-edited file). */
@@ -132,6 +210,14 @@ module.exports = {
   hudSlotKey,
   freePointFrom,
   freeEachFrom,
+  HUD_MERGED_PAGE,
+  HUD_SECTION_BY_PATH,
+  HUD_PATH_BY_SECTION,
+  hudSectionsOf,
+  hudGroupOf,
+  hudGroupPath,
+  HUD_CHAIN_GAP,
+  hudChainOffers,
   splitIntoColumns,
   columnX,
 };

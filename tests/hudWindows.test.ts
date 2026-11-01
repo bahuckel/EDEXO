@@ -54,6 +54,8 @@ type Huds = {
   raiseVisible: () => void;
   isMoving: () => boolean;
   dragFromPage: (win: unknown, phase: string) => { ok: boolean };
+  chainFromPage: (win: unknown, dir: string) => Promise<{ ok: boolean; path?: string }>;
+  unchainFromPage: (win: unknown) => Promise<{ ok: boolean }>;
   loadLayout: () => void;
   relayout: () => void;
 };
@@ -934,5 +936,62 @@ describe("loads that finish late (review O-18)", () => {
     expect(w).toHaveLength(1);
     expect(w[0]!.url).toContain("s=nsp");
     expect(huds.paths()).toEqual(["/hud-overlay.html?s=nsp"]);
+  });
+});
+
+/*
+  Chained HUDs (owner, 2026-11-01): "if two panels of HUD are close to each other, a 'chain' button appears there,
+  allowing you to click it and merge only those panels ... Merging is dependent on their initial order".
+*/
+describe("chaining HUDs while placing", () => {
+  const settle = async () => {
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+  };
+  const offersOf = (w: { sent: unknown[][] }) =>
+    w.sent.filter((m) => m[0] === "edexo:hud-chain-offers").map((m) => m[1] as { below: boolean; right: boolean; group: boolean }).at(-1);
+
+  it("offers a chain between touching HUDs, joins them in the stack's order, and splits them back", async () => {
+    const huds = make();
+    await huds.request("/fss-scan-overlay.html", 404, 120, null, "open");
+    await huds.request("/jump-overlay.html", 404, 200, null, "open");
+    await huds.request("/distance-overlay.html", 404, 150, null, "open");
+    // The launcher's order: jump first, then the discovery scan.
+    huds.setLayout({ freeOn: true, order: ["/jump-overlay.html", "/fss-scan-overlay.html", "/distance-overlay.html"] });
+    huds.setMoveMode(true);
+    await settle();
+    huds.relayout();
+    // Top to bottom on the screen: jump, the discovery scan, the tracker.
+    const [top, mid, bottom] = live().filter((w) => w.visible).sort((x, y) => x.bounds.y - y.bounds.y);
+    expect(top!.url).toContain("/jump-overlay.html");
+    expect(offersOf(top!)).toMatchObject({ below: true, group: false });
+    expect(offersOf(bottom!)).toMatchObject({ below: false });
+    // Chain the top two: one panel, jump before the discovery scan, where the top one was.
+    const at = { ...top!.bounds };
+    const r = await huds.chainFromPage(top, "below");
+    expect(r.ok).toBe(true);
+    expect(r.path).toBe("/hud-overlay.html?s=jump,fss&g=1");
+    expect(huds.paths()).toContain("/hud-overlay.html?s=jump,fss&g=1");
+    expect(huds.paths()).not.toContain("/jump-overlay.html");
+    expect(huds.paths()).toContain("/distance-overlay.html");
+    const group = live().find((w) => w.url?.includes("g=1"));
+    expect(group!.bounds).toMatchObject({ x: at.x, y: at.y });
+    await settle();
+    huds.relayout();
+    expect(offersOf(group!)).toMatchObject({ group: true });
+    // Apart again: separate windows, the first where the group was.
+    expect((await huds.unchainFromPage(group)).ok).toBe(true);
+    expect(huds.paths()).toEqual(expect.arrayContaining(["/jump-overlay.html", "/fss-scan-overlay.html", "/distance-overlay.html"]));
+    expect(huds.paths().some((p) => p.includes("g="))).toBe(false);
+    huds.setMoveMode(false);
+    void mid;
+  });
+
+  it("offers nothing outside placing, nor for HUDs far apart", async () => {
+    const huds = make();
+    await huds.request("/fss-scan-overlay.html", 404, 120, null, "open");
+    await huds.request("/jump-overlay.html", 404, 200, null, "open");
+    const [a] = live();
+    expect(offersOf(a!)?.below ?? false).toBe(false);
+    expect((await huds.chainFromPage(a, "below")).ok).toBe(false);
   });
 });

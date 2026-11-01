@@ -25,6 +25,11 @@ const {
   hudSlotKey,
   freePointFrom,
   freeEachFrom,
+  HUD_PATH_BY_SECTION,
+  hudSectionsOf,
+  hudGroupOf,
+  hudGroupPath,
+  hudChainOffers,
   splitIntoColumns,
   columnX,
 } = require("./hudGeometry.cjs");
@@ -724,6 +729,7 @@ function createHudWindows(deps) {
       }
     });
     if (!drag) logPlacement(area, ordered);
+    if (moving && !drag) sendChainOffers();
   }
 
   /**
@@ -748,8 +754,127 @@ function createHudWindows(deps) {
         /* a window closing mid-send */
       }
     }
+    sendChainOffers();
     applyAway();
     return moving;
+  }
+
+  /*
+    Chain buttons (owner, 2026-11-01: "if two panels of HUD are close to each other, a 'chain' button appears there,
+    allowing you to click it and merge only those panels"). While placing, each separate window is told which HUD
+    touches it below and to the right (hudGeometry.cjs `hudChainOffers`), and whether it is a group (its Unchain).
+    Sent only when that changes, per window.
+  */
+  const chainSent = new WeakMap();
+  function sendChainOffers() {
+    const { ordered } = orderedStack();
+    const rects = [];
+    if (moving && ordered.length > 1) {
+      for (const s of ordered) {
+        try {
+          const b = s.win.getBounds();
+          rects.push({ key: s.key, x: b.x, y: b.y, width: b.width, height: slotHeight(s) ?? b.height });
+        } catch {
+          /* a window going away */
+        }
+      }
+    }
+    const offers = hudChainOffers(rects);
+    for (const s of hudOverlayStack) {
+      if (!s.win || s.win.isDestroyed()) continue;
+      const o = offers[s.key] || { below: null, right: null };
+      const msg = { on: moving, below: o.below != null, right: o.right != null, group: hudGroupOf(s.pathname) != null };
+      const text = JSON.stringify(msg);
+      if (chainSent.get(s.win) === text) continue;
+      chainSent.set(s.win, text);
+      try {
+        s.win.webContents.send("edexo:hud-chain-offers", msg);
+      } catch {
+        /* closing */
+      }
+    }
+  }
+
+  /** The sections of two windows as one list, in the stack's order (the launcher's order list), else the HUD's. */
+  function chainOrder(sections) {
+    const rank = (sec) => {
+      const i = hudLayout.order.indexOf(HUD_PATH_BY_SECTION[sec]);
+      return i < 0 ? 1000 : i;
+    };
+    const base = Object.keys(HUD_PATH_BY_SECTION).map((p) => HUD_PATH_BY_SECTION[p]);
+    return [...new Set(sections)].sort((a, b) => rank(a) - rank(b) || base.indexOf(a) - base.indexOf(b));
+  }
+
+  /**
+   * Chain the window clicked with the one touching it (`dir`: below / right): both close, one group opens where the
+   * upper (left) one was, its sections in the stack's order. A group chained again keeps its id.
+   */
+  async function chainFromPage(win, dir) {
+    if (!moving || (dir !== "below" && dir !== "right")) return { ok: false };
+    const { ordered } = orderedStack();
+    const a = ordered.find((x) => x.win === win);
+    if (!a || ordered.length < 2) return { ok: false };
+    const rects = ordered.map((x) => {
+      const b = x.win.getBounds();
+      return { key: x.key, x: b.x, y: b.y, width: b.width, height: slotHeight(x) ?? b.height };
+    });
+    const otherKey = hudChainOffers(rects)[a.key]?.[dir];
+    const b = otherKey ? ordered.find((x) => x.key === otherKey) : null;
+    if (!b) return { ok: false };
+    const sections = chainOrder([...hudSectionsOf(a.pathname), ...hudSectionsOf(b.pathname)]);
+    if (sections.length < 2) return { ok: false };
+    const used = new Set(hudOverlayStack.map((x) => hudGroupOf(x.pathname)).filter((g) => g != null));
+    let g = hudGroupOf(a.pathname) ?? hudGroupOf(b.pathname);
+    if (g == null) for (g = 1; used.has(g); g++);
+    const path = hudGroupPath(sections, g);
+    const at = a.win.getBounds();
+    const width = Math.max(a.width || 404, b.width || 404);
+    const height = (slotHeight(a) ?? 330) + (slotHeight(b) ?? 330);
+    hudLog(`chain ${a.pathname} + ${b.pathname} -> ${path}`);
+    // Where the upper one was; the old windows' own spots go with them.
+    const each = { ...hudLayout.freeEach };
+    delete each[a.key];
+    delete each[b.key];
+    each[hudSlotKey(path)] = { x: at.x, y: at.y, bottom: false };
+    hudLayout.freeEach = each;
+    closeHudOverlayByPath(a.pathname);
+    closeHudOverlayByPath(b.pathname);
+    const r = await requestHudOverlaySlot(path, width, height, hudChildIcon || lastIcon, "open");
+    persistHudFile();
+    deps.onChange();
+    return { ok: !!r.opened, path };
+  }
+
+  /** A group back into its separate HUDs: the first where the group was, the rest under it. */
+  async function unchainFromPage(win) {
+    if (!moving) return { ok: false };
+    const slot = hudOverlayStack.find((x) => x.win === win);
+    if (!slot || hudGroupOf(slot.pathname) == null) return { ok: false };
+    const sections = hudSectionsOf(slot.pathname);
+    let at;
+    try {
+      at = win.getBounds();
+    } catch {
+      return { ok: false };
+    }
+    hudLog(`unchain ${slot.pathname}`);
+    const each = { ...hudLayout.freeEach };
+    delete each[slot.key];
+    hudLayout.freeEach = each;
+    closeHudOverlayByPath(slot.pathname);
+    let y = at.y;
+    for (const sec of sections) {
+      const path = HUD_PATH_BY_SECTION[sec];
+      if (!path) continue;
+      hudLayout.freeEach = { ...hudLayout.freeEach, [hudSlotKey(path)]: { x: at.x, y, bottom: false } };
+      await requestHudOverlaySlot(path, slot.width || 404, 330, hudChildIcon || lastIcon, "open");
+      const opened = hudOverlayStack.find((x) => x.key === hudSlotKey(path));
+      y += (opened ? (slotHeight(opened) ?? 330) : 330) + HUD_STACK_GAP;
+    }
+    relayoutHudStack();
+    persistHudFile();
+    deps.onChange();
+    return { ok: true };
   }
 
   /**
@@ -800,6 +925,7 @@ function createHudWindows(deps) {
         }),
       );
       relayoutHudStack();
+      sendChainOffers();
       applyAway();
     } finally {
       renewing = false;
@@ -1500,6 +1626,8 @@ function createHudWindows(deps) {
     },
     isMoving: () => moving,
     dragFromPage,
+    chainFromPage,
+    unchainFromPage,
     setLayout: (next) => ({
       ...setHudLayout(next || {}, true),
       hidden: hudHidden,

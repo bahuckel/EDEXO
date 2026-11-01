@@ -75,6 +75,13 @@ contextBridge.exposeInMainWorld("edexoElectron", {
   onHudMoveMode: (cb) => {
     ipcRenderer.on("edexo:hud-move-mode", (_evt, v) => cb(v));
   },
+  /** HUD pages while placing: chain this HUD with the one touching it (`"below"` / `"right"`), or a group apart. */
+  hudChain: (dir) => ipcRenderer.invoke("edexo:hud-chain", { dir }),
+  hudUnchain: () => ipcRenderer.invoke("edexo:hud-unchain"),
+  /** HUD pages: `{ on, below, right, group }` — which chain buttons to show while placing. */
+  onHudChainOffers: (cb) => {
+    ipcRenderer.on("edexo:hud-chain-offers", (_evt, v) => cb(v));
+  },
   /** Close to tray: `{ enabled, available, reason? }` (owner, 2026-09-28; close, not minimise, since 2026-10-01). */
   getTrayPref: () => ipcRenderer.invoke("edexo:get-tray-pref"),
   /** @param {{ enabled: boolean }} opts */

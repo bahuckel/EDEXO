@@ -198,6 +198,12 @@ function registerLauncherIpc(
     if (!["start", "move", "end", "done", "frame", "hover"].includes(phase)) return { ok: false };
     return huds.dragFromPage(BrowserWindow.fromWebContents(evt.sender), phase);
   });
+  // Chain buttons while placing (owner, 2026-11-01): this HUD with the one touching it below / right, or a group apart.
+  ipcMain.handle("edexo:hud-chain", (evt, opts) => {
+    const dir = opts && typeof opts === "object" ? opts.dir : null;
+    return huds.chainFromPage(BrowserWindow.fromWebContents(evt.sender), dir);
+  });
+  ipcMain.handle("edexo:hud-unchain", (evt) => huds.unchainFromPage(BrowserWindow.fromWebContents(evt.sender)));
 
   ipcMain.handle("edexo:toggle-foot-overlay", async () => {
     try {
