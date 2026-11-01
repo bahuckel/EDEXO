@@ -20,8 +20,8 @@ Windows; everything the app saves lives in `%LOCALAPPDATA%\ED Exo Compare\`.
 
 |                                                                                                                |                                                                       |
 | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **[Portable — one file](https://github.com/bahuckel/EDEXO/releases/download/v1.3.4/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
-| **[Program folder — .zip](https://github.com/bahuckel/EDEXO/releases/tag/v1.3.4-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
+| **[Portable — one file](https://github.com/bahuckel/EDEXO/releases/download/v1.3.5/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
+| **[Program folder — .zip](https://github.com/bahuckel/EDEXO/releases/tag/v1.3.5-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
 
 Both are the same version and the same code — [all releases](https://github.com/bahuckel/EDEXO/releases).
 
@@ -44,10 +44,10 @@ saying what worked and what did not — distro, desktop, X11 or Wayland — is t
 
 |                                                                                                                                         |                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO/releases/download/v1.3.4-zip/EDExoCompare-1.3.4-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
-| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO/releases/download/v1.3.4-zip/EDExoCompare-1.3.4-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
+| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO/releases/download/v1.3.5-zip/EDExoCompare-1.3.5-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
+| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO/releases/download/v1.3.5-zip/EDExoCompare-1.3.5-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
 
-**AppImage:** `chmod +x EDExoCompare-1.3.4-x86_64.AppImage`, then run it. It needs FUSE 2:
+**AppImage:** `chmod +x EDExoCompare-1.3.5-x86_64.AppImage`, then run it. It needs FUSE 2:
 
 | Distro                                            | Command                                   |
 | ------------------------------------------------- | ----------------------------------------- |
@@ -58,7 +58,7 @@ saying what worked and what did not — distro, desktop, X11 or Wayland — is t
 | openSUSE                                          | `sudo zypper install libfuse2`            |
 | Arch, CachyOS, Manjaro                            | `sudo pacman -S --needed fuse2`           |
 
-Without FUSE, `./EDExoCompare-1.3.4-x86_64.AppImage --appimage-extract-and-run` works too.
+Without FUSE, `./EDExoCompare-1.3.5-x86_64.AppImage --appimage-extract-and-run` works too.
 
 On start the launcher checks your desktop and lists anything the HUD needs that is missing, with the
 install command for your distro: XWayland on a Wayland session, a compositor on a bare window
@@ -70,13 +70,13 @@ and starts again by itself; tick it to try the graphics card again later. If it 
 once with the graphics card off:
 
 ```bash
-./EDExoCompare-1.3.4-x86_64.AppImage --disable-gpu --disable-gpu-sandbox
+./EDExoCompare-1.3.5-x86_64.AppImage --disable-gpu --disable-gpu-sandbox
 ```
 
 or set `EDEXO_SAFE_GRAPHICS=1` to keep it off. Without the graphics card the 3D galaxy map draws in
 software (slower); the Classic map is unaffected.
 
-**Browser build:** `tar xzf EDExoCompare-1.3.4-linux-x64.tar.gz`, then `./edexo-client.sh` in the
+**Browser build:** `tar xzf EDExoCompare-1.3.5-linux-x64.tar.gz`, then `./edexo-client.sh` in the
 folder it makes. Its `README.txt` has the rest.
 
 **Both:** the journals are found inside the game's Proton or Wine prefix — every Steam library
@@ -112,7 +112,7 @@ renormalises inside that genus to say which of its species you are looking at.
 region by region, with Bronze, Silver and Gold steps — plus stars, worlds and points of interest to
 visit in each region. Track one and its plants are marked in the app and in the HUD.
 
-**Where to go next.** The galaxy map (the galaxy icon in the top bar) draws all 5.3 million systems
+**Where to go next.** The galaxy map (the galaxy icon in the top bar) draws all 5.4 million systems
 with recorded biology in 3D, grouped by region, sector and neighbourhood, with your own systems on
 top. Set a floor — _Worth ≥_ 50 M, say — and **Next target** flies to the nearest system above it that
 you have not mapped or sampled, and copies its name to paste into the game's galaxy map; **Plan**
@@ -215,7 +215,7 @@ game) or as pop-ups if Tab view is off.
 
 ### Galaxy map
 
-- All 5.3 million systems with recorded biology in 3D, by region, sector and neighbourhood, with your
+- All 5.4 million systems with recorded biology in 3D, by region, sector and neighbourhood, with your
   own route on top; game-style controls (W A S D, Q E, R F) or a mouse; it runs on a phone.
 - **Find** (species, systems and station names) and filters by species, genus, star or planet type;
   layers for points of interest, Notable Stellar Phenomena, carriers, bookmarks, green gas giants, the
@@ -275,9 +275,11 @@ boxel line (or, on a neutron route, where to scoop and supercharge and the FSD's
 bodies, notices (F5 clears them), a tracked achievement, **Colonize** (the haul plan's next stop and
 the site you are working on, with bars that fill as you buy and deliver, and this week's credits) and
 **Ship** (an outline of your ship with each part coloured by its health, the damaged parts worst first).
-Stacked or merged into
-one panel, in the original look, a title bar or an Elite-style frame; any colour, 50–200 % scale,
-10–100 % background, hidden when the game is not in front.
+Stacked, merged into
+one panel, or combined into panels of your choosing (two that touch get a Combine button), and placed
+anywhere, one by one, on any screen; in the original look, a title bar or an Elite-style frame angled
+toward the middle of the screen; any colour, 50–200 % scale, 10–100 % background, hidden when the game
+is not in front.
 
 ### Launcher and options
 
