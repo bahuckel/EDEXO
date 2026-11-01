@@ -571,11 +571,11 @@
                   </select>
                 </div>
                 <div class="hud-set-row" id="hudTurnRow">
-                  <label for="hudTilt" title="Positive: the right edge goes into the screen — for a HUD on the left. Negative: the left edge — for a HUD on the right. 0: flat.">Turn <output id="hudTiltOut">15°</output></label>
+                  <label for="hudTilt" title="The turn of a HUD at the right edge of the screen. Every panel points at the middle: mirrored on the left, shallower toward the middle, none in the middle. Negative: the edge toward the middle goes into the screen. Positive: the outer edge. 0: flat.">Turn <output id="hudTiltOut">15°</output></label>
                   <input type="range" id="hudTilt" min="-35" max="35" step="1" value="15" />
                 </div>
                 <div class="hud-set-row" id="hudSlantRow">
-                  <label for="hudSlant" title="Positive: the lines rise to the right. Negative: they fall. The window grows a little above and below to hold the lift.">Slant <output id="hudSlantOut">6°</output></label>
+                  <label for="hudSlant" title="The slant of a HUD in the top-right corner. Lines point at the middle of the screen: mirrored on the left, the other way below the middle, none level with it. Positive: the lines rise toward the outer edge. Negative: toward the middle. The window grows a little above and below to hold the lift.">Slant <output id="hudSlantOut">6°</output></label>
                   <input type="range" id="hudSlant" min="-15" max="15" step="1" value="6" />
                 </div>
               </div>

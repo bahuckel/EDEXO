@@ -22,7 +22,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { Settings } from "lucide-react";
 import { HUD, api, setPort } from "./core";
 import { audioOn, cueFromOverlay } from "./audio";
-import { PHONE, PRESETS, applyTheme, onThemeApplied, readOpacity, readScale } from "./theme";
+import { PHONE, PRESETS, applyTheme, onThemeApplied, readOpacity, readScale, currentScreenPlace } from "./theme";
 import { hudStore } from "./store";
 import { Panel, RELEVANT_HOLD_MS } from "./Panel";
 import type { HudSection } from "./parts";
@@ -70,16 +70,25 @@ const electron = (): ElectronHud | undefined =>
 
 /**
  * The Elite Style's turn with one depth for every panel (hud/tilt.ts): from the height of the screen the window is on,
- * read again as the window moves (free move, another monitor), written only when it changed.
+ * read again as the window moves (free move, another monitor), written only when it changed. A window moved on its
+ * screen gets its angle again (theme.ts `currentScreenPlace`), pointed at the screen's middle.
  */
 function trackTiltDepth(shell: HTMLElement | null): void {
   if (!shell) return;
   let last = "";
+  let place = JSON.stringify(currentScreenPlace());
   const set = () => {
     const depth = `${sharedTiltDepthPx(window.screen.availHeight)}px`;
-    if (depth === last) return;
-    last = depth;
-    document.documentElement.style.setProperty("--hud-tilt-depth", depth);
+    if (depth !== last) {
+      last = depth;
+      document.documentElement.style.setProperty("--hud-tilt-depth", depth);
+    }
+    // Moved on the screen: the angle follows (theme.ts currentScreenPlace).
+    const now = JSON.stringify(currentScreenPlace());
+    if (now !== place) {
+      place = now;
+      applyTheme();
+    }
   };
   set();
   window.setInterval(set, 1000);

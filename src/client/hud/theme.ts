@@ -116,6 +116,38 @@ export function clampNum(v: unknown, lo: number, hi: number, def: number): numbe
   if (!isFinite(n)) return def;
   return Math.min(hi, Math.max(lo, n));
 }
+/** Within this share of the way from the middle, a panel counts as in the middle: no turn, no slant. */
+export const HUD_PLACE_SNAP = 0.04;
+
+/**
+ * Where a panel is on its screen, for the angle (owner, 2026-11-01: "Slant/Swing should point at the middle of the
+ * screen so left and right should have mirrored turn/angle"; "if its in the middle or bottom, the angle becomes more
+ * and more shallow with snapping in the exact middle of the screen (0 degrees slant/swing there)"). `h`: from -1 (flush
+ * left) through 0 (the middle) to 1 (flush right); `v`: 1 flush top, -1 flush bottom. Near 0 it is 0. Pure.
+ */
+export function hudScreenPlace(win: { x: number; y: number; w: number; h: number }, screen: { x: number; y: number; w: number; h: number }): { h: number; v: number } {
+  const axis = (pos: number, size: number, start: number, span: number) => {
+    const room = span / 2 - size / 2;
+    if (!(room > 0)) return 0;
+    const r = Math.max(-1, Math.min(1, (pos + size / 2 - (start + span / 2)) / room));
+    return Math.abs(r) < HUD_PLACE_SNAP ? 0 : Math.round(r * 1000) / 1000;
+  };
+  const down = axis(win.y, win.h, screen.y, screen.h);
+  return { h: axis(win.x, win.w, screen.x, screen.w), v: down === 0 ? 0 : -down };
+}
+
+/** This window's place on its screen; a phone (held in the hand) counts as flush right and top: the angle as set. */
+export function currentScreenPlace(): { h: number; v: number } {
+  if (PHONE || typeof window === "undefined" || !window.screen) return { h: 1, v: 1 };
+  const sc = window.screen as Screen & { availLeft?: number; availTop?: number };
+  // A screen of no size (some embedded browsers): the angle as set, not flat.
+  if (!(sc.availWidth > 0 && sc.availHeight > 0)) return { h: 1, v: 1 };
+  return hudScreenPlace(
+    { x: window.screenX, y: window.screenY, w: window.innerWidth || 0, h: window.innerHeight || 0 },
+    { x: sc.availLeft ?? 0, y: sc.availTop ?? 0, w: sc.availWidth, h: sc.availHeight },
+  );
+}
+
 export function readScale(): number {
   // The phone has its own size: the launcher's slider is for the overlay on the game screen.
   if (PHONE) return 1;
@@ -183,7 +215,14 @@ export function applyTheme(): void {
     Not on a phone (owner, 2026-10-15): the angle is for the panel at the side of the game screen; a phone held in
     the hand, and turned, keeps the Elite Style's look straight.
   */
-  const tilt = PHONE ? 0 : clampNum(pref("edexoHudTilt", "15"), -35, 35, 15);
+  /*
+    Pointed at the middle of the screen (hudScreenPlace): the settings are the angle of a panel flush in the top-right
+    corner, where the HUD starts. The turn follows how far right or left the panel is (mirrored on the left, none in
+    the middle); the slant follows that and how far up or down, so lines aim at the middle as with perspective (none
+    level with the middle or straight above or below it, the other way round below it).
+  */
+  const place = currentScreenPlace();
+  const tilt = PHONE ? 0 : Math.round(place.h * clampNum(pref("edexoHudTilt", "15"), -35, 35, 15) * 10) / 10;
   st.setProperty("--hud-tilt", tilt + "deg");
   st.setProperty("--hud-tilt-origin", tilt >= 0 ? "left" : "right");
   /*
@@ -194,7 +233,7 @@ export function applyTheme(): void {
   */
   const slantMode = !PHONE && pref("edexoHudTiltMode", "turn") === "slant";
   cls.toggle("hud-tilt--slant", slantMode);
-  const slant = clampNum(pref("edexoHudSlant", "6"), -15, 15, 6);
+  const slant = Math.round(place.h * place.v * clampNum(pref("edexoHudSlant", "6"), -15, 15, 6) * 10) / 10;
   st.setProperty("--hud-slant", -slant + "deg");
   const halfLift = (Math.tan((Math.abs(slant) * Math.PI) / 180) * (window.innerWidth || 420)) / 2;
   st.setProperty("--hud-slant-pad", Math.ceil(halfLift + 4) + "px");
