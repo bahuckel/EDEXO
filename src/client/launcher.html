@@ -631,14 +631,14 @@
                 </select>
               </div>
               <div class="hud-set-row" id="hudFreeRow">
-                <label title="The HUDs leave the corner and sit wherever you drag them, on any screen. The spot is kept for the next start."><input type="checkbox" id="hudFree" /> Free move: place them anywhere</label>
+                <label title="The HUDs leave the corner and sit wherever you drag them, on any screen: merged, the one panel; separate, each HUD on its own. The spots are kept for the next start."><input type="checkbox" id="hudFree" /> Free move: place them anywhere</label>
                 <span class="btn-mini-wrap" id="hudMoveWrap" title="Tick &quot;Free move&quot; first: the HUD can only be placed by hand in free move.">
                   <button type="button" class="btn-mini" id="hudMove" disabled>Move HUD</button>
                 </span>
               </div>
               <p class="hud-hint" id="hudMoveHint" hidden>
-                Drag a HUD by its frame to where you want it, then press Done (on the HUD or here). Near the bottom of a
-                screen it grows upwards.
+                Drag a HUD by its frame to where you want it, then press Done (on the HUD or here). Separate HUDs move
+                one by one; the ones you leave stay stacked. Near the bottom of a screen a HUD grows upwards.
               </p>
               <p class="hud-hint" title="The first in the list is outermost: the top of a top-corner stack, the bottom of a bottom-corner one.">Order in the stack</p>
               <ul class="hud-order" id="hudOrderList" aria-label="Order of the HUDs in the stack"></ul>

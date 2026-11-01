@@ -487,7 +487,7 @@ describe("free move (owner, 2026-10-02: the HUD anywhere, on any screen)", () =>
     expect(file.free).toMatchObject({ x: before.x, y: before.y, bottom: false });
   });
 
-  it("placing: the windows take the mouse and show the frame, a drag moves the whole stack, Done ends it", async () => {
+  it("placing: the windows take the mouse and show the frame, a drag moves the window grabbed alone, Done ends it", async () => {
     const huds = make();
     const [a, b] = await twoHuds(huds);
     huds.setLayout({ freeOn: true });
@@ -497,15 +497,26 @@ describe("free move (owner, 2026-10-02: the HUD anywhere, on any screen)", () =>
     expect(a!.visible).toBe(true);
     expect(a!.ignoresMouse).toBe(false);
     expect(b!.sent).toContainEqual(["edexo:hud-move-mode", { on: true }]);
-    const start = { ...a!.bounds };
+    const startA = { ...a!.bounds };
+    const startB = { ...b!.bounds };
+    // Unmerged, every HUD moves on its own (owner, 2026-11-01): the one grabbed, the other stays.
     cursor = { x: 1600, y: 40 };
     expect(huds.dragFromPage(b, "start").ok).toBe(true);
     cursor = { x: 900, y: 240 };
     huds.dragFromPage(b, "move");
-    expect(a!.bounds).toMatchObject({ x: start.x - 700, y: start.y + 200 });
-    expect(b!.bounds).toMatchObject({ x: start.x - 700, y: start.y + 200 + 120 + 6 });
+    expect(b!.bounds).toMatchObject({ x: startB.x - 700, y: startB.y + 200 });
+    expect(a!.bounds).toMatchObject({ x: startA.x, y: startA.y });
     huds.dragFromPage(b, "end");
-    expect(JSON.parse(readFileSync(layoutFile, "utf8")).free).toMatchObject({ x: start.x - 700, y: start.y + 200, bottom: false });
+    const file = JSON.parse(readFileSync(layoutFile, "utf8"));
+    expect(file.freeEach["/distance-overlay.html"]).toMatchObject({ x: startB.x - 700, y: startB.y + 200, bottom: false });
+    // The other one: grabbed next, it moves alone too, and the first keeps its spot.
+    cursor = { x: 1600, y: 20 };
+    huds.dragFromPage(a, "start");
+    cursor = { x: 1500, y: 520 };
+    huds.dragFromPage(a, "move");
+    huds.dragFromPage(a, "end");
+    expect(a!.bounds).toMatchObject({ x: startA.x - 100, y: startA.y + 500 });
+    expect(b!.bounds).toMatchObject({ x: startB.x - 700, y: startB.y + 200 });
     huds.dragFromPage(b, "done");
     expect(huds.isMoving()).toBe(false);
     expect(a!.ignoresMouse).toBe(true);
@@ -513,23 +524,71 @@ describe("free move (owner, 2026-10-02: the HUD anywhere, on any screen)", () =>
     expect(a!.visible).toBe(false);
   });
 
-  it("dropped in the lower half of the second screen it hangs from its bottom edge and grows upwards", async () => {
+  it("merged into one window, a drag moves it from the shared spot", async () => {
+    const huds = make();
+    await huds.request("/hud-overlay.html", 404, 330, null, "open");
+    const [w] = live();
+    huds.setLayout({ freeOn: true });
+    huds.setMoveMode(true);
+    const start = { ...w!.bounds };
+    cursor = { x: 1600, y: 40 };
+    huds.dragFromPage(w, "start");
+    cursor = { x: 900, y: 240 };
+    huds.dragFromPage(w, "move");
+    huds.dragFromPage(w, "end");
+    const file = JSON.parse(readFileSync(layoutFile, "utf8"));
+    expect(file.free).toMatchObject({ x: start.x - 700, y: start.y + 200, bottom: false });
+    expect(file.freeEach ?? {}).toEqual({});
+    huds.setMoveMode(false);
+  });
+
+  it("each separate HUD stays inside the screen it is on: one on each screen, none across an edge", async () => {
+    const huds = make();
+    const [a, b] = await twoHuds(huds);
+    huds.setLayout({ freeOn: true });
+    huds.setMoveMode(true);
+    // b to the second screen, past its right edge: held inside it.
+    cursor = { x: 0, y: 0 };
+    huds.dragFromPage(b, "start");
+    const sb = { ...b!.bounds };
+    cursor = { x: SECOND.x + SECOND.width + 300 - sb.x, y: 200 - sb.y };
+    huds.dragFromPage(b, "move");
+    huds.dragFromPage(b, "end");
+    expect(b!.bounds.x).toBe(SECOND.x + SECOND.width - 404);
+    expect(b!.bounds.x).toBeGreaterThanOrEqual(SECOND.x);
+    // a to the top left of the primary, past its edge: held inside the primary.
+    cursor = { x: 0, y: 0 };
+    huds.dragFromPage(a, "start");
+    const sa = { ...a!.bounds };
+    cursor = { x: -500 - sa.x, y: -50 - sa.y };
+    huds.dragFromPage(a, "move");
+    huds.dragFromPage(a, "end");
+    expect(a!.bounds).toMatchObject({ x: WORK.x, y: WORK.y });
+    // Each on its own screen.
+    expect(a!.bounds.x + a!.bounds.width).toBeLessThanOrEqual(WORK.x + WORK.width);
+    expect(b!.bounds.x).toBeGreaterThanOrEqual(SECOND.x);
+    huds.setMoveMode(false);
+  });
+
+  it("dropped in the lower half of the second screen a HUD hangs from its bottom edge and grows upwards", async () => {
     const huds = make();
     const [a, b] = await twoHuds(huds);
     huds.setLayout({ freeOn: true });
     huds.setMoveMode(true);
     cursor = { x: 0, y: 0 };
-    huds.dragFromPage(a, "start");
-    const start = { ...a!.bounds };
+    huds.dragFromPage(b, "start");
+    const start = { ...b!.bounds };
     cursor = { x: 2400 - start.x, y: 900 - start.y };
-    huds.dragFromPage(a, "move");
-    huds.dragFromPage(a, "end");
-    const free = JSON.parse(readFileSync(layoutFile, "utf8")).free;
-    expect(free).toEqual({ x: 2400, y: 900 + 120 + 6 + 330, bottom: true });
+    huds.dragFromPage(b, "move");
+    huds.dragFromPage(b, "end");
+    const own = JSON.parse(readFileSync(layoutFile, "utf8")).freeEach["/distance-overlay.html"];
+    expect(own).toEqual({ x: 2400, y: 900 + 330, bottom: true });
     // A taller page keeps the bottom edge where it was dropped.
     huds.resizeFromPage(b, { height: 400 });
-    expect(b!.bounds.y + b!.bounds.height).toBe(free.y);
-    expect(a!.bounds.x).toBe(2400);
+    expect(b!.bounds.y + b!.bounds.height).toBe(own.y);
+    expect(b!.bounds.x).toBe(2400);
+    // The other HUD stayed in the stack.
+    expect(a!.bounds.x).not.toBe(2400);
     huds.setMoveMode(false);
   });
 

@@ -72,6 +72,20 @@ function freePointFrom(v) {
   return { x: Math.round(x), y: Math.round(y), bottom: v.bottom === true };
 }
 
+/**
+ * The unmerged HUDs' own spots, by page key (owner, 2026-11-01: "When the HUD is not merged, every module is moved
+ * separately in the free move mode"): each a free spot as above; anything else dropped. At most 16 (the stack's cap).
+ */
+function freeEachFrom(v) {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  const out = {};
+  for (const [k, p] of Object.entries(v).slice(0, 16)) {
+    const f = freePointFrom(p);
+    if (typeof k === "string" && k.startsWith("/") && f) out[k] = f;
+  }
+  return out;
+}
+
 /*
   A stack taller than its screen goes on in a second column beside the first (owner, 2026-10-04: on a
   125 % screen every panel is a quarter taller, the stack ran past the bottom and the windows down
@@ -117,6 +131,7 @@ module.exports = {
   hudHeightFrom,
   hudSlotKey,
   freePointFrom,
+  freeEachFrom,
   splitIntoColumns,
   columnX,
 };
