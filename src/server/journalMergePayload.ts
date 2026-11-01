@@ -11,6 +11,7 @@ import type { ShipDamageState } from "../shared/shipDamage.js";
 import type { OwnAssetsState } from "../shared/ownAssets.js";
 import type { JumponiumState } from "../shared/jumponium.js";
 import type { JumpRangeState } from "../shared/jumpRange.js";
+import type { ShipFlight } from "../shared/dto/routeSystem.js";
 
 export type PendingOrganicSample = {
   fullKey: string;
@@ -123,8 +124,10 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
   40: `lastFuelMainT` / `lastFuelAt` — the main tank's last known level (the neutron planner without the game running,
       owner 2026-10-30); and the scans' `orbitEpochMs`, when their mean anomaly was true (the scan route's positions,
       plan 1.3.3 R-4): cached scans had no time for it and sat at a fixed angle.
+  41: `shipFlight` / `shipEventMs` — supercruise, normal flight, landed or docked, for the scan route's ship (plan 1.3.5
+      R-1); and `currentBodyKey` now moves on a DSS (SAAScanComplete) as well.
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 40;
+export const JOURNAL_MERGE_CACHE_FORMAT = 41;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {
@@ -207,6 +210,9 @@ export type JournalMergeCachePayload = {
   overlayTouchdownBodyKey?: string | null;
   /** The body the ship is at — see {@link GameStateStore.currentBodyKey}. */
   currentBodyKey?: string | null;
+  /** The ship's flight state and when it last changed — see {@link GameStateStore.shipFlight}. */
+  shipFlight?: ShipFlight;
+  shipEventMs?: number;
   fssAllBodiesCompleteSystems: number[];
   /** Present when {@link format} >= 13 — signs of life per system, from the arrival line. */
   systemLife?: [number, SystemLife][];

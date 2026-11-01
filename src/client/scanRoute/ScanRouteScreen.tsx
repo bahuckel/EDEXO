@@ -6,7 +6,7 @@
  * FSSed joins at once; the bodies the honk counted and nobody scanned stand on an outer ring as "?".
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ScanRouteDTO } from "@shared/dto/routeSystem.js";
+import type { ScanRouteBodyDTO, ScanRouteDTO, ScanRouteShipDTO } from "@shared/dto/routeSystem.js";
 import type { GalaxyFindDTO, GalaxyRouteDTO } from "@shared/dto/galaxy.js";
 import { useRouteValues } from "../routeValues";
 import { fmtCrExact, fmtCrShort } from "@shared/format";
@@ -58,6 +58,24 @@ function readMin(): number {
     return DEFAULT_MIN;
   }
 }
+
+/** How often the ship's place in the current system is asked for (ms): the netlog's fixes come about a second apart. */
+const SHIP_POLL_MS = 1500;
+const FLIGHT: Record<ScanRouteShipDTO["flight"], string> = {
+  supercruise: "In supercruise",
+  normal: "In normal space",
+  landed: "Landed",
+  docked: "Docked",
+  unknown: "",
+};
+/** What the netlog switch is doing, under it. */
+const NETLOG_NOTE: Record<ScanRouteShipDTO["netlog"]["state"], string> = {
+  off: "Off: the ship shows at the body you were last at. On: the game's network log adds where you are between them.",
+  reading: "Reading the game's network log.",
+  waiting: "On. The game reads this setting when it starts: restart the game if it is running.",
+  "no-game": "No game folder found (Steam, Epic or Frontier's launcher).",
+  failed: "The game's settings file could not be written; the folder may need administrator rights.",
+};
 
 const fmtLs = (ls: number) => (ls >= 10_000 ? `${Math.round(ls).toLocaleString()} ls` : `${ls.toFixed(ls < 10 ? 1 : 0)} ls`);
 
@@ -120,6 +138,8 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Hit[] | null>(null);
   const [view, setView] = useState<ScanRouteDTO | "loading" | "error">("loading");
+  // Where the ship is in the current system (plan 1.3.5 R-1): the body it is at, the target, the netlog's fix.
+  const [ship, setShip] = useState<ScanRouteShipDTO | null>(null);
   /*
     A body's facts (owner, 2026-10-31, plan 1.3.4 S-8): shown while it is hovered, in the list or the view, and gone
     when the pointer leaves it; a click keeps them (and turns the camera to it) until another system is shown, a jump
@@ -221,9 +241,32 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
       ac.abort();
     };
   }, [query]);
+  // The ship, every second or two while the tab shows.
+  useEffect(() => {
+    let live = true;
+    const load = () =>
+      fetch("/api/scan-route/ship")
+        .then((r) => (r.ok ? (r.json() as Promise<ScanRouteShipDTO>) : null))
+        .then((s) => live && s && setShip(s))
+        .catch(() => undefined);
+    void load();
+    const t = setInterval(() => {
+      if (document.visibilityState === "visible" && host.current?.offsetParent) void load();
+    }, SHIP_POLL_MS);
+    return () => {
+      live = false;
+      clearInterval(t);
+    };
+  }, []);
+  const setNetlog = (on: boolean) =>
+    void fetch("/api/scan-route/netlog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on }) })
+      .then((r) => (r.ok ? (r.json() as Promise<ScanRouteShipDTO["netlog"]>) : null))
+      .then((n) => n && setShip((s) => (s ? { ...s, netlog: n } : s)))
+      .catch(() => undefined);
+
   // The current system's view is read again when the commander's systems move (a jump, a scan) or the ship reaches
   // another body (the route starts there).
-  const rev = stop.addr == null ? `${route?.system ?? ""}|${route?.mineRev ?? ""}|${route?.atBody ?? ""}` : "";
+  const rev = stop.addr == null ? `${route?.system ?? ""}|${route?.mineRev ?? ""}|${ship?.atId ?? ""}` : "";
 
   useEffect(() => {
     let live = true;
@@ -290,6 +333,11 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
     setHovered(null);
   }, [shownAddr]);
   const byId = new Map(d?.bodies.map((b) => [b.id, b]) ?? []);
+  // The ship belongs on the view of the system it is in.
+  const shipHere = d && ship && ship.addr === d.addr ? ship : null;
+  useEffect(() => {
+    scene.current?.setShip(shipHere ? { atId: shipHere.atId, targetId: shipHere.targetId, fix: shipHere.fix } : null);
+  }, [shipHere?.atId, shipHere?.targetId, shipHere?.fix?.refId, shipHere?.fix?.distLs, view, scale]); // eslint-disable-line react-hooks/exhaustive-deps
   const factsId = hovered ?? picked;
   const facts = factsId != null ? byId.get(factsId) : undefined;
   const start = d?.startId != null ? byId.get(d.startId) : undefined;
@@ -489,6 +537,16 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
                   {d.startShip ? `◎ Your ship · ${start.short}` : `◎ Arrival star${start.short !== d.name ? ` · ${start.short}` : ""}`}
                 </p>
               ) : null}
+              {shipHere ? <ShipLine ship={shipHere} byId={byId} /> : null}
+              {d.addr === ship?.addr ? (
+                <div className="scan-route__live">
+                  <label title="Sets VerboseLogging in the game's AppConfigLocal.xml (switching off puts the file back) and reads the position lines of its network log, nothing else from it">
+                    <input type="checkbox" checked={ship.netlog.on} onChange={(e) => setNetlog(e.target.checked)} />
+                    Live position (the game's network log)
+                  </label>
+                  <p className="dim">{NETLOG_NOTE[ship.netlog.state]}</p>
+                </div>
+              ) : null}
               <ol className="scan-route__list">
                 {legs.map(({ b, leg }) => (
                   <li
@@ -536,5 +594,26 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
         </aside>
       </div>
     </div>
+  );
+}
+
+/** The ship's line under the start: its flight, the body targeted, and the netlog's fix with its age. */
+function ShipLine({ ship, byId }: { ship: ScanRouteShipDTO; byId: Map<number, ScanRouteBodyDTO> }) {
+  const target = ship.targetId != null ? byId.get(ship.targetId) : undefined;
+  const ref = ship.fix ? byId.get(ship.fix.refId) : undefined;
+  const age = ship.fix ? Math.round((Date.now() - ship.fix.atMs) / 1000) : 0;
+  const parts = [FLIGHT[ship.flight], target ? `→ ${target.short}` : ""].filter(Boolean);
+  if (!parts.length && !ref) return null;
+  return (
+    <p className="scan-route__ship">
+      ▲ {parts.join(" ")}
+      {ref ? (
+        <span>
+          {" "}
+          · {fmtLs(ship.fix!.distLs)} from {ref.short}
+          {age > 5 ? ` (${age} s ago)` : ""}
+        </span>
+      ) : null}
+    </p>
   );
 }

@@ -7,9 +7,27 @@ import { createRouteSystemValues } from "../routeSystemValues.js";
 import { journalScanRoute, journalSystemValues, spanshScanRoute } from "../scanRouteView.js";
 import { explorationRecordsForSystem } from "../systemMap.js";
 import type { HttpServerOptions } from "../httpServerTypes.js";
+import { scanRouteShip } from "../shipInSystem.js";
+import { createNetlogPosition } from "../netlogPosition.js";
 
 export function registerRouteSystemRoutes(app: express.Express, opts: HttpServerOptions): void {
   const values = createRouteSystemValues(() => opts.getJournalStore?.() ?? null);
+  // The netlog switch (plan 1.3.5 R-1): reads only while on.
+  const netlog = createNetlogPosition();
+
+  /** `/api/scan-route/ship` — where the ship is in the current system, polled by the Scan route every second or two. */
+  app.get("/api/scan-route/ship", (_req, res) => {
+    const store = opts.getJournalStore?.() ?? null;
+    if (!store) return void res.status(503).json({ error: "The journals are not loaded yet." });
+    res.json(scanRouteShip(store, netlog));
+  });
+
+  /** `/api/scan-route/netlog` `{ on }` — the switch: sets the game's verbose netlog, or puts back what it changed. */
+  app.post("/api/scan-route/netlog", (req, res) => {
+    const on = (req.body as { on?: unknown } | undefined)?.on;
+    if (typeof on !== "boolean") return void res.status(400).json({ error: "on: true or false" });
+    res.json(netlog.setOn(on));
+  });
 
   /** `?addr=<id64>&name=<system>`: waits for Spansh when the system is not cached (one fetch at a time). */
   app.get("/api/route/system-values", async (req, res) => {

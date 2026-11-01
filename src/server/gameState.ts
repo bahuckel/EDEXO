@@ -82,6 +82,8 @@ import * as journalEvents from "./gameStateEvents.js";
 import * as explorationSales from "./gameStateSales.js";
 import * as explorationMerge from "./gameStateExploration.js";
 import * as journalPayload from "./gameStatePayload.js";
+import { nextShipFlight } from "./shipInSystem.js";
+import type { ShipFlight } from "../shared/dto/routeSystem.js";
 // tests/genusProgress.test.ts imports upsertFootOrganicLock from here.
 export { signsOfLife, upsertFootOrganicLock } from "./gameStateHelpers.js";
 
@@ -748,6 +750,9 @@ export class GameStateStore {
   overlayTouchdownBodyKey: string | null = null;
   /** The body the ship is at, as `system:body` — arrival body after a jump, then approach / drop / landing. */
   currentBodyKey: string | null = null;
+  /** Supercruise, normal flight, landed or docked, from the journal's events (shipInSystem.ts), and when it last moved. */
+  shipFlight: ShipFlight = "unknown";
+  shipEventMs = 0;
 
   /**
    * Where the ship is parked, from `Touchdown` (A-list: the overlay minimap).
@@ -1433,6 +1438,8 @@ export class GameStateStore {
     this.uiSelectedBodyKey = null;
     this.overlayTouchdownBodyKey = null;
     this.currentBodyKey = null;
+    this.shipFlight = "unknown";
+    this.shipEventMs = 0;
     this.mainStarWasDiscoveredBySystem.clear();
     this.mainStarSourceRankBySystem.clear();
     this.systemPositions.clear();
@@ -1644,6 +1651,12 @@ export class GameStateStore {
           line.SystemAddress as number,
           (line as Record<string, unknown>).BodyID as number,
         );
+        this.shipEventMs = Date.parse(ts) || this.shipEventMs;
+      }
+      const flight = nextShipFlight(event as string, line as Record<string, unknown>, this.shipFlight);
+      if (flight !== this.shipFlight) {
+        this.shipFlight = flight;
+        this.shipEventMs = Date.parse(ts) || this.shipEventMs;
       }
 
       if (event === "FSDJump") {

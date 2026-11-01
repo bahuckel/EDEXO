@@ -93,6 +93,36 @@ export interface ScanRouteBodyDTO {
   others: boolean;
 }
 
+/** The ship's flight state from the journal's events (shipInSystem.ts). */
+export type ShipFlight = "supercruise" | "normal" | "landed" | "docked" | "unknown";
+
+/** The netlog switch (netlogPosition.ts): off, reading positions, or why it is not. */
+export interface NetlogStatusDTO {
+  on: boolean;
+  /**
+   * off; reading (a position seen this game session); waiting (switched on, no position line yet: the game reads its
+   * setting at start, so it needs a restart); no-game (no game folder found); failed (the game's settings file could
+   * not be written).
+   */
+  state: "off" | "reading" | "waiting" | "no-game" | "failed";
+  /** The game folder read (its Logs) and set, when found. */
+  folder: string | null;
+}
+
+/** `/api/scan-route/ship`: where the ship is in the current system (plan 1.3.5 R-1). */
+export interface ScanRouteShipDTO {
+  /** The current system, as the scan view's `addr`. */
+  addr: string | null;
+  /** The body the ship is at (arrival star, approached, dropped at, landed on, mapped). */
+  atId: number | null;
+  /** The body targeted in the game (Status.json Destination), when it is in this system. */
+  targetId: number | null;
+  flight: ShipFlight;
+  /** The netlog's newest fix in this system: the body the game measures from and the distance to it. */
+  fix: { refId: number; distLs: number; mode: "supercruise" | "normal"; atMs: number } | null;
+  netlog: NetlogStatusDTO;
+}
+
 export interface ScanRouteDTO {
   addr: string;
   name: string;

@@ -62,6 +62,8 @@ export function serializeJournalMergePayload(store: GameStateStore): JournalMerg
     surfaceShipMark: store.surfaceShipMark ? { ...store.surfaceShipMark } : null,
     overlayTouchdownBodyKey: store.overlayTouchdownBodyKey,
     currentBodyKey: store.currentBodyKey,
+    shipFlight: store.shipFlight,
+    shipEventMs: store.shipEventMs,
     fssAllBodiesCompleteSystems: [...store.fssAllBodiesCompleteSystems],
     systemLife: [...store.systemLife.entries()],
     fssDiscoveryScanBySystem: [...store.fssDiscoveryScanBySystem.entries()],
@@ -188,6 +190,8 @@ export function hydrateJournalMergePayload(store: GameStateStore, data: JournalM
   }
   store.overlayTouchdownBodyKey = data.overlayTouchdownBodyKey ?? null;
   store.currentBodyKey = data.currentBodyKey ?? null;
+  store.shipFlight = data.shipFlight ?? "unknown";
+  store.shipEventMs = data.shipEventMs ?? 0;
   for (const addr of data.fssAllBodiesCompleteSystems) store.fssAllBodiesCompleteSystems.add(addr);
   for (const [addr, life] of data.systemLife ?? []) store.systemLife.set(addr, life);
   for (const [addr, row] of data.fssDiscoveryScanBySystem) {

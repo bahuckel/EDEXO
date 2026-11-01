@@ -58,8 +58,17 @@ const GRID_MAX = 100_000;
 
 const TARGET_COLOUR = { dss: "#40d9cc", bio: "#5ce675", both: "#ffd166", codex: "#c792ff" } as const;
 
+/** The ship in the shown system (plan 1.3.5 R-1): the body it is at, the body targeted, the netlog's fix. */
+export interface ShipMark {
+  atId: number | null;
+  targetId: number | null;
+  fix: { refId: number; distLs: number } | null;
+}
+
 export interface ScanRouteScene {
   show(d: ScanRouteDTO, scale: ScanScale): void;
+  /** The ship's mark, and a line to the body targeted; null: none (another system shown). */
+  setShip(m: ShipMark | null): void;
   /** Nothing shown (a system loading). */
   clear(): void;
   /** Frame every body. */
@@ -109,7 +118,10 @@ export function createScanRouteScene(
 
   const group = new THREE.Group();
   const grid = new THREE.Group();
-  scene.add(grid, group);
+  // The ship: its own group, drawn again when it moves without drawing the system again.
+  const shipGroup = new THREE.Group();
+  scene.add(grid, group, shipGroup);
+  let ship: ShipMark | null = null;
   let mode: ScanScale = "true";
   let bounds = 40;
   let shownKey = "";
@@ -407,13 +419,59 @@ export function createScanRouteScene(
     if (key !== shownKey || modeChanged || grew) fit();
     shownKey = key;
     gridSize = 0;
+    drawShip();
     render();
+  }
+
+  /*
+    The ship: at the body the journal last put it at (else where the route starts). With the netlog's fix: while the
+    body it is measured from is the target, on the straight line to the target at that distance (supercruise flies
+    mostly straight at it); else at that body. The fix's direction is in the game's axes, which the orbits' are not
+    (plan 1.3.5 R-1), so only the distance is used. A line runs on to the body targeted.
+  */
+  function drawShip(): void {
+    clearGroup(shipGroup);
+    const d = shownData;
+    if (!ship || !d) return;
+    const byId = (id: number | null) => (id == null ? undefined : d.bodies.find((b) => b.id === id));
+    const base = byId(ship.atId) ?? byId(d.startId);
+    const target = ship.targetId !== base?.id ? byId(ship.targetId) : undefined;
+    const ref = ship.fix ? byId(ship.fix.refId) : undefined;
+    let at: THREE.Vector3 | null = base ? placeOf(base) : null;
+    if (ship.fix && ref && target && ref.id === target.id && base) {
+      const len = Math.hypot(target.pos.x - base.pos.x, target.pos.y - base.pos.y, target.pos.z - base.pos.z);
+      const t = len > 0 ? Math.max(0, Math.min(1, 1 - ship.fix.distLs / len)) : 1;
+      at = placeOf(base).lerp(placeOf(target), t);
+    } else if (ref) at = placeOf(ref);
+    if (!at) return;
+    if (target) {
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([at.clone().setZ(0.06), placeOf(target).setZ(0.06)]),
+        new THREE.LineBasicMaterial({ color: 0x7fe3ff, transparent: true, opacity: 0.7 }),
+      );
+      shipGroup.add(line);
+    }
+    const el = document.createElement("div");
+    el.className = "scan-route-ship";
+    el.textContent = "▲";
+    el.title = "Your ship";
+    const o = new CSS2DObject(el);
+    o.position.copy(at);
+    // Above the body, clear of its name under it.
+    o.center.set(0.5, 1.3);
+    shipGroup.add(o);
   }
 
   return {
     show,
     clear() {
       clear();
+      clearGroup(shipGroup);
+      render();
+    },
+    setShip(m) {
+      ship = m;
+      drawShip();
       render();
     },
     fit,
@@ -429,6 +487,7 @@ export function createScanRouteScene(
       renderer.domElement.removeEventListener("wheel", onWheel);
       clear();
       clearGroup(grid);
+      clearGroup(shipGroup);
       controls.dispose();
       renderer.dispose();
       renderer.domElement.remove();

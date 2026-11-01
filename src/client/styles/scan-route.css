@@ -137,6 +137,32 @@
   margin: 0 0 4px;
   color: var(--text-dim);
 }
+/* The ship (plan 1.3.5 R-1): its mark in the view, its line under the start, and the netlog switch. */
+.scan-route-ship {
+  color: #7fe3ff;
+  font-size: 14px;
+  line-height: 1;
+  text-shadow: 0 0 4px #000, 0 0 8px rgba(127, 227, 255, 0.6);
+  pointer-events: none;
+}
+.scan-route__ship {
+  margin: 0 0 4px;
+  color: #7fe3ff;
+}
+.scan-route__live {
+  margin: 0 0 8px;
+  font-size: var(--fs-xs);
+}
+.scan-route__live label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.scan-route__live p {
+  margin: 2px 0 0 21px;
+}
 .scan-route__stop {
   margin-bottom: 6px;
   cursor: pointer;
