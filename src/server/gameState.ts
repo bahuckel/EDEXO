@@ -527,8 +527,13 @@ export class GameStateStore {
   liveStatusFuelReserveT: number | null = null;
   private lastLiveShipFuelPushKey: string | null = null;
 
-  /** Parsed `NavRoute.json` from the journal folder (live file; not journal-cached). */
+  /**
+   * Parsed `NavRoute.json` from the journal folder (live file; not journal-cached), while it agrees with the game's
+   * last FSDTarget ({@link navRouteAgrees}); null when it does not.
+   */
   liveNavRoute: NavRouteWaypointDTO[] | null = null;
+  /** The file as last read, agreeing or not. */
+  private liveNavRouteFile: NavRouteWaypointDTO[] | null = null;
   private lastLiveNavRoutePushKey: string | null = null;
 
   /** User pref: show HUD + poll Status.json (launcher / settings). */
@@ -559,7 +564,8 @@ export class GameStateStore {
    * The system locked in the nav panel (`FSDTarget`), which fires well before the countdown. Cleared
    * on arriving there. Second rung of the next-jump ladder, see {@link nextJumpTarget}.
    */
-  fsdTarget: { starSystem: string; systemAddress: number; starClass: string; at: string } | null = null;
+  /** `remaining`: the line's RemainingJumpsInRoute, when it came with a plotted route (checks NavRoute.json against it). */
+  fsdTarget: { starSystem: string; systemAddress: number; starClass: string; at: string; remaining?: number } | null = null;
   /**
    * The boxel system last put on the clipboard (server/boxelRun.ts), for the HUD's next-jump card:
    * "Copied … · boxel run". Not journal state; this session only.
@@ -1462,6 +1468,7 @@ export class GameStateStore {
     this.lastFuelAt = null;
     this.lastLiveShipFuelPushKey = null;
     this.liveNavRoute = null;
+    this.liveNavRouteFile = null;
     this.lastLiveNavRoutePushKey = null;
     this.fsdTarget = null;
     this.lastJumpTarget = null;
@@ -1952,6 +1959,30 @@ export class GameStateStore {
    * Live `NavRoute.json` — returns true when the plotted route changed (for snapshot push).
    */
   applyLiveNavRoute(waypoints: NavRouteWaypointDTO[] | null): boolean {
+    this.liveNavRouteFile = waypoints;
+    return this.refreshLiveNavRoute();
+  }
+
+  /**
+   * Whether `NavRoute.json` is the route the game is flying: the system locked by the last FSDTarget sits in it with
+   * as many jumps left as the line says. A re-plot does not always rewrite the file (owner, 2026-11-01: a neutron
+   * route, then the same trip re-plotted without neutron jumps; FSDTarget named a system off the old route with 8
+   * jumps left, the file kept the 7-system neutron route, and the HUD's next jump went back to where he had come
+   * from). Nothing to check against (no FSDTarget, or one without a route count): it agrees.
+   */
+  private navRouteAgrees(r: NavRouteWaypointDTO[]): boolean {
+    const ft = this.fsdTarget;
+    if (!ft || ft.remaining == null || r.length === 0) return true;
+    const i = r.findIndex((w) => w.systemAddress === ft.systemAddress);
+    return i >= 0 && r.length - i === ft.remaining;
+  }
+
+  /** The route as used, from the file and the last FSDTarget; true when it changed (for snapshot push). */
+  refreshLiveNavRoute(): boolean {
+    const file = this.liveNavRouteFile;
+    // No file read yet (a journal replay's FSDTarget lines): nothing to check, nothing to push.
+    if (file === null && this.lastLiveNavRoutePushKey === null) return false;
+    const waypoints = file && file.length > 0 && !this.navRouteAgrees(file) ? null : file;
     this.liveNavRoute = waypoints;
     const key =
       waypoints && waypoints.length > 0

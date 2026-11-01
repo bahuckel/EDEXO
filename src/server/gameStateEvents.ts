@@ -164,7 +164,10 @@ export function onFSDJumpEtc(store: GameStateStore, line: JournalLine, ts: strin
     ) {
       store.lastJumpTarget = { ...store.lastJumpTarget, arrived: true };
     }
-    if (store.fsdTarget && store.fsdTarget.systemAddress === addr) store.fsdTarget = null;
+    if (store.fsdTarget && store.fsdTarget.systemAddress === addr) {
+      store.fsdTarget = null;
+      store.refreshLiveNavRoute();
+    }
   }
   if (sys && typeof addr === "number") {
     // No `WasDiscovered` read here: jump events do not carry it. See
@@ -186,7 +189,16 @@ export function onFSDTarget(store: GameStateStore, line: JournalLine, ts: string
   const name = typeof line.Name === "string" ? line.Name : "";
   const addr = typeof line.SystemAddress === "number" ? line.SystemAddress : 0;
   const starClass = typeof line.StarClass === "string" ? line.StarClass : "";
-  if (name) store.fsdTarget = { starSystem: name, systemAddress: addr, starClass, at: ts };
+  if (name)
+    store.fsdTarget = {
+      starSystem: name,
+      systemAddress: addr,
+      starClass,
+      at: ts,
+      ...(typeof rj === "number" && Number.isFinite(rj) ? { remaining: Math.max(0, Math.floor(rj)) } : {}),
+    };
+  // NavRoute.json is checked against the new target (gameState.ts navRouteAgrees).
+  store.refreshLiveNavRoute();
   if (name && addr) {
     store.targetedSystems.set(addr, { name, starClass });
     store.boxelsRevision++;
