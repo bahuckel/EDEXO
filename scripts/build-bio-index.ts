@@ -5,7 +5,12 @@
  * "where has somebody mapped a genus but never landed" — neither the journal (where this commander
  * has been) nor the feeder corpus (where the feeder has profiles) is a galaxy.
  *
- *   npx tsx scripts/build-bio-index.ts <codex-data.csv> <bioforge-stats-dir> [galaxy_bio.jsonl.gz] [--out <file>]
+ *   npx tsx scripts/build-bio-index.ts <codex-data.csv> <bioforge-stats-dir> [galaxy_bio.jsonl.gz]
+ *     [--codex <more-codex.csv>]... [--out <file>]
+ *
+ * `--codex` adds codex files in the same columns as edastro's, read after it: EDSM's codex dump made into one by
+ * docs/perf/edsm_codex_to_csv.py (owner, 2026-11-01: "combine both, best of both worlds"). A system either names
+ * gets the species of both.
  *
  * Paths are arguments, never constants: the inputs live on whichever drive the owner keeps them on,
  * and machine paths must not enter this repo.
@@ -119,14 +124,20 @@ const TIER_CODEX = 4;
 const TIER_BODIES_KNOWN = 8;
 
 const argv = process.argv.slice(2);
-const positional = argv.filter((a) => !a.startsWith("--"));
-const outIdx = argv.indexOf("--out");
-const OUT = outIdx >= 0 ? argv[outIdx + 1]! : "data/galaxy/bio-index.bin";
+const positional: string[] = [];
+const extraCodex: string[] = [];
+let OUT = "data/galaxy/bio-index.bin";
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i]!;
+  if (a === "--out") OUT = argv[++i]!;
+  else if (a === "--codex") extraCodex.push(argv[++i]!);
+  else positional.push(a);
+}
 const [CSV, BIOFORGE, EXPORT] = positional;
 
 if (!CSV || !BIOFORGE) {
   console.error(
-    "Usage: npx tsx scripts/build-bio-index.ts <codex-data.csv> <bioforge-stats-dir> [galaxy_bio.jsonl.gz] [--out <file>]",
+    "Usage: npx tsx scripts/build-bio-index.ts <codex-data.csv> <bioforge-stats-dir> [galaxy_bio.jsonl.gz] [--codex <csv>]... [--out <file>]",
   );
   process.exit(1);
 }
@@ -296,10 +307,12 @@ if (EXPORT) {
   console.log(`export systems ${idCount.toLocaleString()}`);
 }
 
-{
-  process.stderr.write("pass 1b — system ids from the codex…\n");
+const CODEX_FILES = [CSV, ...extraCodex];
+for (const file of CODEX_FILES) {
+  process.stderr.write(`pass 1b — system ids from ${path.basename(file)}…\n`);
+  const before = idCount;
   const rl = createInterface({
-    input: createReadStream(CSV, { highWaterMark: 1 << 22 }),
+    input: createReadStream(file, { highWaterMark: 1 << 22 }),
     crlfDelay: Infinity,
   });
   let header = false;
@@ -315,6 +328,7 @@ if (EXPORT) {
     const raw = f[10] ?? "";
     if (/^\d+$/.test(raw)) pushId(BigInt(raw));
   }
+  console.log(`${path.basename(file)}: ${(idCount - before).toLocaleString()} rows with a system`);
 }
 
 // Sort and de-duplicate: the id array is both the record order and the lookup key.
@@ -427,15 +441,24 @@ if (EXPORT) {
   }
 }
 
+/** Systems with a name so far: a codex file's new systems are the ones it names first. */
+function countNamed(): number {
+  let c = 0;
+  for (let i = 0; i < n; i++) if (nameLen[i]) c++;
+  return c;
+}
+
 // ---- pass 3: codex species, and coordinates for anything the export missed ----
 process.stderr.write("pass 3 — codex species…\n");
 let codexRows = 0;
 let codexKept = 0;
 let regionAgree = 0;
 let regionDisagree = 0;
-{
+for (const file of CODEX_FILES) {
+  const kept0 = codexKept;
+  const named0 = countNamed();
   const rl = createInterface({
-    input: createReadStream(CSV, { highWaterMark: 1 << 22 }),
+    input: createReadStream(file, { highWaterMark: 1 << 22 }),
     crlfDelay: Infinity,
   });
   let header = false;
@@ -475,6 +498,10 @@ let regionDisagree = 0;
       else regionDisagree++;
     }
   }
+  console.log(
+    `${path.basename(file)}: ${(codexKept - kept0).toLocaleString()} species rows, ` +
+      `${(countNamed() - named0).toLocaleString()} systems no earlier source had`,
+  );
 }
 console.log(`codex rows ${codexRows.toLocaleString()}   ours ${codexKept.toLocaleString()}`);
 {
