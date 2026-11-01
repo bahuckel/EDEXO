@@ -156,6 +156,12 @@ const PASSES: readonly { weight: number; expansions: number }[] = [
  * Plain A* (1) did not finish in 30 s on any of the six test routes.
  */
 const REFINE_WEIGHTS: readonly number[] = [1.5, 1.3, 1.2, 1.1];
+/*
+  On the drive's law, the first passes before the fallback stop sooner (plan 1.3.5): on the test routes the exact pass
+  finds its route within 8,800 steps (Beagle Point keeping 25 %, Caspian ×6), on the owner's ×4 ship it never does and
+  ran its 20,000 (0.8 s), then the pessimistic weight-2 pass its 20,000 (0.9 s) before weight 3 found the route.
+*/
+const LAW_FIRST_EXPANSIONS = 12_000;
 /** The time for the refining passes of a whole plan (shared out between its legs). */
 const REFINE_MS = 3000;
 const REFINE_EXPANSIONS = 500_000;
@@ -419,7 +425,7 @@ export async function planLeg(
     test routes the first one always found the route (docs/perf/_neutron-time.mts, unchanged).
   */
   for (const pass of law ? PASSES.slice(0, 1) : PASSES) {
-    best = await searchLeg(index, from, to, first, fuel, pass.weight, pass.expansions, lists);
+    best = await searchLeg(index, from, to, first, fuel, pass.weight, law ? Math.min(pass.expansions, LAW_FIRST_EXPANSIONS) : pass.expansions, lists);
     if (best) break;
   }
   /*
@@ -433,8 +439,10 @@ export async function planLeg(
   */
   if (!best && law) {
     const safe = { ...first, law: { ...law, fuelT: () => law.perJumpT, rangeLy: () => law.rangeLy(law.tankT) } };
-    for (const pass of PASSES) {
-      best = await searchLeg(index, from, to, safe, fuel, pass.weight, pass.expansions, lists);
+    for (const [k, pass] of PASSES.entries()) {
+      // The last, greediest pass keeps its full count: it is the one that finds the route.
+      const steps = k < PASSES.length - 1 ? Math.min(pass.expansions, LAW_FIRST_EXPANSIONS) : pass.expansions;
+      best = await searchLeg(index, from, to, safe, fuel, pass.weight, steps, lists);
       if (best) break;
     }
     if (best) replayOnLaw(best.nodes, ship);
