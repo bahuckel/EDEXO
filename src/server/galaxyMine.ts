@@ -196,6 +196,7 @@ export function sessionRouteDto(store: GameStateStore, sessionSystems: readonly 
     // The backlog's passes too: "my systems" answers with the last one and the next lands later.
     mineRev: `${store.visitedSystems.size}:${store.explorationScansRevision}:${store.dssMappedBodyKeys.size}:${store.bodies.size}:${backlogPassesFinished()}`,
     navRoute,
+    atBody: store.currentBodyKey,
   };
 }
 

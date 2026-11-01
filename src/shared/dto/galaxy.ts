@@ -471,6 +471,8 @@ export interface GalaxyRouteDTO {
   mineRev: string;
   /** The route plotted now (`NavRoute.json`), in order: each system's star class and whether you have been. */
   navRoute: { address: number; name: string; starClass: string; x: number; y: number; z: number; visited: boolean }[];
+  /** The body the ship is at (`<systemAddress>:<bodyId>`), for the Scan route's start; null when not known. */
+  atBody?: string | null;
 }
 
 /**

@@ -110,8 +110,12 @@ export interface ScanRouteDTO {
    * commander's own scans here sell for now (null for a system not in the journals), and CODEX ×N.
    */
   totals: { scanCr: number; mappedCr: number; currentCr: number | null; codexNew: number; codexFirst: number };
-  /** The arrival star: where the route starts. */
+  /**
+   * Where the route starts: the body the ship is at in the current system (approached, dropped at, landed on, mapped),
+   * else the arrival star (owner, 2026-11-01). `startShip` says which.
+   */
   startId: number | null;
+  startShip?: boolean;
   bodies: ScanRouteBodyDTO[];
   /** Body ids in the order to fly them, and the whole way (ls). */
   route: { order: number[]; totalLs: number };

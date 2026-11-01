@@ -1,9 +1,9 @@
 /**
  * The scan view of one system (plan 1.3.3 R-4, owner 2026-10-30: "a 3D variant of the system map, values for all of
  * the planets, and the shortest route between them to scan the high-value ones"). Every star and planet where its
- * orbit puts it now (orbitPositions.ts), valued, and the shortest route from the arrival star through the planets
- * whose mapped value is at least the commander's minimum and the bodies with biology left to sample
- * (scanRoute.ts).
+ * orbit puts it now (orbitPositions.ts), valued, and the shortest route from the arrival star (or the body the ship
+ * is at) through the planets whose mapped value is at least the commander's minimum and the bodies with biology left
+ * to sample (scanRoute.ts).
  *
  * The bodies are the system map's (`explorationRecordsForSystem`: own scans, then EDSM) for a system in the
  * journals, valued at the rate this commander would get (first discovered, first mapped, as the scans say); else
@@ -85,7 +85,18 @@ export interface ScanRouteInput {
   others?: ReadonlySet<number>;
   /** What the commander's own scans here sell for now; null for a system not in the journals. */
   currentCr?: number | null;
+  /** The body the ship is at, in this system: the route starts there instead of the arrival star. */
+  hereId?: number | null;
   atMs: number;
+}
+
+/** The body the ship is at when `addr` is the current system (GameStateStore.currentBodyKey), else null. */
+export function shipBodyIn(store: GameStateStore, addr: number): number | null {
+  const key = store.currentBodyKey;
+  const prefix = `${addr}:`;
+  if (addr !== store.currentSystemAddress || !key?.startsWith(prefix)) return null;
+  const id = Number(key.slice(prefix.length));
+  return Number.isInteger(id) ? id : null;
 }
 
 /** The view from records: positions, values, targets and the route. Pure, for tests. */
@@ -170,8 +181,13 @@ export function buildScanRoute(input: ScanRouteInput): ScanRouteDTO {
   }
   // No arrival star in the records: the first star, else the root.
   if (startId == null) startId = bodies.find((b) => b.kind === "star")?.id ?? null;
+  // The ship at a body here (owner, 2026-11-01: "the start of the route is from that body, onward"); a station, ring
+  // or belt the ship is at is no body here, and the arrival star stays.
+  const startShip = input.hereId != null && input.hereId !== startId && bodies.some((b) => b.id === input.hereId);
+  if (startShip) startId = input.hereId!;
   const start = (startId != null ? bodies.find((b) => b.id === startId)?.pos : null) ?? { x: 0, y: 0, z: 0 };
-  const targets = bodies.filter((b) => b.target && b.id !== startId);
+  // The body the ship is at stays a stop while it still is one (the first, at no distance): its work is not done.
+  const targets = bodies.filter((b) => b.target);
   const route = shortestScanRoute(start, targets.map((b) => ({ item: b.id, pos: b.pos })));
   const total = input.totalBodies;
   return {
@@ -191,6 +207,7 @@ export function buildScanRoute(input: ScanRouteInput): ScanRouteDTO {
       codexFirst: bodies.reduce((a, x) => a + x.codexFirst, 0),
     },
     startId,
+    startShip,
     bodies,
     route: { order: route.order.map((s) => s.item), totalLs: route.totalLs },
     bodyCount: { known: bodies.length, total, missing: total != null ? Math.max(0, total - bodies.length) : 0 },
@@ -323,6 +340,7 @@ export function journalScanRoute(
     ...opts,
     others,
     currentCr: explorationDataValueBreakdown(store, addr).totalCredits,
+    hereId: shipBodyIn(store, addr),
     atMs,
   });
 }
@@ -337,6 +355,7 @@ export function spanshScanRoute(store: GameStateStore, sys: RemoteSystemRecord, 
     bio: spanshBio(store, sys),
     totalBodies: sys.bodyCount ?? null,
     ...opts,
+    hereId: shipBodyIn(store, sys.systemAddress),
     atMs,
   });
 }

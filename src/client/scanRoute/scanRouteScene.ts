@@ -381,7 +381,7 @@ export function createScanRouteScene(
         );
       drawn.push({ id: b.id, mesh, halo, size, label: lab, stop: near >= 0, orbit: 2 * r });
     }
-    // The route: from the arrival star through the stops in order.
+    // The route: from the arrival star (or the body the ship is at) through the stops in order.
     const start = d.bodies.find((b) => b.id === d.startId);
     const stops = d.route.order.map((id) => d.bodies.find((b) => b.id === id)).filter((b): b is ScanRouteBodyDTO => !!b);
     if (start && stops.length) {

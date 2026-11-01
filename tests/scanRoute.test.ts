@@ -155,6 +155,15 @@ describe("the scan view", () => {
     expect(on.totals.codexNew).toBe(2);
   });
 
+  it("starts at the body the ship is at, which stays the first stop while its work is left", () => {
+    // At the ELW (500 ls out): the ELW first, at no distance, then the HMC.
+    const v = buildScanRoute({ ...input, hereId: 1 });
+    expect(v).toMatchObject({ startId: 1, startShip: true });
+    expect(v.route.order).toEqual([1, 3]);
+    // At a station or a belt (no body here): the arrival star stays.
+    expect(buildScanRoute({ ...input, hereId: 99 })).toMatchObject({ startId: 0, startShip: false });
+  });
+
   it("totals the system as the system map does: every body scanned, every planet mapped, the honk with both", () => {
     const v = buildScanRoute({ ...input, others: new Set([2]), currentCr: 12_345 });
     const fss = v.bodies.reduce((a, b) => a + b.fssCr, 0);
@@ -226,5 +235,24 @@ describe("a system half scanned", () => {
     expect(v.bodies.find((b) => b.id === 1)!.cls).toBe("Icy body");
     expect(v.bodies.find((b) => b.id === 2)!.target).toBe("dss");
     expect(v.bodyCount).toEqual({ known: 3, total: 4, missing: 1 });
+  });
+
+  it("starts from the body the ship last approached or mapped in the current system", async () => {
+    const { GameStateStore } = await import("../src/server/gameState.js");
+    const { journalScanRoute } = await import("../src/server/scanRouteView.js");
+    const s = new GameStateStore();
+    const T = "2026-11-01T10:00:00Z";
+    const base = { timestamp: T, StarSystem: "Here", SystemAddress: 4343, ScanType: "Detailed" };
+    s.apply({ timestamp: T, event: "FSDJump", StarSystem: "Here", SystemAddress: 4343, StarPos: [0, 0, 0], BodyID: 0, Body: "Here A" } as never);
+    s.apply({ ...base, event: "Scan", BodyName: "Here A", BodyID: 0, StarType: "K", StellarMass: 0.8, DistanceFromArrivalLS: 0 } as never);
+    s.apply({ ...base, event: "Scan", BodyName: "Here 1", BodyID: 1, PlanetClass: "Icy body", MassEM: 0.1, DistanceFromArrivalLS: 100, Parents: [{ Star: 0 }], SemiMajorAxis: 100 * METRES_PER_LS } as never);
+    s.apply({ ...base, event: "Scan", BodyName: "Here 2", BodyID: 2, PlanetClass: "Rocky body", MassEM: 0.1, DistanceFromArrivalLS: 300, Parents: [{ Star: 0 }], SemiMajorAxis: 300 * METRES_PER_LS } as never);
+    const opts = { minDssCr: 300_000, bioMinCr: 0, codexOn: false };
+    expect(journalScanRoute(s, 4343, "Here", opts, EPOCH)).toMatchObject({ startId: 0, startShip: false });
+    s.apply({ timestamp: T, event: "ApproachBody", StarSystem: "Here", SystemAddress: 4343, Body: "Here 1", BodyID: 1 } as never);
+    expect(journalScanRoute(s, 4343, "Here", opts, EPOCH)).toMatchObject({ startId: 1, startShip: true });
+    // A DSS is fired from beside the body.
+    s.apply({ timestamp: T, event: "SAAScanComplete", BodyName: "Here 2", SystemAddress: 4343, BodyID: 2, ProbesUsed: 3, EfficiencyTarget: 4 } as never);
+    expect(journalScanRoute(s, 4343, "Here", opts, EPOCH)).toMatchObject({ startId: 2, startShip: true });
   });
 });

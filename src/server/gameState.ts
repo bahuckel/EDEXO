@@ -1626,8 +1626,8 @@ export class GameStateStore {
 
       /*
         Which body the ship is at: the arrival body on a jump or a load, then whatever it approaches,
-        drops out of supercruise at, or lands on. The System card's "you are here" (Discord batch O-E2)
-        and, later, "closest first" in the body sort read it.
+        drops out of supercruise at, lands on, or maps (a DSS is fired from beside the body). The System
+        card's "you are here" (Discord batch O-E2), the ship's proximity and the Scan route's start read it.
       */
       if (
         (event === "FSDJump" ||
@@ -1635,7 +1635,8 @@ export class GameStateStore {
           event === "Location" ||
           event === "ApproachBody" ||
           event === "SupercruiseExit" ||
-          event === "Touchdown") &&
+          event === "Touchdown" ||
+          event === "SAAScanComplete") &&
         typeof line.SystemAddress === "number" &&
         typeof (line as Record<string, unknown>).BodyID === "number"
       ) {

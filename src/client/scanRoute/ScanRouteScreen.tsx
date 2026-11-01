@@ -221,8 +221,9 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
       ac.abort();
     };
   }, [query]);
-  // The current system's view is read again when the commander's systems move (a jump, a scan).
-  const rev = stop.addr == null ? `${route?.system ?? ""}|${route?.mineRev ?? ""}` : "";
+  // The current system's view is read again when the commander's systems move (a jump, a scan) or the ship reaches
+  // another body (the route starts there).
+  const rev = stop.addr == null ? `${route?.system ?? ""}|${route?.mineRev ?? ""}|${route?.atBody ?? ""}` : "";
 
   useEffect(() => {
     let live = true;
@@ -483,7 +484,11 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
                   </tr>
                 </tbody>
               </table>
-              {start ? <p className="scan-route__start">◎ Arrival star{start.short !== d.name ? ` · ${start.short}` : ""}</p> : null}
+              {start ? (
+                <p className="scan-route__start">
+                  {d.startShip ? `◎ Your ship · ${start.short}` : `◎ Arrival star${start.short !== d.name ? ` · ${start.short}` : ""}`}
+                </p>
+              ) : null}
               <ol className="scan-route__list">
                 {legs.map(({ b, leg }) => (
                   <li
