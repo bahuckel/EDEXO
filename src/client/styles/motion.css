@@ -90,3 +90,29 @@ html[data-motion="off"] *::after {
     }
   }
 }
+
+/* ---- a download waiting: the galaxy index (galaxyIndexDue.ts, owner 2026-11-01: "a flashing button") ---- */
+/* The Galaxy map entry, the menu button it folds into, the map's View tab and its Update button, until downloaded. */
+.is-update-due {
+  border-color: var(--accent-bright);
+  color: var(--accent-bright);
+  animation: update-due-pulse 1.6s ease-in-out infinite;
+}
+@keyframes update-due-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-a35);
+  }
+  50% {
+    box-shadow:
+      0 0 10px 2px var(--accent-a35),
+      0 0 2px 1px var(--accent);
+  }
+}
+/* Without motion: lit, not pulsing. */
+@media (prefers-reduced-motion: reduce) {
+  .is-update-due {
+    animation: none;
+    box-shadow: 0 0 8px 2px var(--accent-a35);
+  }
+}

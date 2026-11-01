@@ -18,6 +18,7 @@ import {
 } from "../ui/icons";
 import { MENU_ITEM } from "../ui/Menu";
 import { tabStore } from "../tabs/tabStore";
+import { DUE_CLASS, useGalaxyIndexDue } from "../galaxyIndexDue";
 import { Route } from "lucide-react";
 
 /** An entry on the wide app bar, where the menu is the bar itself: an ordinary button. */
@@ -57,6 +58,8 @@ export const AppMenuEntries = memo(function AppMenuEntries({
   asMenu: boolean;
 }) {
   const item = asMenu ? MENU_ITEM : NOT_MENU_ITEM;
+  // A newer galaxy index on the release: the map's entry pulses until it is downloaded (galaxyIndexDue.ts).
+  const indexDue = useGalaxyIndexDue();
   return (
     <>
       {/*
@@ -163,10 +166,16 @@ export const AppMenuEntries = memo(function AppMenuEntries({
         </Tooltip>
       ) : null}
       <span className="appbar-menu-sep" aria-hidden="true" />
-      <Tooltip text="Galaxy map — 5.3 million systems with recorded biology, your own travels, search and codex, in 3D. Opens in its own window.">
+      <Tooltip
+        text={
+          indexDue
+            ? "Galaxy map — a newer galaxy index (the codex data) is ready: open the map, View, Galaxy index, Update."
+            : "Galaxy map — 5.3 million systems with recorded biology, your own travels, search and codex, in 3D. Opens in its own window."
+        }
+      >
         <a
           {...item}
-          className="appbar-icon-btn"
+          className={`appbar-icon-btn${indexDue ? ` ${DUE_CLASS}` : ""}`}
           href="?screen=galaxy"
           target="_blank"
           rel="noreferrer"

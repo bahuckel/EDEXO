@@ -324,8 +324,10 @@ export function registerGalaxyRoutes(
   let indexProbedAt = 0;
   app.get("/api/galaxy/index", async (_req, res) => {
     const st = galaxyIndexStatus();
-    // The release's sizes (HEAD requests), at most every ten minutes: the download and the update check.
-    if ((st.downloadBytes == null || st.updateAvailable == null) && Date.now() - indexProbedAt > 600_000) {
+    // The release's sizes (HEAD requests): every ten minutes at most while unknown, and again after an hour, so a
+    // release published while the app runs lights the update buttons (owner, 2026-11-01).
+    const since = Date.now() - indexProbedAt;
+    if (((st.downloadBytes == null || st.updateAvailable == null) && since > 600_000) || since > 3_600_000) {
       indexProbedAt = Date.now();
       await Promise.all([probeGalaxyIndexSize(), probeStationsRelease(), probeNeutronsRelease(), probeJumponiumRelease()]);
     }

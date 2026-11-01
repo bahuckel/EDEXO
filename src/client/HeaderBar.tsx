@@ -28,6 +28,7 @@ import { useScreenOpen } from "./tabs/TabHost";
 import { useTabSelector } from "./tabs/tabStore";
 import { LiveSnapshotFreshness } from "./header/LiveSnapshotFreshness";
 import { AppMenuEntries, type MenuOpeners } from "./header/AppMenuEntries";
+import { DUE_CLASS, useGalaxyIndexDue } from "./galaxyIndexDue";
 import { CompareTray } from "./header/CompareTray";
 import { HeaderScreens } from "./header/HeaderScreens";
 import { CommanderSwitch } from "./header/CommanderSwitch";
@@ -215,6 +216,8 @@ export const HeaderBar = memo(function HeaderBar({
   const menuRef = useRef<HTMLDivElement | null>(null);
   // From 1,700 px the entries sit in the bar (cockpit.css); below, they are the dropdown.
   const menuInBar = useMediaQuery("(min-width: 1700px)");
+  // The Galaxy map entry pulses for a newer galaxy index; folded into the menu, the menu button pulses with it.
+  const indexDue = useGalaxyIndexDue();
   const menu = useMenuButton<HTMLButtonElement, HTMLDivElement>(menuOpen, setMenuOpen);
   useEffect(() => prefetchMenuModals(), []);
   /** Which way the menu opens; the rule is shared with the alerts popover. */
@@ -410,7 +413,7 @@ export const HeaderBar = memo(function HeaderBar({
             <div className="appbar-menu-wrap" ref={menuRef}>
               <button
                 type="button"
-                className={`appbar-icon-btn appbar-menu-btn${menuOpen ? " appbar-menu-btn--open" : ""}`}
+                className={`appbar-icon-btn appbar-menu-btn${menuOpen ? " appbar-menu-btn--open" : ""}${indexDue && !menuInBar && !menuOpen ? ` ${DUE_CLASS}` : ""}`}
                 {...menu.buttonProps}
                 onClick={menu.toggle}
                 aria-label="Menu"

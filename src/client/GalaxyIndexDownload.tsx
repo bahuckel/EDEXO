@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fmtPct } from "@shared/format";
 import { MenuRow } from "./galaxy3d/G3dMenu";
+import { DUE_CLASS } from "./galaxyIndexDue";
 
 interface IndexStatus {
   present: boolean;
@@ -164,7 +165,7 @@ export function GalaxyIndexRow() {
       ) : (
         <button
           type="button"
-          className={`g3d-btn${update || extrasOnly ? " g3d-btn--primary-small" : ""}`}
+          className={`g3d-btn${update || extrasOnly ? ` g3d-btn--primary-small ${DUE_CLASS}` : ""}`}
           title={
             `${st.systemsHere != null ? `${st.systemsHere.toLocaleString("en-US")} systems` : mb(here)} here` +
             (st.systemsOnRelease != null

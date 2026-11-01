@@ -25,6 +25,7 @@ import { placeLabels } from "./galaxy3d/labelPlacement";
 import { formatCount } from "./galaxy3d/clusters";
 import type { GalaxySearchApplied } from "./GalaxySearchPanel";
 import { GalaxyIndexDownload } from "./GalaxyIndexDownload";
+import { DUE_CLASS, useGalaxyIndexDue } from "./galaxyIndexDue";
 import type { NavRouteSystemDTO } from "./GalaxyNavRoutePanel";
 import {
   EMPTY_GALAXY_FILTER,
@@ -211,6 +212,8 @@ export function GalaxyMap3D() {
   const [route, setRoute] = useState<GalaxyRouteDTO | null>(null);
   // Peeked, not taken: this render may be thrown away (galaxyDrawerRequest.ts); taken below once the map is on screen.
   const [drawer, setDrawer] = useKeptState<Drawer>("galaxy.drawer", (kept) => peekGalaxyDrawer() ?? kept ?? drawerFromUrl());
+  // A newer galaxy index on the release: the View tab pulses (its Galaxy index row holds the Update).
+  const indexDue = useGalaxyIndexDue();
   // A drawer asked for from another screen while the map is open (Colonize's "Find colony sites", in the Galaxy tab).
   useEffect(() => {
     takeGalaxyDrawer();
@@ -1634,7 +1637,7 @@ export function GalaxyMap3D() {
               <Tooltip key={t.key} text={t.hint}>
                 <button
                   type="button"
-                  className={on ? "g3d-tab g3d-tab--on" : "g3d-tab"}
+                  className={`${on ? "g3d-tab g3d-tab--on" : "g3d-tab"}${t.key === "view" && indexDue && !on ? ` ${DUE_CLASS}` : ""}`}
                   aria-pressed={on}
                   aria-label={label}
                   onClick={() => openDrawer(t.key)}
