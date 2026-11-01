@@ -369,6 +369,7 @@ export function buildSnapshot(
     focusedSystemUndiscovered:
       !bootLoading && focusAddr != null && store.commanderDiscoveredSystem(focusAddr) === true,
     remainingJumpsInRoute: bootLoading ? null : store.remainingJumpsInRoute,
+    navRouteUnsaved: !bootLoading && store.navRouteUnsaved,
     liveShipFuelRange: bootLoading ? null : buildLiveShipFuelRangeDTO(store, cachedStarRoles!),
     footTravelOdometerEnabled: store.footTravelOdometerEnabled,
     photoStamp: store.photoStamp,

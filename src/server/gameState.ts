@@ -532,8 +532,9 @@ export class GameStateStore {
    * last FSDTarget ({@link navRouteAgrees}); null when it does not.
    */
   liveNavRoute: NavRouteWaypointDTO[] | null = null;
-  /** The file as last read, agreeing or not. */
+  /** The file as last read, agreeing or not, and when the game wrote it (its `timestamp`, ms; null when unknown). */
   private liveNavRouteFile: NavRouteWaypointDTO[] | null = null;
+  private liveNavRouteFileAtMs: number | null = null;
   private lastLiveNavRoutePushKey: string | null = null;
 
   /** User pref: show HUD + poll Status.json (launcher / settings). */
@@ -1469,6 +1470,7 @@ export class GameStateStore {
     this.lastLiveShipFuelPushKey = null;
     this.liveNavRoute = null;
     this.liveNavRouteFile = null;
+    this.liveNavRouteFileAtMs = null;
     this.lastLiveNavRoutePushKey = null;
     this.fsdTarget = null;
     this.lastJumpTarget = null;
@@ -1958,8 +1960,10 @@ export class GameStateStore {
   /**
    * Live `NavRoute.json` — returns true when the plotted route changed (for snapshot push).
    */
-  applyLiveNavRoute(waypoints: NavRouteWaypointDTO[] | null): boolean {
+  applyLiveNavRoute(waypoints: NavRouteWaypointDTO[] | null, writtenAt?: string | null): boolean {
     this.liveNavRouteFile = waypoints;
+    const at = writtenAt ? Date.parse(writtenAt) : NaN;
+    this.liveNavRouteFileAtMs = Number.isFinite(at) ? at : null;
     return this.refreshLiveNavRoute();
   }
 
@@ -1968,13 +1972,22 @@ export class GameStateStore {
    * as many jumps left as the line says. A re-plot does not always rewrite the file (owner, 2026-11-01: a neutron
    * route, then the same trip re-plotted without neutron jumps; FSDTarget named a system off the old route with 8
    * jumps left, the file kept the 7-system neutron route, and the HUD's next jump went back to where he had come
-   * from). Nothing to check against (no FSDTarget, or one without a route count): it agrees.
+   * from). Only an FSDTarget newer than the file can say so: a plot to the system already locked writes the file and
+   * no new FSDTarget, and the older line's count belongs to the route before (owner's next re-plot, same day).
+   * Nothing to check against (no FSDTarget, or one without a route count): it agrees.
    */
   private navRouteAgrees(r: NavRouteWaypointDTO[]): boolean {
     const ft = this.fsdTarget;
     if (!ft || ft.remaining == null || r.length === 0) return true;
+    const targetAt = Date.parse(ft.at);
+    if (this.liveNavRouteFileAtMs != null && Number.isFinite(targetAt) && targetAt <= this.liveNavRouteFileAtMs) return true;
     const i = r.findIndex((w) => w.systemAddress === ft.systemAddress);
     return i >= 0 && r.length - i === ft.remaining;
+  }
+
+  /** A route is plotted in the game that NavRoute.json does not hold (the file disagrees with the last FSDTarget). */
+  get navRouteUnsaved(): boolean {
+    return !!this.liveNavRouteFile?.length && this.liveNavRoute === null;
   }
 
   /** The route as used, from the file and the last FSDTarget; true when it changed (for snapshot push). */

@@ -280,6 +280,11 @@ export interface AppSnapshot {
   /** Journal `FSDTarget.RemainingJumpsInRoute`; null until line merged. */
   remainingJumpsInRoute: number | null;
   /**
+   * The game flies a route NavRoute.json does not hold (a re-plot it did not write, owner 2026-11-01): the HUD says
+   * so with the jumps left instead of an empty route strip.
+   */
+  navRouteUnsaved?: boolean;
+  /**
    * Commander fuel tank + rough “how many max-range jumps left” from Status.json + journal `Loadout`/`FSDJump`.
    * Null when Status.json unread or no fuel fields.
    */

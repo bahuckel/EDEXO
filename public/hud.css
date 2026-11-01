@@ -925,8 +925,9 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
 .jump__copied-run {
   color: var(--bio);
 }
-/* The neutron route being flown (plan 8.5) and the FSD's health (8.4). */
+/* The neutron route being flown (plan 8.5) and the FSD's health (8.4); a route the game did not save (2026-11-01). */
 .jump__neutron,
+.jump__unsaved,
 .jump__fsd {
   margin-top: 0.4rem;
   font-size: 0.62rem;
@@ -937,6 +938,10 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
   text-overflow: ellipsis;
 }
 /* With something to do there (scoop, supercharge) the line wraps: one line cut the next stop off at 420 px (2026-10-29). */
+.jump__unsaved {
+  white-space: normal;
+  line-height: 1.45;
+}
 .jump__neutron--act {
   white-space: normal;
   line-height: 1.45;

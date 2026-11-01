@@ -431,6 +431,21 @@ export function fitRouteStrip(el: HTMLElement, hops: Hop[]): number {
   return shown;
 }
 
+/*
+  A route the game flies but did not save (owner, 2026-11-01: re-plotted without neutron jumps, NavRoute.json kept the
+  old route): no stars to draw, so the jumps left from the game's FSDTarget, and how to get the strip back.
+*/
+function UnsavedRoute({ d }: { d: HudSnapshot }) {
+  if (!d.navRouteUnsaved) return <div className="jump__unsaved" data-f="unsaved" hidden />;
+  const n = d.remainingJumpsInRoute;
+  return (
+    <div className="jump__unsaved" data-f="unsaved" title="The game re-plotted the route without writing NavRoute.json, so its stars are not known">
+      <span className="jump__neutron-k">Route</span> {n != null ? `${n} jump${n === 1 ? "" : "s"} left · ` : ""}
+      not saved by the game: plot it again in the galaxy map to see its stars
+    </div>
+  );
+}
+
 function RouteStrip({ d }: { d: HudSnapshot }) {
   const el = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -485,6 +500,7 @@ function Jump({ d }: { d: HudSnapshot }) {
         </div>
       </div>
       <RouteStrip d={d} />
+      <UnsavedRoute d={d} />
       <NeutronLive d={d} />
       <RefuelBar d={d} />
       <FsdHealth d={d} />

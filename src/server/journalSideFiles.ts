@@ -13,7 +13,8 @@ import { recordNavRoute } from "./navRouteLog.js";
 export function createJournalSideFiles({ store, getJournalDir }: { store: GameStateStore; getJournalDir: () => string }) {
   /** The live route into the store, and a new one into the NavRoute star finder's log (navRouteLog.ts). */
   function applyNavRoute(waypoints: ReturnType<typeof readLiveNavRouteWaypoints>): boolean {
-    const changed = store.applyLiveNavRoute(waypoints);
+    // When the game wrote the file: an FSDTarget older than that says nothing about this route (gameState.ts).
+    const changed = store.applyLiveNavRoute(waypoints, waypoints && navRouteFileSeen?.waypoints === waypoints ? navRouteFileSeen.at : null);
     if (changed && recordNavRoute(waypoints)) store.boxelsRevision++;
     return changed;
   }
@@ -22,17 +23,22 @@ export function createJournalSideFiles({ store, getJournalDir }: { store: GameSt
     plotted route makes it a large file: re-read only when its size or mtime moved, the last parse
     standing in between (code review D6, 2026-10-14). A missing file still reads as no route.
   */
-  let navRouteFileSeen: { key: string; waypoints: NonNullable<ReturnType<typeof parseNavRouteJson>> } | null =
-    null;
+  let navRouteFileSeen: {
+    key: string;
+    waypoints: NonNullable<ReturnType<typeof parseNavRouteJson>>;
+    at: string | null;
+  } | null = null;
   function readLiveNavRouteWaypoints() {
     const file = path.join(getJournalDir(), "NavRoute.json");
     try {
       const st = statSync(file);
       const key = `${file}|${st.size}|${st.mtimeMs}`;
       if (navRouteFileSeen?.key === key) return navRouteFileSeen.waypoints;
-      const waypoints = parseNavRouteJson(readFileSync(file, "utf8"));
+      const raw = readFileSync(file, "utf8");
+      const waypoints = parseNavRouteJson(raw);
+      const at = /"timestamp"\s*:\s*"([^"]+)"/.exec(raw)?.[1] ?? null;
       // Only a route is kept: no route also reads as null for a file caught mid-write, and that must retry.
-      navRouteFileSeen = waypoints ? { key, waypoints } : null;
+      navRouteFileSeen = waypoints ? { key, waypoints, at } : null;
       return waypoints;
     } catch {
       navRouteFileSeen = null;

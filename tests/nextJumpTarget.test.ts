@@ -134,3 +134,42 @@ describe("a NavRoute.json the game did not rewrite", () => {
     expect(st.liveNavRoute).toHaveLength(3);
   });
 });
+
+describe("the route the game did not save", () => {
+  it("is flagged for the HUD while the file disagrees, and not once the game writes it", () => {
+    const st = new GameStateStore();
+    arrivedAt(st, "A", 1);
+    st.applyLiveNavRoute([
+      { systemAddress: 1, starSystem: "A", starPos: [0, 0, 0] },
+      { systemAddress: 2, starSystem: "B", starPos: [10, 0, 0] },
+    ]);
+    expect(st.navRouteUnsaved).toBe(false);
+    st.apply(line("FSDTarget", 5, { Name: "X", SystemAddress: 9, StarClass: "F", RemainingJumpsInRoute: 4 }));
+    expect(st.navRouteUnsaved).toBe(true);
+    st.applyLiveNavRoute([
+      { systemAddress: 1, starSystem: "A", starPos: [0, 0, 0] },
+      { systemAddress: 9, starSystem: "X", starPos: [10, 0, 0] },
+      { systemAddress: 10, starSystem: "Y", starPos: [20, 0, 0] },
+      { systemAddress: 11, starSystem: "Z", starPos: [30, 0, 0] },
+      { systemAddress: 12, starSystem: "W", starPos: [40, 0, 0] },
+    ]);
+    expect(st.navRouteUnsaved).toBe(false);
+  });
+});
+
+describe("a re-plot to the system already locked (owner, 2026-11-01, 15:50)", () => {
+  it("uses the new file: an FSDTarget older than it says nothing about it", () => {
+    const st = new GameStateStore();
+    st.apply({ timestamp: "2026-11-01T15:38:26Z", event: "FSDJump", StarSystem: "Eembaids MK-E d12-4715", SystemAddress: 1, StarPos: [0, 0, 0] } as never);
+    // Locked during the route before, 4 jumps left on that one.
+    st.apply({ timestamp: "2026-11-01T15:38:15Z", event: "FSDTarget", Name: "Eorl Brou XE-G d11-7331", SystemAddress: 2, StarClass: "F", RemainingJumpsInRoute: 4 } as never);
+    const route = [1, 2, 3, 4, 5, 6].map((a) => ({ systemAddress: a, starSystem: `S${a}`, starPos: [a, 0, 0] as [number, number, number] }));
+    // Re-plotted at 15:50: the game wrote the file, and no new FSDTarget (the same system stays locked).
+    st.applyLiveNavRoute(route, "2026-11-01T15:50:13Z");
+    expect(st.liveNavRoute).toHaveLength(6);
+    expect(st.navRouteUnsaved).toBe(false);
+    // An FSDTarget after the file that disagrees still drops it.
+    st.apply({ timestamp: "2026-11-01T15:51:00Z", event: "FSDTarget", Name: "Elsewhere", SystemAddress: 99, StarClass: "K", RemainingJumpsInRoute: 9 } as never);
+    expect(st.liveNavRoute).toBeNull();
+  });
+});
