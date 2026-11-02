@@ -794,6 +794,9 @@ export class GameStateStore {
   /** Composition-scan waypoints (surfaceMarksFile.ts `codex`): live `CodexEntry` lines only, kept on disk. */
   surfaceCodexMarks: SurfaceMark[] = [];
 
+  /** Where the commander left the SRV (exoOrganicTracker.ts `srvMarkLine`): live lines only, kept on disk. */
+  surfaceSrvMark: SurfaceMark | null = null;
+
   /**
    * Record a sampled plant's position, and remember it across restarts.
    *
@@ -844,6 +847,7 @@ export class GameStateStore {
     const f = loadSurfaceMarks();
     this.surfaceSampleMarks = f.samples;
     this.surfaceCodexMarks = f.codex ?? [];
+    this.surfaceSrvMark = f.srv ?? null;
     // The ship also arrives from the journal replay; whichever is newer wins, and Touchdown always
     // overwrites this afterwards, so a stale file cannot outlive a real landing.
     if (!this.surfaceShipMark) this.surfaceShipMark = f.ship;
@@ -855,6 +859,7 @@ export class GameStateStore {
       samples: this.surfaceSampleMarks,
       ship: this.surfaceShipMark,
       codex: this.surfaceCodexMarks,
+      srv: this.surfaceSrvMark,
     });
   }
 

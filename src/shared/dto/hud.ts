@@ -71,8 +71,11 @@ export interface ExoMinimapDTO {
 }
 
 export interface ExoMinimapMarkDTO {
-  /** `codex`: where the composition scanner named a plant (a waypoint until the species is logged on the body). */
-  kind: "sample" | "ship" | "codex";
+  /**
+   * `codex`: where the composition scanner named a plant (a waypoint until the species is logged on the body).
+   * `srv`: where the commander stepped out of the SRV (plan 1.3.6 S-2), until he boards it again or it is gone.
+   */
+  kind: "sample" | "ship" | "codex" | "srv";
   /**
    * Whether this mark belongs to the sampling run in progress on this body.
    *

@@ -166,7 +166,7 @@ function drawMinimapAt(svg: RadarSvg, mm: Minimap, hint: boolean): boolean {
     const x = m.eastM * scale;
     const y = -m.northM * scale; // SVG y grows downward and north is up
     const r = Math.sqrt(x * x + y * y);
-    const cls = m.kind === "ship" ? "ship" : m.kind === "codex" ? "codex" : "sample";
+    const cls = m.kind === "ship" ? "ship" : m.kind === "codex" ? "codex" : m.kind === "srv" ? "srv" : "sample";
     if (m.kind === "sample" && m.active && !firstActive) firstActive = { x, y };
     const tint = m.kind === "sample" && !m.active ? ' style="fill:' + leftoverColour(m.label) + '"' : "";
     const title = "<title>" + esc(m.label) + " — " + Math.round(m.distanceM) + " m</title>";
@@ -180,6 +180,19 @@ function drawMinimapAt(svg: RadarSvg, mm: Minimap, hint: boolean): boolean {
             ") rotate(" +
             (-rot).toFixed(2) +
             ')"><polygon class="minimap-ship" points="0,-5.5 5,4.5 0,2.2 -5,4.5" />' +
+            title +
+            "</g>",
+        );
+      } else if (m.kind === "srv") {
+        // The SRV left standing (plan 1.3.6 S-2): a small square with its wheels, upright like the ship.
+        parts.push(
+          '<g transform="translate(' +
+            x.toFixed(1) +
+            "," +
+            y.toFixed(1) +
+            ") rotate(" +
+            (-rot).toFixed(2) +
+            ')"><rect class="minimap-srv" x="-4" y="-3" width="8" height="6" rx="1" /><circle class="minimap-srv-wheel" cx="-3" cy="3.6" r="1.3" /><circle class="minimap-srv-wheel" cx="3" cy="3.6" r="1.3" />' +
             title +
             "</g>",
         );

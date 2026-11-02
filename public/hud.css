@@ -814,6 +814,20 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
 .minimap-arrow--ship {
   fill: var(--hud-text);
 }
+/* Where the commander left the SRV (plan 1.3.6 S-2). */
+.minimap-srv {
+  fill: none;
+  stroke: var(--hud-text);
+  stroke-width: 1.3;
+}
+.minimap-srv-wheel {
+  fill: var(--hud-text);
+}
+.minimap-arrow--srv {
+  fill: none;
+  stroke: var(--hud-text);
+  stroke-width: 1.2;
+}
 /* Where the composition scanner named a plant (CodexEntry position): a waypoint until it is logged on foot. */
 .minimap-codex {
   fill: none;

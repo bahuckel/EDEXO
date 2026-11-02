@@ -17,6 +17,7 @@
  */
 import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { homedir } from "node:os";
 import { writeFileAtomic } from "./atomicWrite.js";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 import { SHIP_NEAR_LS, type NetlogStatusDTO } from "../shared/dto/routeSystem.js";
@@ -53,25 +54,48 @@ export function parseNetlogFix(line: string, nowMs: number): NetlogFix | null {
   };
 }
 
-/** The game's product folders (each holds EliteDangerous64.exe and its Logs): Steam libraries, Epic, Frontier. */
-export function findGameProductDirs(env: NodeJS.ProcessEnv = process.env): string[] {
-  if (process.platform !== "win32") return [];
-  const pf86 = env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
-  const pf = env.ProgramFiles || "C:\\Program Files";
-  const roots = new Set<string>([
-    join(pf86, "Frontier", "Products"),
-    join(pf, "Frontier", "Products"),
-    join(env.LOCALAPPDATA || "", "Frontier_Developments", "Products"),
-    join(pf, "Epic Games", "EliteDangerous", "Products"),
-  ]);
-  for (const steam of [join(pf86, "Steam"), join(pf, "Steam")]) {
-    try {
-      const vdf = readFileSync(join(steam, "steamapps", "libraryfolders.vdf"), "utf8");
-      for (const m of vdf.matchAll(/"path"\s+"([^"]+)"/g))
-        roots.add(join(m[1]!.replace(/\\\\/g, "\\"), "steamapps", "common", "Elite Dangerous", "Products"));
-    } catch {
-      /* no Steam here */
+/** Steam's library folders (libraryfolders.vdf's "path" entries), each one's Elite Products folder. */
+function steamLibraries(steamDir: string, roots: Set<string>, windows: boolean): void {
+  try {
+    const vdf = readFileSync(join(steamDir, "steamapps", "libraryfolders.vdf"), "utf8");
+    for (const m of vdf.matchAll(/"path"\s+"([^"]+)"/g)) {
+      const lib = windows ? m[1]!.replace(/\\\\/g, "\\") : m[1]!;
+      roots.add(join(lib, "steamapps", "common", "Elite Dangerous", "Products"));
     }
+  } catch {
+    /* no Steam here */
+  }
+}
+
+/**
+ * The game's product folders (each holds EliteDangerous64.exe and its Logs): Steam libraries, Epic, Frontier on
+ * Windows; on Linux (Proton, plan 1.3.6 M-1) the libraries of a native, Flatpak or Snap Steam and Heroic's default
+ * folder for Epic. `EDEXO_ELITE_PRODUCTS_DIR` names one more Products folder, for any other install.
+ */
+export function findGameProductDirs(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+  home: string = homedir(),
+): string[] {
+  const roots = new Set<string>();
+  if (env.EDEXO_ELITE_PRODUCTS_DIR) roots.add(env.EDEXO_ELITE_PRODUCTS_DIR);
+  if (platform === "win32") {
+    const pf86 = env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
+    const pf = env.ProgramFiles || "C:\\Program Files";
+    roots.add(join(pf86, "Frontier", "Products"));
+    roots.add(join(pf, "Frontier", "Products"));
+    roots.add(join(env.LOCALAPPDATA || "", "Frontier_Developments", "Products"));
+    roots.add(join(pf, "Epic Games", "EliteDangerous", "Products"));
+    for (const steam of [join(pf86, "Steam"), join(pf, "Steam")]) steamLibraries(steam, roots, true);
+  } else if (platform === "linux") {
+    for (const steam of [
+      join(home, ".steam", "steam"),
+      join(home, ".local", "share", "Steam"),
+      join(home, ".var", "app", "com.valvesoftware.Steam", ".local", "share", "Steam"),
+      join(home, "snap", "steam", "common", ".local", "share", "Steam"),
+    ])
+      steamLibraries(steam, roots, false);
+    roots.add(join(home, "Games", "Heroic", "EliteDangerous", "Products"));
   }
   const out: string[] = [];
   for (const root of roots) {

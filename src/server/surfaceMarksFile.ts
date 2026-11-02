@@ -74,6 +74,11 @@ export interface SurfaceMarksFile {
    * Optional: files written before it have none.
    */
   codex?: SurfaceMark[];
+  /**
+   * Where the commander stepped out of the SRV (plan 1.3.6 S-2, owner 2026-11-02: "SRV mark - yes"): `Disembark` with
+   * `SRV: true` has no position, so it is `Status.json`'s at that moment. Optional: older files have none.
+   */
+  srv?: SurfaceMark | null;
 }
 
 /** Bodies' worth of plants before the oldest are dropped. Generous; this file is tiny. */
@@ -94,7 +99,7 @@ export function withoutCodexMarks(list: SurfaceMark[], bodyKey: string, codexNam
 }
 
 export function emptySurfaceMarks(): SurfaceMarksFile {
-  return { formatVersion: 1, samples: [], ship: null, codex: [] };
+  return { formatVersion: 1, samples: [], ship: null, codex: [], srv: null };
 }
 
 function isMark(v: unknown): v is SurfaceMark {
@@ -146,7 +151,8 @@ export function loadSurfaceMarks(): SurfaceMarksFile {
     const samples = Array.isArray(parsed.samples) ? parsed.samples.map(repairName).filter(isMark) : [];
     const ship = isMark(parsed.ship) ? repairName(parsed.ship) : null;
     const codex = Array.isArray(parsed.codex) ? parsed.codex.filter(isMark) : [];
-    return { formatVersion: 1, samples, ship, codex };
+    const srv = isMark(parsed.srv) ? parsed.srv : null;
+    return { formatVersion: 1, samples, ship, codex, srv };
   } catch {
     return emptySurfaceMarks();
   }

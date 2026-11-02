@@ -74,7 +74,9 @@ export type ExoOrganicOverlayHost = {
   readonly explorationScans: ReadonlyMap<string, { surfaceGravity?: number; radius?: number; bodyName?: string }>;
   /** Composition-scan waypoints (`CodexEntry` positions). Optional so the test hosts keep working unchanged. */
   surfaceCodexMarks?: SurfaceMark[];
-  /** Writes the marks file (samples, ship, waypoints). */
+  /** Where the commander left the SRV (live lines only). Optional so the test hosts keep working unchanged. */
+  surfaceSrvMark?: SurfaceMark | null;
+  /** Writes the marks file (samples, ship, waypoints, SRV). */
   persistSurfaceMarks?(): void;
   addSurfaceSampleMark(
     bodyKey: string,
@@ -424,6 +426,7 @@ export function ingestExoOrganicJournalLine(
     addCodexScanMark(store, line, statusFix);
     return;
   }
+  if (srvMarkLine(store, line, statusFix)) return;
   if (line.event !== "ScanOrganic") return;
 
   /** The line's own timestamp, so a mark is dated by when it happened rather than when it was read. */
@@ -689,6 +692,40 @@ function addCodexScanMark(store: ExoOrganicJournalStore, line: JournalLine, stat
   );
 }
 
+/**
+ * The SRV left on the surface (plan 1.3.6 S-2, owner 2026-11-02): stepping out of it (`Disembark`, `SRV: true`) marks
+ * where it stands, from `Status.json` at that moment (the line has no position); boarding it again, docking it in the
+ * ship, launching another or losing it clears the mark. True when the line was one of these.
+ */
+function srvMarkLine(store: ExoOrganicJournalStore, line: JournalLine, statusFix: FootTravelFix | null): boolean {
+  const e = line.event;
+  if (e === "Disembark" && line.SRV === true) {
+    const sa = line.SystemAddress;
+    const bodyId = line.BodyID;
+    if (!statusFix || typeof sa !== "number" || typeof bodyId !== "number") return true;
+    const bk = bodyKey(sa, bodyId);
+    const bodyName = (typeof line.Body === "string" && line.Body.trim()) || store.explorationScans.get(bk)?.bodyName || statusFix.bodyName;
+    store.surfaceSrvMark = {
+      bodyKey: bk,
+      bodyNameNorm: normStatusBodyName(bodyName ?? null) ?? "",
+      latDeg: statusFix.latDeg,
+      lonDeg: statusFix.lonDeg,
+      label: "Your SRV",
+      atIso: typeof line.timestamp === "string" ? line.timestamp : new Date().toISOString(),
+    };
+    store.persistSurfaceMarks?.();
+    return true;
+  }
+  if ((e === "Embark" && line.SRV === true) || e === "DockSRV" || e === "LaunchSRV" || e === "SRVDestroyed") {
+    if (store.surfaceSrvMark) {
+      store.surfaceSrvMark = null;
+      store.persistSurfaceMarks?.();
+    }
+    return true;
+  }
+  return false;
+}
+
 /** The waypoints changed (the helpers hand back the same list when nothing did): keep and write them. */
 function setCodexMarks(store: ExoOrganicOverlayHost, next: SurfaceMark[]): void {
   if (next === store.surfaceCodexMarks || (!next.length && !store.surfaceCodexMarks?.length)) return;
@@ -734,7 +771,7 @@ export function buildExoMinimapDto(
   const push = (
     latDeg: number,
     lonDeg: number,
-    kind: "sample" | "ship" | "codex",
+    kind: "sample" | "ship" | "codex" | "srv",
     markLabel: string,
     active = false,
     ringM = 0,
@@ -799,6 +836,8 @@ export function buildExoMinimapDto(
   }
   const ship = store.surfaceShipMark;
   if (ship && belongsHere(ship)) push(ship.latDeg, ship.lonDeg, "ship", "Your ship");
+  const srv = store.surfaceSrvMark;
+  if (srv && belongsHere(srv)) push(srv.latDeg, srv.lonDeg, "srv", "Your SRV");
 
   return { radiusM: minimapRadiusFor(store), headingDeg: fix.headingDeg, minSampleDistanceM, marks };
 }
