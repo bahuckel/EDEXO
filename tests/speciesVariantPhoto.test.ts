@@ -12,6 +12,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { heroPhotoUrlFor, variantPhotoUrlFor } from "../src/client/speciesMatchHelpers.js";
+import { pendingLinePhoto } from "../src/server/organicValue.js";
 
 const AMETHYST = "/species-photos/cactoida/Cactoida-peperatis-Amethyst.jpg";
 const TEAL = "/species-photos/cactoida/Cactoida-peperatis-Teal.jpg";
@@ -45,17 +46,28 @@ describe("picking the photograph of the predicted colour", () => {
     expect(heroPhotoUrlFor(m, "Green")).toBe(TEAL);
   });
 
-  it("refuses to choose when the prediction did not", () => {
-    /*
-      "(unknown)" is the rule having nothing to read; "Lime or Cyan" is it genuinely not deciding.
-      Picking a photograph for either would be the app making the choice silently, in a picture,
-      where nothing says it was a guess.
-    */
+  it("refuses to choose when the rule had nothing to read", () => {
     expect(variantPhotoUrlFor(m, "(unknown)")).toBeNull();
-    expect(variantPhotoUrlFor(m, "Lime or Cyan")).toBeNull();
     expect(variantPhotoUrlFor(m, "")).toBeNull();
     expect(variantPhotoUrlFor(m, null)).toBeNull();
     expect(heroPhotoUrlFor(m, "(unknown)")).toBe(TEAL);
+  });
+
+  it("shows a colour the body can grow when the rule allows more than one (owner, 2026-11-02)", () => {
+    // Concha renibus "Red or White" showed the Aquamarine photograph while a White one was in the tree.
+    expect(variantPhotoUrlFor(m, "Red or Yellow")).toBe(YELLOW);
+    expect(variantPhotoUrlFor(m, "Amethyst or Yellow")).toBe(AMETHYST);
+    expect(variantPhotoUrlFor(m, "Lime or Cyan")).toBeNull();
+    expect(heroPhotoUrlFor(m, "Lime or Cyan")).toBe(TEAL);
+  });
+
+  it("shows the sampled colour on the unsold-samples list (owner, 2026-11-02)", () => {
+    // The game's variant names the colour: "Cactoida Peperatis - Yellow".
+    const photo = { photoUrl: m.photoUrl, photoVariants: m.photoVariants };
+    expect(pendingLinePhoto(photo, "Cactoida Peperatis - Yellow")).toBe(YELLOW);
+    expect(pendingLinePhoto(photo, "Cactoida Peperatis - amethyst")).toBe(AMETHYST);
+    expect(pendingLinePhoto(photo, "Cactoida Peperatis - Green")).toBe(TEAL);
+    expect(pendingLinePhoto(photo, "Cactoida Peperatis")).toBe(TEAL);
   });
 
   it("falls back to the species photograph for a species nobody has shot by variant", () => {

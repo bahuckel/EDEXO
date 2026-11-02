@@ -97,8 +97,8 @@ export function candidateMorphColorShortLabel(
  * to choose is right; refusing to *say anything* threw away what is actually known. If every host
  * would give the same colour, that colour is certain. If they differ, naming both beats "(unknown)".
  *
- * The `" or "` form is already understood downstream, where it suppresses the variant photograph —
- * the app must not pick a picture the rule declined to pick.
+ * The `" or "` form is understood downstream: the photograph is the first of those colours somebody
+ * has taken (`variantPhotoUrlFor`), never a colour the body cannot grow.
  */
 /**
  * The colour for a body lit by several stars, brightest first (owner, 2026-09-28: "if a star has no

@@ -60,6 +60,16 @@ function speciesForPendingLabel(db: SpeciesDatabase, label: string): SpeciesEntr
   return hit;
 }
 
+/**
+ * The photograph of the colour that was sampled: the label is the game's variant, "Concha Renibus - White",
+ * so the colour is known here. The species' default picture is only for a colour nobody has photographed
+ * (owner, 2026-11-02: a sampled White showed the Aquamarine photograph).
+ */
+export function pendingLinePhoto(photo: { photoUrl: string; photoVariants: { url: string; colour: string }[] }, label: string): string {
+  const colour = /\s-\s*([^-]+)$/.exec(label)?.[1]?.trim().toLowerCase();
+  return (colour && photo.photoVariants.find((v) => v.colour.trim().toLowerCase() === colour)?.url) || photo.photoUrl;
+}
+
 export function buildOrganicPendingLines(
   store: GameStateStore,
   db: SpeciesDatabase,
@@ -77,7 +87,7 @@ export function buildOrganicPendingLines(
     const mult: 1 | 5 = firstFootfall ? 5 : 1;
     const valueCredits = base != null ? base * mult : 0;
     const entry = speciesForPendingLabel(db, p.label);
-    const photoUrl = entry ? resolveSpeciesPhoto(entry, root).photoUrl : "/photos/__builtin_placeholder.svg";
+    const photoUrl = entry ? pendingLinePhoto(resolveSpeciesPhoto(entry, root), p.label) : "/photos/__builtin_placeholder.svg";
     out.push({
       bodyKey: p.bodyKey,
       bodyName,

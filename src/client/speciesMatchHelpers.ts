@@ -377,9 +377,13 @@ export function exomasteryDetailHasContent(d: ExomasteryDetailDTO | null | undef
  * printed "Cactoida Peperatis - Amethyst" beside a photograph of the Teal one. The owner reported
  * exactly that, and the fix is one rule in one place rather than the same `useMemo` copied twice.
  *
- * Null for a colour that was not decided. `(unknown)` means the rule had nothing to read, and
- * "Lime or Cyan" means it genuinely did not choose — picking a photograph then would be the app
- * choosing for it, silently, in a picture. The caller falls back to the species' own photograph,
+ * "Red or White" (the rule allows more than one) takes the first of those colours somebody has
+ * photographed: a plant this body can grow beats the species' default picture, which may be a colour
+ * it cannot (owner, 2026-11-02: Concha renibus "Red or White" showed the Aquamarine one while a White
+ * was in the tree). The gallery labels each photograph with its colour, so the pick is not hidden.
+ *
+ * Null for a colour that was not decided (`(unknown)`: the rule had nothing to read) or that nobody
+ * has photographed. The caller falls back to the species' own photograph,
  * which is stable rather than random: the same species shows the same picture every time, which
  * matters for a list somebody is scanning down.
  */
@@ -388,9 +392,12 @@ export function variantPhotoUrlFor(
   predictedColour: string | null | undefined,
 ): string | null {
   const raw = (predictedColour ?? "").trim();
-  if (!raw || raw === "(unknown)" || raw.toLowerCase().includes(" or ")) return null;
-  const want = raw.toLowerCase();
-  return m.photoVariants?.find((v) => v.colour.trim().toLowerCase() === want)?.url ?? null;
+  if (!raw || raw === "(unknown)") return null;
+  for (const want of raw.toLowerCase().split(/\s+or\s+/)) {
+    const url = m.photoVariants?.find((v) => v.colour.trim().toLowerCase() === want.trim())?.url;
+    if (url) return url;
+  }
+  return null;
 }
 
 /** The variant photograph when there is one, otherwise the species' own. Never empty. */
