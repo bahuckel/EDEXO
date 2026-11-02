@@ -172,7 +172,7 @@ function NeutronLive({ d }: { d: HudSnapshot }) {
   if (n.done)
     return (
       <div className="jump__neutron" data-f="neutron">
-        <span className="jump__neutron-k">{n.carrier ? "Carrier route" : "Neutron route"}</span> done · {n.destination}
+        <span className="jump__neutron-k">{n.carrier ? "Carrier route" : "Route"}</span> done · {n.destination}
       </div>
     );
   if (n.replanning)
@@ -205,7 +205,7 @@ function NeutronLive({ d }: { d: HudSnapshot }) {
     <div className={"jump__neutron" + (todo.length ? " jump__neutron--act" : "")} data-f="neutron">
       <span className="jump__neutron-k">
         {/* A Spansh carrier route follows his carrier (plan 1.3.6): the next stop is for the carrier's map. */}
-        {n.carrier ? "Carrier" : "Neutron"} {n.at}/{n.total}
+        {n.carrier ? "Carrier" : n.noNeutrons ? "Route" : "Neutron"} {n.at}/{n.total}
       </span>{" "}
       {todo.map((t, i) => (
         <Fragment key={i}>

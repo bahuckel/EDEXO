@@ -34,6 +34,9 @@ same release.
 
 ### EDSM — [edsm.net](https://edsm.net)
 
+EDSM's data may be reused with credit, for non-commercial use (the same terms as EDAstro's); this project credits
+it here and is non-commercial (see [LICENSE](LICENSE)).
+
 Body records: gravity, temperature, pressure, atmosphere, volcanism and orbital geometry for the
 bodies in the corpus, plus the system coordinates that place them. Queried through the public API at
 one request per 1.5 s and cached, so a re-run costs EDSM nothing.

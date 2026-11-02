@@ -28,6 +28,8 @@ import { likelyCodex } from "../shared/codexCount.js";
 const SPECIES_SHOWN = 4;
 /** Systems kept for the session (whole records, every body: a few hundred kB at most). */
 const KEPT = 300;
+/** A failed fetch is asked again after this long, not on every look (a slow or offline Spansh, many route systems). */
+const ERROR_RETRY_MS = 5 * 60_000;
 
 /** The 30-day lookup cache, read again only when the file changes (it was read on every system asked for). */
 let lookupMemo: { mtimeMs: number; byAddr: Map<number, RemoteSystemRecord> } | null = null;
@@ -175,10 +177,12 @@ type FetchSystem = typeof fetchRemoteSystem;
 
 /** The session's route systems, one Spansh fetch at a time. */
 export function createRouteSystemValues(store: () => GameStateStore | null, fetchSystem: FetchSystem = fetchRemoteSystem) {
-  const kept = new Map<number, RemoteSystemRecord | { none: string } | { error: string }>();
+  const kept = new Map<number, RemoteSystemRecord | { none: string } | { error: string; at?: number }>();
   let queue: Promise<unknown> = Promise.resolve();
+  const usable = (v: RemoteSystemRecord | { none: string } | { error: string; at?: number } | null | undefined) =>
+    !!v && (!("error" in v) || Date.now() - (v.at ?? 0) < ERROR_RETRY_MS);
 
-  const keep = (addr: number, v: RemoteSystemRecord | { none: string } | { error: string }) => {
+  const keep = (addr: number, v: RemoteSystemRecord | { none: string } | { error: string; at?: number }) => {
     kept.delete(addr);
     kept.set(addr, v);
     if (kept.size > KEPT) kept.delete(kept.keys().next().value!);
@@ -186,12 +190,12 @@ export function createRouteSystemValues(store: () => GameStateStore | null, fetc
 
   async function system(addr: number, name: string): Promise<RemoteSystemRecord | { none: string } | { error: string }> {
     const hit = kept.get(addr) ?? cachedLookup(addr);
-    if (hit && !("error" in hit)) return hit;
+    if (hit && usable(hit)) return hit;
     const run = queue.then(async () => {
       const again = kept.get(addr);
-      if (again && !("error" in again)) return again;
+      if (again && usable(again)) return again;
       const r = await fetchSystem(addr, name);
-      const v = r.ok ? r.system : /no record|no bodies/i.test(r.error) ? { none: r.error } : { error: r.error };
+      const v = r.ok ? r.system : /no record|no bodies/i.test(r.error) ? { none: r.error } : { error: r.error, at: Date.now() };
       keep(addr, v);
       return v;
     });

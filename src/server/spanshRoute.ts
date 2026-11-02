@@ -133,7 +133,7 @@ export function parseSpanshResult(job: string, data: unknown): SpanshRouteDTO | 
   stops[0]!.jumps = 0;
   const from = str(p.from) ?? str(p.source) ?? str(p.source_system) ?? stops[0]!.name;
   const last = (v: unknown) => (Array.isArray(v) ? v[v.length - 1] : v);
-  const toRaw = p.to ?? p.destination ?? last(p.destinations) ?? last(p.destination_systems);
+  const toRaw = p.to ?? p.destination ?? p.destination_system ?? last(p.destinations) ?? last(p.destination_systems);
   return {
     job,
     kind,

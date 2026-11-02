@@ -52,6 +52,7 @@ describe("a Spansh route", () => {
   it("reads a galaxy plotter route and a fleet carrier route, whose tritium restocks are not the ship's refuels", () => {
     const g = parse("galaxy");
     expect(g.kind).toBe("plotter");
+    expect([g.from, g.to]).toEqual(["Sol", "Wolf 359"]);
     expect(g.stops.map((s) => [s.name, s.jumps])).toEqual([
       ["Sol", 0],
       ["Wolf 359", 1],

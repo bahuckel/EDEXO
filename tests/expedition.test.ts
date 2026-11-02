@@ -12,6 +12,7 @@ import {
   boxelKey,
   boxelKeyAt,
   boxelPassesSpatialGate,
+  boxelSpatialFactor,
   boxelsWithin,
   candidateSystems,
   countRecorded,
@@ -164,10 +165,11 @@ describe("expedition: what a boxel is worth", () => {
 describe("expedition: target species", () => {
   const cat = loadSpatialCatalogue(root);
   it("lights radialem only where its nebula rule can be met, with the boxel's half-diagonal as slack", () => {
-    // Inside the Coalsack: passes. The owner's home, 175 ly from R CrA: a 20 ly b boxel cannot reach 150 ly,
-    // an 80 ly d boxel (half-diagonal 69 ly) can.
+    // Inside the Coalsack: passes. The owner's home, 175 ly from R CrA: a 20 ly b boxel cannot reach 150 ly, only the
+    // 200 ly band at a tenth of the chance; an 80 ly d boxel (half-diagonal 69 ly) can.
     expect(boxelPassesSpatialGate("electricae_electricae_radialem", box({ center: { x: 340, y: 10, z: 210 } }), cat)).toBe(true);
-    expect(boxelPassesSpatialGate("electricae_electricae_radialem", box({ code: "b", cubeLy: 20 }), cat)).toBe(false);
+    expect(boxelSpatialFactor("electricae_electricae_radialem", box({ code: "b", cubeLy: 20 }), cat)).toBe(0.1);
+    expect(boxelSpatialFactor("electricae_electricae_radialem", box({ cubeLy: 80 }), cat)).toBe(1);
     expect(boxelPassesSpatialGate("electricae_electricae_radialem", box({ cubeLy: 80 }), cat)).toBe(true);
     // No position rule: always.
     expect(boxelPassesSpatialGate("stratum_stratum_paleas", box({ code: "b", cubeLy: 20 }), cat)).toBe(true);
@@ -183,14 +185,26 @@ describe("expedition: target species", () => {
     expect(boxelPassesSpatialGate("electricae_electricae_radialem", box({ center, code: "b", cubeLy: 20 }), only)).toBe(false);
   });
 
+  it("keeps a gate's soft band at its factor, as the body matcher does (Brain Trees, 2026-11-02)", () => {
+    const site = { n: "test site", x: 0, y: 0, z: 0 };
+    const only = { ...cat!, guardian: [site], guardianSites: [site] };
+    const at = (x: number) => boxelSpatialFactor("brain_tree_roseum", box({ center: { x, y: 0, z: 0 }, code: "b", cubeLy: 20 }), only);
+    expect(at(500)).toBe(1);
+    expect(at(850)).toBe(0.5);
+    expect(at(1100)).toBe(0);
+    expect(boxelPassesSpatialGate("brain_tree_roseum", box({ center: { x: 850, y: 0, z: 0 }, code: "b", cubeLy: 20 }), only)).toBe(true);
+  });
+
   it("expects species bodies from the genus rate and its share in the genus", () => {
     const r = boxelEVForSpecies(box(), {
       table, region: "Inner Orion Spur", genus: "Stratum", speciesId: "stratum_stratum_paleas", shareInGenus: 0.25, catalogue: cat,
     });
     // 200 x 0.05 bio systems x 2 bodies x 0.5 Stratum x 0.25
     expect(r.bodies).toBeCloseTo(2.5, 6);
-    const none = boxelEVForSpecies(box({ code: "b", cubeLy: 20 }), {
-      table, region: "Inner Orion Spur", genus: "Electricae", speciesId: "electricae_electricae_radialem", shareInGenus: 1, catalogue: cat,
+    const site = { n: "test site", x: 0, y: 0, z: 0 };
+    const none = boxelEVForSpecies(box({ center: { x: 5000, y: 0, z: 0 } }), {
+      table, region: "Inner Orion Spur", genus: "Brain Tree", speciesId: "brain_tree_roseum", shareInGenus: 1,
+      catalogue: { ...cat!, guardian: [site], guardianSites: [site] },
     });
     expect(none).toEqual({ bodies: 0, passesGate: false });
   });

@@ -65,5 +65,10 @@ describe("the SRV mark", () => {
     ingest(line("Disembark", { SRV: true }));
     ingest(line("Embark", { SRV: false }));
     expect(store.surfaceSrvMark).not.toBeNull();
+    // A dismissed ship lifting off on its own leaves the SRV too; flying the ship off does not (the game recalls it).
+    ingest(line("Liftoff", { PlayerControlled: false }));
+    expect(store.surfaceSrvMark).not.toBeNull();
+    ingest(line("Liftoff", { PlayerControlled: true }));
+    expect(store.surfaceSrvMark).toBeNull();
   });
 });

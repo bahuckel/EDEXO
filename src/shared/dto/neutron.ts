@@ -36,6 +36,8 @@ export interface NeutronLiveDTO {
    * next one goes to the clipboard when the carrier arrives at a stop.
    */
   carrier?: boolean;
+  /** No neutron star among the stops (a Spansh exobiology, riches or plotter route): labelled "Route", not "Neutron". */
+  noNeutrons?: boolean;
 }
 
 /**

@@ -716,7 +716,9 @@ function srvMarkLine(store: ExoOrganicJournalStore, line: JournalLine, statusFix
     store.persistSurfaceMarks?.();
     return true;
   }
-  if ((e === "Embark" && line.SRV === true) || e === "DockSRV" || e === "LaunchSRV" || e === "SRVDestroyed") {
+  // Flying the ship off (not a dismissed ship lifting off on its own) leaves no SRV behind: the game recalls it.
+  const flownOff = (e === "Liftoff" && line.PlayerControlled === true) || e === "SupercruiseEntry" || e === "FSDJump";
+  if ((e === "Embark" && line.SRV === true) || e === "DockSRV" || e === "LaunchSRV" || e === "SRVDestroyed" || flownOff) {
     if (store.surfaceSrvMark) {
       store.surfaceSrvMark = null;
       store.persistSurfaceMarks?.();

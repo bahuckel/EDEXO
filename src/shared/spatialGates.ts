@@ -14,7 +14,7 @@
  * |---|---|---|---|
  * | nebula < 150 ly | Bark Mounds | 93 % of 23,651 systems | 4–7 % background |
  * | nebula < 150 ly | Electricae radialem | 79 % of 16,370 systems | *pluma 0 %* |
- * | Guardian site < 1,250 ly | Brain Trees | 99 % of 16,062 systems within 1,000 ly; all 4,142 confirmed bodies within 1,223 | 15–27 % |
+ * | Guardian site < 700 ly (50 % to 1,000) | Brain Trees | all 23,066 codex systems within 967 ly, 99.9 % within 588 | 16.5 % |
  * | galactic core < 10,000 ly | Sinuous Tubers | 94 % of 5,139 systems | 0–20 % |
  *
  * Planetary nebulae are excluded from `nebulae` on evidence: **not one** of 88 Bark Mound systems

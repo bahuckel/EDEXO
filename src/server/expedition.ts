@@ -353,16 +353,25 @@ export function evPerJump(
  * systems may be on the right side)? True for a species without one.
  */
 export function boxelPassesSpatialGate(speciesId: string, b: ExpeditionBoxel, catalogue: SpatialCatalogue | null): boolean {
+  return boxelSpatialFactor(speciesId, b, catalogue) > 0;
+}
+
+/**
+ * How much of a species' chance its position rule leaves in the boxel: 1 where the rule is met (with the same
+ * slack as {@link boxelPassesSpatialGate}), the gate's soft factor where only its soft band is reached, 0 beyond.
+ */
+export function boxelSpatialFactor(speciesId: string, b: ExpeditionBoxel, catalogue: SpatialCatalogue | null): number {
   const gate = gateForSpeciesId(speciesId);
-  if (!gate) return true;
+  if (!gate) return 1;
   const v = evaluateSpatialGate(speciesId, b.center, catalogue);
-  if (!v) return true;
-  if (v.passes) return true;
+  if (!v) return 1;
+  if (v.passes) return 1;
   const slack = (b.cubeLy * Math.sqrt(3)) / 2;
-  if (v.beyond) return v.distanceLy + slack >= v.thresholdLy;
-  if (v.distanceLy - slack <= v.thresholdLy) return true;
-  if (v.planetary && v.planetary.distanceLy - slack <= v.planetary.withinLy) return true;
-  return !!v.record && v.record.distanceLy - slack <= v.record.withinLy;
+  if (v.beyond) return v.distanceLy + slack >= v.thresholdLy ? 1 : 0;
+  if (v.distanceLy - slack <= v.thresholdLy) return 1;
+  if (v.planetary && v.planetary.distanceLy - slack <= v.planetary.withinLy) return 1;
+  if (v.record && v.record.distanceLy - slack <= v.record.withinLy) return 1;
+  return gate.softBandLy != null && v.distanceLy - slack <= gate.softBandLy ? (gate.softFactor ?? 0.5) : 0;
 }
 
 /**
@@ -383,14 +392,15 @@ export function boxelEVForSpecies(
     barren?: number;
   },
 ): { bodies: number; passesGate: boolean } {
-  const passesGate = boxelPassesSpatialGate(ctx.speciesId, b, ctx.catalogue);
+  const factor = boxelSpatialFactor(ctx.speciesId, b, ctx.catalogue);
+  const passesGate = factor > 0;
   if (!passesGate) return { bodies: 0, passesGate };
   const s = boxelEV(b, { table: ctx.table, region: ctx.region, genusValue: [], recorded: ctx.recorded, barren: ctx.barren });
   const { cell } = evCellFor(ctx.table, ctx.region, b.code);
   const gi = ctx.table.genera.findIndex((g) => genusKey(g) === genusKey(ctx.genus));
   const pGenus = gi >= 0 && cell.dss > 0 ? cell.genera[gi]! / cell.dss : 0;
   const bioSystems = Math.max(0, s.remaining * s.pBio - s.recorded);
-  return { bodies: bioSystems * s.bioBodiesPerSystem * pGenus * ctx.shareInGenus, passesGate };
+  return { bodies: bioSystems * s.bioBodiesPerSystem * pGenus * ctx.shareInGenus * factor, passesGate };
 }
 
 /**

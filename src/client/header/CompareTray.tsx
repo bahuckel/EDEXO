@@ -127,11 +127,11 @@ export function CompareTray({
           <div
             className="d-scan-card d-scan-card--header-row header-route-mini header-neutron tray-tile"
             title={
-              snap.neutronLive.carrier
+              snap.neutronLive.done
+                ? `${snap.neutronLive.carrier ? "Carrier route" : "Route"} done: ${snap.neutronLive.destination}`
+                : snap.neutronLive.carrier
                 ? `Carrier route to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop goes to the clipboard when your carrier arrives at one: paste it in the carrier's galaxy map (F6 copies it again).`
-                : snap.neutronLive.done
-                ? `Neutron route done: ${snap.neutronLive.destination}`
-                : `Neutron route to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop is on the clipboard after each jump onto a stop: target it in the game's galaxy map, don't plot a route to it: the game can refuse to plot a full-range jump on a part tank (F6 copies it again).`
+                : `${snap.neutronLive.noNeutrons ? "Route" : "Neutron route"} to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop is on the clipboard after each jump onto a stop: target it in the game's galaxy map, don't plot a route to it: the game can refuse to plot a full-range jump on a part tank (F6 copies it again).`
             }
           >
             <span className="tray-tile__label">

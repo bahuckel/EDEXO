@@ -376,6 +376,7 @@ export function createNeutronLive(opts: {
         ...(replanning && replanWhy ? { replanWhy } : {}),
         destination: st.hops[st.hops.length - 1]!.name,
         ...(carrier ? { carrier: true } : {}),
+        ...(!carrier && !st.hops.some((h) => h.kind === "neutron") ? { noNeutrons: true } : {}),
       };
     },
   };
