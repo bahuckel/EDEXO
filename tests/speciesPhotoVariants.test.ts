@@ -206,3 +206,19 @@ describe("a group's photographs", () => {
     expect(p.photoCreditByUrl?.[p.photoUrl]?.name).toBe("Stellar Exobiologists Guild");
   });
 });
+
+describe("a commander of another squadron (By CMDR Nimblor [TSEG], owner 2026-11-02)", () => {
+  it("is credited with the squadron tag and without the clan prefix", () => {
+    clearPhotoCreditsCache();
+    expect(photoContributorFor(root, "Osseus-discus-White.jpg")?.name).toBe("CMDR Nimblor [TSEG]");
+    const p = resolveSpeciesPhoto(find("Fungoida stabitis"), root);
+    const blue = p.photoVariants.find((v) => v.colour === "Blue");
+    expect(blue && p.photoCreditByUrl?.[blue.url]?.name).toBe("CMDR Nimblor [TSEG]");
+  });
+
+  it("keeps his second shot of a colour beside the owner's, each under its own name", () => {
+    const p = resolveSpeciesPhoto(find("Bacterium cerbrus"), root);
+    const limes = p.photoVariants.filter((v) => v.colour === "Lime");
+    expect(limes.map((v) => p.photoCreditByUrl?.[v.url]?.name).sort()).toEqual(["Bahuckel — CMDR FALrenica", "CMDR Nimblor [TSEG]"]);
+  });
+});

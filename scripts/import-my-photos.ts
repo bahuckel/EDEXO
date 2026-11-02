@@ -138,8 +138,22 @@ function contributorFromFolder(folder: string): Contributor | null {
       licence: `Contributed to this project by ${group}.`,
     };
   }
-  const cmdr = m[1]!.trim();
+  const cmdr = m[1]!.trim().replace(/\s+/g, " ");
   if (!cmdr) return null;
+  /*
+    A commander of another squadron carries its tag in the folder name: `By CMDR Nimblor [TSEG]`
+    (owner, 2026-11-02). Credited as `CMDR Nimblor [TSEG]`, without the clan prefix, since he is not
+    of the owner's clan; the id is the commander alone.
+  */
+  const tagged = /^(.+?)\s*\[([^\]]+)\]$/.exec(cmdr);
+  if (tagged) {
+    const name = `CMDR ${tagged[1]!.trim()} [${tagged[2]!.trim()}]`;
+    return {
+      id: tagged[1]!.toLowerCase().replace(/[^a-z0-9]+/g, ""),
+      name,
+      licence: `Photographed by ${name} and contributed to this project.`,
+    };
+  }
   return {
     id: cmdr.toLowerCase().replace(/[^a-z0-9]+/g, ""),
     name: `Bahuckel — CMDR ${cmdr}`,

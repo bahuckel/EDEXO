@@ -153,9 +153,9 @@ Only the outline and a set of points are kept; no image from any of them ships w
 
 ## Species photographs
 
-`data/species/<genus>/<genus>_photos/` holds 184 images of Elite Dangerous exobiology (each also
-present as a cropped card and thumbnail, so 552 files). **157 of them were contributed by commanders
-of the Bahuckel clan and by the Stellar Exobiologists Guild**; the remaining 27 are sourced from the ED-DSN community, are **not covered by
+`data/species/<genus>/<genus>_photos/` holds 189 images of Elite Dangerous exobiology (each also
+present as a cropped card and thumbnail, so 567 files). **169 of them were contributed by commanders
+of the Bahuckel clan, by the Stellar Exobiologists Guild and by CMDR Nimblor [TSEG]**; the remaining 20 are sourced from the ED-DSN community, are **not covered by
 this project's licences** and are not this project's to sublicense.
 
 ### Telling them apart, in the app and on disk
@@ -178,9 +178,10 @@ commander against each file:
 
 | commander                                     | images |
 | --------------------------------------------- | ------ |
-| Bahuckel — CMDR FALrenica (the project owner) | 146    |
-| Bahuckel — CMDR PhoEniXDFA                    | 6      |
+| Bahuckel — CMDR FALrenica (the project owner) | 149    |
+| Bahuckel — CMDR PhoEniXDFA                    | 7      |
 | Stellar Exobiologists Guild                   | 5      |
+| CMDR Nimblor [TSEG]                           | 8      |
 
 Each contributor took the photographs themselves and gave them to this project knowingly. That is
 the difference from the ED-DSN set below, and it is the whole reason the manifest exists: an image
@@ -188,7 +189,7 @@ credited to the wrong person is the one mistake this area of the project cannot 
 
 These replace the ED-DSN images, which are there mainly as placeholders. Anything not listed in the
 manifest is ED-DSN's and carries the standing credit below. **Once a species has a contributed
-photograph, ED-DSN's of that same species is removed from the tree** — 66 were retired this way — so
+photograph, ED-DSN's of that same species is removed from the tree** — 75 were retired this way — so
 the borrowed images shrink as contributed ones arrive. They are also **variant** photographs — the
 exact colour a body grows — which is what lets a card show the plant you are about to walk up to
 rather than one of its siblings.

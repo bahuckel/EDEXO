@@ -13,6 +13,10 @@
   "stellarexobiologistsguild": {
    "name": "Stellar Exobiologists Guild",
    "licence": "Contributed to this project by Stellar Exobiologists Guild."
+  },
+  "nimblor": {
+   "name": "CMDR Nimblor [TSEG]",
+   "licence": "Photographed by CMDR Nimblor [TSEG] and contributed to this project."
   }
  },
  "byFile": {
@@ -172,6 +176,18 @@
   "Recepta-umbrux-Orange.jpg": "falrenica",
   "Stratum-tectonicas-Grey.jpg": "falrenica",
   "Tussock-pennatis-Emerald.jpg": "falrenica",
-  "Tussock-stigmasis-Lime.jpg": "falrenica"
+  "Tussock-stigmasis-Lime.jpg": "falrenica",
+  "Cactoida-vermis-Yellow.jpg": "nimblor",
+  "Concha-renibus-Aquamarine.jpg": "nimblor",
+  "Frutexa-sponsae-Green.jpg": "nimblor",
+  "Fungoida-stabitis-Blue.jpg": "nimblor",
+  "Osseus-discus-White.jpg": "nimblor",
+  "Frutexa-collum-Green.jpg": "falrenica",
+  "Recepta-conditivus-Aquamarine.jpg": "falrenica",
+  "Tussock-stigmasis-Yellow.jpg": "falrenica",
+  "Recepta-deltahedronix-Mulberry.jpg": "phoenixdfa",
+  "Bacterium-cerbrus-Lime-2.jpg": "nimblor",
+  "Stratum-paleas-Emerald.jpg": "nimblor",
+  "Tussock-virgam-Yellow.jpg": "nimblor"
  }
 }
