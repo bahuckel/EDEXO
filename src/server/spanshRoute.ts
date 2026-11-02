@@ -4,7 +4,7 @@
  * read) and turns its five shapes into one {@link SpanshRouteDTO}:
  *
  * - exobiology: `result[]` systems with bodies and their `landmarks` (species, value)
- * - riches (road to riches and its ammonia / earth-like / terraformable variants): the same, bodies valued by
+ * - riches (road to riches and its ammonia / earth-like / rocky and metal-rich variants): the same, bodies valued by
  *   `estimated_mapping_value` + `estimated_scan_value`
  * - neutron: `result.system_jumps[]`, `neutron_star` per stop
  * - galaxy plotter: `result.jumps[]`, one per jump, `has_neutron` / `must_refuel` / `must_inject`
@@ -39,6 +39,18 @@ const SITE_PATH: Record<SpanshRouteKind, string> = {
   plotter: "exact-plotter",
   carrier: "fleet-carrier",
 };
+
+/**
+ * The riches planner's page on Spansh: its ammonia, earth-like and rocky / metal-rich variants have their own
+ * (`/ammonia`, `/earth`, `/rocky-metal`), told apart only by the body types they ask for (seen 2026-11-02).
+ */
+function richesPath(bodyTypes: unknown): string {
+  const t = Array.isArray(bodyTypes) ? bodyTypes.map(String).sort().join("|") : "";
+  if (t === "Ammonia world") return "ammonia";
+  if (t === "Earth-like world") return "earth";
+  if (t === "High metal content world|Rocky body") return "rocky-metal";
+  return "riches";
+}
 
 const num = (v: unknown): number | null => {
   const n = typeof v === "string" ? Number(v) : v;
@@ -143,7 +155,7 @@ export function parseSpanshResult(job: string, data: unknown): SpanshRouteDTO | 
     stops,
     totalJumps: stops.reduce((a, s) => a + s.jumps, 0),
     totalValueCr: stops.reduce((a, s) => a + s.valueCr, 0),
-    url: `https://spansh.co.uk/${SITE_PATH[kind]}/results/${job}`,
+    url: `https://spansh.co.uk/${kind === "riches" ? richesPath(p.body_types) : SITE_PATH[kind]}/results/${job}`,
   };
 }
 

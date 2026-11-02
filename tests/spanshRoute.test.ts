@@ -81,6 +81,16 @@ describe("a Spansh route", () => {
     expect(spanshRouteHops(r, new Set())).toBeNull();
   });
 
+  it("links a road-to-riches variant to its own Spansh page, told by the body types asked for", () => {
+    const sol = { bodies: [], id64: "10477373803", jumps: 1, name: "Sol", x: 0, y: 0, z: 0 };
+    const url = (body_types?: string[]) =>
+      parseSpanshResult("40E0DDE2-D708-11F1-B356-DDEA54A60EFC", { status: "ok", parameters: { source: "Sol", body_types }, result: [sol] })!.url;
+    expect(url(["Ammonia world"])).toContain("/ammonia/results/");
+    expect(url(["Earth-like world"])).toContain("/earth/results/");
+    expect(url(["Rocky body", "High metal content world"])).toContain("/rocky-metal/results/");
+    expect(url()).toContain("/riches/results/");
+  });
+
   it("asks Spansh once and says when the route is not ready or not there", async () => {
     const answer = (status: number, body: unknown) => async () => new Response(JSON.stringify(body), { status });
     const ok = await fetchSpanshRoute("AD7B6374-D6DF-11F1-9EF1-8B05C8FD45EC", answer(200, fx("neutron")) as typeof fetch);
