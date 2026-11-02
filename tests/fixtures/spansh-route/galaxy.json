@@ -1,0 +1,59 @@
+{
+ "job": "BA554ECA-D6DF-11F1-9EF1-8B05C8FD45EC",
+ "parameters": {
+  "algorithm": "optimistic",
+  "base_mass": 300,
+  "cargo": 0,
+  "destination_system": "Wolf 359",
+  "exclude_secondary": false,
+  "fuel_multiplier": 0.012,
+  "fuel_power": 2.45,
+  "internal_tank_size": 0.5,
+  "is_supercharged": false,
+  "max_fuel_per_jump": 8,
+  "optimal_mass": 1800,
+  "range_boost": 0,
+  "reserve_size": 0,
+  "ship_build": null,
+  "source_system": "Sol",
+  "tank_size": 32,
+  "use_injections": false,
+  "use_injections_when_required": false,
+  "use_supercharge": true
+ },
+ "result": {
+  "jumps": [
+   {
+    "distance": 0,
+    "distance_to_destination": 7.77779792904136,
+    "fuel_in_tank": 32,
+    "fuel_used": 0,
+    "has_neutron": false,
+    "id64": "10477373803",
+    "is_scoopable": false,
+    "must_inject": 0,
+    "must_refuel": false,
+    "name": "Sol",
+    "x": 0,
+    "y": 0,
+    "z": 0
+   },
+   {
+    "distance": 7.77779769897461,
+    "distance_to_destination": 0,
+    "fuel_in_tank": 31.9710559844971,
+    "fuel_used": 0.0289432369172573,
+    "has_neutron": false,
+    "id64": "24860210308521",
+    "is_scoopable": false,
+    "must_inject": 0,
+    "must_refuel": false,
+    "name": "Wolf 359",
+    "x": 3.875,
+    "y": 6.46875,
+    "z": -1.90625
+   }
+  ]
+ },
+ "status": "ok"
+}

@@ -44,6 +44,8 @@ systems covering every codex entry EDSM has there, with the entries it has for e
 matched against Spansh's bodies, is how the plant colour rules were checked on 119,657 bodies.
 `data/rarity/species-rarity.json` is from the same dump: per species, how many systems EDSM's codex
 has it in, galaxy-wide and per region — the rarity tiers and the region check read it.
+`src/shared/alienSites.ts` (the galaxy map's Guardian and Thargoid site layers) is from the same dump too: the
+systems its Guardian and Thargoid codex entries were reported in, with their coordinates.
 
 ### EDAstro — [edastro.com](https://edastro.com), by CMDR Orvidius
 

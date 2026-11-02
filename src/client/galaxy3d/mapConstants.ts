@@ -29,6 +29,7 @@ export type Drawer =
   | "targets"
   | "expedition"
   | "neutron"
+  | "spansh"
   | "stations"
   | "jumponium"
   | "finder";

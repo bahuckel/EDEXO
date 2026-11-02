@@ -6,6 +6,7 @@
 import { lazy, type ComponentType } from "react";
 
 const neutron = () => import("../NeutronDrawer");
+const spansh = () => import("./SpanshRouteDrawer");
 const jumponium = () => import("./JumponiumDrawer");
 const finder = () => import("./FinderDrawer");
 const navRoute = () => import("../GalaxyNavRoutePanel");
@@ -24,6 +25,7 @@ function drawer<M, C extends ComponentType<any>>(load: () => Promise<M>, pick: (
 const Nothing = () => null;
 
 export const NeutronDrawer = drawer(neutron, (m) => m.NeutronDrawer);
+export const SpanshRouteDrawer = drawer(spansh, (m) => m.SpanshRouteDrawer);
 export const JumponiumDrawer = drawer(jumponium, (m) => m.JumponiumDrawer);
 export const FinderDrawer = drawer(finder, (m) => m.FinderDrawer);
 export const GalaxyNavRoutePanel = drawer(navRoute, (m) => m.GalaxyNavRoutePanel);
@@ -38,7 +40,7 @@ export function preloadGalaxyDrawers(): void {
   if (preloaded) return;
   preloaded = true;
   const go = () => {
-    for (const load of [neutron, jumponium, finder, navRoute, search, codex, carriers]) void load().catch(() => {});
+    for (const load of [neutron, spansh, jumponium, finder, navRoute, search, codex, carriers]) void load().catch(() => {});
   };
   const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
   if (idle) idle(go, { timeout: 4000 });

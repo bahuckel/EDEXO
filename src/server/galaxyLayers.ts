@@ -13,6 +13,7 @@ import type { BookmarksService } from "./bookmarks.js";
 import { GGG_CATALOGUE } from "../shared/gggCatalogue.js";
 import { GGG_CANDIDATES } from "../shared/gggCandidates.js";
 import { HELIUM_GIANTS } from "../shared/heliumGiants.js";
+import { ALIEN_SITES, type AlienSiteKind } from "../shared/alienSites.js";
 import { loadStationsIndex } from "./stationsIndex.js";
 import {
   classifyGreenGiant,
@@ -65,6 +66,23 @@ export interface OwnGreenGiant {
   body: string;
   system: string;
 }
+
+/**
+ * What each kind of site is and what it gives (plan 1.3.6 G-1). EDSM's codex names the entry, not the body: the site
+ * is on a planet of that system.
+ */
+export const ALIEN_SITE_TEXT: Record<AlienSiteKind, string> = {
+  ruins: "Ruins: Guardian materials and artefacts, ancient data from the obelisks",
+  structure: "Structure: blueprint fragments from the data terminals (power the pylons)",
+  sentinel: "Sentinels on guard (their wrecks drop weapon parts and wreckage components)",
+  beacon: "Beacon: its data points to a structure",
+  barnacle: "Barnacles: meta-alloys",
+  device: "Thargoid device",
+  uplink: "Thargoid uplink device",
+  pod: "Thargoid pods",
+  scavengers: "Scavengers about (hostile)",
+  wreck: "Thargoid wreck: Thargoid materials from the wreckage",
+};
 
 export function galaxyLayer(
   kind: GalaxyLayerKind,
@@ -149,6 +167,13 @@ export function galaxyLayer(
       s.bodies.sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
       const detail = `${n} helium gas giant${n === 1 ? "" : "s"}: ${s.bodies.join(", ")} · ${[...s.sources].map((x) => NAMES[x] ?? x).join(", ")}`;
       out.add(s.x, s.y, s.z, system, detail, system);
+    }
+    return out.done(kind);
+  }
+  if (kind === "guardian" || kind === "thargoid") {
+    for (const [side, system, x, y, z, kinds, first] of ALIEN_SITES) {
+      if (side !== kind) continue;
+      out.add(x, y, z, system, `${kinds.map((k) => ALIEN_SITE_TEXT[k]).join(" · ")} · first reported ${first} (EDSM codex)`, system);
     }
     return out.done(kind);
   }

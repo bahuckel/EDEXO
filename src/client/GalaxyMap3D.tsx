@@ -56,6 +56,7 @@ import {
   GalaxySearchPanel,
   JumponiumDrawer,
   NeutronDrawer,
+  SpanshRouteDrawer,
   preloadGalaxyDrawers,
 } from "./galaxy3d/lazyDrawers";
 import { clearStationsAtCache } from "./galaxy3d/StationsAt";
@@ -254,6 +255,8 @@ export function GalaxyMap3D() {
   const [gggOn, setGggOn] = usePersistedState("galaxy.layer.ggg", false, isBool);
   const [heliumOn, setHeliumOn] = usePersistedState("galaxy.layer.helium", false, isBool);
   const [stationsOn, setStationsOn] = usePersistedState("galaxy.layer.stations", false, isBool);
+  const [guardianOn, setGuardianOn] = usePersistedState("galaxy.layer.guardian", false, isBool);
+  const [thargoidOn, setThargoidOn] = usePersistedState("galaxy.layer.thargoid", false, isBool);
   // The plotted route's systems you have not been to (owner, 2026-10-04): placed from NavRoute.json.
   const [navUnvisitedOn, setNavUnvisitedOn] = usePersistedState("galaxy.layer.navUnvisited", true, isBool);
   // Every plotted route's systems not visited (plan 1.3.3 R-2): on unless switched off.
@@ -291,6 +294,8 @@ export function GalaxyMap3D() {
     ggg: gggOn,
     helium: heliumOn,
     stations: stationsOn,
+    guardian: guardianOn,
+    thargoid: thargoidOn,
   };
   const extraSet: Record<GalaxyLayerKind, (v: boolean) => void> = {
     poi: setPoiOn,
@@ -300,6 +305,8 @@ export function GalaxyMap3D() {
     ggg: setGggOn,
     helium: setHeliumOn,
     stations: setStationsOn,
+    guardian: setGuardianOn,
+    thargoid: setThargoidOn,
   };
   const [extraData, setExtraData] = useState<Partial<Record<GalaxyLayerKind, GalaxyLayerDTO>>>({});
   const [worthStep, setWorthStep] = useKeptState("galaxy.worthStep", 0);
@@ -602,7 +609,7 @@ export function GalaxyMap3D() {
       ).finally(() => layerAsked.current.delete(l.kind));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stationsOn, extraData]);
+  }, [poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stationsOn, guardianOn, thargoidOn, extraData]);
   useEffect(() => {
     const e = engine.current;
     if (!e) return;
@@ -625,7 +632,7 @@ export function GalaxyMap3D() {
       e.setMarkerLayerVisible(name, extraOn[l.kind]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraData, poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stationsOn, stats?.phase]);
+  }, [extraData, poiOn, nspOn, carriersOn, bookmarksOn, gggOn, heliumOn, stationsOn, guardianOn, thargoidOn, stats?.phase]);
 
   /*
     His own carrier's system and his colonies (owner, 2026-10-13: "a little icon"; server/routes/galaxyRoutes.ts
@@ -1194,7 +1201,7 @@ export function GalaxyMap3D() {
   */
   useEffect(() => {
     if (findText.trim().length < 2) return;
-    for (const kind of ["ggg", "helium", "bookmarks"] as const) {
+    for (const kind of ["ggg", "helium", "bookmarks", "guardian", "thargoid"] as const) {
       if (extraData[kind]) continue;
       void fetch(`/api/galaxy/layers?kind=${kind}`)
         .then((r) => (r.ok ? r.json() : null))
@@ -1578,6 +1585,10 @@ export function GalaxyMap3D() {
           onRoute={setNeutronHops}
           onFocus={(p) => engine.current?.flyTo({ x: p.x, y: p.y, z: p.z }, 400)}
         />
+      ) : null}
+
+      {drawer === "spansh" ? (
+        <SpanshRouteDrawer onRoute={setNeutronHops} onFocus={(p) => engine.current?.flyTo({ x: p.x, y: p.y, z: p.z }, 400)} />
       ) : null}
 
       {drawer === "navroute" ? (

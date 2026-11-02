@@ -1,0 +1,67 @@
+{
+ "job": "AD7B6374-D6DF-11F1-9EF1-8B05C8FD45EC",
+ "parameters": {
+  "efficiency": "60",
+  "from": "Sol",
+  "range": "60",
+  "to": "Colonia",
+  "via": []
+ },
+ "result": {
+  "destination_system": "Colonia",
+  "distance": 22000.4740453411,
+  "efficiency": "60",
+  "job": "AD7B6374-D6DF-11F1-9EF1-8B05C8FD45EC",
+  "range": "60",
+  "source_system": "Sol",
+  "system_jumps": [
+   {
+    "distance_jumped": 0,
+    "distance_left": 22000.4740453411,
+    "id64": 10477373803,
+    "jumps": 0,
+    "neutron_star": false,
+    "system": "Sol",
+    "x": 0,
+    "y": 0,
+    "z": 0
+   },
+   {
+    "distance_jumped": 407.486400990496,
+    "distance_left": 21629.3877108911,
+    "id64": 22712681061,
+    "jumps": 8,
+    "neutron_star": true,
+    "system": "PSR J1752-2806",
+    "x": -10.96875,
+    "y": -6.84375,
+    "z": 407.28125
+   },
+   {
+    "distance_jumped": 379.383912838054,
+    "distance_left": 21349.9114306519,
+    "id64": 5531763309,
+    "jumps": 5,
+    "neutron_star": true,
+    "system": "Nova Aquila No 3",
+    "x": -363.03125,
+    "y": 3.3125,
+    "z": 548.28125
+   },
+   {
+    "distance_jumped": 229.632931443042,
+    "distance_left": 21129.8103676501,
+    "id64": 14183040220,
+    "jumps": 1,
+    "neutron_star": true,
+    "system": "Col 359 Sector NN-T e3-3",
+    "x": -399.375,
+    "y": -16.8125,
+    "z": 774.125
+   }
+  ],
+  "total_jumps": 109,
+  "via": []
+ },
+ "status": "ok"
+}

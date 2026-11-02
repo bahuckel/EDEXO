@@ -80,3 +80,17 @@ describe("the helium gas giant layer (owner, 2026-10-12)", () => {
     expect(d.details.join(" ")).not.toMatch(/helium-rich/i);
   });
 });
+
+describe("the Guardian and Thargoid site layers (plan 1.3.6 G-1, owner 2026-11-01)", () => {
+  it("draw one point per system with what its site gives, Thargoid ships seen in flight left out", () => {
+    const g = galaxyLayer("guardian", undefined);
+    expect(g.available).toBe(true);
+    expect(g.points.length).toBeGreaterThan(350);
+    const at = (d: typeof g, system: string) => layerPointText(d, d.points.find((p) => p[3] === system)!).detail;
+    expect(at(g, "Col 173 Sector AD-H c11-15")).toMatch(/^Ruins: Guardian materials .* · Sentinels .* · Structure: blueprint fragments/);
+    expect(at(g, "HIP 36823")).toMatch(/^Beacon: /);
+    const t = galaxyLayer("thargoid", undefined);
+    expect(at(t, "Arietis Sector HG-X b1-0")).toMatch(/^Barnacles: meta-alloys · first reported \d{4}-\d\d-\d\d \(EDSM codex\)$/);
+    expect(t.details.join(" ")).not.toMatch(/Interceptor|Scout (Marauder|Inciter)/);
+  });
+});

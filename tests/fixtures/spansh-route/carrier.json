@@ -1,0 +1,66 @@
+{
+ "job": "B9F51B72-D6DF-11F1-9EF1-8B05C8FD45EC",
+ "parameters": {
+  "calculate_starting_fuel": 1,
+  "capacity": 25000,
+  "capacity_used": 0,
+  "current_fuel": 0,
+  "destination_systems": [
+   "Wolf 359"
+  ],
+  "mass": 25000,
+  "refuel_destinations": [],
+  "source_system": "Sol",
+  "tritium_amount": 0
+ },
+ "result": {
+  "calculate_starting_fuel": true,
+  "capacity": 25000,
+  "capacity_used": 0,
+  "destinations": [
+   "Wolf 359"
+  ],
+  "fuel_loaded": 0,
+  "jumps": [
+   {
+    "distance": 0,
+    "distance_to_destination": 7.77779792904136,
+    "fuel_in_tank": 6,
+    "fuel_used": 0,
+    "has_icy_ring": false,
+    "id64": "10477373803",
+    "is_desired_destination": 1,
+    "is_system_pristine": false,
+    "must_restock": 1,
+    "name": "Sol",
+    "restock_amount": 6,
+    "tritium_in_market": 0,
+    "x": 0,
+    "y": 0,
+    "z": 0
+   },
+   {
+    "distance": 7.77779792904136,
+    "distance_to_destination": 0,
+    "fuel_in_tank": 0,
+    "fuel_used": 6,
+    "has_icy_ring": false,
+    "id64": "24860210308521",
+    "is_desired_destination": 1,
+    "is_system_pristine": false,
+    "must_restock": 0,
+    "name": "Wolf 359",
+    "restock_amount": 0,
+    "tritium_in_market": 0,
+    "x": 3.875,
+    "y": 6.46875,
+    "z": -1.90625
+   }
+  ],
+  "mass": 25000,
+  "refuel_destinations": [],
+  "source": "Sol",
+  "tritium_stored": 0
+ },
+ "status": "ok"
+}

@@ -1,0 +1,187 @@
+{
+ "job": "ADD9D60C-D6DF-11F1-8006-BB4F253D68BF",
+ "parameters": {
+  "loop": "1",
+  "max_distance": "50000",
+  "max_results": "5",
+  "min_value": "1000000",
+  "radius": "25",
+  "range": "50",
+  "source": "Sol"
+ },
+ "result": [
+  {
+   "bodies": [],
+   "id64": "10477373803",
+   "jumps": 1,
+   "name": "Sol",
+   "x": 0,
+   "y": 0,
+   "z": 0
+  },
+  {
+   "bodies": [
+    {
+     "distance_to_arrival": 432.402342,
+     "estimated_mapping_value": 2221,
+     "estimated_scan_value": 500,
+     "id": 756620801247094177,
+     "id64": "756620801247094177",
+     "landmark_value": 15885300,
+     "landmarks": [
+      {
+       "count": 43,
+       "subtype": "Tussock Capillum",
+       "type": "Tussock",
+       "value": 7025800
+      },
+      {
+       "count": 37,
+       "subtype": "Fungoida Bullarum",
+       "type": "Fungoida",
+       "value": 3703200
+      },
+      {
+       "count": 33,
+       "subtype": "Osseus Pumice",
+       "type": "Osseus",
+       "value": 3156300
+      },
+      {
+       "count": 23,
+       "subtype": "Bacterium Vesicula",
+       "type": "Bacterium",
+       "value": 1000000
+      },
+      {
+       "count": 42,
+       "subtype": "Fonticulua Campestris",
+       "type": "Fonticulua",
+       "value": 1000000
+      }
+     ],
+     "name": "Stein 2051 B 4 a",
+     "subtype": "Rocky Ice world",
+     "type": "Planet"
+    }
+   ],
+   "id64": "16063848850849",
+   "jumps": 1,
+   "name": "Stein 2051",
+   "x": -9.46875,
+   "y": 2.4375,
+   "z": -15.375
+  },
+  {
+   "bodies": [
+    {
+     "distance_to_arrival": 1322.539694,
+     "estimated_mapping_value": 2221,
+     "estimated_scan_value": 500,
+     "id": 360291352577053394,
+     "id64": "360291352577053394",
+     "landmark_value": 13953900,
+     "landmarks": [
+      {
+       "count": 36,
+       "subtype": "Aleoida Arcus",
+       "type": "Aleoida",
+       "value": 7252500
+      },
+      {
+       "count": 23,
+       "subtype": "Tussock Albata",
+       "type": "Tussock",
+       "value": 3252500
+      },
+      {
+       "count": 33,
+       "subtype": "Stratum Excutitus",
+       "type": "Stratum",
+       "value": 2448900
+      },
+      {
+       "count": 20,
+       "subtype": "Bacterium Aurasus",
+       "type": "Bacterium",
+       "value": 1000000
+      }
+     ],
+     "name": "PSPF-LF 2 1 b",
+     "subtype": "Rocky body",
+     "type": "Planet"
+    },
+    {
+     "distance_to_arrival": 1803.436191,
+     "estimated_mapping_value": 2221,
+     "estimated_scan_value": 500,
+     "id": 972780901899440850,
+     "id64": "972780901899440850",
+     "landmark_value": 8418000,
+     "landmarks": [
+      {
+       "count": 10,
+       "subtype": "Bacterium Informem",
+       "type": "Bacterium",
+       "value": 8418000
+      }
+     ],
+     "name": "PSPF-LF 2 3 a",
+     "subtype": "Icy body",
+     "type": "Planet"
+    },
+    {
+     "distance_to_arrival": 2333.421664,
+     "estimated_mapping_value": 2221,
+     "estimated_scan_value": 500,
+     "id": 1152924886994260690,
+     "id64": "1152924886994260690",
+     "landmark_value": 1152500,
+     "landmarks": [
+      {
+       "count": 7,
+       "subtype": "Bacterium Bullaris",
+       "type": "Bacterium",
+       "value": 1152500
+      }
+     ],
+     "name": "PSPF-LF 2 4 a",
+     "subtype": "Icy body",
+     "type": "Planet"
+    },
+    {
+     "distance_to_arrival": 2335.081687,
+     "estimated_mapping_value": 2221,
+     "estimated_scan_value": 500,
+     "id": 1188953684013224658,
+     "id64": "1188953684013224658",
+     "landmark_value": 2956600,
+     "landmarks": [
+      {
+       "count": 10,
+       "subtype": "Fonticulua Digitos",
+       "type": "Fonticulua",
+       "value": 1804100
+      },
+      {
+       "count": 7,
+       "subtype": "Bacterium Bullaris",
+       "type": "Bacterium",
+       "value": 1152500
+      }
+     ],
+     "name": "PSPF-LF 2 4 b",
+     "subtype": "Icy body",
+     "type": "Planet"
+    }
+   ],
+   "id64": "3382387413714",
+   "jumps": 1,
+   "name": "PSPF-LF 2",
+   "x": -4.40625,
+   "y": -17.15625,
+   "z": -15.34375
+  }
+ ],
+ "status": "ok"
+}

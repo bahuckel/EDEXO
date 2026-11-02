@@ -1546,6 +1546,10 @@
 .g3d-neutron-table tr.is-waypoint td {
   color: var(--accent);
 }
+/* A Spansh route's stop left out of the flight (SpanshRouteDrawer.tsx). */
+.g3d-neutron-table tr.is-dropped td {
+  opacity: 0.45;
+}
 .g3d-neutron-table td.is-warn {
   color: #ff8a6b;
 }

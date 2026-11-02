@@ -38,6 +38,15 @@ export function registerRouteSystemRoutes(app: express.Express, opts: HttpServer
       // His own records first (a system he has been to, or EDSM filled in), else Spansh.
       const store = opts.getJournalStore?.() ?? null;
       const own = store ? journalSystemValues(store, addr, name) : null;
+      /*
+        His records without any biology (a jump through, or EDSM's bodies, which carry no signals) said 0 where Spansh
+        knows the plants (plan 1.3.6 S-1: Stein 2051 next to Sol, 15.9 M on Spansh's route). Spansh's answer then,
+        when it has biology.
+      */
+      if (own && !own.bioCr) {
+        const sp = await values.values(addr, name).catch(() => null);
+        if (sp?.state === "ok" && sp.bioCr > 0) return void res.json(sp);
+      }
       res.json(own ?? (await values.values(addr, name)));
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });

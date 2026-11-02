@@ -2,9 +2,9 @@
  * The 3D galaxy map's extra layers (server/galaxyLayers.ts builds them; D10, guild tester report
  * 2026-09-30). Each is a list the commander already has on this PC.
  */
-export type GalaxyLayerKind = "poi" | "nsp" | "carriers" | "bookmarks" | "ggg" | "helium" | "stations";
+export type GalaxyLayerKind = "poi" | "nsp" | "carriers" | "bookmarks" | "ggg" | "helium" | "stations" | "guardian" | "thargoid";
 
-export const GALAXY_LAYER_KINDS: readonly GalaxyLayerKind[] = ["poi", "nsp", "carriers", "bookmarks", "ggg", "helium", "stations"];
+export const GALAXY_LAYER_KINDS: readonly GalaxyLayerKind[] = ["poi", "nsp", "carriers", "bookmarks", "ggg", "helium", "stations", "guardian", "thargoid"];
 
 /**
  * [x, y, z, label, detail, system]: label is the name; detail indexes {@link GalaxyLayerDTO.details},
@@ -63,4 +63,10 @@ export const GALAXY_LAYERS: readonly {
     blue-white systems and the POI cyan).
   */
   { kind: "stations", label: "Stations", needs: "Download them in Carriers & Stations → Stations", colour: [0.9, 0.42, 0.4], size: 6 },
+  /*
+    Guardian and Thargoid sites (plan 1.3.6 G-1, owner 2026-11-01: "extend materials to guardian sites as well"): the
+    systems EDSM's codex dump has them in (shared/alienSites.ts), the hover card saying what each kind gives.
+  */
+  { kind: "guardian", label: "Guardian sites", needs: "", colour: [0.3, 0.6, 1], size: 9 },
+  { kind: "thargoid", label: "Thargoid sites", needs: "", colour: [0.5, 1, 0.75], size: 8 },
 ];
