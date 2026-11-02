@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
 /**
  * His fleet carrier's jump timer (owner, 2026-11-02: "carrier jump timer - yes"): the journal side in
- * shared/ownAssets.ts (`ownCarrierJump`), the HUD's counting in src/client/hud/sections/carrier.tsx (`carrierPhase`).
+ * shared/ownAssets.ts (`ownCarrierJump`, and `carrierPhase`, the counting the HUD's Carrier section and the main
+ * window's tray tile share).
  * Times from his own journals: requested 18:39:39, departing 18:55:10, CarrierJump at 18:56:01.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { CarrierTile } from "../src/client/header/CarrierTile.js";
 import {
   CARRIER_ARRIVE_MS,
   CARRIER_COOLDOWN_MS,
@@ -14,8 +18,8 @@ import {
   ownAssetsLine,
   ownCarrierJump,
   ownCarrierNow,
+  carrierPhase,
 } from "../src/shared/ownAssets.js";
-import { carrierPhase } from "../src/client/hud/sections/carrier.js";
 
 const at = (t: string, o: Record<string, unknown>) => ({ ...o, timestamp: t });
 const ms = (t: string) => Date.parse(t);
@@ -155,5 +159,26 @@ describe("the HUD's Carrier section counting", () => {
     expect(carrierPhase(v, dep + CARRIER_ARRIVE_MS + 60_000)).toEqual({ kind: "cooldown", leftMs: CARRIER_COOLDOWN_MS - 60_000 });
     expect(carrierPhase(v, dep + CARRIER_ARRIVE_MS + CARRIER_COOLDOWN_MS)).toBeNull();
     expect(carrierPhase(null, dep)).toBeNull();
+  });
+});
+
+describe("the main window's Carrier tile (owner, 2026-11-02: it was on the HUD only)", () => {
+  const v = ownCarrierJump(scheduled(), ms("2025-10-04T18:40:00Z"))!;
+  const dep = ms("2025-10-04T18:55:10Z");
+  const tile = (now: number) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    return renderToStaticMarkup(createElement(CarrierTile, { jump: v }));
+  };
+  afterEach(() => vi.useRealTimers());
+
+  it("counts down, then says locked down, jumping and cooldown, then hides", () => {
+    expect(tile(dep - 10 * 60_000)).toMatch(/Carrier jump<\/span><span class="tray-tile__value">10:00</);
+    const locked = tile(dep - 60_000);
+    expect(locked).toMatch(/Locked down<\/span><span class="tray-tile__value">01:00</);
+    expect(locked).toContain("header-carrier--warn");
+    expect(tile(dep + 30_000)).toMatch(/Jumping<\/span><span class="tray-tile__value">G 224-46 A 1</);
+    expect(tile(dep + CARRIER_ARRIVE_MS + 60_000)).toMatch(/Cooldown<\/span><span class="tray-tile__value">04:00</);
+    expect(tile(dep + CARRIER_ARRIVE_MS + CARRIER_COOLDOWN_MS)).toBe("");
   });
 });

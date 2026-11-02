@@ -1,4 +1,5 @@
 import type { HudSnapshot } from "../types";
+import { carrierPhase, type CarrierPhase } from "../../../shared/ownAssets";
 import { fmtClock, type SectionState } from "../core";
 import { playCue } from "../audio";
 import { Head, type HudSection } from "../parts";
@@ -10,26 +11,6 @@ import { Head, type HudSection } from "../parts";
   after it and the end of the cooldown. The section counts them itself every second, and runs on from the jump
   into the cooldown without waiting for another snapshot. Nothing scheduled and no cooldown: it has nothing to say.
 */
-type Jump = NonNullable<HudSnapshot["carrierJump"]>;
-
-export type CarrierPhase =
-  | { kind: "countdown"; system: string; body: string | null; toDepartMs: number; toLockdownMs: number }
-  | { kind: "lockdown"; system: string; body: string | null; toDepartMs: number }
-  | { kind: "jumping"; system: string; body: string | null }
-  | { kind: "cooldown"; leftMs: number };
-
-/** Where the carrier's jump stands at `nowMs`, or null when there is nothing to count. */
-export function carrierPhase(cj: Jump | null | undefined, nowMs: number): CarrierPhase | null {
-  if (!cj) return null;
-  const p = cj.pending;
-  if (p && nowMs < p.lockdownMs)
-    return { kind: "countdown", system: p.system, body: p.body, toDepartMs: p.departureMs - nowMs, toLockdownMs: p.lockdownMs - nowMs };
-  if (p && nowMs < p.departureMs) return { kind: "lockdown", system: p.system, body: p.body, toDepartMs: p.departureMs - nowMs };
-  if (p && nowMs < p.arriveMs) return { kind: "jumping", system: p.system, body: p.body };
-  if (cj.cooldownUntilMs != null && nowMs < cj.cooldownUntilMs) return { kind: "cooldown", leftMs: cj.cooldownUntilMs - nowMs };
-  return null;
-}
-
 /*
   One tone when the pads close and one when it jumps, with the sample tones' switch (Sound in the HUD settings): on the
   edge seen by this page, so a page opened during a lockdown stays quiet.

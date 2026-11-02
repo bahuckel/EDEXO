@@ -1,10 +1,11 @@
 /**
- * Compare's tray under the app bar: the data value, D-Scan, the neutron route, FSD wear, first discovery,
- * the route and fuel, and the next boxel. Moved out of HeaderBar.tsx (audit 2026-10-22), with the route
+ * Compare's tray under the app bar: the data value, D-Scan, the neutron route, FSD wear, his carrier's jump, first
+ * discovery, the route and fuel, and the next boxel. Moved out of HeaderBar.tsx (audit 2026-10-22), with the route
  * card's distance/refuel switch, which only the tray shows.
  */
 import { Tooltip } from "../ui/Tooltip";
 import { NextBoxelCard } from "../NextBoxelCard";
+import { CarrierTile } from "./CarrierTile";
 import { fmtCrExact, fmtCrShort, fmtLy } from "@shared/format";
 import { useEffect, useState, type ReactNode } from "react";
 import { Fuel, TriangleAlert, Zap } from "lucide-react";
@@ -163,6 +164,7 @@ export function CompareTray({
             </span>
           </div>
         ) : null}
+        <CarrierTile jump={snap.carrierJump} />
         {snap.focusedSystemUndiscovered ? (
           <div
             className="d-scan-card d-scan-card--complete d-scan-card--header-row header-route-mini tray-tile"

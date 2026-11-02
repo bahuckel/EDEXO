@@ -328,6 +328,14 @@
   text-shadow: 0 0 10px rgba(255, 80, 60, 0.5);
 }
 
+/* His carrier's jump (CarrierTile.tsx): amber while the pads are closed or it is jumping. */
+.d-scan-card.header-carrier--warn {
+  border-color: rgba(255, 190, 70, 0.75);
+  color: #ffc864;
+  background: rgba(56, 38, 8, 0.65);
+  box-shadow: 0 0 14px rgba(255, 180, 50, 0.25);
+}
+
 .d-scan-card.d-scan-card--route.header-route-mini,
 .header-route-mini.d-scan-card.d-scan-card--route {
   display: inline-flex;

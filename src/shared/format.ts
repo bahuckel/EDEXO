@@ -102,3 +102,14 @@ export function fmtCount(n: number, noun: string, plural = `${noun}s`): string {
   return `${n.toLocaleString("en-US")} ${n === 1 ? noun : plural}`;
 }
 
+/* ------------------------------------------------------------------ clock */
+
+/** "04:59", "1:02:03": a countdown, from milliseconds; empty for a negative or missing one. */
+export function fmtClock(ms: number): string {
+  if (!(ms >= 0)) return "";
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const two = (n: number) => (n < 10 ? "0" : "") + n;
+  return h > 0 ? h + ":" + two(m % 60) + ":" + two(s % 60) : two(m) + ":" + two(s % 60);
+}

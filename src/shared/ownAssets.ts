@@ -200,6 +200,24 @@ export function ownCarrierJump(st: OwnAssetsState, nowMs = Date.now()): OwnCarri
   };
 }
 
+export type CarrierPhase =
+  | { kind: "countdown"; system: string; body: string | null; toDepartMs: number; toLockdownMs: number }
+  | { kind: "lockdown"; system: string; body: string | null; toDepartMs: number }
+  | { kind: "jumping"; system: string; body: string | null }
+  | { kind: "cooldown"; leftMs: number };
+
+/** Where the carrier's jump stands at `nowMs`, or null when there is nothing to count. */
+export function carrierPhase(cj: OwnCarrierJumpDTO | null | undefined, nowMs: number): CarrierPhase | null {
+  if (!cj) return null;
+  const p = cj.pending;
+  if (p && nowMs < p.lockdownMs)
+    return { kind: "countdown", system: p.system, body: p.body, toDepartMs: p.departureMs - nowMs, toLockdownMs: p.lockdownMs - nowMs };
+  if (p && nowMs < p.departureMs) return { kind: "lockdown", system: p.system, body: p.body, toDepartMs: p.departureMs - nowMs };
+  if (p && nowMs < p.arriveMs) return { kind: "jumping", system: p.system, body: p.body };
+  if (cj.cooldownUntilMs != null && nowMs < cj.cooldownUntilMs) return { kind: "cooldown", leftMs: cj.cooldownUntilMs - nowMs };
+  return null;
+}
+
 /** The state from the journal cache, or empty for anything else. */
 export function hydrateOwnAssets(raw: unknown): OwnAssetsState {
   const st = newOwnAssets();

@@ -43,14 +43,7 @@ export function fmtM(n: number | null | undefined): string {
 export const COUNT_MS = 180;
 export const COUNT_SNAP_M = 250;
 
-export function fmtClock(ms: number): string {
-  if (!(ms >= 0)) return "";
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  const two = (n: number) => (n < 10 ? "0" : "") + n;
-  return h > 0 ? h + ":" + two(m % 60) + ":" + two(s % 60) : two(m) + ":" + two(s % 60);
-}
+export { fmtClock } from "../../shared/format";
 /** "tussock propagito" → "Tussock Propagito"; the game writes species in lower case after the genus. */
 export function cap(s: string | null | undefined): string {
   return String(s || "")
