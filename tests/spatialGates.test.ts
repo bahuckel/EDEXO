@@ -94,13 +94,25 @@ describe("evaluating a gate", () => {
     expect(describeVerdict(tubers)).toContain("Sagittarius A*");
   });
 
-  it("passes Brain Trees in Norma Expanse, just past 1,000 ly from the nearest Guardian site", () => {
-    // Graea Hypue MO-X b2-1: a confirmed Brain Tree Puniceum system. All 4,142 confirmed Brain Tree
-    // bodies lie within 1,223 ly; the 83 past 1,000 are all in Norma Expanse.
+  it("passes Brain Trees in Norma Expanse, near a named Guardian site the old points lacked (plan 1.3.6)", () => {
+    // Graea Hypue MO-X b2-1: a confirmed Brain Tree Puniceum system, past 1,000 ly from the 362 unnamed points.
     const graea = { x: -1247.8125, y: -1001.15625, z: 13086.5 };
     const v = evaluateSpatialGate("brain_trees_brain_tree_puniceum", graea, cat)!;
-    expect(v.distanceLy).toBeGreaterThan(1000);
     expect(v.passes).toBe(true);
+    expect(v.distanceLy).toBeLessThan(700);
+    const oldPoints = evaluateSpatialGate("brain_trees_brain_tree_puniceum", graea, { ...cat, guardianSites: undefined })!;
+    expect(oldPoints.distanceLy).toBeGreaterThan(1000);
+    // Kuekee RU-V d3-16, Brain Trees in the codex: 1,307 ly from the old points, so the old 1,250 ly line hid them.
+    const kuekee = evaluateSpatialGate("brain_trees_brain_tree_puniceum", { x: -872.5, y: -1307.69, z: 13381.7 }, cat)!;
+    expect(kuekee.passes).toBe(true);
+  });
+
+  it("keeps a Brain Tree past 700 ly at half the chance, out to 1,000 ly (two Inner Orion Spur systems)", () => {
+    expect(gateForSpeciesId("brain_trees_brain_tree_aureum")).toMatchObject({ kind: "guardian", thresholdLy: 700, softBandLy: 1000, softFactor: 0.5 });
+    // Outopps XZ-L c22-0 (911 ly from the nearest site): kept, at half the chance.
+    const v = evaluateSpatialGate("brain_trees_brain_tree_aureum", { x: 0, y: 0, z: 0 }, { ...cat, guardianSites: [{ n: "site", x: 911, y: 0, z: 0 }] })!;
+    expect(v.passes).toBe(false);
+    expect(v.softBand).toEqual({ factor: 0.5, bandLy: 1000 });
   });
 
   it("Crystalline Shards: at least 19,500 ly from the core (2026-10-09)", () => {

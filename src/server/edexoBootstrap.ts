@@ -160,6 +160,7 @@ import { reloadSpeciesDerivedCaches } from "./speciesCacheReload.js";
 import { pickCommanderForRun } from "./commanderMigration.js";
 import { activeCommander } from "./activeCommander.js";
 import { createCommanderWatch } from "./commanderWatch.js";
+import { carrierHereOf, createCarrierRouteFollow } from "./carrierRouteFollow.js";
 import { isOtherCommandersJournal } from "./journalCommanders.js";
 export { backfillCommanderPosition } from "./commanderPositionBackfill.js";
 export { logFatal, assertResourceLayout } from "./startupChecks.js";
@@ -396,10 +397,9 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   const neutronLive = createNeutronLive({
     filePath: path.join(resolveCommanderDataDir(), "edexo-neutron-live.json"),
     deliver: (name) => deliverToClipboard(name, "neutron"),
-    onStart: () => {
-      if (savedBoxels.runId()) savedBoxels.setRun(null);
-    },
+    onStart: () => void (savedBoxels.runId() && savedBoxels.setRun(null)),
     onDone: () => neutronStopped(),
+    carrierHere: () => carrierHereOf(store),
   });
   const shipHere = () => ({ name: store.currentSystem ?? null, pos: store.commanderPos ?? null });
   /** Stopped: the HUD's "Copied … · neutron route" line goes with it (owner, 2026-10-13: it stayed). */
@@ -412,10 +412,10 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   const neutronReplanner = createNeutronReplanner({ store, neutronLive, push: () => push(), shipHere });
   /* More or less fuel than the plan had: planned again from here too (plan 1.3.4 S-9, server/neutronFuelWatch.ts). */
   const fuelReplan = (why: string, fuelT: number) => void neutronReplanner.replan({ why, fuelT });
+  // A Spansh carrier route follows his carrier's arrivals instead of the ship's jumps (plan 1.3.6).
+  const carrierFollow = createCarrierRouteFollow({ store, neutronLive, push: () => push() });
   const neutronFuelWatch = createNeutronFuelWatch({ neutronLive, shipHere, fuel: () => storeFuel(store) }, fuelReplan);
-  const bookmarks = createBookmarksService({
-    filePath: path.join(resolveCommanderDataDir(), "edexo-bookmarks.json"),
-  });
+  const bookmarks = createBookmarksService({ filePath: path.join(resolveCommanderDataDir(), "edexo-bookmarks.json") });
   /* Green gas giants (owner, 2026-09-30): the commander's own calls, and what the verdict reads. */
   const greenMarks = createGreenGiantMarks({
     filePath: path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-ggg-marks.json"),
@@ -651,7 +651,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         eddnUploader.offer(line);
         const side = liveSideFiles();
         applyNavRoute(side.route);
-        if (line.event === "FSDJump") {
+        carrierFollow.tick();
+        if (line.event === "FSDJump" && neutronLive.follows() !== "carrier") {
           // A neutron route being flown owns the clipboard; else the boxel run or the saved boxel's next.
           const flying = neutronLive.active();
           const onStop = neutronLive.onJump(shipHere()) != null;

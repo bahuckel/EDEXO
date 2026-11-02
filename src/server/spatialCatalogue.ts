@@ -12,6 +12,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { SpatialCatalogue } from "../shared/spatialGates.js";
+import { ALIEN_SITES } from "../shared/alienSites.js";
+
+/** The Guardian gate's points: the catalogue's and EDSM's named Guardian systems (plan 1.3.6). */
+function withGuardianSites(cat: SpatialCatalogue): SpatialCatalogue {
+  const named = ALIEN_SITES.filter((r) => r[0] === "guardian").map(([, n, x, y, z]) => ({ n, x, y, z }));
+  return { ...cat, guardianSites: [...cat.guardian, ...named] };
+}
 
 let cached: SpatialCatalogue | null | undefined;
 
@@ -28,7 +35,7 @@ export function loadSpatialCatalogue(projectRoot: string): SpatialCatalogue | nu
   }
   try {
     const parsed = JSON.parse(readFileSync(file, "utf8")) as SpatialCatalogue;
-    cached = Array.isArray(parsed?.nebulae) && Array.isArray(parsed?.guardian) ? parsed : null;
+    cached = Array.isArray(parsed?.nebulae) && Array.isArray(parsed?.guardian) ? withGuardianSites(parsed) : null;
   } catch {
     cached = null;
   }

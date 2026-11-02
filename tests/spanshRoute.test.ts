@@ -49,7 +49,7 @@ describe("a Spansh route", () => {
     expect(hops[2]).toMatchObject({ name: "Nova Aquila No 3", jumps: 5, boosted: 1 });
   });
 
-  it("reads a galaxy plotter route and a fleet carrier route; the carrier's is not flown by the ship", () => {
+  it("reads a galaxy plotter route and a fleet carrier route, whose tritium restocks are not the ship's refuels", () => {
     const g = parse("galaxy");
     expect(g.kind).toBe("plotter");
     expect(g.stops.map((s) => [s.name, s.jumps])).toEqual([
@@ -59,7 +59,11 @@ describe("a Spansh route", () => {
     const c = parse("carrier");
     expect(c.kind).toBe("carrier");
     expect(c.stops[0]!.refuel).toBe(true);
-    expect(spanshRouteHops(c)).toBeNull();
+    expect([c.from, c.to]).toEqual(["Sol", "Wolf 359"]);
+    expect(spanshRouteHops(c)!.map((h) => [h.name, h.refuel])).toEqual([
+      ["Sol", false],
+      ["Wolf 359", false],
+    ]);
     expect(c.url).toContain("/fleet-carrier/results/");
   });
 

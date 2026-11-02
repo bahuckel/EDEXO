@@ -8,10 +8,12 @@
  *   `estimated_mapping_value` + `estimated_scan_value`
  * - neutron: `result.system_jumps[]`, `neutron_star` per stop
  * - galaxy plotter: `result.jumps[]`, one per jump, `has_neutron` / `must_refuel` / `must_inject`
- * - fleet carrier: `result.jumps[]` with `tritium_stored` on the result: shown, not flown
+ * - fleet carrier: `result.jumps[]` with `tritium_stored` on the result
  *
  * Flying it reuses the neutron route's live follow (neutronLive.ts): the next stop on the clipboard after each jump
- * onto one, the HUD's next-jump line, the galaxy map's line. Nothing is fetched until a link is pasted.
+ * onto one, the HUD's next-jump line, the galaxy map's line. A carrier route follows the commander's carrier instead of
+ * the ship (owner, 2026-11-02): the next stop is copied when the carrier arrives at one, for its own galaxy map.
+ * Nothing is fetched until a link is pasted.
  */
 import type { LiveHop } from "./neutronLive.js";
 import type { SpanshRouteAnswer, SpanshRouteBodyDTO, SpanshRouteDTO, SpanshRouteKind, SpanshRouteStopDTO } from "../shared/dto/spanshRoute.js";
@@ -129,8 +131,9 @@ export function parseSpanshResult(job: string, data: unknown): SpanshRouteDTO | 
   if (!stops.length) return null;
   // The first stop is where the route starts: no jumps to it.
   stops[0]!.jumps = 0;
-  const from = str(p.from) ?? str(p.source) ?? stops[0]!.name;
-  const toRaw = p.to ?? p.destination ?? (Array.isArray(p.destinations) ? p.destinations[p.destinations.length - 1] : p.destinations);
+  const from = str(p.from) ?? str(p.source) ?? str(p.source_system) ?? stops[0]!.name;
+  const last = (v: unknown) => (Array.isArray(v) ? v[v.length - 1] : v);
+  const toRaw = p.to ?? p.destination ?? last(p.destinations) ?? last(p.destination_systems);
   return {
     job,
     kind,
@@ -146,11 +149,11 @@ export function parseSpanshResult(job: string, data: unknown): SpanshRouteDTO | 
 
 /**
  * The stops to fly, as the live route's hops: a stop after a neutron star starts with a supercharge, a plotter's
- * refuel stop says "scoop here". `keep` drops stops the commander unticked (never the first). Carrier routes are not
- * flown by the ship: null.
+ * refuel stop says "scoop here" (a carrier's tritium restock does not: the drawer lists those). `keep` drops stops the
+ * commander unticked (never the first).
  */
 export function spanshRouteHops(route: SpanshRouteDTO, keep?: ReadonlySet<number> | null): LiveHop[] | null {
-  if (route.kind === "carrier") return null;
+  const carrier = route.kind === "carrier";
   const hops: LiveHop[] = [];
   let jumps = 0;
   route.stops.forEach((s, i) => {
@@ -167,7 +170,7 @@ export function spanshRouteHops(route: SpanshRouteDTO, keep?: ReadonlySet<number
       jumps: i === 0 ? 0 : Math.max(1, jumps),
       // The jump out of a neutron star is supercharged: only when that star is the stop just before.
       boosted: prev && prevStop?.neutron && prev.name === prevStop.name ? 1 : 0,
-      refuel: s.refuel,
+      refuel: !carrier && s.refuel,
       scoopLs: null,
       scoopOnWay: false,
       inject: null,

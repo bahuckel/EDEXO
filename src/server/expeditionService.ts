@@ -190,6 +190,7 @@ export function catalogueNear(cat: SpatialCatalogue | null, center: Xyz, reachLy
     ...cat,
     nebulae: near(cat.nebulae)!,
     guardian: near(cat.guardian)!,
+    ...(cat.guardianSites ? { guardianSites: near(cat.guardianSites)! } : {}),
     ...(cat.planetary ? { planetary: near(cat.planetary)! } : {}),
     ...(records ? { records } : {}),
   };
@@ -227,7 +228,7 @@ function rulePoints(
     }
   };
   if (gate.kind === "core") add([cat.core], gate.thresholdLy);
-  else add(gate.kind === "nebula" ? cat.nebulae : cat.guardian, gate.softBandLy ?? gate.thresholdLy);
+  else add(gate.kind === "nebula" ? cat.nebulae : (cat.guardianSites ?? cat.guardian), gate.softBandLy ?? gate.thresholdLy);
   if (gate.planetary) add(cat.planetary, gate.planetary.withinLy);
   if (gate.records) add(cat.records?.[gate.records.key], gate.records.withinLy);
   out.sort((a, b) => a.d - b.d);

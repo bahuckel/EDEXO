@@ -8,7 +8,7 @@ import { NextBoxelCard } from "../NextBoxelCard";
 import { CarrierTile } from "./CarrierTile";
 import { fmtCrExact, fmtCrShort, fmtLy } from "@shared/format";
 import { useEffect, useState, type ReactNode } from "react";
-import { Fuel, TriangleAlert, Zap } from "lucide-react";
+import { Anchor, Fuel, TriangleAlert, Zap } from "lucide-react";
 import { DScanBodiesBadge } from "../DScanBodiesBadge";
 import type { AppSnapshot } from "@shared/types";
 import {
@@ -127,13 +127,17 @@ export function CompareTray({
           <div
             className="d-scan-card d-scan-card--header-row header-route-mini header-neutron tray-tile"
             title={
-              snap.neutronLive.done
+              snap.neutronLive.carrier
+                ? `Carrier route to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop goes to the clipboard when your carrier arrives at one: paste it in the carrier's galaxy map (F6 copies it again).`
+                : snap.neutronLive.done
                 ? `Neutron route done: ${snap.neutronLive.destination}`
                 : `Neutron route to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop is on the clipboard after each jump onto a stop: target it in the game's galaxy map, don't plot a route to it: the game can refuse to plot a full-range jump on a part tank (F6 copies it again).`
             }
           >
             <span className="tray-tile__label">
-              {snap.neutronLive.refuelHere && !snap.neutronLive.done ? (
+              {snap.neutronLive.carrier ? (
+                <Anchor className="tray-tile__ico" aria-hidden="true" />
+              ) : snap.neutronLive.refuelHere && !snap.neutronLive.done ? (
                 <Fuel className="tray-tile__ico" aria-hidden="true" />
               ) : (
                 <Zap className="tray-tile__ico" aria-hidden="true" />

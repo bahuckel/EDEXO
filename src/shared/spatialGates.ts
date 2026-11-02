@@ -54,6 +54,11 @@ export interface SpatialCatalogue {
   sources: Record<string, string>;
   nebulae: SpatialPoint[];
   guardian: SpatialPoint[];
+  /**
+   * The Guardian gate's points (plan 1.3.6, owner 2026-11-02): `guardian` and the 385 named systems of EDSM's codex
+   * dump (shared/alienSites.ts), added by the loader. `guardian` alone stays what the species-split fit was made on.
+   */
+  guardianSites?: SpatialPoint[];
   core: SpatialPoint;
   /** Where a species has been recorded (scripts/add-codex-records.ts), for a gate's `records` check. */
   records?: Record<string, SpatialPoint[]>;
@@ -181,13 +186,18 @@ export const SPATIAL_GATES: { idIncludes: string; gate: SpatialGate }[] = [
     gate: {
       kind: "guardian",
       /*
-        1,250 since 2026-10-04 (owner: no misses): every one of 4,142 confirmed single-species Brain
-        Tree bodies lies within 1,223 ly of a catalogued Guardian site; the 83 past 1,000 ly are all in
-        Norma Expanse (Puniceum 37, Roseum 43, Viride 3), and each lost its species to this gate.
+        1,250 from 2026-10-04 (owner: no misses) to 2026-11-02, measured on the 362 unnamed POI points. With the 385
+        named Guardian systems of EDSM's codex dump added (`guardianSites`), every one of 23,066 Brain Tree codex
+        systems (EDAstro's and EDSM's) is within 967 ly of a site, 99.9 % within 588 ly; the old points left 3 past
+        1,250 ly (Kuekee RU-V d3-15 / d3-16 at 1,307 ly, Norma Expanse). Past 700 ly only two systems, both in the
+        Inner Orion Spur (Outopps XZ-L c22-0 at 911 ly, Synuefe EG-N c23-7 at 967 ly): kept at half the chance to
+        1,000 ly rather than set the line (outlier rule). docs/perf/calibration/braintree_gate.py.
       */
-      thresholdLy: 1250,
+      thresholdLy: 700,
+      softBandLy: 1000,
+      softFactor: 0.5,
       evidence:
-        "99 % of 16,062 Brain Tree systems are within 1,000 ly of a Guardian site, and every confirmed Brain Tree body within 1,223 ly; controls 15–27 %",
+        "Every one of 23,066 Brain Tree codex systems is within 967 ly of a Guardian site, 99.9 % within 588 ly; past 700 ly only 2 systems",
     },
   },
   /*
@@ -306,7 +316,7 @@ export function evaluateSpatialGate(
     };
   }
 
-  const points = gate.kind === "nebula" ? catalogue.nebulae : catalogue.guardian;
+  const points = gate.kind === "nebula" ? catalogue.nebulae : (catalogue.guardianSites ?? catalogue.guardian);
   const near = nearestPoint(system, points);
   if (!near) return null;
   let passes = near.distanceLy <= gate.thresholdLy;

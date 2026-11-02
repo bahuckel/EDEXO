@@ -10,7 +10,8 @@
  *   side by side.
  *
  * "Fly this route" flies the stops kept the way the neutron route is flown (neutronLive.ts): the next stop on the
- * clipboard after each jump onto one, the HUD's Next jump line. Stop ends it here or in the Neutron drawer.
+ * clipboard after each jump onto one, the HUD's Next jump line. A fleet carrier route follows his carrier instead
+ * (server/carrierRouteFollow.ts): the next stop is copied when the carrier arrives at one. Stop ends either.
  */
 import { useEffect, useMemo, useState } from "react";
 import type { SpanshRouteAnswer, SpanshRouteDTO, SpanshRouteStopDTO } from "@shared/dto/spanshRoute";
@@ -186,7 +187,9 @@ export function SpanshRouteDrawer({
       const marks = marksOf(keptStops);
       keepNeutronMarks(marks);
       onRoute(marks);
-      setNote(`Flying ${j.stops} stop${j.stops === 1 ? "" : "s"}${j.next ? `: ${j.next} is on the clipboard` : ""}. F6 copies the next stop again.`);
+      setNote(
+        `${route.kind === "carrier" ? "Following" : "Flying"} ${j.stops} stop${j.stops === 1 ? "" : "s"}${j.next ? `: ${j.next} is on the clipboard` : ""}. F6 copies the next stop again.`,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -283,14 +286,16 @@ export function SpanshRouteDrawer({
               ) : null}
             </>
           ) : (
-            <p className="g3d-panel__note">A fleet carrier route is shown, not flown: plot each jump in the carrier's own map.</p>
+            <p className="g3d-panel__note">
+              Follow with my carrier: when your carrier arrives at a stop, the next one goes to the clipboard to paste in the
+              carrier&apos;s galaxy map. Restock tritium where the list says.
+            </p>
           )}
 
-          {route.kind !== "carrier" ? (
-            <button type="button" className="btn-top-toggle" disabled={busy || keptStops.length < 2} onClick={() => void fly()}>
-              Fly this route{dropped.size ? ` (${keptStops.length - 1} stops)` : ""}
-            </button>
-          ) : null}
+          <button type="button" className="btn-top-toggle" disabled={busy || keptStops.length < 2} onClick={() => void fly()}>
+            {route.kind === "carrier" ? "Follow with my carrier" : "Fly this route"}
+            {dropped.size ? ` (${keptStops.length - 1} stops)` : ""}
+          </button>
           <button type="button" className="btn-top-toggle" onClick={() => void stopFlying()} title="Ends the route being flown (this one or the Neutron tab's)">
             Stop
           </button>
@@ -298,7 +303,7 @@ export function SpanshRouteDrawer({
           <table className="fdb-table g3d-neutron-table">
             <thead>
               <tr>
-                <th>{route.kind !== "carrier" ? "Fly" : "#"}</th>
+                <th>Fly</th>
                 <th>System</th>
                 <th>Jumps</th>
                 {valued ? (
@@ -317,7 +322,7 @@ export function SpanshRouteDrawer({
                 return (
                   <tr key={`${s.name}-${i}`} className={off ? "is-dropped" : undefined}>
                     <td>
-                      {route.kind !== "carrier" && i > 0 ? (
+                      {i > 0 ? (
                         <input type="checkbox" checked={!off} aria-label={`Fly to ${s.name}`} onChange={() => toggle(i)} />
                       ) : (
                         i

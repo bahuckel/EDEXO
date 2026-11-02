@@ -31,6 +31,11 @@ export interface NeutronLiveDTO {
   done: boolean;
   /** The route's last stop. */
   destination: string;
+  /**
+   * A fleet carrier route from Spansh (plan 1.3.6): the stops follow the commander's carrier, not the ship, and the
+   * next one goes to the clipboard when the carrier arrives at a stop.
+   */
+  carrier?: boolean;
 }
 
 /**

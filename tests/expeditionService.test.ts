@@ -138,7 +138,7 @@ describe("expedition service", () => {
 
   it("says each position rule in words, and has none to give for a species without one", async () => {
     expect(ruleText(gateForSpeciesId("bark_mounds_bark_mounds")!)).toBe("within 150 ly of a nebula, at 50 % of the chance out to 300 ly");
-    expect(ruleText(gateForSpeciesId("brain_trees_brain_tree_aureum")!)).toBe("within 1.25 kly of a Guardian site");
+    expect(ruleText(gateForSpeciesId("brain_trees_brain_tree_aureum")!)).toBe("within 700 ly of a Guardian site, at 50 % of the chance out to 1 kly");
     expect(ruleText(gateForSpeciesId("crystalline_shards_crystalline_shards")!)).toBe("at least 19.5 kly from Sgr A*");
     const f = await expeditionField({ from: SWOILZ, radiusLy: 200, jumpRangeLy: 60, codes: ["d"], speciesId: "stratum_stratum_paleas" }, deps());
     expect(f.rule).toBeNull();

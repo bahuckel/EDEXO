@@ -53,8 +53,13 @@ export interface LivePlan {
   boost?: number;
 }
 
+/** Whose jumps move the route on: the ship's (FSDJump), or the commander's fleet carrier's (a Spansh carrier route). */
+export type LiveFollow = "ship" | "carrier";
+
 export interface NeutronLive {
-  start(hops: LiveHop[], here: Here, plan?: LivePlan | null): string | null;
+  start(hops: LiveHop[], here: Here, plan?: LivePlan | null, follow?: LiveFollow): string | null;
+  /** Whose jumps the route follows; null with no route. */
+  follows(): LiveFollow | null;
   /** The destinations not reached yet and the plan's ship, for planning again from here; null without a plan. */
   remaining(): LivePlan | null;
   /** The ship is far off the way from the stop reached to the next (more than twice its range, 100 ly at least). */
@@ -196,10 +201,12 @@ export function createNeutronLive(opts: {
   /** The last stop reached: what the route put on the HUD goes, as with Stop. */
   onDone?: () => void;
   now?: () => string;
+  /** Where the commander's carrier is, for a carrier route's view (plan 1.3.6). */
+  carrierHere?: () => Here;
 }): NeutronLive {
   const now = opts.now ?? (() => new Date().toISOString());
   let st = load(opts.filePath);
-  let done: { destination: string } | null = null;
+  let done: { destination: string; carrier?: boolean } | null = null;
   let replanning = false;
   let replanWhy: string | null = null;
   let version = 1;
@@ -227,7 +234,7 @@ export function createNeutronLive(opts: {
   };
 
   return {
-    start(hops, here, plan) {
+    start(hops, here, plan, follow) {
       opts.onStart?.();
       done = null;
       // Where the ship is on the route: the last stop it is in (a re-plan from mid-route), else the start.
@@ -237,7 +244,7 @@ export function createNeutronLive(opts: {
           at = i;
           break;
         }
-      st = { hops, at, startedAt: now(), plan: plan ?? null };
+      st = { hops, at, startedAt: now(), plan: plan ?? null, ...(follow === "carrier" ? { follow: "carrier" as const } : {}) };
       // A re-plot of the route before is not this route's: it neither shows nor lands here (version below).
       replanning = false;
       replanWhy = null;
@@ -272,7 +279,7 @@ export function createNeutronLive(opts: {
     replace(hops, targets) {
       if (!st) return null;
       const was = st.hops[st.at + 1]?.name ?? null;
-      st = { hops, at: 0, startedAt: st.startedAt, plan: st.plan ? { ...st.plan, targets } : null };
+      st = { ...st, hops, at: 0, plan: st.plan ? { ...st.plan, targets } : null };
       version++;
       persist();
       const next = hops[1]?.name ?? null;
@@ -297,6 +304,7 @@ export function createNeutronLive(opts: {
       persist();
     },
     active: () => st != null,
+    follows: () => (st ? (st.follow ?? "ship") : null),
     hops: () => st?.hops ?? null,
     copyNext,
     onJump(here) {
@@ -311,7 +319,7 @@ export function createNeutronLive(opts: {
         }
       if (hit < 0) return null;
       if (hit === st.hops.length - 1) {
-        done = { destination: st.hops[hit]!.name };
+        done = { destination: st.hops[hit]!.name, ...(st.follow === "carrier" ? { carrier: true } : {}) };
         st = null;
         // A new version: the galaxy map clears the line (review 1.2.16: it stayed after arrival).
         version++;
@@ -323,7 +331,9 @@ export function createNeutronLive(opts: {
       persist();
       return copyNext();
     },
-    view(here) {
+    view(shipHere) {
+      const carrier = st?.follow === "carrier" || (!st && done?.carrier === true);
+      const here = carrier ? (opts.carrierHere?.() ?? shipHere) : shipHere;
       if (!st) {
         if (!done) return null;
         return {
@@ -342,6 +352,7 @@ export function createNeutronLive(opts: {
           done: true,
           replanning: false,
           destination: done.destination,
+          ...(carrier ? { carrier: true } : {}),
         };
       }
       const cur = st.hops[st.at]!;
@@ -364,6 +375,7 @@ export function createNeutronLive(opts: {
         replanning,
         ...(replanning && replanWhy ? { replanWhy } : {}),
         destination: st.hops[st.hops.length - 1]!.name,
+        ...(carrier ? { carrier: true } : {}),
       };
     },
   };
@@ -371,7 +383,7 @@ export function createNeutronLive(opts: {
 
 function load(
   filePath: string | null,
-): { hops: LiveHop[]; at: number; startedAt: string; plan: LivePlan | null } | null {
+): { hops: LiveHop[]; at: number; startedAt: string; plan: LivePlan | null; follow?: "carrier" } | null {
   if (!filePath || !existsSync(filePath)) return null;
   try {
     const raw = JSON.parse(readFileSync(filePath, "utf8")) as {
@@ -379,6 +391,7 @@ function load(
       at?: unknown;
       startedAt?: unknown;
       plan?: unknown;
+      follow?: unknown;
     };
     const hops = parseLiveHops(raw.hops);
     if (!hops) return null;
@@ -391,6 +404,7 @@ function load(
       at,
       startedAt: typeof raw.startedAt === "string" ? raw.startedAt : "",
       plan: parseLivePlan(raw.plan),
+      ...(raw.follow === "carrier" ? { follow: "carrier" as const } : {}),
     };
   } catch {
     return null;

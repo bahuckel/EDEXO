@@ -6,6 +6,7 @@
 import type express from "express";
 import { fetchSpanshRoute, spanshJobFromText, spanshRouteHops, type SpanshRouteDTO } from "../spanshRoute.js";
 import type { HttpServerOptions } from "../httpServerTypes.js";
+import { carrierHereOf } from "../carrierRouteFollow.js";
 
 /** Routes read this session, newest last; a few dozen at most. */
 const KEPT = 20;
@@ -36,8 +37,12 @@ export function registerSpanshRouteRoutes(app: express.Express, opts: HttpServer
       ? new Set(body.keep.filter((i): i is number => Number.isInteger(i) && i > 0 && i < route.stops.length))
       : null;
     const hops = spanshRouteHops(route, keep);
-    if (!hops) return void res.status(400).json({ error: route.kind === "carrier" ? "A carrier route is not flown by the ship." : "Keep at least one stop after the start." });
-    const next = live.start(hops, opts.shipHere?.() ?? { name: null, pos: null }, null);
+    if (!hops) return void res.status(400).json({ error: "Keep at least one stop after the start." });
+    // A carrier route follows his carrier: where it is now is the stop reached (owner, 2026-11-02).
+    const carrier = route.kind === "carrier";
+    const store = opts.getJournalStore?.() ?? null;
+    const here = (carrier ? (store ? carrierHereOf(store) : null) : opts.shipHere?.()) ?? { name: null, pos: null };
+    const next = live.start(hops, here, null, carrier ? "carrier" : "ship");
     opts.scheduleBroadcast?.();
     res.json({ ok: true, next, stops: hops.length - 1 });
   });
