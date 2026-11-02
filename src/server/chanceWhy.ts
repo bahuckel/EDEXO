@@ -213,8 +213,13 @@ export function explainChances(
         });
       }
       // How often rows at this chance came true (1.2.19, F3): the trust in the number, not a reason for it.
-      const calibration = calibrationLine(root, genus, m.presenceProbabilityPercent, !!b.genusHints?.length);
-      if (calibration) lines.push({ label: calibration, weight: null, kind: "calibration" });
+      // Judged on the chance the matcher gave; a corrected row says what it was (chanceRecalibration.ts, 2026-11-02).
+      const before = m.chanceBeforeRecal;
+      const calibration = calibrationLine(root, genus, before ?? m.presenceProbabilityPercent, !!b.genusHints?.length);
+      if (before != null && m.presenceProbabilityPercent != null) {
+        const said = `corrected from ${before.toFixed(before < 10 ? 1 : 0)} % to ${m.presenceProbabilityPercent.toFixed(m.presenceProbabilityPercent < 10 ? 1 : 0)} %`;
+        lines.push({ label: calibration ? `${said}: ${calibration}` : `${said}, to how often such ${genus} rows came true (EDDN year)`, weight: null, kind: "calibration" });
+      } else if (calibration) lines.push({ label: calibration, weight: null, kind: "calibration" });
       if (lines.length) m.chanceWhy = lines;
     }
   }

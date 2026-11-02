@@ -34,6 +34,7 @@ import { applyGenusBodySplit } from "./genusBodySplit.js";
 import { applyGenusPrior, rescueByGenusPrior, vetoUnseenGenera } from "./genusPrior.js";
 import { applyMeasuredOdds } from "./measuredOdds.js";
 import { orderConchaPair } from "./conchaOrder.js";
+import { recalibrateFssChances } from "./chanceRecalibration.js";
 import { collectResolvedOrganicLockSpeciesIds } from "./organicLocks.js";
 
 /** What the matcher and the passes after it read about the body. */
@@ -149,6 +150,8 @@ export function rankCandidates(
   // the tables have ordered Concha already.
   if (!split.has("Concha")) orderConchaPair(matches, scan);
   markSampledDespiteUnlikely(matches, b, db);
+  // Last, on the chances as shown: the map was fitted on them (chanceRecalibration.ts; owner, 2026-11-02).
+  recalibrateFssChances(matches, !!b.genusHints?.length, root);
   return split;
 }
 

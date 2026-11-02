@@ -175,11 +175,12 @@ describe("matchDatabaseToScan", () => {
     // Sinuous Tubers left when they got their measured 200-500 K (2026-09-28): this body is 198.7 K,
     // and none of the 8,000+ Tubers bodies measured is under 200 K.
     // Bark Mounds left when their profile grew to the 8,036 Spansh DSS bodies (2026-10-14): none under 200.0 K,
-    // nor any of the EDDN year's 1,381, so the observed envelope demotes them here (soft, one click away).
+    // nor any of the EDDN year's 1,381, so they are demoted here (soft, one click away): by the firm 200 K edge
+    // since 2026-11-02 (firmTemperatureEdges.ts), which the observed envelope did before.
     expect([...genera].sort()).toEqual(["anemone", "fumerola"]);
     const bark = r.matches.find((m) => m.entry.genusDataDir === "bark-mound");
     expect(bark?.unlikely).toBe(true);
-    expect(bark!.unlikelyReasons!.map((x) => x.field)).toEqual(["ObservedTemperature"]);
+    expect(bark!.unlikelyReasons!.map((x) => x.field)).toEqual(["FirmTemperature"]);
 
     const gypseeum = r.matches.find((m) => m.entry.displayName === "Brain Tree Gypseeum");
     expect(gypseeum?.unlikely).toBe(true);

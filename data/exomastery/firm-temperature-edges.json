@@ -1,0 +1,211 @@
+{
+ "about": "Temperature edges no species body of the EDDN year (2025-10-08..2026-10-07, eddn.duckdb) lies past: a round number with >= 1 % of the species' bodies within 1 K of it, >= 1,000 bodies (docs/perf/calibration/firm_edges_scan.py --write). A row past one is demoted and not brought back to fill the signal count (matchSpecies.ts, firmTemperatureEdges.ts).",
+ "species": {
+  "aleoida_aleoida_arcus": {
+   "bodies": 10312,
+   "maxK": 180.0,
+   "minK": 175.0
+  },
+  "aleoida_aleoida_coronamus": {
+   "bodies": 12626,
+   "maxK": 190.0,
+   "minK": 180.0
+  },
+  "aleoida_aleoida_gravis": {
+   "bodies": 5985,
+   "minK": 190.0
+  },
+  "aleoida_aleoida_spica": {
+   "bodies": 6678,
+   "minK": 170.0
+  },
+  "bacterium_bacterium_acies": {
+   "bodies": 39646,
+   "minK": 20.0
+  },
+  "bacterium_bacterium_nebulus": {
+   "bodies": 1663,
+   "minK": 20.0
+  },
+  "bacterium_bacterium_omentum": {
+   "bodies": 3159,
+   "minK": 20.0
+  },
+  "bacterium_bacterium_scopulum": {
+   "bodies": 2155,
+   "minK": 20.0
+  },
+  "bacterium_bacterium_tela": {
+   "bodies": 23464,
+   "minK": 20.0
+  },
+  "bacterium_bacterium_verrata": {
+   "bodies": 2854,
+   "minK": 20.0
+  },
+  "bark_mounds_bark_mounds": {
+   "bodies": 1381,
+   "minK": 200.0
+  },
+  "brain_trees_brain_tree_roseum": {
+   "bodies": 2510,
+   "minK": 200.0
+  },
+  "cactoida_cactoida_cortexum": {
+   "bodies": 9942,
+   "minK": 180.0
+  },
+  "cactoida_cactoida_lapis": {
+   "bodies": 14688,
+   "minK": 160.0
+  },
+  "cactoida_cactoida_peperatis": {
+   "bodies": 8486,
+   "minK": 160.0
+  },
+  "cactoida_cactoida_pullulanta": {
+   "bodies": 5120,
+   "minK": 180.0
+  },
+  "clypeus_clypeus_lacrimam": {
+   "bodies": 10354,
+   "minK": 190.0
+  },
+  "clypeus_clypeus_margaritus": {
+   "bodies": 6828,
+   "minK": 190.0
+  },
+  "clypeus_clypeus_speculumi": {
+   "bodies": 3670,
+   "minK": 190.0
+  },
+  "concha_concha_labiata": {
+   "bodies": 27415,
+   "minK": 150.0
+  },
+  "frutexa_frutexa_collum": {
+   "bodies": 1134,
+   "minK": 132.0
+  },
+  "osseus_osseus_cornibus": {
+   "bodies": 5111,
+   "minK": 180.0
+  },
+  "osseus_osseus_fractus": {
+   "bodies": 14405,
+   "maxK": 190.0,
+   "minK": 180.0
+  },
+  "osseus_osseus_pellebantus": {
+   "bodies": 4772,
+   "minK": 191.0
+  },
+  "osseus_osseus_spiralis": {
+   "bodies": 38043,
+   "minK": 160.0
+  },
+  "recepta_recepta_conditivus": {
+   "bodies": 2641,
+   "minK": 132.0
+  },
+  "recepta_recepta_deltahedronix": {
+   "bodies": 1767,
+   "minK": 132.0
+  },
+  "recepta_recepta_umbrux": {
+   "bodies": 4623,
+   "minK": 132.0
+  },
+  "stratum_stratum_cucumisis": {
+   "bodies": 6232,
+   "minK": 191.0
+  },
+  "stratum_stratum_excutitus": {
+   "bodies": 10816,
+   "maxK": 190.0,
+   "minK": 165.0
+  },
+  "stratum_stratum_frigus": {
+   "bodies": 1414,
+   "minK": 191.0
+  },
+  "stratum_stratum_laminamus": {
+   "bodies": 4279,
+   "minK": 165.0
+  },
+  "stratum_stratum_limaxus": {
+   "bodies": 6036,
+   "maxK": 190.0,
+   "minK": 165.0
+  },
+  "stratum_stratum_paleas": {
+   "bodies": 46040,
+   "minK": 165.0
+  },
+  "stratum_stratum_tectonicas": {
+   "bodies": 104863,
+   "minK": 165.0
+  },
+  "tubus_tubus_cavas": {
+   "bodies": 17138,
+   "minK": 160.0
+  },
+  "tubus_tubus_compagibus": {
+   "bodies": 26682,
+   "minK": 160.0
+  },
+  "tubus_tubus_conifer": {
+   "bodies": 9428,
+   "minK": 160.0
+  },
+  "tubus_tubus_rosarium": {
+   "bodies": 8754,
+   "minK": 160.0
+  },
+  "tubus_tubus_sororibus": {
+   "bodies": 7262,
+   "minK": 160.0
+  },
+  "tussock_tussock_albata": {
+   "bodies": 13588,
+   "maxK": 180.0,
+   "minK": 175.0
+  },
+  "tussock_tussock_capillum": {
+   "bodies": 6984,
+   "minK": 80.0
+  },
+  "tussock_tussock_caputus": {
+   "bodies": 13558,
+   "maxK": 190.0,
+   "minK": 181.0
+  },
+  "tussock_tussock_ignis": {
+   "bodies": 22328,
+   "maxK": 170.0,
+   "minK": 161.0
+  },
+  "tussock_tussock_pennata": {
+   "bodies": 4588,
+   "maxK": 154.0
+  },
+  "tussock_tussock_serrati": {
+   "bodies": 9680,
+   "maxK": 174.0,
+   "minK": 171.0
+  },
+  "tussock_tussock_stigmasis": {
+   "bodies": 2345,
+   "minK": 132.0
+  },
+  "tussock_tussock_triticum": {
+   "bodies": 5305,
+   "minK": 191.0
+  },
+  "tussock_tussock_ventusa": {
+   "bodies": 7567,
+   "maxK": 160.0,
+   "minK": 155.0
+  }
+ }
+}

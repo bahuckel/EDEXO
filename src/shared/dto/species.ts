@@ -619,6 +619,8 @@ export interface SpeciesMatch {
    * this body it can measure. Null is "unmeasured", never "unlikely".
    */
   presenceProbabilityPercent?: number | null;
+  /** The FSS chance before the per-genus correction to how often such rows came true (chanceRecalibration.ts). */
+  chanceBeforeRecal?: number;
   /**
    * Share of its own genus this species holds, 0-100 — P(this species | this genus is here).
    *
