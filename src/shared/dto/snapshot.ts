@@ -1,5 +1,6 @@
 import type { NspOutlookDTO } from "../nspOutlook.js";
 import type { ShipDamageState } from "../shipDamage.js";
+import type { OwnCarrierJumpDTO } from "../ownAssets.js";
 import type { ColonizeHudDTO } from "../colonize/hud.js";
 import type { JournalHistoryPreset } from "../journalHistoryPreset.js";
 import type { TriageTiming } from "../systemTriage.js";
@@ -114,6 +115,8 @@ export interface AppSnapshot {
   colonizeHud?: ColonizeHudDTO | null;
   /** The ship's damage part by part, for the HUD's Ship section (shared/shipDamage.ts); null before a Loadout. */
   shipDamage?: ShipDamageState | null;
+  /** The HUD's Carrier section (shared/ownAssets.ts, owner 2026-11-02): his carrier's jump or cooldown; null when idle. */
+  carrierJump?: OwnCarrierJumpDTO | null;
   /** Rows included in `organicDataValueCredits` (pending sales). */
   organicPendingSampleCount: number;
   /** Per-sample breakdown for the data value modal (unsold completes in journal). */

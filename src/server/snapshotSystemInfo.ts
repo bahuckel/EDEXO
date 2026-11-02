@@ -4,6 +4,7 @@
 import { greenGiantLabel } from "../shared/greenGasGiant.js";
 import { bodyFeatures, directParent } from "../shared/bodyFeatures.js";
 import { notableOptions } from "./notableOptions.js";
+import { customRuleHits } from "../shared/customBodyRules.js";
 import { greenGiantForRecord, type GreenGiantSources } from "./greenGiants.js";
 import { isTerraformableState } from "../shared/terraformState.js";
 import type {
@@ -448,7 +449,7 @@ export function notableBodiesForSystem(
     all.set(rec.bodyId, rec);
     // Stars only count through a feature (ancient, ringed); planets through anything.
     const star = explorationRecordIsStellar(rec) && !rec.isSynthetic && !!rec.starType;
-    if (!isPlanetLikeExplorationRecord(rec) && !(star && opts.features.size)) continue;
+    if (!isPlanetLikeExplorationRecord(rec) && !(star && (opts.features.size || opts.rules.length))) continue;
     byBodyId.set(rec.bodyId, rec);
   }
 
@@ -462,6 +463,9 @@ export function notableBodiesForSystem(
       const hits = bodyFeatures(rec, parent).filter((f) => opts.features.has(f.key));
       if (hits.length) features = hits;
     }
+    // His own rules after the features (owner, 2026-11-02).
+    const ruleHits = opts.rules.length ? customRuleHits(rec, opts.rules) : [];
+    if (ruleHits.length) features = [...(features ?? []), ...ruleHits];
     const tag =
       notableTagForRecord(rec) ?? (green ? greenGiantLabel(green) : null) ?? (features ? features.map((f) => f.label).join(" · ") : null);
     if (!tag) continue;

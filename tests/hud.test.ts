@@ -796,3 +796,48 @@ describe("HUD Colonize (1.3.0)", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("HUD carrier (owner, 2026-11-02: carrier jump timer)", () => {
+  it("counts down to lockdown and departure, tones once at each edge, and says idle with nothing scheduled", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const dep = Date.parse("2026-11-02T12:15:10Z");
+      vi.setSystemTime(dep - 10 * 60_000);
+      const HUD = await loadHud();
+      const cues: string[] = [];
+      HUD.onCue = (k: string) => cues.push(k);
+      HUD.mount(["carrier"], { noTimers: true });
+      const cj = {
+        name: "NO MONEY FOR SQUADRON",
+        callsign: "KBX-05T",
+        fuel: 512,
+        system: "Col 285 Sector DR-C c13-20",
+        pending: { system: "G 224-46", body: null, departureMs: dep, lockdownMs: dep - 200_000, arriveMs: dep + 60_000 },
+        cooldownUntilMs: dep + 360_000,
+      };
+      HUD.render({ carrierJump: cj });
+      const f = (k: string) => document.querySelector(`[data-section="carrier"] [data-f="${k}"]`)?.textContent;
+      expect(f("status")).toBe("10:00");
+      expect(f("to")).toBe("G 224-46");
+      expect(f("lockdown")).toBe("06:40");
+      expect(f("who")).toBe("NO MONEY FOR SQUADRON (KBX-05T) · 512 t tritium");
+      vi.setSystemTime(dep - 60_000);
+      HUD.render({ carrierJump: cj });
+      expect(f("status")).toBe("Locked down");
+      expect(f("depart")).toBe("01:00");
+      vi.setSystemTime(dep + 30_000);
+      HUD.render({ carrierJump: cj });
+      HUD.render({ carrierJump: cj });
+      expect(f("status")).toBe("Jumping");
+      expect(cues).toEqual(["carrierLockdown", "carrierJump"]);
+      vi.setSystemTime(dep + 120_000);
+      HUD.render({ carrierJump: cj });
+      expect(f("cooldown")).toBe("04:00");
+      HUD.render({ carrierJump: null });
+      expect(f("idle")).toBe("No carrier jump scheduled.");
+      expect(f("status")).toBe("Idle");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

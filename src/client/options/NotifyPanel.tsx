@@ -22,6 +22,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AFM_REFILLS, INJECTIONS } from "@shared/jumponium";
 import { fmtPct } from "@shared/format";
 import { DraftNumber } from "./DraftNumber";
+import { CustomRulesEditor } from "./CustomRulesEditor";
 import { postSetting } from "./postSetting";
 
 /*
@@ -88,6 +89,7 @@ export function NotifyPanel() {
   const poiOn = POI_GROUP_OPTIONS.filter((g) => nb.poiGroups[g.key]).length;
   const notableOn = NOTABLE_KINDS.filter((k) => p.notable[k.key]).length;
   const featuresOn = BODY_FEATURES.filter((f) => p.features?.[f.key]).length;
+  const rulesOn = (p.customRules ?? []).filter((r) => r.on && r.conds.length).length;
   const exoOn =
     (p.codexFirst ?? true ? 1 : 0) + (p.codexFirstLowChance ?? true ? 1 : 0) + (p.rareColours ?? true ? 1 : 0);
   const tiersOn = INJECTIONS.filter((i) => jp.tiers[i.tier]);
@@ -102,6 +104,7 @@ export function NotifyPanel() {
     poiOn +
     (nb.carriers !== "off" ? 1 : 0) +
     featuresOn +
+    rulesOn +
     (jp.on ? 1 : 0) +
     (p.communityGoals ?? true ? 1 : 0);
   const radiusLy = st.jumpLy != null ? Math.round(nb.jumps * st.jumpLy) : null;
@@ -180,6 +183,22 @@ export function NotifyPanel() {
             </div>
           </div>
         ))}
+      </NotifySection>
+
+      <NotifySection
+        k="rules"
+        title="Your own rules"
+        summary={rulesOn ? `${rulesOn} on` : "none"}
+        help={
+          <p>
+            A name and up to six conditions on the body&apos;s scan, all of which must hold: &quot;Landable yes, Gravity
+            under 0.05 g, Atmosphere contains argon&quot;. A body that meets one shows on the Notable card and the system
+            map with the rule&apos;s name and its figures, and a new scan of one comes to the mail icon. Text matches
+            any part (&quot;icy&quot; finds Icy body); &quot;none&quot; is no atmosphere or volcanism.
+          </p>
+        }
+      >
+        <CustomRulesEditor rules={p.customRules ?? []} busy={busy} onSave={(customRules) => save({ customRules })} />
       </NotifySection>
 
       <NotifySection

@@ -3,7 +3,7 @@
  * position lines, and the switch that sets the game's verbose netlog and puts the file back.
  */
 import { describe, expect, it } from "vitest";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, appendFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, appendFileSync, utimesSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GameStateStore } from "../src/server/gameState.js";
@@ -77,6 +77,41 @@ describe("the netlog's position lines", () => {
     expect(n.status().state).toBe("reading");
     expect(n.setOn(false).state).toBe("off");
     expect(readFileSync(cfg, "utf8")).toBe(before);
+    n.dispose();
+  });
+
+  it("starts as failed, not waiting, when the setting it saved as on is not in the game's file (code review 2026-11-02)", () => {
+    const game = mkdtempSync(join(tmpdir(), "edexo-netlog-"));
+    mkdirSync(join(game, "Logs"));
+    const cfg = join(game, "AppConfigLocal.xml");
+    const plain = '<AppConfig>\n\t<Network Port="0" />\n</AppConfig>\n';
+    writeFileSync(cfg, plain);
+    const first = createNetlogPosition({ pollMs: 60_000, findDirs: () => [game] });
+    first.setOn(true);
+    first.dispose();
+    // The write did not hold (a read-only folder, or put back since): the next run must say so.
+    writeFileSync(cfg, plain);
+    const next = createNetlogPosition({ pollMs: 60_000, findDirs: () => [game] });
+    expect(next.status().state).toBe("failed");
+    next.setOn(false);
+    next.dispose();
+  });
+
+  it("dates an old session's lines on the day its log was written, not today (code review 2026-11-02)", () => {
+    const game = mkdtempSync(join(tmpdir(), "edexo-netlog-"));
+    const logs = join(game, "Logs");
+    mkdirSync(logs);
+    writeFileSync(join(game, "AppConfigLocal.xml"), '<AppConfig>\n\t<Network Port="0" />\n</AppConfig>\n');
+    const log = join(logs, "netLog.2026-10-29T080000.01.log");
+    writeFileSync(log, `${LINE}\n`);
+    const written = new Date(Date.now() - 3 * 86_400_000);
+    utimesSync(log, written, written);
+    const n = createNetlogPosition({ pollMs: 60_000, findDirs: () => [game] });
+    n.setOn(true);
+    // Within the day before the log's last write (its 17:05 clock time, written by then), not today.
+    expect(n.fix()!.atMs).toBeLessThanOrEqual(written.getTime() + 60_000);
+    expect(n.fix()!.atMs).toBeGreaterThan(written.getTime() - 86_400_000);
+    n.setOn(false);
     n.dispose();
   });
 

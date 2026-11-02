@@ -25,6 +25,7 @@ import { rareColourPhrase, type ColourRarity } from "../shared/rareColour.js";
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import type { ExplorationScanRecord } from "../shared/types.js";
 import { BODY_FEATURES, bodyFeatures, directParent, featureRecordFromScan, inVoidCross } from "../shared/bodyFeatures.js";
+import { customRuleHits } from "../shared/customBodyRules.js";
 import { emptyJumpRange, fullJumpRange, jumpRangeJump } from "../shared/jumpRange.js";
 import { createGreenCodexMatcher } from "../shared/greenCodexMatch.js";
 import { greenCodexId, greenGiantLabel, isK10CodexName, type GreenGiantVerdict } from "../shared/greenGasGiant.js";
@@ -566,6 +567,12 @@ export function createNoticesService(opts: {
         added =
           add({ ...base, id: `feature:${f.key}:${bodyKey}`, kind: "notable", title: f.label, text: `${body} in ${system} — ${f.why}` }) ||
           added;
+      }
+    }
+    // His own rules, as a feature (shared/customBodyRules.ts; owner, 2026-11-02).
+    if (state.prefs.customRules?.some((r) => r.on)) {
+      for (const h of customRuleHits(featureRecordFromScan(line), state.prefs.customRules)) {
+        added = add({ ...base, id: `${h.key}:${bodyKey}`, kind: "notable", title: h.label, text: `${body} in ${system} — ${h.why}` }) || added;
       }
     }
 

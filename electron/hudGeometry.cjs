@@ -87,6 +87,7 @@ const HUD_SECTION_BY_PATH = {
   "/notices-overlay.html": "notices",
   "/colonize-overlay.html": "colonize",
   "/ship-overlay.html": "ship",
+  "/carrier-overlay.html": "carrier",
 };
 const HUD_PATH_BY_SECTION = Object.fromEntries(Object.entries(HUD_SECTION_BY_PATH).map(([p, s]) => [s, p]));
 

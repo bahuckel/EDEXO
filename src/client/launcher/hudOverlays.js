@@ -26,6 +26,7 @@ export var HUD_SECTION_BY_PATH = {
   "/notices-overlay.html": "notices",
   "/colonize-overlay.html": "colonize",
   "/ship-overlay.html": "ship",
+  "/carrier-overlay.html": "carrier",
 };
 // The HUD's own list and order (shared/hudSections.ts); the launcher kept a copy of it until 1.3.1.
 export var HUD_SECTION_ORDER = HUD_SECTION_KEYS.slice();
@@ -40,6 +41,7 @@ export var HUD_SECTION_LABEL = {
   notices: "Notices",
   colonize: "Colonize",
   ship: "Ship",
+  carrier: "Carrier",
 };
 export var HUD_PATH_BY_SECTION = {};
 var LS_HUD_MERGE = "edexoHudMerge";

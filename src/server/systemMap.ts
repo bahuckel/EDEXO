@@ -1,6 +1,7 @@
 import { bodyFeatures, directParent } from "../shared/bodyFeatures.js";
 import { greenGiantForRecord, greenMarkToAsk } from "./greenGiants.js";
 import { notableOptions } from "./notableOptions.js";
+import { customRuleHits } from "../shared/customBodyRules.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type {
@@ -525,11 +526,15 @@ export function buildSystemMapSnapshot(
     // The "green?" question, where edGGG's ladder leaves it open (greenQuestionWorthAsking).
     const askMark = nopts.green ? greenMarkToAsk(r, green, nopts.green.marks) : undefined;
     const dpf = nopts.features.size ? directParent(r.parents) : null;
-    const featureHits = nopts.features.size
-      ? bodyFeatures(r, dpf && dpf.kind !== "Null" ? (byId.get(dpf.id) ?? null) : null).filter((f) =>
-          nopts.features.has(f.key),
-        )
-      : [];
+    const featureHits = [
+      ...(nopts.features.size
+        ? bodyFeatures(r, dpf && dpf.kind !== "Null" ? (byId.get(dpf.id) ?? null) : null).filter((f) =>
+            nopts.features.has(f.key),
+          )
+        : []),
+      // His own rules after the features (owner, 2026-11-02).
+      ...(nopts.rules.length ? customRuleHits(r, nopts.rules) : []),
+    ];
 
     detailsByBodyId[String(r.bodyId)] = {
       bodyId: r.bodyId,

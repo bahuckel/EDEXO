@@ -166,7 +166,7 @@ function drawMinimapAt(svg: RadarSvg, mm: Minimap, hint: boolean): boolean {
     const x = m.eastM * scale;
     const y = -m.northM * scale; // SVG y grows downward and north is up
     const r = Math.sqrt(x * x + y * y);
-    const cls = m.kind === "ship" ? "ship" : "sample";
+    const cls = m.kind === "ship" ? "ship" : m.kind === "codex" ? "codex" : "sample";
     if (m.kind === "sample" && m.active && !firstActive) firstActive = { x, y };
     const tint = m.kind === "sample" && !m.active ? ' style="fill:' + leftoverColour(m.label) + '"' : "";
     const title = "<title>" + esc(m.label) + " — " + Math.round(m.distanceM) + " m</title>";
@@ -182,6 +182,11 @@ function drawMinimapAt(svg: RadarSvg, mm: Minimap, hint: boolean): boolean {
             ')"><polygon class="minimap-ship" points="0,-5.5 5,4.5 0,2.2 -5,4.5" />' +
             title +
             "</g>",
+        );
+      } else if (m.kind === "codex") {
+        // A composition-scan waypoint: a hollow circle, never mistaken for a sample taken.
+        parts.push(
+          '<circle class="minimap-codex" r="4" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '">' + title + "</circle>",
         );
       } else {
         parts.push(

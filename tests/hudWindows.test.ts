@@ -544,6 +544,28 @@ describe("free move (owner, 2026-10-02: the HUD anywhere, on any screen)", () =>
     huds.setMoveMode(false);
   });
 
+  it("a separate HUD keeps its own spot while the other one is idle (code review 2026-11-02)", async () => {
+    const huds = make();
+    const [a, b] = await twoHuds(huds);
+    huds.setLayout({ freeOn: true });
+    huds.toggleVisibility(true);
+    huds.setMoveMode(true);
+    const startB = { ...b!.bounds };
+    cursor = { x: 1600, y: 40 };
+    huds.dragFromPage(b, "start");
+    cursor = { x: 900, y: 240 };
+    huds.dragFromPage(b, "move");
+    huds.dragFromPage(b, "end");
+    huds.dragFromPage(b, "done");
+    const own = { x: startB.x - 700, y: startB.y + 200 };
+    expect(b!.bounds).toMatchObject(own);
+    // The other page has nothing to show: it leaves the stack, and the one left must not go to the shared spot.
+    huds.resizeFromPage(a, { height: 200, idle: true });
+    expect(b!.bounds).toMatchObject(own);
+    huds.resizeFromPage(a, { height: 200, idle: false });
+    expect(b!.bounds).toMatchObject(own);
+  });
+
   it("each separate HUD stays inside the screen it is on: one on each screen, none across an edge", async () => {
     const huds = make();
     const [a, b] = await twoHuds(huds);

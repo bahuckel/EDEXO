@@ -5,14 +5,17 @@
  * then, green gas giants from the journals alone and no features.
  */
 import type { BodyFeatureKey } from "../shared/bodyFeatures.js";
+import type { CustomBodyRule } from "../shared/customBodyRules.js";
 import type { GreenGiantSources } from "./greenGiants.js";
 
 export interface NotableOptions {
   green: Omit<GreenGiantSources, "greenCodexBodies" | "k10Systems"> | null;
   features: ReadonlySet<BodyFeatureKey>;
+  /** His own rules, the switched-on ones (shared/customBodyRules.ts). */
+  rules: readonly CustomBodyRule[];
 }
 
-let provider: () => NotableOptions = () => ({ green: { marks: { get: () => null } }, features: new Set() });
+let provider: () => NotableOptions = () => ({ green: { marks: { get: () => null } }, features: new Set(), rules: [] });
 
 export function setNotableOptionsProvider(fn: () => NotableOptions): void {
   provider = fn;

@@ -814,6 +814,18 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
 .minimap-arrow--ship {
   fill: var(--hud-text);
 }
+/* Where the composition scanner named a plant (CodexEntry position): a waypoint until it is logged on foot. */
+.minimap-codex {
+  fill: none;
+  stroke: var(--bio);
+  stroke-width: 1.4;
+  stroke-dasharray: 2 1.5;
+}
+.minimap-arrow--codex {
+  fill: none;
+  stroke: var(--bio);
+  stroke-width: 1.2;
+}
 /* SVG text takes no text-shadow: a dark stroke behind the fill does the same. */
 .minimap-far-label,
 .minimap-north {

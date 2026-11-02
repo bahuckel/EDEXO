@@ -8,6 +8,7 @@
  */
 import { isTerraformableState } from "./terraformState.js";
 import { BODY_FEATURES, defaultFeaturePrefs, type BodyFeatureKey } from "./bodyFeatures.js";
+import { sanitizeCustomRules, type CustomBodyRule } from "./customBodyRules.js";
 import { POI_GROUP_OPTIONS, type PoiGroup } from "./gecCategories.js";
 import { CARRIER_SERVICE_OPTIONS } from "./carrierServices.js";
 import type { InjectionTier } from "./jumponium.js";
@@ -72,6 +73,8 @@ export interface NotifyPrefsDTO {
   nearby: NearbyPrefsDTO;
   /** Body features (shared/bodyFeatures.ts): Notable card and notices. All off until chosen. */
   features: Record<BodyFeatureKey, boolean>;
+  /** His own notable-body rules (shared/customBodyRules.ts; owner, 2026-11-02): Notable card and notices like a feature. */
+  customRules: CustomBodyRule[];
   /** A scanned body rich in a Laboratory material, FSD injection or AFM refill (shared/jumponium.ts, 1.2.16). */
   jumponium: JumponiumNotifyPrefsDTO;
   /**
@@ -137,6 +140,7 @@ export const DEFAULT_NOTIFY_PREFS: NotifyPrefsDTO = {
     nsp: false,
   },
   features: defaultFeaturePrefs(),
+  customRules: [],
   jumponium: {
     on: false,
     tiers: { basic: true, standard: true, premium: true },
@@ -182,6 +186,7 @@ export function mergeNotifyPrefs(prev: NotifyPrefsDTO, raw: unknown): NotifyPref
       nsp: bool(nr.nsp, pn.nsp ?? false),
     },
     features,
+    customRules: Array.isArray(r.customRules) ? sanitizeCustomRules(r.customRules) : sanitizeCustomRules(prev.customRules),
     jumponium: mergeJumponiumPrefs(prev.jumponium ?? DEFAULT_NOTIFY_PREFS.jumponium, r.jumponium),
     communityGoals: bool(r.communityGoals, prev.communityGoals ?? true),
   };

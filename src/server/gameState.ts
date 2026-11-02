@@ -535,6 +535,11 @@ export class GameStateStore {
   /** The file as last read, agreeing or not, and when the game wrote it (its `timestamp`, ms; null when unknown). */
   private liveNavRouteFile: NavRouteWaypointDTO[] | null = null;
   private liveNavRouteFileAtMs: number | null = null;
+  /**
+   * The file a FSDTarget last found wrong (its systems and when it was written): still wrong after that target is spent
+   * on arrival, until the game rewrites the file (code review 2026-11-02: the old route came back at the destination).
+   */
+  private rejectedNavRouteKey: string | null = null;
   private lastLiveNavRoutePushKey: string | null = null;
 
   /** User pref: show HUD + poll Status.json (launcher / settings). */
@@ -786,6 +791,9 @@ export class GameStateStore {
    */
   surfaceSampleMarks: SurfaceMark[] = [];
 
+  /** Composition-scan waypoints (surfaceMarksFile.ts `codex`): live `CodexEntry` lines only, kept on disk. */
+  surfaceCodexMarks: SurfaceMark[] = [];
+
   /**
    * Record a sampled plant's position, and remember it across restarts.
    *
@@ -835,6 +843,7 @@ export class GameStateStore {
   loadSurfaceMarksFromDisk(): void {
     const f = loadSurfaceMarks();
     this.surfaceSampleMarks = f.samples;
+    this.surfaceCodexMarks = f.codex ?? [];
     // The ship also arrives from the journal replay; whichever is newer wins, and Touchdown always
     // overwrites this afterwards, so a stale file cannot outlive a real landing.
     if (!this.surfaceShipMark) this.surfaceShipMark = f.ship;
@@ -845,6 +854,7 @@ export class GameStateStore {
       formatVersion: 1,
       samples: this.surfaceSampleMarks,
       ship: this.surfaceShipMark,
+      codex: this.surfaceCodexMarks,
     });
   }
 
@@ -1471,6 +1481,7 @@ export class GameStateStore {
     this.liveNavRoute = null;
     this.liveNavRouteFile = null;
     this.liveNavRouteFileAtMs = null;
+    this.rejectedNavRouteKey = null;
     this.lastLiveNavRoutePushKey = null;
     this.fsdTarget = null;
     this.lastJumpTarget = null;
@@ -1995,7 +2006,19 @@ export class GameStateStore {
     const file = this.liveNavRouteFile;
     // No file read yet (a journal replay's FSDTarget lines): nothing to check, nothing to push.
     if (file === null && this.lastLiveNavRoutePushKey === null) return false;
-    const waypoints = file && file.length > 0 && !this.navRouteAgrees(file) ? null : file;
+    let waypoints = file;
+    if (file && file.length > 0) {
+      const fileKey = `${this.liveNavRouteFileAtMs ?? ""}|${file.map((w) => w.systemAddress).join(":")}`;
+      if (!this.navRouteAgrees(file)) {
+        this.rejectedNavRouteKey = fileKey;
+        waypoints = null;
+      } else if (this.fsdTarget?.remaining != null) {
+        this.rejectedNavRouteKey = null;
+      } else if (this.rejectedNavRouteKey === fileKey) {
+        // No target to judge it now (spent on arrival): the same file stays wrong.
+        waypoints = null;
+      }
+    }
     this.liveNavRoute = waypoints;
     const key =
       waypoints && waypoints.length > 0

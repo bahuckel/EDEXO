@@ -155,6 +155,31 @@ describe("the route the game did not save", () => {
     ]);
     expect(st.navRouteUnsaved).toBe(false);
   });
+
+  it("stays dropped after arriving where the target pointed, until the game rewrites the file (code review 2026-11-02)", () => {
+    const st = new GameStateStore();
+    arrivedAt(st, "A", 1);
+    const stale = [
+      { systemAddress: 1, starSystem: "A", starPos: [0, 0, 0] as [number, number, number] },
+      { systemAddress: 2, starSystem: "B", starPos: [10, 0, 0] as [number, number, number] },
+    ];
+    st.applyLiveNavRoute(stale);
+    // A one-jump plot to X, off the file's route: the file is wrong.
+    st.apply(line("FSDTarget", 5, { Name: "X", SystemAddress: 9, StarClass: "F", RemainingJumpsInRoute: 1 }));
+    expect(st.liveNavRoute).toBeNull();
+    // Arrived: the target is spent, and the same stale file read on the next tick must not come back as the route.
+    arrivedAt(st, "X", 9, 60);
+    st.applyLiveNavRoute(stale);
+    expect(st.liveNavRoute).toBeNull();
+    expect(st.nextJumpTarget()?.starSystem).not.toBe("A");
+    // The game writes a new file: used again.
+    const fresh = [
+      { systemAddress: 9, starSystem: "X", starPos: [10, 0, 0] as [number, number, number] },
+      { systemAddress: 12, starSystem: "W", starPos: [40, 0, 0] as [number, number, number] },
+    ];
+    st.applyLiveNavRoute(fresh);
+    expect(st.liveNavRoute).toHaveLength(2);
+  });
 });
 
 describe("a re-plot to the system already locked (owner, 2026-11-01, 15:50)", () => {

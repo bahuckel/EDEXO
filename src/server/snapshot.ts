@@ -36,6 +36,7 @@ import {
   buildNotableBodiesForFocusedSystem,
 } from "./snapshotSystemInfo.js";
 import { bodyKey } from "../shared/bodyKey.js";
+import { ownCarrierJump } from "../shared/ownAssets.js";
 // The unsold exobiology's value moved to organicValue.ts (item 30); the live strip is still importable from here.
 export { organicLiveSummary } from "./organicValue.js";
 import {
@@ -308,6 +309,7 @@ export function buildSnapshot(
     organicDataValueCredits,
     colonizeHud: getColonizeHud(),
     shipDamage: store.shipDamage.loadoutAt ? store.shipDamage : null,
+    carrierJump: ownCarrierJump(store.ownAssets),
     organicPendingSampleCount,
     organicPendingLines,
     fssAllBodiesFoundNoBio,

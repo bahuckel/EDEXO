@@ -38,6 +38,7 @@ import { notable } from "./sections/notable";
 import { notices } from "./sections/notices";
 import { colonize } from "./sections/colonize";
 import { ship } from "./sections/ship";
+import { carrier } from "./sections/carrier";
 import { sharedTiltDepthPx } from "./tilt";
 
 export const SECTIONS: Record<string, HudSection> = {
@@ -51,6 +52,7 @@ export const SECTIONS: Record<string, HudSection> = {
   notices,
   colonize,
   ship,
+  carrier,
 };
 // The one list of section names (shared/hudSections.ts), which the server's prefs check and the CLI read too.
 export const ORDER: string[] = [...HUD_SECTION_KEYS];

@@ -1,6 +1,7 @@
 /** Organic scan distance + payout overlay (Electron); built from live journal + Status.json. */
 import type { GreenGiantVerdict } from "../greenGasGiant.js";
 import type { BodyFeatureHit } from "../bodyFeatures.js";
+import type { RuleHit } from "../customBodyRules.js";
 export interface ExoOrganicOverlayDTO {
   visible: boolean;
   phase: "tracking" | "celebrate";
@@ -70,7 +71,8 @@ export interface ExoMinimapDTO {
 }
 
 export interface ExoMinimapMarkDTO {
-  kind: "sample" | "ship";
+  /** `codex`: where the composition scanner named a plant (a waypoint until the species is logged on the body). */
+  kind: "sample" | "ship" | "codex";
   /**
    * Whether this mark belongs to the sampling run in progress on this body.
    *
@@ -254,7 +256,7 @@ export interface NotableBodyInfo {
   /** A green gas giant verdict (shared/greenGasGiant.ts), when it is a candidate. */
   green?: GreenGiantVerdict;
   /** The body features the commander switched on that this body has (shared/bodyFeatures.ts). */
-  features?: BodyFeatureHit[];
+  features?: (BodyFeatureHit | RuleHit)[];
   /** Its scan data was sold: still notable, marked so on the card. */
   sold?: boolean;
 }

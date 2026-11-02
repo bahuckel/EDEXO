@@ -14,6 +14,7 @@ export const HUD_SECTION_KEYS = [
   "notable",
   "colonize",
   "ship",
+  "carrier",
   "notices",
 ] as const;
 

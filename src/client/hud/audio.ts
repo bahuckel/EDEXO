@@ -27,7 +27,7 @@ function tone(freq: number, atMs: number, durMs: number, gain: number): void {
   o.start(t0);
   o.stop(t0 + durMs / 1000 + 0.02);
 }
-export function playCue(kind: "clear" | "third"): void {
+export function playCue(kind: "clear" | "third" | "carrierLockdown" | "carrierJump"): void {
   if (typeof HUD.onCue === "function") HUD.onCue(kind);
   if (!audioOn()) return;
   try {
@@ -41,6 +41,13 @@ export function playCue(kind: "clear" | "third"): void {
     } else if (kind === "third") {
       tone(660, 0, 140, 0.18);
       tone(990, 150, 220, 0.2);
+    } else if (kind === "carrierLockdown") {
+      // The carrier's pads close (sections/carrier.tsx): a low double knock, unlike the sample tones.
+      tone(440, 0, 140, 0.18);
+      tone(440, 180, 140, 0.18);
+    } else if (kind === "carrierJump") {
+      tone(523, 0, 160, 0.18);
+      tone(392, 170, 260, 0.18);
     }
   } catch {
     /* no audio device, or the page is not allowed to play: the cue is optional */

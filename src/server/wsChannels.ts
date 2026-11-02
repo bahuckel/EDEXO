@@ -93,6 +93,8 @@ const HUD_KEYS = [
   "colonizeHud",
   // The Ship section (discuss item 32): the ship's damage part by part.
   "shipDamage",
+  // The Carrier section (owner, 2026-11-02): his carrier's jump countdown and cooldown.
+  "carrierJump",
 ] as const satisfies readonly (keyof AppSnapshot)[];
 
 /** What the launcher's `applyLauncherSnapshotData` reads; its live strip polls `/api/status` on its own. */

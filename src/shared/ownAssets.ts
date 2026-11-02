@@ -6,6 +6,9 @@
  *   a squadron's carrier is not his) says where it is. `CarrierJumpRequest` schedules a jump and
  *   `CarrierJumpCancelled` takes it back: once the departure time has passed (and the jump's 15 minutes or so), the
  *   carrier is taken to be at the requested system until the next `CarrierLocation` says otherwise.
+ * - The jump timer (owner, 2026-11-02, "carrier jump timer - yes"): `CarrierStats` gives the name, callsign and
+ *   tritium; `CarrierJump` (written only when he is aboard) lands the scheduled jump at once; the HUD's Carrier section
+ *   counts down to the lockdown and the departure, then the cooldown, from `ownCarrierJump`.
  * - Colonies: `ColonisationSystemClaim` (the suite claims the system; `ColonisationBeaconDeployed` follows without a
  *   system name) adds the system, `ColonisationSystemClaimRelease` takes it away. What the commander builds there
  *   is his own.
@@ -16,17 +19,41 @@ export interface OwnSystem {
   at: string;
 }
 
-export interface OwnAssetsState {
-  carrier: OwnSystem | null;
-  pendingJump: (OwnSystem & { departure: string }) | null;
-  colonies: OwnSystem[];
+/** The carrier's own figures from `CarrierStats` (the carrier management screen, and at a game load). */
+export interface OwnCarrierInfo {
+  name: string | null;
+  callsign: string | null;
+  /** Tritium in the tank, tonnes. */
+  fuel: number | null;
+  jumpRangeMax: number | null;
 }
 
-/** After the departure time, the jump itself (about a quarter of an hour; the game says 15 to 20 minutes). */
-const JUMP_MS = 20 * 60 * 1000;
+export interface OwnAssetsState {
+  carrier: OwnSystem | null;
+  pendingJump: (OwnSystem & { departure: string; body?: string }) | null;
+  colonies: OwnSystem[];
+  /** Absent in a journal cache written before 2026-11-02 (hydrateOwnAssets fills it). */
+  info?: OwnCarrierInfo | null;
+  /** When the last jump landed (ISO): the start of the cooldown. */
+  lastArrival?: string | null;
+}
+
+/*
+  The game's carrier timings, approximate (owner's journals, 2026-11-02): `DepartureTime` is already the end of the
+  countdown (15 to 16 minutes after the request, always at :10 s), and `CarrierJump` follows it by about 51 s
+  (18:55:10 → 18:56:01, 00:16:10 → 00:17:01, 11:14:10 → 11:15:01). The pads close 3 min 20 s before departure, and a
+  carrier that has jumped cannot schedule the next jump for about 5 minutes. Until 2026-11-02 the jump was taken to
+  land 20 minutes after departure, a quarter of an hour too late for the galaxy map's badge.
+*/
+/** From the departure time to the carrier in the new system (the hyperspace tunnel; ~51 s seen). */
+export const CARRIER_ARRIVE_MS = 60 * 1000;
+/** Lockdown (the pads close) before the departure time. */
+export const CARRIER_LOCKDOWN_MS = 200 * 1000;
+/** After landing, before the next jump can be scheduled (about 5 minutes). */
+export const CARRIER_COOLDOWN_MS = 5 * 60 * 1000;
 
 export function newOwnAssets(): OwnAssetsState {
-  return { carrier: null, pendingJump: null, colonies: [] };
+  return { carrier: null, pendingJump: null, colonies: [], info: null, lastArrival: null };
 }
 
 const own = (line: Record<string, unknown>) =>
@@ -42,16 +69,27 @@ function systemOf(line: Record<string, unknown>, key: "StarSystem" | "SystemName
 function landJump(st: OwnAssetsState, at: unknown): void {
   const p = st.pendingJump;
   const t = typeof at === "string" ? Date.parse(at) : NaN;
-  if (!p || !Number.isFinite(t) || t < Date.parse(p.departure) + JUMP_MS) return;
+  if (!p || !Number.isFinite(t) || t < Date.parse(p.departure) + CARRIER_ARRIVE_MS) return;
   st.carrier = { name: p.name, addr: p.addr, at: p.departure };
+  st.lastArrival = arrivalOf(p.departure);
   st.pendingJump = null;
 }
+
+function arrivalOf(departure: string): string | null {
+  const t = Date.parse(departure);
+  return Number.isFinite(t) ? new Date(t + CARRIER_ARRIVE_MS).toISOString() : null;
+}
+
+const numOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+const strOrNull = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
 export function ownAssetsLine(st: OwnAssetsState, line: Record<string, unknown>): void {
   switch (line.event) {
     case "CarrierLocation": {
       const s = own(line) ? systemOf(line, "StarSystem") : null;
       if (s) {
+        // A jump that landed while the game was closed: its cooldown is known from the departure.
+        landJump(st, line.timestamp);
         st.carrier = s;
         // Written at every game load: a jump still counting down (a relog before it departs) stays scheduled.
         const t = typeof line.timestamp === "string" ? Date.parse(line.timestamp) : NaN;
@@ -64,7 +102,32 @@ export function ownAssetsLine(st: OwnAssetsState, line: Record<string, unknown>)
       const departure = typeof line.DepartureTime === "string" ? line.DepartureTime : null;
       // The jump before may have landed: it is where the carrier is now, before the new one is scheduled.
       landJump(st, line.timestamp);
-      if (s && departure) st.pendingJump = { ...s, departure };
+      const body = strOrNull(line.Body);
+      if (s && departure) st.pendingJump = { ...s, departure, ...(body ? { body } : {}) };
+      return;
+    }
+    case "CarrierJump": {
+      /*
+        Written for any carrier he is aboard when it jumps, a stranger's too: it lands his own jump only when it
+        arrives where his scheduled one was going.
+      */
+      const s = systemOf(line, "StarSystem");
+      const p = st.pendingJump;
+      if (s && p && s.addr === p.addr) {
+        st.carrier = s;
+        st.lastArrival = typeof line.timestamp === "string" ? line.timestamp : arrivalOf(p.departure);
+        st.pendingJump = null;
+      }
+      return;
+    }
+    case "CarrierStats": {
+      if (!own(line)) return;
+      st.info = {
+        name: strOrNull(line.Name),
+        callsign: strOrNull(line.Callsign),
+        fuel: numOrNull(line.FuelLevel),
+        jumpRangeMax: numOrNull(line.JumpRangeMax),
+      };
       return;
     }
     case "CarrierJumpCancelled":
@@ -92,9 +155,49 @@ export function ownCarrierNow(st: OwnAssetsState, nowMs = Date.now()): OwnSystem
   const p = st.pendingJump;
   if (p) {
     const t = Date.parse(p.departure);
-    if (Number.isFinite(t) && nowMs >= t + JUMP_MS) return { name: p.name, addr: p.addr, at: p.departure };
+    if (Number.isFinite(t) && nowMs >= t + CARRIER_ARRIVE_MS) return { name: p.name, addr: p.addr, at: p.departure };
   }
   return st.carrier;
+}
+
+/** The HUD's Carrier section: a jump scheduled or a cooldown running at `nowMs`, else null. */
+export interface OwnCarrierJumpDTO {
+  name: string | null;
+  callsign: string | null;
+  fuel: number | null;
+  /** Where the carrier is (before the scheduled jump lands). */
+  system: string | null;
+  pending: { system: string; body: string | null; departureMs: number; lockdownMs: number; arriveMs: number } | null;
+  /** The next jump can be scheduled from then on; null when no cooldown is known. */
+  cooldownUntilMs: number | null;
+}
+
+/**
+ * The timer's figures. Times rather than a countdown, so the HUD counts itself (no push every second); the client
+ * also lets a pending jump run on into its cooldown when no new snapshot comes. A request whose departure is long
+ * past (an old journal, a jump landed while the game was closed) shows nothing.
+ */
+export function ownCarrierJump(st: OwnAssetsState, nowMs = Date.now()): OwnCarrierJumpDTO | null {
+  const p = st.pendingJump;
+  const dep = p ? Date.parse(p.departure) : NaN;
+  const arrive = Number.isFinite(dep) ? dep + CARRIER_ARRIVE_MS : NaN;
+  const last = st.lastArrival ? Date.parse(st.lastArrival) : NaN;
+  const cooldownFrom = Number.isFinite(arrive) && nowMs >= arrive ? arrive : last;
+  const cooldownUntilMs = Number.isFinite(cooldownFrom) ? cooldownFrom + CARRIER_COOLDOWN_MS : null;
+  const pending =
+    p && Number.isFinite(dep) && nowMs < arrive
+      ? { system: p.name, body: p.body ?? null, departureMs: dep, lockdownMs: dep - CARRIER_LOCKDOWN_MS, arriveMs: arrive }
+      : null;
+  if (!pending && !(cooldownUntilMs != null && nowMs < cooldownUntilMs)) return null;
+  const info = st.info ?? null;
+  return {
+    name: info?.name ?? null,
+    callsign: info?.callsign ?? null,
+    fuel: info?.fuel ?? null,
+    system: pending ? (st.carrier?.name ?? null) : (ownCarrierNow(st, nowMs)?.name ?? null),
+    pending,
+    cooldownUntilMs: pending ? pending.arriveMs + CARRIER_COOLDOWN_MS : cooldownUntilMs,
+  };
 }
 
 /** The state from the journal cache, or empty for anything else. */
@@ -111,7 +214,20 @@ export function hydrateOwnAssets(raw: unknown): OwnAssetsState {
   st.carrier = sys(r.carrier);
   const p = sys(r.pendingJump);
   const dep = (r.pendingJump as { departure?: unknown } | null)?.departure;
-  st.pendingJump = p && typeof dep === "string" ? { ...p, departure: dep } : null;
+  const body = (r.pendingJump as { body?: unknown } | null)?.body;
+  st.pendingJump =
+    p && typeof dep === "string" ? { ...p, departure: dep, ...(typeof body === "string" ? { body } : {}) } : null;
+  const info = r.info as Partial<OwnCarrierInfo> | null | undefined;
+  st.info =
+    info && typeof info === "object"
+      ? {
+          name: strOrNull(info.name),
+          callsign: strOrNull(info.callsign),
+          fuel: numOrNull(info.fuel),
+          jumpRangeMax: numOrNull(info.jumpRangeMax),
+        }
+      : null;
+  st.lastArrival = typeof r.lastArrival === "string" ? r.lastArrival : null;
   st.colonies = Array.isArray(r.colonies) ? r.colonies.map(sys).filter((c): c is OwnSystem => c != null) : [];
   return st;
 }

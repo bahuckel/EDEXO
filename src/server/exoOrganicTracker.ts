@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { FootTravelFix } from "./footTravelStatus.js";
-import type { SurfaceMark } from "./surfaceMarksFile.js";
+import { withCodexMark, withoutCodexMarks, type SurfaceMark } from "./surfaceMarksFile.js";
 import { elevationFromGravity } from "../shared/journalPhysics.js";
 import { RADAR_RADIUS_DEFAULT_M, clampRadarRadiusM } from "../shared/radarRadius.js";
 import { greatCircleDistanceMeters, resolveFootFixForOrganicLine } from "./footTravelStatus.js";
@@ -71,7 +71,11 @@ export type ExoOrganicOverlayHost = {
   /** Where each plant was sampled — the radar's dots, kept across bodies and across restarts. */
   surfaceSampleMarks: SurfaceMark[];
   /** Body records, for the reference gravity and radius an elevation is measured against. */
-  readonly explorationScans: ReadonlyMap<string, { surfaceGravity?: number; radius?: number }>;
+  readonly explorationScans: ReadonlyMap<string, { surfaceGravity?: number; radius?: number; bodyName?: string }>;
+  /** Composition-scan waypoints (`CodexEntry` positions). Optional so the test hosts keep working unchanged. */
+  surfaceCodexMarks?: SurfaceMark[];
+  /** Writes the marks file (samples, ship, waypoints). */
+  persistSurfaceMarks?(): void;
   addSurfaceSampleMark(
     bodyKey: string,
     bodyNameNorm: string,
@@ -416,6 +420,10 @@ export function ingestExoOrganicJournalLine(
   db: SpeciesDatabase,
 ): void {
   expireCelebrationIfNeeded(store, projectRoot);
+  if (line.event === "CodexEntry") {
+    addCodexScanMark(store, line, statusFix);
+    return;
+  }
   if (line.event !== "ScanOrganic") return;
 
   /** The line's own timestamp, so a mark is dated by when it happened rather than when it was read. */
@@ -431,6 +439,15 @@ export function ingestExoOrganicJournalLine(
   if (typeof sa !== "number" || typeof bodyId !== "number") return;
 
   const bk = bodyKey(sa, bodyId);
+  // Found on foot: the composition-scan waypoint for this species here has done its job.
+  setCodexMarks(
+    store,
+    withoutCodexMarks(
+      store.surfaceCodexMarks ?? [],
+      bk,
+      [line.Variant, line.Species].filter((x): x is string => typeof x === "string" && x.trim() !== ""),
+    ),
+  );
   /*
     What to call the body this scan happened on.
 
@@ -645,6 +662,41 @@ export function ingestExoOrganicJournalLine(
 }
 
 /**
+ * A biological `CodexEntry` with a position (the ship's composition scanner, or one on foot): a radar waypoint for
+ * that plant until the species is logged on the body. `CodexEntry` carries Latitude, Longitude and BodyID (97 of 97
+ * biological ones in the owner's October journals), so `Status.json` is needed only for the body's name.
+ */
+function addCodexScanMark(store: ExoOrganicJournalStore, line: JournalLine, statusFix: FootTravelFix | null): void {
+  if (line.Category !== "$Codex_Category_Biology;") return;
+  const { SystemAddress: sa, BodyID: bodyId, Latitude: lat, Longitude: lon, Name: name } = line;
+  if (typeof sa !== "number" || typeof bodyId !== "number" || typeof lat !== "number" || typeof lon !== "number") return;
+  if (typeof name !== "string" || !name.trim()) return;
+  const bk = bodyKey(sa, bodyId);
+  const label =
+    typeof line.Name_Localised === "string" && line.Name_Localised.trim() ? line.Name_Localised.trim() : name;
+  const bodyName = store.explorationScans.get(bk)?.bodyName ?? statusFix?.bodyName ?? null;
+  setCodexMarks(
+    store,
+    withCodexMark(store.surfaceCodexMarks ?? [], {
+      bodyKey: bk,
+      bodyNameNorm: normStatusBodyName(bodyName) ?? "",
+      latDeg: lat,
+      lonDeg: lon,
+      label,
+      atIso: typeof line.timestamp === "string" ? line.timestamp : new Date().toISOString(),
+      codexName: name,
+    }),
+  );
+}
+
+/** The waypoints changed (the helpers hand back the same list when nothing did): keep and write them. */
+function setCodexMarks(store: ExoOrganicOverlayHost, next: SurfaceMark[]): void {
+  if (next === store.surfaceCodexMarks || (!next.length && !store.surfaceCodexMarks?.length)) return;
+  store.surfaceCodexMarks = next;
+  store.persistSurfaceMarks?.();
+}
+
+/**
  * Where things are around you on this body, in metres.
  *
  * **Not tied to a sample session.** It was, and that was wrong: the overlay only built a payload
@@ -682,7 +734,7 @@ export function buildExoMinimapDto(
   const push = (
     latDeg: number,
     lonDeg: number,
-    kind: "sample" | "ship",
+    kind: "sample" | "ship" | "codex",
     markLabel: string,
     active = false,
     ringM = 0,
@@ -741,6 +793,9 @@ export function buildExoMinimapDto(
     // The run's own distance for its marks; a leftover species' from its genus.
     const ringM = isActive ? minSampleDistanceM : sampleDistanceForSpeciesLabel(m.label);
     push(m.latDeg, m.lonDeg, "sample", m.label, isActive, ringM);
+  }
+  for (const m of store.surfaceCodexMarks ?? []) {
+    if (belongsHere(m)) push(m.latDeg, m.lonDeg, "codex", `${m.label} (scanned from the ship)`);
   }
   const ship = store.surfaceShipMark;
   if (ship && belongsHere(ship)) push(ship.latDeg, ship.lonDeg, "ship", "Your ship");

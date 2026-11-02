@@ -190,8 +190,13 @@ export function createNetlogPosition(opts: { pollMs?: number; findDirs?: () => s
     }
     if (!file) return;
     let size: number;
+    // Lines carry a clock time only: dated on the day the log was last written, not today (code review 2026-11-02: an
+    // old session's log read at start looked newer than the journal).
+    let dayRefMs = now;
     try {
-      size = statSync(file).size;
+      const st = statSync(file);
+      size = st.size;
+      dayRefMs = Math.min(now, st.mtimeMs);
     } catch {
       file = null;
       return;
@@ -202,14 +207,16 @@ export function createNetlogPosition(opts: { pollMs?: number; findDirs?: () => s
     try {
       const len = Math.min(size - offset, 4 * 1024 * 1024);
       const buf = Buffer.alloc(len);
-      readSync(fd, buf, 0, len, offset);
-      offset += len;
-      const lines = (rest + buf.toString("utf8")).split("\n");
+      // A short read while the game appends: take what came, the rest next tick (code review 2026-11-02).
+      const got = readSync(fd, buf, 0, len, offset);
+      if (got <= 0) return;
+      offset += got;
+      const lines = (rest + buf.toString("utf8", 0, got)).split("\n");
       rest = lines.pop() ?? "";
       if (rest.length > 64 * 1024) rest = "";
       for (const l of lines) {
         if (!l.includes("RelPos:")) continue;
-        const f = parseNetlogFix(l, now);
+        const f = parseNetlogFix(l, dayRefMs);
         if (!f) continue;
         last = f;
         if (f.distLs <= SHIP_NEAR_LS) lastNear = f;
@@ -298,6 +305,11 @@ export function createNetlogPosition(opts: { pollMs?: number; findDirs?: () => s
     return status();
   };
 
-  if (saved.on) start();
+  if (saved.on) {
+    start();
+    // Switched on in an earlier run: a settings file still without the setting was never written (EPERM under Program
+    // Files) or was put back since; "waiting" would ask for a game restart that cannot help (code review 2026-11-02).
+    failed = dirs.some((d) => withVerboseLogging(readText(join(d, "AppConfigLocal.xml"))) != null);
+  }
   return { fix: () => last, near: () => lastNear, status, setOn, dispose: stop };
 }

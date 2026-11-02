@@ -30,6 +30,7 @@ const {
   hudGroupOf,
   hudGroupPath,
   hudChainOffers,
+  HUD_MERGED_PAGE,
   splitIntoColumns,
   columnX,
 } = require("./hudGeometry.cjs");
@@ -659,10 +660,15 @@ function createHudWindows(deps) {
     return top ? { x: top.x, y: top.y, bottom: false } : null;
   }
 
-  /** Unmerged, the windows placed on spots of their own (dragged one by one); merged, none. */
-  const ownSpot = (s, ordered) => (ordered.length > 1 ? hudLayout.freeEach[s.key] : undefined);
+  /*
+    Unmerged, the windows placed on spots of their own (dragged one by one); merged, none. Told by the window's page,
+    not by how many are showing (code review 2026-11-02): with the others idle a lone separate HUD went back to the
+    shared spot and returned when they came back, and two HUDs combined into one group lost the group's spot.
+  */
+  const separate = (s) => s.key !== HUD_MERGED_PAGE;
+  const ownSpot = (s) => (separate(s) ? hudLayout.freeEach[s.key] : undefined);
   /** The windows that stack from the shared spot. */
-  const stackedOf = (ordered) => ordered.filter((s) => !ownSpot(s, ordered));
+  const stackedOf = (ordered) => ordered.filter((s) => !ownSpot(s));
 
   /** One window on its own spot, on the screen nearest it and clamped into it. */
   function placeOwn(s, f, w) {
@@ -693,7 +699,7 @@ function createHudWindows(deps) {
     const all = orderedStack();
     const w = all.w;
     for (const s of all.ordered) {
-      const own = ownSpot(s, all.ordered);
+      const own = ownSpot(s);
       if (own) placeOwn(s, own, w);
     }
     const ordered = stackedOf(all.ordered);
@@ -958,7 +964,7 @@ function createHudWindows(deps) {
     if (phase === "start") {
       const { ordered } = orderedStack();
       // Unmerged: the window grabbed moves alone, from where it is now (owner, 2026-11-01).
-      const slot = ordered.length > 1 ? ordered.find((s) => s.win === win) : undefined;
+      const slot = ordered.find((s) => s.win === win && separate(s));
       if (slot) {
         let b = null;
         try {
@@ -1337,6 +1343,10 @@ function createHudWindows(deps) {
           /* ignore */
         }
       }
+      // A new page starts with no Combine / Split buttons: what the old one was sent counts for nothing
+      // (code review 2026-11-02: a `set` reloading a group while placing lost them).
+      chainSent.delete(win);
+      if (moving) sendChainOffers();
     });
 
     return win;

@@ -445,7 +445,11 @@ export async function planLeg(
       best = await searchLeg(index, from, to, safe, fuel, pass.weight, steps, lists);
       if (best) break;
     }
-    if (best) replayOnLaw(best.nodes, ship);
+    if (best) {
+      replayOnLaw(best.nodes, ship);
+      // The next leg starts from the replayed tank, not the pessimistic one (code review 2026-11-02).
+      best = { ...best, fuel: best.nodes[best.nodes.length - 1]!.fuel };
+    }
     // Nothing even so: the greedier exact pass, as before.
     for (const pass of best ? [] : PASSES.slice(1)) {
       best = await searchLeg(index, from, to, first, fuel, pass.weight, pass.expansions, lists);

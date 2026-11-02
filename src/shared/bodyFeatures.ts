@@ -154,6 +154,11 @@ export function featureRecordFromScan(line: Record<string, unknown>): Partial<Ex
     parents: line.Parents,
     rings: scanRings(line.Rings),
     ageMy: n(line.Age_MY),
+    // For his own rules (customBodyRules.ts).
+    terraformState: typeof line.TerraformState === "string" ? line.TerraformState : undefined,
+    volcanism: typeof line.Volcanism === "string" ? line.Volcanism : undefined,
+    distanceFromArrivalLs: n(line.DistanceFromArrivalLS),
+    tidalLock: typeof line.TidalLock === "boolean" ? line.TidalLock : undefined,
   };
 }
 

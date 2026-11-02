@@ -40,10 +40,12 @@ export function createNoticesWiring({
     mainStarRecord([...store.liveScansInSystem(addr), ...store.soldScansInSystem(addr)])?.starType ?? null;
   // The Notable card: green gas giants always (they are notable like an Earth-like), features as chosen.
   setNotableOptionsProvider(() => {
-    const on = notices.prefs().features;
+    const prefs = notices.prefs();
+    const on = prefs.features;
     return {
       green: greenExtras,
       features: new Set(BODY_FEATURES.filter((f) => on[f.key]).map((f) => f.key)),
+      rules: (prefs.customRules ?? []).filter((r) => r.on && r.conds.length),
     };
   });
   const noticesContext: NoticesContext = {

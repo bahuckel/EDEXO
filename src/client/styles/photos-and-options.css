@@ -509,6 +509,39 @@
 .options-notify-sub {
   margin: 0.55rem 0 0.2rem;
 }
+/* Your own rules (2026-11-02): one block per rule, its conditions one per line, wrapping on a narrow window. */
+.options-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+.options-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: var(--border);
+  border-radius: 4px;
+}
+.options-rule__head,
+.options-rule__cond {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.5rem;
+}
+.options-rule__name {
+  min-width: 12rem;
+}
+.options-rule__num {
+  width: 6rem;
+}
+.options-rule__text {
+  width: 9rem;
+}
 .options-nsp__row {
   display: flex;
   flex-wrap: wrap;

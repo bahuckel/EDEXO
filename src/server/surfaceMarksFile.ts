@@ -60,19 +60,41 @@ export interface SurfaceMark {
    * scan. Stored rather than derived on read so the file stands on its own as a record.
    */
   elevationM?: number | null;
+  /** A composition-scan mark's codex entry (`CodexEntry.Name`, the variant), so a sample of it can retire it. */
+  codexName?: string;
 }
 
 export interface SurfaceMarksFile {
   formatVersion: 1;
   samples: SurfaceMark[];
   ship: SurfaceMark | null;
+  /**
+   * Where the ship's composition scanner named a plant (`CodexEntry` carries Latitude / Longitude and BodyID;
+   * survey 2026-11-02 after EDMC-BioScan / ExplorerLite / SrvSurvey): a waypoint until that species is logged there.
+   * Optional: files written before it have none.
+   */
+  codex?: SurfaceMark[];
 }
 
 /** Bodies' worth of plants before the oldest are dropped. Generous; this file is tiny. */
 export const MAX_SURFACE_MARKS = 400;
 
+/** The composition-scan waypoints with one more (none twice per species and body); the same list when nothing changes. */
+export function withCodexMark(list: SurfaceMark[], mark: SurfaceMark & { codexName: string }): SurfaceMark[] {
+  if (!Number.isFinite(mark.latDeg) || !Number.isFinite(mark.lonDeg)) return list;
+  if (list.some((m) => m.bodyKey === mark.bodyKey && m.codexName === mark.codexName)) return list;
+  return [...list, mark].slice(-MAX_SURFACE_MARKS);
+}
+
+/** Without the waypoints of these codex entries on this body; the same list when none goes. */
+export function withoutCodexMarks(list: SurfaceMark[], bodyKey: string, codexNames: readonly string[]): SurfaceMark[] {
+  const names = new Set(codexNames.map((n) => n.toLowerCase()));
+  const keep = list.filter((m) => !(m.bodyKey === bodyKey && names.has((m.codexName ?? "").toLowerCase())));
+  return keep.length === list.length ? list : keep;
+}
+
 export function emptySurfaceMarks(): SurfaceMarksFile {
-  return { formatVersion: 1, samples: [], ship: null };
+  return { formatVersion: 1, samples: [], ship: null, codex: [] };
 }
 
 function isMark(v: unknown): v is SurfaceMark {
@@ -123,7 +145,8 @@ export function loadSurfaceMarks(): SurfaceMarksFile {
     const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<SurfaceMarksFile>;
     const samples = Array.isArray(parsed.samples) ? parsed.samples.map(repairName).filter(isMark) : [];
     const ship = isMark(parsed.ship) ? repairName(parsed.ship) : null;
-    return { formatVersion: 1, samples, ship };
+    const codex = Array.isArray(parsed.codex) ? parsed.codex.filter(isMark) : [];
+    return { formatVersion: 1, samples, ship, codex };
   } catch {
     return emptySurfaceMarks();
   }

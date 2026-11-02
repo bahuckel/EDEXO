@@ -421,6 +421,7 @@ var ovNotable = document.getElementById("ovNotable");
 var ovNotices = document.getElementById("ovNotices");
 var ovColonize = document.getElementById("ovColonize");
 var ovShip = document.getElementById("ovShip");
+var ovCarrier = document.getElementById("ovCarrier");
 
 /** What ran when the page loaded, in the order it ran (main.js calls each module's in the file's old order). */
 export function start() {
@@ -595,4 +596,5 @@ export function start() {
   if (ovNotices) ovNotices.addEventListener("click", function () { void pickOverlay("/notices-overlay.html", HUD_W, 140); });
   if (ovColonize) ovColonize.addEventListener("click", function () { void pickOverlay("/colonize-overlay.html", HUD_W, 260); });
   if (ovShip) ovShip.addEventListener("click", function () { void pickOverlay("/ship-overlay.html", HUD_W, 300); });
+  if (ovCarrier) ovCarrier.addEventListener("click", function () { void pickOverlay("/carrier-overlay.html", HUD_W, 140); });
 }

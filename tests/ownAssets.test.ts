@@ -37,7 +37,9 @@ describe("own carrier and colonies", () => {
         DepartureTime: "2026-10-13T01:00:00Z",
       }),
     );
-    expect(ownCarrierNow(st, Date.parse("2026-10-13T01:05:00Z"))?.name).toBe("Col 285 Sector DR-C c13-20");
+    // The jump lands about a minute after the departure time (CARRIER_ARRIVE_MS; 20 minutes before 2026-11-02).
+    expect(ownCarrierNow(st, Date.parse("2026-10-13T01:00:30Z"))?.name).toBe("Col 285 Sector DR-C c13-20");
+    expect(ownCarrierNow(st, Date.parse("2026-10-13T01:01:05Z"))?.name).toBe("Swoilz KI-E b4-9");
     expect(ownCarrierNow(st, Date.parse("2026-10-13T01:30:00Z"))?.name).toBe("Swoilz KI-E b4-9");
     ownAssetsLine(st, ev("CarrierJumpCancelled"));
     expect(ownCarrierNow(st, Date.parse("2026-10-13T02:00:00Z"))?.name).toBe("Col 285 Sector DR-C c13-20");
@@ -64,7 +66,7 @@ describe("own carrier and colonies", () => {
         DepartureTime: "2026-10-13T00:30:00Z",
       }),
     );
-    // B landed (00:30 + 20 min); now C is scheduled, then cancelled: the carrier is at B.
+    // B landed (00:30 + 1 min); now C is scheduled, then cancelled: the carrier is at B.
     ownAssetsLine(
       st,
       at("2026-10-13T02:00:00Z", {
