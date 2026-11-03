@@ -20,8 +20,8 @@ Windows; everything the app saves lives in `%LOCALAPPDATA%\ED Exo Compare\`.
 
 |                                                                                                                |                                                                       |
 | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **[Portable — one file](https://github.com/bahuckel/EDEXO/releases/download/v1.3.5/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
-| **[Program folder — .zip](https://github.com/bahuckel/EDEXO/releases/tag/v1.3.5-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
+| **[Portable — one file](https://github.com/bahuckel/EDEXO/releases/download/v1.3.6/EDExoCompare.exe)** | Download and run. Unpacks itself somewhere temporary each time.       |
+| **[Program folder — .zip](https://github.com/bahuckel/EDEXO/releases/tag/v1.3.6-zip)**                 | Extract and keep. Starts faster, and includes the two console builds. |
 
 Both are the same version and the same code — [all releases](https://github.com/bahuckel/EDEXO/releases).
 
@@ -44,10 +44,10 @@ saying what worked and what did not — distro, desktop, X11 or Wayland — is t
 
 |                                                                                                                                         |                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO/releases/download/v1.3.5-zip/EDExoCompare-1.3.5-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
-| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO/releases/download/v1.3.5-zip/EDExoCompare-1.3.5-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
+| **[AppImage — launcher + HUD](https://github.com/bahuckel/EDEXO/releases/download/v1.3.6-zip/EDExoCompare-1.3.6-x86_64.AppImage)** | The same app as on Windows: launcher window, tray, HUD overlays. One file, x86_64.       |
+| **[Browser build — .tar.gz](https://github.com/bahuckel/EDEXO/releases/download/v1.3.6-zip/EDExoCompare-1.3.6-linux-x64.tar.gz)** | No Electron. The app and the HUD pages open in your browser. For anything the AppImage cannot run on. |
 
-**AppImage:** `chmod +x EDExoCompare-1.3.5-x86_64.AppImage`, then run it. It needs FUSE 2:
+**AppImage:** `chmod +x EDExoCompare-1.3.6-x86_64.AppImage`, then run it. It needs FUSE 2:
 
 | Distro                                            | Command                                   |
 | ------------------------------------------------- | ----------------------------------------- |
@@ -58,7 +58,7 @@ saying what worked and what did not — distro, desktop, X11 or Wayland — is t
 | openSUSE                                          | `sudo zypper install libfuse2`            |
 | Arch, CachyOS, Manjaro                            | `sudo pacman -S --needed fuse2`           |
 
-Without FUSE, `./EDExoCompare-1.3.5-x86_64.AppImage --appimage-extract-and-run` works too.
+Without FUSE, `./EDExoCompare-1.3.6-x86_64.AppImage --appimage-extract-and-run` works too.
 
 On start the launcher checks your desktop and lists anything the HUD needs that is missing, with the
 install command for your distro: XWayland on a Wayland session, a compositor on a bare window
@@ -70,13 +70,13 @@ and starts again by itself; tick it to try the graphics card again later. If it 
 once with the graphics card off:
 
 ```bash
-./EDExoCompare-1.3.5-x86_64.AppImage --disable-gpu --disable-gpu-sandbox
+./EDExoCompare-1.3.6-x86_64.AppImage --disable-gpu --disable-gpu-sandbox
 ```
 
 or set `EDEXO_SAFE_GRAPHICS=1` to keep it off. Without the graphics card the 3D galaxy map draws in
 software (slower); the Classic map is unaffected.
 
-**Browser build:** `tar xzf EDExoCompare-1.3.5-linux-x64.tar.gz`, then `./edexo-client.sh` in the
+**Browser build:** `tar xzf EDExoCompare-1.3.6-linux-x64.tar.gz`, then `./edexo-client.sh` in the
 folder it makes. Its `README.txt` has the rest.
 
 **Both:** the journals are found inside the game's Proton or Wine prefix — every Steam library
@@ -219,7 +219,8 @@ game) or as pop-ups if Tab view is off.
   own route on top; game-style controls (W A S D, Q E, R F) or a mouse; it runs on a phone.
 - **Find** (species, systems and station names) and filters by species, genus, star or planet type;
   layers for points of interest, Notable Stellar Phenomena, carriers, bookmarks, green gas giants, the
-  18 helium gas giants on record and 800,709 **stations** (names on hover, pads by type); your own
+  18 helium gas giants on record, 385 **Guardian** and 417 **Thargoid** site systems (what each site gives) and
+  800,709 **stations** (names on hover, pads by type); your own
   carrier and colonies marked, your stations in gold; your codex by region, with the biology others have
   logged in a region that is not in your codex yet, rarest first — a click flies to the nearest system in
   that same region that has it.
@@ -241,6 +242,11 @@ game) or as pop-ups if Tab view is off.
   FSD wear per hop learned for each ship. The supercharge is read from your ship's drive: ×6 with the Mk II
   SCO drive (the Caspian Explorer's, which other ships with a size 8 slot can fit), ×4 with any other. **Fly this route** puts the next stop on the clipboard after
   each jump and plots again from your ship if you leave the route; **Stop** clears it everywhere.
+- **Spansh route** tab: paste a Spansh results link (exobiology, road to riches and its variants, neutron, galaxy
+  plotter, fleet carrier) and the route is drawn on the map; exobiology and riches stops show Spansh's value beside
+  EDEXO's (drop the ones EDEXO values under a floor), neutron and plotter routes can be planned with EDEXO's
+  planner to compare the jumps. **Fly this route** works as in the Neutron tab; a fleet carrier route can follow
+  **your carrier**, the next stop copied when it arrives at one, aboard or not.
 - **Next target** and **Plan**: the nearest system above a value you set, and up to 20 more in the
   shortest order. **NavRoute** keeps every route you plot with each system's star class.
 - **Expedition**: every boxel round you, or along a route to any system you name (or one of eight
@@ -269,11 +275,14 @@ game) or as pop-ups if Tab view is off.
 ### Overlay (HUD)
 
 Click-through panels over the game, each on or off: the exo-distance tracker (a radar with each sample
-ringed at its genus's distance, and the payout), discovery scan count, candidates for the targeted
+ringed at its genus's distance, your ship, your SRV and the plants your composition scanner named, and the
+payout), discovery scan count, candidates for the targeted
 body, unsold data value, the next jumps with their star class and whether EDSM knows them, the Next
 boxel line (or, on a neutron route, where to scoop and supercharge and the FSD's health), notable
 bodies, notices (F5 clears them), a tracked achievement, **Colonize** (the haul plan's next stop and
-the site you are working on, with bars that fill as you buy and deliver, and this week's credits) and
+the site you are working on, with bars that fill as you buy and deliver, and this week's credits),
+**Carrier** (your carrier's jump countdown, lockdown and cooldown, with a tone; also a tile in the main
+window) and
 **Ship** (an outline of your ship with each part coloured by its health, the damaged parts worst first).
 Stacked, merged into
 one panel, or combined into panels of your choosing (two that touch get a Combine button), and placed
@@ -289,7 +298,8 @@ is not in front.
   each one can be hidden or turned off.
 - **Backups** of your journals and the app's data, with warnings when the folder shares a drive with
   them.
-- **Notify me**: notices for notable bodies, Notable Stellar Phenomena, nearby carriers with the
+- **Notify me**: your own body rules (a name and up to six conditions on a scan: class, atmosphere, gravity,
+  temperature, distance, ...), notices for notable bodies, Notable Stellar Phenomena, nearby carriers with the
   services you pick, achievements, a scanned body rich in a Laboratory material you are short of, and a new
   Community Goal (where to sign up, the objective, when it ends and the rewards), with or without sound.
 - **Colour scheme** for the app and the HUD (a dark colour is lightened until it reads, and the text can take
