@@ -126,8 +126,10 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
       plan 1.3.3 R-4): cached scans had no time for it and sat at a fixed angle.
   41: `shipFlight` / `shipEventMs` — supercruise, normal flight, landed or docked, for the scan route's ship (plan 1.3.5
       R-1); and `currentBodyKey` now moves on a DSS (SAAScanComplete) as well.
+  42: `jumponium.mats` — manufactured and encoded materials aboard, for the Laboratory's Guardian tab (1.3.7,
+      shared/guardianTech.ts); a full re-read counts them from the last Materials line on.
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 41;
+export const JOURNAL_MERGE_CACHE_FORMAT = 42;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {

@@ -133,6 +133,7 @@ describe("jumponium inventory", () => {
       learned: {},
       made: {},
       afmu: null,
+      mats: null,
     });
     expect(hydrateJumponium(null)).toEqual(newJumponium());
   });

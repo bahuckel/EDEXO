@@ -202,7 +202,7 @@ export async function fetchSpanshRoute(text: string, fetchImpl: typeof fetch = f
   } catch (e) {
     return { state: "error", error: `Spansh did not answer (${e instanceof Error ? e.message : String(e)}).` };
   }
-  if (res.status === 404) return { state: "error", error: "Spansh does not have that route (it keeps results for a while only)." };
+  if (res.status === 404) return { state: "error", error: "Spansh does not have that route any more (it keeps results for a few hours only). Routes read before are under Kept routes." };
   if (!res.ok) return { state: "error", error: `Spansh answered ${res.status}.` };
   let data: { status?: unknown; error?: unknown };
   try {

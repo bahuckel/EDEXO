@@ -3,7 +3,8 @@
  * filters"; 2026-10-13: "rename it to Laboratory and place both in different tabs in it"): two inner tabs, Jumponium
  * (the FSD injections) and AFM Refill. Each shows what is aboard of its elements and what each tier makes, then the
  * nearest bodies rich in the elements picked — the commander's own scans first-hand, the rest from the galaxy file
- * (the top 1 % of landable bodies for an element, from Spansh's dump) — drawn on the map while the tab is open.
+ * (the top 1 % of landable bodies for an element, from Spansh's dump) — drawn on the map while the tab is open. A third,
+ * Guardian (1.3.7, GuardianLab.tsx), does the same for the Guardian materials and the Guardian sites.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -22,6 +23,7 @@ import { pctLabel, type JumpRow } from "./jumpRow";
 import { tabListKeyDown } from "../ui/Tabs";
 import { G3D_HELP, MenuHead } from "./G3dMenu";
 import { LabCrafting } from "./LabCrafting";
+import { GuardianLab } from "./GuardianLab";
 
 
 interface NearReply {
@@ -37,7 +39,10 @@ const pickable = (kind: LabKind) =>
   elementsOf(kind)
     .filter((k) => !jumpElement(k).common)
     .map(jumpElement);
-const isKind = (v: unknown): v is LabKind => v === "fsd" || v === "afm";
+/** The Laboratory's inner tabs: the two syntheses, and the Guardian technology. */
+type LabTab = LabKind | "guardian";
+const isKind = (v: unknown): v is LabTab => v === "fsd" || v === "afm" || v === "guardian";
+const TAB_NAME: Record<LabTab, string> = { fsd: "Jumponium", afm: LAB_KIND_NAME.afm, guardian: "Guardian" };
 const isView = (v: unknown): v is "craft" | "collect" => v === "craft" || v === "collect";
 const LEVELS = [
   { key: "any", label: "Any amount" },
@@ -60,7 +65,10 @@ export function JumponiumDrawer({
   /** Changes when the ship jumps, so the list is asked again from where it is (review 1.2.16). */
   shipKey: string;
 }) {
-  const [kind, setKind] = usePersistedState<LabKind>("galaxy.lab.kind", "fsd", isKind);
+  const [tab, setTab] = usePersistedState<LabTab>("galaxy.lab.kind", "fsd", isKind);
+  const guardian = tab === "guardian";
+  // The synthesis the element filters and the stock are for (the Guardian tab has its own).
+  const kind: LabKind = guardian ? "fsd" : tab;
   // Crafting (owner, 2026-10-15: "a 'Crafting screen' ... Collection screen, similar to what it is now") or Collection.
   const [view, setView] = usePersistedState<"craft" | "collect">("galaxy.lab.view", "craft", isView);
   // The elements picked, kept per inner tab.
@@ -90,6 +98,7 @@ export function JumponiumDrawer({
   }, [kind, els, all, level, maxG, maxLs, range, ownOnly]);
 
   useEffect(() => {
+    if (guardian) return;
     let alive = true;
     setBusy(true);
     const t = window.setTimeout(() => {
@@ -122,10 +131,13 @@ export function JumponiumDrawer({
       alive = false;
       window.clearTimeout(t);
     };
-  }, [query, downloading, shipKey]);
+  }, [query, downloading, shipKey, guardian]);
 
   const rows = useMemo(() => reply?.bodies ?? [], [reply]);
-  useEffect(() => onRows(rows), [rows, onRows]);
+  // The Guardian tab draws its own sites.
+  useEffect(() => {
+    if (!guardian) onRows(rows);
+  }, [rows, onRows, guardian]);
   useEffect(() => () => onRows([]), [onRows]);
 
   const toggle = (k: string) => {
@@ -185,25 +197,25 @@ export function JumponiumDrawer({
       <MenuHead title="Laboratory" help={G3D_HELP.jumponium} />
       {/* The app's keyboard for an option strip (ui/Tabs.tsx, audit 2026-10-22): one Tab stop, arrows choose. */}
       <div className="lab-tabs" role="tablist" aria-label="What to make" onKeyDown={(ev) => tabListKeyDown(ev, { follow: true })}>
-        {(["fsd", "afm"] as const).map((k) => (
+        {(["fsd", "afm", "guardian"] as const).map((k) => (
           <button
             key={k}
             type="button"
             role="tab"
-            aria-selected={kind === k}
-            tabIndex={kind === k ? 0 : -1}
-            className={`lab-tab${kind === k ? " lab-tab--on" : ""}`}
-            onClick={() => setKind(k)}
+            aria-selected={tab === k}
+            tabIndex={tab === k ? 0 : -1}
+            className={`lab-tab${tab === k ? " lab-tab--on" : ""}`}
+            onClick={() => setTab(k)}
           >
-            {k === "fsd" ? "Jumponium" : LAB_KIND_NAME.afm}
+            {TAB_NAME[k]}
           </button>
         ))}
       </div>
       <div className="lab-views" role="group" aria-label="View">
         {(
           [
-            ["craft", "Crafting", "What your materials make, and what each recipe takes"],
-            ["collect", "Collection", "Where to find the materials: the nearest bodies rich in them"],
+            ["craft", "Crafting", guardian ? "What your Guardian materials unlock at a technology broker" : "What your materials make, and what each recipe takes"],
+            ["collect", "Collection", guardian ? "Where the Guardian materials come from, and the nearest Guardian sites" : "Where to find the materials: the nearest bodies rich in them"],
           ] as const
         ).map(([v, label, hint]) => (
           <button
@@ -219,7 +231,9 @@ export function JumponiumDrawer({
         ))}
       </div>
       <div className="g3d-menu__section g3d-menu__section--first">
-        {view === "craft" ? (
+        {guardian ? (
+          <GuardianLab view={view} onRows={onRows} onPick={onPick} shipKey={shipKey} />
+        ) : view === "craft" ? (
           stock?.known ? (
             <>
               <LabCrafting stock={stock} kind={kind} />

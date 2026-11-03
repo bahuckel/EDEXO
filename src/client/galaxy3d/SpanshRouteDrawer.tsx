@@ -6,15 +6,18 @@
  * - exobiology and road-to-riches routes: each stop's value from Spansh beside EDEXO's (the route values the NavRoute
  *   finder and the neutron drawer show, `/api/route/system-values`), the stops EDEXO values under a floor can be
  *   dropped before flying;
- * - neutron and galaxy plotter routes: EDEXO's neutron planner on the same two ends with the same range, the jumps
- *   side by side.
+ * - neutron and galaxy plotter routes: EDEXO's neutron planner on the same two ends, at Spansh's range or the ship's:
+ *   jumps, supercharges and refuel stops side by side, and EDEXO's line on the map in place of Spansh's on request.
+ *
+ * Every route read is kept on disk (server/spanshRouteFile.ts, owner 2026-11-03): Spansh deletes results within hours,
+ * the "Kept routes" list opens one again after that.
  *
  * "Fly this route" flies the stops kept the way the neutron route is flown (neutronLive.ts): the next stop on the
  * clipboard after each jump onto one, the HUD's Next jump line. A fleet carrier route follows his carrier instead
  * (server/carrierRouteFollow.ts): the next stop is copied when the carrier arrives at one. Stop ends either.
  */
 import { useEffect, useMemo, useState } from "react";
-import type { SpanshRouteAnswer, SpanshRouteDTO, SpanshRouteStopDTO } from "@shared/dto/spanshRoute";
+import type { SavedSpanshRouteDTO, SpanshRouteAnswer, SpanshRouteDTO, SpanshRouteStopDTO } from "@shared/dto/spanshRoute";
 import type { RouteSystemValuesDTO } from "@shared/dto/routeSystem";
 import { fmtCrShort } from "@shared/format";
 import { CopySystemButton } from "../CopySystemButton";
@@ -67,9 +70,29 @@ const marksOf = (stops: SpanshRouteStopDTO[]): NeutronMark[] =>
 
 interface Compare {
   jumps: number;
+  boosted: number;
   refuels: number;
+  /** The range EDEXO planned with. */
+  rangeLy: number | null;
+  marks: NeutronMark[];
   error?: string;
 }
+
+/**
+ * Spansh's side of the comparison: its jumps, supercharges (stops on a neutron star) and refuel stops; null where its
+ * planner does not say (the neutron plotter plans no fuel).
+ */
+function spanshCounts(route: SpanshRouteDTO): Record<"jumps" | "boosted" | "refuels", number | null> {
+  const last = route.stops.length - 1;
+  return {
+    jumps: route.totalJumps,
+    boosted: route.stops.filter((s, i) => s.neutron && i < last).length,
+    refuels: route.kind === "neutron" ? null : route.stops.filter((s) => s.refuel).length,
+  };
+}
+
+type RangeFrom = "spansh" | "ship";
+const noCompare = (error: string): Compare => ({ jumps: 0, boosted: 0, refuels: 0, rangeLy: null, marks: [], error });
 
 export function SpanshRouteDrawer({
   onRoute,
@@ -86,6 +109,22 @@ export function SpanshRouteDrawer({
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compare, setCompare] = useState<Compare | null>(null);
+  const [rangeFrom, setRangeFrom] = useState<RangeFrom>("spansh");
+  const [edexoOnMap, setEdexoOnMap] = useState(false);
+  const [savedRoutes, setSavedRoutes] = useState<SavedSpanshRouteDTO[]>([]);
+  const [fromCopy, setFromCopy] = useState(false);
+
+  const loadSaved = () =>
+    void fetch("/api/spansh-route/saved")
+      .then(async (r) => (r.ok ? ((await r.json()) as { routes: SavedSpanshRouteDTO[] }).routes : []))
+      .then(setSavedRoutes)
+      .catch(() => setSavedRoutes([]));
+  useEffect(loadSaved, []);
+
+  const forget = async (job: string) => {
+    const r = await fetch(`/api/spansh-route/saved?job=${encodeURIComponent(job)}`, { method: "DELETE" }).catch(() => null);
+    if (r?.ok) setSavedRoutes(((await r.json()) as { routes: SavedSpanshRouteDTO[] }).routes);
+  };
 
   useEffect(() => {
     kept.text = text;
@@ -94,16 +133,19 @@ export function SpanshRouteDrawer({
     kept.floor = floor;
   }, [text, route, dropped, floor]);
 
-  const read = async () => {
+  const read = async (q = text) => {
     setBusy(true);
     setError(null);
     setNote(null);
     setCompare(null);
     try {
-      const r = await fetch(`/api/spansh-route?q=${encodeURIComponent(text.trim())}`);
+      const r = await fetch(`/api/spansh-route?q=${encodeURIComponent(q.trim())}`);
       const a = (await r.json()) as SpanshRouteAnswer;
       if (a.state === "ok") {
         setRoute(a.route);
+        setEdexoOnMap(false);
+        setFromCopy(a.saved === true);
+        loadSaved();
         setDropped(new Set());
         const marks = marksOf(a.route.stops);
         keepNeutronMarks(marks);
@@ -156,10 +198,20 @@ export function SpanshRouteDrawer({
     setDropped(next);
   };
 
+  /** The map shows Spansh's route, or EDEXO's plan of the same ends. */
+  const showOnMap = (edexo: boolean, c: Compare | null = compare) => {
+    if (!route) return;
+    const marks = edexo && c?.marks.length ? c.marks : marksOf(route.stops);
+    keepNeutronMarks(marks);
+    onRoute(marks);
+    setEdexoOnMap(edexo && !!c?.marks.length);
+  };
+
   const compareWithEdexo = async () => {
     if (!route) return;
     setBusy(true);
     setCompare(null);
+    if (edexoOnMap) showOnMap(false, null);
     try {
       const a = route.stops[0]!;
       const b = route.stops[route.stops.length - 1]!;
@@ -171,13 +223,41 @@ export function SpanshRouteDrawer({
             { name: a.name, x: a.x, y: a.y, z: a.z },
             { name: b.name, x: b.x, y: b.y, z: b.z },
           ],
-          rangeLy: route.rangeLy ?? undefined,
+          // Without a range the planner takes the ship's.
+          rangeLy: rangeFrom === "spansh" ? (route.rangeLy ?? undefined) : undefined,
         }),
       });
-      const j = (await r.json()) as { jumps?: number; refuels?: number; error?: string };
-      setCompare(r.ok ? { jumps: j.jumps ?? 0, refuels: j.refuels ?? 0 } : { jumps: 0, refuels: 0, error: j.error ?? `Plan failed (${r.status})` });
+      const j = (await r.json()) as {
+        jumps?: number;
+        boosted?: number;
+        refuels?: number;
+        hops?: NeutronMark[];
+        ship?: { rangeLy?: number };
+        error?: string;
+      };
+      setCompare(
+        r.ok
+          ? {
+              jumps: j.jumps ?? 0,
+              boosted: j.boosted ?? 0,
+              refuels: j.refuels ?? 0,
+              rangeLy: j.ship?.rangeLy ?? null,
+              marks: (j.hops ?? []).map((h) => ({
+                name: h.name,
+                x: h.x,
+                y: h.y,
+                z: h.z,
+                kind: h.kind,
+                jumps: h.jumps,
+                boosted: h.boosted,
+                refuel: h.refuel,
+                refuelHalf: h.refuelHalf,
+              })),
+            }
+          : noCompare(j.error ?? `Plan failed (${r.status})`),
+      );
     } catch (e) {
-      setCompare({ jumps: 0, refuels: 0, error: e instanceof Error ? e.message : String(e) });
+      setCompare(noCompare(e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }
@@ -199,6 +279,7 @@ export function SpanshRouteDrawer({
       const marks = marksOf(keptStops);
       keepNeutronMarks(marks);
       onRoute(marks);
+      setEdexoOnMap(false);
       setNote(
         `${route.kind === "carrier" ? "Following" : "Flying"} ${j.stops} stop${j.stops === 1 ? "" : "s"}${j.next ? `: ${j.next} is on the clipboard` : ""}. F6 copies the next stop again.`,
       );
@@ -243,6 +324,40 @@ export function SpanshRouteDrawer({
         </button>
         {error ? <p className="g3d-panel__note g3d-panel__note--warn">{error}</p> : null}
         {note ? <p className="g3d-panel__note">{note}</p> : null}
+        {savedRoutes.length ? (
+          <details className="g3d-spansh-saved" open={!route}>
+            <summary title="Every route read is kept here: Spansh deletes its results within hours">
+              Kept routes ({savedRoutes.length})
+            </summary>
+            <ul>
+              {savedRoutes.map((s) => (
+                <li key={s.job} className={route?.job === s.job ? "is-on" : undefined}>
+                  <button
+                    type="button"
+                    className="g3d-linkbtn"
+                    disabled={busy}
+                    title={`Read ${new Date(s.readAt).toLocaleString()}`}
+                    onClick={() => {
+                      setText(s.job);
+                      void read(s.job);
+                    }}
+                  >
+                    {KIND_NAME[s.kind]}
+                    {s.from ? ` from ${s.from}` : ""}
+                    {s.to ? ` to ${s.to}` : ""}
+                  </button>{" "}
+                  <small className="dim">
+                    {s.stops} stop{s.stops === 1 ? "" : "s"}
+                    {s.totalValueCr ? ` · ${fmtCrShort(s.totalValueCr)} CR` : ""} · {new Date(s.readAt).toLocaleDateString()}
+                  </small>{" "}
+                  <button type="button" className="g3d-linkbtn" aria-label={`Forget the route from ${s.from ?? "Spansh"}`} title="Forget it" onClick={() => void forget(s.job)}>
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
       </div>
 
       {route ? (
@@ -256,6 +371,7 @@ export function SpanshRouteDrawer({
             <a href={route.url} target="_blank" rel="noopener noreferrer">
               Open on Spansh
             </a>
+            {fromCopy ? <span className="dim"> (EDEXO&apos;s kept copy: Spansh may have deleted it since)</span> : null}
           </p>
 
           {valued ? (
@@ -286,15 +402,75 @@ export function SpanshRouteDrawer({
             </>
           ) : route.kind !== "carrier" ? (
             <>
+              <MenuRow label="Plan EDEXO's at" hint="The jump range EDEXO plans the same two ends with: the one Spansh was given, or your ship's now">
+                <span className="g3d-row__val">
+                  {(
+                    [
+                      ["spansh", route.rangeLy ? `Spansh's ${route.rangeLy} ly` : "Spansh's range"],
+                      ["ship", "My ship's range"],
+                    ] as const
+                  ).map(([k, label]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className={`fdb-chip${rangeFrom === k ? " fdb-chip--on" : ""}`}
+                      aria-pressed={rangeFrom === k}
+                      onClick={() => {
+                        setRangeFrom(k);
+                        setCompare(null);
+                        if (edexoOnMap) showOnMap(false, null);
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </span>
+              </MenuRow>
               <button type="button" className="btn-top-toggle" disabled={busy} onClick={() => void compareWithEdexo()}>
                 Plan it with EDEXO too
               </button>
-              {compare ? (
-                <p className={`g3d-panel__note${compare.error ? " g3d-panel__note--warn" : ""}`} data-testid="spansh-compare">
-                  {compare.error
-                    ? `EDEXO could not plan it: ${compare.error}`
-                    : `Spansh ${route.totalJumps} jumps · EDEXO ${compare.jumps} jumps${compare.refuels ? ` (${compare.refuels} refuel stop${compare.refuels === 1 ? "" : "s"})` : ""}, with your ship${route.rangeLy ? ` at ${route.rangeLy} ly` : ""}. The Neutron tab plans EDEXO's in full.`}
+              {compare?.error ? (
+                <p className="g3d-panel__note g3d-panel__note--warn" data-testid="spansh-compare">
+                  EDEXO could not plan it: {compare.error}
                 </p>
+              ) : compare ? (
+                <>
+                  <table className="fdb-table g3d-neutron-table g3d-spansh-vs" data-testid="spansh-compare">
+                    <thead>
+                      <tr>
+                        <th />
+                        <th>Spansh</th>
+                        <th>EDEXO</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(
+                        [
+                          ["Jumps", "jumps"],
+                          ["Supercharged", "boosted"],
+                          ["Refuel stops", "refuels"],
+                        ] as const
+                      ).map(([label, k]) => (
+                        <tr key={k}>
+                          <td>{label}</td>
+                          <td title={spanshCounts(route)[k] == null ? "Spansh's neutron plotter plans no fuel stops" : undefined}>
+                            {spanshCounts(route)[k]?.toLocaleString("en-US") ?? "—"}
+                          </td>
+                          <td>{compare[k].toLocaleString("en-US")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="g3d-panel__note">
+                    EDEXO at {compare.rangeLy ? `${compare.rangeLy.toFixed(1)} ly` : "your ship's range"} with your ship&apos;s tank
+                    {route.rangeLy ? `; Spansh at ${route.rangeLy} ly` : ""}. The Neutron tab plans and flies EDEXO&apos;s in full.
+                  </p>
+                  {compare.marks.length ? (
+                    <button type="button" className="btn-top-toggle" onClick={() => showOnMap(!edexoOnMap)}>
+                      {edexoOnMap ? "Show Spansh's route on the map" : "Show EDEXO's route on the map"}
+                    </button>
+                  ) : null}
+                </>
               ) : null}
             </>
           ) : (

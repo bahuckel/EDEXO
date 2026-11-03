@@ -52,8 +52,25 @@ export interface SpanshRouteDTO {
   url: string;
 }
 
-/** What `/api/spansh-route` answers: the route, Spansh still working on it, or why not. */
+/** A route kept on disk (server/spanshRouteFile.ts), as `/api/spansh-route/saved` lists it. */
+export interface SavedSpanshRouteDTO {
+  job: string;
+  kind: SpanshRouteKind;
+  from: string | null;
+  to: string | null;
+  /** Stops after the start. */
+  stops: number;
+  totalJumps: number;
+  totalValueCr: number;
+  /** ISO time it was read from Spansh. */
+  readAt: string;
+}
+
+/**
+ * What `/api/spansh-route` answers: the route, Spansh still working on it, or why not. `saved` says the route came
+ * from the copy kept on disk (Spansh may have deleted it since).
+ */
 export type SpanshRouteAnswer =
-  | { state: "ok"; route: SpanshRouteDTO }
+  | { state: "ok"; route: SpanshRouteDTO; saved?: boolean }
   | { state: "pending"; job: string }
   | { state: "error"; error: string };

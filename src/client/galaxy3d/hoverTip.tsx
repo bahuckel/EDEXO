@@ -101,7 +101,7 @@ export function hoverTip(
       <>
         <strong>{r.body}</strong>
         <span>{jumpLine(r)}</span>
-        <em>{r.own ? "You scanned it" : "From Spansh's dump"} · click for details</em>
+        <em>{r.own ? "You scanned it" : (r.source ?? "From Spansh's dump")} · click for details</em>
       </>
     ) : null;
   }

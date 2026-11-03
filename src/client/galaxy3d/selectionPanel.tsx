@@ -100,7 +100,7 @@ export function selectionPanel(selection: Selection | null, ctx: SelectionPanelC
         </p>
         {route?.position ? <p className="dim">{fmtLy(dist(route.position, r))} from your ship</p> : null}
         <p className="dim">
-          {r.own ? "You scanned it." : "From Spansh's dump: the top 1 % of landable bodies for an element."}
+          {r.own ? "You scanned it." : r.source ? `${r.source}.` : "From Spansh's dump: the top 1 % of landable bodies for an element."}
         </p>
       </div>
     ) : null;

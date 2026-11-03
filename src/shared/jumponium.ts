@@ -10,9 +10,13 @@
  * - Inventory: `Materials` at every login sets the raw list; `MaterialCollected`, `MaterialDiscarded`,
  *   `MaterialTrade`, `Synthesis`, `EngineerCraft`, `TechnologyBroker`, `EngineerContribution`, `ScientificResearch`
  *   and `MissionCompleted` rewards move it until the next login. Raw caps by grade: 300 / 250 / 200 / 150.
+ * - Manufactured and encoded materials (1.3.7, the Guardian tab, shared/guardianTech.ts): counted the same way in
+ *   `mats`, from the `Materials` line's Manufactured and Encoded lists and the same events.
  * - Bodies: a landable body's `Scan` lists its elements in percent. "Good" is the top tenth of landable bodies for
  *   that element, measured on Spansh's dump (Ryker's Hope region, 4,189,719 landable bodies, 2026-10-13).
  */
+
+import { guardianItem, guardianLabView, MAT_CAP, type GuardianLabDTO } from "./guardianTech.js";
 
 /*
   The Laboratory (owner, 2026-10-13: "add … AFM Refill materials collection as well, same tab as jumponium, rename it
@@ -177,10 +181,12 @@ export interface JumponiumState {
   made: Partial<Record<string, number>>;
   /** The AFMUs fitted, from the last `Loadout` (its ammo is not in the journals); null before one. */
   afmu: { item: string; size: number | null; cls: number | null; health: number | null }[] | null;
+  /** Manufactured and encoded counts by lower-case name (1.3.7); null until a `Materials` line. */
+  mats: Record<string, number> | null;
 }
 
 export function newJumponium(): JumponiumState {
-  return { raw: null, loginAt: null, learned: {}, made: {}, afmu: null };
+  return { raw: null, loginAt: null, learned: {}, made: {}, afmu: null, mats: null };
 }
 
 const lc = (v: unknown) => (typeof v === "string" ? v.trim().toLowerCase() : "");
@@ -190,6 +196,12 @@ const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0
 function isRaw(category: unknown): boolean {
   const c = lc(category);
   return c === "raw" || c.includes("elements");
+}
+
+/** Manufactured or encoded, as the journal names them now and in older versions. */
+function isMat(category: unknown): boolean {
+  const c = lc(category);
+  return c.includes("manufactured") || c.includes("encoded");
 }
 
 function gradeOf(name: string): 1 | 2 | 3 | 4 | null {
@@ -227,6 +239,14 @@ function add(st: JumponiumState, name: string, delta: number): void {
   const g = gradeOf(name);
   if (!g) return;
   st.raw[name] = Math.max(0, Math.min(RAW_CAP[g], (st.raw[name] ?? 0) + delta));
+}
+
+/** A manufactured or encoded count; raw names go to {@link add}. Capped where the Guardian table knows the grade. */
+function addMat(st: JumponiumState, name: string, delta: number): void {
+  if (!st.mats || !name || !delta || gradeOf(name)) return;
+  const g = guardianItem(name)?.grade;
+  const v = Math.max(0, (st.mats[name] ?? 0) + delta);
+  st.mats[name] = g ? Math.min(MAT_CAP[g], v) : v;
 }
 
 /** The `{ Name, Count }` lists of Synthesis / EngineerCraft / TechnologyBroker (and the old `{ name: count }` map). */
@@ -273,27 +293,38 @@ export function jumponiumLine(st: JumponiumState, line: Record<string, unknown>)
         for (const m of line.Raw as Record<string, unknown>[])
           if (lc(m?.Name)) raw[lc(m.Name)] = num(m.Count);
       st.raw = raw;
+      const mats: Record<string, number> = {};
+      for (const list of [line.Manufactured, line.Encoded])
+        if (Array.isArray(list))
+          for (const m of list as Record<string, unknown>[])
+            if (lc(m?.Name)) mats[lc(m.Name)] = num(m.Count);
+      st.mats = mats;
       st.loginAt = typeof line.timestamp === "string" ? line.timestamp : null;
       return;
     }
     case "MaterialCollected":
       if (isRaw(line.Category)) add(st, lc(line.Name), num(line.Count));
+      else if (isMat(line.Category)) addMat(st, lc(line.Name), num(line.Count));
       return;
     case "MaterialDiscarded":
-      if (isRaw(line.Category)) add(st, lc(line.Name), -num(line.Count));
-      return;
     case "ScientificResearch":
       if (isRaw(line.Category)) add(st, lc(line.Name), -num(line.Count));
+      else if (isMat(line.Category)) addMat(st, lc(line.Name), -num(line.Count));
       return;
     case "MaterialTrade": {
       const paid = line.Paid as Record<string, unknown> | null;
       const got = line.Received as Record<string, unknown> | null;
       if (paid && isRaw(paid.Category)) add(st, lc(paid.Material), -num(paid.Quantity));
+      else if (paid && isMat(paid.Category)) addMat(st, lc(paid.Material), -num(paid.Quantity));
       if (got && isRaw(got.Category)) add(st, lc(got.Material), num(got.Quantity));
+      else if (got && isMat(got.Category)) addMat(st, lc(got.Material), num(got.Quantity));
       return;
     }
     case "Synthesis": {
-      eachIngredient(line.Materials, (n, c) => add(st, n, -c));
+      eachIngredient(line.Materials, (n, c) => {
+        add(st, n, -c);
+        addMat(st, n, -c);
+      });
       const r = recipeOfSynthesis(line.Name);
       if (r) {
         const k = recipeKey(r.kind, r.tier);
@@ -318,19 +349,27 @@ export function jumponiumLine(st: JumponiumState, line: Record<string, unknown>)
       return;
     }
     case "EngineerCraft":
-      eachIngredient(line.Ingredients, (n, c) => add(st, n, -c));
+      eachIngredient(line.Ingredients, (n, c) => {
+        add(st, n, -c);
+        addMat(st, n, -c);
+      });
       return;
     case "TechnologyBroker":
       eachIngredient(line.Materials, (n, c, cat) => {
         if (cat == null || isRaw(cat)) add(st, n, -c);
+        if (cat == null || isMat(cat)) addMat(st, n, -c);
       });
       return;
     case "EngineerContribution":
-      if (line.Type === "Materials") add(st, lc(line.Material), -num(line.Quantity));
+      if (line.Type === "Materials") {
+        add(st, lc(line.Material), -num(line.Quantity));
+        addMat(st, lc(line.Material), -num(line.Quantity));
+      }
       return;
     case "MissionCompleted":
       eachIngredient(line.MaterialsReward, (n, c, cat) => {
         if (isRaw(cat)) add(st, n, c);
+        else if (isMat(cat)) addMat(st, n, c);
       });
       return;
   }
@@ -383,6 +422,11 @@ export function hydrateJumponium(raw: unknown): JumponiumState {
     st.raw = {};
     for (const [k, v] of Object.entries(r.raw))
       if (typeof v === "number" && Number.isFinite(v)) st.raw[k] = v;
+  }
+  if (r.mats && typeof r.mats === "object") {
+    st.mats = {};
+    for (const [k, v] of Object.entries(r.mats))
+      if (typeof v === "number" && Number.isFinite(v)) st.mats[k] = v;
   }
   st.loginAt = typeof r.loginAt === "string" ? r.loginAt : null;
   for (const i of RECIPES) {
@@ -467,6 +511,10 @@ export interface JumponiumDTO {
   afmTiers: LabTierDTO[];
   /** The AFMUs fitted (from the last Loadout); empty when none, null before a Loadout. */
   afmu: { size: number | null; cls: number | null; health: number | null }[] | null;
+  /** The Guardian tab: materials aboard and what the technology broker makes of them (shared/guardianTech.ts). */
+  guardian: GuardianLabDTO;
+  /** False until a `Materials` line written since 1.3.7 counted the manufactured and encoded ones. */
+  matsKnown: boolean;
 }
 
 export interface LabTierDTO {
@@ -497,6 +545,8 @@ export function jumponiumView(st: JumponiumState): JumponiumDTO {
     tiers: INJECTIONS.map((i) => tierView(st, i)),
     afmTiers: AFM_REFILLS.map((i) => tierView(st, i)),
     afmu: st.afmu ? st.afmu.map((a) => ({ size: a.size, cls: a.cls, health: a.health })) : null,
+    guardian: guardianLabView(st.raw, st.mats),
+    matsKnown: st.mats != null,
   };
 }
 

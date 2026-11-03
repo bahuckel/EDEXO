@@ -21,6 +21,21 @@ import {
   type JumpElement,
   type JumponiumDTO,
 } from "../../shared/jumponium.js";
+import { ALIEN_SITES, type AlienSiteKind } from "../../shared/alienSites.js";
+
+/** The Guardian site kinds the tab can ask for. */
+const GUARDIAN_SITE_KINDS: readonly AlienSiteKind[] = ["ruins", "structure", "sentinel", "beacon"];
+
+export interface GuardianSiteDTO {
+  system: string;
+  x: number;
+  y: number;
+  z: number;
+  kinds: readonly AlienSiteKind[];
+  /** First reported (EDSM's codex), YYYY-MM-DD. */
+  first: string;
+  distLy: number;
+}
 
 export interface JumponiumNearDTO {
   from: { x: number; y: number; z: number };
@@ -126,5 +141,31 @@ export function registerJumponiumRoutes(app: express.Express, opts: HttpServerOp
       stock: store ? jumponiumView(store.jumponium) : null,
     };
     res.json(body);
+  });
+
+  /**
+   * `/api/guardian/near?kinds=ruins|structure|sentinel|beacon&maxLy=&limit=` — the Laboratory's Guardian tab (1.3.7):
+   * the nearest Guardian sites of those kinds (EDSM's codex, shared/alienSites.ts), and what is aboard.
+   */
+  app.get("/api/guardian/near", (req, res) => {
+    const q = req.query as Record<string, unknown>;
+    const from = opts.getCommanderPosition?.() ?? null;
+    if (!from) return void res.status(400).json({ error: "No position yet: fly a jump so the journals have one." });
+    const kinds = new Set(
+      String(q.kinds ?? "")
+        .split(/[|,]/)
+        .filter((k): k is AlienSiteKind => GUARDIAN_SITE_KINDS.includes(k as AlienSiteKind)),
+    );
+    const maxLy = Math.min(50_000, Math.max(10, num(q.maxLy) ?? 5000));
+    const limit = Math.min(200, Math.max(1, Math.floor(num(q.limit) ?? 50)));
+    const sites: GuardianSiteDTO[] = [];
+    for (const [side, system, x, y, z, siteKinds, first] of ALIEN_SITES) {
+      if (side !== "guardian" || (kinds.size && !siteKinds.some((k) => kinds.has(k)))) continue;
+      const distLy = Math.hypot(x - from.x, y - from.y, z - from.z);
+      if (distLy <= maxLy) sites.push({ system, x, y, z, kinds: siteKinds, first, distLy });
+    }
+    sites.sort((a, b) => a.distLy - b.distLy);
+    const store = opts.getJournalStore?.() ?? null;
+    res.json({ sites: sites.slice(0, limit), total: sites.length, stock: store ? jumponiumView(store.jumponium) : null });
   });
 }

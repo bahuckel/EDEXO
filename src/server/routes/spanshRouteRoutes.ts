@@ -1,37 +1,50 @@
 /**
  * `/api/spansh-route` — a route planned on Spansh (plan 1.3.6 S-1, server/spanshRoute.ts): `GET ?q=<link or job id>`
- * reads it from Spansh once (kept for the session), `POST /api/spansh-route/fly { job, keep }` flies it as the live
- * route, the stops in `keep` (indexes; all when absent).
+ * reads it from Spansh once and keeps it on disk (server/spanshRouteFile.ts: Spansh deletes results within hours),
+ * `GET /api/spansh-route/saved` lists the kept ones, `DELETE /api/spansh-route/saved?job=` forgets one, and
+ * `POST /api/spansh-route/fly { job, keep }` flies it as the live route, the stops in `keep` (indexes; all when absent).
  */
 import type express from "express";
-import { fetchSpanshRoute, spanshJobFromText, spanshRouteHops, type SpanshRouteDTO } from "../spanshRoute.js";
+import { fetchSpanshRoute, spanshJobFromText, spanshRouteHops } from "../spanshRoute.js";
+import { openSpanshRouteFile, resolveSpanshRoutesPath, type SpanshRouteFile } from "../spanshRouteFile.js";
 import type { HttpServerOptions } from "../httpServerTypes.js";
 import { carrierHereOf } from "../carrierRouteFollow.js";
 
-/** Routes read this session, newest last; a few dozen at most. */
-const KEPT = 20;
-
-export function registerSpanshRouteRoutes(app: express.Express, opts: HttpServerOptions): void {
-  const kept = new Map<string, SpanshRouteDTO>();
+export function registerSpanshRouteRoutes(app: express.Express, opts: HttpServerOptions, file?: SpanshRouteFile): void {
+  // Opened on first use (nothing is read until the drawer asks), and again when the commander's folder changes.
+  let open: { path: string; file: SpanshRouteFile } | null = null;
+  const routes = (): SpanshRouteFile => {
+    if (file) return file;
+    const p = resolveSpanshRoutesPath();
+    if (open?.path !== p) open = { path: p, file: openSpanshRouteFile(p) };
+    return open.file;
+  };
 
   app.get("/api/spansh-route", async (req, res) => {
     const q = String(req.query.q ?? "").slice(0, 500);
     const job = spanshJobFromText(q);
-    const have = job ? kept.get(job) : undefined;
-    if (have) return void res.json({ state: "ok", route: have });
+    const have = job ? routes().get(job) : undefined;
+    if (have) return void res.json({ state: "ok", route: have, saved: true });
     const answer = await fetchSpanshRoute(q);
-    if (answer.state === "ok") {
-      kept.set(answer.route.job, answer.route);
-      while (kept.size > KEPT) kept.delete(kept.keys().next().value!);
-    }
+    if (answer.state === "ok") routes().put(answer.route);
     res.json(answer);
+  });
+
+  app.get("/api/spansh-route/saved", (_req, res) => {
+    res.json({ routes: routes().list() });
+  });
+
+  app.delete("/api/spansh-route/saved", (req, res) => {
+    const job = spanshJobFromText(String(req.query.job ?? ""));
+    if (!job) return void res.status(400).json({ error: "job: a Spansh job id" });
+    res.json({ removed: routes().remove(job), routes: routes().list() });
   });
 
   app.post("/api/spansh-route/fly", (req, res) => {
     const live = opts.neutronLive;
     if (!live) return void res.status(501).json({ error: "Not available in this build." });
     const body = (req.body ?? {}) as { job?: unknown; keep?: unknown };
-    const route = typeof body.job === "string" ? kept.get(body.job.toUpperCase()) : undefined;
+    const route = typeof body.job === "string" ? routes().get(body.job.toUpperCase()) : undefined;
     if (!route) return void res.status(400).json({ error: "Read the route from Spansh first." });
     const keep = Array.isArray(body.keep)
       ? new Set(body.keep.filter((i): i is number => Number.isInteger(i) && i > 0 && i < route.stops.length))
