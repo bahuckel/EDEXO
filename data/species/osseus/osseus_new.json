@@ -95,13 +95,15 @@
         ],
         "planet_types": [
           "Rocky",
-          "Rocky Ice"
+          "Rocky Ice",
+          "High Metal Content"
         ],
         "max_gravity": 0.275,
         "atmospherePressureCategory": "thin",
         "minPressure": 0.001,
         "off_list_atmosphere_needs_volcanism": true,
         "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 384 of 2,221 bodies with it in the EDDN year are High Metal Content (17 %); the row left it out and only the observed-class rescue showed it.",
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
           "Morph colour follows host star type (genus meta.color_variants).",
           "Argon added 2026-10-09: 24 of 6,852 bodies, all Rocky ice in a year of EDDN codex entries (EDGalaxyData archive) grew on it, one per system; the codex list left it out, so each was listed as unlikely.",
@@ -120,7 +122,8 @@
         ],
         "planet_types": [
           "Rocky",
-          "Rocky Ice"
+          "Rocky Ice",
+          "High Metal Content"
         ],
         "temperature_K": [
           180,
@@ -129,6 +132,7 @@
         "max_gravity": 0.275,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 795 of 4,691 bodies with it in the EDDN year are High Metal Content (17 %); the row left it out and only the observed-class rescue showed it.",
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
           "Morph colour follows host star type (genus meta.color_variants)."
         ]
@@ -145,7 +149,8 @@
         ],
         "planet_types": [
           "Rocky",
-          "Rocky Ice"
+          "Rocky Ice",
+          "High Metal Content"
         ],
         "temperature_K": [
           190,
@@ -154,6 +159,7 @@
         "max_gravity": 0.275,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 315 of 1,225 bodies with it in the EDDN year are High Metal Content (26 %); the row left it out and only the observed-class rescue showed it.",
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
           "Morph colour follows host star type (genus meta.color_variants)."
         ]
@@ -192,11 +198,13 @@
         ],
         "planet_types": [
           "Rocky",
-          "Rocky Ice"
+          "Rocky Ice",
+          "High Metal Content"
         ],
         "max_gravity": 0.275,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 2,318 of 12,327 bodies with it in the EDDN year are High Metal Content (19 %); the row left it out and only the observed-class rescue showed it.",
           "Volcanism no longer demotes it (2026-10-29): the whole EDDN year has it on 14 volcanic ammonia bodies in 14 systems (29 % of the count its usual rate gives), against discus on 124; 38,029 of its 38,043 bodies have none.",
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
           "Morph colour follows host star type (genus meta.color_variants)."

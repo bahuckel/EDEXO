@@ -106,10 +106,12 @@ function createQuitFlow({ app, dialog, getRuntime, getMainWindow }) {
         app.quit();
       } else if (response === 0) {
         exitWhenBackupDone = true;
-        void runtime.whenBackupDone().then(() => {
+        // A server that stopped or never answered has nothing left to wait for: close either way.
+        const close = () => {
           exitAllowed = true;
           app.quit();
-        });
+        };
+        void runtime.whenBackupDone().then(close, close);
       }
     });
     return true;

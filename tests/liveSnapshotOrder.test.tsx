@@ -44,7 +44,8 @@ class FakeSocket {
 
 let root: Root | null = null;
 let seen: (AppSnapshot | null)[] = [];
-let answerFetch: ((rev: number, tag: string) => Promise<void>) | null = null;
+/** `rev` null: an answer without the revision header. */
+let answerFetch: ((rev: number | null, tag: string) => Promise<void>) | null = null;
 
 function Probe() {
   const { snapshot } = useLiveSnapshot();
@@ -70,7 +71,7 @@ beforeEach(() => {
       () =>
         new Promise((resolve) => {
           answerFetch = async (rev, t) => {
-            resolve({ headers: new Headers({ "X-Edexo-Rev": String(rev) }), text: async () => JSON.stringify({ tag: t }) });
+            resolve({ headers: new Headers(rev == null ? {} : { "X-Edexo-Rev": String(rev) }), text: async () => JSON.stringify({ tag: t }) });
             await vi.runOnlyPendingTimersAsync();
           };
         }),
@@ -132,6 +133,23 @@ describe("live snapshot ordering", () => {
     expect(tag()).toBe("push-5");
     await act(() => answerFetch!(4, "fetch-4"));
     expect(tag()).toBe("push-5");
+  });
+
+  it("drops a fetch without a revision once a push has shown one (review A16: its age is unknown)", async () => {
+    waitOutFirstFrame();
+    const ws = FakeSocket.all[0]!;
+    act(() => {
+      ws.open();
+      ws.push(5, "push-5");
+    });
+    await act(() => answerFetch!(null, "fetch-unknown"));
+    expect(tag()).toBe("push-5");
+  });
+
+  it("takes a fetch without a revision when no push has come", async () => {
+    waitOutFirstFrame();
+    await act(() => answerFetch!(null, "fetch-unknown"));
+    expect(tag()).toBe("fetch-unknown");
   });
 
   it("takes a fetch that is as new as the last push or newer", async () => {

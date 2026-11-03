@@ -191,7 +191,8 @@ export function useLiveSnapshot(channel: LiveChannel = "app"): {
         })
         .then(({ rev, t }) => {
           if (cancelled) return;
-          if (rev != null && shownRev != null && rev < shownRev) return;
+          // Older than what a push has shown, or of unknown age (no revision header): a push stays (review A16).
+          if (shownRev != null && (rev == null || rev < shownRev)) return;
           if (rev != null) lastRev = shownRev = rev;
           perfSnapshotReceived(t.length);
           applyPayload(JSON.parse(t) as AppSnapshot);

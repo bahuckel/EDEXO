@@ -230,6 +230,9 @@ function otherMatchCardTierFromTitle(shortTitle: string): 1 | 2 | 3 | 4 {
   return 4;
 }
 
+/** A title's tier, read once: the titles are the profiles' few hundred facts, scored for every candidate. */
+const tierByTitle = new Map<string, 1 | 2 | 3 | 4>();
+
 /**
  * Single scalar “deck strength” from other-match chips: tier (primary vs solid vs crust vs other) × highlight colour.
  * Used for same-genus deck share (sum-normalized vs siblings in {@link applyExomasteryGenusCompetitivePercent}), not habitat quality.
@@ -237,7 +240,8 @@ function otherMatchCardTierFromTitle(shortTitle: string): 1 | 2 | 3 | 4 {
 export function exomasteryOtherMatchCardDeckScore(cards: OtherMatchDetailCardDTO[]): number {
   let sum = 0;
   for (const c of cards) {
-    const tier = otherMatchCardTierFromTitle(c.shortTitle);
+    let tier = tierByTitle.get(c.shortTitle);
+    if (tier === undefined) tierByTitle.set(c.shortTitle, (tier = otherMatchCardTierFromTitle(c.shortTitle)));
     const hi = (c.highlight ?? "neutral") as keyof typeof OTHER_MATCH_HIGHLIGHT_UNIT;
     const hw = OTHER_MATCH_HIGHLIGHT_UNIT[hi] ?? OTHER_MATCH_HIGHLIGHT_UNIT.neutral;
     let hostBoost = 1;
@@ -278,11 +282,130 @@ export function buildOtherMatchDetailDecks(
   scan: PlanetScan,
   rec: ExplorationScanRecord | null | undefined,
   journalHost?: JournalHostStarObservation | null,
-): { withoutSimilarity: OtherMatchDetailCardDTO[]; withSimilarity: OtherMatchDetailCardDTO[] } {
+): { withoutSimilarity: OtherMatchDetailCardDTO[]; readonly withSimilarity: OtherMatchDetailCardDTO[] } {
   const raw = buildOtherMatchRawCards(profile, scan, rec, journalHost);
+  // The similarity deck only when asked for: a candidate without a measured similarity never shows it.
+  let withSimilarity: OtherMatchDetailCardDTO[] | null = null;
   return {
     withoutSimilarity: finishOtherMatchDeck(raw, false),
-    withSimilarity: finishOtherMatchDeck(raw, true),
+    get withSimilarity() {
+      return (withSimilarity ??= finishOtherMatchDeck(raw, true));
+    },
+  };
+}
+
+/*
+  What a profile's facts need for their cards and do not take from the body — which facts get one, their titles, the
+  typical value, the range, the start of the tooltip — worked out once per profile instead of once per body and
+  candidate (2026-11-03: the cards were 42 % of the time spent building bodies, ~19 of 46 s over 1,035 EDDN bodies).
+  Profiles are loaded once and never changed, so the profile object is the key.
+*/
+interface NumericFact {
+  path: string;
+  r: ExomasteryNumericRollup;
+  tightBand: boolean;
+  id: string;
+  label: string;
+  dispMode: string;
+  /** The tooltip up to the body's own deviation. */
+  tooltipHead: string;
+}
+interface ShareFact {
+  el: string;
+  r: ExomasteryNumericRollup;
+  mode: number;
+  tightBand: boolean;
+  id: string;
+  shortTitle: string;
+  topValue: string;
+  tooltipHead: string;
+}
+interface ProfileFacts {
+  numerics: NumericFact[];
+  materials: ShareFact[];
+  atmosphere: ShareFact[];
+  solids: ShareFact[];
+}
+const profileFacts = new WeakMap<ExomasteryProfileV1, ProfileFacts>();
+
+function shareFacts(
+  entries: [string, ExomasteryNumericRollup][],
+  idPrefix: string,
+  title: string,
+  what: string,
+): ShareFact[] {
+  return entries.map(([el, r]) => {
+    const mode = r.mode ?? r.mean;
+    return {
+      el,
+      r,
+      mode,
+      tightBand: rollupRelativeBandPercent(r) < 0.1,
+      id: `${idPrefix}${el.replace(/[^a-z0-9]+/gi, "-")}`,
+      shortTitle: `${title} · ${el}`,
+      topValue: `${formatExomasteryNum(mode)}%`,
+      tooltipHead: `${what} ${el}: feeder ${formatExomasteryNum(r.min)}–${formatExomasteryNum(r.max)}% · n=${r.count ?? "?"}. Δ vs mode: `,
+    };
+  });
+}
+
+function factsOf(profile: ExomasteryProfileV1): ProfileFacts {
+  const hit = profileFacts.get(profile);
+  if (hit) return hit;
+  const materialKeysLower = new Set(Object.keys(profile.materials).map((k) => k.toLowerCase()));
+  const atmoKeysLower = new Set(Object.keys(profile.atmosphereComposition).map((k) => k.toLowerCase()));
+  const solidKeysLower = new Set(Object.keys(profile.solidComposition ?? {}).map((k) => k.toLowerCase()));
+  const numerics: NumericFact[] = [];
+  for (const [path, r] of Object.entries(profile.numerics)) {
+    if (shouldOmitExomasterySciencePath(path)) continue;
+    if (/solidcomposition/i.test(path)) continue;
+    const tail = exomasteryPathTailLower(path);
+    if (materialKeysLower.has(tail) || atmoKeysLower.has(tail) || solidKeysLower.has(tail)) continue;
+    const band = rollupRelativeBandPercent(r);
+    const spanNote = `${formatExomasteryValueForPath(path, r.min)} … ${formatExomasteryValueForPath(path, r.max)}`;
+    numerics.push({
+      path,
+      r,
+      tightBand: band < 0.1,
+      id: `exo-${tail}-${Math.abs(hashStringSimple(path))}`.replace(/[^a-z0-9_-]/gi, "-"),
+      label: formatPathLabel(path),
+      dispMode: formatExomasteryValueForPath(path, r.mode ?? r.mean),
+      tooltipHead: `Exomastery sample (${r.count ?? "?"} bodies): min–max ${spanNote}. Band vs mode: ${band.toFixed(4)}%. Δ vs mode: `,
+    });
+  }
+  // A solid key listed twice in other cases is one card, the first.
+  const seenSolid = new Set<string>();
+  const solids = Object.entries(profile.solidComposition ?? {}).filter(([el]) => {
+    const k = el.toLowerCase();
+    if (seenSolid.has(k)) return false;
+    seenSolid.add(k);
+    return true;
+  });
+  const facts: ProfileFacts = {
+    numerics,
+    materials: shareFacts(Object.entries(profile.materials), "exo-mat-", "Crust", "Crust element"),
+    atmosphere: shareFacts(Object.entries(profile.atmosphereComposition), "exo-atmo-", "Atmosphere", "Atmosphere gas"),
+    solids: shareFacts(solids, "exo-solid-", "Solid", "Solid fraction"),
+  };
+  profileFacts.set(profile, facts);
+  return facts;
+}
+
+/** One card of a share (crust element, atmosphere gas, solid fraction) for the body's own value. */
+function shareCard(f: ShareFact, curN: number): OtherMatchDetailCardDTO {
+  const devPct = deviationPercentVsRollupMode(curN, f.r);
+  const highlight = otherMatchHighlightFromDeviation(devPct, curN, f.r);
+  const dpp = Number.isFinite(f.mode) ? Math.round(Math.abs(curN - f.mode) * 10) / 10 : null;
+  return {
+    id: f.id,
+    priority: otherMatchPriorityFromHighlight(highlight, f.tightBand),
+    shortTitle: f.shortTitle,
+    topLegend: "Typical (mode %)",
+    topValue: f.topValue,
+    bottomLegend: "This body",
+    bottomValue: `${formatExomasteryNum(curN)}%`,
+    tooltip: `${f.tooltipHead}${dpp ?? "—"} pp · ${devPct.toFixed(2)}% rel.`,
+    highlight,
   };
 }
 
@@ -301,120 +424,50 @@ function buildOtherMatchRawCards(
   const out: OtherMatchDetailCardDTO[] = [];
   const withoutSimilarityOnly = new Set<OtherMatchDetailCardDTO>();
   pushHostStarOtherMatchDeckCards(out, profile, journalHost ?? null);
-  const materialKeysLower = new Set(Object.keys(profile.materials).map((k) => k.toLowerCase()));
-  const atmoKeysLower = new Set(Object.keys(profile.atmosphereComposition).map((k) => k.toLowerCase()));
-  const solidKeysLower = new Set(Object.keys(profile.solidComposition ?? {}).map((k) => k.toLowerCase()));
+  const facts = factsOf(profile);
 
-  for (const [path, r] of Object.entries(profile.numerics)) {
-    if (shouldOmitExomasterySciencePath(path)) continue;
-    if (/solidcomposition/i.test(path)) continue;
-    const tail = exomasteryPathTailLower(path);
-    if (materialKeysLower.has(tail) || atmoKeysLower.has(tail) || solidKeysLower.has(tail)) continue;
-    const v = valueForNumericPath(path, scan, rec);
-    const mode = r.mode ?? r.mean;
-    const tightBand = rollupRelativeBandPercent(r) < 0.1;
+  for (const f of facts.numerics) {
+    const v = valueForNumericPath(f.path, scan, rec);
     const hasValue = v != null && Number.isFinite(v);
     // With a similarity: a fact with a value or a tight band. Without: anything but a missing value on a loose band.
-    const inWith = tightBand || hasValue;
-    const inWithout = !(v == null && !tightBand);
+    const inWith = f.tightBand || hasValue;
+    const inWithout = !(v == null && !f.tightBand);
     if (!inWith && !inWithout) continue;
 
-    const devPct = hasValue ? deviationPercentVsRollupMode(v!, r) : 100;
-    const highlight = hasValue ? otherMatchHighlightFromDeviation(devPct, v!, r) : "neutral";
-    const priority = otherMatchPriorityFromHighlight(highlight, tightBand);
-    const label = formatPathLabel(path);
-    const dispMode = formatExomasteryValueForPath(path, mode);
-    const dispCur = hasValue ? formatExomasteryValueForPath(path, v!) : "—";
-    const spanNote = `${formatExomasteryValueForPath(path, r.min)} … ${formatExomasteryValueForPath(path, r.max)}`;
+    const devPct = hasValue ? deviationPercentVsRollupMode(v!, f.r) : 100;
+    const highlight = hasValue ? otherMatchHighlightFromDeviation(devPct, v!, f.r) : "neutral";
     out.push({
-      id: `exo-${tail}-${Math.abs(hashStringSimple(path))}`.replace(/[^a-z0-9_-]/gi, "-"),
-      priority,
-      shortTitle: label,
+      id: f.id,
+      priority: otherMatchPriorityFromHighlight(highlight, f.tightBand),
+      shortTitle: f.label,
       topLegend: "Typical (mode)",
-      topValue: dispMode,
+      topValue: f.dispMode,
       bottomLegend: "This body",
-      bottomValue: dispCur,
-      tooltip: `Exomastery sample (${r.count ?? "?"} bodies): min–max ${spanNote}. Band vs mode: ${rollupRelativeBandPercent(r).toFixed(4)}%. Δ vs mode: ${hasValue ? `${devPct.toFixed(2)}%` : "—"}.`,
+      bottomValue: hasValue ? formatExomasteryValueForPath(f.path, v!) : "—",
+      tooltip: `${f.tooltipHead}${hasValue ? `${devPct.toFixed(2)}%` : "—"}.`,
       highlight,
     });
     if (!inWith) withoutSimilarityOnly.add(out[out.length - 1]!);
   }
 
-  for (const [el, r] of Object.entries(profile.materials)) {
-    const cur = crustMaterialValue(scan, rec, el);
-    if (!cur.known) continue;
-    const curN = cur.v ?? 0;
-    const mode = r.mode ?? r.mean;
-    const tightBand = rollupRelativeBandPercent(r) < 0.1;
-    const devPct = deviationPercentVsRollupMode(curN, r);
-    const highlight = otherMatchHighlightFromDeviation(devPct, curN, r);
-    const priority = otherMatchPriorityFromHighlight(highlight, tightBand);
-    const dpp = Number.isFinite(mode) ? Math.round(Math.abs(curN - mode) * 10) / 10 : null;
-    out.push({
-      id: `exo-mat-${el.replace(/[^a-z0-9]+/gi, "-")}`,
-      priority,
-      shortTitle: `Crust · ${el}`,
-      topLegend: "Typical (mode %)",
-      topValue: `${formatExomasteryNum(mode)}%`,
-      bottomLegend: "This body",
-      bottomValue: `${formatExomasteryNum(curN)}%`,
-      tooltip: `Crust element ${el}: feeder ${formatExomasteryNum(r.min)}–${formatExomasteryNum(r.max)}% · n=${r.count ?? "?"}. Δ vs mode: ${dpp ?? "—"} pp · ${devPct.toFixed(2)}% rel.`,
-      highlight,
-    });
+  for (const f of facts.materials) {
+    const cur = crustMaterialValue(scan, rec, f.el);
+    if (cur.known) out.push(shareCard(f, cur.v ?? 0));
   }
-
-  for (const [el, r] of Object.entries(profile.atmosphereComposition)) {
-    const cur = atmoGasValue(scan, rec, el);
-    if (!cur.known) continue;
-    const curN = cur.v ?? 0;
-    const mode = r.mode ?? r.mean;
-    const tightBand = rollupRelativeBandPercent(r) < 0.1;
-    const devPct = deviationPercentVsRollupMode(curN, r);
-    const highlight = otherMatchHighlightFromDeviation(devPct, curN, r);
-    const priority = otherMatchPriorityFromHighlight(highlight, tightBand);
-    const dpp = Number.isFinite(mode) ? Math.round(Math.abs(curN - mode) * 10) / 10 : null;
-    out.push({
-      id: `exo-atmo-${el.replace(/[^a-z0-9]+/gi, "-")}`,
-      priority,
-      shortTitle: `Atmosphere · ${el}`,
-      topLegend: "Typical (mode %)",
-      topValue: `${formatExomasteryNum(mode)}%`,
-      bottomLegend: "This body",
-      bottomValue: `${formatExomasteryNum(curN)}%`,
-      tooltip: `Atmosphere gas ${el}: feeder ${formatExomasteryNum(r.min)}–${formatExomasteryNum(r.max)}% · n=${r.count ?? "?"}. Δ vs mode: ${dpp ?? "—"} pp · ${devPct.toFixed(2)}% rel.`,
-      highlight,
-    });
+  for (const f of facts.atmosphere) {
+    const cur = atmoGasValue(scan, rec, f.el);
+    if (cur.known) out.push(shareCard(f, cur.v ?? 0));
   }
-
-  const seenSolidKeys = new Set<string>();
-  for (const [el, r] of Object.entries(profile.solidComposition ?? {})) {
-    const elK = el.toLowerCase();
-    if (seenSolidKeys.has(elK)) continue;
-    seenSolidKeys.add(elK);
-    const cur = solidValue(scan, rec, el);
-    if (!cur.known) continue;
-    const curN = cur.v ?? 0;
-    const mode = r.mode ?? r.mean;
-    const tightBand = rollupRelativeBandPercent(r) < 0.1;
-    const devPct = deviationPercentVsRollupMode(curN, r);
-    const highlight = otherMatchHighlightFromDeviation(devPct, curN, r);
-    const priority = otherMatchPriorityFromHighlight(highlight, tightBand);
-    const dpp = Number.isFinite(mode) ? Math.round(Math.abs(curN - mode) * 10) / 10 : null;
-    out.push({
-      id: `exo-solid-${el.replace(/[^a-z0-9]+/gi, "-")}`,
-      priority,
-      shortTitle: `Solid · ${el}`,
-      topLegend: "Typical (mode %)",
-      topValue: `${formatExomasteryNum(mode)}%`,
-      bottomLegend: "This body",
-      bottomValue: `${formatExomasteryNum(curN)}%`,
-      tooltip: `Solid fraction ${el}: feeder ${formatExomasteryNum(r.min)}–${formatExomasteryNum(r.max)}% · n=${r.count ?? "?"}. Δ vs mode: ${dpp ?? "—"} pp · ${devPct.toFixed(2)}% rel.`,
-      highlight,
-    });
+  for (const f of facts.solids) {
+    const cur = solidValue(scan, rec, f.el);
+    if (cur.known) out.push(shareCard(f, cur.v ?? 0));
   }
 
   return { cards: out, withoutSimilarityOnly };
 }
+
+/** The order `localeCompare` gives, made once (a new comparison per call was ~4 s of the 19 above). */
+const CARD_ORDER = new Intl.Collator();
 
 function finishOtherMatchDeck(raw: RawCards, hasSimilarity: boolean): OtherMatchDetailCardDTO[] {
   const dedup = new Map<string, OtherMatchDetailCardDTO>();
@@ -424,7 +477,7 @@ function finishOtherMatchDeck(raw: RawCards, hasSimilarity: boolean): OtherMatch
     if (!dedup.has(k)) dedup.set(k, c);
   }
   const merged = [...dedup.values()];
-  merged.sort((a, b) => a.priority - b.priority || a.shortTitle.localeCompare(b.shortTitle));
+  merged.sort((a, b) => a.priority - b.priority || CARD_ORDER.compare(a.shortTitle, b.shortTitle));
   return merged.slice(0, 120);
 }
 

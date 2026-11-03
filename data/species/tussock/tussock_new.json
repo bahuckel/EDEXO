@@ -66,14 +66,18 @@
           "Carbon Dioxide"
         ],
         "planet_types": [
-          "Rocky"
+          "Rocky",
+          "High Metal Content"
         ],
         "temperature_K": [
           175,
           180
         ],
         "max_gravity": 0.275,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 1,051 of 4,502 bodies with it in the EDDN year are High Metal Content (23 %); the row left it out and only the observed-class rescue showed it."
+        ]
       }
     },
     {
@@ -86,10 +90,14 @@
           "Methane"
         ],
         "planet_types": [
-          "Rocky"
+          "Rocky",
+          "Rocky Ice"
         ],
         "max_gravity": 0.275,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "Rocky Ice added 2026-11-03 (hand list vs data): 1,556 of 1,724 bodies with it in the EDDN year are Rocky Ice (90 %); the row left it out and only the observed-class rescue showed it."
+        ]
       }
     },
     {
@@ -121,10 +129,14 @@
           "Ammonia"
         ],
         "planet_types": [
-          "Rocky"
+          "Rocky",
+          "High Metal Content"
         ],
         "max_gravity": 0.275,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 1,108 of 4,234 bodies with it in the EDDN year are High Metal Content (26 %); the row left it out and only the observed-class rescue showed it."
+        ]
       }
     },
     {
@@ -137,7 +149,7 @@
         ],
         "planet_types": [
           "Rocky",
-		  "High Metal Content"
+          "High Metal Content"
         ],
         "max_gravity": 0.275,
         "atmospherePressureCategory": "thin"
@@ -168,14 +180,18 @@
           "Carbon Dioxide"
         ],
         "planet_types": [
-          "Rocky"
+          "Rocky",
+          "High Metal Content"
         ],
         "temperature_K": [
           160,
           170
         ],
         "max_gravity": 0.275,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 1,351 of 8,380 bodies with it in the EDDN year are High Metal Content (16 %); the row left it out and only the observed-class rescue showed it."
+        ]
       }
     },
     {
@@ -207,14 +223,18 @@
           "Carbon Dioxide"
         ],
         "planet_types": [
-          "Rocky"
+          "Rocky",
+          "High Metal Content"
         ],
         "temperature_K": [
           0,
           195
         ],
         "max_gravity": 0.275,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 966 of 5,565 bodies with it in the EDDN year are High Metal Content (17 %); the row left it out and only the observed-class rescue showed it."
+        ]
       }
     },
     {
@@ -246,14 +266,18 @@
           "Carbon Dioxide"
         ],
         "planet_types": [
-          "Rocky"
+          "Rocky",
+          "High Metal Content"
         ],
         "temperature_K": [
           170,
           175
         ],
         "max_gravity": 0.275,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 624 of 3,063 bodies with it in the EDDN year are High Metal Content (20 %); the row left it out and only the observed-class rescue showed it."
+        ]
       }
     },
     {
@@ -322,10 +346,14 @@
           "Water"
         ],
         "planet_types": [
-          "Rocky"
+          "Rocky",
+          "High Metal Content"
         ],
         "max_gravity": 0.275,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 992 of 2,387 bodies with it in the EDDN year are High Metal Content (42 %); the row left it out and only the observed-class rescue showed it."
+        ]
       }
     }
   ],

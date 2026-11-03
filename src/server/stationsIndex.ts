@@ -10,7 +10,8 @@
  * then length-prefixed UTF-8 strings.
  *
  * Read whole on first use (about 35 MB for 800 k stations), queried by a straight pass (a nearest search over every
- * system is a few milliseconds), and let go with the galaxy map's other caches when it idles.
+ * system is a few milliseconds; the name search over a text of every name built on its first use), and let go with
+ * the galaxy map's other caches when it idles.
  */
 import {
   closeSync,
@@ -318,26 +319,24 @@ export class StationsIndex {
     const withSystem = q.includes(" ");
     const hits: { i: number; sys: number; starts: boolean; name: string; system: string }[] = [];
     const seen = new Map<string, number>();
-    for (let s = 0; s < this.systemCount; s++) {
-      const so = this.sysAt + s * SYS;
-      const first = this.buf.readUInt32LE(so + 16);
-      const count = this.buf.readUInt16LE(so + 20);
-      let sysName: string | null = null;
-      for (let i = first; i < first + count; i++) {
-        if (this.padAt(i) === 0) continue; // an installation: no pad, of no interest
-        const name = this.str(this.buf.readUInt32LE(this.stAt + i * ST + 16)).toLowerCase();
-        let ok = name.includes(q);
-        if (!ok && withSystem) {
-          sysName ??= this.str(this.buf.readUInt32LE(so + 12)).toLowerCase();
-          ok = `${name} ${sysName}`.includes(q);
-        }
-        if (!ok) continue;
+    const t = this.searchText();
+    let at = t.text.indexOf(q);
+    while (at >= 0) {
+      const k = lineAt(t.starts, at);
+      const start = t.starts[k]!;
+      const nameLen = t.nameLen[k]!;
+      // Without a space only the name may hold the words; with one, "station system" may too.
+      if (withSystem || at + q.length <= start + nameLen) {
+        const name = t.text.slice(start, start + nameLen);
         seen.set(name, (seen.get(name) ?? 0) + 1);
         if (hits.length < 50_000) {
-          sysName ??= this.str(this.buf.readUInt32LE(so + 12)).toLowerCase();
-          hits.push({ i, sys: s, starts: name.startsWith(q), name, system: sysName });
+          const end = k + 1 < t.starts.length ? t.starts[k + 1]! - 1 : t.text.length;
+          hits.push({ i: t.station[k]!, sys: t.sys[k]!, starts: at === start, name, system: t.text.slice(start + nameLen + 1, end) });
         }
       }
+      // One hit per station: on to the next line.
+      const next = k + 1 < t.starts.length ? t.starts[k + 1]! : t.text.length;
+      at = t.text.indexOf(q, next);
     }
     const distOf = (sys: number) => {
       if (!from) return 0;
@@ -348,18 +347,75 @@ export class StationsIndex {
         this.buf.readFloatLE(so + 8) - from.z,
       );
     };
-    const d = from ? new Map(hits.map((h) => [h, distOf(h.sys)])) : null;
-    hits.sort((a, b) =>
-      d
-        ? d.get(a)! - d.get(b)!
-        : Number(b.starts) - Number(a.starts) ||
-          a.name.localeCompare(b.name) ||
-          a.system.localeCompare(b.system),
-    );
-    return hits.slice(0, limit).map((h) => ({
-      ...this.row(h.i, h.sys, d ? d.get(h)! : 0),
-      dup: (seen.get(h.name) ?? 0) > 1,
-    }));
+    if (from) {
+      const d = new Float64Array(hits.length);
+      for (let k = 0; k < hits.length; k++) d[k] = distOf(hits[k]!.sys);
+      const order = Array.from(hits.keys()).sort((a, b) => d[a]! - d[b]! || a - b);
+      return order.slice(0, limit).map((k) => ({
+        ...this.row(hits[k]!.i, hits[k]!.sys, d[k]!),
+        dup: (seen.get(hits[k]!.name) ?? 0) > 1,
+      }));
+    }
+    // The first `limit` in name order, kept as they come (a common word matches tens of thousands; sorting them all
+    // cost more than finding them). Equal ones keep their order, as a stable sort would.
+    const cmp = (a: (typeof hits)[number], b: (typeof hits)[number]) =>
+      Number(b.starts) - Number(a.starts) || NAME_ORDER.compare(a.name, b.name) || NAME_ORDER.compare(a.system, b.system);
+    const top: typeof hits = [];
+    for (const h of hits) {
+      if (top.length >= limit && cmp(h, top[top.length - 1]!) >= 0) continue;
+      let lo = 0;
+      let hi = top.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        if (cmp(top[mid]!, h) <= 0) lo = mid + 1;
+        else hi = mid;
+      }
+      top.splice(lo, 0, h);
+      if (top.length > limit) top.pop();
+    }
+    return top.map((h) => ({ ...this.row(h.i, h.sys, 0), dup: (seen.get(h.name) ?? 0) > 1 }));
+  }
+
+  private searchCache: SearchText | null = null;
+  /**
+   * Every station with a pad as one lowercased line, "name system\n", built on the first search (review 2026-10-10:
+   * each keystroke decoded and lowercased all 800 k names again, 75-155 ms). A search is then the string's own
+   * indexOf over one text, and a hit's line is found by its start.
+   */
+  private searchText(): SearchText {
+    if (this.searchCache) return this.searchCache;
+    const parts: string[] = [];
+    const starts: number[] = [];
+    const nameLen: number[] = [];
+    const station: number[] = [];
+    const sys: number[] = [];
+    let at = 0;
+    for (let s = 0; s < this.systemCount; s++) {
+      const so = this.sysAt + s * SYS;
+      const first = this.buf.readUInt32LE(so + 16);
+      const count = this.buf.readUInt16LE(so + 20);
+      let sysName: string | null = null;
+      for (let i = first; i < first + count; i++) {
+        if (this.padAt(i) === 0) continue; // an installation: no pad, of no interest
+        sysName ??= this.systemNameLower(s);
+        const name = this.str(this.buf.readUInt32LE(this.stAt + i * ST + 16)).toLowerCase();
+        const line = `${name} ${sysName}\n`;
+        parts.push(line);
+        starts.push(at);
+        nameLen.push(name.length);
+        station.push(i);
+        sys.push(s);
+        at += line.length;
+      }
+    }
+    this.searchCache = {
+      text: parts.join(""),
+      starts: Uint32Array.from(starts),
+      nameLen: Uint16Array.from(nameLen),
+      station: Uint32Array.from(station),
+      sys: Uint32Array.from(sys),
+    };
+    return this.searchCache;
   }
 
   /** The stations of the system at a point (the map's hover), nearest system within `withinLy`. */
@@ -462,6 +518,30 @@ export class StationsIndex {
     }
     return null;
   }
+}
+
+/** {@link StationsIndex.search}'s text: line k starts at `starts[k]`, its name is `nameLen[k]` long. */
+interface SearchText {
+  text: string;
+  starts: Uint32Array;
+  nameLen: Uint16Array;
+  station: Uint32Array;
+  sys: Uint32Array;
+}
+
+/** The order `localeCompare` gives, made once: a search sorts up to 50,000 names. */
+const NAME_ORDER = new Intl.Collator();
+
+/** The line holding a position: the last start at or before it. */
+function lineAt(starts: Uint32Array, pos: number): number {
+  let lo = 0;
+  let hi = starts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >>> 1;
+    if (starts[mid]! <= pos) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
 }
 
 /** FNV-1a over the UTF-16 code units: the station index's name look-up ({@link StationsIndex.systemIndex}). */

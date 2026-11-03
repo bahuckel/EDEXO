@@ -2,6 +2,9 @@
  * The EDDN collector's codex ledger (owner, 2026-10-04, plan O-G): when one runs on this machine, plants
  * relayed since EDSM's dump count against [CODEX FIRST]; when none does, nothing changes.
  */
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { codexFirstCheck, resetCodexFirst } from "../src/server/codexFirst.js";
 import {
@@ -95,6 +98,35 @@ describe("the EDDN collector's ledger", () => {
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+
+  it("keeps what it read, and next time asks only for rows since the latest one (two days back)", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "edexo-ledger-"));
+    const file = path.join(dir, "ledger.json");
+    const asked: string[] = [];
+    const answering = (body: string) =>
+      (async (url: string) => {
+        asked.push(String(url));
+        return new Response(body);
+      }) as unknown as typeof fetch;
+    const dated = (token: string, region: string, firstSeen: string) =>
+      JSON.stringify({ kind: "codex", token, region, category: "$Codex_Category_Biology;", firstSeen });
+    const first = [
+      manifest,
+      dated("$Codex_Ent_Cactoid_01_A_Name;", "Errant Marches", "2026-10-20T10:00:00Z"),
+      dated("$Codex_Ent_Aleoids_01_A_Name;", "Inner Orion Spur", "2026-10-25T12:00:00Z"),
+    ].join("\n");
+    expect(await refreshEddnLedger(root, answering(first), "http://ledger", file)).toMatchObject({ found: true, plantRows: 2 });
+    expect(asked[0]).not.toContain("2026-10-23");
+    // The second answer holds only the new row; the two kept ones stay.
+    const second = [manifest, dated("$Codex_Ent_Cactoid_02_A_Name;", "Errant Marches", "2026-10-26T08:00:00Z")].join("\n");
+    expect(await refreshEddnLedger(root, answering(second), "http://ledger", file)).toMatchObject({ found: true, plantRows: 3 });
+    expect(decodeURIComponent(asked[1]!)).toContain("since=2026-10-23T12:00:00.000Z");
+    // Without the file it is a whole read again.
+    rmSync(file);
+    expect(await refreshEddnLedger(root, answering(second), "http://ledger", file)).toMatchObject({ plantRows: 1 });
+    expect(asked[2]).toBe(asked[0]);
+    rmSync(dir, { recursive: true, force: true });
   });
 
   it("stays quiet when nothing answers", async () => {

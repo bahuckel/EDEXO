@@ -7,8 +7,12 @@
  * tools relay on EDDN, so its rows since the dump close that gap. Asked on start and every half hour
  * with one local GET; when nothing answers, nothing changes and nothing is shown.
  */
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { regionJoinKey } from "../shared/regionMap.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 import { codexFirstDataDate, setEddnLedgerIds } from "./codexFirst.js";
+import { resolveUserSettingsJsonPath } from "./paths.js";
 
 export const EDDN_COLLECTOR_URL = "http://127.0.0.1:7121";
 
@@ -51,6 +55,12 @@ function field(line: string, re: RegExp): string | null {
 const TOKEN = /"token":"((?:[^"\\]|\\.)*)"/;
 const REGION = /"region":"((?:[^"\\]|\\.)*)"/;
 const CATEGORY = /"category":"((?:[^"\\]|\\.)*)"/;
+const FIRST_SEEN = /"firstSeen":"([^"\\]*)"/;
+
+/** The latest `firstSeen` of the plant rows read: where the next read can start. */
+interface Cursor {
+  latest: string | null;
+}
 /**
  * Add the plant rows of some whole JSONL lines to `out` as `region|codexId` keys.
  *
@@ -59,7 +69,7 @@ const CATEGORY = /"category":"((?:[^"\\]|\\.)*)"/;
  * (2026-10-19, measured in the desktop app: the launcher's first data waited for it). Lines are walked in place,
  * rows that are not biology are skipped before anything is built, and only the three fields are read.
  */
-function addLedgerKeys(text: string, out: Set<string>): void {
+function addLedgerKeys(text: string, out: Set<string>, cursor?: Cursor): void {
   let at = 0;
   while (at < text.length) {
     let end = text.indexOf("\n", at);
@@ -71,6 +81,10 @@ function addLedgerKeys(text: string, out: Set<string>): void {
         const token = field(line, TOKEN);
         const region = field(line, REGION);
         if (token && region) out.add(`${regionJoinKey(region)}|${ledgerTokenToCodexId(token)}`);
+        if (cursor) {
+          const seen = FIRST_SEEN.exec(line)?.[1];
+          if (seen && (cursor.latest == null || seen > cursor.latest)) cursor.latest = seen;
+        }
       }
     }
     at = end + 1;
@@ -86,17 +100,17 @@ export function parseLedger(text: string): Set<string> {
 
 const MANIFEST = '{"kind":"manifest"';
 
-function parseLedgerChecked(text: string): Set<string> {
+function parseLedgerChecked(text: string, out: Set<string>, cursor: Cursor): Set<string> {
   if (!text.startsWith(MANIFEST)) throw new Error("not a codex ledger");
-  return parseLedger(text);
+  addLedgerKeys(text, out, cursor);
+  return out;
 }
 
 /**
  * Read the ledger as it streams in, one network chunk at a time: no 43 MB string, and the thread is handed back
  * between chunks. Throws when the answer does not start with the ledger's manifest.
  */
-async function readLedgerStream(body: ReadableStream<Uint8Array>): Promise<Set<string>> {
-  const out = new Set<string>();
+async function readLedgerStream(body: ReadableStream<Uint8Array>, out: Set<string>, cursor: Cursor): Promise<Set<string>> {
   const reader = body.getReader();
   const dec = new TextDecoder();
   let rest = "";
@@ -112,10 +126,53 @@ async function readLedgerStream(body: ReadableStream<Uint8Array>): Promise<Set<s
       checked = true;
     }
     const cut = done ? text.length : text.lastIndexOf("\n") + 1;
-    addLedgerKeys(text.slice(0, cut), out);
+    addLedgerKeys(text.slice(0, cut), out, cursor);
     rest = text.slice(cut);
     if (done) return out;
   }
+}
+
+/*
+  The keys read before, kept on disk (review 2026-10-19 follow-up: the whole 43 MB export was read at every start and
+  every half hour, ~2 s of the server's CPU each time). The next read asks only for rows first seen since the latest
+  one kept, less two days: a row's firstSeen is the game's time, and a sighting relayed late can carry an earlier
+  one. A new EDSM dump, or a week since the last whole read, reads it all again, so nothing missed stays missed.
+*/
+const LEDGER_CACHE_VERSION = 1;
+const FULL_READ_EVERY_MS = 7 * 86_400_000;
+const OVERLAP_MS = 2 * 86_400_000;
+
+interface LedgerCache {
+  version: number;
+  /** The EDSM dump date the keys count from. */
+  since: string | null;
+  /** When the export was last read whole. */
+  fullAt: string;
+  latest: string | null;
+  keys: string[];
+}
+
+export function eddnLedgerCachePath(): string {
+  return path.join(path.dirname(resolveUserSettingsJsonPath()), "edexo-eddn-ledger.json");
+}
+
+function readCache(file: string, since: string | null, now: number): LedgerCache | null {
+  try {
+    if (!existsSync(file)) return null;
+    const c = JSON.parse(readFileSync(file, "utf8")) as LedgerCache;
+    if (c.version !== LEDGER_CACHE_VERSION || c.since !== since || !Array.isArray(c.keys) || !c.latest) return null;
+    const fullAt = Date.parse(c.fullAt);
+    if (!Number.isFinite(fullAt) || now - fullAt > FULL_READ_EVERY_MS || fullAt > now) return null;
+    return c;
+  } catch {
+    return null;
+  }
+}
+
+/** Where an incremental read starts: two days before the latest row kept. */
+function sinceCursor(latest: string): string | null {
+  const t = Date.parse(latest);
+  return Number.isFinite(t) ? new Date(t - OVERLAP_MS).toISOString() : null;
 }
 
 /**
@@ -126,11 +183,19 @@ export async function refreshEddnLedger(
   projectRoot: string,
   fetchImpl: typeof fetch = fetch,
   base = EDDN_COLLECTOR_URL,
+  cacheFile: string | null = eddnLedgerCachePath(),
 ): Promise<EddnLedgerStatus> {
   const since = codexFirstDataDate(projectRoot);
-  const checkedAt = new Date().toISOString();
+  const now = Date.now();
+  const checkedAt = new Date(now).toISOString();
   try {
-    const url = `${base}/api/export/codex${since ? `?since=${encodeURIComponent(since)}` : ""}`;
+    const kept = cacheFile ? readCache(cacheFile, since, now) : null;
+    const from = kept?.latest ? sinceCursor(kept.latest) : null;
+    // Never before the dump: what it holds is not the ledger's to add.
+    const ask = from && (!since || from > since) ? from : since;
+    const url = `${base}/api/export/codex${ask ? `?since=${encodeURIComponent(ask)}` : ""}`;
+    const out = new Set<string>(kept && from ? kept.keys : []);
+    const cursor: Cursor = { latest: kept && from ? kept.latest : null };
     // 4 s for the collector to answer at all; the body itself (tens of MB) gets a minute.
     const ctl = new AbortController();
     const answerTimer = setTimeout(() => ctl.abort(), 4000);
@@ -140,12 +205,26 @@ export async function refreshEddnLedger(
       const r = await fetchImpl(url, { signal: ctl.signal });
       clearTimeout(answerTimer);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      ids = r.body ? await readLedgerStream(r.body) : parseLedgerChecked(await r.text());
+      ids = r.body ? await readLedgerStream(r.body, out, cursor) : parseLedgerChecked(await r.text(), out, cursor);
     } finally {
       clearTimeout(answerTimer);
       clearTimeout(bodyTimer);
     }
     setEddnLedgerIds(ids);
+    if (cacheFile) {
+      try {
+        const cache: LedgerCache = {
+          version: LEDGER_CACHE_VERSION,
+          since,
+          fullAt: kept && from ? kept.fullAt : checkedAt,
+          latest: cursor.latest,
+          keys: [...ids],
+        };
+        writeFileAtomic(cacheFile, JSON.stringify(cache));
+      } catch {
+        /* the next read is a whole one: nothing lost */
+      }
+    }
     status = { found: true, plantRows: ids.size, since, checkedAt };
   } catch {
     if (status.found) setEddnLedgerIds(null);

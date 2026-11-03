@@ -105,3 +105,42 @@ describe("a tab left behind", () => {
     act(() => root.unmount());
   });
 });
+
+describe("a screen that fails to draw", () => {
+  it("says so in its own tab; the other tabs and the app stay (review 2026-10-10 A15)", () => {
+    function Broken(): never {
+      throw new Error("bad row");
+    }
+    const galaxyPane = document.createElement("div");
+    const boxelsPane = document.createElement("div");
+    document.body.append(galaxyPane, boxelsPane);
+    const host = document.createElement("div");
+    const root = createRoot(host);
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+    act(() => {
+      tabStore.open("galaxy");
+      tabStore.open("boxels");
+      tabStore.setPane("galaxy", galaxyPane);
+      tabStore.setPane("boxels", boxelsPane);
+      tabStore.activate("galaxy");
+      root.render(
+        <>
+          <p>app</p>
+          <TabSlot kind="galaxy">
+            <Broken />
+          </TabSlot>
+          <TabSlot kind="boxels">
+            <p>boxels</p>
+          </TabSlot>
+        </>,
+      );
+    });
+    act(() => tabStore.activate("boxels"));
+    quiet.mockRestore();
+    expect(galaxyPane.textContent).toContain("Galaxy map could not be drawn.");
+    expect(galaxyPane.textContent).toContain("bad row");
+    expect(boxelsPane.textContent).toBe("boxels");
+    expect(host.textContent).toBe("app");
+    act(() => root.unmount());
+  });
+});

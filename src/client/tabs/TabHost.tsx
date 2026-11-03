@@ -20,6 +20,7 @@ import {
 import { UI_COMMAND_EVENT } from "../useLiveSnapshot";
 import { tabListKeyDown } from "../ui/Tabs";
 import { MENU_ITEM, useMenuButton } from "../ui/Menu";
+import { ErrorBoundary } from "../ui/ErrorBoundary";
 import type { UiCommand } from "@shared/types";
 
 const DRAG_TYPE = "application/x-edexo-tab";
@@ -93,10 +94,13 @@ export function TabSlot({
     const t = window.setTimeout(() => setStarted(false), releaseAfterMs);
     return () => window.clearTimeout(t);
   }, [releaseAfterMs, inFront, started]);
-  if (pane === false) return <>{children}</>;
+  // A screen that throws while drawing says so in its own place; the app, its live connection and the other
+  // screens stay (review 2026-10-10 A15: one render error used to unmount everything).
+  const guarded = <ErrorBoundary label={labelOf(kind)}>{children}</ErrorBoundary>;
+  if (pane === false) return guarded;
   if (!started) return null;
   return pane
-    ? createPortal(<InTabContext.Provider value={kind}>{children}</InTabContext.Provider>, pane)
+    ? createPortal(<InTabContext.Provider value={kind}>{guarded}</InTabContext.Provider>, pane)
     : null;
 }
 

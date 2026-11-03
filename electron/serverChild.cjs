@@ -14,6 +14,10 @@ const os = require("node:os");
 const path = require("node:path");
 
 const SHUTDOWN_WAIT_MS = 8000;
+/** How long main waits for the server's answer to a call. */
+const CALL_TIMEOUT_MS = 60_000;
+/** "Wait, then close": how long the backup may take before the app closes anyway. */
+const BACKUP_WAIT_MS = 10 * 60_000;
 
 /**
  * @param {object} o
@@ -69,13 +73,26 @@ function startServerChild(o) {
   });
   let stopping = false;
 
-  const call = (method, ...args) =>
+  /*
+    Every call gives up after a while (review 2026-10-10 A12): a server that is alive but stuck never replies and
+    never exits, and "Wait, then close" or a boxel key would wait on it for the rest of the run.
+  */
+  const callWithin = (ms, method, ...args) =>
     new Promise((resolve, reject) => {
       if (state.exited) return reject(new Error("The server is not running."));
       const id = ++seq;
-      waiting.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        if (!waiting.delete(id)) return;
+        reject(new Error(`The server did not answer "${method}" within ${Math.round(ms / 1000)} s.`));
+      }, ms);
+      const done = (fn) => (v) => {
+        clearTimeout(timer);
+        fn(v);
+      };
+      waiting.set(id, { resolve: done(resolve), reject: done(reject) });
       child.postMessage({ type: "call", id, method, args });
     });
+  const call = (method, ...args) => callWithin(CALL_TIMEOUT_MS, method, ...args);
 
   const runtime = {
     ready,
@@ -104,7 +121,8 @@ function startServerChild(o) {
     boxelRunToggle: () => call("boxelRunToggle"),
     openMainAppInBrowser: () => void call("openMainAppInBrowser").catch(() => {}),
     stagedUpdate: () => call("stagedUpdate"),
-    whenBackupDone: () => call("whenBackupDone"),
+    // A backup takes seconds; this is only there so a stuck server cannot hold the quit for ever.
+    whenBackupDone: () => callWithin(BACKUP_WAIT_MS, "whenBackupDone"),
     /*
       Windows logoff: there is no time to wait for an answer, so this only asks. The server writes
       the buffered foot catalog when the message lands, which is the same best effort as before.

@@ -96,7 +96,8 @@
         "planet_types": [
           "Rocky",
           "Icy",
-          "Rocky Ice"
+          "Rocky Ice",
+          "High Metal Content"
         ],
         "whenAtmosphereLinkedMinTempK": 180,
         "whenAtmosphereLinkedMaxTempK": 195,
@@ -110,6 +111,7 @@
         "max_gravity": 0.28,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 1,028 of 7,758 bodies with it in the EDDN year are High Metal Content (13 %); the row left it out and only the observed-class rescue showed it.",
           "Codex: surface structures on high ground — mountains, cliffs, plateau edges (not a hard planet-class gate).",
           "Morph colour is driven by planetary rare materials (genus meta), not star class."
         ]
@@ -127,11 +129,13 @@
         "planet_types": [
           "Rocky",
           "Icy",
-          "Rocky Ice"
+          "Rocky Ice",
+          "High Metal Content"
         ],
         "max_gravity": 0.28,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 6,775 of 19,505 bodies with it in the EDDN year are High Metal Content (35 %); the row left it out and only the observed-class rescue showed it.",
           "Codex: surface structures on high ground — mountains, cliffs, plateau edges (not a hard planet-class gate).",
           "Morph colour is driven by planetary rare materials (genus meta), not star class."
         ]
@@ -149,7 +153,8 @@
         "planet_types": [
           "Rocky",
           "Icy",
-          "Rocky Ice"
+          "Rocky Ice",
+          "High Metal Content"
         ],
         "whenAtmosphereLinkedMinTempK": 180,
         "whenAtmosphereLinkedMaxTempK": 195,
@@ -163,6 +168,7 @@
         "max_gravity": 0.28,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
+          "High Metal Content added 2026-11-03 (hand list vs data): 539 of 3,978 bodies with it in the EDDN year are High Metal Content (14 %); the row left it out and only the observed-class rescue showed it.",
           "Codex: surface structures on high ground — mountains, cliffs, plateau edges (not a hard planet-class gate).",
           "Morph colour is driven by planetary rare materials (genus meta), not star class."
         ]
