@@ -1546,6 +1546,20 @@
 .g3d-neutron-table tr.is-waypoint td {
   color: var(--accent);
 }
+/* The Spansh route drawer (SpanshRouteDrawer.tsx): wide enough for both value columns; each stop's species two lines. */
+.g3d-plan.g3d-spansh-drawer {
+  width: min(460px, calc(100vw - 24px));
+}
+.g3d-spansh-drawer .g3d-neutron-table td:nth-child(n + 3) {
+  white-space: nowrap;
+}
+.g3d-neutron-worth.g3d-spansh-species {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
 /* A Spansh route's stop left out of the flight (SpanshRouteDrawer.tsx). */
 .g3d-neutron-table tr.is-dropped td {
   opacity: 0.45;

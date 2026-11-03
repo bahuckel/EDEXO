@@ -33,6 +33,18 @@ const KIND_NAME: Record<SpanshRouteDTO["kind"], string> = {
 /** Kept across openings of the drawer (it unmounts when another opens). */
 const kept: { text: string; route: SpanshRouteDTO | null; dropped: number[]; floor: string } = { text: "", route: null, dropped: [], floor: "" };
 
+/** A stop's bodies and their species, two lines at most; the whole list on hover. */
+function SpeciesLine({ stop }: { stop: SpanshRouteStopDTO }) {
+  const text = stop.bodies
+    .map((b) => `${b.name.startsWith(stop.name) ? b.name.slice(stop.name.length).trim() : b.name}${b.species.length ? `: ${b.species.map((x) => x.name).join(", ")}` : ""}`)
+    .join(" · ");
+  return (
+    <small className="g3d-neutron-worth g3d-spansh-species" title={text}>
+      {text}
+    </small>
+  );
+}
+
 /** EDEXO's value of a stop for this kind of route: the biology for exobiology, the scan and map for riches. */
 function edexoValue(kind: SpanshRouteDTO["kind"], v: RouteSystemValuesDTO | undefined): number | null {
   if (!v) return null;
@@ -211,7 +223,7 @@ export function SpanshRouteDrawer({
     });
 
   return (
-    <aside className="g3d-drawer g3d-menu g3d-plan" aria-label="Spansh route" data-testid="g3d-spansh">
+    <aside className="g3d-drawer g3d-menu g3d-plan g3d-spansh-drawer" aria-label="Spansh route" data-testid="g3d-spansh">
       <MenuHead title="Spansh route" help={G3D_HELP.spansh} />
       <div className="g3d-menu__section g3d-menu__section--first">
         <MenuRow label="Spansh link" hint="The address of a Spansh results page (exobiology, road to riches, neutron, galaxy plotter or fleet carrier), or its job id">
@@ -336,12 +348,7 @@ export function SpanshRouteDrawer({
                       {s.neutron ? <small className="g3d-neutron-worth"> neutron star</small> : null}
                       {s.refuel ? <small className="g3d-neutron-worth"> {route.kind === "carrier" ? "restock tritium" : "refuel"}</small> : null}
                       {valued && s.bodies.length ? (
-                        <small className="g3d-neutron-worth">
-                          {s.bodies
-                            .slice(0, 3)
-                            .map((b) => `${b.name.startsWith(s.name) ? b.name.slice(s.name.length).trim() : b.name}${b.species.length ? `: ${b.species.map((x) => x.name).join(", ")}` : ""}`)
-                            .join(" · ")}
-                        </small>
+                        <SpeciesLine stop={s} />
                       ) : null}
                     </td>
                     <td>{s.jumps || ""}</td>

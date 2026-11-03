@@ -9,6 +9,10 @@ import { explorationRecordsForSystem } from "../systemMap.js";
 import type { HttpServerOptions } from "../httpServerTypes.js";
 import { scanRouteShip } from "../shipInSystem.js";
 import { createNetlogPosition } from "../netlogPosition.js";
+import type { RouteSystemValuesDTO } from "../../shared/dto/routeSystem.js";
+
+/** Bodies with biology in a system's values: a signal count or a value for its species. */
+const bioBodies = (v: RouteSystemValuesDTO): number => v.bodies.filter((b) => (b.bioSignals ?? 0) > 0 || (b.bioCr ?? 0) > 0).length;
 
 export function registerRouteSystemRoutes(app: express.Express, opts: HttpServerOptions): void {
   const values = createRouteSystemValues(() => opts.getJournalStore?.() ?? null);
@@ -39,15 +43,18 @@ export function registerRouteSystemRoutes(app: express.Express, opts: HttpServer
       const store = opts.getJournalStore?.() ?? null;
       const own = store ? journalSystemValues(store, addr, name) : null;
       /*
-        His records without any biology (a jump through, or EDSM's bodies, which carry no signals) said 0 where Spansh
-        knows the plants (plan 1.3.6 S-1: Stein 2051 next to Sol, 15.9 M on Spansh's route). Spansh's answer then,
-        when it has biology.
+        His records can know fewer bodies with biology than Spansh: none (a jump through, or EDSM's bodies, which carry
+        no signals; plan 1.3.6 S-1: Stein 2051 said 0 where Spansh's route has 15.9 M), or only the ones he scanned in a
+        system he passed through (2026-11-03: Blatrimpe, one of Spansh's seven, 35 M of 122 M). Spansh's answer when it
+        knows more of them. A system he scanned whole (every body of the honk's count) knows them all: no fetch.
       */
-      if (own && !own.bioCr) {
+      if (own && own.bodyTotal != null && own.missing === 0) return void res.json(own);
+      if (own) {
         const sp = await values.values(addr, name).catch(() => null);
-        if (sp?.state === "ok" && sp.bioCr > 0) return void res.json(sp);
+        if (sp?.state === "ok" && bioBodies(sp) > bioBodies(own)) return void res.json(sp);
+        return void res.json(own);
       }
-      res.json(own ?? (await values.values(addr, name)));
+      res.json(await values.values(addr, name));
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }
