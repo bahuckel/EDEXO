@@ -19,7 +19,7 @@ import { ownFootEntriesWithBackups } from "./footScannedCatalog.js";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import type { AppSnapshot, ExoLiveDTO, JournalLine, UiCommand } from "../shared/types.js";
 import { journalHistoryCutoffUtcMs } from "../shared/journalHistoryPreset.js";
-import { applyLiveFix } from "./liveFix.js";
+import { applyLiveFix, journalLineFix } from "./liveFix.js";
 import { mergeCollectionFocus } from "../shared/collectionFocus.js";
 import {
   clearCollectionFocusCache,
@@ -73,7 +73,6 @@ import { buildDiscoveries } from "./discoveries.js";
 import { flushFootScannedCatalog } from "./footScannedCatalog.js";
 import {
   parseStatusJsonDestination,
-  parseStatusJsonFootFix,
   parseStatusJsonFuel,
   readStatusJsonFootFixText,
 } from "./footTravelStatus.js";
@@ -663,7 +662,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
           if (store.boxelCopied) store.boxelCopied.run = savedBoxels.runId() != null;
         }
         neutronFuelWatch.onLine(line);
-        const footFix = side.status ? parseStatusJsonFootFix(side.status) : null;
+        const footFix = journalLineFix(store, side.status);
         ingestExoOrganicJournalLine(store, ownLine, footFix, projectRoot, getCachedSpeciesDatabase());
         sessionLog.record(line, store, getCachedPrices());
         unknownExobio.offer(line);

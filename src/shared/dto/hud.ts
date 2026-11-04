@@ -75,8 +75,14 @@ export interface ExoMinimapDTO {
   near?: boolean;
   /** Metres above the ground (Status.json Altitude), in the ship; null on foot. For the screen marker's look-down. */
   altitudeM?: number | null;
-  /** The nose's angle, degrees, negative down (a flight-path estimate); null when not known. */
+  /** The nose's angle, degrees, negative down (read off the HUD, else a flight-path estimate); null when not known. */
   pitchDeg?: number | null;
+  /** True when `pitchDeg` was read off the game's HUD (the launcher's pitch reader). */
+  pitchFromHud?: boolean;
+  /** The ship's eye above `altitudeM`, metres, learned per ship (server/eyeHeight.ts); angles are taken from the eye. */
+  eyeAboveM?: number;
+  /** The HUD's roll, degrees (the pitch boxes' tilt, positive with the right one lower); null unless read. */
+  rollDeg?: number | null;
 }
 
 export interface ExoMinimapMarkDTO {

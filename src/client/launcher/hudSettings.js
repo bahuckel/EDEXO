@@ -23,6 +23,7 @@ var LS_HUD_NEXT_BOXEL = "edexoHudNextBoxel";
 var LS_HUD_REFUEL_BAR = "edexoHudRefuelBar";
 var LS_HUD_RADAR_ALWAYS = "edexoHudRadarAlways";
 var LS_HUD_AIM = "edexoHudAim";
+var LS_HUD_PITCH_READER = "edexoHudPitchReader";
 /* Colonize HUD (1.3.0): materials and other sites on unless switched off; finished lines off unless switched on. */
 var HUD_CZ_PREFS = [
   { id: "hudCzNeeds", ls: "edexoHudCzNeeds", key: "czNeeds", def: true },
@@ -66,6 +67,7 @@ function hudPrefsNow() {
   try { prefs.nextBoxel = localStorage.getItem(LS_HUD_NEXT_BOXEL) === "1"; } catch (e) {}
   try { prefs.refuelBar = localStorage.getItem(LS_HUD_REFUEL_BAR) !== "0"; } catch (e) {}
   try { prefs.radarAlways = localStorage.getItem(LS_HUD_RADAR_ALWAYS) === "1"; } catch (e) {}
+  try { prefs.pitchReader = localStorage.getItem(LS_HUD_PITCH_READER) === "1"; } catch (e) {}
   HUD_CZ_PREFS.forEach(function (p) { prefs[p.key] = readCzPref(p); });
   try { var tl = parseFloat(localStorage.getItem(LS_HUD_TILT) || ""); prefs.tilt = isFinite(tl) ? tl : 15; } catch (e) {}
   try { prefs.tiltMode = localStorage.getItem(LS_HUD_TILT_MODE) === "slant" ? "slant" : "turn"; } catch (e) {}
@@ -246,6 +248,7 @@ var hudNextBoxel = document.getElementById("hudNextBoxel");
 var hudRefuelBar = document.getElementById("hudRefuelBar");
 var hudRadarAlways = document.getElementById("hudRadarAlways");
 var hudAim = document.getElementById("hudAim");
+var hudPitchReader = document.getElementById("hudPitchReader");
 var hudCompact = document.getElementById("hudCompact");
 var hudRelevant = document.getElementById("hudRelevant");
 var hudAudio = document.getElementById("hudAudio");
@@ -518,6 +521,14 @@ export function start() {
     hudAim.addEventListener("change", function () {
       try { localStorage.setItem(LS_HUD_AIM, hudAim.checked ? "1" : "0"); } catch (e) {}
       if (ee && typeof ee.setAimOverlay === "function") ee.setAimOverlay({ on: hudAim.checked }).catch(function () {});
+    });
+  }
+  /* The pitch reader (the screen marker's page reads it from the HUD prefs mirror; local capture, aim/pitchCapture.ts). */
+  if (hudPitchReader) {
+    hudPitchReader.checked = (function () { try { return localStorage.getItem(LS_HUD_PITCH_READER) === "1"; } catch (e) { return false; } })();
+    hudPitchReader.addEventListener("change", function () {
+      try { localStorage.setItem(LS_HUD_PITCH_READER, hudPitchReader.checked ? "1" : "0"); } catch (e) {}
+      syncHudPrefs();
     });
   }
   if (hudRadarAlways) {

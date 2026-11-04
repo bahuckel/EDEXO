@@ -54,13 +54,18 @@ export interface ScreenMark {
 /** The marks the screen shows: composition scans (and so the next target). Samples taken are behind you. */
 const shown = (m: Mark) => m.kind === "codex";
 
-export function projectMarks(map: ExoMinimapDTO | null | undefined, view: View): ScreenMark[] {
+/** `origin`: where the nose points on the screen (the HUD's centre the reader found), else the screen's centre. */
+export function projectMarks(map: ExoMinimapDTO | null | undefined, view: View, origin?: { x: number; y: number } | null): ScreenMark[] {
   if (!map || map.headingDeg == null) return [];
-  const cx = view.width / 2;
-  const cy = view.height / 2;
+  // Half the view for the scale, the origin for the place (they differ when the HUD sits off the screen's centre).
+  const hx = view.width / 2;
+  const hy = view.height / 2;
+  const cx = origin?.x ?? hx;
+  const cy = origin?.y ?? hy;
   const tx = Math.tan((view.hFovDeg / 2) * RAD);
   const ty = Math.tan((view.vFovDeg / 2) * RAD);
-  const alt = map.altitudeM != null && map.altitudeM > 0 ? map.altitudeM : null;
+  // From the eye, which sits above the reported altitude (learned per ship, server/eyeHeight.ts).
+  const alt = map.altitudeM != null && map.altitudeM > 0 ? map.altitudeM + (map.eyeAboveM ?? 0) : null;
   const pitch = map.pitchDeg;
   const out: ScreenMark[] = [];
   for (const m of map.marks) {
@@ -75,21 +80,27 @@ export function projectMarks(map: ExoMinimapDTO | null | undefined, view: View):
       out.push({ mark: m, x: turnDeg < 0 ? 0 : view.width, y: cy, edge: turnDeg < 0 ? "left" : "right", turnDeg, belowDeg, pitched });
       continue;
     }
-    const x = cx + (Math.tan(turnDeg * RAD) / tx) * cx;
-    const yOff = belowDeg != null ? Math.max(-cy, Math.min(cy, (Math.tan(Math.max(-89, Math.min(89, belowDeg)) * RAD) / ty) * cy)) : 0;
-    out.push({ mark: m, x, y: cy + yOff, edge: null, turnDeg, belowDeg, pitched });
+    const xOff = (Math.tan(turnDeg * RAD) / tx) * hx;
+    const yOff = belowDeg != null ? Math.max(-hy, Math.min(hy, (Math.tan(Math.max(-89, Math.min(89, belowDeg)) * RAD) / ty) * hy)) : 0;
+    // Rolled (the HUD read): the world turns on the screen with the ladder; positions turn by the boxes' tilt.
+    const roll = (map.rollDeg ?? 0) * RAD;
+    const x = cx + xOff * Math.cos(roll) - yOff * Math.sin(roll);
+    const y = cy + xOff * Math.sin(roll) + yOff * Math.cos(roll);
+    out.push({ mark: m, x, y, edge: null, turnDeg, belowDeg, pitched });
   }
   return out;
 }
 
 /** The mark that opens: the one nearest the screen's centre, within reach of it (across only on foot). */
-export function openMark(marks: readonly ScreenMark[], view: View): ScreenMark | null {
+export function openMark(marks: readonly ScreenMark[], view: View, origin?: { x: number; y: number } | null): ScreenMark | null {
+  const ox = origin?.x ?? view.width / 2;
+  const oy = origin?.y ?? view.height / 2;
   const reach = (OPEN_PX_AT_1440 * view.height) / 1440;
   let best: ScreenMark | null = null;
   let bestD = Infinity;
   for (const s of marks) {
     if (s.edge) continue;
-    const d = Math.hypot(s.x - view.width / 2, s.belowDeg != null ? s.y - view.height / 2 : 0);
+    const d = Math.hypot(s.x - ox, s.belowDeg != null ? s.y - oy : 0);
     if (d <= reach && (d < bestD || (d === bestD && best && s.mark.distanceM < best.mark.distanceM))) {
       best = s;
       bestD = d;

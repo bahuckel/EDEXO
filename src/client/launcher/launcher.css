@@ -1766,6 +1766,17 @@ input[type="checkbox"] {
   border-left-width: 3px;
   background: rgba(217, 130, 43, 0.09);
 }
+/* "Experimental" beside a HUD setting that is still being tested (screen marker, pitch reader). */
+.hud-exp {
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  font-size: 0.72em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--warn, #e0a030);
+  vertical-align: middle;
+}
 .hud-hint {
   margin: 6px 0 0;
   font-size: 0.72rem;

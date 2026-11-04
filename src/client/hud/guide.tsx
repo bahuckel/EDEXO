@@ -29,8 +29,8 @@ const guided = (m: Mark) => m.kind === "codex" || m.kind === "sample";
 
 function aim(map: ExoMinimapDTO, m: Mark, heading: number): Aimed {
   const turnDeg = relativeDeg(bearingDeg(m.eastM, m.northM), heading);
-  const alt = map.altitudeM;
-  const downDeg = alt != null && alt > 0 && m.distanceM > 0 ? (Math.atan2(alt, m.distanceM) * 180) / Math.PI : null;
+  const alt = map.altitudeM != null && map.altitudeM > 0 ? map.altitudeM + (map.eyeAboveM ?? 0) : null;
+  const downDeg = alt != null && m.distanceM > 0 ? (Math.atan2(alt, m.distanceM) * 180) / Math.PI : null;
   return { mark: m, turnDeg, downDeg };
 }
 

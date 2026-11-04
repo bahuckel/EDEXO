@@ -32,6 +32,10 @@ export interface CompScan {
   /** The nose's angle, degrees, negative down (a flight-path estimate); null when not known. */
   pitchDeg: number | null;
   atIso: string;
+  /** True when `pitchDeg` was read off the game's HUD (the launcher's pitch reader), not estimated. */
+  pitchFromHud?: boolean;
+  /** The ship's eye above the reported altitude when scanned, metres (server/eyeHeight.ts); 0 when not known. */
+  eyeAboveM?: number;
 }
 
 export type PlantLocated = "crossing" | "ahead" | "scanned-from";
@@ -141,7 +145,8 @@ export function locatePlant(scans: readonly CompScan[], radiusM: number): PlantF
     if (s.headingDeg == null || s.altitudeM == null || s.pitchDeg == null || !(s.altitudeM > 0)) continue;
     const down = -s.pitchDeg;
     if (down < MIN_DEPRESSION_DEG || down >= 90) continue;
-    const dist = s.altitudeM / Math.tan(down * RAD);
+    // From the eye, not the reported altitude (the cockpit sits above it: eyeHeight.ts).
+    const dist = (s.altitudeM + (s.eyeAboveM ?? 0)) / Math.tan(down * RAD);
     if (dist > SCAN_REACH_M) continue;
     const p = toLocal(origin, s, radiusM);
     return {

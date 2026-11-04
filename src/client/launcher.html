@@ -568,8 +568,13 @@
                 <label title="The sample radar on the Exo-distance tracker stays on whenever the game gives your position and heading near a planet (Status.json): flying, gliding, after lift-off, not only once landed, so the composition scanner's marks show as you fly over them. A planet you composition-scanned opens it even with this off. Off by default."><input type="checkbox" id="hudRadarAlways" /> Radar always on near a planet</label>
               </div>
               <div class="hud-set-row">
-                <label title="A dot in a circle on the screen for each plant your composition scanner named, where it is from the ship's nose; point at one and it opens into a hexagon with its name, distance and how it was placed. Over the whole game screen, clicks go through. Up and down follow the ship's pitch while flying (estimated from its path); hovering or on foot the dots sit on the middle line. Off by default."><input type="checkbox" id="hudAim" /> Screen marker over the game (composition scans)</label>
+                <label title="Experimental, off by default. A dot in a circle on the screen for each plant your composition scanner named, where it is from the ship's nose; point at one and it opens into a hexagon with its name, distance and how it was placed. Over the whole game screen, clicks go through. Not yet accurate enough to rely on: the dot can sit a few degrees off the plant."><input type="checkbox" id="hudAim" /> Screen marker over the game (composition scans) <span class="hud-exp">Experimental</span></label>
               </div>
+              <div class="hud-set-row">
+                <label title="Experimental, off by default. With the screen marker on: reads the ship's pitch and heading off the HUD (the pitch boxes beside its centre, the heading tape at its top) four times a second while you are in the ship near a planet, so the marker follows the nose live. Gear up and landing gear down are both read. Needs the game in borderless (not fullscreen) and the default HUD colours. A frame it cannot read keeps the last good reading; with none, the marker keeps its own estimate."><input type="checkbox" id="hudPitchReader" /> Read the pitch off the HUD (screen marker) <span class="hud-exp">Experimental</span></label>
+              </div>
+              <p class="hud-hint">The pitch reader works only on this PC: it looks at the middle of the game's screen, keeps nothing and sends nothing anywhere.</p>
+              <p class="hud-hint">The screen marker and the pitch reader are experimental and off by default; they are still being tested.</p>
               <div class="hud-set-row" id="radarRadiusRow" hidden>
                 <label for="radarRadiusM" title="How far out the sample radar draws, in metres. Anything further becomes an arrow on its rim with the distance beside it.">Radar range</label>
                 <span>

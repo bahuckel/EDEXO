@@ -24,8 +24,12 @@ export type FootTravelFix = {
    * (shared/scanLocate.ts, owner 2026-11-04).
    */
   altitudeM?: number | null;
-  /** The nose's angle (degrees, negative down), estimated from the flight path (scanLocate.ts FlightPathPitch). */
+  /** The nose's angle (degrees, negative down): read off the HUD (liveFix.ts), else the flight-path estimate. */
   pitchDeg?: number | null;
+  /** The HUD's roll (degrees, the pitch boxes' tilt), when it was read off the HUD. */
+  rollDeg?: number | null;
+  /** True when `pitchDeg` was read off the HUD. */
+  pitchFromHud?: boolean;
   /**
    * Kelvin at the commander's feet, or null when the game is not reporting it.
    *
@@ -151,13 +155,20 @@ function footFixFromParsed(o: Record<string, unknown>): FootTravelFix | null {
   const bnRaw = o.BodyName;
   const bodyName = typeof bnRaw === "string" && bnRaw.trim() ? bnRaw.trim() : null;
   const heading = pickFinite(o, ["Heading", "heading"]);
+  /*
+    Flags bit 29 (AltitudeFromAverageRadius): the game then gives the altitude above the planet's average radius, not
+    above the ground. The owner's scans read 2 m, then 2,066 m seven seconds later over terrain 2 km above average; taken
+    as height above ground it put the screen marker 80 deg below the nose (2026-11-04). Then the altitude is not known.
+  */
+  const flags = pickFinite(o, ["Flags"]);
+  const fromAverage = flags != null && Math.floor(flags / 0x20000000) % 2 === 1;
   return {
     latDeg: lat,
     lonDeg: lon,
     planetRadiusM: radius,
     bodyName,
     headingDeg: heading,
-    altitudeM: pickFinite(o, ["Altitude", "altitude"]),
+    altitudeM: fromAverage ? null : pickFinite(o, ["Altitude", "altitude"]),
     temperatureK: pickFinite(o, ["Temperature", "temperature"]),
     gravityG: pickFinite(o, ["Gravity", "gravity"]),
   };

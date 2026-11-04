@@ -24,6 +24,8 @@ function registerLauncherIpc(
 
   ipcMain.handle("edexo:hud-overlay-state", () => ({ paths: huds.paths() }));
   // The screen marker (aimWindow.cjs): the launcher's switch, off by default.
+  // The screen marker's pitch reader: the game monitor's capture id, to the marker's own page only (aimWindow.cjs).
+  ipcMain.handle("edexo:aim-capture-source", (evt) => (aim ? aim.captureSource(evt.sender) : null));
   ipcMain.handle("edexo:set-aim-overlay", (_evt, opts) => ({ on: aim ? aim.set(!!(opts && typeof opts === "object" && opts.on === true)) : false }));
 
   ipcMain.handle("edexo:open-app-window", () => appWindows.openAppUiWindow(iconForChild));

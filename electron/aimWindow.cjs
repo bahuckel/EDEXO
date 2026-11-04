@@ -5,7 +5,8 @@
   frameless, transparent, click-through window over the whole of the game's monitor, loading aim-overlay.html. On
   with the launcher's switch (off by default); shown only while the HUDs are (not hidden with the hotkey, the game
   running and, with "hide when unfocused", in front). The page draws nothing until there is a composition-scanned
-  plant on the planet underfoot or flown over, so the window costs nothing to leave open.
+  plant on the planet underfoot or flown over, so the window costs nothing to leave open. With the pitch reader on,
+  its page captures the game's monitor (displayMedia below: that screen only, to this page only), on this PC only.
 
   Electron is passed in (as hudWindows.cjs does) so a test can drive it with fakes.
 */
@@ -19,6 +20,7 @@ const { hudWindowOptions } = require("./hudWindowOptions.cjs");
  *   getDisplay: () => { bounds: { x: number, y: number, width: number, height: number } },
  *   isAllowed: () => boolean,
  *   guardWindow?: (win: any) => void,
+ *   desktopCapturer?: any,
  * }} deps
  */
 function createAimWindow(deps) {
@@ -82,6 +84,44 @@ function createAimWindow(deps) {
     } else if (win.isVisible()) win.hide();
   }
 
+  /**
+   * The pitch reader's capture (aim/pitchCapture.ts, the launcher's option): the page asks for the screen, and gets the
+   * game's monitor only, and only when the request comes from this window's own page. Anything else gets nothing.
+   */
+  function displayMedia(request, callback) {
+    const fromAim = win && !win.isDestroyed() && request && request.frame === win.webContents.mainFrame;
+    if (!fromAim || !deps.desktopCapturer) return callback({});
+    const want = String(deps.getDisplay().id ?? "");
+    deps.desktopCapturer
+      .getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } })
+      .then((sources) => {
+        const src = sources.find((s) => String(s.display_id) === want) ?? sources[0];
+        callback(src ? { video: src } : {});
+      })
+      .catch(() => callback({}));
+  }
+
+  /** True for this window's own page (the only one the capture and its permission are for). */
+  function isAimContents(wc) {
+    return !!win && !win.isDestroyed() && wc === win.webContents;
+  }
+
+  /**
+   * The game monitor's capture id, for this window's page only (2026-11-04: getDisplayMedia needs a click, and the
+   * marker window is click-through, so the page asks for the screen by id through getUserMedia instead).
+   */
+  async function captureSource(sender) {
+    if (!isAimContents(sender) || !deps.desktopCapturer) return null;
+    const want = String(deps.getDisplay().id ?? "");
+    try {
+      const sources = await deps.desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } });
+      const src = sources.find((s) => String(s.display_id) === want) ?? sources[0];
+      return src ? src.id : null;
+    } catch {
+      return null;
+    }
+  }
+
   return {
     /** The launcher's switch. */
     set(next) {
@@ -90,6 +130,9 @@ function createAimWindow(deps) {
       return on;
     },
     isOn: () => on,
+    displayMedia,
+    isAimContents,
+    captureSource,
     sync,
     dispose() {
       disposed = true;

@@ -11,6 +11,7 @@ const {
   shell,
   clipboard,
   utilityProcess,
+  desktopCapturer,
 } = require("electron");
 const { startServerChild } = require("./serverChild.cjs");
 const { installStaticShell } = require("./staticShell.cjs");
@@ -32,7 +33,7 @@ const { createKeybinds } = require("./keybinds.cjs");
 const { createTabWindows } = require("./tabWindows.cjs");
 const updater = require("./updater.cjs");
 const { watchForegroundOffMain, isGameOrOwn, isGame, nativeWatcherPath } = require("./foregroundWatch.cjs");
-const { guardWindowNavigation, restrictPermissions, isOwnUrl } = require("./windowGuards.cjs");
+const { guardWindowNavigation, restrictPermissions, isOwnUrl, ALLOWED_PERMISSIONS } = require("./windowGuards.cjs");
 const { APP_WINDOW_PARTITION, createAppWindows } = require("./appWindows.cjs");
 const { createQuitFlow } = require("./quitFlow.cjs");
 const { registerLauncherIpc } = require("./launcherIpc.cjs");
@@ -157,6 +158,7 @@ aim = createAimWindow({
     return !l.hidden && !l.gameAway && !(l.focusAway && l.hideUnfocused);
   },
   guardWindow: (win) => guardWindowNavigation(win, ownBase, shell),
+  desktopCapturer,
 });
 
 function showLauncher() {
@@ -969,6 +971,16 @@ app.whenReady().then(() => {
     for (const ses of [session.defaultSession, session.fromPartition(APP_WINDOW_PARTITION), session.fromPartition("persist:hud")]) {
       restrictPermissions(ses);
     }
+    // The screen marker's pitch reader: the game's monitor, to its own page only (aimWindow.cjs); every other ask, nothing.
+    const hudSession = session.fromPartition("persist:hud");
+    hudSession.setDisplayMediaRequestHandler((req, cb) => (aim ? aim.displayMedia(req, cb) : cb({})));
+    // The same allow-list as every session, plus video (no audio) for the marker's page alone: its screen capture.
+    hudSession.setPermissionRequestHandler((wc, permission, cb, details) =>
+      cb(
+        ALLOWED_PERMISSIONS.has(permission) ||
+          (permission === "media" && !!aim && aim.isAimContents(wc) && !((details && details.mediaTypes) || []).includes("audio")),
+      ),
+    );
   } catch (e) {
     console.warn("[edexo-compare] could not restrict permissions:", e);
   }

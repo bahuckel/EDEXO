@@ -267,6 +267,11 @@ export interface HudPrefsDTO {
   refuelBar?: boolean;
   /** The radar stays open while flying near a planet, not only on it; closes in supercruise (owner, 2026-11-04; default off). */
   radarAlways?: boolean;
+  /**
+   * Read the ship's pitch off the game's HUD for the screen marker (owner, 2026-11-04; default off): a local capture of
+   * the game's monitor, read every 2 s while there are plants to point at; falls back to the estimate when unread.
+   */
+  pitchReader?: boolean;
   /** Colonize HUD (1.3.0): the followed site's materials with bars (default on). */
   czNeeds?: boolean;
   /** Colonize HUD: the other sites being built (default on). */

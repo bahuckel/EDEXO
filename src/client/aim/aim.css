@@ -20,6 +20,17 @@ body.aim-body {
   stroke-width: 3px;
   stroke-linejoin: round;
 }
+/* Glide between readings rather than snap (4 a second). */
+.aim-mark,
+.aim-edge {
+  transition: transform 0.2s linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aim-mark,
+  .aim-edge {
+    transition: none;
+  }
+}
 .aim-ring {
   fill: none;
   stroke: var(--aim);
@@ -56,6 +67,15 @@ body.aim-body {
 }
 .aim-sub {
   font-size: 14px;
+}
+/* The pitch reader's status line (main.tsx ReaderLine): quiet unless it is reading. */
+.aim-reader {
+  font-size: 12px;
+  opacity: 0.6;
+}
+.aim-reader.is-ok {
+  fill: var(--aim);
+  opacity: 0.85;
 }
 @keyframes aim-open {
   from {

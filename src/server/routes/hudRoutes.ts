@@ -2,8 +2,23 @@ import { getHudBridge } from "../hudBridge.js";
 import express from "express";
 
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
+import { setHudPitch } from "../liveFix.js";
 
-export function registerHudRoutes(app: express.Express, _opts: HttpServerOptions, _ctx: RouteContext): void {
+export function registerHudRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
+  /*
+    The pitch the screen marker's page read off the game's HUD (aim/main.tsx, the launcher's pitch reader): local, from
+    this PC's own capture, to this PC's own server. `{ pitchDeg, rollDeg }`, or `{}` when it could not read the HUD.
+  */
+  app.post("/api/hud-pitch", (req, res) => {
+    const store = opts.getJournalStore?.();
+    if (!store) return void res.status(503).json({ ok: false });
+    const b = (req.body ?? {}) as { pitchDeg?: unknown; rollDeg?: unknown };
+    const ok = typeof b.pitchDeg === "number" && Number.isFinite(b.pitchDeg) && Math.abs(b.pitchDeg) <= 90;
+    const roll = typeof b.rollDeg === "number" && Number.isFinite(b.rollDeg) ? Math.max(-90, Math.min(90, b.rollDeg)) : 0;
+    setHudPitch(store, ok ? { pitchDeg: b.pitchDeg as number, rollDeg: roll } : null);
+    res.json({ ok: true });
+  });
+
   const hudBridgeOr501 = (res: express.Response) => {
     const bridge = getHudBridge();
     if (!bridge) {

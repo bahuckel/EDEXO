@@ -2,12 +2,15 @@
  * The screen marker (owner, 2026-11-04): a dot in a circle on the screen where each composition-scanned plant is, from
  * the nose; pointing at one opens it into a hexagon with its name. A full-screen, click-through window over the game
  * (electron/aimWindow.cjs), fed by the HUD's own socket: the radar's frame (exoMinimap) at the Status.json rate.
- * The maths is project.ts. Later (owner): the hexagon holds a per-genus outline, animated open.
+ * The maths is project.ts. Later (owner): the hexagon holds a per-genus outline, animated open. With the launcher's
+ * pitch reader on, this page also reads the HUD's pitch off the screen while there are plants to point at
+ * (pitchCapture.ts): local only.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { ExoMinimapDTO } from "@shared/types";
 import { openMark, projectMarks, viewOf, type ScreenMark, type View } from "./project";
+import { startPitchCapture, type PitchCapture, type PitchRead } from "./pitchCapture";
 import "./aim.css";
 
 type MiniMap = ExoMinimapDTO | null;
@@ -22,8 +25,9 @@ const hex = (r: number) =>
     return `${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)}`;
   }).join(" ");
 
-function useMinimap(): MiniMap {
+function useMinimap(): { map: MiniMap; reader: boolean } {
   const [map, setMap] = useState<MiniMap>(null);
+  const [reader, setReader] = useState(false);
   useEffect(() => {
     let ws: WebSocket | null = null;
     let retry = 1000;
@@ -37,9 +41,13 @@ function useMinimap(): MiniMap {
       };
       ws.onmessage = (ev) => {
         try {
-          const msg = JSON.parse(String(ev.data)) as { type?: string; payload?: { exoMinimap?: MiniMap; journalBoot?: boolean } };
+          const msg = JSON.parse(String(ev.data)) as {
+            type?: string;
+            payload?: { exoMinimap?: MiniMap; journalBoot?: boolean; hudPrefs?: { pitchReader?: unknown } | null };
+          };
           if ((msg.type === "state" || msg.type === "exoLive") && msg.payload && "exoMinimap" in msg.payload)
             setMap(msg.payload.journalBoot ? null : (msg.payload.exoMinimap ?? null));
+          if (msg.type === "state" && msg.payload && "hudPrefs" in msg.payload) setReader(msg.payload.hudPrefs?.pitchReader === true);
         } catch {
           /* a malformed frame is skipped */
         }
@@ -56,7 +64,93 @@ function useMinimap(): MiniMap {
       ws?.close();
     };
   }, []);
-  return map;
+  return { map, reader };
+}
+
+/**
+ * The pitch reader running while it is wanted: switched on in the launcher and a composition-scanned plant on the
+ * planet underfoot or flown over. Stops 10 s after it is no longer wanted, so a moment without a frame does not
+ * restart the capture.
+ */
+/** What the pitch reader is doing, for its status line: a number read, not read, or no capture. */
+type ReaderState =
+  | { kind: "off" }
+  | { kind: "starting" }
+  | { kind: "failed"; error: string }
+  | { kind: "read"; pitchDeg: number | null; headingDeg: number | null; last: (PitchRead & { atMs: number }) | null };
+
+function usePitchReader(wanted: boolean): ReaderState {
+  const cap = useRef<PitchCapture | null>(null);
+  const starting = useRef(false);
+  const [state, setState] = useState<ReaderState>({ kind: "off" });
+  useEffect(() => {
+    /*
+      Steady (owner, 2026-11-04: the dot "teleports away as soon as the reader has trouble reading the numbers"): a frame
+      not read keeps the last good reading; a reading that jumps more than 4 deg of pitch or 6 of heading from the last
+      within a second is held until the next one agrees with it (a misread digit, 0 for 8, is one frame, a turn is not);
+      a heading not read keeps the last one.
+    */
+    let accepted: (PitchRead & { atMs: number }) | null = null;
+    let pending: PitchRead | null = null;
+    const turn = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
+    const jumped = (a: PitchRead, b: PitchRead) =>
+      Math.abs(a.pitchDeg - b.pitchDeg) > 4 || (a.headingDeg != null && b.headingDeg != null && turn(a.headingDeg, b.headingDeg) > 6);
+    const post = (raw: PitchRead | null) => {
+      const now = Date.now();
+      let r = raw;
+      if (r && accepted && r.headingDeg == null && now - accepted.atMs < 3000) r = { ...r, headingDeg: accepted.headingDeg };
+      if (r && accepted && now - accepted.atMs < 1000 && jumped(r, accepted)) {
+        const confirmed = pending && !jumped(r, pending);
+        pending = confirmed ? null : r;
+        if (!confirmed) r = null;
+      } else pending = null;
+      if (r) accepted = { ...r, atMs: now };
+      const shown = accepted && now - accepted.atMs < 3000 ? accepted : null;
+      setState({ kind: "read", pitchDeg: shown ? shown.pitchDeg : null, headingDeg: shown ? shown.headingDeg : null, last: shown });
+      if (r) {
+        const body = { pitchDeg: r.pitchDeg, rollDeg: r.rollDeg };
+        void fetch("/api/hud-pitch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
+      }
+    };
+    if (wanted) {
+      if (!cap.current && !starting.current) {
+        starting.current = true;
+        setState({ kind: "starting" });
+        void startPitchCapture(post).then((c) => {
+          starting.current = false;
+          if ("error" in c) setState({ kind: "failed", error: c.error });
+          else cap.current = c;
+        });
+      }
+      return;
+    }
+    const t = setTimeout(() => {
+      cap.current?.stop();
+      cap.current = null;
+      setState({ kind: "off" });
+    }, 10_000);
+    return () => clearTimeout(t);
+  }, [wanted]);
+  useEffect(() => () => cap.current?.stop(), []);
+  return state;
+}
+
+/** The reader's one line, bottom centre: so it shows whether it reads at all (owner, 2026-11-04). */
+function ReaderLine({ s, view }: { s: ReaderState; view: View }) {
+  if (s.kind === "off") return null;
+  const text =
+    s.kind === "starting"
+      ? "Pitch reader: starting"
+      : s.kind === "failed"
+        ? `Pitch reader: no screen capture (${s.error})`
+        : s.pitchDeg != null
+          ? `HUD pitch ${s.pitchDeg.toFixed(1)}°${s.headingDeg != null ? ` · heading ${s.headingDeg.toFixed(1)}°` : ""}`
+          : "Pitch reader: not read";
+  return (
+    <text className={"aim-reader" + (s.kind === "read" && s.pitchDeg != null ? " is-ok" : "")} x={view.width / 2} y={view.height * 0.66} textAnchor="middle">
+      {text}
+    </text>
+  );
 }
 
 function useView(): View {
@@ -80,7 +174,7 @@ function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
     // Off the side: an arrow at that edge, at the middle line, with how far to turn.
     const left = s.edge === "left";
     return (
-      <g className={"aim-edge" + (m.target ? " is-target" : "")} transform={`translate(${left ? 24 : s.x - 24},${s.y})`}>
+      <g className={"aim-edge" + (m.target ? " is-target" : "")} style={{ transform: `translate(${left ? 24 : s.x - 24}px, ${s.y}px)` }}>
         <polygon points={left ? "-10,0 6,-10 6,10" : "10,0 -6,-10 -6,10"} />
         <text x={left ? 14 : -14} y="5" textAnchor={left ? "start" : "end"}>
           {Math.round(Math.abs(s.turnDeg))}°
@@ -89,7 +183,10 @@ function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
     );
   }
   return (
-    <g className={"aim-mark" + (m.target ? " is-target" : "") + (open ? " is-open" : "") + (s.pitched ? "" : " is-level")} transform={`translate(${s.x},${s.y})`}>
+    <g
+      className={"aim-mark" + (m.target ? " is-target" : "") + (open ? " is-open" : "") + (s.pitched ? "" : " is-level")}
+      style={{ transform: `translate(${s.x}px, ${s.y}px)` }}
+    >
       {open ? (
         <>
           <polygon className="aim-hex" points={hex(34)} />
@@ -138,16 +235,35 @@ const DEMO: ExoMinimapDTO | null = new URLSearchParams(location.search).has("dem
 
 function Aim() {
   const live = useMinimap();
-  const map = DEMO ?? live;
-  const view = useView();
-  const marks = projectMarks(map, view);
-  const open = openMark(marks, view);
-  if (!marks.length) return null;
+  const map = DEMO ?? live.map;
+  // Near a planet in the ship (the first scan needs the pitch too, before there is any mark).
+  const reader = usePitchReader(!DEMO && live.reader && live.map?.altitudeM != null);
+  const baseView = useView();
+  // The page's own reading, while fresh, over the server's echo of it (no round trip), and the screen's measured
+  // pixels per degree over the one worked out from the settings' field of view.
+  const own = reader.kind === "read" && reader.last && Date.now() - reader.last.atMs < 3000 ? reader.last : null;
+  const view =
+    own?.pxPerDeg && own.screenH > 0
+      ? viewOf(baseView.width, baseView.height, (2 * Math.atan((own.screenH / 2) / ((own.pxPerDeg * 180) / Math.PI)) * 180) / Math.PI)
+      : baseView;
+  // On-screen heading and pitch while fresh (owner, 2026-11-04: "use only the on-screen data … updated live"); the
+  // position stays Status.json's (the screen's latitude has 4 decimals, 16 m here).
+  const shown =
+    own && map && map.altitudeM != null
+      ? { ...map, pitchDeg: own.pitchDeg, rollDeg: own.rollDeg, pitchFromHud: true, ...(own.headingDeg != null ? { headingDeg: own.headingDeg } : {}) }
+      : map;
+  // Where the nose points: the HUD's centre the reader found (it sits lower than the screen's centre nose up).
+  const origin = own ? { x: own.centre.fx * view.width, y: own.centre.fy * view.height } : null;
+  const marks = projectMarks(shown, view, origin);
+  const open = openMark(marks, view, origin);
+  // The reader's line shows from the first frame near a planet, before any plant is scanned.
+  if (!marks.length && reader.kind === "off") return null;
   return (
     <svg className="aim" width={view.width} height={view.height} aria-hidden="true">
       {marks.map((s, i) => (
         <Marker key={i} s={s} open={s === open} />
       ))}
+      <ReaderLine s={reader} view={view} />
     </svg>
   );
 }

@@ -2,6 +2,7 @@ import { join } from "node:path";
 import type { FootTravelFix } from "./footTravelStatus.js";
 import { withCodexScan, withoutCodexMarks, type SurfaceMark } from "./surfaceMarksFile.js";
 import { logScanLocate } from "./scanLocateLog.js";
+import { eyeAboveM, learnEyeHeight, noteShipLine } from "./eyeHeight.js";
 import { elevationFromGravity } from "../shared/journalPhysics.js";
 import { RADAR_RADIUS_DEFAULT_M, clampRadarRadiusM } from "../shared/radarRadius.js";
 import { greatCircleDistanceMeters, resolveFootFixForOrganicLine } from "./footTravelStatus.js";
@@ -423,6 +424,7 @@ export function ingestExoOrganicJournalLine(
   db: SpeciesDatabase,
 ): void {
   expireCelebrationIfNeeded(store, projectRoot);
+  noteShipLine(line);
   if (line.event === "CodexEntry") {
     addCodexScanMark(store, line, statusFix);
     return;
@@ -716,10 +718,15 @@ function addCodexScanMark(store: ExoOrganicJournalStore, line: JournalLine, stat
         altitudeM: inShip ? (statusFix?.altitudeM ?? null) : null,
         pitchDeg: inShip ? (statusFix?.pitchDeg ?? null) : null,
         atIso,
+        ...(inShip && statusFix?.pitchFromHud ? { pitchFromHud: true } : {}),
+        ...(inShip ? { eyeAboveM: eyeAboveM() } : {}),
       },
       radiusM,
     ),
   );
+  // A plant two scans placed teaches the ship's eye height (eyeHeight.ts).
+  for (const m of store.surfaceCodexMarks ?? [])
+    if (m.bodyKey === bk && m.codexName === name && m.located === "crossing" && m.scans) learnEyeHeight(m, m.scans, radiusM);
 }
 
 /**
@@ -916,6 +923,8 @@ export function buildExoMinimapDto(
     ...(near ? { near: true } : {}),
     altitudeM: fix.altitudeM ?? null,
     pitchDeg: fix.pitchDeg ?? null,
+    eyeAboveM: eyeAboveM(),
+    ...(fix.pitchFromHud ? { pitchFromHud: true, rollDeg: fix.rollDeg ?? null } : {}),
   };
 }
 

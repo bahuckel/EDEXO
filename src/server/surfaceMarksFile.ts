@@ -230,7 +230,18 @@ function cleanScans(m: SurfaceMark): SurfaceMark {
   const scans = (m.scans as unknown[]).flatMap((v): CompScan[] => {
     const s = v as Partial<CompScan> | null;
     if (!s || numOrNull(s.latDeg) == null || numOrNull(s.lonDeg) == null) return [];
-    return [{ latDeg: s.latDeg!, lonDeg: s.lonDeg!, headingDeg: numOrNull(s.headingDeg), altitudeM: numOrNull(s.altitudeM), pitchDeg: numOrNull(s.pitchDeg), atIso: typeof s.atIso === "string" ? s.atIso : m.atIso }];
+    return [
+      {
+        latDeg: s.latDeg!,
+        lonDeg: s.lonDeg!,
+        headingDeg: numOrNull(s.headingDeg),
+        altitudeM: numOrNull(s.altitudeM),
+        pitchDeg: numOrNull(s.pitchDeg),
+        atIso: typeof s.atIso === "string" ? s.atIso : m.atIso,
+        ...(s.pitchFromHud === true ? { pitchFromHud: true } : {}),
+        ...(numOrNull(s.eyeAboveM) != null ? { eyeAboveM: s.eyeAboveM! } : {}),
+      },
+    ];
   });
   return { ...m, scans };
 }
