@@ -1,8 +1,8 @@
 {
  "formatVersion": 1,
- "builtAt": "2026-10-15",
+ "builtAt": "2026-10-15 + 2026-11-03 October",
  "rule": "Owner 2026-10-15: one lone outlier never sets a range. Two or more systems per species = a pattern to examine; a gate widens only when the pattern is legit, by hand, with the evidence.",
- "sources": "real-app runs app17 on EDDN hold-outs A/B, hold-out D (judge), his journals (no names); codex temperature outliers over the whole EDDN year. Built by docs/perf/build_outlier_register.py.",
+ "sources": "real-app runs app17 on EDDN hold-outs A/B, hold-out D (judge), his journals (no names); codex temperature outliers over the whole EDDN year. Built by docs/perf/build_outlier_register.py. fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known).",
  "species": {
   "brain_trees_brain_tree_aureum": {
    "bodies": 1,
@@ -21,7 +21,7 @@
   "brain_trees_brain_tree_ostrinum": {
    "bodies": 2,
    "systems": 2,
-   "status": "pattern: examine",
+   "status": "pattern examined 2026-11-03: probe artefact, rule holds. Both systems have a listed companion in Spansh's dump (Col 173 Sector MW-V b18-5: Water world 5; Col 173 Sector RY-Q d5-10: gas giants with water- and ammonia-based life A 8 / A 9 / B 9 / B 10, Water giant A 11); the hold-out D probe fed the system's stars only, so the companion rule could not be met",
    "rows": [
     {
      "src": "holdD (judge)",
@@ -40,9 +40,9 @@
    ]
   },
   "brain_trees_brain_tree_puniceum": {
-   "bodies": 1,
-   "systems": 1,
-   "status": "lone outlier: never sets a range",
+   "bodies": 2,
+   "systems": 2,
+   "status": "colour share under 1 % plus one companion-body row; not a gate pattern (docs/plan-01112026-1.3.5.md S-2)",
    "rows": [
     {
      "src": "holdD (judge)",
@@ -50,13 +50,21 @@
      "body": "Puekee EF-R d4-844 A 2",
      "kind": "demoted",
      "field": "System bodies"
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "1482803746202:20",
+     "body": "NGC 3199 Sector IM-V c2-5 B 1",
+     "kind": "under 1 %",
+     "field": "Which Brain Trees",
+     "chance": 1
     }
    ]
   },
   "concha_concha_labiata": {
-   "bodies": 1,
-   "systems": 1,
-   "status": "lone outlier: never sets a range",
+   "bodies": 4,
+   "systems": 4,
+   "status": "pattern examined 2026-11-01: kept. Past 28 ls labiata is on 0.1-0.2 % of thin-CO2 rocky moons with life (3.9 % within): ~20 finds a year for ~14,000 rows; the rule lists them as low-probability (docs/plan-01112026-1.3.5.md S-2)",
    "rows": [
     {
      "src": "holdD (judge)",
@@ -64,6 +72,30 @@
      "body": "Pleia Aoc JH-T c17-0 BC 2",
      "kind": "demoted",
      "field": "Orbit"
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "10661923483:52",
+     "body": "HR 6265 B 5 e",
+     "kind": "demoted",
+     "field": "Orbit",
+     "chance": null
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "114193959179:45",
+     "body": "Flyeia Dryoae YJ-Z d3 A 8 d",
+     "kind": "demoted",
+     "field": "Orbit",
+     "chance": null
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "253159803899:21",
+     "body": "Byeia Eur JO-Z d13-7 1 d",
+     "kind": "demoted",
+     "field": "Orbit",
+     "chance": null
     }
    ]
   },
@@ -130,9 +162,9 @@
    ]
   },
   "osseus_osseus_discus": {
-   "bodies": 1,
-   "systems": 1,
-   "status": "lone outlier: never sets a range",
+   "bodies": 5,
+   "systems": 4,
+   "status": "pattern examined 2026-11-01: carbon dioxide is one system (HIP 87621, lone); the other rows are chances under the 1 % floor (docs/plan-01112026-1.3.5.md S-2)",
    "rows": [
     {
      "src": "holdD (judge)",
@@ -140,6 +172,38 @@
      "body": "HIP 65459 ABC 7 a",
      "kind": "demoted",
      "field": "Chance here"
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "11359613510:18",
+     "body": "Scheau Flyi BA-A g169 A 3 a a",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 0.8
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "147882789259:6",
+     "body": "HIP 87621 2 b a",
+     "kind": "demoted",
+     "field": "AtmosphereType",
+     "chance": null
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "147882789259:3",
+     "body": "HIP 87621 2 a",
+     "kind": "demoted",
+     "field": "AtmosphereType",
+     "chance": null
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "5088060381897:12",
+     "body": "Phoi Aec QL-J b23-2 B 2",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 0
     }
    ]
   },
@@ -237,9 +301,9 @@
    ]
   },
   "stratum_stratum_tectonicas": {
-   "bodies": 1,
-   "systems": 1,
-   "status": "lone outlier: never sets a range",
+   "bodies": 3,
+   "systems": 3,
+   "status": "pattern examined 2026-11-01: kept as is (owner). The gate reads the brightest star; these orbit M/K dwarfs under a neutron primary. Orbit-host patch docs/perf/tectonicas-orbit-host.patch (docs/plan-01112026-1.3.5.md S-2)",
    "rows": [
     {
      "src": "holdB",
@@ -251,6 +315,22 @@
      "atm": 0.0018381831334813718,
      "g": 0.367,
      "atmo": "sulphurdioxide"
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "73173834211:13",
+     "body": "Myoagea FW-E d11-2 B 1",
+     "kind": "demoted",
+     "field": "StarType",
+     "chance": null
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "8699004611:13",
+     "body": "Phoi Aescs KC-M d7-0 C 3",
+     "kind": "demoted",
+     "field": "StarType",
+     "chance": null
     }
    ]
   },
@@ -285,9 +365,9 @@
    ]
   },
   "tussock_tussock_divisa": {
-   "bodies": 3,
-   "systems": 3,
-   "status": "pattern: examine",
+   "bodies": 4,
+   "systems": 4,
+   "status": "pattern examined 2026-11-01: TTS colour star one body in ~96,000 (lone); the rest chances under the 1 % floor (docs/plan-01112026-1.3.5.md S-2)",
    "rows": [
     {
      "src": "holdD (judge)",
@@ -309,6 +389,14 @@
      "body": "Gludgoi NB-O d6-51 14 f",
      "kind": "demoted",
      "field": "StarType"
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "10091776107:13",
+     "body": "Sqeast HH-D d12-0 B 4",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 1.6
     }
    ]
   },
@@ -349,9 +437,9 @@
    ]
   },
   "frutexa_frutexa_flabellum": {
-   "bodies": 3,
-   "systems": 3,
-   "status": "pattern examined 2026-10-29: kept. 3 systems inside 'orbit <= 49.92 d, parent star K' against about 3,380 bodies its usual rate expects over the whole EDDN year (0.1 %), under the 1 % floor",
+   "bodies": 4,
+   "systems": 4,
+   "status": "pattern examined 2026-10-29: kept. 3 systems inside 'orbit <= 49.92 d, parent star K' against about 3,380 bodies its usual rate expects over the whole EDDN year (0.1 %), under the 1 % floor + October 2026-11-03: 1 more body/bodies, look again",
    "rows": [
     {
      "src": "fresh EDDN 2026-10-08..28",
@@ -370,19 +458,201 @@
      "body": "Sleguae WP-M d8-13 B 2 b",
      "kind": "demoted",
      "field": "Never found here (orbit <= 49.92 d, parent star K)"
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "970050309195:27",
+     "body": "Thraikiae NX-K d8-28 B 10 b",
+     "kind": "demoted",
+     "field": "Never found here",
+     "chance": null
     }
    ]
   },
   "concha_concha_aureolas": {
-   "bodies": 1,
-   "systems": 1,
-   "status": "lone outlier: never sets a range",
+   "bodies": 2,
+   "systems": 2,
+   "status": "pattern examined 2026-11-01: 'never found here' rule under M companions of neutron primaries, single systems; kept (docs/plan-01112026-1.3.5.md S-2)",
    "rows": [
     {
      "src": "fresh EDDN 2026-10-08..28",
      "body": "Gria Eohm QT-Z d13-0 C 7 a",
      "kind": "demoted",
      "field": "Never found here (<= 21,750 ls, parent star M); the M is a companion 19,222 ls from a neutron primary and the body's plants are coloured N"
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "4202449659:14",
+     "body": "Gria Eohm QT-Z d13-0 C 7 a",
+     "kind": "demoted",
+     "field": "Never found here",
+     "chance": null
+    }
+   ]
+  },
+  "clypeus_clypeus_speculumi": {
+   "bodies": 2,
+   "systems": 2,
+   "status": "chances under the 1 % floor, not a gate: policy (docs/plan-01112026-1.3.5.md S-2)",
+   "rows": [
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "1693651536699:26",
+     "body": "Blae Drye FI-Q d6-49 2 b",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 0.9
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "1739965044194:30",
+     "body": "Greae Eoq FN-I c26-6 ABC 1 d",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 0.1
+    }
+   ]
+  },
+  "tussock_tussock_capillum": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "668538250801:8",
+     "body": "Col 359 Sector BN-J b10-0 3 a",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 0.8
+    }
+   ]
+  },
+  "concha_concha_biconcavis": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "20568911162:2",
+     "body": "Phaa Chrie SW-N c6-0 1",
+     "kind": "demoted",
+     "field": "Region",
+     "chance": null
+    }
+   ]
+  },
+  "tussock_tussock_stigmasis": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "521947417515:6",
+     "body": "Grie Dryue OI-S d4-15 4",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 0
+    }
+   ]
+  },
+  "fungoida_fungoida_setisis": {
+   "bodies": 2,
+   "systems": 2,
+   "status": "chances under the 1 % floor, not a gate: policy (docs/plan-01112026-1.3.5.md S-2)",
+   "rows": [
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "9156635498858:5",
+     "body": "Prieluia WR-D c12-33 C 1",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 1.1
+    },
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "3145730731:4",
+     "body": "Byaa Thoi FF-R d4-0 4",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 1.7
+    }
+   ]
+  },
+  "bacterium_bacterium_volu": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "97073269138:5",
+     "body": "Dryau Aec IZ-V c16-0 A 1",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 0.9
+    }
+   ]
+  },
+  "anemone_prasinum_bioluminescent": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "128286863:35",
+     "body": "S171 9 BCD 1 i",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 0.7
+    }
+   ]
+  },
+  "fumerola_fumerola_extremus": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "147882789259:3",
+     "body": "HIP 87621 2 a",
+     "kind": "under 1 %",
+     "field": "Chance here",
+     "chance": 0.2
+    }
+   ]
+  },
+  "sinuous_tuber_sinuous_tubers_violaceum": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "2141670396323:9",
+     "body": "Shrogaae PN-T d3-62 A 3",
+     "kind": "under 1 %",
+     "field": "Which Sinuous Tuber",
+     "chance": 0.1
+    }
+   ]
+  },
+  "brain_trees_brain_tree_lindigoticum": {
+   "bodies": 1,
+   "systems": 1,
+   "status": "lone outlier: never sets a range",
+   "rows": [
+    {
+     "src": "fresh2 October 2026-10-08..10-30 (probe at d5ad9e4, signal count known)",
+     "key": "560501476923:45",
+     "body": "Blaa Hypai OZ-O d6-16 7 a",
+     "kind": "under 1 %",
+     "field": "Which Brain Trees",
+     "chance": 0.1
     }
    ]
   }

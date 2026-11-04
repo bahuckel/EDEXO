@@ -1,12 +1,16 @@
 /**
  * How often "Chance here" came true, for the "why this chance" popover (plan-17102026-1.2.19 F3, owner 2026-10-17).
  *
- * Measured on the EDDN year's two held-back samples with 1.2.19's prediction code
- * (`docs/perf/calibration/build_chance_calibration.py`): complete bodies, signal count known, each listed row counted
- * as true when the species was logged on that body. Before a DSS and after one are kept apart — after a DSS the
- * middle bands read high (rows said 65-80 % came true 56 % on 1.2.19), and the line says so rather than hiding it.
+ * Measured on the EDDN year's two held-back samples (`docs/perf/calibration/build_chance_calibration.py`): complete
+ * bodies, signal count known, each listed row counted as true when the species was logged on that body. Before a DSS
+ * and after one are kept apart — after a DSS the middle bands read high (rows said 65-80 % came true 56 %), and the
+ * line says so rather than hiding it.
  *
- * Per genus where its band holds at least `minRows` rows, else all genera together. Read-only; no chance is changed.
+ * Rebuilt 2026-11-03 (run app48) on the chances as the app shows them since the FSS correction
+ * (chanceRecalibration.ts, 1.3.7): before a DSS every band now comes true within about two points of what it says
+ * (35-50 % said 42.3, came true 42.7; hold-out D agrees), where 1.2.19's table was fitted on the uncorrected chances.
+ *
+ * Per genus where its band holds at least `minRows` rows, else all genera together. Read-only: this changes no chance.
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";

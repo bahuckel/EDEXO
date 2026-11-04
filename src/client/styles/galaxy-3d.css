@@ -1147,6 +1147,33 @@
 .g3d-find__input {
   width: 210px;
 }
+/*
+  Narrow windows (2026-11-03, seen at 820 px): the thirteen tab icons, the Find box and the title need about 1,230 px
+  on one line, and below that the bar pushed the map sideways, so a toolbar click scrolled the screen. Under that the
+  tabs and the title keep the first row and the Find box takes a row of its own; the drawers follow the bar's height
+  (--g3d-top).
+*/
+@media (max-width: 1240px) {
+  .g3d-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .g3d-tabs {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .g3d-bar .g3d-title {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .g3d-find--centre {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: start;
+  }
+  .g3d-find--centre .g3d-find__input {
+    width: min(440px, calc(100vw - 48px));
+  }
+}
 
 /* ---- G5: Next target ----------------------------------------------------------------------------- */
 .g3d-btn--primary-small {
