@@ -108,7 +108,7 @@ function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
           <circle className="aim-dot" r="3.5" />
           <text className="aim-dist" y="32" textAnchor="middle">
             {fmtM(m.distanceM)}
-            {!s.pitched && s.belowDeg != null ? ` ▼${Math.round(s.belowDeg)}°` : ""}
+
           </text>
         </>
       )}

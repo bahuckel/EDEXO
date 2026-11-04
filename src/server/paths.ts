@@ -243,6 +243,11 @@ export function resolveSurfaceMarksPath(): string {
   return join(resolveCommanderDataDir(), "edexo-surface-marks.json");
 }
 
+/** Where composition scans put plants against where they were sampled (scanLocateLog.ts), one JSON line each. */
+export function resolveScanLocateLogPath(): string {
+  return join(resolveCommanderDataDir(), "edexo-scan-locate.jsonl");
+}
+
 /**
  * The half-finished sampling run — which plant, how many scans down, and where each one was.
  *

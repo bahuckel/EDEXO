@@ -233,7 +233,7 @@ export class FlightPathPitch {
 
   constructor(
     private readonly windowMs = 3000,
-    private readonly minSpeedMs = 8,
+    private readonly minSpeedMs = 5,
   ) {}
 
   /** A new fix; the pitch estimate after it. */

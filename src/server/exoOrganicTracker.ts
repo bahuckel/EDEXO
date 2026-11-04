@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { FootTravelFix } from "./footTravelStatus.js";
 import { withCodexScan, withoutCodexMarks, type SurfaceMark } from "./surfaceMarksFile.js";
+import { logScanLocate } from "./scanLocateLog.js";
 import { elevationFromGravity } from "../shared/journalPhysics.js";
 import { RADAR_RADIUS_DEFAULT_M, clampRadarRadiusM } from "../shared/radarRadius.js";
 import { greatCircleDistanceMeters, resolveFootFixForOrganicLine } from "./footTravelStatus.js";
@@ -450,10 +451,9 @@ export function ingestExoOrganicJournalLine(
   const retireHere = resolveFootFixForOrganicLine(statusFix, line);
   if (scanKind === "analyse" || retireHere) {
     const genusForRange = typeof line.Genus_Localised === "string" ? line.Genus_Localised.trim() : "";
-    setCodexMarks(
-      store,
-      withoutCodexMarks(
-        store.surfaceCodexMarks ?? [],
+    const marksBefore = store.surfaceCodexMarks ?? [];
+    const marksAfter = withoutCodexMarks(
+        marksBefore,
         bk,
         [line.Variant, line.Species].filter((x): x is string => typeof x === "string" && x.trim() !== ""),
         scanKind === "analyse" || !retireHere
@@ -464,8 +464,10 @@ export function ingestExoOrganicJournalLine(
               radiusM: retireHere.planetRadiusM,
               withinM: Math.max(50, resolveMinSampleDistanceM(projectRoot, db, genusForRange)),
             },
-      ),
     );
+    // The plant's real spot against where its scans put it, to tune the placing (scanLocateLog.ts).
+    if (scanKind !== "analyse" && retireHere) logScanLocate(marksBefore.filter((m) => !marksAfter.includes(m)), retireHere, line.timestamp);
+    setCodexMarks(store, marksAfter);
   }
   /*
     What to call the body this scan happened on.

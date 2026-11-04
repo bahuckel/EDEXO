@@ -55,11 +55,23 @@ describe("screen marker projection", () => {
     // Nose level: 45 degrees below it, low on the screen.
     const [low] = projectMarks(map([codex(0, 100)], { altitudeM: 100, pitchDeg: 0 }), view);
     expect(low!.y).toBeGreaterThan(1100);
-    // Pitch unknown: the middle line, and how far below it is said instead.
+    // Pitch unknown (hovering): a level nose assumed, so the same place as nose level, drawn dashed.
     const [level] = projectMarks(map([codex(0, 100)], { altitudeM: 100, pitchDeg: null }), view);
-    expect(level!.y).toBe(720);
+    expect(level!.y).toBeCloseTo(low!.y);
     expect(level!.pitched).toBe(false);
     expect(level!.belowDeg).toBeCloseTo(45);
+    // On foot (no altitude): the middle line.
+    const [foot] = projectMarks(map([codex(0, 100)]), view);
+    expect(foot!.y).toBe(720);
+    expect(foot!.belowDeg).toBeNull();
+  });
+
+  it("does not open a mark straight ahead but far below a level nose (owner, 2026-11-04: 240 m, 18 deg below, 78 m up)", () => {
+    const below = projectMarks(map([codex(0, 240)], { altitudeM: 78, pitchDeg: null }), view);
+    expect(below[0]!.belowDeg).toBeCloseTo(18, 0);
+    expect(openMark(below, view)).toBeNull();
+    // Nose 18 degrees down (estimated): it opens.
+    expect(openMark(projectMarks(map([codex(0, 240)], { altitudeM: 78, pitchDeg: -18 }), view), view)).not.toBeNull();
   });
 
   it("opens the mark the nose points at, and none when nothing is near the centre", () => {
