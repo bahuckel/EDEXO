@@ -27,6 +27,7 @@ const {
   hudHeightFrom,
 } = require("./hudWindows.cjs");
 const { createTrayControl } = require("./tray.cjs");
+const { createAimWindow } = require("./aimWindow.cjs");
 const { createKeybinds } = require("./keybinds.cjs");
 const { createTabWindows } = require("./tabWindows.cjs");
 const updater = require("./updater.cjs");
@@ -112,6 +113,9 @@ let runtime = null;
 let hudBridge = {};
 let footOverlayIpcRegistered = false;
 
+/** The screen marker (aimWindow.cjs), created below the HUDs it follows; null until then. */
+let aim = null;
+
 /** The HUD overlay windows: hudWindows.cjs owns the stack, its layout file and its visibility. */
 const huds = createHudWindows({
   electron: { app, BrowserWindow, screen },
@@ -123,6 +127,8 @@ const huds = createHudWindows({
   guardWindow: (win) => guardWindowNavigation(win, ownBase, shell),
   onChange: () => {
     trayControl.refresh();
+    // The screen marker shows and hides with the HUDs (hotkey, game running, in front).
+    aim?.sync();
     // The launcher's Shown / Hidden buttons follow the hotkey and the tray as well as their own clicks.
     if (mainWindow && !mainWindow.isDestroyed()) {
       try {
@@ -139,6 +145,18 @@ const huds = createHudWindows({
       }
     }
   },
+});
+
+aim = createAimWindow({
+  BrowserWindow,
+  getBaseUrl: () => (runtime ? runtime.getLocalBaseUrl() : null),
+  preloadPath: path.join(__dirname, "preload.cjs"),
+  getDisplay: () => huds.gameDisplay(),
+  isAllowed: () => {
+    const l = huds.layout();
+    return !l.hidden && !l.gameAway && !(l.focusAway && l.hideUnfocused);
+  },
+  guardWindow: (win) => guardWindowNavigation(win, ownBase, shell),
 });
 
 function showLauncher() {
@@ -313,6 +331,7 @@ function registerFootOverlayIpc(iconForChild) {
     {
       electron: { app, dialog, ipcMain, BrowserWindow },
       huds,
+      aim,
       appWindows,
       keybinds,
       trayControl,
@@ -749,6 +768,7 @@ async function start() {
     // A backup being written would be thrown away (owner, 2026-09-29): ask first.
     if (quitFlow.holdExitForBackup(e)) return;
     huds.dispose();
+    aim?.dispose();
     trayControl.destroy();
     // The launcher is still the app: closing it closes the app window too, as it always quit — and every other
     // window (galaxy map, privacy page, torn-off tabs): one left open kept the app alive with no launcher and no tray,
@@ -1023,6 +1043,7 @@ function closeForQuit() {
     /* ignore */
   }
   huds.dispose();
+  aim?.dispose();
   if (foregroundStartTimer) clearTimeout(foregroundStartTimer);
   foreground?.stop();
   trayControl.destroy();

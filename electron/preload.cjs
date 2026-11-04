@@ -69,6 +69,8 @@ contextBridge.exposeInMainWorld("edexoElectron", {
   toggleHudVisibility: (opts) => ipcRenderer.invoke("edexo:toggle-hud-visibility", opts),
   /** Free move: start or end placing the HUDs. @param {{ on: boolean }} opts @returns {Promise<{ moving: boolean }>} */
   setHudMoveMode: (opts) => ipcRenderer.invoke("edexo:set-hud-move-mode", opts),
+  /** The screen marker over the game on or off. @param {{ on: boolean }} opts @returns {Promise<{ on: boolean }>} */
+  setAimOverlay: (opts) => ipcRenderer.invoke("edexo:set-aim-overlay", opts),
   /** A HUD page's drag while placing: "start", "move", "end", or "done" to finish placing. */
   hudDrag: (phase) => ipcRenderer.invoke("edexo:hud-drag", { phase }),
   /** HUD pages: placing mode on or off (`{ on }`). */

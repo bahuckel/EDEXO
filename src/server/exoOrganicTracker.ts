@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { FootTravelFix } from "./footTravelStatus.js";
-import { withCodexMark, withoutCodexMarks, type SurfaceMark } from "./surfaceMarksFile.js";
+import { withCodexScan, withoutCodexMarks, type SurfaceMark } from "./surfaceMarksFile.js";
 import { elevationFromGravity } from "../shared/journalPhysics.js";
 import { RADAR_RADIUS_DEFAULT_M, clampRadarRadiusM } from "../shared/radarRadius.js";
 import { greatCircleDistanceMeters, resolveFootFixForOrganicLine } from "./footTravelStatus.js";
@@ -445,15 +445,31 @@ export function ingestExoOrganicJournalLine(
   if (typeof sa !== "number" || typeof bodyId !== "number") return;
 
   const bk = bodyKey(sa, bodyId);
-  // Found on foot: the composition-scan waypoint for this species here has done its job.
-  setCodexMarks(
-    store,
-    withoutCodexMarks(
-      store.surfaceCodexMarks ?? [],
-      bk,
-      [line.Variant, line.Species].filter((x): x is string => typeof x === "string" && x.trim() !== ""),
-    ),
-  );
+  /*
+    Sampled on foot: the composition-scan mark of the plant underfoot has done its job. The other marks of this species
+    on the body stay, as the next plants to sample (owner, 2026-11-04: comp scan from the ship, then go round them),
+    until the species is finished (Analyse). Without a position for the sample none can be told apart: they wait.
+  */
+  const retireHere = resolveFootFixForOrganicLine(statusFix, line);
+  if (scanKind === "analyse" || retireHere) {
+    const genusForRange = typeof line.Genus_Localised === "string" ? line.Genus_Localised.trim() : "";
+    setCodexMarks(
+      store,
+      withoutCodexMarks(
+        store.surfaceCodexMarks ?? [],
+        bk,
+        [line.Variant, line.Species].filter((x): x is string => typeof x === "string" && x.trim() !== ""),
+        scanKind === "analyse" || !retireHere
+          ? undefined
+          : {
+              latDeg: retireHere.latDeg,
+              lonDeg: retireHere.lonDeg,
+              radiusM: retireHere.planetRadiusM,
+              withinM: Math.max(50, resolveMinSampleDistanceM(projectRoot, db, genusForRange)),
+            },
+      ),
+    );
+  }
   /*
     What to call the body this scan happened on.
 
@@ -681,17 +697,29 @@ function addCodexScanMark(store: ExoOrganicJournalStore, line: JournalLine, stat
   const label =
     typeof line.Name_Localised === "string" && line.Name_Localised.trim() ? line.Name_Localised.trim() : name;
   const bodyName = store.explorationScans.get(bk)?.bodyName ?? statusFix?.bodyName ?? null;
+  const atIso = typeof line.timestamp === "string" ? line.timestamp : new Date().toISOString();
+  /*
+    How the scanner was pointed, from Status.json at that moment (the line has no heading): only in the ship, where
+    Status.json reports an altitude. On foot the line's position is the plant itself, and a heading there would draw a
+    line through it that crosses nothing real.
+  */
+  const inShip = statusFix?.altitudeM != null;
+  const radiusM = statusFix?.planetRadiusM ?? store.explorationScans.get(bk)?.radius ?? 0;
   setCodexMarks(
     store,
-    withCodexMark(store.surfaceCodexMarks ?? [], {
-      bodyKey: bk,
-      bodyNameNorm: normStatusBodyName(bodyName) ?? "",
-      latDeg: lat,
-      lonDeg: lon,
-      label,
-      atIso: typeof line.timestamp === "string" ? line.timestamp : new Date().toISOString(),
-      codexName: name,
-    }),
+    withCodexScan(
+      store.surfaceCodexMarks ?? [],
+      { bodyKey: bk, bodyNameNorm: normStatusBodyName(bodyName) ?? "", label, atIso, codexName: name },
+      {
+        latDeg: lat,
+        lonDeg: lon,
+        headingDeg: inShip ? (statusFix?.headingDeg ?? null) : null,
+        altitudeM: inShip ? (statusFix?.altitudeM ?? null) : null,
+        pitchDeg: inShip ? (statusFix?.pitchDeg ?? null) : null,
+        atIso,
+      },
+      radiusM,
+    ),
   );
 }
 
@@ -784,6 +812,7 @@ export function buildExoMinimapDto(
     markLabel: string,
     active = false,
     ringM = 0,
+    extra: Partial<ExoMinimapMarkDTO> = {},
   ) => {
     // Longitude wraps; without this a plant just across the antimeridian reads as half a planet away.
     let dLon = lonDeg - fix.lonDeg;
@@ -797,6 +826,7 @@ export function buildExoMinimapDto(
       label: markLabel,
       active,
       ...(ringM > 0 ? { ringM } : {}),
+      ...extra,
     });
   };
 
@@ -838,17 +868,55 @@ export function buildExoMinimapDto(
     const isActive = activeSpecies != null && m.label.trim().toLowerCase() === activeSpecies;
     // The run's own distance for its marks; a leftover species' from its genus.
     const ringM = isActive ? minSampleDistanceM : sampleDistanceForSpeciesLabel(m.label);
-    push(m.latDeg, m.lonDeg, "sample", m.label, isActive, ringM);
+    push(m.latDeg, m.lonDeg, "sample", m.label, isActive, ringM, { name: m.label });
   }
+  /*
+    The next plant to sample (owner, 2026-11-04: comp scan from the ship, then drive round them): a composition scan of
+    the species being sampled whose spot is outside the clonal range of every sample of this run, nearest first.
+  */
+  const run = tracker && activeSpecies != null && tracker.phase === "tracking" ? tracker : null;
+  const outsideRange = (m: { latDeg: number; lonDeg: number }) =>
+    !!run && run.anchors.every((a) => greatCircleDistanceMeters(a.latDeg, a.lonDeg, m.latDeg, m.lonDeg, R) >= minSampleDistanceM);
+  const isRunPlant = (m: SurfaceMark) => !!run && !!m.codexName && run.speciesKey.toLowerCase().includes(m.codexName.toLowerCase());
+  let target: SurfaceMark | null = null;
+  let targetM = Infinity;
   for (const m of store.surfaceCodexMarks ?? []) {
-    if (belongsHere(m)) push(m.latDeg, m.lonDeg, "codex", `${m.label} (scanned from the ship)`);
+    if (!belongsHere(m) || !isRunPlant(m) || !outsideRange(m)) continue;
+    const d = greatCircleDistanceMeters(fix.latDeg, fix.lonDeg, m.latDeg, m.lonDeg, R);
+    if (d < targetM) {
+      target = m;
+      targetM = d;
+    }
+  }
+  const NOTE: Record<NonNullable<SurfaceMark["located"]>, string> = {
+    crossing: "located from 2 scans",
+    ahead: "ahead of where it was scanned",
+    "scanned-from": "scanned from here",
+  };
+  for (const m of store.surfaceCodexMarks ?? []) {
+    if (!belongsHere(m)) continue;
+    const how = m.located ?? "scanned-from";
+    push(m.latDeg, m.lonDeg, "codex", `${m.label} (${m === target ? "next to sample, " : ""}${NOTE[how]})`, false, 0, {
+      name: m.label,
+      located: how,
+      ...(how === "scanned-from" && m.headingDeg != null ? { scanHeadingDeg: m.headingDeg } : {}),
+      ...(m === target ? { target: true } : {}),
+    });
   }
   const ship = store.surfaceShipMark;
   if (ship && belongsHere(ship)) push(ship.latDeg, ship.lonDeg, "ship", "Your ship");
   const srv = store.surfaceSrvMark;
   if (srv && belongsHere(srv)) push(srv.latDeg, srv.lonDeg, "srv", "Your SRV");
 
-  return { radiusM: minimapRadiusFor(store), headingDeg: fix.headingDeg, minSampleDistanceM, marks, ...(near ? { near: true } : {}) };
+  return {
+    radiusM: minimapRadiusFor(store),
+    headingDeg: fix.headingDeg,
+    minSampleDistanceM,
+    marks,
+    ...(near ? { near: true } : {}),
+    altitudeM: fix.altitudeM ?? null,
+    pitchDeg: fix.pitchDeg ?? null,
+  };
 }
 
 export function buildExoOrganicOverlayDto(

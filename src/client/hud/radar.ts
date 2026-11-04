@@ -197,9 +197,19 @@ function drawMinimapAt(svg: RadarSvg, mm: Minimap, hint: boolean): boolean {
             "</g>",
         );
       } else if (m.kind === "codex") {
-        // A composition-scan waypoint: a hollow circle, never mistaken for a sample taken.
+        // A composition-scan waypoint: a hollow circle, never mistaken for a sample taken. Placed by two crossing scans
+        // it gets a second ring; from one scan without a range, a short line the way the ship was pointed.
+        if (m.located === "scanned-from" && m.scanHeadingDeg != null) {
+          const t = (m.scanHeadingDeg * Math.PI) / 180;
+          parts.push(
+            '<line class="minimap-codex-heading" x1="' + x.toFixed(1) + '" y1="' + y.toFixed(1) + '" x2="' +
+              (x + Math.sin(t) * 16).toFixed(1) + '" y2="' + (y - Math.cos(t) * 16).toFixed(1) + '" />',
+          );
+        }
+        if (m.located === "crossing")
+          parts.push('<circle class="minimap-codex minimap-codex--outer" r="7" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" />');
         parts.push(
-          '<circle class="minimap-codex" r="4" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '">' + title + "</circle>",
+          '<circle class="minimap-codex' + (m.target ? " minimap-codex--target" : "") + '" r="4" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '">' + title + "</circle>",
         );
       } else {
         parts.push(
@@ -249,6 +259,14 @@ function drawMinimapAt(svg: RadarSvg, mm: Minimap, hint: boolean): boolean {
           "</text>",
       );
     }
+  }
+  // The next plant to sample (owner, 2026-11-04): a line from you to it, to the rim when it is off the map.
+  const next = mm.marks.find((m) => m.target);
+  if (next) {
+    const nx = next.eastM * scale;
+    const ny = -next.northM * scale;
+    const k = Math.min(1, (MAP_R - 8) / Math.max(1e-6, Math.hypot(nx, ny)));
+    parts.push('<line class="minimap-target-line" x1="0" y1="0" x2="' + (nx * k).toFixed(1) + '" y2="' + (ny * k).toFixed(1) + '" />');
   }
   // The way to walk: the min-gap ring, on the side away from the first sample.
   if (hint && firstActive && minR > 0) {

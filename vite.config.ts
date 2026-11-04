@@ -59,6 +59,7 @@ export default defineConfig({
           "colonize-overlay",
           "ship-overlay",
           "carrier-overlay",
+          "aim-overlay",
         ].map((n) => [n, path.resolve(import.meta.dirname, "src/client", `${n}.html`)]),
       ),
       output: {

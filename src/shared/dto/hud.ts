@@ -73,6 +73,10 @@ export interface ExoMinimapDTO {
    * for this only with the launcher's "Radar always visible" (owner, 2026-11-04).
    */
   near?: boolean;
+  /** Metres above the ground (Status.json Altitude), in the ship; null on foot. For the screen marker's look-down. */
+  altitudeM?: number | null;
+  /** The nose's angle, degrees, negative down (a flight-path estimate); null when not known. */
+  pitchDeg?: number | null;
 }
 
 export interface ExoMinimapMarkDTO {
@@ -106,6 +110,20 @@ export interface ExoMinimapMarkDTO {
    * and for a species whose distance is not known.
    */
   ringM?: number;
+  /** The plant's own name without the radar's note ("Stratum Tectonicas - Green"): the pointed-at label. */
+  name?: string;
+  /**
+   * A composition scan: how its position was found (shared/scanLocate.ts, owner 2026-11-04). "crossing": two heading
+   * lines met there; "ahead": along the heading at altitude / tan(nose-down angle); "scanned-from": the ship's spot.
+   */
+  located?: "crossing" | "ahead" | "scanned-from";
+  /** "scanned-from": the heading of that scan, so the radar can draw which way from there. */
+  scanHeadingDeg?: number;
+  /**
+   * The next plant to sample (owner, 2026-11-04): a composition scan of the species being sampled, outside the clonal
+   * range of every sample taken, nearest first. One at most.
+   */
+  target?: boolean;
 }
 
 /** One system seen in merged journals (for browse / search). */

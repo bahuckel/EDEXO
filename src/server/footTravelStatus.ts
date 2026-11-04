@@ -19,6 +19,14 @@ export type FootTravelFix = {
    */
   headingDeg: number | null;
   /**
+   * Metres above the ground (Status.json `Altitude`): in the ship or the SRV, absent on foot. Optional: the
+   * journal-line fixes and the test hosts have none. With the heading it places a composition scan ahead of the ship
+   * (shared/scanLocate.ts, owner 2026-11-04).
+   */
+  altitudeM?: number | null;
+  /** The nose's angle (degrees, negative down), estimated from the flight path (scanLocate.ts FlightPathPitch). */
+  pitchDeg?: number | null;
+  /**
    * Kelvin at the commander's feet, or null when the game is not reporting it.
    *
    * A body's `SurfaceTemperature` is one number for a whole planet, and the journal offers nothing
@@ -149,6 +157,7 @@ function footFixFromParsed(o: Record<string, unknown>): FootTravelFix | null {
     planetRadiusM: radius,
     bodyName,
     headingDeg: heading,
+    altitudeM: pickFinite(o, ["Altitude", "altitude"]),
     temperatureK: pickFinite(o, ["Temperature", "temperature"]),
     gravityG: pickFinite(o, ["Gravity", "gravity"]),
   };

@@ -1663,6 +1663,8 @@ function createHudWindows(deps) {
     resizeFromPage,
     /** Where the game's window is (screen pixels), so the corner stack goes to its monitor. */
     setGamePoint,
+    /** The game's monitor (the corner stack's): the screen marker covers it (aimWindow.cjs). */
+    gameDisplay: stackDisplay,
     raiseVisible,
     /** One line in hud-events.log (main.cjs adds the foreground window's changes). */
     log: hudLog,

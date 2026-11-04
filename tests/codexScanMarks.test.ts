@@ -82,21 +82,91 @@ describe("composition-scan waypoints", () => {
     expect(buildExoMinimapDto(store as never, "37738594260331:4", 0)!.near).toBeUndefined();
   });
 
-  it("retires once the species is logged on that body, and only there", () => {
+  const organic = (scanType: string, over: Record<string, unknown> = {}) => ({
+    timestamp: "2026-11-01T18:05:00Z",
+    event: "ScanOrganic",
+    ScanType: scanType,
+    Genus: "$Codex_Ent_Tube_Name;",
+    Genus_Localised: "Sinuous Tubers",
+    Species: "$Codex_Ent_TubeABCD_01_Name;",
+    Variant: "$Codex_Ent_TubeABCD_01_Name;",
+    Species_Localised: "Prasinum Sinuous Tubers",
+    SystemAddress: 37738594260331,
+    Body: 4,
+    ...over,
+  });
+
+  it("a sample retires only the scan of the plant underfoot; Analyse retires the species on that body", () => {
     const { store, ingest } = setup();
     ingest(codex());
     ingest(codex({ BodyID: 5 }));
-    ingest({
-      timestamp: "2026-11-01T18:05:00Z",
-      event: "ScanOrganic",
-      ScanType: "Log",
-      Genus: "$Codex_Ent_Tube_Name;",
-      Species: "$Codex_Ent_TubeABCD_01_Name;",
-      Variant: "$Codex_Ent_TubeABCD_01_Name;",
-      Species_Localised: "Prasinum Sinuous Tubers",
-      SystemAddress: 37738594260331,
-      Body: 4,
-    });
+    // Sampled 600 m from the scanned plant: that one is still to do (owner, 2026-11-04).
+    ingest(organic("Log"));
+    expect(store.surfaceCodexMarks.map((m) => m.bodyKey)).toEqual(["37738594260331:4", "37738594260331:5"]);
+    ingest(organic("Analyse", { timestamp: "2026-11-01T18:20:00Z" }));
     expect(store.surfaceCodexMarks.map((m) => m.bodyKey)).toEqual(["37738594260331:5"]);
+  });
+
+  it("a sample at the scanned plant retires its mark", () => {
+    loadSpeciesDatabase();
+    const store = new GameStateStore();
+    const atPlant = { ...fix, latDeg: 13.935266, lonDeg: 165.722351 };
+    ingestExoOrganicJournalLine(store as never, codex() as never, fix, process.cwd(), getCachedSpeciesDatabase());
+    ingestExoOrganicJournalLine(store as never, organic("Log") as never, atPlant, process.cwd(), getCachedSpeciesDatabase());
+    expect(store.surfaceCodexMarks).toHaveLength(0);
+  });
+
+  it("points at the next plant of the species being sampled, outside the range of the samples taken", () => {
+    const { store, ingest } = setup();
+    ingest(codex());
+    ingest(organic("Log"));
+    store.exoOrganicLastFix = fix;
+    const mm = buildExoMinimapDto(store as never, "37738594260331:4", store.exoOrganicTracker!.minSampleDistanceM)!;
+    const m = mm.marks.find((x) => x.kind === "codex")!;
+    expect(m.target).toBe(true);
+    expect(m.label).toContain("next to sample");
+    expect(m.name).toBe("Prasinum Sinuous Tubers");
+  });
+
+  it("places a plant scanned twice from the ship where the two heading lines cross", () => {
+    loadSpeciesDatabase();
+    const store = new GameStateStore();
+    const R = fix.planetRadiusM;
+    const deg = 180 / Math.PI / R;
+    // The plant 500 m north of `fix`; scanned from 400 m west and 400 m east of it, 300 m short, 150 m up.
+    const plantLat = fix.latDeg + 500 * deg;
+    const cos = Math.cos((fix.latDeg * Math.PI) / 180);
+    const ship = (e: number, heading: number) => ({
+      ...fix,
+      latDeg: fix.latDeg + 200 * deg,
+      lonDeg: fix.lonDeg + (e * deg) / cos,
+      headingDeg: heading,
+      altitudeM: 150,
+      pitchDeg: null,
+    });
+    const scanFrom = (e: number, heading: number, ts: string) =>
+      ingestExoOrganicJournalLine(
+        store as never,
+        codex({ timestamp: ts, Latitude: ship(e, heading).latDeg, Longitude: ship(e, heading).lonDeg }) as never,
+        ship(e, heading),
+        process.cwd(),
+        getCachedSpeciesDatabase(),
+      );
+    scanFrom(-400, 53.13, "2026-11-01T18:00:31Z");
+    expect(store.surfaceCodexMarks[0]).toMatchObject({ located: "scanned-from", headingDeg: 53.13 });
+    scanFrom(400, 306.87, "2026-11-01T18:01:10Z");
+    const m = store.surfaceCodexMarks[0]!;
+    expect(store.surfaceCodexMarks).toHaveLength(1);
+    expect(m.located).toBe("crossing");
+    expect(m.scans).toHaveLength(2);
+    expect(Math.abs(m.latDeg - plantLat) / deg).toBeLessThan(2);
+    expect(Math.abs(m.lonDeg - fix.lonDeg) / deg).toBeLessThan(2);
+  });
+
+  it("keeps no heading for a scan on foot (its position is the plant's)", () => {
+    loadSpeciesDatabase();
+    const store = new GameStateStore();
+    ingestExoOrganicJournalLine(store as never, codex() as never, { ...fix, headingDeg: 90 }, process.cwd(), getCachedSpeciesDatabase());
+    expect(store.surfaceCodexMarks[0]!.scans![0]!.headingDeg).toBeNull();
   });
 });

@@ -19,6 +19,7 @@ import { ownFootEntriesWithBackups } from "./footScannedCatalog.js";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import type { AppSnapshot, ExoLiveDTO, JournalLine, UiCommand } from "../shared/types.js";
 import { journalHistoryCutoffUtcMs } from "../shared/journalHistoryPreset.js";
+import { applyLiveFix } from "./liveFix.js";
 import { mergeCollectionFocus } from "../shared/collectionFocus.js";
 import {
   clearCollectionFocusCache,
@@ -1315,12 +1316,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         const read = readStatusJsonFootFixText(raw);
         if (read.kind === "unreadable") return;
         const fix = read.kind === "fix" ? read.fix : null;
-        if (fix) {
-          store.applyFootTravelSample(fix.latDeg, fix.lonDeg, fix.planetRadiusM, fix.bodyName);
-          store.exoOrganicLastFix = fix;
-        } else {
-          store.exoOrganicLastFix = null;
-        }
+        // The odometer's sample, the nose's pitch from the flight path, and the radar's fix (null: off the surface).
+        applyLiveFix(store, fix);
         // The targeted body: the HUD's candidate list, and a one-shot jump to its Body tab. Pushed
         // only when it actually changes — see `applyStatusDestination`.
         const destChanged = store.applyStatusDestination(parseStatusJsonDestination(raw));

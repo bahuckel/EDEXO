@@ -11,7 +11,7 @@ const gpuSafe = require("./gpuSafeMode.cjs");
 const { hudPathFrom, hudWidthFrom, hudHeightFrom } = require("./hudWindows.cjs");
 
 function registerLauncherIpc(
-  { electron, huds, appWindows, keybinds, trayControl, quitFlow, tray, graphics, gpuSafeDir, hotkey, getRuntime, getMainWindow },
+  { electron, huds, aim, appWindows, keybinds, trayControl, quitFlow, tray, graphics, gpuSafeDir, hotkey, getRuntime, getMainWindow },
   iconForChild,
 ) {
   const { app, dialog, ipcMain, BrowserWindow } = electron;
@@ -23,6 +23,8 @@ function registerLauncherIpc(
   }));
 
   ipcMain.handle("edexo:hud-overlay-state", () => ({ paths: huds.paths() }));
+  // The screen marker (aimWindow.cjs): the launcher's switch, off by default.
+  ipcMain.handle("edexo:set-aim-overlay", (_evt, opts) => ({ on: aim ? aim.set(!!(opts && typeof opts === "object" && opts.on === true)) : false }));
 
   ipcMain.handle("edexo:open-app-window", () => appWindows.openAppUiWindow(iconForChild));
   ipcMain.handle("edexo:open-colonize-window", () => appWindows.openColonizeWindow(iconForChild));

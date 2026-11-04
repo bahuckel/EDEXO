@@ -27,6 +27,7 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { resolveSurfaceMarksPath } from "./paths.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { locatePlant, type CompScan, type PlantLocated } from "../shared/scanLocate.js";
 
 /** One recorded position on a surface. */
 export interface SurfaceMark {
@@ -62,6 +63,16 @@ export interface SurfaceMark {
   elevationM?: number | null;
   /** A composition-scan mark's codex entry (`CodexEntry.Name`, the variant), so a sample of it can retire it. */
   codexName?: string;
+  /**
+   * A composition-scan mark's scans (owner, 2026-11-04): where the scanner was and how it was pointed, each one. The
+   * mark's own latitude / longitude is where they put the plant (shared/scanLocate.ts): two crossing heading lines,
+   * straight ahead of one, or where it was scanned from. Marks written before this have none (scanned from there).
+   */
+  scans?: CompScan[];
+  /** How the mark's position was found, from {@link scans}. */
+  located?: PlantLocated;
+  /** "scanned-from": the scan's heading, for the radar's tick. */
+  headingDeg?: number;
 }
 
 export interface SurfaceMarksFile {
@@ -84,17 +95,55 @@ export interface SurfaceMarksFile {
 /** Bodies' worth of plants before the oldest are dropped. Generous; this file is tiny. */
 export const MAX_SURFACE_MARKS = 400;
 
-/** The composition-scan waypoints with one more (none twice per species and body); the same list when nothing changes. */
-export function withCodexMark(list: SurfaceMark[], mark: SurfaceMark & { codexName: string }): SurfaceMark[] {
-  if (!Number.isFinite(mark.latDeg) || !Number.isFinite(mark.lonDeg)) return list;
-  if (list.some((m) => m.bodyKey === mark.bodyKey && m.codexName === mark.codexName)) return list;
-  return [...list, mark].slice(-MAX_SURFACE_MARKS);
+/** Scans kept per composition-scan mark (the newest). */
+const MAX_SCANS = 6;
+
+/**
+ * The composition-scan waypoints with one more scan (one mark per species and body): a new mark, or another scan of
+ * one already there, which places the plant again (two heading lines cross where it stands). `radiusM` is the body's.
+ */
+export function withCodexScan(
+  list: SurfaceMark[],
+  mark: Omit<SurfaceMark, "latDeg" | "lonDeg"> & { codexName: string },
+  scan: CompScan,
+  radiusM: number,
+): SurfaceMark[] {
+  if (!Number.isFinite(scan.latDeg) || !Number.isFinite(scan.lonDeg)) return list;
+  const i = list.findIndex((m) => m.bodyKey === mark.bodyKey && m.codexName === mark.codexName);
+  const before = i >= 0 ? list[i]! : null;
+  // A mark from before the scans were kept: its position was the scanner's, with no heading.
+  const had: CompScan[] = before
+    ? (before.scans ?? [{ latDeg: before.latDeg, lonDeg: before.lonDeg, headingDeg: null, altitudeM: null, pitchDeg: null, atIso: before.atIso }])
+    : [];
+  const scans = [...had, scan].slice(-MAX_SCANS);
+  const at = locatePlant(scans, radiusM)!;
+  const next: SurfaceMark = {
+    ...(before ?? mark),
+    latDeg: at.latDeg,
+    lonDeg: at.lonDeg,
+    scans,
+    located: at.how,
+    ...(at.headingDeg != null ? { headingDeg: at.headingDeg } : {}),
+  };
+  if (at.headingDeg == null) delete next.headingDeg;
+  if (i < 0) return [...list, next].slice(-MAX_SURFACE_MARKS);
+  const out = list.slice();
+  out[i] = next;
+  return out;
 }
 
 /** Without the waypoints of these codex entries on this body; the same list when none goes. */
-export function withoutCodexMarks(list: SurfaceMark[], bodyKey: string, codexNames: readonly string[]): SurfaceMark[] {
+export function withoutCodexMarks(
+  list: SurfaceMark[],
+  bodyKey: string,
+  codexNames: readonly string[],
+  /** Only the ones within `withinM` of this spot (the plant just sampled), not every one of that species on the body. */
+  near?: { latDeg: number; lonDeg: number; radiusM: number; withinM: number },
+): SurfaceMark[] {
   const names = new Set(codexNames.map((n) => n.toLowerCase()));
-  const keep = list.filter((m) => !(m.bodyKey === bodyKey && names.has((m.codexName ?? "").toLowerCase())));
+  const close = (m: SurfaceMark) =>
+    !near || greatCircleM(near.latDeg, near.lonDeg, m.latDeg, m.lonDeg, near.radiusM) <= near.withinM;
+  const keep = list.filter((m) => !(m.bodyKey === bodyKey && names.has((m.codexName ?? "").toLowerCase()) && close(m)));
   return keep.length === list.length ? list : keep;
 }
 
@@ -136,6 +185,27 @@ function repairName<T extends { bodyNameNorm?: string }>(m: T): T {
   return m;
 }
 
+/** Surface distance, metres (haversine; footTravelStatus has the same, this file stays free of it). */
+function greatCircleM(lat1: number, lon1: number, lat2: number, lon2: number, r: number): number {
+  const rad = Math.PI / 180;
+  const a =
+    Math.sin(((lat2 - lat1) * rad) / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(((lon2 - lon1) * rad) / 2) ** 2;
+  return 2 * r * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+}
+
+const numOrNull = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+
+/** A mark's scans as the file has them, the malformed ones left out. */
+function cleanScans(m: SurfaceMark): SurfaceMark {
+  if (!Array.isArray(m.scans)) return m;
+  const scans = (m.scans as unknown[]).flatMap((v): CompScan[] => {
+    const s = v as Partial<CompScan> | null;
+    if (!s || numOrNull(s.latDeg) == null || numOrNull(s.lonDeg) == null) return [];
+    return [{ latDeg: s.latDeg!, lonDeg: s.lonDeg!, headingDeg: numOrNull(s.headingDeg), altitudeM: numOrNull(s.altitudeM), pitchDeg: numOrNull(s.pitchDeg), atIso: typeof s.atIso === "string" ? s.atIso : m.atIso }];
+  });
+  return { ...m, scans };
+}
+
 /**
  * Read the file, or an empty set.
  *
@@ -150,7 +220,7 @@ export function loadSurfaceMarks(): SurfaceMarksFile {
     const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<SurfaceMarksFile>;
     const samples = Array.isArray(parsed.samples) ? parsed.samples.map(repairName).filter(isMark) : [];
     const ship = isMark(parsed.ship) ? repairName(parsed.ship) : null;
-    const codex = Array.isArray(parsed.codex) ? parsed.codex.filter(isMark) : [];
+    const codex = Array.isArray(parsed.codex) ? parsed.codex.filter(isMark).map(cleanScans) : [];
     const srv = isMark(parsed.srv) ? parsed.srv : null;
     return { formatVersion: 1, samples, ship, codex, srv };
   } catch {

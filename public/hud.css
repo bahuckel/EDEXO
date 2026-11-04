@@ -840,6 +840,79 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
   stroke: var(--bio);
   stroke-width: 1.2;
 }
+/* Placed by two crossing scans: a second, solid ring (scanLocate.ts). */
+.minimap-codex--outer {
+  stroke-dasharray: none;
+  stroke-width: 1;
+  opacity: 0.7;
+}
+/* Scanned from here, no range known: the way the ship was pointed. */
+.minimap-codex-heading {
+  stroke: var(--bio);
+  stroke-width: 1;
+  stroke-dasharray: 1.5 2;
+  opacity: 0.8;
+}
+/* The next plant to sample (owner, 2026-11-04): filled, and a line from you to it. */
+.minimap-codex--target {
+  fill: var(--bio);
+  fill-opacity: 0.35;
+  stroke-dasharray: none;
+  stroke-width: 1.8;
+}
+.minimap-target-line {
+  stroke: var(--bio);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 3;
+  opacity: 0.85;
+}
+
+/* Heading to a scan (guide.tsx): the tape under the radar and the line naming what the nose points at. */
+.guide {
+  margin: 4px 0 2px;
+}
+.guide__tape {
+  display: block;
+  width: 100%;
+  height: 12px;
+  border-bottom: 1px solid var(--hud-dim);
+}
+.guide__centre {
+  stroke: var(--hud-text);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+.guide__tick {
+  stroke: var(--hud-dim);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.guide__tick--codex {
+  stroke: var(--bio);
+}
+.guide__tick.is-target,
+.guide__tick.is-on {
+  stroke: var(--bio);
+  stroke-width: 3;
+}
+.guide__off {
+  fill: var(--bio);
+}
+.guide__line {
+  font-size: 0.92em;
+  min-height: 1.3em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.guide--on .guide__name b {
+  color: var(--bio);
+  font-size: 1.15em;
+}
+.guide__how,
+.guide__hint {
+  color: var(--hud-dim);
+}
 /* SVG text takes no text-shadow: a dark stroke behind the fill does the same. */
 .minimap-far-label,
 .minimap-north {

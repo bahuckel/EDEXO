@@ -1,0 +1,70 @@
+/* The screen marker (aim/main.tsx): transparent everywhere but the marks, never in the way of the mouse. */
+html,
+body.aim-body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+.aim {
+  position: fixed;
+  inset: 0;
+  font-family: var(--hud-font, "Segoe UI", sans-serif);
+  --aim: var(--bio, #7be07b);
+}
+.aim text {
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.85);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.aim-ring {
+  fill: none;
+  stroke: var(--aim);
+  stroke-width: 1.6;
+  opacity: 0.85;
+}
+.aim-mark.is-level .aim-ring {
+  stroke-dasharray: 4 3;
+}
+.aim-dot,
+.aim-edge polygon {
+  fill: var(--aim);
+}
+.aim-mark.is-target .aim-ring {
+  stroke-width: 2.6;
+  opacity: 1;
+}
+.aim-dist,
+.aim-edge text {
+  font-size: 13px;
+}
+.aim-hex {
+  fill: rgba(0, 0, 0, 0.35);
+  stroke: var(--aim);
+  stroke-width: 2.4;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: aim-open 0.22s ease-out;
+}
+.aim-name {
+  font-size: 20px;
+  font-weight: 700;
+  fill: var(--aim);
+}
+.aim-sub {
+  font-size: 14px;
+}
+@keyframes aim-open {
+  from {
+    transform: scale(0.45) rotate(-30deg);
+    opacity: 0.3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aim-hex {
+    animation: none;
+  }
+}

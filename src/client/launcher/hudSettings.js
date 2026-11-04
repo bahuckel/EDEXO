@@ -22,6 +22,7 @@ var LS_HUD_NEXT_BOXEL = "edexoHudNextBoxel";
 /* The fuel bar at a neutron route's refuel stop (2026-10-29): on unless switched off. */
 var LS_HUD_REFUEL_BAR = "edexoHudRefuelBar";
 var LS_HUD_RADAR_ALWAYS = "edexoHudRadarAlways";
+var LS_HUD_AIM = "edexoHudAim";
 /* Colonize HUD (1.3.0): materials and other sites on unless switched off; finished lines off unless switched on. */
 var HUD_CZ_PREFS = [
   { id: "hudCzNeeds", ls: "edexoHudCzNeeds", key: "czNeeds", def: true },
@@ -244,6 +245,7 @@ var hudCredit = document.getElementById("hudCredit");
 var hudNextBoxel = document.getElementById("hudNextBoxel");
 var hudRefuelBar = document.getElementById("hudRefuelBar");
 var hudRadarAlways = document.getElementById("hudRadarAlways");
+var hudAim = document.getElementById("hudAim");
 var hudCompact = document.getElementById("hudCompact");
 var hudRelevant = document.getElementById("hudRelevant");
 var hudAudio = document.getElementById("hudAudio");
@@ -504,6 +506,18 @@ export function start() {
     hudNextBoxel.addEventListener("change", function () {
       try { localStorage.setItem(LS_HUD_NEXT_BOXEL, hudNextBoxel.checked ? "1" : "0"); } catch (e) {}
       syncHudPrefs();
+    });
+  }
+  /* The screen marker's window (electron/aimWindow.cjs): kept on through restarts, asked for again at each start. */
+  if (hudAim) {
+    var aimOn = (function () { try { return localStorage.getItem(LS_HUD_AIM) === "1"; } catch (e) { return false; } })();
+    hudAim.checked = aimOn;
+    var ee = window.edexoElectron;
+    if (!ee || typeof ee.setAimOverlay !== "function") hudAim.disabled = true;
+    else if (aimOn) ee.setAimOverlay({ on: true }).catch(function () {});
+    hudAim.addEventListener("change", function () {
+      try { localStorage.setItem(LS_HUD_AIM, hudAim.checked ? "1" : "0"); } catch (e) {}
+      if (ee && typeof ee.setAimOverlay === "function") ee.setAimOverlay({ on: hudAim.checked }).catch(function () {});
     });
   }
   if (hudRadarAlways) {

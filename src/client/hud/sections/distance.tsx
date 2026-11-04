@@ -3,6 +3,7 @@ import type { HudSnapshot } from "../types";
 import { cueFromOverlay } from "../audio";
 import { cap, fmtClock, fmtCr } from "../core";
 import { pref } from "../theme";
+import { Guide } from "../guide";
 import { drawMinimap } from "../radar";
 import { Head, Metres, Pill, type HudSection } from "../parts";
 import { useLiveRev } from "../store";
@@ -229,6 +230,7 @@ function Distance({ d, waiting = false }: { d: HudSnapshot; waiting?: boolean })
             </Row>
           </div>
         </div>
+        {showTracker && !waiting ? <Guide map={map} /> : null}
         <Row label="Payout" rule>
           <span className="val" data-f="pay">
             {pay}
