@@ -69,8 +69,8 @@ export interface ExoMinimapDTO {
   minSampleDistanceM: number;
   marks: ExoMinimapMarkDTO[];
   /**
-   * Flying near the planet rather than on it (normal flight, not supercruise, no touchdown): the HUD opens the radar
-   * for this only with the launcher's "Radar always visible" (owner, 2026-11-04).
+   * Near the planet rather than on it (Status.json gives a position and a heading, no touchdown): the HUD opens the
+   * radar for this with the launcher's "Radar always on", or when the planet has composition scans (owner, 2026-11-04).
    */
   near?: boolean;
   /** Metres above the ground (Status.json Altitude), in the ship; null on foot. For the screen marker's look-down. */

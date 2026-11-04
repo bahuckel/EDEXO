@@ -6,6 +6,8 @@
 import { describe, expect, it } from "vitest";
 import { buildExoMinimapDto, ingestExoOrganicJournalLine } from "../src/server/exoOrganicTracker.js";
 import { GameStateStore } from "../src/server/gameState.js";
+import { applyLiveFix } from "../src/server/liveFix.js";
+import { fromLocal } from "../src/shared/scanLocate.js";
 import { getCachedSpeciesDatabase, loadSpeciesDatabase } from "../src/server/snapshot.js";
 
 const BODY = "Eembaids EG-Y g5 4";
@@ -40,11 +42,14 @@ function setup() {
 }
 
 describe("composition-scan waypoints", () => {
-  it("marks where the scanner named a plant, once per species and body", () => {
+  it("marks where the scanner named a plant, once per plant", () => {
     const { store, ingest } = setup();
     ingest(codex());
-    ingest(codex({ Latitude: 13.94 }));
+    ingest(codex({ Latitude: 13.93527 }));
     expect(store.surfaceCodexMarks).toHaveLength(1);
+    // Another spot, no heading to tie it to the first (on foot): another plant.
+    ingest(codex({ Latitude: 13.94 }));
+    expect(store.surfaceCodexMarks).toHaveLength(2);
     expect(store.surfaceCodexMarks[0]).toMatchObject({ bodyKey: "37738594260331:4", label: "Prasinum Sinuous Tubers" });
   });
 
@@ -66,19 +71,22 @@ describe("composition-scan waypoints", () => {
     expect(m!.northM).toBeGreaterThan(100);
   });
 
-  it("draws the planet flown over in normal flight (Radar always visible), never in supercruise", () => {
+  it("draws the planet flown over while Status.json gives a position and a heading (Radar always on)", () => {
     const { store, ingest } = setup();
     ingest(codex());
+    // No touchdown, no sample run: the radar of the planet flown over, flagged `near` for the HUD's switch, whatever
+    // the flight mode (owner, 2026-11-04: "as long as we have the coordinates and heading in the status.json").
     store.exoOrganicLastFix = fix;
-    // No touchdown, no sample run: only the radar of the planet flown over, flagged `near` for the HUD's setting.
-    store.shipFlight = "normal";
     const mm = buildExoMinimapDto(store as never, null, 0)!;
     expect(mm.near).toBe(true);
     expect(mm.marks.find((x) => x.kind === "codex")?.label).toContain("Prasinum Sinuous Tubers");
-    store.shipFlight = "supercruise";
+    // No heading, or no body name: no radar.
+    store.exoOrganicLastFix = { ...fix, headingDeg: null };
+    expect(buildExoMinimapDto(store as never, null, 0)).toBeNull();
+    store.exoOrganicLastFix = { ...fix, bodyName: null };
     expect(buildExoMinimapDto(store as never, null, 0)).toBeNull();
     // Landed: the body underfoot, not `near`.
-    store.shipFlight = "landed";
+    store.exoOrganicLastFix = fix;
     expect(buildExoMinimapDto(store as never, "37738594260331:4", 0)!.near).toBeUndefined();
   });
 
@@ -168,5 +176,28 @@ describe("composition-scan waypoints", () => {
     const store = new GameStateStore();
     ingestExoOrganicJournalLine(store as never, codex() as never, { ...fix, headingDeg: 90 }, process.cwd(), getCachedSpeciesDatabase());
     expect(store.surfaceCodexMarks[0]!.scans![0]!.headingDeg).toBeNull();
+  });
+  it("splits a mark from the first build that held two plants' scans, once the planet's radius is known", () => {
+    loadSpeciesDatabase();
+    const store = new GameStateStore();
+    const R = fix.planetRadiusM;
+    const at = (sec: number) => new Date(Date.UTC(2026, 10, 4, 10, 5, 28) + sec * 1000).toISOString();
+    const sc = (e: number, n: number, h: number, sec: number) => ({ ...fromLocal(fix, e, n, R), headingDeg: h, altitudeM: 5, pitchDeg: null, atIso: at(sec) });
+    store.surfaceCodexMarks = [
+      {
+        bodyKey: "37738594260331:4",
+        bodyNameNorm: "eembaids eg-y g5 4",
+        latDeg: fix.latDeg,
+        lonDeg: fix.lonDeg,
+        label: "Prasinum Sinuous Tubers",
+        atIso: at(0),
+        codexName: "$Codex_Ent_TubeABCD_01_Name;",
+        located: "crossing",
+        scans: [sc(0, 0, 191, 0), sc(-65, -19, 134, 14), sc(-38, -119, 121, 459), sc(-72, -283, 67, 477)],
+      },
+    ];
+    applyLiveFix(store, { ...fix }, 0);
+    expect(store.surfaceCodexMarks).toHaveLength(2);
+    expect(store.surfaceCodexMarks.every((m) => m.located === "crossing" && m.radiusM === R)).toBe(true);
   });
 });

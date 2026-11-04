@@ -56,10 +56,13 @@ function Distance({ d, waiting = false }: { d: HudSnapshot; waiting?: boolean })
   const svg = useRef<SVGSVGElement>(null);
   const { eo, live, tooClose } = readRun(d);
   // On a surface when there is a map to draw (drawMinimap draws nothing and says false without one). A map of the
-  // planet flown over (`near`) opens it only with "Radar always visible" (owner, 2026-11-04: the composition scanner's
-  // marks are of no use while the radar folds shut off the ground).
+  // planet flown over (`near`) opens it with "Radar always on" (owner, 2026-11-04: the composition scanner's marks are
+  // of no use while the radar folds shut off the ground).
+  // A composition scan on the planet flown over opens it too (owner, 2026-11-04: "tracker radar not activating on comp
+  // scan"): with something to show, the switch is not needed.
   const map = d.exoMinimap;
-  const onSurface = !d.journalBoot && !!map?.marks && (!map.near || pref("edexoHudRadarAlways", "0") === "1");
+  const flownOverShows = !!map?.marks.some((m) => m.kind === "codex") || pref("edexoHudRadarAlways", "0") === "1";
+  const onSurface = !d.journalBoot && !!map?.marks && (!map.near || flownOverShows);
   // Before the first snapshot the block stands open, as the page's markup did: the first frame folds it if it must.
   const showTracker = waiting || onSurface || live;
   useLayoutEffect(() => {

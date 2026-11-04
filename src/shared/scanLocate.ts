@@ -155,6 +155,74 @@ export function locatePlant(scans: readonly CompScan[], radiusM: number): PlantF
   return { latDeg: last.latDeg, lonDeg: last.lonDeg, how: "scanned-from", ...(last.headingDeg != null ? { headingDeg: last.headingDeg } : {}) };
 }
 
+/** A second scan pairs with a plant's open scan only this soon after it: scan, fly round it, scan again. */
+export const PAIR_WINDOW_MS = 180_000;
+/** A scan joins a plant placed by two scans when its heading line passes this close to it. */
+export const ON_LINE_M = 30;
+/** A scan from where a plant already is (on foot, the scan's spot is the plant) is that plant. */
+const SAME_SPOT_M = 10;
+
+const timeOf = (s: CompScan) => {
+  const t = Date.parse(s.atIso);
+  return Number.isFinite(t) ? t : 0;
+};
+
+/**
+ * Which plant each scan of one species on one body named (owner, 2026-11-04: two Tubers scanned twice each were
+ * averaged into one dot between them). Every heading line crosses every other somewhere, so the geometry alone cannot
+ * tell; in time order, a scan joins:
+ * 1. a plant two scans already placed, when its line passes within {@link ON_LINE_M} of it, ahead and within reach;
+ * 2. else a plant whose newest scan is within {@link PAIR_WINDOW_MS} and whose line it crosses validly (the second scan
+ *    of the plant just scanned);
+ * 3. else it is a new plant. A scan without a heading (on foot, or from before headings were kept) joins only a plant
+ *    at its own spot (within {@link SAME_SPOT_M}).
+ */
+export function clusterScans(scans: readonly CompScan[], radiusM: number): CompScan[][] {
+  const plants: CompScan[][] = [];
+  const sorted = [...scans].sort((a, b) => timeOf(a) - timeOf(b));
+  for (const s of sorted) {
+    let best = -1;
+    let bestScore = Infinity;
+    if (radiusM > 0)
+      plants.forEach((p, i) => {
+        const at = locatePlant(p, radiusM)!;
+        const o = toLocal(s, at, radiusM);
+        const d = Math.hypot(o.e, o.n);
+        if (s.headingDeg == null && d <= SAME_SPOT_M && d < bestScore) {
+          best = i;
+          bestScore = d;
+        }
+      });
+    if (s.headingDeg != null && radiusM > 0) {
+      plants.forEach((p, i) => {
+        const at = locatePlant(p, radiusM)!;
+        if (at.how === "crossing") {
+          const o = toLocal(s, at, radiusM);
+          const h = s.headingDeg! * RAD;
+          const along = o.e * Math.sin(h) + o.n * Math.cos(h);
+          const off = Math.abs(o.e * Math.cos(h) - o.n * Math.sin(h));
+          if (along > 0 && along <= SCAN_REACH_M && off <= ON_LINE_M && off < bestScore) {
+            best = i;
+            bestScore = off;
+          }
+          return;
+        }
+        const last = [...p].reverse().find((x) => x.headingDeg != null);
+        if (!last || timeOf(s) - timeOf(last) > PAIR_WINDOW_MS) return;
+        if (locatePlant([last, s], radiusM)!.how !== "crossing") return;
+        const score = ON_LINE_M + (timeOf(s) - timeOf(last)) / 1000;
+        if (score < bestScore) {
+          best = i;
+          bestScore = score;
+        }
+      });
+    }
+    if (best >= 0) plants[best]!.push(s);
+    else plants.push([s]);
+  }
+  return plants;
+}
+
 /**
  * The ship's nose angle from its path: the climb over the ground covered in the last `windowMs`. Null when hovering or
  * crawling (under `minSpeedMs` over the ground) or without altitude: then nothing says where the nose points.

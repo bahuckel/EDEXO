@@ -561,6 +561,24 @@
               <p class="hud-hint"><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>H</kbd> shows and hides them in game.</p>
             </details>
 
+            <!-- The radar's own fold (owner, 2026-11-04: the switch was not found inside "What they show"). Open at first. -->
+            <details class="hud-group" data-group="radar" open>
+              <summary title="The Exo-distance tracker's radar and the screen marker over the game">Radar &amp; screen marker</summary>
+              <div class="hud-set-row">
+                <label title="The sample radar on the Exo-distance tracker stays on whenever the game gives your position and heading near a planet (Status.json): flying, gliding, after lift-off, not only once landed, so the composition scanner's marks show as you fly over them. A planet you composition-scanned opens it even with this off. Off by default."><input type="checkbox" id="hudRadarAlways" /> Radar always on near a planet</label>
+              </div>
+              <div class="hud-set-row">
+                <label title="A dot in a circle on the screen for each plant your composition scanner named, where it is from the ship's nose; point at one and it opens into a hexagon with its name, distance and how it was placed. Over the whole game screen, clicks go through. Up and down follow the ship's pitch while flying (estimated from its path); hovering or on foot the dots sit on the middle line. Off by default."><input type="checkbox" id="hudAim" /> Screen marker over the game (composition scans)</label>
+              </div>
+              <div class="hud-set-row" id="radarRadiusRow" hidden>
+                <label for="radarRadiusM" title="How far out the sample radar draws, in metres. Anything further becomes an arrow on its rim with the distance beside it.">Radar range</label>
+                <span>
+                  <input type="number" id="radarRadiusM" step="50" /> m
+                </span>
+              </div>
+              <p class="hud-hint">Needs the Exo-distance tracker HUD open (Overlays, above).</p>
+            </details>
+
             <details class="hud-group" data-group="look">
               <summary title="Style, colour, size and how much of the game shows through">Look</summary>
               <div class="hud-set-row">
@@ -654,7 +672,7 @@
             </details>
 
             <details class="hud-group" data-group="content">
-              <summary title="What the HUDs list and how far the radar reaches">What they show</summary>
+              <summary title="What the HUDs list">What they show</summary>
               <div class="hud-set-row">
                 <label for="hudCandOrder" title="The Exo candidates HUD: by how likely each genus is (as in the app), or by value, highest first.">Candidate order</label>
                 <select id="hudCandOrder">
@@ -664,18 +682,6 @@
               </div>
               <div class="hud-set-row">
                 <label title="A line with the codex region you are in, on the Exo candidates HUD."><input type="checkbox" id="hudRegion" checked /> Show the current region</label>
-              </div>
-              <div class="hud-set-row">
-                <label title="The sample radar stays open while you fly near a planet (normal flight, gliding, after lift-off), not only once you have landed: the composition scanner's marks show as you fly over them. It still closes when you enter supercruise. Off by default."><input type="checkbox" id="hudRadarAlways" /> Radar always visible near a planet</label>
-              </div>
-              <div class="hud-set-row">
-                <label title="A dot in a circle on the screen for each plant your composition scanner named, where it is from the ship's nose; point at one and it opens into a hexagon with its name, distance and how it was placed. Over the whole game screen, clicks go through. Up and down follow the ship's pitch while flying (estimated from its path); hovering or on foot the dots sit on the middle line. Off by default."><input type="checkbox" id="hudAim" /> Screen marker over the game (composition scans)</label>
-              </div>
-              <div class="hud-set-row" id="radarRadiusRow" hidden>
-                <label for="radarRadiusM" title="How far out the sample radar draws, in metres. Anything further becomes an arrow on its rim with the distance beside it.">Radar range</label>
-                <span>
-                  <input type="number" id="radarRadiusM" step="50" /> m
-                </span>
               </div>
             </details>
 

@@ -27,7 +27,7 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { resolveSurfaceMarksPath } from "./paths.js";
 import { writeFileAtomic } from "./atomicWrite.js";
-import { locatePlant, type CompScan, type PlantLocated } from "../shared/scanLocate.js";
+import { clusterScans, locatePlant, type CompScan, type PlantLocated } from "../shared/scanLocate.js";
 
 /** One recorded position on a surface. */
 export interface SurfaceMark {
@@ -73,6 +73,8 @@ export interface SurfaceMark {
   located?: PlantLocated;
   /** "scanned-from": the scan's heading, for the radar's tick. */
   headingDeg?: number;
+  /** The body's radius, metres, kept so the scans can be grouped into plants again when the file is read. */
+  radiusM?: number;
 }
 
 export interface SurfaceMarksFile {
@@ -98,9 +100,34 @@ export const MAX_SURFACE_MARKS = 400;
 /** Scans kept per composition-scan mark (the newest). */
 const MAX_SCANS = 6;
 
+/** A mark's scans; a mark from before the scans were kept has its position as one scan, no heading. */
+const scansOf = (m: SurfaceMark): CompScan[] =>
+  m.scans ?? [{ latDeg: m.latDeg, lonDeg: m.lonDeg, headingDeg: null, altitudeM: null, pitchDeg: null, atIso: m.atIso }];
+
+/** One mark per plant for one species on one body, from all its scans (shared/scanLocate.ts clusterScans). */
+function plantMarks(template: Omit<SurfaceMark, "latDeg" | "lonDeg">, scans: CompScan[], radiusM: number): SurfaceMark[] {
+  return clusterScans(scans, radiusM).map((group) => {
+    const kept = group.slice(-MAX_SCANS);
+    const at = locatePlant(kept, radiusM)!;
+    const m: SurfaceMark = {
+      ...template,
+      latDeg: at.latDeg,
+      lonDeg: at.lonDeg,
+      atIso: kept[0]!.atIso,
+      scans: kept,
+      located: at.how,
+      ...(radiusM > 0 ? { radiusM } : {}),
+    };
+    if (at.headingDeg != null) m.headingDeg = at.headingDeg;
+    else delete m.headingDeg;
+    return m;
+  });
+}
+
 /**
- * The composition-scan waypoints with one more scan (one mark per species and body): a new mark, or another scan of
- * one already there, which places the plant again (two heading lines cross where it stands). `radiusM` is the body's.
+ * The composition-scan waypoints with one more scan: the scans of that species on that body are grouped into plants
+ * again (owner, 2026-11-04: two plants scanned twice each must be two dots, not one between them), one mark each,
+ * placed by its own scans (two heading lines cross where it stands). `radiusM` is the body's.
  */
 export function withCodexScan(
   list: SurfaceMark[],
@@ -109,26 +136,28 @@ export function withCodexScan(
   radiusM: number,
 ): SurfaceMark[] {
   if (!Number.isFinite(scan.latDeg) || !Number.isFinite(scan.lonDeg)) return list;
-  const i = list.findIndex((m) => m.bodyKey === mark.bodyKey && m.codexName === mark.codexName);
-  const before = i >= 0 ? list[i]! : null;
-  // A mark from before the scans were kept: its position was the scanner's, with no heading.
-  const had: CompScan[] = before
-    ? (before.scans ?? [{ latDeg: before.latDeg, lonDeg: before.lonDeg, headingDeg: null, altitudeM: null, pitchDeg: null, atIso: before.atIso }])
-    : [];
-  const scans = [...had, scan].slice(-MAX_SCANS);
-  const at = locatePlant(scans, radiusM)!;
-  const next: SurfaceMark = {
-    ...(before ?? mark),
-    latDeg: at.latDeg,
-    lonDeg: at.lonDeg,
-    scans,
-    located: at.how,
-    ...(at.headingDeg != null ? { headingDeg: at.headingDeg } : {}),
-  };
-  if (at.headingDeg == null) delete next.headingDeg;
-  if (i < 0) return [...list, next].slice(-MAX_SURFACE_MARKS);
-  const out = list.slice();
-  out[i] = next;
+  const same = (m: SurfaceMark) => m.bodyKey === mark.bodyKey && m.codexName === mark.codexName;
+  const group = list.filter(same);
+  const template = group[0] ?? mark;
+  const next = plantMarks(template, [...group.flatMap(scansOf), scan], radiusM);
+  const at = list.findIndex(same);
+  const rest = list.filter((m) => !same(m));
+  const out = at < 0 ? [...rest, ...next] : [...rest.slice(0, at), ...next, ...rest.slice(at)];
+  return out.slice(-MAX_SURFACE_MARKS);
+}
+
+/** The waypoints with each species' scans on each body grouped into plants again (the file read; radius kept). */
+export function regroupCodexMarks(list: SurfaceMark[]): SurfaceMark[] {
+  const out: SurfaceMark[] = [];
+  const done = new Set<string>();
+  for (const m of list) {
+    const key = `${m.bodyKey}\u0000${m.codexName ?? ""}`;
+    if (done.has(key)) continue;
+    done.add(key);
+    const group = list.filter((x) => x.bodyKey === m.bodyKey && x.codexName === m.codexName);
+    const r = group.find((x) => x.radiusM && x.radiusM > 0)?.radiusM;
+    out.push(...(r && m.codexName ? plantMarks(m, group.flatMap(scansOf), r) : group));
+  }
   return out;
 }
 
@@ -220,7 +249,7 @@ export function loadSurfaceMarks(): SurfaceMarksFile {
     const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<SurfaceMarksFile>;
     const samples = Array.isArray(parsed.samples) ? parsed.samples.map(repairName).filter(isMark) : [];
     const ship = isMark(parsed.ship) ? repairName(parsed.ship) : null;
-    const codex = Array.isArray(parsed.codex) ? parsed.codex.filter(isMark).map(cleanScans) : [];
+    const codex = Array.isArray(parsed.codex) ? regroupCodexMarks(parsed.codex.filter(isMark).map(cleanScans)) : [];
     const srv = isMark(parsed.srv) ? parsed.srv : null;
     return { formatVersion: 1, samples, ship, codex, srv };
   } catch {

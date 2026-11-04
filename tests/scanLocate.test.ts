@@ -3,7 +3,7 @@
  * from the altitude and the nose-down angle, or where it was scanned from (shared/scanLocate.ts).
  */
 import { describe, expect, it } from "vitest";
-import { FlightPathPitch, fromLocal, locatePlant, relativeDeg, toLocal, bearingDeg, type CompScan } from "../src/shared/scanLocate.js";
+import { FlightPathPitch, clusterScans, fromLocal, locatePlant, relativeDeg, toLocal, bearingDeg, type CompScan } from "../src/shared/scanLocate.js";
 
 const R = 1_000_000;
 const O = { latDeg: 10, lonDeg: 20 };
@@ -76,6 +76,37 @@ describe("locatePlant", () => {
     expect(locatePlant([scan(0, 0, 90, { altitudeM: 100, pitchDeg: -1 })], R)!.how).toBe("scanned-from");
     expect(locatePlant([scan(0, 0, 90, { altitudeM: 1000, pitchDeg: -10 })], R)!.how).toBe("scanned-from");
     expect(locatePlant([scan(0, 0, 90, { altitudeM: 100 })], R)!.how).toBe("scanned-from");
+  });
+});
+
+describe("clusterScans", () => {
+  // The owner's first test (2026-11-04), as offsets: two Tubers, each scanned twice from the ship, 7 minutes apart.
+  const at = (sec: number) => new Date(Date.UTC(2026, 10, 4, 10, 5, 28) + sec * 1000).toISOString();
+  const session = [
+    scan(0, 0, 191, { atIso: at(0), altitudeM: 13 }),
+    scan(-65, -19, 134, { atIso: at(14), altitudeM: 7 }),
+    scan(-38, -119, 121, { atIso: at(459), altitudeM: 4 }),
+    scan(-72, -283, 67, { atIso: at(477), altitudeM: 3 }),
+  ];
+
+  it("tells two plants scanned twice each apart, each where its own two lines cross", () => {
+    const plants = clusterScans(session, R);
+    expect(plants.map((p) => p.map((s) => s.headingDeg))).toEqual([
+      [191, 134],
+      [121, 67],
+    ]);
+    const a = toLocal(O, locatePlant(plants[0]!, R)!, R);
+    const b = toLocal(O, locatePlant(plants[1]!, R)!, R);
+    expect(Math.hypot(a.e + 13, a.n + 69)).toBeLessThan(3);
+    expect(Math.hypot(b.e - 108, b.n + 206)).toBeLessThan(3);
+  });
+
+  it("adds a third scan whose line passes through a placed plant to it, and keeps a late single scan apart", () => {
+    const third = scan(60, -60, bearingDeg(-13 - 60, -69 + 60), { atIso: at(900) });
+    expect(clusterScans([...session.slice(0, 2), third], R)).toHaveLength(1);
+    // Ten minutes after an open single scan, a crossing line is another plant.
+    const late = scan(-65, -19, 134, { atIso: at(600) });
+    expect(clusterScans([session[0]!, late], R)).toHaveLength(2);
   });
 });
 
