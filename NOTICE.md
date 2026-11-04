@@ -158,8 +158,8 @@ Only the outline and a set of points are kept; no image from any of them ships w
 
 ## Species photographs
 
-`data/species/<genus>/<genus>_photos/` holds 189 images of Elite Dangerous exobiology (each also
-present as a cropped card and thumbnail, so 567 files). **170 of them were contributed by commanders
+`data/species/<genus>/<genus>_photos/` holds 192 images of Elite Dangerous exobiology (each also
+present as a cropped card and thumbnail, so 576 files). **173 of them were contributed by commanders
 of the Bahuckel clan, by the Stellar Exobiologists Guild and by CMDR Nimblor [TSEG]**; the remaining 19 are sourced from the ED-DSN community, are **not covered by
 this project's licences** and are not this project's to sublicense.
 
@@ -186,7 +186,7 @@ commander against each file:
 | Bahuckel — CMDR FALrenica (the project owner) | 149    |
 | Bahuckel — CMDR PhoEniXDFA                    | 7      |
 | Stellar Exobiologists Guild                   | 5      |
-| CMDR Nimblor [TSEG]                           | 9      |
+| CMDR Nimblor [TSEG]                           | 12     |
 
 Each contributor took the photographs themselves and gave them to this project knowingly. That is
 the difference from the ED-DSN set below, and it is the whole reason the manifest exists: an image
