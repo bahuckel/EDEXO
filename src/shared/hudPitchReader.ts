@@ -31,7 +31,8 @@ export interface PitchReading {
   centre: { x: number; y: number };
 }
 
-const isLadderPx = (r: number, g: number, b: number) => r > 180 && g > 70 && g < 200 && b < 90 && r - b > 120;
+// The ladder's rungs: orange; dimmer and thinner in the landing (gear down) look, so the test is a little loose.
+const isLadderPx = (r: number, g: number, b: number) => r > 160 && g > 60 && g < 210 && b < 100 && r - b > 100;
 
 /**
  * The pitch to a fraction of a degree, from the ladder (owner, 2026-11-04: the dot jumped above and below the plant
@@ -47,6 +48,7 @@ function refineFromLadder(
   box: PitchBox,
   boxDeg: number,
   rollDeg: number,
+  expectPxPerDeg: number,
 ): { pitchDeg: number; pxPerDeg: number } | null {
   const right = Math.max(...box.digits.map((c) => c.x1));
   const x0 = Math.round(right + box.dh * 0.6);
@@ -84,10 +86,17 @@ function refineFromLadder(
     group.push(r);
   }
   flush();
-  if (rungs.length < 2) return null;
-  // Spacing: the gaps between neighbouring rungs are 5 degrees each (a gap of two rungs is 10).
-  const gaps = rungs.slice(1).map((r, i) => r.y - rungs[i]!.y).sort((a, b) => a - b);
-  const step = gaps[0]!;
+  if (!rungs.length) return null;
+  // Spacing: each gap between found rungs is a whole number of 5-degree steps. The rung level with the box hides
+  // behind it, so near a multiple of 5 the nearest found rungs are 10 degrees apart (owner's F10 shots at -10 and -39
+  // read as twice the spacing and fell back to the middle of the degree); the expected spacing counts the steps.
+  const steps = rungs
+    .slice(1)
+    .map((r, i) => r.y - rungs[i]!.y)
+    .map((g) => g / Math.max(1, Math.round(g / (5 * expectPxPerDeg))))
+    .sort((a, b) => a - b);
+  // One rung (the other lost against bright ground; his -10, -50 and 3): the screen's own spacing.
+  const step = steps.length ? steps[Math.floor(steps.length / 2)]! : 5 * expectPxPerDeg;
   if (!(step > box.dh * 2)) return null;
   const pxPerDeg = step / 5;
   // Roll tilts the rungs: a rung's height is taken at the box's column.
@@ -100,7 +109,7 @@ function refineFromLadder(
     return v - off;
   });
   const near = fits.filter((f) => Math.abs(f - boxDeg) <= 1.5);
-  if (near.length < 2) return null;
+  if (near.length < Math.min(2, rungs.length)) return null;
   const mean = near.reduce((t, f) => t + f, 0) / near.length;
   if (near.some((f) => Math.abs(f - mean) > 0.4)) return null;
   return { pitchDeg: Math.round(mean * 10) / 10, pxPerDeg };
@@ -447,9 +456,16 @@ export function readHudPitch(rgba: Rgba, w: number, h: number, glyphs: HudGlyphs
     // boxes agreeing on a wrong number is far rarer than one box being wrong.
     if (l == null || r == null || l !== r) continue;
     const rollDeg = (Math.atan2(pair.right.y - pair.left.y, pair.right.x - pair.left.x) * 180) / Math.PI;
-    const fine = refineFromLadder(rgba, w, h, pair.left, l, rollDeg);
+    const found = refineFromLadder(rgba, w, h, pair.left, l, rollDeg, screen.h * 0.01757);
     // No rungs: the middle of the degree the box stands for (it drops the fraction: -9 is -9.0 to -9.99).
     const mid = l === 0 ? 0 : l + 0.5 * Math.sign(l);
+    // A rung missed doubles the spacing (his -3 came out -1.8): the spacing must be the screen's (25.3 px a degree at
+    // 1440 rows, measured on 30 of his shots, within a fifth), and the result inside the box's own degree.
+    const lo = l < 0 ? l - 1 : l === 0 ? -1 : l;
+    const hi = l < 0 ? l : l === 0 ? 1 : l + 1;
+    const plausible =
+      !!found && Math.abs(found.pxPerDeg / (screen.h * 0.01757) - 1) <= 0.2 && found.pitchDeg >= lo - 0.15 && found.pitchDeg <= hi + 0.15;
+    const fine = plausible ? { ...found!, pitchDeg: Math.max(lo + 0.05, Math.min(hi - 0.05, found!.pitchDeg)) } : null;
     return {
       pitchDeg: fine ? fine.pitchDeg : mid,
       rollDeg,

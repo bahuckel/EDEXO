@@ -7,7 +7,8 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { openMark, projectMarks, viewOf, DEFAULT_VFOV_DEG } from "../src/client/aim/project.js";
+import { openMark, projectMarks, projectRings, viewOf, DEFAULT_VFOV_DEG } from "../src/client/aim/project.js";
+import { glidedMap, nextGlide } from "../src/client/aim/glide.js";
 import { readEliteView } from "../src/server/eliteDisplayMode.js";
 import type { ExoMinimapDTO } from "../src/shared/types.js";
 
@@ -80,9 +81,55 @@ describe("screen marker projection", () => {
     expect(openMark(projectMarks(map([codex(300, 300)]), view), view)).toBeNull();
   });
 
-  it("shows only composition scans, and nothing without a heading", () => {
-    expect(projectMarks(map([codex(0, 100, { kind: "sample" }), codex(0, 100, { kind: "ship" })]), view)).toHaveLength(0);
+  it("shows composition scans and samples taken, not the ship, and nothing without a heading", () => {
+    expect(projectMarks(map([codex(0, 100, { kind: "sample" }), codex(0, 100, { kind: "ship" })]), view)).toHaveLength(1);
     expect(projectMarks(map([codex(0, 100)], { headingDeg: null }), view)).toHaveLength(0);
+  });
+});
+
+describe("samples' rings on the ground", () => {
+  it("draws a sample's ring around its mark, lower on the screen at its near side", () => {
+    const m = map([codex(0, 200, { kind: "sample", ringM: 50 })], { altitudeM: 30, pitchDeg: -10 });
+    const [ring] = projectRings(m, view);
+    const [mark] = projectMarks(m, view);
+    const pts = ring!.runs.flat();
+    expect(pts.length).toBeGreaterThan(60);
+    const ys = pts.map((p) => p[1]);
+    // The near side (150 m) below the mark, the far side (250 m) above it; across, around its x.
+    expect(Math.max(...ys)).toBeGreaterThan(mark!.y);
+    expect(Math.min(...ys)).toBeLessThan(mark!.y);
+    const xs = pts.map((p) => p[0]);
+    expect(Math.min(...xs)).toBeLessThan(mark!.x);
+    expect(Math.max(...xs)).toBeGreaterThan(mark!.x);
+  });
+
+  it("draws no ring on foot (no altitude) or for a mark without a distance", () => {
+    expect(projectRings(map([codex(0, 200, { kind: "sample", ringM: 50 })]), view)).toHaveLength(0);
+    expect(projectRings(map([codex(0, 200, { kind: "sample" })], { altitudeM: 30, pitchDeg: -10 }), view)).toHaveLength(0);
+  });
+});
+
+describe("marks between Status.json writes (glide)", () => {
+  it("moves the marks on by the ship's speed from the last two writes, for one gap at most", () => {
+    const a = map([codex(0, 300)], { altitudeM: 40 });
+    const b = map([codex(0, 270)], { altitudeM: 37 });
+    const g = nextGlide(nextGlide(null, a, 0), b, 3000);
+    // 30 m north in 3 s: 10 m/s; 1.5 s later the plant is 15 m nearer, the ship 1.5 m lower.
+    const mid = glidedMap(g, 4500)!;
+    expect(mid.marks[0]!.northM).toBeCloseTo(255, 5);
+    expect(mid.marks[0]!.distanceM).toBeCloseTo(255, 5);
+    expect(mid.altitudeM).toBeCloseTo(35.5, 5);
+    // Stopped (no new write): it stays where one gap took it.
+    expect(glidedMap(g, 60_000)!.marks[0]!.northM).toBeCloseTo(240, 5);
+  });
+
+  it("does not glide from one write, a long pause or a jump", () => {
+    const a = map([codex(0, 300)]);
+    expect(glidedMap(nextGlide(null, a, 0), 2000)).toBe(a);
+    const late = nextGlide(nextGlide(null, a, 0), map([codex(0, 270)]), 20_000);
+    expect(late.vN).toBe(0);
+    const jump = nextGlide(nextGlide(null, a, 0), map([codex(0, 100)]), 100);
+    expect(jump.vN).toBe(0);
   });
 });
 

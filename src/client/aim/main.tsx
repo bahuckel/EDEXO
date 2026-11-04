@@ -9,7 +9,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { ExoMinimapDTO } from "@shared/types";
-import { openMark, projectMarks, viewOf, type ScreenMark, type View } from "./project";
+import { glidedMap, nextGlide, type GlideState } from "./glide";
+import { openMark, projectMarks, projectRings, viewOf, type ScreenMark, type ScreenRing, type View } from "./project";
 import { startPitchCapture, type PitchCapture, type PitchRead } from "./pitchCapture";
 import "./aim.css";
 
@@ -25,8 +26,8 @@ const hex = (r: number) =>
     return `${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)}`;
   }).join(" ");
 
-function useMinimap(): { map: MiniMap; reader: boolean } {
-  const [map, setMap] = useState<MiniMap>(null);
+function useMinimap(): { glide: GlideState | null; reader: boolean } {
+  const [glide, setGlide] = useState<GlideState | null>(null);
   const [reader, setReader] = useState(false);
   useEffect(() => {
     let ws: WebSocket | null = null;
@@ -46,7 +47,10 @@ function useMinimap(): { map: MiniMap; reader: boolean } {
             payload?: { exoMinimap?: MiniMap; journalBoot?: boolean; hudPrefs?: { pitchReader?: unknown } | null };
           };
           if ((msg.type === "state" || msg.type === "exoLive") && msg.payload && "exoMinimap" in msg.payload)
-            setMap(msg.payload.journalBoot ? null : (msg.payload.exoMinimap ?? null));
+          {
+            const next = msg.payload.journalBoot ? null : (msg.payload.exoMinimap ?? null);
+            setGlide((prev) => (next ? nextGlide(prev, next, Date.now()) : null));
+          }
           if (msg.type === "state" && msg.payload && "hudPrefs" in msg.payload) setReader(msg.payload.hudPrefs?.pitchReader === true);
         } catch {
           /* a malformed frame is skipped */
@@ -64,7 +68,18 @@ function useMinimap(): { map: MiniMap; reader: boolean } {
       ws?.close();
     };
   }, []);
-  return { map, reader };
+  return { glide, reader };
+}
+
+/** Re-render four times a second while the marks glide between Status.json writes (glide.ts). */
+function useGlideTick(g: GlideState | null): void {
+  const [, setTick] = useState(0);
+  const moving = !!g && (g.vE !== 0 || g.vN !== 0 || g.vUp !== 0);
+  useEffect(() => {
+    if (!moving) return;
+    const t = setInterval(() => setTick((n) => n + 1), 250);
+    return () => clearInterval(t);
+  }, [moving, g]);
 }
 
 /**
@@ -73,11 +88,14 @@ function useMinimap(): { map: MiniMap; reader: boolean } {
  * restart the capture.
  */
 /** What the pitch reader is doing, for its status line: a number read, not read, or no capture. */
+/** A reading this old is held: its pitch stays, the heading is Status.json's again, the marks are drawn dashed. */
+const HOLD_FRESH_MS = 3000;
+
 type ReaderState =
   | { kind: "off" }
   | { kind: "starting" }
   | { kind: "failed"; error: string }
-  | { kind: "read"; pitchDeg: number | null; headingDeg: number | null; last: (PitchRead & { atMs: number }) | null };
+  | { kind: "read"; pitchDeg: number | null; headingDeg: number | null; last: (PitchRead & { atMs: number }) | null; heldMs: number };
 
 function usePitchReader(wanted: boolean): ReaderState {
   const cap = useRef<PitchCapture | null>(null);
@@ -89,6 +107,9 @@ function usePitchReader(wanted: boolean): ReaderState {
       not read keeps the last good reading; a reading that jumps more than 4 deg of pitch or 6 of heading from the last
       within a second is held until the next one agrees with it (a misread digit, 0 for 8, is one frame, a turn is not);
       a heading not read keeps the last one.
+      Held (owner, 2026-11-04: "as soon as it cant read the numbers, the marker gets teleported outside of the screen"):
+      the last good pitch stays until the next good one, however long; dropping it after 3 s put the marks on a level
+      nose, off the bottom of the screen. Only the heading goes back to Status.json's after 3 s (main.tsx Aim).
     */
     let accepted: (PitchRead & { atMs: number }) | null = null;
     let pending: PitchRead | null = null;
@@ -105,8 +126,8 @@ function usePitchReader(wanted: boolean): ReaderState {
         if (!confirmed) r = null;
       } else pending = null;
       if (r) accepted = { ...r, atMs: now };
-      const shown = accepted && now - accepted.atMs < 3000 ? accepted : null;
-      setState({ kind: "read", pitchDeg: shown ? shown.pitchDeg : null, headingDeg: shown ? shown.headingDeg : null, last: shown });
+      const heldMs = accepted ? now - accepted.atMs : 0;
+      setState({ kind: "read", pitchDeg: accepted?.pitchDeg ?? null, headingDeg: accepted?.headingDeg ?? null, last: accepted, heldMs });
       if (r) {
         const body = { pitchDeg: r.pitchDeg, rollDeg: r.rollDeg };
         void fetch("/api/hud-pitch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
@@ -144,7 +165,9 @@ function ReaderLine({ s, view }: { s: ReaderState; view: View }) {
       : s.kind === "failed"
         ? `Pitch reader: no screen capture (${s.error})`
         : s.pitchDeg != null
-          ? `HUD pitch ${s.pitchDeg.toFixed(1)}°${s.headingDeg != null ? ` · heading ${s.headingDeg.toFixed(1)}°` : ""}`
+          ? s.heldMs >= HOLD_FRESH_MS
+            ? `HUD pitch ${s.pitchDeg.toFixed(1)}° held · not read for ${Math.round(s.heldMs / 1000)} s`
+            : `HUD pitch ${s.pitchDeg.toFixed(1)}°${s.headingDeg != null ? ` · heading ${s.headingDeg.toFixed(1)}°` : ""}`
           : "Pitch reader: not read";
   return (
     <text className={"aim-reader" + (s.kind === "read" && s.pitchDeg != null ? " is-ok" : "")} x={view.width / 2} y={view.height * 0.66} textAnchor="middle">
@@ -168,6 +191,17 @@ function useView(): View {
   return viewOf(size.w, size.h, fov);
 }
 
+/** A sample's ring on the ground: inside it the next sample of that species is too close. */
+function Ring({ r }: { r: ScreenRing }) {
+  return (
+    <g className={"aim-ground-ring" + (r.mark.active ? " is-active" : "")}>
+      {r.runs.map((run, i) => (
+        <polyline key={i} points={run.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ")} />
+      ))}
+    </g>
+  );
+}
+
 function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
   const m = s.mark;
   if (s.edge) {
@@ -184,7 +218,7 @@ function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
   }
   return (
     <g
-      className={"aim-mark" + (m.target ? " is-target" : "") + (open ? " is-open" : "") + (s.pitched ? "" : " is-level")}
+      className={"aim-mark" + (m.kind === "sample" ? " is-sample" : "") + (m.target ? " is-target" : "") + (open ? " is-open" : "") + (s.pitched ? "" : " is-level")}
       style={{ transform: `translate(${s.x}px, ${s.y}px)` }}
     >
       {open ? (
@@ -196,13 +230,19 @@ function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
           <text className="aim-sub" y="56" textAnchor="middle">
             {fmtM(m.distanceM)}
             {s.belowDeg != null ? ` · ${Math.round(Math.abs(s.belowDeg))}° ${s.belowDeg >= 0 ? "below" : "above"}` : ""}
-            {m.located ? ` · ${HOW[m.located]}` : ""}
+            {m.kind === "sample" ? " · sampled" : m.located ? ` · ${HOW[m.located]}` : ""}
           </text>
         </>
       ) : (
         <>
-          <circle className="aim-ring" r="16" />
-          <circle className="aim-dot" r="3.5" />
+          {m.kind === "sample" ? (
+            <polygon className="aim-ring" points="0,-13 13,0 0,13 -13,0" />
+          ) : (
+            <>
+              <circle className="aim-ring" r="16" />
+              <circle className="aim-dot" r="3.5" />
+            </>
+          )}
           <text className="aim-dist" y="32" textAnchor="middle">
             {fmtM(m.distanceM)}
 
@@ -215,7 +255,8 @@ function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
 
 /**
  * `?demo`: a fixed frame to see the marker without the game (owner at work): 120 m up, nose 20 deg down, one plant
- * where the nose points (open), the next to sample to the right, one scanned-from ahead-left, one behind.
+ * where the nose points (open), the next to sample to the right, one scanned-from ahead-left, one behind, and a sample
+ * taken with its ring.
  */
 const DEMO: ExoMinimapDTO | null = new URLSearchParams(location.search).has("demo")
   ? {
@@ -229,19 +270,22 @@ const DEMO: ExoMinimapDTO | null = new URLSearchParams(location.search).has("dem
         { kind: "codex", eastM: 260, northM: 420, distanceM: 494, label: "", name: "Bacterium Vesicula - Lime", located: "ahead", target: true },
         { kind: "codex", eastM: -300, northM: 700, distanceM: 762, label: "", name: "Tussock Virgam - Yellow", located: "scanned-from", scanHeadingDeg: 10 },
         { kind: "codex", eastM: -200, northM: -600, distanceM: 632, label: "", name: "Osseus Discus - White", located: "scanned-from" },
+        { kind: "sample", eastM: -90, northM: 260, distanceM: 275, label: "", name: "Stratum Tectonicas - Green", ringM: 100, active: true },
       ],
     }
   : null;
 
 function Aim() {
   const live = useMinimap();
-  const map = DEMO ?? live.map;
+  useGlideTick(live.glide);
+  const map = DEMO ?? glidedMap(live.glide, Date.now());
   // Near a planet in the ship (the first scan needs the pitch too, before there is any mark).
-  const reader = usePitchReader(!DEMO && live.reader && live.map?.altitudeM != null);
+  const reader = usePitchReader(!DEMO && live.reader && live.glide?.map.altitudeM != null);
   const baseView = useView();
-  // The page's own reading, while fresh, over the server's echo of it (no round trip), and the screen's measured
+  // The page's own reading (held when frames go unread) over the server's echo of it (no round trip), and the screen's measured
   // pixels per degree over the one worked out from the settings' field of view.
-  const own = reader.kind === "read" && reader.last && Date.now() - reader.last.atMs < 3000 ? reader.last : null;
+  const own = reader.kind === "read" && reader.last ? reader.last : null;
+  const fresh = !!own && Date.now() - own.atMs < HOLD_FRESH_MS;
   const view =
     own?.pxPerDeg && own.screenH > 0
       ? viewOf(baseView.width, baseView.height, (2 * Math.atan((own.screenH / 2) / ((own.pxPerDeg * 180) / Math.PI)) * 180) / Math.PI)
@@ -250,16 +294,20 @@ function Aim() {
   // position stays Status.json's (the screen's latitude has 4 decimals, 16 m here).
   const shown =
     own && map && map.altitudeM != null
-      ? { ...map, pitchDeg: own.pitchDeg, rollDeg: own.rollDeg, pitchFromHud: true, ...(own.headingDeg != null ? { headingDeg: own.headingDeg } : {}) }
+      ? { ...map, pitchDeg: own.pitchDeg, rollDeg: own.rollDeg, pitchFromHud: true, ...(fresh && own.headingDeg != null ? { headingDeg: own.headingDeg } : {}) }
       : map;
   // Where the nose points: the HUD's centre the reader found (it sits lower than the screen's centre nose up).
   const origin = own ? { x: own.centre.fx * view.width, y: own.centre.fy * view.height } : null;
   const marks = projectMarks(shown, view, origin);
+  const rings = projectRings(shown, view, origin);
   const open = openMark(marks, view, origin);
   // The reader's line shows from the first frame near a planet, before any plant is scanned.
   if (!marks.length && reader.kind === "off") return null;
   return (
-    <svg className="aim" width={view.width} height={view.height} aria-hidden="true">
+    <svg className={"aim" + (own && !fresh ? " is-held" : "")} width={view.width} height={view.height} aria-hidden="true">
+      {rings.map((r, i) => (
+        <Ring key={i} r={r} />
+      ))}
       {marks.map((s, i) => (
         <Marker key={i} s={s} open={s === open} />
       ))}

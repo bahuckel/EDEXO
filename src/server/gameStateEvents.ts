@@ -49,6 +49,7 @@ import {
   upsertFootOrganicLock,
 } from "./gameStateHelpers.js";
 import type { GameStateStore } from "./gameState.js";
+import { noteShipLine } from "./eyeHeight.js";
 import * as explorationSales from "./gameStateSales.js";
 import * as explorationMerge from "./gameStateExploration.js";
 
@@ -107,6 +108,8 @@ export function onLoadGame(store: GameStateStore, line: JournalLine): void {
 
 /** `Loadout` — one of apply()'s event handlers. */
 export function onLoadout(store: GameStateStore, line: JournalLine): void {
+  // The ship type for the learned eye height (eyeHeight.ts), from a replayed Loadout too.
+  noteShipLine(line);
   const mjr = (line as Record<string, unknown>).MaxJumpRange;
   const shipId = (line as Record<string, unknown>).ShipID;
   fsdFuelLoadout(store.fsdFuel, line as Record<string, unknown>);

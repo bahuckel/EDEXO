@@ -17,6 +17,12 @@ import { toLocal, type CompScan } from "../shared/scanLocate.js";
 
 /** Samples kept per ship (the newest). */
 const KEEP = 30;
+/**
+ * The height is the median of the newest this many: the reader keeps improving, and the first samples (pitches read
+ * before the ladder's fraction worked, 4-6 m) held his Mandalay at 13 m while the newer ones say 15 (owner,
+ * 2026-11-04: "its still a bit high").
+ */
+const USE = 12;
 /** A sample needs a real look down and a plant at a sensible range. */
 const MIN_DOWN_DEG = 3;
 const MIN_DIST_M = 15;
@@ -26,6 +32,11 @@ interface EyeFile {
   version: 1;
   /** Ship type (the journal's `Ship`, lower case) → samples: scan time and metres above the reported altitude. */
   ships: Record<string, { at: string; m: number }[]>;
+  /**
+   * The ship last flown: the app started mid-session has seen no Loadout yet (the journal cache restores the rest), and
+   * without it the eye stayed 0 m (owner, 2026-11-04: the dot sat 8 deg above the plant).
+   */
+  lastShip?: string;
 }
 
 let ship: string | null = null;
@@ -40,7 +51,8 @@ function load(): EyeFile {
   try {
     if (existsSync(f)) {
       const j = JSON.parse(readFileSync(f, "utf8")) as Partial<EyeFile>;
-      if (j && typeof j.ships === "object" && j.ships) data = { version: 1, ships: j.ships };
+      if (j && typeof j.ships === "object" && j.ships)
+        data = { version: 1, ships: j.ships, ...(typeof j.lastShip === "string" ? { lastShip: j.lastShip } : {}) };
     }
   } catch {
     /* a damaged file starts again */
@@ -63,22 +75,51 @@ function save(data: EyeFile): void {
 export function noteShipLine(line: { event?: unknown; Ship?: unknown; ShipType?: unknown }): void {
   if (line.event !== "Loadout" && line.event !== "LoadGame" && line.event !== "ShipyardSwap") return;
   const s = typeof line.Ship === "string" ? line.Ship : typeof line.ShipType === "string" ? line.ShipType : null;
-  if (s && s.trim()) ship = s.trim().toLowerCase();
+  if (!s || !s.trim()) return;
+  ship = s.trim().toLowerCase();
+  const data = load();
+  if (data.lastShip !== ship) {
+    data.lastShip = ship;
+    save(data);
+  }
+}
+
+/**
+ * The ship flown: the last line naming one, else the one remembered from the last run, else the ship sampled last. A
+ * start from the journal cache replays no Loadout, so a file from before lastShip existed stayed at 0 m (owner,
+ * 2026-11-04: the hexagon still sat 8 deg above the plant).
+ */
+function currentShip(): string | null {
+  if (ship) return ship;
+  const data = load();
+  if (data.lastShip) return data.lastShip;
+  let best: string | null = null;
+  let bestAt = "";
+  for (const [name, list] of Object.entries(data.ships)) {
+    const at = list.at(-1)?.at ?? "";
+    if (at > bestAt) [best, bestAt] = [name, at];
+  }
+  return best;
 }
 
 /** The eye's height above the reported altitude for the ship flown, metres (0 until it has samples). */
 export function eyeAboveM(): number {
-  const s = ship ? load().ships[ship] : undefined;
+  const cur = currentShip();
+  const s = cur ? load().ships[cur] : undefined;
   if (!s?.length) return 0;
-  const sorted = s.map((x) => x.m).sort((a, b) => a - b);
+  const sorted = s
+    .slice(-USE)
+    .map((x) => x.m)
+    .sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)]!;
 }
 
 /** Learn from a plant two scans placed: each of its HUD-pitch scans gives one sample. */
 export function learnEyeHeight(plant: { latDeg: number; lonDeg: number }, scans: readonly CompScan[], radiusM: number): void {
-  if (!ship || !(radiusM > 0)) return;
+  const cur = currentShip();
+  if (!cur || !(radiusM > 0)) return;
   const data = load();
-  const list = (data.ships[ship] ??= []);
+  const list = (data.ships[cur] ??= []);
   let added = false;
   for (const s of scans) {
     if (!s.pitchFromHud || s.pitchDeg == null || s.altitudeM == null) continue;
@@ -95,7 +136,7 @@ export function learnEyeHeight(plant: { latDeg: number; lonDeg: number }, scans:
     added = true;
   }
   if (!added) return;
-  data.ships[ship] = list.slice(-KEEP);
+  data.ships[cur] = list.slice(-KEEP);
   save(data);
 }
 

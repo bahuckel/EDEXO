@@ -51,12 +51,24 @@ export interface ScreenMark {
   pitched: boolean;
 }
 
-/** The marks the screen shows: composition scans (and so the next target). Samples taken are behind you. */
-const shown = (m: Mark) => m.kind === "codex";
+/**
+ * The marks the screen shows: composition scans (and so the next target), and the samples taken (owner, 2026-11-04:
+ * "the On-Foot scans are not marked"), each ringed with its genus's sample distance.
+ */
+const shown = (m: Mark) => m.kind === "codex" || m.kind === "sample";
 
-/** `origin`: where the nose points on the screen (the HUD's centre the reader found), else the screen's centre. */
-export function projectMarks(map: ExoMinimapDTO | null | undefined, view: View, origin?: { x: number; y: number } | null): ScreenMark[] {
-  if (!map || map.headingDeg == null) return [];
+/** A ground point's angles off the nose and its place on the screen; `null` y offset on foot (no altitude). */
+interface Placed {
+  turnDeg: number;
+  belowDeg: number | null;
+  /** Off the side or behind: no place on the screen. */
+  off: boolean;
+  x: number;
+  y: number;
+}
+
+/** The projection for this frame: a ground point (metres east and north of the commander) to the screen. */
+function projector(map: ExoMinimapDTO, headingDeg: number, view: View, origin?: { x: number; y: number } | null) {
   // Half the view for the scale, the origin for the place (they differ when the HUD sits off the screen's centre).
   const hx = view.width / 2;
   const hy = view.height / 2;
@@ -67,26 +79,72 @@ export function projectMarks(map: ExoMinimapDTO | null | undefined, view: View, 
   // From the eye, which sits above the reported altitude (learned per ship, server/eyeHeight.ts).
   const alt = map.altitudeM != null && map.altitudeM > 0 ? map.altitudeM + (map.eyeAboveM ?? 0) : null;
   const pitch = map.pitchDeg;
-  const out: ScreenMark[] = [];
-  for (const m of map.marks) {
-    if (!shown(m)) continue;
-    const turnDeg = relativeDeg(bearingDeg(m.eastM, m.northM), map.headingDeg);
-    const downDeg = alt != null && m.distanceM > 0 ? Math.atan2(alt, m.distanceM) / RAD : null;
-    const pitched = downDeg != null && pitch != null;
+  // Rolled (the HUD read): the world turns on the screen with the ladder; positions turn by the boxes' tilt.
+  const roll = (map.rollDeg ?? 0) * RAD;
+  const place = (eastM: number, northM: number, distanceM: number): Placed => {
+    const turnDeg = relativeDeg(bearingDeg(eastM, northM), headingDeg);
+    const downDeg = alt != null && distanceM > 0 ? Math.atan2(alt, distanceM) / RAD : null;
     // Below the nose: the angle below the horizon less the nose's own (a nose 20 deg down sees 20 deg less below);
     // no estimate: a level nose.
     const belowDeg = downDeg == null ? null : downDeg + (pitch ?? 0);
     if (Math.abs(turnDeg) >= view.hFovDeg / 2 || Math.abs(turnDeg) >= 89) {
-      out.push({ mark: m, x: turnDeg < 0 ? 0 : view.width, y: cy, edge: turnDeg < 0 ? "left" : "right", turnDeg, belowDeg, pitched });
-      continue;
+      return { turnDeg, belowDeg, off: true, x: turnDeg < 0 ? 0 : view.width, y: cy };
     }
     const xOff = (Math.tan(turnDeg * RAD) / tx) * hx;
     const yOff = belowDeg != null ? Math.max(-hy, Math.min(hy, (Math.tan(Math.max(-89, Math.min(89, belowDeg)) * RAD) / ty) * hy)) : 0;
-    // Rolled (the HUD read): the world turns on the screen with the ladder; positions turn by the boxes' tilt.
-    const roll = (map.rollDeg ?? 0) * RAD;
-    const x = cx + xOff * Math.cos(roll) - yOff * Math.sin(roll);
-    const y = cy + xOff * Math.sin(roll) + yOff * Math.cos(roll);
-    out.push({ mark: m, x, y, edge: null, turnDeg, belowDeg, pitched });
+    return { turnDeg, belowDeg, off: false, x: cx + xOff * Math.cos(roll) - yOff * Math.sin(roll), y: cy + xOff * Math.sin(roll) + yOff * Math.cos(roll) };
+  };
+  return { place, alt, pitched: pitch != null };
+}
+
+/** `origin`: where the nose points on the screen (the HUD's centre the reader found), else the screen's centre. */
+export function projectMarks(map: ExoMinimapDTO | null | undefined, view: View, origin?: { x: number; y: number } | null): ScreenMark[] {
+  if (!map || map.headingDeg == null) return [];
+  const { place, pitched } = projector(map, map.headingDeg, view, origin);
+  const out: ScreenMark[] = [];
+  for (const m of map.marks) {
+    if (!shown(m)) continue;
+    const p = place(m.eastM, m.northM, m.distanceM);
+    const edge = p.off ? (p.turnDeg < 0 ? "left" : "right") : null;
+    out.push({ mark: m, x: p.x, y: p.y, edge, turnDeg: p.turnDeg, belowDeg: p.belowDeg, pitched: p.belowDeg != null && pitched });
+  }
+  return out;
+}
+
+/** A sample's ring on the ground, as the screen sees it: runs of points (a run breaks where the ring leaves the view). */
+export interface ScreenRing {
+  mark: Mark;
+  runs: [number, number][][];
+}
+
+const RING_POINTS = 72;
+
+/**
+ * The samples' rings (their genus's sample distance) drawn on the ground (owner, 2026-11-04: the "bio diversity"
+ * circle was not on the screen). Needs the altitude: on foot there is no look-down to place the ground by.
+ */
+export function projectRings(map: ExoMinimapDTO | null | undefined, view: View, origin?: { x: number; y: number } | null): ScreenRing[] {
+  if (!map || map.headingDeg == null) return [];
+  const { place, alt } = projector(map, map.headingDeg, view, origin);
+  if (alt == null) return [];
+  const out: ScreenRing[] = [];
+  for (const m of map.marks) {
+    const r = m.ringM ?? 0;
+    if (m.kind !== "sample" || !(r > 0)) continue;
+    const runs: [number, number][][] = [];
+    let run: [number, number][] = [];
+    for (let i = 0; i <= RING_POINTS; i++) {
+      const a = (i / RING_POINTS) * 2 * Math.PI;
+      const e = m.eastM + r * Math.sin(a);
+      const n = m.northM + r * Math.cos(a);
+      const p = place(e, n, Math.hypot(e, n));
+      if (p.off) {
+        if (run.length > 1) runs.push(run);
+        run = [];
+      } else run.push([p.x, p.y]);
+    }
+    if (run.length > 1) runs.push(run);
+    if (runs.length) out.push({ mark: m, runs });
   }
   return out;
 }

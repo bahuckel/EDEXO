@@ -88,3 +88,23 @@ body.aim-body {
     animation: none;
   }
 }
+/* Samples taken (owner, 2026-11-04): a diamond in their own colour, and their genus's sample distance on the ground. */
+.aim-mark.is-sample {
+  --aim: var(--aim-sample, #8fd0ff);
+}
+.aim-ground-ring polyline {
+  fill: none;
+  stroke: var(--aim-sample, #8fd0ff);
+  stroke-width: 1.4;
+  stroke-dasharray: 6 5;
+  opacity: 0.45;
+}
+.aim-ground-ring.is-active polyline {
+  stroke-width: 2;
+  opacity: 0.8;
+}
+/* A held reading (the HUD not read for 3 s): the marks stay put, dashed to say they are not following the nose. */
+.aim.is-held .aim-ring {
+  stroke-dasharray: 4 3;
+  opacity: 0.6;
+}

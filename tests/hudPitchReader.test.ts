@@ -92,12 +92,13 @@ describe("HUD pitch reader", () => {
   });
 
   it("takes the fraction from the ladder's 5-degree rungs, and the screen's pixels per degree", () => {
-    // Nose at -10.4: the box shows -10; rungs every 5 degrees, 30 px per degree, right of the left box.
+    // Nose at -10.4: the box shows -10; rungs every 5 degrees right of the left box, at the screen's own spacing
+    // (25.3 px a degree at 1440 rows: 15.8 at 900).
     const f = frame();
     draw(f, "-10", 840, 450);
     draw(f, "-10", 1120, 450);
     const orange = (x: number, y: number) => f.set([230, 140, 40, 255], (y * W + x) * 4);
-    const ppd = 30;
+    const ppd = 15.8;
     const boxY = 450 - 0.5; // the drawn string's middle row
     for (const v of [-5, -10, -15]) {
       const y = Math.round(boxY - (v - -10.4) * ppd);
@@ -106,7 +107,7 @@ describe("HUD pitch reader", () => {
     const r = readHudPitch(f, W, H, GLYPHS)!;
     expect(r.boxDeg).toBe(-10);
     expect(r.pitchDeg).toBeCloseTo(-10.4, 1);
-    expect(r.pxPerDeg).toBeCloseTo(30, 0);
+    expect(r.pxPerDeg).toBeCloseTo(15.8, 0);
   });
 
   it("reads the heading off the tape: the box, and the fraction from the 10-degree ticks under it", () => {

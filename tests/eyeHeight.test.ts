@@ -3,11 +3,12 @@
  * above it and the screen marker drew plants about 10 deg off): from plants two scans placed and the HUD pitch of each
  * scan (server/eyeHeight.ts), then used for the marker's angles and a single scan placed ahead.
  */
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eyeAboveM, learnEyeHeight, noteShipLine, resetEyeHeightForTests } from "../src/server/eyeHeight.js";
+import { resolveCommanderDataDir } from "../src/server/paths.js";
 import { fromLocal, locatePlant, toLocal, type CompScan } from "../src/shared/scanLocate.js";
 import { projectMarks, viewOf } from "../src/client/aim/project.js";
 
@@ -55,6 +56,24 @@ describe("eye height", () => {
     expect(Math.abs(eyeAboveM() - 13)).toBeLessThan(3);
     noteShipLine({ event: "Loadout", Ship: "Krait_Light" });
     expect(eyeAboveM()).toBe(0);
+  });
+
+  it("remembers the last ship across a restart (the app started mid-session sees no Loadout)", () => {
+    noteShipLine({ event: "Loadout", Ship: "Mandalay" });
+    learnEyeHeight(plant, [scan(-60, 20, 9, 13, "2026-11-04T12:36:17Z"), scan(60, 30, 5, 13, "2026-11-04T12:36:29Z")], R);
+    const learned = eyeAboveM();
+    expect(learned).toBeGreaterThan(8);
+    // A new run: no line has named the ship yet.
+    resetEyeHeightForTests();
+    expect(eyeAboveM()).toBe(learned);
+  });
+
+  it("uses the ship sampled last when no line or saved ship names one (a start from the journal cache)", () => {
+    const d = resolveCommanderDataDir();
+    mkdirSync(d, { recursive: true });
+    const ships = { cobra: [{ at: "2026-11-01T10:00:00Z", m: 2 }], mandalay: [{ at: "2026-11-04T13:15:22Z", m: 13.2 }] };
+    writeFileSync(path.join(d, "edexo-eye-height.json"), JSON.stringify({ version: 1, ships }));
+    expect(eyeAboveM()).toBe(13.2);
   });
 
   it("ignores estimated pitches, flat looks and absurd results", () => {
