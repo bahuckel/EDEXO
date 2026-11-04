@@ -133,6 +133,8 @@ export interface GuardianRecipeDTO {
   /** How many the materials aboard unlock (commodities left out: bought at a market). */
   count: number;
   needs: GuardianNeedDTO[];
+  /** What one more needs beyond what is aboard (commodities left out), as the Jumponium tiers' `short`. */
+  short: { key: string; label: string; need: number }[];
 }
 
 export interface GuardianStockDTO {
@@ -177,7 +179,12 @@ export function guardianLabView(raw: Readonly<Record<string, number>> | null, ma
       });
       let count = Number.POSITIVE_INFINITY;
       for (const n of needs) if (n.held != null) count = Math.min(count, Math.floor(n.held / n.qty));
-      return { name: r.name, group: r.group, count: Number.isFinite(count) ? count : 0, needs };
+      if (!Number.isFinite(count)) count = 0;
+      const short = needs.flatMap((n) => {
+        const need = n.held == null ? 0 : (count + 1) * n.qty - n.held;
+        return need > 0 ? [{ key: n.key, label: n.label, need }] : [];
+      });
+      return { name: r.name, group: r.group, count, needs, short };
     }),
   };
 }

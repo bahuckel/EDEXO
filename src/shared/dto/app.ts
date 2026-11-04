@@ -265,6 +265,8 @@ export interface HudPrefsDTO {
   nextBoxel?: boolean;
   /** The fuel bar at a neutron route's refuel stop: how much to scoop (2026-10-29; default on). */
   refuelBar?: boolean;
+  /** The radar stays open while flying near a planet, not only on it; closes in supercruise (owner, 2026-11-04; default off). */
+  radarAlways?: boolean;
   /** Colonize HUD (1.3.0): the followed site's materials with bars (default on). */
   czNeeds?: boolean;
   /** Colonize HUD: the other sites being built (default on). */

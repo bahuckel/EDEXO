@@ -18,7 +18,7 @@
    ========================================================================================================== */
 
 /* ---- which elements, and their corner size ---- */
-:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-prov, .species-demoted-badge, .photo-meta-row--overlay,
   .srow-tag, .srow-prog) {
   --cut: 3px;
 }
@@ -61,7 +61,7 @@
 
 /* A containing block for the bands: every chamfered element; one positioned by its own rules keeps that (zero
    specificity). A static modal put its bands against the page instead. */
-:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-prov, .species-demoted-badge, .photo-meta-row--overlay,
   .srow-tag, .srow-prog, .btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon,
   .fold-help-btn, .facts-dss, .land-badge, .price-tag, .tab, .galaxy-map__controls, .ss-link, .ss-hud-link, .ui-select,
   .cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral, .btn-top-toggle,
@@ -79,13 +79,13 @@
   element (or a state, or a screen width) without a border gets no band.
   (The first version rotated a 1px line into each corner; its ends smeared and the diagonal read thicker.)
 */
-:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-prov, .species-demoted-badge, .photo-meta-row--overlay,
   .srow-tag, .srow-prog, .btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon,
   .fold-help-btn, .facts-dss, .land-badge, .price-tag, .tab, .galaxy-map__controls, .ss-link,
   .ss-hud-link, .ui-select, .cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral,
   .btn-top-toggle, .planetary-info-copy-summary, .tabs-jump-btn, .species-similarity-index, .species-quad-cell,
   .bio-empty-next, .btn, .fact, .species-identity-neon-inner, .ss-sort, .payout-hero, .bio-empty-wrap)::before,
-:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-prov, .species-demoted-badge, .photo-meta-row--overlay,
   .srow-tag, .srow-prog, .btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon,
   .fold-help-btn, .facts-dss, .land-badge, .price-tag, .tab, .galaxy-map__controls, .ss-link,
   .ss-hud-link, .ui-select, .cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral,
@@ -103,7 +103,7 @@
   pointer-events: none;
 }
 /* top-left: the band between the cut (x + y = c) and the line one border-width inside it */
-:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-prov, .species-demoted-badge, .photo-meta-row--overlay,
   .srow-tag, .srow-prog, .btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon,
   .fold-help-btn, .facts-dss, .land-badge, .price-tag, .tab, .galaxy-map__controls, .ss-link,
   .ss-hud-link, .ui-select, .cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral,
@@ -117,7 +117,7 @@
   clip-path: polygon(var(--cut) 0, calc(var(--cut) + 1.4142px) 0, 0 calc(var(--cut) + 1.4142px), 0 var(--cut));
 }
 /* bottom-right */
-:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-demoted-badge, .photo-meta-row--overlay,
+:where(.badge-approx, .badge-foot-learned, .species-codex-new, .species-prov, .species-demoted-badge, .photo-meta-row--overlay,
   .srow-tag, .srow-prog, .btn-ency-exomastery, .btn-ency-found, .fdb-chip, .gsx-ff, .gsx-tier, .my-exo-nav-icon,
   .fold-help-btn, .facts-dss, .land-badge, .price-tag, .tab, .galaxy-map__controls, .ss-link,
   .ss-hud-link, .ui-select, .cz-chip, .cz-card, .btn-confirm-cancel, .btn-confirm-go, .btn-top-neutral,

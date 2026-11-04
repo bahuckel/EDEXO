@@ -573,6 +573,7 @@ input[type="text"]:focus {
   color: var(--accent);
 }
 .species-codex-new,
+.species-prov,
 .species-demoted-badge,
 .badge-foot-learned,
 .badge-approx {

@@ -68,6 +68,11 @@ export interface ExoMinimapDTO {
   /** The minimum separation this genus needs, so the map can draw the ring you have to clear. */
   minSampleDistanceM: number;
   marks: ExoMinimapMarkDTO[];
+  /**
+   * Flying near the planet rather than on it (normal flight, not supercruise, no touchdown): the HUD opens the radar
+   * for this only with the launcher's "Radar always visible" (owner, 2026-11-04).
+   */
+  near?: boolean;
 }
 
 export interface ExoMinimapMarkDTO {

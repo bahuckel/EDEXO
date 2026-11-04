@@ -48,7 +48,7 @@ export interface SpanshRouteDTO {
   stops: SpanshRouteStopDTO[];
   totalJumps: number;
   totalValueCr: number;
-  /** The link to open the route on Spansh's own site. */
+  /** The link to open the route on Spansh's own site; empty for a route imported from a file without Spansh's job id. */
   url: string;
 }
 
@@ -68,9 +68,9 @@ export interface SavedSpanshRouteDTO {
 
 /**
  * What `/api/spansh-route` answers: the route, Spansh still working on it, or why not. `saved` says the route came
- * from the copy kept on disk (Spansh may have deleted it since).
+ * from the copy kept on disk (Spansh may have deleted it since); `note` says what an imported file left out.
  */
 export type SpanshRouteAnswer =
-  | { state: "ok"; route: SpanshRouteDTO; saved?: boolean }
+  | { state: "ok"; route: SpanshRouteDTO; saved?: boolean; note?: string }
   | { state: "pending"; job: string }
   | { state: "error"; error: string };

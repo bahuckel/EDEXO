@@ -66,6 +66,22 @@ describe("composition-scan waypoints", () => {
     expect(m!.northM).toBeGreaterThan(100);
   });
 
+  it("draws the planet flown over in normal flight (Radar always visible), never in supercruise", () => {
+    const { store, ingest } = setup();
+    ingest(codex());
+    store.exoOrganicLastFix = fix;
+    // No touchdown, no sample run: only the radar of the planet flown over, flagged `near` for the HUD's setting.
+    store.shipFlight = "normal";
+    const mm = buildExoMinimapDto(store as never, null, 0)!;
+    expect(mm.near).toBe(true);
+    expect(mm.marks.find((x) => x.kind === "codex")?.label).toContain("Prasinum Sinuous Tubers");
+    store.shipFlight = "supercruise";
+    expect(buildExoMinimapDto(store as never, null, 0)).toBeNull();
+    // Landed: the body underfoot, not `near`.
+    store.shipFlight = "landed";
+    expect(buildExoMinimapDto(store as never, "37738594260331:4", 0)!.near).toBeUndefined();
+  });
+
   it("retires once the species is logged on that body, and only there", () => {
     const { store, ingest } = setup();
     ingest(codex());

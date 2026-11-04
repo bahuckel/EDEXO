@@ -219,6 +219,7 @@
  * somewhere — so they are outlined rather than filled, and sit at the same size without competing.
  *
  * "You scanned it" is the only first-hand evidence in the app and gets the warmer of the two.
+ * Cut corners like the app's buttons (owner, 2026-11-04): cockpit.css cuts them, chamfer.css draws the cut edges.
  */
 .species-prov {
   margin-left: 0.4rem;

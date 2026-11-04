@@ -124,6 +124,8 @@ export function createHttpServer(opts: HttpServerOptions): {
   app.use("/api/ui/mirror", express.json({ limit: "512kb" }));
   // Colonize's checkout plans carry market snapshots (colonizeRoutes.ts).
   app.use("/api/colonize", express.json({ limit: "8mb" }));
+  // A Spansh route saved to a file (spanshRouteImport.ts): an exobiology result runs to megabytes.
+  app.use("/api/spansh-route/import", express.json({ limit: "16mb" }));
   app.use(express.json({ limit: "48kb" }));
 
   registerSpeciesFilesRoutes(app, opts, routeCtx);

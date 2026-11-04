@@ -1,7 +1,8 @@
 /**
  * `/api/spansh-route` — a route planned on Spansh (plan 1.3.6 S-1, server/spanshRoute.ts): `GET ?q=<link or job id>`
  * reads it from Spansh once and keeps it on disk (server/spanshRouteFile.ts: Spansh deletes results within hours),
- * `GET /api/spansh-route/saved` lists the kept ones, `DELETE /api/spansh-route/saved?job=` forgets one, and
+ * `POST /api/spansh-route/import { name, text }` reads one from a file saved from Spansh (JSON or CSV,
+ * server/spanshRouteImport.ts) and keeps it the same way, `GET /api/spansh-route/saved` lists the kept ones, `DELETE /api/spansh-route/saved?job=` forgets one, and
  * `POST /api/spansh-route/fly { job, keep }` flies it as the live route, the stops in `keep` (indexes; all when absent).
  */
 import type express from "express";
@@ -9,6 +10,9 @@ import { fetchSpanshRoute, spanshJobFromText, spanshRouteHops } from "../spanshR
 import { openSpanshRouteFile, resolveSpanshRoutesPath, type SpanshRouteFile } from "../spanshRouteFile.js";
 import type { HttpServerOptions } from "../httpServerTypes.js";
 import { carrierHereOf } from "../carrierRouteFollow.js";
+import { importSpanshRouteFile } from "../spanshRouteImport.js";
+import { resolveCoordMapForSystems } from "../colonize/galaxySystemCoords.js";
+import { normSystemName } from "../../shared/colonize/stationFilter.js";
 
 export function registerSpanshRouteRoutes(app: express.Express, opts: HttpServerOptions, file?: SpanshRouteFile): void {
   // Opened on first use (nothing is read until the drawer asks), and again when the commander's folder changes.
@@ -26,6 +30,14 @@ export function registerSpanshRouteRoutes(app: express.Express, opts: HttpServer
     const have = job ? routes().get(job) : undefined;
     if (have) return void res.json({ state: "ok", route: have, saved: true });
     const answer = await fetchSpanshRoute(q);
+    if (answer.state === "ok") routes().put(answer.route);
+    res.json(answer);
+  });
+
+  app.post("/api/spansh-route/import", async (req, res) => {
+    const body = (req.body ?? {}) as { name?: unknown; text?: unknown };
+    if (typeof body.text !== "string") return void res.status(400).json({ state: "error", error: "text: the file's content" });
+    const answer = await importSpanshRouteFile(typeof body.name === "string" ? body.name.slice(0, 200) : "", body.text, resolveCoordMapForSystems, normSystemName);
     if (answer.state === "ok") routes().put(answer.route);
     res.json(answer);
   });

@@ -9,6 +9,9 @@
  * - neutron and galaxy plotter routes: EDEXO's neutron planner on the same two ends, at Spansh's range or the ship's:
  *   jumps, supercharges and refuel stops side by side, and EDEXO's line on the map in place of Spansh's on request.
  *
+ * A route saved from Spansh can be imported from its file too (JSON or CSV, server/spanshRouteImport.ts, owner
+ * 2026-11-04): for a result Spansh has deleted, or one planned on another PC.
+ *
  * Every route read is kept on disk (server/spanshRouteFile.ts, owner 2026-11-03): Spansh deletes results within hours,
  * the "Kept routes" list opens one again after that.
  *
@@ -133,15 +136,17 @@ export function SpanshRouteDrawer({
     kept.floor = floor;
   }, [text, route, dropped, floor]);
 
-  const read = async (q = text) => {
+  /** Asks for a route (a link read from Spansh, or a file) and shows the answer. */
+  const answer = async (ask: () => Promise<Response>) => {
     setBusy(true);
     setError(null);
     setNote(null);
     setCompare(null);
     try {
-      const r = await fetch(`/api/spansh-route?q=${encodeURIComponent(q.trim())}`);
+      const r = await ask();
       const a = (await r.json()) as SpanshRouteAnswer;
       if (a.state === "ok") {
+        if (a.note) setNote(a.note);
         setRoute(a.route);
         setEdexoOnMap(false);
         setFromCopy(a.saved === true);
@@ -158,6 +163,18 @@ export function SpanshRouteDrawer({
     } finally {
       setBusy(false);
     }
+  };
+  const read = (q = text) => answer(() => fetch(`/api/spansh-route?q=${encodeURIComponent(q.trim())}`));
+  // A route saved from Spansh (owner, 2026-11-04): its JSON or its "Download as CSV" (server/spanshRouteImport.ts).
+  const importFile = async (f: File) => {
+    const content = await f.text();
+    await answer(() =>
+      fetch("/api/spansh-route/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: f.name, text: content }),
+      }),
+    );
   };
 
   const valued = route?.kind === "exobiology" || route?.kind === "riches";
@@ -319,9 +336,27 @@ export function SpanshRouteDrawer({
             }}
           />
         </MenuRow>
-        <button type="button" className="btn-top-toggle" disabled={busy || !text.trim()} onClick={() => void read()}>
-          Read from Spansh
-        </button>
+        <div className="g3d-spansh-read">
+          <button type="button" className="btn-top-toggle" disabled={busy || !text.trim()} onClick={() => void read()}>
+            Read from Spansh
+          </button>
+          <label
+            className={`btn-top-toggle g3d-spansh-file${busy ? " is-disabled" : ""}`}
+            title="A route saved from Spansh: its JSON, or the CSV of its Download as CSV button. Kept with the other routes."
+          >
+            Import a file…
+            <input
+              type="file"
+              accept=".json,.csv,application/json,text/csv"
+              disabled={busy}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void importFile(f);
+              }}
+            />
+          </label>
+        </div>
         {error ? <p className="g3d-panel__note g3d-panel__note--warn">{error}</p> : null}
         {note ? <p className="g3d-panel__note">{note}</p> : null}
         {savedRoutes.length ? (
@@ -368,10 +403,14 @@ export function SpanshRouteDrawer({
             {route.to ? ` to ${route.to}` : ""}: {route.stops.length - 1} stop{route.stops.length === 2 ? "" : "s"},{" "}
             {route.totalJumps.toLocaleString("en-US")} jump{route.totalJumps === 1 ? "" : "s"}
             {route.rangeLy ? ` at ${route.rangeLy} ly` : ""}.{" "}
-            <a href={route.url} target="_blank" rel="noopener noreferrer">
-              Open on Spansh
-            </a>
-            {fromCopy ? <span className="dim"> (EDEXO&apos;s kept copy: Spansh may have deleted it since)</span> : null}
+            {route.url ? (
+              <a href={route.url} target="_blank" rel="noopener noreferrer">
+                Open on Spansh
+              </a>
+            ) : (
+              <span className="dim">Imported from a file.</span>
+            )}
+            {fromCopy && route.url ? <span className="dim"> (EDEXO&apos;s kept copy: Spansh may have deleted it since)</span> : null}
           </p>
 
           {valued ? (

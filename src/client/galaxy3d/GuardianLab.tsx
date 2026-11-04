@@ -1,19 +1,29 @@
 /**
  * The Laboratory's Guardian tab (owner, 2026-11-01: "extend materials to guardian sites as well, so it can be useful,
- * the more the better"; 1.3.7). Crafting: what the Guardian materials aboard unlock at a technology broker, recipe by
- * recipe (shared/guardianTech.ts, EDEngineer's blueprints). Collection: each Guardian material, where it comes from,
- * and the nearest Guardian sites that give it (EDSM's codex, the galaxy map's Guardian layer), drawn on the map while
- * the tab is open.
+ * the more the better"; 1.3.7), laid out as the Jumponium and AFM tabs are (owner, 2026-11-04). Crafting: the crafting
+ * screen (LabCrafting.tsx CraftGraph), the materials of one group's unlocks joined to their cards, recipes from
+ * shared/guardianTech.ts (EDEngineer's blueprints). Collection: what is aboard as chips, each unlock's count and what
+ * one more lacks, and the nearest Guardian sites (EDSM's codex, the galaxy map's Guardian layer), drawn on the map
+ * while the tab is open; a material's chip picks the sites that give it.
  */
 import { useEffect, useMemo, useState } from "react";
 import type { AlienSiteKind } from "@shared/alienSites";
-import { GUARDIAN_GROUP_NAME, type GuardianGroup, type GuardianStockDTO } from "@shared/guardianTech";
+import {
+  GUARDIAN_GROUP_NAME,
+  GUARDIAN_ITEMS,
+  guardianItem,
+  MAT_CAP,
+  type GuardianGroup,
+  type GuardianRecipeDTO,
+  type GuardianStockDTO,
+} from "@shared/guardianTech";
 import type { JumponiumDTO } from "@shared/jumponium";
 import { fmtLyAway } from "@shared/format";
 import { isBool, isNum, isStrArr, usePersistedState } from "../usePersistedState";
 import { CopySystemButton } from "../CopySystemButton";
 import { LoadingNote } from "../ui/Loading";
 import type { JumpRow } from "./jumpRow";
+import { CraftGraph, type CraftCard, type CraftMat } from "./LabCrafting";
 
 interface SiteRow {
   system: string;
@@ -43,6 +53,35 @@ const GROUPS: readonly GuardianGroup[] = ["module", "weapon", "fighter"];
 const isGroup = (v: unknown): v is GuardianGroup => v === "module" || v === "weapon" || v === "fighter";
 /** "Power Cell" for "Guardian Power Cell": the stock chips are short. */
 const short = (label: string) => label.replace(/^Guardian /, "").replace(/ Obelisk Data$/, "").replace(/ Blueprint Fragment$/, " blueprint");
+
+/** "FSD Booster" for "Guardian FSD Booster": the tab already says Guardian ("Modified …" keeps its word). */
+const cardName = (name: string) => name.replace(/^Guardian /, "");
+const nextLine = (r: GuardianRecipeDTO) => (r.short.length ? r.short.map((x) => `${short(x.label)} ${x.need}`).join(", ") : undefined);
+const ORDER = new Map(GUARDIAN_ITEMS.map((i, n) => [i.key, n]));
+
+/** The crafting screen's nodes for some unlocks: every ingredient they take, in the item table's order. */
+function graphOf(recipes: readonly GuardianRecipeDTO[], known: boolean): { mats: CraftMat[]; cards: CraftCard[] } {
+  const byKey = new Map<string, CraftMat>();
+  for (const r of recipes)
+    for (const n of r.needs)
+      if (!byKey.has(n.key))
+        byKey.set(n.key, {
+          key: n.key,
+          sym: short(n.label),
+          label: n.label,
+          held: n.held == null ? null : known ? n.held : 0,
+          cap: MAT_CAP[guardianItem(n.key)?.grade ?? 5],
+        });
+  const mats = [...byKey.values()].sort((a, b) => (ORDER.get(a.key) ?? 0) - (ORDER.get(b.key) ?? 0));
+  const cards = recipes.map((r) => ({
+    id: r.name,
+    name: cardName(r.name),
+    count: r.count,
+    next: known ? nextLine(r) : undefined,
+    recipe: r.needs.map((n) => ({ key: n.key, qty: n.qty })),
+  }));
+  return { mats, cards };
+}
 
 const siteLine = (s: Pick<SiteRow, "kinds" | "first">) =>
   `Guardian ${s.kinds.map((k) => KIND_WORD[k] ?? k).join(", ")} · first reported ${s.first}`;
@@ -113,8 +152,10 @@ export function GuardianLab({
   const g = stock?.guardian ?? null;
   const known = !!stock?.matsKnown;
   const toggleKind = (k: string) => setKinds((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
-  /** A material's sites, picked as the filter. */
+  /** A material's chip: its sites picked as the filter, and its source said under the chips. */
+  const [picked, setPicked] = useState<string | null>(null);
   const findFor = (m: GuardianStockDTO) => {
+    setPicked(m.key);
     if (m.sites.length) setKinds([...m.sites]);
   };
 
@@ -124,80 +165,76 @@ export function GuardianLab({
   const notKnown = (
     <p className="fdb-empty">What you hold shows after your next login: the game writes the list then.</p>
   );
+  const shown = (g?.recipes ?? []).filter((r) => r.group === group && (!canOnly || r.count > 0));
+  const groupChips = (
+    <div className="stations-filters">
+      <div className="stations-filters__group">
+        {GROUPS.map((k) => (
+          <button key={k} type="button" className={`fdb-chip${group === k ? " fdb-chip--on" : ""}`} aria-pressed={group === k} onClick={() => setGroup(k)}>
+            {GUARDIAN_GROUP_NAME[k]}
+          </button>
+        ))}
+        <button
+          type="button"
+          className={`fdb-chip${canOnly ? " fdb-chip--on" : ""}`}
+          aria-pressed={canOnly}
+          title="Only what the materials aboard unlock now (commodities are bought at a market)"
+          onClick={() => setCanOnly(!canOnly)}
+        >
+          I can unlock
+        </button>
+      </div>
+    </div>
+  );
 
   if (view === "craft") {
-    const recipes = (g?.recipes ?? []).filter((r) => r.group === group && (!canOnly || r.count > 0));
+    const { mats, cards } = graphOf(shown, known);
     return (
       <>
         {known ? null : notKnown}
-        <div className="stations-filters">
-          <div className="stations-filters__group">
-            {GROUPS.map((k) => (
-              <button key={k} type="button" className={`fdb-chip${group === k ? " fdb-chip--on" : ""}`} aria-pressed={group === k} onClick={() => setGroup(k)}>
-                {GUARDIAN_GROUP_NAME[k]}
-              </button>
-            ))}
-            <button
-              type="button"
-              className={`fdb-chip${canOnly ? " fdb-chip--on" : ""}`}
-              aria-pressed={canOnly}
-              title="Only what the materials aboard unlock now (commodities are bought at a market)"
-              onClick={() => setCanOnly(!canOnly)}
-            >
-              I can unlock
-            </button>
-          </div>
-        </div>
-        {recipes.length === 0 ? <p className="fdb-empty">Nothing here your materials unlock yet.</p> : null}
-        <ul className="guardian-recipes">
-          {recipes.map((r) => (
-            <li key={r.name} className={r.count ? "is-can" : undefined}>
-              <div className="guardian-recipes__head">
-                <b>{r.name}</b>
-                <span className={r.count ? "jump-tiers__n" : "jump-tiers__n is-zero"} title={`The materials aboard unlock ${r.count}`}>
-                  {known ? r.count : "?"}
-                </span>
-              </div>
-              <div className="guardian-recipes__needs">
-                {r.needs.map((n) => (
-                  <span
-                    key={n.key}
-                    className={n.held == null ? "is-buy" : known && n.held < n.qty ? "is-short" : undefined}
-                    title={n.held == null ? `${n.label}: a commodity, bought at a market` : `${n.label}: ${n.held} aboard`}
-                  >
-                    {n.held == null ? "buy " : ""}
-                    {short(n.label)} {n.qty}
-                    {n.held != null && known ? <small> ({n.held})</small> : null}
-                  </span>
-                ))}
-              </div>
-            </li>
-          ))}
-        </ul>
-        <p className="dim tiny">Unlocked at a Guardian technology broker. Recipes as EDEngineer lists them; aboard in brackets.</p>
+        {groupChips}
+        {shown.length === 0 ? <p className="fdb-empty">Nothing here your materials unlock yet.</p> : <CraftGraph mats={mats} cards={cards} named />}
+        <p className="dim tiny">Unlocked at a Guardian technology broker, recipes as EDEngineer lists them. Commodities are bought at a market.</p>
       </>
     );
   }
 
+  // What one more of a shown unlock lacks, as the Jumponium tab marks its short elements.
+  const shortKeys = new Set(known ? shown.flatMap((r) => r.short.map((x) => x.key)) : []);
+  const pickedItem = picked ? g?.stock.find((m) => m.key === picked) : undefined;
   return (
     <>
       {known ? null : notKnown}
       {g ? (
-        <table className="fdb-table guardian-stock">
-          <tbody>
-            {g.stock.map((m) => (
-              <tr key={m.key} className={m.sites.length ? "is-pickable" : undefined} onClick={() => findFor(m)} title={m.sites.length ? "Click to find the sites that give it" : undefined}>
-                <td>{short(m.label)}</td>
-                <td className="guardian-stock__n">
-                  {known ? m.count : "?"}
-                  <span className="dim">/{m.cap}</span>
-                </td>
-                <td className="dim">{m.source}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="jump-stock">
+          {g.stock.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              className={`jump-stock__el guardian-chip${shortKeys.has(m.key) ? " is-short" : ""}${picked === m.key ? " is-picked" : ""}`}
+              title={`${m.label}: ${known ? m.count : "?"} of ${m.cap}. ${m.source}.${m.sites.length ? " Click to find the sites that give it." : ""}`}
+              onClick={() => findFor(m)}
+            >
+              <b>{short(m.label)}</b> {known ? m.count : "?"}
+            </button>
+          ))}
+        </div>
       ) : null}
+      {pickedItem ? (
+        <p className="dim tiny">
+          {pickedItem.label}: {pickedItem.source}.
+        </p>
+      ) : null}
+      {groupChips}
+      <ul className="jump-tiers">
+        {shown.map((r) => (
+          <li key={r.name}>
+            <span className="jump-tiers__name">{cardName(r.name)}</span>
+            <span className={r.count ? "jump-tiers__n" : "jump-tiers__n is-zero"}>{known ? r.count : "?"}</span>
+            <span className="dim">{known && r.short.length ? `next: ${nextLine(r)}` : ""}</span>
+          </li>
+        ))}
+      </ul>
 
       <div className="stations-filters">
         <div className="stations-filters__group">

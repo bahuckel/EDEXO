@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, type ReactNode } from "react";
 import type { HudSnapshot } from "../types";
 import { cueFromOverlay } from "../audio";
 import { cap, fmtClock, fmtCr } from "../core";
+import { pref } from "../theme";
 import { drawMinimap } from "../radar";
 import { Head, Metres, Pill, type HudSection } from "../parts";
 import { useLiveRev } from "../store";
@@ -53,8 +54,11 @@ function Distance({ d, waiting = false }: { d: HudSnapshot; waiting?: boolean })
   useLiveRev();
   const svg = useRef<SVGSVGElement>(null);
   const { eo, live, tooClose } = readRun(d);
-  // On a surface when there is a map to draw (drawMinimap draws nothing and says false without one).
-  const onSurface = !d.journalBoot && !!(d.exoMinimap && d.exoMinimap.marks);
+  // On a surface when there is a map to draw (drawMinimap draws nothing and says false without one). A map of the
+  // planet flown over (`near`) opens it only with "Radar always visible" (owner, 2026-11-04: the composition scanner's
+  // marks are of no use while the radar folds shut off the ground).
+  const map = d.exoMinimap;
+  const onSurface = !d.journalBoot && !!map?.marks && (!map.near || pref("edexoHudRadarAlways", "0") === "1");
   // Before the first snapshot the block stands open, as the page's markup did: the first frame folds it if it must.
   const showTracker = waiting || onSurface || live;
   useLayoutEffect(() => {

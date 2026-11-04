@@ -12,6 +12,7 @@
     edexoHudTheme      {"preset":"orange"} or {"preset":"custom","accent":"#rrggbb","text":"#rrggbb"}
     edexoHudCandOrder  "likelihood" (default) | "value"
     edexoHudRegion     "1" (default) | "0"  — show the current region line in the candidates card
+    edexoHudRadarAlways "0" (default) | "1" — the radar stays open flying near a planet, not only on it
     edexoHudCompact    "0" (default) | "1"  — compact: hide the explanatory lines (.hud-explain)
     edexoHudRelevant   "0" (default) | "1"  — only when relevant: a section with nothing to say steps aside
 

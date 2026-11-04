@@ -1039,48 +1039,20 @@
   color: var(--accent-bright);
   font-weight: 700;
 }
-/* The Laboratory's Guardian tab (GuardianLab.tsx, 1.3.7): unlock cards and the materials' sources. */
-.guardian-recipes {
-  list-style: none;
-  margin: 0 0 6px;
+/* The Laboratory's Guardian tab (GuardianLab.tsx, 1.3.7): its stock chips are buttons (a chip picks the sites that
+   give the material), dressed as the Jumponium tab's plain stock line. */
+.jump-stock__el.guardian-chip {
   padding: 0;
-  display: grid;
-  gap: 6px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
-.guardian-recipes li {
-  border: 1px solid var(--accent-a22);
-  border-radius: 6px;
-  padding: 5px 8px;
-}
-.guardian-recipes li.is-can {
-  border-color: var(--accent);
-}
-.guardian-recipes__head {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-.guardian-recipes__needs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 10px;
-  font-size: 0.88em;
-  font-variant-numeric: tabular-nums;
-}
-.guardian-recipes__needs .is-short {
-  color: var(--warn);
-}
-.guardian-recipes__needs .is-buy {
-  color: var(--text-dim);
-}
-.guardian-stock td {
-  font-size: 0.88em;
-  vertical-align: top;
-}
-.guardian-stock__n {
-  white-space: nowrap;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.jump-stock__el.guardian-chip:hover b,
+.jump-stock__el.guardian-chip.is-picked b {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 /* Nearest station on the map (StationsPanel compact): rows fly the map there. */
 .g3d-stations-drawer .fdb-scroll {
@@ -1631,6 +1603,29 @@
   overflow: hidden;
 }
 /* The routes kept on disk (Spansh deletes its results within hours). */
+/* Read a link, or import a file saved from Spansh (the file input hides inside its label-button). */
+.g3d-spansh-read {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.g3d-spansh-file {
+  cursor: pointer;
+}
+.g3d-spansh-file input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.g3d-spansh-file:focus-within {
+  border-color: var(--accent-bright, var(--accent));
+}
+.g3d-spansh-file.is-disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .g3d-spansh-saved {
   margin-top: 8px;
 }
@@ -1727,6 +1722,11 @@
   font-weight: 700;
   fill: var(--text-dim);
 }
+/* A commodity: bought at a market, so neither covered nor short. */
+.lab-craft__line.is-buy path {
+  stroke: var(--text-dim);
+  stroke-dasharray: 1 3;
+}
 .lab-craft__line.is-dim {
   opacity: 0.12;
 }
@@ -1762,6 +1762,37 @@
 .lab-craft__card.is-hot {
   border-color: var(--accent-bright);
   box-shadow: 0 0 0 1px var(--accent-a30);
+}
+.lab-craft__mat.is-buy {
+  border-style: dashed;
+}
+.lab-craft__held--buy {
+  opacity: 0.7;
+  font-weight: 400;
+}
+/* Named materials (the Guardian tab): a short name in place of an element symbol, the count under it, in a column
+   narrow enough to leave the unlock cards room in the drawer. */
+.lab-craft--named {
+  grid-template-columns: minmax(0, 9.5rem) minmax(0, 1fr);
+  column-gap: 2.2rem;
+}
+.lab-craft--named .lab-craft__mat {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.05rem;
+}
+.lab-craft--named .lab-craft__sym {
+  font-size: var(--fs-xs, 0.72rem);
+  text-align: left;
+  line-height: 1.2;
+}
+.lab-craft--named .lab-craft__tier {
+  overflow-wrap: anywhere;
+}
+.lab-craft--named .lab-craft__cards {
+  gap: 0.4rem;
+}
+.lab-craft--named .lab-craft__card {
+  padding: 0.35rem 0.55rem;
 }
 .lab-craft__sym {
   font-family: var(--hud-font, inherit);

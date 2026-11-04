@@ -495,7 +495,6 @@ export const SpeciesCard = memo(function SpeciesCard({
             </span>
           </Tooltip>
         ) : null}
-        <SpeciesProvenanceBadge p={m.provenance} />
         {m.entry.predictionUnsupported ? (
           <Tooltip text={`${m.entry.predictionUnsupported.reason}. A body scan cannot answer that, so this species is listed as possible rather than predicted — nothing here says it is likely to be present.`}>
             <span className="species-not-predicted">
@@ -522,6 +521,8 @@ export const SpeciesCard = memo(function SpeciesCard({
             ) : null}
           </span>
         ) : null}
+        {/* After the colour, so the name reads whole: "Fungoida Stabitis - Green (you scanned it)" (owner, 2026-11-04). */}
+        <SpeciesProvenanceBadge p={m.provenance} />
         {m.colourMismatchPredicted ? (
           <span
             className="species-colour-miss"

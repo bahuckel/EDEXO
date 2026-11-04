@@ -62,6 +62,8 @@ describe("Guardian technology", () => {
     const fsd = view.recipes.find((r) => r.name === "Guardian FSD Booster")!;
     expect(fsd.count).toBe(1);
     expect(fsd.needs.find((n) => n.key === "hnshockmount")).toMatchObject({ kind: "commodity", held: null });
+    // What a second lacks: only the focus crystals (commodities are never short, they are bought).
+    expect(fsd.short).toEqual([{ key: "focuscrystals", label: "Focus Crystals", need: 24 }]);
     const shield = view.recipes.find((r) => r.name === "Guardian Shield Reinforcement")!;
     expect(shield.count).toBe(0);
     expect(view.stock.find((s) => s.key === "guardian_powercell")).toMatchObject({ count: 50, cap: 300 });

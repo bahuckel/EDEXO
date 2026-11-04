@@ -27,6 +27,7 @@ import { getProjectRoot, getSpeciesDataDir } from "./paths.js";
 import { readGenusMinSampleDistanceM } from "./speciesTreeLoader.js";
 import { gameOrderSpeciesName } from "../shared/codexLog.js";
 import { bodyKey } from "../shared/bodyKey.js";
+import type { ShipFlight } from "../shared/dto/routeSystem.js";
 
 export type ExoOrganicAnchors = { latDeg: number; lonDeg: number; planetRadiusM: number };
 
@@ -90,6 +91,8 @@ export type ExoOrganicOverlayHost = {
   surfaceShipMark: SurfaceMark | null;
   /** How far the radar draws. Optional so the test hosts in this repo keep working unchanged. */
   minimapRadiusM?: number;
+  /** Supercruise, normal flight, landed or docked (shipInSystem.ts): the radar of a planet flown over needs "normal". */
+  shipFlight?: ShipFlight;
 };
 
 /**
@@ -759,9 +762,13 @@ export function buildExoMinimapDto(
 ): ExoMinimapDTO | null {
   const fix = store.exoOrganicLastFix;
   if (!fix) return null;
-  // No body underfoot (no touchdown, no sample run) means no radar. `Status.json` keeps reporting a
-  // latitude from orbit, so the fix alone would draw an empty radar all the way out to supercruise.
-  if (!bodyKeyOnFoot) return null;
+  // No body underfoot (no touchdown, no sample run): a radar of the planet flown over (`near`), which the HUD shows only
+  // with "Radar always visible" (owner, 2026-11-04). Never in supercruise: `Status.json` keeps reporting a latitude in
+  // orbital cruise, and the radar closes on entering it. Only in normal flight, which the journal names.
+  const near = !bodyKeyOnFoot;
+  if (near && (store.shipFlight !== "normal" || !normStatusBodyName(fix.bodyName))) return null;
+  // Matches no mark's key: flying over, a mark is placed by the body's name alone.
+  const footKey = bodyKeyOnFoot ?? "\u0000near";
   const R = fix.planetRadiusM;
   if (!(R > 0)) return null;
 
@@ -810,7 +817,7 @@ export function buildExoMinimapDto(
     // A mark from an older store may have no name; its key is then the only thing to go on, and
     // refusing to draw it would lose a ship that is genuinely parked here.
     if (onBodyNorm && m.bodyNameNorm) return m.bodyNameNorm === onBodyNorm;
-    return bodyKeyOnFoot == null || m.bodyKey === bodyKeyOnFoot;
+    return m.bodyKey === footKey;
   };
 
   /*
@@ -841,7 +848,7 @@ export function buildExoMinimapDto(
   const srv = store.surfaceSrvMark;
   if (srv && belongsHere(srv)) push(srv.latDeg, srv.lonDeg, "srv", "Your SRV");
 
-  return { radiusM: minimapRadiusFor(store), headingDeg: fix.headingDeg, minSampleDistanceM, marks };
+  return { radiusM: minimapRadiusFor(store), headingDeg: fix.headingDeg, minSampleDistanceM, marks, ...(near ? { near: true } : {}) };
 }
 
 export function buildExoOrganicOverlayDto(
