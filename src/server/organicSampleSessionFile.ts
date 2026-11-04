@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { SpeciesDatabase } from "../shared/types.js";
 import { normOrganicToken } from "./organicTracking.js";
-import { readGenusMinSampleDistanceM } from "./speciesTreeLoader.js";
+import { readGenusMinSampleDistanceM, speciesGenusSampleDistanceM } from "./speciesTreeLoader.js";
 import type { ExoOrganicTrackerInternal } from "./exoOrganicTracker.js";
 import { getSpeciesDataDir, resolveOrganicSampleSessionPath } from "./paths.js";
 import { bodyIdOfBodyKey, systemAddressOfBodyKey } from "../shared/bodyKey.js";
@@ -218,7 +218,9 @@ export function loadOrganicSampleSessionFromDisk(
 
   const speciesDisplay = typeof p.speciesDisplay === "string" ? p.speciesDisplay : "—";
   const genusLocalised = typeof p.genusLocalised === "string" ? p.genusLocalised : "";
-  const minDb = resolveMinSampleDistanceMForGenus(projectRoot, db, genusLocalised);
+  // A genus the game names after a species ("Luteolum Anemone") matches none: then the species' own.
+  const minDb =
+    resolveMinSampleDistanceMForGenus(projectRoot, db, genusLocalised) || speciesGenusSampleDistanceM(db.species, speciesDisplay);
   const minSampleDistanceM =
     typeof p.minSampleDistanceM === "number" && Number.isFinite(p.minSampleDistanceM)
       ? p.minSampleDistanceM

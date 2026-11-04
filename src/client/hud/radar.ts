@@ -10,7 +10,12 @@ import { esc } from "./core";
 
 type Minimap = ExoMinimapDTO;
 type Mark = Minimap["marks"][number];
-type RadarSvg = SVGSVGElement & { __staticBuilt?: boolean; __mmPredict?: PredictState };
+type RadarSvg = SVGSVGElement & { __staticBuilt?: boolean; __mmPredict?: PredictState; __clipId?: string };
+/**
+ * Each radar's own clip id: two radars in one page sharing "hudRadarClip" both clip to the first one's, and when that
+ * one is hidden its rings can go with it (owner, 2026-11-04: the sample rings not shown).
+ */
+let clipSeq = 0;
 
 /* ============================================================== Exo-distance tracker ======== */
 /*
@@ -38,12 +43,15 @@ export const MAP_R = 100;
 function radarStatic(svg: RadarSvg): void {
   if (svg.__staticBuilt) return;
   svg.__staticBuilt = true;
+  svg.__clipId = "hudRadarClip" + ++clipSeq;
   svg.innerHTML =
     '<defs><linearGradient id="hudSweepGrad" x1="0" y1="0" x2="1" y2="0">' +
     '<stop offset="0" stop-color="currentColor" stop-opacity="0"/>' +
     '<stop offset="1" stop-color="currentColor" stop-opacity="0.28"/></linearGradient>' +
     // The sample rings stop at the rim: a ring round a plant out of range still shows its near edge.
-    '<clipPath id="hudRadarClip"><circle cx="0" cy="0" r="' +
+    '<clipPath id="' +
+    svg.__clipId +
+    '"><circle cx="0" cy="0" r="' +
     MAP_R +
     '"/></clipPath></defs>' +
     '<circle class="minimap-rim-outer" cx="0" cy="0" r="' +
@@ -146,7 +154,7 @@ function drawMinimapAt(svg: RadarSvg, mm: Minimap, hint: boolean): boolean {
         " />",
     );
   }
-  if (rings.length) parts.push('<g clip-path="url(#hudRadarClip)">' + rings.join("") + "</g>");
+  if (rings.length) parts.push('<g clip-path="url(#' + svg.__clipId + ')">' + rings.join("") + "</g>");
   for (let t = 0; t < 360; t += 30) {
     const major = t % 90 === 0;
     parts.push(
@@ -342,22 +350,13 @@ function median(xs: number[]): number {
   return s[Math.floor(s.length / 2)]!;
 }
 
+/**
+ * A copy to draw from, every field kept: one that listed the fields it copied dropped the ones added later (the next
+ * plant's `target`, a crossing's `located`, a scan's heading), so the radar never drew the line to the next plant
+ * (owner, 2026-11-04).
+ */
 function cloneMinimap(mm: Minimap): Minimap {
-  return {
-    radiusM: mm.radiusM,
-    headingDeg: mm.headingDeg,
-    minSampleDistanceM: mm.minSampleDistanceM,
-    marks: mm.marks.map((m) => ({
-      kind: m.kind,
-      label: m.label,
-      active: m.active,
-      northM: m.northM,
-      eastM: m.eastM,
-      distanceM: m.distanceM,
-      ringM: m.ringM,
-    })),
-    ...(mm.clearArmed ? { clearArmed: mm.clearArmed } : {}),
-  };
+  return { ...mm, marks: mm.marks.map((m) => ({ ...m })) };
 }
 
 /** How far every mark moved between two fixes — the commander's movement, negated. */
@@ -403,7 +402,8 @@ try {
  */
 function minimapSignature(mm: Minimap): string {
   let s = String(mm.headingDeg) + "|" + mm.radiusM + "|" + mm.minSampleDistanceM + "|" + (mm.clearArmed ?? 0);
-  for (const m of mm.marks) s += "|" + m.kind + ":" + m.label + ":" + m.northM + "," + m.eastM;
+  for (const m of mm.marks)
+    s += "|" + m.kind + ":" + m.label + ":" + m.northM + "," + m.eastM + ":" + (m.ringM ?? 0) + (m.active ? "a" : "") + (m.target ? "t" : "");
   return s;
 }
 

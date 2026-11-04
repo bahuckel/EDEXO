@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { BRAIN_TREE_SYSTEM_REQUIREMENT } from "../shared/systemBodyGates.js";
 import { gateForSpeciesId } from "../shared/spatialGates.js";
 import { unrecognisedConditionKeys } from "./conditionKeyAudit.js";
+import { gameOrderSpeciesName } from "../shared/codexLog.js";
 
 /**
  * Warnings raised while reading the species tree, kept so `/api/status` can show them.
@@ -140,6 +141,21 @@ export function findGenusJsonPath(genusDirPath: string, folderBaseName: string):
     return null;
   }
   return null;
+}
+
+/**
+ * The sample distance of the genus of the species named `label` ("Rubeum Bioluminescent Anemone", in the game's word
+ * order or the database's); 0 when no species carries that name. For genera the game misnames (exoOrganicTracker.ts).
+ */
+export function speciesGenusSampleDistanceM(
+  species: readonly { displayName: string; genusMinSampleDistanceM?: number | null }[],
+  label: string,
+): number {
+  const fold = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const want = fold(label);
+  if (!want) return 0;
+  const e = species.find((x) => fold(gameOrderSpeciesName(x.displayName)) === want || fold(x.displayName) === want);
+  return e?.genusMinSampleDistanceM ?? 0;
 }
 
 /** Read genus `meta.general.min_sample_distance_m` / `meta.minSampleDistanceM` from a genus JSON path. */

@@ -26,8 +26,7 @@ import {
   type OrganicSampleSessionHost,
 } from "./organicSampleSessionFile.js";
 import { getProjectRoot, getSpeciesDataDir } from "./paths.js";
-import { readGenusMinSampleDistanceM } from "./speciesTreeLoader.js";
-import { gameOrderSpeciesName } from "../shared/codexLog.js";
+import { readGenusMinSampleDistanceM, speciesGenusSampleDistanceM } from "./speciesTreeLoader.js";
 import { bodyKey } from "../shared/bodyKey.js";
 
 export type ExoOrganicAnchors = { latDeg: number; lonDeg: number; planetRadiusM: number };
@@ -183,7 +182,17 @@ function persistSoon(store: ExoOrganicJournalStore, projectRoot: string): void {
   schedulePersistOrganicSampleSession(store, projectRoot);
 }
 
-function resolveMinSampleDistanceM(projectRoot: string, db: SpeciesDatabase, genusLocalised: string): number {
+/**
+ * The run's sample distance, from its genus, else from its species: the game names some genera after one of their
+ * species ("Luteolum Anemone" for every Anemone, "Roseum Sinuous Tubers" for every Tubers), which no genus matches,
+ * and the run's ring was 0 m and not drawn (owner, 2026-11-04: "the BIG circle around a log/sample ... is still not
+ * visible").
+ */
+function resolveMinSampleDistanceM(projectRoot: string, db: SpeciesDatabase, genusLocalised: string, species: string): number {
+  return genusMinSampleDistanceM(projectRoot, db, genusLocalised) || sampleDistanceForSpeciesLabel(species, db);
+}
+
+function genusMinSampleDistanceM(projectRoot: string, db: SpeciesDatabase, genusLocalised: string): number {
   const g = genusLocalised.trim().toLowerCase();
   if (!g) return 0;
   const cached = genusMinDistCache.get(g);
@@ -216,20 +225,13 @@ export function setExoOrganicSpeciesDb(db: SpeciesDatabase): void {
   ringSpeciesDb = db;
   ringByLabel.clear();
 }
-export function sampleDistanceForSpeciesLabel(label: string): number {
+export function sampleDistanceForSpeciesLabel(label: string, db: SpeciesDatabase | null = ringSpeciesDb): number {
   const key = label.trim().toLowerCase();
   if (!key) return 0;
   const hit = ringByLabel.get(key);
   if (hit !== undefined) return hit;
-  const fold = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
-  const want = fold(label);
-  let m = 0;
-  for (const e of ringSpeciesDb?.species ?? []) {
-    if (fold(gameOrderSpeciesName(e.displayName)) === want || fold(e.displayName) === want) {
-      m = e.genusMinSampleDistanceM ?? 0;
-      break;
-    }
-  }
+  if (!db) return 0;
+  const m = speciesGenusSampleDistanceM(db.species, label);
   ringByLabel.set(key, m);
   return m;
 }
@@ -401,7 +403,7 @@ export function restoreOrganicSessionFromJournal(
     bodyNameNorm: normOrganicToken(
       typeof last.BodyName === "string" && last.BodyName.trim() ? last.BodyName.trim() : `Body ${bodyId}`,
     ),
-    minSampleDistanceM: resolveMinSampleDistanceM(projectRoot, db, genusLoc),
+    minSampleDistanceM: resolveMinSampleDistanceM(projectRoot, db, genusLoc, speciesDisplay),
     anchors,
     anchorSlots,
     recoveredSamples: counted.length - anchors.length,
@@ -464,7 +466,7 @@ export function ingestExoOrganicJournalLine(
               latDeg: retireHere.latDeg,
               lonDeg: retireHere.lonDeg,
               radiusM: retireHere.planetRadiusM,
-              withinM: Math.max(50, resolveMinSampleDistanceM(projectRoot, db, genusForRange)),
+              withinM: Math.max(50, resolveMinSampleDistanceM(projectRoot, db, genusForRange, speciesDisplayFromLine(line))),
             },
     );
     // The plant's real spot against where its scans put it, to tune the placing (scanLocateLog.ts).
@@ -546,7 +548,7 @@ export function ingestExoOrganicJournalLine(
     }
 
     const speciesDisplay = speciesDisplayFromLine(line);
-    const minM = resolveMinSampleDistanceM(projectRoot, db, genusLoc);
+    const minM = resolveMinSampleDistanceM(projectRoot, db, genusLoc, speciesDisplay);
 
     /** The first plant of a run: a fresh tracker anchored here, the map's mark, the foot session. */
     const startRun = (): void => {
