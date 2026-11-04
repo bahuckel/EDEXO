@@ -218,6 +218,7 @@ const keybinds = createKeybinds({
       if (browserTabs?.reloadShown?.()) return;
       void runtime?.clearNotices?.()?.catch?.(() => {});
     },
+    planetMarksClear: () => void runtime?.clearPlanetMarks?.()?.catch?.(() => {}),
     // Boxel scanning (server/boxelRun.ts): the server picks the system, the clipboard writer below copies it.
     boxelCopyNext: () => void runtime?.boxelCopyNext?.()?.catch?.(() => {}),
     boxelRun: () => {

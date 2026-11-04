@@ -73,6 +73,11 @@ body.aim-body {
   font-size: 12px;
   opacity: 0.6;
 }
+.aim text.aim-clear {
+  font-size: 16px;
+  font-weight: 700;
+  fill: var(--bad, #ff5a3c);
+}
 .aim-reader.is-ok {
   fill: var(--aim);
   opacity: 0.85;

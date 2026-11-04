@@ -291,6 +291,13 @@ function drawMinimapAt(svg: RadarSvg, mm: Minimap, hint: boolean): boolean {
       ')">NORTH</text>',
   );
   parts.push("</g>");
+  // The clear key's first press (owner, 2026-11-04): the second one, within 3 s, clears this planet's marks.
+  if (mm.clearArmed) {
+    const n = mm.clearArmed;
+    parts.push(
+      '<text class="minimap-clear" x="0" y="' + (MAP_R - 22) + '" text-anchor="middle">Press again: clear ' + n + " mark" + (n === 1 ? "" : "s") + "</text>",
+    );
+  }
   svg.querySelector(".mm-world")!.innerHTML = parts.join("");
   svg.querySelector(".mm-you")!.innerHTML =
     heading == null
@@ -349,6 +356,7 @@ function cloneMinimap(mm: Minimap): Minimap {
       distanceM: m.distanceM,
       ringM: m.ringM,
     })),
+    ...(mm.clearArmed ? { clearArmed: mm.clearArmed } : {}),
   };
 }
 
@@ -394,7 +402,7 @@ try {
  * snapshot push and hands over the same minimap each time, and only a change of position is a fix.
  */
 function minimapSignature(mm: Minimap): string {
-  let s = String(mm.headingDeg) + "|" + mm.radiusM + "|" + mm.minSampleDistanceM;
+  let s = String(mm.headingDeg) + "|" + mm.radiusM + "|" + mm.minSampleDistanceM + "|" + (mm.clearArmed ?? 0);
   for (const m of mm.marks) s += "|" + m.kind + ":" + m.label + ":" + m.northM + "," + m.eastM;
   return s;
 }

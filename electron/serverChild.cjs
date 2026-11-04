@@ -116,6 +116,7 @@ function startServerChild(o) {
     // Fire and forget, as before (main never used their answers except to log).
     uiCommand: (cmd) => void call("uiCommand", cmd).catch(() => {}),
     clearNotices: () => call("clearNotices"),
+    clearPlanetMarks: () => call("clearPlanetMarks"),
     boxelCopyNext: () => call("boxelCopyNext"),
     boxelStep: (dir) => call("boxelStep", dir),
     boxelRunToggle: () => call("boxelRunToggle"),

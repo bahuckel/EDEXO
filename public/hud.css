@@ -915,7 +915,8 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
 }
 /* SVG text takes no text-shadow: a dark stroke behind the fill does the same. */
 .minimap-far-label,
-.minimap-north {
+.minimap-north,
+.minimap-clear {
   paint-order: stroke;
   stroke: rgba(0, 0, 0, 0.85);
   stroke-width: 1.6px;
@@ -933,6 +934,12 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
   font-family: inherit;
   font-weight: 700;
   letter-spacing: 0.16em;
+}
+.minimap-clear {
+  fill: var(--bad);
+  font-size: 9px;
+  font-family: inherit;
+  font-weight: 700;
 }
 
 /* ---- next jump: system name with the arrival star's scoop verdict as a triangle -------------------- */

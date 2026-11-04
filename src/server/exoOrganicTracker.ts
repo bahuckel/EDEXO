@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { FootTravelFix } from "./footTravelStatus.js";
-import { withCodexScan, withoutCodexMarks, type SurfaceMark } from "./surfaceMarksFile.js";
+import { keepClearedMarks, withCodexScan, withoutCodexMarks, type SurfaceMark } from "./surfaceMarksFile.js";
 import { logScanLocate } from "./scanLocateLog.js";
 import { eyeAboveM, learnEyeHeight, noteShipLine } from "./eyeHeight.js";
 import { elevationFromGravity } from "../shared/journalPhysics.js";
@@ -849,13 +849,7 @@ export function buildExoMinimapDto(
     The body key is the fallback for the case where the live fix has no name, which happens on some
     surfaces; a key from the session or the last landing is better than refusing to draw.
   */
-  const onBodyNorm = normStatusBodyName(fix.bodyName);
-  const belongsHere = (m: { bodyKey: string; bodyNameNorm?: string }): boolean => {
-    // A mark from an older store may have no name; its key is then the only thing to go on, and
-    // refusing to draw it would lose a ship that is genuinely parked here.
-    if (onBodyNorm && m.bodyNameNorm) return m.bodyNameNorm === onBodyNorm;
-    return m.bodyKey === footKey;
-  };
+  const belongsHere = belongsHereFor(fix, footKey);
 
   /*
     The species the commander is sampling right now, if the run is on this body.
@@ -925,7 +919,59 @@ export function buildExoMinimapDto(
     pitchDeg: fix.pitchDeg ?? null,
     eyeAboveM: eyeAboveM(),
     ...(fix.pitchFromHud ? { pitchFromHud: true, rollDeg: fix.rollDeg ?? null } : {}),
+    ...(clearArm && clearArm.untilMs > Date.now() ? { clearArmed: clearArm.count } : {}),
   };
+}
+
+/** Whether a mark is on the body `Status.json` names (see buildExoMinimapDto), else the one with key `footKey`. */
+function belongsHereFor(fix: FootTravelFix, footKey: string): (m: { bodyKey: string; bodyNameNorm?: string }) => boolean {
+  const onBodyNorm = normStatusBodyName(fix.bodyName);
+  // A mark from an older store may have no name; its key is then the only thing to go on, and
+  // refusing to draw it would lose a ship that is genuinely parked here.
+  return (m) => (onBodyNorm && m.bodyNameNorm ? m.bodyNameNorm === onBodyNorm : m.bodyKey === footKey);
+}
+
+/** How long the clear key waits for its second press. */
+export const CLEAR_ARM_MS = 3000;
+/** The clear key's first press: on which body, until when, and how many marks would go. */
+let clearArm: { untilMs: number; count: number; body: string } | null = null;
+
+/**
+ * The clear key (owner, 2026-11-04: "a key bind to do the delete of current planet scans"): the first press arms it
+ * and the radar asks for a second; a second press on the same body within {@link CLEAR_ARM_MS} moves this planet's
+ * sample and composition-scan marks to the file's `cleared` list (surfaceMarksFile.ts keepClearedMarks), off the radar, the screen marker and everything that
+ * reads the marks ("keep in memory file but just remove them from the screen and the calculations"). The ship and the
+ * SRV stay. Null when there is nothing here to clear.
+ */
+export function pressClearMarksHere(
+  store: ExoOrganicOverlayHost,
+  bodyKeyOnFoot: string | null,
+  nowMs: number,
+  /** Sends the radar again: now, and when the wait for the second press runs out (its "press again" goes). */
+  changed?: () => void,
+): { armed: number } | { cleared: number } | null {
+  const fix = store.exoOrganicLastFix;
+  if (!fix) return null;
+  const here = belongsHereFor(fix, bodyKeyOnFoot ?? "\u0000near");
+  const body = normStatusBodyName(fix.bodyName) ?? bodyKeyOnFoot ?? "";
+  const gone = [...store.surfaceSampleMarks.filter(here), ...(store.surfaceCodexMarks ?? []).filter(here)];
+  if (!clearArm || clearArm.untilMs <= nowMs || clearArm.body !== body) {
+    clearArm = gone.length ? { untilMs: nowMs + CLEAR_ARM_MS, count: gone.length, body } : null;
+    if (!gone.length) return null;
+    if (changed) {
+      changed();
+      setTimeout(changed, CLEAR_ARM_MS + 50).unref?.();
+    }
+    return { armed: gone.length };
+  }
+  clearArm = null;
+  if (!gone.length) return null;
+  keepClearedMarks(gone, new Date(nowMs).toISOString());
+  store.surfaceSampleMarks = store.surfaceSampleMarks.filter((m) => !here(m));
+  if (store.surfaceCodexMarks) store.surfaceCodexMarks = store.surfaceCodexMarks.filter((m) => !here(m));
+  store.persistSurfaceMarks?.();
+  changed?.();
+  return { cleared: gone.length };
 }
 
 export function buildExoOrganicOverlayDto(

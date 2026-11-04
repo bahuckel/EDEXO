@@ -94,6 +94,7 @@ import {
   buildExoMinimapDto,
   buildExoOrganicOverlayDto,
   ingestExoOrganicJournalLine,
+  pressClearMarksHere,
   restoreOrganicSessionFromJournal,
 } from "./exoOrganicTracker.js";
 import { perfTime, startPerfReporter } from "./perf.js";
@@ -192,6 +193,8 @@ export type EdexoRuntime = {
   uiCommand: (cmd: UiCommand) => void;
   /** The Clear notices key (owner, 2026-10-05): every notice marked read, then the read ones cleared. */
   clearNotices: () => number;
+  /** The clear key (exoOrganicTracker.ts pressClearMarksHere): press twice to clear this planet's marks. */
+  clearPlanetMarks: () => { armed: number } | { cleared: number } | null;
   /**
    * Boxel scanning keys (server/boxelRun.ts): copy the next system to fly, step to the previous / next
    * one still to fly, start or finish a run. Each returns the name copied (or the run's state).
@@ -1439,6 +1442,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       if (n) push();
       return n;
     },
+    clearPlanetMarks: () =>
+      pressClearMarksHere(store, store.exoOrganicTracker?.bodyKey ?? store.overlayTouchdownBodyKey, Date.now(), push),
     // F6: the neutron route's next stop while one is flown, else the boxel's next system.
     boxelCopyNext: () => (neutronLive.active() ? neutronLive.copyNext() : boxelRun.copyNext()),
     boxelStep: (dir) => boxelRun.step(dir),

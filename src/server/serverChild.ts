@@ -116,6 +116,7 @@ export function isServerChild(): boolean {
 const CALLS = new Set([
   "uiCommand",
   "clearNotices",
+  "clearPlanetMarks",
   "boxelCopyNext",
   "boxelStep",
   "boxelRunToggle",

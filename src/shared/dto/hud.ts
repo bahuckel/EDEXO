@@ -83,6 +83,8 @@ export interface ExoMinimapDTO {
   eyeAboveM?: number;
   /** The HUD's roll, degrees (the pitch boxes' tilt, positive with the right one lower); null unless read. */
   rollDeg?: number | null;
+  /** The clear key was pressed once (server/exoOrganicTracker.ts pressClearMarksHere): this many marks go on a second. */
+  clearArmed?: number;
 }
 
 export interface ExoMinimapMarkDTO {

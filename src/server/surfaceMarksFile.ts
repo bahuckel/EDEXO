@@ -75,6 +75,8 @@ export interface SurfaceMark {
   headingDeg?: number;
   /** The body's radius, metres, kept so the scans can be grouped into plants again when the file is read. */
   radiusM?: number;
+  /** When the commander cleared it off the radar (the {@link SurfaceMarksFile.cleared} list only). */
+  clearedAtIso?: string;
 }
 
 export interface SurfaceMarksFile {
@@ -92,6 +94,11 @@ export interface SurfaceMarksFile {
    * `SRV: true` has no position, so it is `Status.json`'s at that moment. Optional: older files have none.
    */
   srv?: SurfaceMark | null;
+  /**
+   * Marks the commander cleared off a planet with the key bind (owner, 2026-11-04: "keep in memory file but just remove
+   * them from the screen and the calculations"): kept here, read by nothing. Optional: older files have none.
+   */
+  cleared?: SurfaceMark[];
 }
 
 /** Bodies' worth of plants before the oldest are dropped. Generous; this file is tiny. */
@@ -305,11 +312,45 @@ export function flushSurfaceMarks(): void {
   if (d) saveSurfaceMarks(d);
 }
 
+/**
+ * The cleared marks, per file: read from it the first time, written back with every save. Nothing else reads them, so
+ * they live here rather than in the store (the radar, the screen marker and every calculation never see them).
+ */
+const clearedByFile = new Map<string, SurfaceMark[]>();
+
+function clearedIn(file: string): SurfaceMark[] {
+  let list = clearedByFile.get(file);
+  if (!list) {
+    list = [];
+    try {
+      const parsed = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as Partial<SurfaceMarksFile>) : null;
+      if (Array.isArray(parsed?.cleared)) list = parsed.cleared.filter(isMark).map(cleanScans);
+    } catch {
+      /* a damaged file has none */
+    }
+    clearedByFile.set(file, list);
+  }
+  return list;
+}
+
+/** Keep marks the clear key took off a planet (exoOrganicTracker.ts pressClearMarksHere); written with the next save. */
+export function keepClearedMarks(marks: readonly SurfaceMark[], atIso: string): void {
+  const file = resolveSurfaceMarksPath();
+  const next = [...clearedIn(file), ...marks.map((m) => ({ ...m, clearedAtIso: atIso }))];
+  clearedByFile.set(file, next.slice(-2 * MAX_SURFACE_MARKS));
+}
+
+/** The cleared marks of the commander's file (tests, and anyone checking what the key took). */
+export function clearedSurfaceMarks(): SurfaceMark[] {
+  return clearedIn(resolveSurfaceMarksPath());
+}
+
 export function saveSurfaceMarks(data: SurfaceMarksFile): void {
   const file = resolveSurfaceMarksPath();
   try {
+    const cleared = clearedIn(file);
     mkdirSync(path.dirname(file), { recursive: true });
-    writeFileAtomic(file, `${JSON.stringify(data, null, 1)}\n`, "utf8");
+    writeFileAtomic(file, `${JSON.stringify(cleared.length ? { ...data, cleared } : data, null, 1)}\n`, "utf8");
   } catch {
     /* A radar that cannot remember is still a radar; never fail a journal tick over it. */
   }

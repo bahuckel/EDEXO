@@ -312,6 +312,11 @@ function Aim() {
         <Marker key={i} s={s} open={s === open} />
       ))}
       <ReaderLine s={reader} view={view} />
+      {map?.clearArmed ? (
+        <text className="aim-clear" x={view.width / 2} y={view.height * 0.66 + 24} textAnchor="middle">
+          {`Press again to clear ${map.clearArmed} mark${map.clearArmed === 1 ? "" : "s"} on this planet`}
+        </text>
+      ) : null}
     </svg>
   );
 }
