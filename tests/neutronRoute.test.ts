@@ -4,7 +4,7 @@
  * where no neutron star helps, waypoints in order or optimised, and the FSD's wear from the journal.
  */
 import { describe, expect, it } from "vitest";
-import { optimiseOrder, planLeg, planNeutronRoute, rangeAt } from "../src/server/neutronRoute.js";
+import { optimiseOrder, planLeg, planNeutronRoute, rangeAt, replayOnLaw } from "../src/server/neutronRoute.js";
 import type { NeutronStar } from "../src/server/neutronIndex.js";
 import {
   DEFAULT_WEAR,
@@ -430,5 +430,24 @@ describe("FSD wear from the journal", () => {
     boost(st, 1);
     expect(hydrateFsdWear(structuredClone(st))).toEqual(st);
     expect(hydrateFsdWear({ shipId: 7, health: 0.9, boostsSince: 1 })).toEqual(newFsdWear());
+  });
+});
+
+describe("a leg found on the pessimistic model, replayed on the drive's law", () => {
+  // 128 t in 16 units of 8 t; a plain jump costs its most (6.8 t), a supercharge by the law only 2 t.
+  const law = { tankT: 128, perJumpT: 6.8, fuelT: () => 2, rangeLy: () => 60 };
+  const ship = { rangeLy: 60, jumpsPerTank: 16, jumpsNow: 16, boost: 4, law } as Parameters<typeof replayOnLaw>[1];
+  const node = (x: number, jumps: number, boosted: number, fuel: number) =>
+    ({ key: String(x), star: null, pos: { x, y: 0, z: 0 }, g: 0, f: 0, fuel, arrive: fuel, prev: null, jumps, boosted, refuel: false, onWay: false });
+
+  it("recounts each supercharge's fuel and hands the next leg the replayed tank (code review 2026-11-02)", () => {
+    const perU = 6.8 / 8;
+    // Pessimistic: every hop at the most per jump.
+    const nodes = [node(0, 0, 0, 16), node(200, 1, 1, 16 - perU), node(400, 1, 1, 16 - 2 * perU)] as Parameters<typeof replayOnLaw>[0];
+    const fuel = replayOnLaw(nodes, ship);
+    // Two supercharges at 2 t (0.25 units) each, not 0.85.
+    expect(fuel).toBeCloseTo(16 - 0.5, 6);
+    expect(fuel).toBe(nodes[2]!.fuel);
+    expect(fuel).toBeGreaterThan(16 - 2 * perU);
   });
 });

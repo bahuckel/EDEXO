@@ -323,7 +323,7 @@ function splitWide(mask: Uint8Array, w: number, c: Rect, dh: number): Rect[] {
   return out.filter((p) => p.x1 - p.x0 + 1 >= dh * 0.3);
 }
 
-/** A minus left of the digits: yellow across the middle rows of the gap, none in its top and bottom rows. */
+/** A minus left of the digits: yellow across the middle rows of the gap, far less in its top and bottom rows. */
 function hasMinus(rgba: Rgba, w: number, left: number, top: number, bottom: number, ink = yellowness): boolean {
   const dh = bottom - top + 1;
   const mid = (top + bottom) / 2;
@@ -343,7 +343,9 @@ function hasMinus(rgba: Rgba, w: number, left: number, top: number, bottom: numb
       const i = (y * w + x) * 4;
       edge = Math.max(edge, ink(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!));
     }
-    if (midY > 0.45 && edge < 0.35) bar++;
+    // Against the bar's own ink, not a fixed edge: bright sand behind a gear-down box inks 0.33-0.44 everywhere
+    // (2026-11-06, Screenshot_0325: -19 read as 19).
+    if (midY > 0.45 && midY - edge > 0.3) bar++;
   }
   return cols > 0 && bar / cols >= 0.4;
 }

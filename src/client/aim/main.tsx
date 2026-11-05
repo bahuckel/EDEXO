@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { ExoMinimapDTO } from "@shared/types";
 import { glidedMap, nextGlide, type GlideState } from "./glide";
-import { openMark, projectMarks, projectRings, viewOf, type ScreenMark, type ScreenRing, type View } from "./project";
+import { openMark, projectMarks, viewOf, type ScreenMark, type View } from "./project";
 import { startPitchCapture, type PitchCapture, type PitchRead } from "./pitchCapture";
 import { useDistanceReader } from "./useDistanceReader";
 import "./aim.css";
@@ -207,17 +207,6 @@ function useView(): View {
   return viewOf(size.w, size.h, fov);
 }
 
-/** A sample's ring on the ground: inside it the next sample of that species is too close. */
-function Ring({ r }: { r: ScreenRing }) {
-  return (
-    <g className={"aim-ground-ring" + (r.mark.active ? " is-active" : "")}>
-      {r.runs.map((run, i) => (
-        <polyline key={i} points={run.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ")} />
-      ))}
-    </g>
-  );
-}
-
 function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
   const m = s.mark;
   if (s.edge) {
@@ -272,7 +261,7 @@ function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
 /**
  * `?demo`: a fixed frame to see the marker without the game (owner at work): 120 m up, nose 20 deg down, one plant
  * where the nose points (open), the next to sample to the right, one scanned-from ahead-left, one behind, and a sample
- * taken with its ring.
+ * taken.
  */
 const DEMO: ExoMinimapDTO | null = new URLSearchParams(location.search).has("demo")
   ? {
@@ -317,15 +306,11 @@ function Aim() {
   // Where the nose points: the HUD's centre the reader found (it sits lower than the screen's centre nose up).
   const origin = own ? { x: own.centre.fx * view.width, y: own.centre.fy * view.height } : null;
   const marks = projectMarks(shown, view, origin);
-  const rings = projectRings(shown, view, origin);
   const open = openMark(marks, view, origin);
   // The reader's line shows from the first frame near a planet, before any plant is scanned.
   if (!marks.length && reader.kind === "off") return null;
   return (
     <svg className={"aim" + (own && !fresh ? " is-held" : "")} width={view.width} height={view.height} aria-hidden="true">
-      {rings.map((r, i) => (
-        <Ring key={i} r={r} />
-      ))}
       {marks.map((s, i) => (
         <Marker key={i} s={s} open={s === open} />
       ))}

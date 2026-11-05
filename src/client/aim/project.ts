@@ -111,44 +111,6 @@ export function projectMarks(map: ExoMinimapDTO | null | undefined, view: View, 
   return out;
 }
 
-/** A sample's ring on the ground, as the screen sees it: runs of points (a run breaks where the ring leaves the view). */
-export interface ScreenRing {
-  mark: Mark;
-  runs: [number, number][][];
-}
-
-const RING_POINTS = 72;
-
-/**
- * The samples' rings (their genus's sample distance) drawn on the ground (owner, 2026-11-04: the "bio diversity"
- * circle was not on the screen). Needs the altitude: on foot there is no look-down to place the ground by.
- */
-export function projectRings(map: ExoMinimapDTO | null | undefined, view: View, origin?: { x: number; y: number } | null): ScreenRing[] {
-  if (!map || map.headingDeg == null) return [];
-  const { place, alt } = projector(map, map.headingDeg, view, origin);
-  if (alt == null) return [];
-  const out: ScreenRing[] = [];
-  for (const m of map.marks) {
-    const r = m.ringM ?? 0;
-    if (m.kind !== "sample" || !(r > 0)) continue;
-    const runs: [number, number][][] = [];
-    let run: [number, number][] = [];
-    for (let i = 0; i <= RING_POINTS; i++) {
-      const a = (i / RING_POINTS) * 2 * Math.PI;
-      const e = m.eastM + r * Math.sin(a);
-      const n = m.northM + r * Math.cos(a);
-      const p = place(e, n, Math.hypot(e, n));
-      if (p.off) {
-        if (run.length > 1) runs.push(run);
-        run = [];
-      } else run.push([p.x, p.y]);
-    }
-    if (run.length > 1) runs.push(run);
-    if (runs.length) out.push({ mark: m, runs });
-  }
-  return out;
-}
-
 /** The mark that opens: the one nearest the screen's centre, within reach of it (across only on foot). */
 export function openMark(marks: readonly ScreenMark[], view: View, origin?: { x: number; y: number } | null): ScreenMark | null {
   const ox = origin?.x ?? view.width / 2;

@@ -242,6 +242,15 @@ describe("HUD tracker", () => {
     expect(document.querySelector('[data-f="status"]')?.textContent).toBe("On foot");
   });
 
+  it("folds in supercruise with a run in progress (no radar there), the head still naming the run", () => {
+    const run = { visible: true, phase: "tracking", sampleCount: 1, nearestSampleMeetsMin: true, minSampleDistanceM: 500, speciesDisplay: "Bacterium Alcyoneum" };
+    HUD.render({ exoOrganicOverlay: run, exoMinimap: null });
+    expect(document.querySelector(".trk")?.className).toContain("trk--away");
+    expect(document.querySelector('[data-f="status"]')?.textContent).toMatch(/1\s*\/\s*3/);
+    HUD.render({ exoOrganicOverlay: run, exoMinimap: { headingDeg: 0, radiusM: 500, minSampleDistanceM: 500, marks: [] } });
+    expect(document.querySelector(".trk")?.className).not.toContain("trk--away");
+  });
+
   /** Owner, 2026-10-02: the Log names the species, so the payout shows from the first scan. */
   it("shows the payout estimate from the first scan, with the walk guidance still under it", () => {
     const run = (sampleCount: number) => {

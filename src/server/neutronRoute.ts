@@ -384,8 +384,9 @@ type Leg = { nodes: Node[]; fuel: number; g: number };
 /**
  * The fuel along a route found on the pessimistic model, recounted on the drive's law: what each hop really burns
  * and what is left, as the route being flown checks it (NeutronHop `fuelArrive`). The hops and their jumps stay.
+ * Returns the fuel leaving the last node: the next leg starts from it (code review 2026-11-02).
  */
-function replayOnLaw(nodes: Node[], ship: NeutronShip): void {
+export function replayOnLaw(nodes: Node[], ship: NeutronShip): number {
   const { tank, perU, rangeWith, burn } = tankModel(ship);
   for (let k = 1; k < nodes.length; k++) {
     const prev = nodes[k - 1]!;
@@ -397,6 +398,7 @@ function replayOnLaw(nodes: Node[], ship: NeutronShip): void {
     n.arrive = arrive;
     n.fuel = n.refuel ? (n.half ? Math.max(arrive, Math.ceil(tank / 2)) : tank) : arrive;
   }
+  return nodes[nodes.length - 1]!.fuel;
 }
 
 /** One leg, from a point (a neutron star or not) to a point, with `fuel` jumps in the tank. Null when no safe way. */
@@ -445,11 +447,8 @@ export async function planLeg(
       best = await searchLeg(index, from, to, safe, fuel, pass.weight, steps, lists);
       if (best) break;
     }
-    if (best) {
-      replayOnLaw(best.nodes, ship);
-      // The next leg starts from the replayed tank, not the pessimistic one (code review 2026-11-02).
-      best = { ...best, fuel: best.nodes[best.nodes.length - 1]!.fuel };
-    }
+    // The next leg starts from the replayed tank, not the pessimistic one.
+    if (best) best = { ...best, fuel: replayOnLaw(best.nodes, ship) };
     // Nothing even so: the greedier exact pass, as before.
     for (const pass of best ? [] : PASSES.slice(1)) {
       best = await searchLeg(index, from, to, first, fuel, pass.weight, pass.expansions, lists);

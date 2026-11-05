@@ -361,16 +361,49 @@ export function stellarIrradianceFor(
 
 type StarLight = { id: number; type: string; flux: number };
 
+/*
+  Once per system scan index (code review D2): systemExplorationScanIndex builds a new Map whenever the system's scans
+  change, so the orbit tree and each body's starlight are kept with that Map. The size guards a caller that grows its
+  own Map between calls. Per body the light was measured three times (colour star, stars by light, irradiance), each
+  with a new tree.
+*/
+type ScanIndex = Map<number, ExplorationScanRecord>;
+const starTrees = new WeakMap<ScanIndex, { size: number; tree: StarTree }>();
+const starLights = new WeakMap<ScanIndex, { size: number; byRec: WeakMap<ExplorationScanRecord, Map<LuminosityReading, StarLight[] | undefined>> }>();
+
+function starTreeOf(byId: ScanIndex): StarTree {
+  const kept = starTrees.get(byId);
+  if (kept && kept.size === byId.size) return kept.tree;
+  const tree = new StarTree(byId);
+  starTrees.set(byId, { size: byId.size, tree });
+  return tree;
+}
+
+/** {@link measureStarLight}, kept per system scan index and body. The list is shared: read it, never change it. */
+function starLightOn(rec: ExplorationScanRecord, byId: ScanIndex, reading: LuminosityReading = "brighter"): StarLight[] | undefined {
+  let kept = starLights.get(byId);
+  if (!kept || kept.size !== byId.size) {
+    kept = { size: byId.size, byRec: new WeakMap() };
+    starLights.set(byId, kept);
+  }
+  let byReading = kept.byRec.get(rec);
+  if (!byReading) kept.byRec.set(rec, (byReading = new Map()));
+  if (byReading.has(reading)) return byReading.get(reading);
+  const lit = measureStarLight(rec, byId, reading);
+  byReading.set(reading, lit);
+  return lit;
+}
+
 /**
  * Each measurable star's light on the body, luminosity (suns) / distance² (ls). Undefined when the
  * star (or star group) the body orbits, or the arrival star, cannot be measured.
  */
-function starLightOn(
+function measureStarLight(
   rec: ExplorationScanRecord,
-  byId: Map<number, ExplorationScanRecord>,
+  byId: ScanIndex,
   reading: LuminosityReading = "brighter",
 ): StarLight[] | undefined {
-  const tree = new StarTree(byId);
+  const tree = starTreeOf(byId);
   const chain = (Array.isArray(rec.parents) ? rec.parents : []).map((e) => parseJournalParentEntry(e));
   // What the body orbits: the nearest star, else the nearest barycentre that holds stars.
   let anchorIndex = chain.findIndex((e) => e?.kind === "Star");

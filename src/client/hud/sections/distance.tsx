@@ -64,7 +64,10 @@ function Distance({ d, waiting = false }: { d: HudSnapshot; waiting?: boolean })
   const flownOverShows = !!map?.marks.some((m) => m.kind === "codex") || pref("edexoHudRadarAlways", "0") === "1";
   const onSurface = !d.journalBoot && !!map?.marks && (!map.near || flownOverShows);
   // Before the first snapshot the block stands open, as the page's markup did: the first frame folds it if it must.
-  const showTracker = waiting || onSurface || live;
+  // A run in progress opens it only where there is a radar (owner, 2026-11-06: "radar not minimized" in supercruise at
+  // 1 / 3: the game keeps the run until a sample elsewhere, Status.json has no position there); the head still says
+  // "Sampling 1 / 3".
+  const showTracker = waiting || onSurface || (live && !!map);
   useLayoutEffect(() => {
     // The cue fires on the edge, once per frame of the run, as the tracker's render always fed it.
     cueFromOverlay(eo);
@@ -87,7 +90,8 @@ function Distance({ d, waiting = false }: { d: HudSnapshot; waiting?: boolean })
   let cele: string | null = null;
   let timer = "—";
   if (waiting || !showTracker) {
-    status = d.journalBoot ? "Journal loading" : "Standby";
+    // Folded with a run in progress (off the planet): the head still names it.
+    status = d.journalBoot ? "Journal loading" : live && !waiting ? "Sampling " + Math.min(eo!.sampleCount || 0, 3) + " / 3" : "Standby";
     if (waiting) {
       noteExplain = false;
       pay = "—";

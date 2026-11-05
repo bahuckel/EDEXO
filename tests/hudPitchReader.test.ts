@@ -67,6 +67,19 @@ describe("HUD pitch reader", () => {
     expect(readHudPitch(f, W, H, GLYPHS)).toMatchObject({ boxDeg: -20, pitchDeg: -20.5, boxes: 2, pxPerDeg: null });
   });
 
+  it("tells the minus on bright ground that inks a little everywhere (2026-11-06: -19 over sand read as 19)", () => {
+    const f = frame();
+    for (let i = 0; i < W * H; i++) f.set([200, 180, 52, 255], i * 4); // ink 0.4, the sand behind his gear-down box
+    draw(f, "-19", 840, 450);
+    draw(f, "-19", 1120, 450);
+    expect(readHudPitch(f, W, H, GLYPHS)?.boxDeg).toBe(-19);
+    const g = frame();
+    for (let i = 0; i < W * H; i++) g.set([200, 180, 52, 255], i * 4);
+    draw(g, "19", 858, 450);
+    draw(g, "19", 1120, 450);
+    expect(readHudPitch(g, W, H, GLYPHS)?.boxDeg).toBe(19);
+  });
+
   it("reads a nose-up pitch without a minus, and the roll from the boxes' tilt", () => {
     const f = frame();
     draw(f, "89", 850, 430);

@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { openMark, projectMarks, projectRings, viewOf, DEFAULT_VFOV_DEG } from "../src/client/aim/project.js";
+import { openMark, projectMarks, viewOf, DEFAULT_VFOV_DEG } from "../src/client/aim/project.js";
 import { glidedMap, nextGlide } from "../src/client/aim/glide.js";
 import { readEliteView } from "../src/server/eliteDisplayMode.js";
 import type { ExoMinimapDTO } from "../src/shared/types.js";
@@ -87,25 +87,13 @@ describe("screen marker projection", () => {
   });
 });
 
-describe("samples' rings on the ground", () => {
-  it("draws a sample's ring around its mark, lower on the screen at its near side", () => {
+describe("samples on the screen", () => {
+  it("marks a sample where it is, and draws no ring on the ground (owner 2026-11-06: it ran across the screen)", async () => {
     const m = map([codex(0, 200, { kind: "sample", ringM: 50 })], { altitudeM: 30, pitchDeg: -10 });
-    const [ring] = projectRings(m, view);
     const [mark] = projectMarks(m, view);
-    const pts = ring!.runs.flat();
-    expect(pts.length).toBeGreaterThan(60);
-    const ys = pts.map((p) => p[1]);
-    // The near side (150 m) below the mark, the far side (250 m) above it; across, around its x.
-    expect(Math.max(...ys)).toBeGreaterThan(mark!.y);
-    expect(Math.min(...ys)).toBeLessThan(mark!.y);
-    const xs = pts.map((p) => p[0]);
-    expect(Math.min(...xs)).toBeLessThan(mark!.x);
-    expect(Math.max(...xs)).toBeGreaterThan(mark!.x);
-  });
-
-  it("draws no ring on foot (no altitude) or for a mark without a distance", () => {
-    expect(projectRings(map([codex(0, 200, { kind: "sample", ringM: 50 })]), view)).toHaveLength(0);
-    expect(projectRings(map([codex(0, 200, { kind: "sample" })], { altitudeM: 30, pitchDeg: -10 }), view)).toHaveLength(0);
+    expect(mark!.mark.kind).toBe("sample");
+    expect(mark!.edge).toBeFalsy();
+    expect(Object.keys(await import("../src/client/aim/project.js"))).not.toContain("projectRings");
   });
 });
 
