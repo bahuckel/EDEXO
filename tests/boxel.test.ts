@@ -2,7 +2,7 @@
  * Boxels (src/shared/boxel.ts, src/server/boxel.ts; guild tester report, 2026-09-30).
  */
 import { describe, expect, it } from "vitest";
-import { boxelIndexOf, parseBoxel } from "../src/shared/boxel.js";
+import { boxelDone, boxelIndexOf, parseBoxel } from "../src/shared/boxel.js";
 import { boxelSystems } from "../src/server/boxel.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
@@ -96,22 +96,25 @@ describe("saved boxels (owner, 2026-09-30)", () => {
         end: 9,
         total: 10,
         flown: 3,
-        next: "Eol Prou AB-C d1-1",
+        // Last in -9, the end: the one after it first while the end is not checked (as the boxel run copies).
+        next: "Eol Prou AB-C d1-10",
       }),
     ]);
     // The same boxel again moves its end instead of adding a second one.
     expect(s.add("Eol Prou AB-C d1-9")!.id).toBe(id);
     expect(s.list(visited)[0]).toMatchObject({ end: 9, flown: 3 });
-    // All flown: no next.
+    // All flown: done, and next is the system after the end until the end is checked (as the boxel run copies it).
     const all = Array.from({ length: 10 }, (_, n) => `Eol Prou AB-C d1-${n}`);
-    expect(s.list(all)[0]).toMatchObject({ flown: 10, next: null });
+    expect(s.list(all)[0]).toMatchObject({ flown: 10, next: "Eol Prou AB-C d1-10" });
+    expect(boxelDone(s.list(all)[0]!)).toBe(true);
+    expect(boxelDone(s.list(visited)[0]!)).toBe(false);
     // Skip: counts as done without being flown; next moves past it.
     expect(s.setSkipped(id, 1, true)).toBe(true);
-    expect(s.list(visited)[0]).toMatchObject({ skipped: [1], next: "Eol Prou AB-C d1-3" });
+    expect(s.list(visited, undefined, "Eol Prou AB-C d1-0")[0]).toMatchObject({ skipped: [1], next: "Eol Prou AB-C d1-3" });
     expect(s.setSkipped(id, 42, true)).toBe(false);
     // Cut from -7: ends at -6 — but the flown -9 keeps the boxel listed to -9 (owner, 2026-10-05).
     expect(s.cutFrom(id, 7)).toBe(true);
-    expect(s.list(visited)[0]).toMatchObject({ end: 9, lastSystem: "Eol Prou AB-C d1-6", flownBeyond: [] });
+    expect(s.list(visited)[0]).toMatchObject({ end: 9, lastSystem: "Eol Prou AB-C d1-6" });
     const unflownPast = visited.filter((v) => !v.endsWith("d1-9"));
     expect(s.list(unflownPast)[0]).toMatchObject({ end: 6 });
     expect(s.cutFrom(id, 0)).toBe(false);
@@ -157,7 +160,7 @@ describe("a large core boxel (ticket T-MVS9JTOP-A782)", () => {
     const { createSavedBoxels } = await import("../src/server/savedBoxels.js");
     const s = createSavedBoxels({ filePath: null });
     s.add("Synuefe XO-P c22-1800");
-    expect(s.list(["Synuefe XO-P c22-17719"])[0]).toMatchObject({ end: 17719, total: 17720, flownBeyond: [] });
+    expect(s.list(["Synuefe XO-P c22-17719"])[0]).toMatchObject({ end: 17719, total: 17720 });
     // What the Extend button sends: the boxel ends there now.
     s.add("Synuefe XO-P c22-12000");
     expect(s.list([])[0]).toMatchObject({ end: 12000, lastSystem: "Synuefe XO-P c22-12000", probe: "Synuefe XO-P c22-12001" });
@@ -172,7 +175,15 @@ describe("a saved boxel follows the jumps (owner, 2026-10-05)", () => {
     const s = createSavedBoxels({ filePath: null });
     s.add("Assairts EL-P e5-9");
     const visited = ["Assairts EL-P e5-9", "Assairts EL-P e5-16"];
-    expect(s.list(visited)[0]).toMatchObject({ end: 16, total: 17, flown: 2, next: "Assairts EL-P e5-0" });
+    // Next after -16, the end: the system after it (the end is not checked), then from -0 — as the boxel run copies.
+    expect(s.list(visited)[0]).toMatchObject({ end: 16, total: 17, flown: 2, next: "Assairts EL-P e5-17" });
+    const { createBoxelRun } = await import("../src/server/boxelRun.js");
+    const run = createBoxelRun({ saved: s, visited: () => visited, sightings: () => [], currentSystem: () => "Assairts EL-P e5-16", deliver: () => {} });
+    expect(run.next()).toBe(s.list(visited, undefined, "Assairts EL-P e5-16")[0]!.next);
+    s.confirmEnd(s.list([])[0]!.id, 16);
+    expect(s.list(visited, undefined, "Assairts EL-P e5-16")[0]).toMatchObject({ next: "Assairts EL-P e5-0" });
+    expect(run.next()).toBe("Assairts EL-P e5-0");
+    s.add("Assairts EL-P e5-9");
     expect(s.list(["Assairts EL-P e5-9"])[0]).toMatchObject({ end: 9 });
   });
 
@@ -186,7 +197,6 @@ describe("a saved boxel follows the jumps (owner, 2026-10-05)", () => {
       total: 22,
       flown: 1,
       routed: 1,
-      flownBeyond: [],
     });
   });
 });

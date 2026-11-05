@@ -81,6 +81,30 @@ const RARITY: Record<string, [string, string, string]> = {
   common: ["C", "#9aa0a8", "Common"],
 };
 
+export type CandidateOpts = { activeTop: boolean; scanned: "place" | "top" | "hidden"; max: number };
+/** The most rows the setting allows; 9 by default (the HUD's other lists). */
+export const CAND_MAX_ROWS = 30;
+
+export function candidateOpts(): CandidateOpts {
+  const s = pref("edexoHudCandScanned", "place");
+  const max = Math.round(Number(pref("edexoHudCandMax", String(HUD_LIST_ROWS))));
+  return {
+    activeTop: pref("edexoHudCandActiveTop", "1") !== "0",
+    scanned: s === "top" || s === "hidden" ? s : "place",
+    max: Number.isFinite(max) ? Math.max(1, Math.min(CAND_MAX_ROWS, max)) : HUD_LIST_ROWS,
+  };
+}
+
+/** The rows in the order shown: the species being sampled, then the scanned ones when asked, then the rest; pure. */
+export function arrangeCandidates<T extends { prog: Progress | null }>(rows: T[], o: CandidateOpts): T[] {
+  const live = (r: T) => r.prog?.cls === "live";
+  const done = (r: T) => r.prog?.cls === "done";
+  const kept = o.scanned === "hidden" ? rows.filter((r) => !done(r)) : rows;
+  const rank = (r: T) => (o.activeTop && live(r) ? 0 : o.scanned === "top" && done(r) ? 1 : 2);
+  // Array.prototype.sort is stable: within each group the chosen order stays.
+  return [...kept].sort((a, b) => rank(a) - rank(b));
+}
+
 function Facts({
   body,
   sig,
@@ -207,6 +231,12 @@ function Candidates({ d }: { d: HudSnapshot }) {
   });
   rows.sort((a, b) => (byValue ? b.cr - a.cr || a.idx - b.idx : a.rank - b.rank || a.idx - b.idx));
   const xCount = bioZero ? 0 : rows.length;
+  /*
+    Candidate settings (owner, 2026-11-05): the species being sampled first (on unless switched off), the scanned ones
+    (3/3) first or left out, and how many rows at most.
+  */
+  const opts = candidateOpts();
+  const shown = arrangeCandidates(rows, opts);
   const status =
     (pick.target ? "Target · " : "") +
     (bioZero ? "No biology" : xCount + " candidate" + (xCount === 1 ? "" : "s")) +
@@ -226,11 +256,12 @@ function Candidates({ d }: { d: HudSnapshot }) {
         {plain("No candidate species")}
       </Shell>
     );
-  const limit = listRowLimit(HUD_LIST_ROWS);
-  const hidden = Math.max(0, rows.length - limit);
+  const limit = listRowLimit(opts.max);
+  const hidden = Math.max(0, shown.length - limit);
+  const scannedOut = rows.length - shown.length;
   return (
     <Shell d={d} status={status} facts={facts}>
-      {rows.slice(0, limit).map((r, i) => {
+      {shown.slice(0, limit).map((r, i) => {
         const m = r.m;
         const e = (m.entry || {}) as Entry;
         const genus = cap((e.genus || "").trim() || "—");
@@ -295,6 +326,7 @@ function Candidates({ d }: { d: HudSnapshot }) {
         </li>
       ))}
       {hidden ? <li className="more">+{hidden} more — all of them in the app</li> : null}
+      {scannedOut ? <li className="more">{scannedOut} scanned, not listed</li> : null}
     </Shell>
   );
 }

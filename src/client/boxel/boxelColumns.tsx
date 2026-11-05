@@ -13,14 +13,14 @@ import { fromIndex, NOTABLE_LABEL, OTHER_STARS_SHOWN } from "./boxelLabels";
 export function boxelColumns({
   byId,
   order,
-  flownMax,
+  knownMax,
   openRow,
   patch,
   setCutAsk,
 }: {
   byId: Map<string, SavedBoxelDTO>;
   order: Map<string, number>;
-  flownMax: Map<string, number>;
+  knownMax: Map<string, number>;
   openRow: (r: BoxelTableRowDTO) => void;
   patch: (id: string, body: Record<string, unknown>) => Promise<unknown>;
   setCutAsk: (ask: { id: string; n: number }) => void;
@@ -198,11 +198,12 @@ export function boxelColumns({
               title={
                 r.flown
                   ? "Open it in EDEXO, from your journals"
-                  : "Look it up on Spansh and open it in EDEXO"
+                  : "Not flown: found on Spansh, then opened in EDEXO"
               }
               onClick={() => openRow(r)}
             >
-              {r.flown ? "Open" : "Spansh"}
+              {/* One name whichever way it opens (review P6): from your journals, or found on Spansh first. */}
+              Open
             </button>
             {b && !r.flown ? (
               <button
@@ -215,7 +216,7 @@ export function boxelColumns({
                 {r.skipped ? "Unskip" : "Skip"}
               </button>
             ) : null}
-            {b && r.n >= 1 && r.n > (flownMax.get(b.id) ?? -1) ? (
+            {b && r.n >= 1 && r.n > (knownMax.get(b.id) ?? -1) ? (
               <button
                 type="button"
                 className="fdb-chip boxel-x"

@@ -48,6 +48,8 @@ export interface LookupSystemFacts {
   bodyTypes: string[];
   /** Species commanders logged there (Spansh landmarks of the exobiology genera). */
   species: string[];
+  /** Where it is, light years (the shortest boxel order, shared/boxelOrder.ts). Look-ups before 1.3.8 have none. */
+  pos?: [number, number, number];
 }
 
 export interface BoxelLookupRecord {
@@ -131,6 +133,9 @@ export function spanshSearchSystemFacts(
     })),
     bodyTypes: [...bodyTypes],
     species: [...species].sort(),
+    ...([s.x, s.y, s.z].every((v) => typeof v === "number" && Number.isFinite(v))
+      ? { pos: [s.x, s.y, s.z] as [number, number, number] }
+      : {}),
   };
 }
 

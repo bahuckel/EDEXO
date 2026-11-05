@@ -117,4 +117,31 @@ describe("Spansh routes kept on disk", () => {
       server.close();
     }
   });
+
+  it("fly with the stops sent along, after the route was forgotten (review P13)", async () => {
+    const { registerSpanshRouteRoutes } = await import("../src/server/routes/spanshRouteRoutes.js");
+    const start = vi.fn((hops: { name: string }[]) => hops[1]!.name);
+    const app = express();
+    app.use(express.json());
+    registerSpanshRouteRoutes(app, { neutronLive: { start }, shipHere: () => null } as never, openSpanshRouteFile(tmpFile()));
+    const server = app.listen(0, "127.0.0.1");
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const fly = (body: unknown) =>
+      fetch(`${base}/api/spansh-route/fly`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    try {
+      const r = route(job(9));
+      const ok = await fly({ job: r.job, kind: r.kind, stops: r.stops });
+      expect(ok.status).toBe(200);
+      expect(await ok.json()).toMatchObject({ ok: true, next: "Stein 2051", stops: 1 });
+      expect(start.mock.calls[0]![0].map((h: { name: string }) => h.name)).toEqual(["Sol", "Stein 2051"]);
+      // Not a route: the old answer.
+      const bad = await fly({ job: r.job, kind: "teleport", stops: r.stops });
+      expect(bad.status).toBe(400);
+      expect(((await bad.json()) as { error: string }).error).toBe("Read the route from Spansh first.");
+      expect((await fly({ job: r.job, kind: r.kind, stops: [{ name: "Sol", x: 0, y: 0 }, r.stops[1]] })).status).toBe(400);
+    } finally {
+      server.close();
+    }
+  });
 });

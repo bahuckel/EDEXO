@@ -38,6 +38,18 @@ export interface NeutronLiveDTO {
   carrier?: boolean;
   /** No neutron star among the stops (a Spansh exobiology, riches or plotter route): labelled "Route", not "Neutron". */
   noNeutrons?: boolean;
+  /** Jumps and destinations done (shared/routeProgress.ts); absent from an older server and once the route is done. */
+  progress?: RouteProgressDTO;
+}
+
+/** How far along a route is: jumps, destinations (the commander's waypoints) and stops (every hop), done and in all. */
+export interface RouteProgressDTO {
+  jump: number;
+  jumps: number;
+  dest: number;
+  dests: number;
+  stop: number;
+  stops: number;
 }
 
 /**

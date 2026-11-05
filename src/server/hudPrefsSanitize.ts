@@ -22,6 +22,9 @@ export function sanitizeHudPrefs(raw: unknown): HudPrefsDTO | null {
   if (typeof r.opacity === "number" && Number.isFinite(r.opacity))
     out.opacity = Math.min(1, Math.max(0.1, r.opacity));
   if (r.candOrder === "likelihood" || r.candOrder === "value") out.candOrder = r.candOrder;
+  if (r.candScanned === "place" || r.candScanned === "top" || r.candScanned === "hidden") out.candScanned = r.candScanned;
+  if (typeof r.candMax === "number" && Number.isFinite(r.candMax)) out.candMax = Math.min(30, Math.max(1, Math.round(r.candMax)));
+  if (typeof r.candActiveTop === "boolean") out.candActiveTop = r.candActiveTop;
   if (typeof r.region === "boolean") out.region = r.region;
   if (typeof r.audio === "boolean") out.audio = r.audio;
   if (typeof r.compact === "boolean") out.compact = r.compact;

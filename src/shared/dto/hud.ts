@@ -41,8 +41,6 @@ export interface ExoOrganicOverlayDTO {
   distToNearestSampleM: number | null;
   /** True when {@link distToNearestSampleM} ≥ {@link minSampleDistanceM} (both known). */
   nearestSampleMeetsMin: boolean | null;
-  /** Where things are around you on this body. Null until the game reports a surface position. */
-  minimap: ExoMinimapDTO | null;
 }
 
 /**
@@ -132,6 +130,8 @@ export interface ExoMinimapMarkDTO {
    * range of every sample taken, nearest first. One at most.
    */
   target?: boolean;
+  /** A sample of the run in progress: which of its three scans (1-3), shown beside the mark (review P15, 2026-11-05). */
+  scanNo?: number;
 }
 
 /** One system seen in merged journals (for browse / search). */

@@ -82,6 +82,26 @@ describe("the clear key", () => {
     expect(raw.cleared).toHaveLength(2);
   });
 
+  it("keeps the samples of the run in progress (owner, 2026-11-05: do not end the run, just remove the comp scans)", () => {
+    const store = setup();
+    store.surfaceSampleMarks.push(mark("1:4", HERE, "Stratum Tectonicas", { latDeg: 14.5 })); // an earlier run's
+    store.exoOrganicTracker = {
+      bodyKey: "1:4",
+      bodyNameNorm: HERE,
+      speciesDisplay: "Stratum Tectonicas",
+      anchors: [{ latDeg: 13.93, lonDeg: 165.72 }],
+    } as never;
+    const t0 = Date.now();
+    expect(pressClearMarksHere(store as never, "1:4", t0)).toEqual({ armed: 2 });
+    expect(pressClearMarksHere(store as never, "1:4", t0 + 1000)).toEqual({ cleared: 2 });
+    expect(store.surfaceSampleMarks.map((m) => [m.label, m.latDeg])).toEqual([
+      ["Stratum Tectonicas", 13.93],
+      ["Bacterium Aurasus", 13.93],
+    ]);
+    expect(store.surfaceCodexMarks).toEqual([]);
+    expect(store.exoOrganicTracker).not.toBeNull();
+  });
+
   it("a second press after the wait only arms again", () => {
     const store = setup();
     const t0 = Date.now();

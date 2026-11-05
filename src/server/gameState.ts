@@ -818,9 +818,9 @@ export class GameStateStore {
     conditions?: { temperatureK: number | null; gravityG: number | null; elevationM: number | null },
   ): void {
     if (!Number.isFinite(latDeg) || !Number.isFinite(lonDeg)) return;
+    // The same plant twice (Analyse after Log); another species logged without moving is its own mark (2026-11-05).
     const dup = this.surfaceSampleMarks.some(
-      (m) =>
-        m.bodyKey === bodyKeyStr && Math.abs(m.latDeg - latDeg) < 1e-5 && Math.abs(m.lonDeg - lonDeg) < 1e-5,
+      (m) => m.bodyKey === bodyKeyStr && m.label === label && Math.abs(m.latDeg - latDeg) < 1e-5 && Math.abs(m.lonDeg - lonDeg) < 1e-5,
     );
     if (dup) return;
     const tK = conditions?.temperatureK;

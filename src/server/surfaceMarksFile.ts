@@ -145,7 +145,9 @@ export function withCodexScan(
   if (!Number.isFinite(scan.latDeg) || !Number.isFinite(scan.lonDeg)) return list;
   const same = (m: SurfaceMark) => m.bodyKey === mark.bodyKey && m.codexName === mark.codexName;
   const group = list.filter(same);
-  const template = group[0] ?? mark;
+  // A first scan stored without the body's name takes it from a later one (review 2026-11-05: in flight the radar
+  // matches marks by name, so the plant never showed until he landed).
+  const template = group[0] ? { ...group[0], bodyNameNorm: group[0].bodyNameNorm || mark.bodyNameNorm } : mark;
   const next = plantMarks(template, [...group.flatMap(scansOf), scan], radiusM);
   const at = list.findIndex(same);
   const rest = list.filter((m) => !same(m));

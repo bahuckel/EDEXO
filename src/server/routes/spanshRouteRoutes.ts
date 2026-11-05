@@ -3,7 +3,8 @@
  * reads it from Spansh once and keeps it on disk (server/spanshRouteFile.ts: Spansh deletes results within hours),
  * `POST /api/spansh-route/import { name, text }` reads one from a file saved from Spansh (JSON or CSV,
  * server/spanshRouteImport.ts) and keeps it the same way, `GET /api/spansh-route/saved` lists the kept ones, `DELETE /api/spansh-route/saved?job=` forgets one, and
- * `POST /api/spansh-route/fly { job, keep }` flies it as the live route, the stops in `keep` (indexes; all when absent).
+ * `POST /api/spansh-route/fly { job, keep, kind, stops }` flies it as the live route, the stops in `keep` (indexes; all when
+ * absent); `kind` and `stops` stand in for a route no longer kept on disk.
  */
 import type express from "express";
 import { fetchSpanshRoute, spanshJobFromText, spanshRouteHops } from "../spanshRoute.js";
@@ -13,6 +14,39 @@ import { carrierHereOf } from "../carrierRouteFollow.js";
 import { importSpanshRouteFile } from "../spanshRouteImport.js";
 import { resolveCoordMapForSystems } from "../colonize/galaxySystemCoords.js";
 import { normSystemName } from "../../shared/colonize/stationFilter.js";
+import type { SpanshRouteDTO, SpanshRouteKind, SpanshRouteStopDTO } from "../../shared/dto/spanshRoute.js";
+
+const KINDS: readonly SpanshRouteKind[] = ["exobiology", "riches", "neutron", "plotter", "carrier"];
+const MAX_STOPS = 5000;
+
+/**
+ * The route the drawer shows, sent with Fly (review P13, 2026-11-05): a route forgotten from the kept list, or pushed
+ * out of it by newer ones, still flies. Only what flying reads is taken; null when it is not a route.
+ */
+function routeFromStops(kind: unknown, stops: unknown): SpanshRouteDTO | undefined {
+  if (!KINDS.includes(kind as SpanshRouteKind) || !Array.isArray(stops) || stops.length < 2 || stops.length > MAX_STOPS) return undefined;
+  const out: SpanshRouteStopDTO[] = [];
+  for (const raw of stops) {
+    const s = (raw ?? {}) as Record<string, unknown>;
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+    const [x, y, z, jumps] = [num(s.x), num(s.y), num(s.z), num(s.jumps)];
+    if (typeof s.name !== "string" || !s.name.trim() || s.name.length > 200 || [x, y, z].some(Number.isNaN)) return undefined;
+    out.push({
+      name: s.name,
+      id64: null,
+      x,
+      y,
+      z,
+      jumps: Number.isNaN(jumps) ? 0 : Math.max(0, Math.min(10_000, Math.round(jumps))),
+      neutron: s.neutron === true,
+      refuel: s.refuel === true,
+      inject: s.inject === true,
+      valueCr: 0,
+      bodies: [],
+    });
+  }
+  return { job: "", kind: kind as SpanshRouteKind, from: null, to: null, rangeLy: null, stops: out, totalJumps: 0, totalValueCr: 0, url: "" };
+}
 
 export function registerSpanshRouteRoutes(app: express.Express, opts: HttpServerOptions, file?: SpanshRouteFile): void {
   // Opened on first use (nothing is read until the drawer asks), and again when the commander's folder changes.
@@ -55,8 +89,8 @@ export function registerSpanshRouteRoutes(app: express.Express, opts: HttpServer
   app.post("/api/spansh-route/fly", (req, res) => {
     const live = opts.neutronLive;
     if (!live) return void res.status(501).json({ error: "Not available in this build." });
-    const body = (req.body ?? {}) as { job?: unknown; keep?: unknown };
-    const route = typeof body.job === "string" ? routes().get(body.job.toUpperCase()) : undefined;
+    const body = (req.body ?? {}) as { job?: unknown; keep?: unknown; kind?: unknown; stops?: unknown };
+    const route = (typeof body.job === "string" ? routes().get(body.job.toUpperCase()) : undefined) ?? routeFromStops(body.kind, body.stops);
     if (!route) return void res.status(400).json({ error: "Read the route from Spansh first." });
     const keep = Array.isArray(body.keep)
       ? new Set(body.keep.filter((i): i is number => Number.isInteger(i) && i > 0 && i < route.stops.length))

@@ -5,6 +5,7 @@
  * was closed.
  */
 import type { MarkerItem } from "./engineTypes";
+import { routeProgress, routeProgressText } from "@shared/routeProgress";
 
 /** A stop of the planned or flown route: the planner's hop, or the live route's. */
 export interface NeutronMark {
@@ -53,5 +54,5 @@ export function neutronStopLine(marks: NeutronMark[], i: number): string {
   if (next?.boosted) todo.push("supercharge");
   const what = m.kind === "waypoint" ? (next ? "Your stop" : "Destination") : m.refuel ? "Refuel stop" : "Neutron star";
   const doing = todo.length ? `: ${todo.join(", then ")}` : "";
-  return `${what}${doing} · stop ${i} of ${marks.length - 1}`;
+  return `${what}${doing} · ${routeProgressText(routeProgress(marks, i))}`;
 }

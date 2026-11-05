@@ -97,15 +97,17 @@ function host(
 /** Empty: the minimap is geometry, and a price would only change the credits rows beside it. */
 const prices: PriceIndex = new Map();
 
+/** The radar as the snapshot builds it for the run's body (the overlay no longer carries a copy of it: review P17). */
 function build(h: ExoOrganicOverlayHost) {
-  return buildExoOrganicOverlayDto(h, prices);
+  const t = h.exoOrganicTracker!;
+  return buildExoMinimapDto(h, t.bodyKey, Math.max(0, Math.round(t.minSampleDistanceM)));
 }
 
 describe("the minimap payload", () => {
   it("puts north on the plus side and east on the plus side", () => {
     const oneDegNorth = mark(1, 0, "North plant");
     const oneDegEast = mark(0, 1, "East plant");
-    const mm = build(host({ marks: [oneDegNorth, oneDegEast] }))!.minimap!;
+    const mm = build(host({ marks: [oneDegNorth, oneDegEast] }))!;
 
     const north = mm.marks.find((m) => m.label === "North plant")!;
     expect(north.northM).toBeCloseTo(M_PER_DEG, 0);
@@ -116,23 +118,53 @@ describe("the minimap payload", () => {
     expect(east.northM).toBeCloseTo(0, 6);
   });
 
+  it("marks only this run's samples as the run's: an abandoned run of the same species is a leftover (2026-11-05)", () => {
+    const old = { ...mark(0.001, 0, "Bacterium Aurasus"), atIso: "2026-09-11T09:00:00Z" };
+    const now = { ...mark(0.002, 0, "Bacterium Aurasus"), atIso: "2026-09-11T10:00:00Z" };
+    const h = host({ marks: [old, now] });
+    // This run's one scan stands where the second mark is.
+    h.exoOrganicTracker!.anchors = [{ latDeg: 0.002, lonDeg: 0, planetRadiusM: RADIUS_M }];
+    const mm = build(h)!;
+    const active = mm.marks.filter((m) => m.kind === "sample").map((m) => m.active);
+    expect(active).toEqual([false, true]);
+  });
+
+  it("marks the run's composition scans active (green) and numbers its samples by scan (review P14, P15)", () => {
+    const h = host({ marks: [mark(0.003, 0, "Bacterium Aurasus"), mark(0.001, 0, "Bacterium Aurasus")] });
+    // Scan 1 stood at 0.001, scan 2 at 0.003.
+    h.exoOrganicTracker!.anchors = [
+      { latDeg: 0.001, lonDeg: 0, planetRadiusM: RADIUS_M },
+      { latDeg: 0.003, lonDeg: 0, planetRadiusM: RADIUS_M },
+    ];
+    h.surfaceCodexMarks = [
+      { ...mark(0.02, 0, "Bacterium Aurasus"), codexName: "bacterium aurasus" },
+      { ...mark(0.03, 0, "Stratum Tectonicas"), codexName: "stratum tectonicas" },
+    ];
+    const mm = build(h)!;
+    expect(mm.marks.filter((m) => m.kind === "sample").map((m) => m.scanNo)).toEqual([2, 1]);
+    expect(mm.marks.filter((m) => m.kind === "codex").map((m) => [m.name, m.active])).toEqual([
+      ["Bacterium Aurasus", true],
+      ["Stratum Tectonicas", false],
+    ]);
+  });
+
   it("puts south and west on the minus side", () => {
-    const mm = build(host({ marks: [mark(-1, -1, "Southwest")] }))!.minimap!;
+    const mm = build(host({ marks: [mark(-1, -1, "Southwest")] }))!;
     expect(mm.marks[0]!.northM).toBeLessThan(0);
     expect(mm.marks[0]!.eastM).toBeLessThan(0);
   });
 
   it("takes the short way round the antimeridian", () => {
     // Standing at 179.9°, a plant at -179.9° is 0.2° away, not 359.8°.
-    const mm = build(host({ lon: 179.9, marks: [mark(0, -179.9, "Over there")] }))!.minimap!;
+    const mm = build(host({ lon: 179.9, marks: [mark(0, -179.9, "Over there")] }))!;
     expect(mm.marks[0]!.eastM).toBeCloseTo(0.2 * M_PER_DEG, 0);
     // And the reported distance agrees with the offset rather than wrapping the long way.
     expect(mm.marks[0]!.distanceM).toBeCloseTo(0.2 * M_PER_DEG, 0);
   });
 
   it("shrinks east-west distance near the pole, where a degree of longitude is short", () => {
-    const atEquator = build(host({ lat: 0, marks: [mark(0, 1, "e")] }))!.minimap!.marks[0]!.eastM;
-    const atSixty = build(host({ lat: 60, marks: [mark(60, 1, "e")] }))!.minimap!.marks[0]!.eastM;
+    const atEquator = build(host({ lat: 0, marks: [mark(0, 1, "e")] }))!.marks[0]!.eastM;
+    const atSixty = build(host({ lat: 60, marks: [mark(60, 1, "e")] }))!.marks[0]!.eastM;
     // cos(60°) = 0.5, so the same degree of longitude is half the distance.
     expect(atSixty).toBeCloseTo(atEquator * 0.5, 0);
   });
@@ -143,7 +175,7 @@ describe("the minimap payload", () => {
         marks: [mark(0.001, 0, "A plant")],
         ship: mark(0, 0.002, "Your ship"),
       }),
-    )!.minimap!;
+    )!;
     expect(mm.marks.map((m) => m.kind).sort()).toEqual(["sample", "ship"]);
     expect(mm.marks.find((m) => m.kind === "ship")!.label).toBe("Your ship");
   });
@@ -154,12 +186,12 @@ describe("the minimap payload", () => {
         marks: [mark(0.001, 0, "Elsewhere", ELSEWHERE, "9:9")],
         ship: mark(0, 0.002, "Your ship", ELSEWHERE, "9:9"),
       }),
-    )!.minimap!;
+    )!;
     expect(mm.marks).toHaveLength(0);
   });
 
   it("carries the genus separation, so the map can draw the ring being cleared", () => {
-    const mm = build(host())!.minimap!;
+    const mm = build(host())!;
     expect(mm.minSampleDistanceM).toBe(500);
     expect(mm.radiusM).toBe(500);
   });
@@ -171,12 +203,13 @@ describe("the minimap payload", () => {
   it("gives every sample mark its ring: the run's distance, or the leftover species' own", () => {
     loadSpeciesDatabase();
     const stratum = getCachedSpeciesDatabase().species.find((e) => e.displayName.toLowerCase() === "stratum tectonicas")!;
-    const mm = build(
-      host({
-        marks: [mark(0.001, 0, "Bacterium Aurasus"), mark(0, 0.001, "Stratum Tectonicas")],
-        ship: mark(0.002, 0, "Your ship"),
-      }),
-    )!.minimap!;
+    const h = host({
+      marks: [mark(0.001, 0, "Bacterium Aurasus"), mark(0, 0.001, "Stratum Tectonicas")],
+      ship: mark(0.002, 0, "Your ship"),
+    });
+    // The run's sample mark stands where its scan was taken (the same fix makes both).
+    h.exoOrganicTracker!.anchors = [{ latDeg: 0.001, lonDeg: 0, planetRadiusM: RADIUS_M }];
+    const mm = build(h)!;
     const by = (label: string) => mm.marks.find((m) => m.label === label)!;
     expect(by("Bacterium Aurasus")).toMatchObject({ active: true, ringM: 500 });
     expect(by("Stratum Tectonicas").active).toBe(false);
@@ -186,14 +219,14 @@ describe("the minimap payload", () => {
   });
 
   it("passes the heading through, and null when the game is not reporting one", () => {
-    expect(build(host({ heading: 217 }))!.minimap!.headingDeg).toBe(217);
-    expect(build(host({ heading: null }))!.minimap!.headingDeg).toBeNull();
+    expect(build(host({ heading: 217 }))!.headingDeg).toBe(217);
+    expect(build(host({ heading: null }))!.headingDeg).toBeNull();
   });
 
   it("is absent entirely when the game has not given a surface position", () => {
     const h = host();
     h.exoOrganicLastFix = null;
-    expect(build(h)!.minimap).toBeNull();
+    expect(build(h)).toBeNull();
   });
 
   it("draws without a sample session, which is the state you land in", () => {
@@ -238,24 +271,24 @@ describe("the minimap payload", () => {
 describe("leaving and coming back", () => {
   it("drops the marks once the commander is on a different body", () => {
     const marks = [mark(0.001, 0, "A plant"), mark(0.002, 0, "Another")];
-    expect(build(host({ marks }))!.minimap!.marks).toHaveLength(2);
+    expect(build(host({ marks }))!.marks).toHaveLength(2);
 
-    const away = build(host({ marks, bodyName: ELSEWHERE }))!.minimap!;
+    const away = build(host({ marks, bodyName: ELSEWHERE }))!;
     expect(away.marks).toHaveLength(0);
   });
 
   it("brings them back on landing, because they were never thrown away", () => {
     const marks = [mark(0.001, 0, "A plant")];
     const away = host({ marks, bodyName: ELSEWHERE });
-    expect(build(away)!.minimap!.marks).toHaveLength(0);
+    expect(build(away)!.marks).toHaveLength(0);
     // Same store, same marks, back on the original rock.
-    expect(build(host({ marks }))!.minimap!.marks).toHaveLength(1);
+    expect(build(host({ marks }))!.marks).toHaveLength(1);
   });
 
   it("keeps one body's marks off another body's map", () => {
     const here = mark(0.001, 0, "Here");
     const there = mark(0.001, 0, "There", ELSEWHERE, "9:9");
-    const mm = build(host({ marks: [here, there] }))!.minimap!;
+    const mm = build(host({ marks: [here, there] }))!;
     expect(mm.marks.map((m) => m.label)).toEqual(["Here"]);
   });
 });
@@ -555,17 +588,15 @@ describe("telling the run in progress from what was left behind", () => {
   const near = (m: number) => m / M_PER_DEG;
 
   it("marks the species being sampled as active and the rest as leftovers", () => {
-    const dto = buildExoMinimapDto(
-      host({
-        marks: [
-          mark(near(50), 0, "Bacterium Aurasus"),
-          mark(near(80), 0, "Stratum Tectonicas"),
-          mark(0, near(60), "Tussock Ignis"),
-        ],
-      }),
-      "1:2",
-      500,
-    )!;
+    const h = host({
+      marks: [
+        mark(near(50), 0, "Bacterium Aurasus"),
+        mark(near(80), 0, "Stratum Tectonicas"),
+        mark(0, near(60), "Tussock Ignis"),
+      ],
+    });
+    h.exoOrganicTracker!.anchors = [{ latDeg: near(50), lonDeg: 0, planetRadiusM: RADIUS_M }];
+    const dto = buildExoMinimapDto(h, "1:2", 500)!;
     const byLabel = new Map(dto.marks.map((m) => [m.label, m]));
     expect(byLabel.get("Bacterium Aurasus")!.active, "the run in progress").toBe(true);
     expect(byLabel.get("Stratum Tectonicas")!.active, "a different species").toBeFalsy();
@@ -616,7 +647,7 @@ describe("the position of the third sample", () => {
         { latDeg: near(900), lonDeg: 0, planetRadiusM: RADIUS_M },
       ],
     };
-    const dto = build(h)!;
+    const dto = buildExoOrganicOverlayDto(h, prices)!;
     expect(dto.distToThirdM).not.toBeNull();
     expect(dto.distToThirdM!).toBeGreaterThan(800);
     expect(dto.distToThirdM!).toBeLessThan(1000);
@@ -628,6 +659,6 @@ describe("the position of the third sample", () => {
       ...h.exoOrganicTracker!,
       anchors: [{ latDeg: 0, lonDeg: 0, planetRadiusM: RADIUS_M }],
     };
-    expect(build(h)!.distToThirdM).toBeNull();
+    expect(buildExoOrganicOverlayDto(h, prices)!.distToThirdM).toBeNull();
   });
 });

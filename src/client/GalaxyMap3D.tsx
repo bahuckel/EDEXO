@@ -1588,7 +1588,11 @@ export function GalaxyMap3D() {
       ) : null}
 
       {drawer === "spansh" ? (
-        <SpanshRouteDrawer onRoute={setNeutronHops} onFocus={(p) => engine.current?.flyTo({ x: p.x, y: p.y, z: p.z }, 400)} />
+        <SpanshRouteDrawer
+          onRoute={setNeutronHops}
+          onFocus={(p) => engine.current?.flyTo({ x: p.x, y: p.y, z: p.z }, 400)}
+          onOpenNeutron={() => withTransition(() => setDrawer("neutron"))}
+        />
       ) : null}
 
       {drawer === "navroute" ? (

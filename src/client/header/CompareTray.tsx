@@ -7,6 +7,7 @@ import { Tooltip } from "../ui/Tooltip";
 import { NextBoxelCard } from "../NextBoxelCard";
 import { CarrierTile } from "./CarrierTile";
 import { fmtCrExact, fmtCrShort, fmtLy } from "@shared/format";
+import { liveProgressShort, liveProgressText } from "@shared/routeProgress";
 import { useEffect, useState, type ReactNode } from "react";
 import { Anchor, Fuel, TriangleAlert, Zap } from "lucide-react";
 import { DScanBodiesBadge } from "../DScanBodiesBadge";
@@ -130,8 +131,8 @@ export function CompareTray({
               snap.neutronLive.done
                 ? `${snap.neutronLive.carrier ? "Carrier route" : "Route"} done: ${snap.neutronLive.destination}`
                 : snap.neutronLive.carrier
-                ? `Carrier route to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop goes to the clipboard when your carrier arrives at one: paste it in the carrier's galaxy map (F6 copies it again).`
-                : `${snap.neutronLive.noNeutrons ? "Route" : "Neutron route"} to ${snap.neutronLive.destination}: stop ${snap.neutronLive.at} of ${snap.neutronLive.total}. The next stop is on the clipboard after each jump onto a stop: target it in the game's galaxy map, don't plot a route to it: the game can refuse to plot a full-range jump on a part tank (F6 copies it again).`
+                ? `Carrier route to ${snap.neutronLive.destination}: ${liveProgressText(snap.neutronLive)}. The next stop goes to the clipboard when your carrier arrives at one: paste it in the carrier's galaxy map (F6 copies it again).`
+                : `${snap.neutronLive.noNeutrons ? "Route" : "Neutron route"} to ${snap.neutronLive.destination}: ${liveProgressText(snap.neutronLive)}. The next stop is on the clipboard after each jump onto a stop: target it in the game's galaxy map, don't plot a route to it: the game can refuse to plot a full-range jump on a part tank (F6 copies it again).`
             }
           >
             <span className="tray-tile__label">
@@ -150,7 +151,7 @@ export function CompareTray({
                     : "Scoop here"
                   : snap.neutronLive.superchargeHere
                     ? "Supercharge here"
-                    : `${snap.neutronLive.at}/${snap.neutronLive.total}`}
+                    : liveProgressShort(snap.neutronLive)}
             </span>
             <span className="tray-tile__value">{snap.neutronLive.next ?? snap.neutronLive.destination}</span>
           </div>

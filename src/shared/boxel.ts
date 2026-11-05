@@ -124,8 +124,6 @@ export interface SavedBoxelDTO {
   flown: number;
   /** System numbers he marked skipped (not flown, still counted as done). */
   skipped: number[];
-  /** Systems past `end` that he has flown: the boxel goes further than the end he typed. */
-  flownBeyond: number[];
   /**
    * Systems -0..end not flown that a route he plotted passes through (NavRoute.json, kept by the
    * NavRoute finder): they exist, as far as the game's own plotter knows.
@@ -145,9 +143,29 @@ export interface SavedBoxelDTO {
   /** The boxel run (start / finish key): its next system is copied after every jump. */
   run?: boolean;
   total: number;
-  /** The lowest system number neither flown nor skipped; null when the boxel is done. */
+  /**
+   * The next in line, as the boxel run copies it: the first neither flown nor skipped after where he is, then the
+   * system after the end while the end is not checked, then from -0; null when nothing is left.
+   */
   next: string | null;
+  /**
+   * Flown in the shortest order (owner, 2026-11-04; shared/boxelOrder.ts) rather than by number: `order` is what is
+   * left, each with the light years from the one before (null: no position known, flown last, by number).
+   */
+  shortest?: boolean;
+  order?: { n: number; ly: number | null }[];
+  /** How many of `order` have a position (they come first); their light years, and the same systems by number. */
+  placed?: number;
+  orderLy?: number;
+  numericLy?: number;
 }
+
+/**
+ * Nothing left to fly up to its end (the side menu's Fully explored). `next` is not the test: while the end is not
+ * checked it names the system after it (the probe), as the boxel run copies it.
+ */
+export const boxelDone = (b: Pick<SavedBoxelDTO, "flown" | "skipped" | "total">): boolean =>
+  b.flown + b.skipped.length >= b.total;
 
 /** A notable body kind there and how many (null: the galaxy index says "at least one"). */
 export interface BoxelNotableDTO {

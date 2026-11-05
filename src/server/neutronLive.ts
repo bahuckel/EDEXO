@@ -14,6 +14,7 @@
  */
 import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import type { NeutronLiveDTO } from "../shared/dto/neutron.js";
+import { routeProgress } from "../shared/routeProgress.js";
 
 export type { NeutronLiveDTO };
 
@@ -37,6 +38,13 @@ export interface LiveHop {
   /** The plan's fuel here in jumps, on arrival and on leaving (neutronRoute.ts NeutronHop); absent in older routes. */
   fuelArrive?: number;
   fuelLeave?: number;
+  /**
+   * The plan's jumps of fuel left and the FSD's health there, and the system's address: shown in the Neutron drawer's
+   * list of the stops ahead (review 2026-11-05: after a re-plot it had lost them). Absent on Spansh and older routes.
+   */
+  jumpsLeft?: number;
+  fsdHealth?: number;
+  address?: number;
 }
 
 /** The commander's own stops (not the neutron stars between) and the ship the route was planned for. */
@@ -174,6 +182,9 @@ export function parseLiveHops(raw: unknown): LiveHop[] | null {
     const kind = r.kind === "start" || r.kind === "neutron" || r.kind === "waypoint" ? r.kind : "waypoint";
     const fuelArrive = num(r.fuelArrive);
     const fuelLeave = num(r.fuelLeave);
+    const jumpsLeft = num(r.jumpsLeft);
+    const fsdHealth = num(r.fsdHealth);
+    const address = num(r.address);
     out.push({
       name,
       x,
@@ -188,6 +199,9 @@ export function parseLiveHops(raw: unknown): LiveHop[] | null {
       scoopOnWay: r.scoopOnWay === true,
       inject: parseInject(r.inject),
       ...(fuelArrive != null && fuelArrive >= 0 && fuelLeave != null && fuelLeave >= 0 ? { fuelArrive, fuelLeave } : {}),
+      ...(jumpsLeft != null && jumpsLeft >= 0 ? { jumpsLeft } : {}),
+      ...(fsdHealth != null && fsdHealth >= 0 && fsdHealth <= 1 ? { fsdHealth } : {}),
+      ...(address != null && Number.isSafeInteger(address) && address > 0 ? { address } : {}),
     });
   }
   return out;
@@ -377,6 +391,7 @@ export function createNeutronLive(opts: {
         destination: st.hops[st.hops.length - 1]!.name,
         ...(carrier ? { carrier: true } : {}),
         ...(!carrier && !st.hops.some((h) => h.kind === "neutron") ? { noNeutrons: true } : {}),
+        progress: routeProgress(st.hops, st.at),
       };
     },
   };

@@ -10,7 +10,7 @@ import type { ScanRouteBodyDTO, ScanRouteDTO, ScanRouteShipDTO } from "@shared/d
 import type { GalaxyFindDTO, GalaxyRouteDTO } from "@shared/dto/galaxy.js";
 import { useRouteValues } from "../routeValues";
 import { fmtCrExact, fmtCrShort } from "@shared/format";
-import { createScanRouteScene, type ScanRouteScene, type ScanScale } from "./scanRouteScene";
+import { createScanRouteScene, type ScanNames, type ScanRouteScene, type ScanScale } from "./scanRouteScene";
 import "../styles/scan-route.css";
 
 const MIN_KEY = "edexo.scanRoute.minDssCr";
@@ -35,6 +35,18 @@ function keep(key: string, v: string): void {
   }
 }
 const SCALE_KEY = "edexo.scanRoute.scale";
+/** Which names show and whether the view follows the next stop (owner, 2026-11-05); kept on this PC. */
+const NAMES_KEY = "edexo.scanRoute.names";
+const ZOOM_NEXT_KEY = "edexo.scanRoute.zoomNext";
+
+function readNames(): ScanNames {
+  try {
+    const v = localStorage.getItem(NAMES_KEY);
+    return v === "route" || v === "next" ? v : "all";
+  } catch {
+    return "all";
+  }
+}
 
 function readScale(): ScanScale {
   try {
@@ -119,6 +131,16 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
     } catch {
       /* this session only */
     }
+  };
+  const [names, setNamesState] = useState<ScanNames>(readNames);
+  const setNames = (v: ScanNames) => {
+    setNamesState(v);
+    keep(NAMES_KEY, v);
+  };
+  const [zoomNext, setZoomNextState] = useState(() => readNum(ZOOM_NEXT_KEY, 0) === 1);
+  const setZoomNext = (v: boolean) => {
+    setZoomNextState(v);
+    keep(ZOOM_NEXT_KEY, v ? "1" : "0");
   };
   const [gridLs, setGridLs] = useState<number | null>(null);
   // What the box says, and the minimum asked for 400 ms after the last key (each one re-plans the route).
@@ -338,6 +360,19 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
   useEffect(() => {
     scene.current?.setShip(shipHere ? { atId: shipHere.atId, targetId: shipHere.targetId, fix: shipHere.fix } : null);
   }, [shipHere?.atId, shipHere?.targetId, shipHere?.fix?.refId, shipHere?.fix?.distLs, view, scale]); // eslint-disable-line react-hooks/exhaustive-deps
+  /*
+    The next stop (owner, 2026-11-05: "zoom to next target planet", "names only for next planet in line"): the body the
+    game has targeted when it is one of the route's stops, else the route's first stop (the route starts where the ship is).
+  */
+  const order = d?.route.order;
+  const nextId = order?.length ? (shipHere?.targetId != null && order.includes(shipHere.targetId) ? shipHere.targetId : order[0]!) : null;
+  useEffect(() => {
+    scene.current?.setNames(names, nextId);
+  }, [names, nextId, view, scale]);
+  // After the view is drawn (the effect above `show`s it): framed on the next stop again whenever it or the view changes.
+  useEffect(() => {
+    if (zoomNext && nextId != null) scene.current?.focus(nextId);
+  }, [zoomNext, nextId, view, scale]);
   const factsId = hovered ?? picked;
   const facts = factsId != null ? byId.get(factsId) : undefined;
   const start = d?.startId != null ? byId.get(d.startId) : undefined;
@@ -446,6 +481,21 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
         <button type="button" onClick={() => scene.current?.fit()}>
           Fit
         </button>
+        <label className="scan-route__min" title="Which bodies have their names on the view">
+          Names
+          <select value={names} onChange={(e) => setNames(e.target.value as ScanNames)}>
+            <option value="all">All bodies</option>
+            <option value="route">Only the route's planets</option>
+            <option value="next">Only the next planet</option>
+          </select>
+        </label>
+        <label
+          className="scan-route__min"
+          title="The view follows the next planet of the route: the one you target in game when it is on the route, else the route's next stop"
+        >
+          <input type="checkbox" checked={zoomNext} onChange={(e) => setZoomNext(e.target.checked)} />
+          Zoom to the next planet
+        </label>
         {onClose ? (
           <button type="button" onClick={onClose} aria-label="Close the scan route">
             ×

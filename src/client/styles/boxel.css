@@ -26,16 +26,6 @@
   gap: 0.6rem;
   min-width: 0;
 }
-.boxel-current__end {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-.boxel-current__end input {
-  flex: 0 0 5rem;
-  min-width: 0;
-  width: 5rem;
-}
 
 .boxel-screen__body {
   flex: 1 1 auto;
@@ -116,7 +106,7 @@
 }
 .boxel-side__item {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.2rem 0.45rem;
   padding: 0.35rem 0.45rem;
@@ -162,7 +152,12 @@
 .boxel-side__bar,
 .boxel-side__count,
 .boxel-side__actions {
-  grid-column: 2;
+  grid-column: 2 / -1;
+}
+/* A saved boxel's one "⋯" (review P2): beside its name, top right. */
+.boxel-side__actions--menu {
+  grid-column: 3;
+  grid-row: 1;
 }
 .boxel-side__bar {
   height: 0.3rem;
@@ -229,6 +224,15 @@
   margin: 0;
   font-size: var(--fs-sm);
 }
+/* The shortest order (BoxelOrderLine.tsx): the stops wrap, each one whole. */
+.boxel-order {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+.boxel-order__stop {
+  white-space: nowrap;
+}
 .boxel-row__actions {
   display: inline-flex;
   gap: 0.3rem;
@@ -264,13 +268,8 @@
   .boxel-screen__head {
     flex-wrap: wrap;
   }
-  .boxel-current,
-  .boxel-plan {
+  .boxel-current {
     flex: 1 1 100%;
-  }
-  .boxel-plan input {
-    flex: 1 1 auto;
-    width: auto;
   }
   .boxel-screen__body,
   .boxel-screen__body--folded {
@@ -340,16 +339,6 @@
   flex: 1 1 16rem;
   font-size: var(--fs-sm);
 }
-.boxel-plan {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.boxel-plan input {
-  flex: 0 1 22rem;
-  min-width: 0;
-  width: min(22rem, 40vw);
-}
 
 /* Previous boxels: every one flown through, notable first (owner, 2026-10-05). */
 .boxel-prev {
@@ -393,6 +382,9 @@
   margin: 0 var(--s-4) var(--s-2);
   max-height: 45vh;
   overflow: auto;
+  /* A column-flex child with overflow: auto shrinks to nothing beside the table body (owner, 2026-11-05: "a small
+     sliver"): keep its own height, up to the cap. */
+  flex: 0 0 auto;
 }
 .boxel-rates__wrap {
   overflow-x: auto;
@@ -563,11 +555,62 @@
   }
 }
 
-/* "Show Next boxel in the main screen" (owner, 2026-10-11). */
-.boxel-header-option {
-  display: inline-flex;
+
+/* The top row's one field (review P1). */
+.boxel-add__input {
+  flex: 0 1 24rem;
+  min-width: 0;
+  width: min(24rem, 45vw);
+}
+@media (max-width: 760px) {
+  .boxel-add__input {
+    flex: 1 1 auto;
+    width: auto;
+  }
+}
+
+/* A saved boxel's actions behind its "⋯" (review P2): a panel over the Boxels screen. */
+.boxel-side__more {
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.boxel-side__menu {
+  z-index: calc(var(--z-modal) + 1);
+  display: grid;
+  gap: 0.4rem;
+  justify-items: start;
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 32px));
+  padding: 0.55rem;
+  background: var(--panel-warm);
+  border: 1px solid var(--accent-a35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  font-size: var(--fs-sm);
+}
+.boxel-side__menu-group {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
-  margin: 0.2rem 0 0.4rem;
-  cursor: pointer;
+}
+.boxel-side__end {
+  width: 5.5rem;
+}
+
+/* The Flying strip (review P3): next to fly, the order, the copy after a jump, the run. */
+.boxel-flying {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--accent-a22);
+  background: rgba(var(--accent-rgb), 0.05);
+  font-size: var(--fs-sm);
+}
+.boxel-flying__order,
+.boxel-flying__run {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }

@@ -46,4 +46,13 @@ describe("sanitizeHudPrefs", () => {
       slant: 15,
     });
   });
+
+  it("keeps the candidate settings, the most rows within 1 to 30", () => {
+    expect(sanitizeHudPrefs({ candScanned: "hidden", candMax: 99, candActiveTop: false })).toEqual({
+      candScanned: "hidden",
+      candMax: 30,
+      candActiveTop: false,
+    });
+    expect(sanitizeHudPrefs({ candScanned: "first", candMax: 0.2 })).toEqual({ candMax: 1 });
+  });
 });

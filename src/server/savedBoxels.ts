@@ -19,6 +19,8 @@ interface Stored {
   skipped?: number[];
   /** He checked in the galaxy map that the system after `lastSystem` does not exist: the end is final. */
   endKnown?: boolean;
+  /** Flown in the shortest order, not by number (shared/boxelOrder.ts). */
+  shortest?: boolean;
 }
 
 export interface SavedBoxelsService {
@@ -54,6 +56,8 @@ export interface SavedBoxelsService {
    */
   runId(): string | null;
   setRun(id: string | null): boolean;
+  /** Fly this boxel in the shortest order (true) or by number (owner, 2026-11-04). False when unknown. */
+  setShortest(id: string, on: boolean): boolean;
   /**
    * The systems of a saved boxel still to fly (neither flown nor skipped), in order, -0 to its end, and
    * the end (known: checked in the galaxy map that nothing follows it). `anchor`: where "next in line"
@@ -65,7 +69,7 @@ export interface SavedBoxelsService {
     visited: Iterable<VisitedSystem>,
     routed?: Iterable<{ name: string }>,
     current?: string | null,
-  ): { prefix: string; todo: number[]; end: number; endKnown: boolean; anchor: number } | null;
+  ): { prefix: string; todo: number[]; end: number; endKnown: boolean; anchor: number; shortest: boolean } | null;
 }
 
 export function createSavedBoxels(opts: {
@@ -141,14 +145,15 @@ export function createSavedBoxels(opts: {
           [the lowest unflown] is useless"): the first one still to fly after the system he is in, else
           after the one of it he was in last (owner, 2026-11-01: between two systems of a run it copied
           the one after the highest he had flown, Eembaids EG-Y g286 after g285, not g6 after g5); past
-          the end it starts again from -0.
+          the end the probe while the end is not known, then again from -0 — the boxel run's own order
+          (server/boxelRun.ts), so the screen shows what F6 copies (review 2026-11-05: it showed the wrap).
         */
         const anchor = anchorOf(b.prefix, lastBy.get(s.id)!.n, current);
+        const open = (n: number) => !flownAll.has(n) && !skip.has(n);
         let next: number | null = null;
-        for (let k = 1; k <= end + 1 && next == null; k++) {
-          const n = (anchor + k + end + 1) % (end + 1);
-          if (!flownAll.has(n) && !skip.has(n)) next = n;
-        }
+        for (let n = anchor + 1; n <= end && next == null; n++) if (open(n)) next = n;
+        if (next == null && !endKnown && end < BOXEL_MAX_ROWS - 1) next = end + 1;
+        for (let n = 0; n <= Math.min(anchor, end) && next == null; n++) if (open(n)) next = n;
         let bodiesScanned = 0;
         let bodiesTotal: number | null = 0;
         let notable = 0;
@@ -174,12 +179,12 @@ export function createSavedBoxels(opts: {
           addedAt: s.addedAt,
           flown: [...flownAll].filter((n) => n <= end).length,
           skipped,
-          flownBeyond: [...flownAll].filter((n) => n > end).sort((x, y) => x - y),
           routed: [...routedAll].filter((n) => n <= end && !flownAll.has(n)).length,
           endKnown,
           probe: endKnown || end >= BOXEL_MAX_ROWS - 1 ? null : `${b.prefix}${end + 1}`,
           total: end + 1,
           next: next == null ? null : `${b.prefix}${next}`,
+          ...(s.shortest ? { shortest: true } : {}),
         };
       });
       // The boxel he is in first; the rest keep their order (newest first).
@@ -264,7 +269,22 @@ export function createSavedBoxels(opts: {
       const skip = new Set(s.skipped ?? []);
       const todo: number[] = [];
       for (let n = 0; n <= end; n++) if (!flown.has(n) && !skip.has(n)) todo.push(n);
-      return { prefix: e.b.prefix, todo, end, endKnown: !!s.endKnown && end === e.end, anchor: anchorOf(e.b.prefix, last.n, current) };
+      return {
+        prefix: e.b.prefix,
+        todo,
+        end,
+        endKnown: !!s.endKnown && end === e.end,
+        anchor: anchorOf(e.b.prefix, last.n, current),
+        shortest: !!s.shortest,
+      };
+    },
+    setShortest(id, on) {
+      const s = items.find((x) => x.id === id);
+      if (!s) return false;
+      if (on) s.shortest = true;
+      else delete s.shortest;
+      persist();
+      return true;
     },
     setSkipped(id, n, skipped) {
       const s = items.find((x) => x.id === id);
@@ -313,6 +333,7 @@ function load(filePath: string | null): { items: Stored[]; autoCopy: boolean; ru
         ...s,
         skipped: Array.isArray(s.skipped) ? s.skipped.filter((n) => Number.isInteger(n) && n >= 0) : undefined,
         endKnown: s.endKnown === true ? true : undefined,
+        shortest: s.shortest === true ? true : undefined,
       }));
     return { items, autoCopy: raw.autoCopyNext !== false, run: typeof raw.run === "string" ? raw.run : null };
   } catch {

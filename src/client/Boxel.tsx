@@ -15,13 +15,11 @@ import { withTransition } from "./motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BoxelTableDTO, BoxelTableRowDTO, PreviousBoxelDTO, SavedBoxelDTO } from "@shared/boxel";
 import type { BoxelLookupStatus } from "@shared/boxel";
-import { parseBoxel } from "@shared/boxel";
+import { boxelDone, parseBoxel } from "@shared/boxel";
 import { useModal } from "./ui/useModal";
-import { CopySystemButton } from "./CopySystemButton";
 import { useToast } from "./ui/feedback";
 import { isBool, isNum, oneOf, usePersistedState } from "./usePersistedState";
 import { Table, type Column } from "./ui/DataTable";
-import { useNextBoxelInHeader } from "./nextBoxelSetting";
 import { fuzzyRankAny } from "./fuzzyMatch";
 import { Select } from "./ui/Select";
 import { BoxelLookingFor, BoxelMassCodeHelp, GoldenTag } from "./BoxelAdvice";
@@ -44,6 +42,9 @@ import {
   type SideTab,
 } from "./boxel/boxelLabels";
 import { boxelColumns } from "./boxel/boxelColumns";
+import { BoxelOrderLine } from "./boxel/BoxelOrderLine";
+import { BoxelSideActions } from "./boxel/BoxelSideActions";
+import { BoxelFlyingStrip } from "./boxel/BoxelFlyingStrip";
 
 /*
   The labels and helpers and the table's columns live in boxel/ since the audit of 2026-10-22; the
@@ -89,8 +90,8 @@ export function BoxelScreen({
   /** The ticked boxels; null until he ticks anything (then: the current boxel, else the newest). */
   const [included, setIncluded] = usePersistedState<string[] | null>("boxel.included", null, isIncluded);
   const [sideQuery, setSideQuery] = useState("");
-  const [endInput, setEndInput] = useState("");
-  const [planInput, setPlanInput] = useState("");
+  // "Add a boxel: paste any system of it" (review P1): the one field of the top row.
+  const [addInput, setAddInput] = useState("");
   /*
     The side menu's three lists (owner, 2026-10-05: "Sidebar can get quite large … a button switch
     between saved, fully explored and history on the top").
@@ -105,7 +106,6 @@ export function BoxelScreen({
   const [sideOpen, setSideOpen] = usePersistedState("boxel.sideOpen", true, isBool);
   // The [?] beside the close button: the mass code tables (owner, 2026-10-05).
   const [helpOpen, setHelpOpen] = usePersistedState("boxel.helpOpen", false, isBool);
-  const [nextInHeader, setNextInHeader] = useNextBoxelInHeader();
   const [prevDays, setPrevDays] = usePersistedState("boxel.previousDays", 30, isNum);
   const [previous, setPrevious] = useState<PreviousBoxelDTO[] | null>(null);
   /** History's total for the range and search, and whether a page is on its way. */
@@ -113,9 +113,6 @@ export function BoxelScreen({
   const [prevLoading, setPrevLoading] = useState(false);
   const prevGen = useRef(0);
   const prevMore = useRef<HTMLDivElement | null>(null);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  /** The saved boxel whose Find end tools (Copy prefix, Probe, Not there) are open. */
-  const [findEndId, setFindEndId] = useState<string | null>(null);
   const [lookup, setLookup] = useState<BoxelLookupStatus | null>(null);
   const [cutAsk, setCutAsk] = useState<{ id: string; n: number } | null>(null);
   const [table, setTable] = useState<BoxelTableDTO | null>(null);
@@ -240,50 +237,24 @@ export function BoxelScreen({
   const only = (id: string) => setIncluded([id]);
 
   /*
-    Save a boxel by any of its systems, flown or not (Current boxel: the one you are in; Plan: a name
-    typed — the name alone says the boxel, owner 2026-10-05), to the last number typed or else the
-    highest one recorded, and tick it.
+    Save a boxel by any of its systems, flown or not (the name alone says the boxel, owner 2026-10-05), to the highest
+    system anyone recorded, or to `end` (a saved boxel's own row sets it: review P1), and tick it.
   */
-  const addBoxel = (system: string, endOverride?: string) => {
-    const end = (endOverride ?? endInput).trim();
+  const addBoxel = (system: string, end: number | null = null) => {
     void call({
       method: "POST",
       headers: json,
-      body: JSON.stringify({ system, end: end === "" ? null : Number(end) }),
+      body: JSON.stringify({ system, end }),
     }).then((j) => {
       if (!j?.id) return;
-      setEndInput("");
-      setPlanInput("");
+      setAddInput("");
       if (!ids.includes(j.id)) setIncluded([j.id, ...ids]);
     });
   };
-  /*
-    The boxel's last system number, applied (owner, 2026-10-10: "when I click on Current boxel I should
-    be able to write down the highest number system in that boxel and apply it … pasting a high-system
-    number should do the same"). A number goes to the boxel typed in Plan, else the one he is in; a
-    whole system name ("Eol Prou PX-T d3-1867") sets its own boxel to its number. The field used to
-    keep only the digits of a pasted name, so d3-1867 became 31867.
-  */
-  const applyEnd = (raw: string) => {
-    const text = raw.trim();
-    const named = parseBoxel(text);
-    if (named?.index != null) {
-      addBoxel(text, String(named.index));
-      return;
-    }
-    const n = text.replace(/\D/g, "");
-    const target = plan ? planInput.trim() : here ? currentSystem : null;
-    if (n && target) addBoxel(target, n);
-  };
-  const addCurrent = () => {
-    if (currentSystem && here) addBoxel(currentSystem);
-  };
-  const plan = parseBoxel(planInput);
-  /** The saved boxel the Last system # field would change: the one typed in Plan, else the current one. */
-  const endShownFor = (() => {
-    const b = plan ?? here;
-    return b ? ((saved ?? []).find((x) => x.prefix.toLowerCase() === b.prefix.toLowerCase()) ?? null) : null;
-  })();
+  // What Add saves: the system pasted, else (the field empty) the boxel you are in.
+  const typed = parseBoxel(addInput.trim());
+  const addTarget = typed ? addInput.trim() : !addInput.trim() && here ? currentSystem : null;
+  const addWhat = typed ?? (addTarget ? here : null);
 
   /*
     History (owner, 2026-10-05; paged 2026-10-06: "go through the journal log from newest to oldest …
@@ -347,10 +318,7 @@ export function BoxelScreen({
       { method: "PATCH", headers: json, body: JSON.stringify(body) },
       `/api/boxels/${encodeURIComponent(id)}`,
     );
-  const extendTo = (b: SavedBoxelDTO, n: number) =>
-    void call({ method: "POST", headers: json, body: JSON.stringify({ lastSystem: `${b.prefix}${n}` }) });
   const remove = (id: string) => {
-    setConfirmId(null);
     void call({ method: "DELETE" }, `/api/boxels/${encodeURIComponent(id)}`).then(() =>
       setIncluded(ids.filter((x) => x !== id)),
     );
@@ -392,19 +360,21 @@ export function BoxelScreen({
   const byId = useMemo(() => new Map((saved ?? []).map((b) => [b.id, b])), [saved]);
   const looked = useMemo(() => new Map((table?.lookups ?? []).map((l) => [l.boxelId, l])), [table]);
   /*
-    The highest system flown per boxel: a cut (×) is offered only after it, since the boxel always
-    lists as far as he has flown (owner, 2026-10-05).
+    The highest system per boxel known to exist: a cut (×) is offered only after it, since the boxel always
+    lists as far as he has flown (owner, 2026-10-05), as far as a route he plotted goes, and as far as a Spansh
+    look-up found (review 2026-11-05: a cut below those came straight back).
   */
-  const flownMax = useMemo(() => {
+  const knownMax = useMemo(() => {
     const m = new Map<string, number>();
-    for (const r of table?.rows ?? []) if (r.flown) m.set(r.boxelId, Math.max(m.get(r.boxelId) ?? -1, r.n));
+    for (const r of table?.rows ?? [])
+      if (r.flown || r.onRoute || r.from === "lookup" || r.from === "route") m.set(r.boxelId, Math.max(m.get(r.boxelId) ?? -1, r.n));
     return m;
   }, [table]);
   const order = useMemo(() => new Map(ids.map((id, i) => [id, i])), [ids]);
   const columns = useMemo<Column<BoxelTableRowDTO>[]>(
-    () => boxelColumns({ byId, order, flownMax, openRow, patch, setCutAsk }),
+    () => boxelColumns({ byId, order, knownMax, openRow, patch, setCutAsk }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [byId, order, flownMax],
+    [byId, order, knownMax],
   );
   // A phone gets cards, titled by the system (owner, 2026-10-05: the redo works on a phone too).
   const narrow = useMediaQuery("(max-width: 760px)");
@@ -417,11 +387,11 @@ export function BoxelScreen({
   const prevShown = previous ?? [];
   const sideShown = useMemo(() => {
     const q = sideQuery.trim();
-    const mine = (saved ?? []).filter((b) => (sideTab === "explored") === (b.next == null));
+    const mine = (saved ?? []).filter((b) => (sideTab === "explored") === boxelDone(b));
     if (!q) return mine;
     return mine.filter((b) => fuzzyRankAny([b.boxel, b.sector, b.lastSystem], q) != null);
   }, [saved, sideQuery, sideTab]);
-  const exploredCount = (saved ?? []).filter((b) => b.next == null).length;
+  const exploredCount = (saved ?? []).filter(boxelDone).length;
 
   const ticked = ids.map((id) => byId.get(id)).filter((b): b is SavedBoxelDTO => !!b);
   const lead = ticked.find((b) => b.current) ?? ticked[0] ?? null;
@@ -451,6 +421,26 @@ export function BoxelScreen({
     return allRows.filter((r) => keep(r) && (!notFlownOnly || (!r.flown && !r.skipped)));
   }, [allRows, filterKind, filterQuery, notFlownOnly]);
   const suggestions = useMemo(() => boxelFilterSuggestions(filterKind, allRows), [filterKind, allRows]);
+  /** The summary's counts: flown, skipped, and known from elsewhere (the split for its tooltip). */
+  const sources = useMemo(() => {
+    const n = (keep: (r: BoxelTableRowDTO) => boolean) => allRows.filter(keep).length;
+    const index = n((r) => !r.flown && r.from === "index");
+    const spansh = n((r) => !r.flown && r.from === "lookup");
+    const routes = n((r) => !r.flown && !!r.onRoute);
+    const gaps = n((r) => !r.flown && !!r.gap);
+    const parts = [
+      [index, "in the galaxy index"],
+      [spansh, "from Spansh"],
+      [routes, "on your routes (plotted or targeted, not flown)"],
+      [gaps, "exist unrecorded (a higher system is known; mass codes a–g number without gaps)"],
+    ] as const;
+    return {
+      flown: n((r) => r.flown),
+      skipped: n((r) => !r.flown && !!r.skipped),
+      elsewhere: n((r) => !r.flown && (r.from === "index" || r.from === "lookup" || r.from === "route" || !!r.onRoute || !!r.gap)),
+      split: parts.filter(([k]) => k > 0).map(([k, what]) => `${k.toLocaleString()} ${what}`).join("\n") || "Nothing known beyond your own journals",
+    };
+  }, [allRows]);
   /*
     The same element while its inputs stand, so a snapshot that changes nothing in the table (one comes
     about every second in game) does not draw its rows again (owner, 2026-10-06).
@@ -482,93 +472,38 @@ export function BoxelScreen({
       <div ref={dialogRef} className="boxel-screen" role="dialog" aria-modal="true" aria-label="Boxels">
         <header className="modal-head boxel-screen__head">
           <h3 className="boxel-screen__title">Boxels</h3>
+          {/*
+            One field (review P1, owner 2026-11-05): "Current boxel", "Plan" and "Last system #" overlapped. Any system
+            of a boxel adds it, flown or not; empty, Add takes the boxel you are in. Its end is set on its own row (⋯).
+          */}
           <form
             className="boxel-current"
             onSubmit={(ev) => {
               ev.preventDefault();
-              addCurrent();
+              if (addTarget) addBoxel(addTarget);
             }}
           >
+            <input
+              className="carriers-search__input boxel-add__input"
+              value={addInput}
+              placeholder="Add a boxel: paste any system of it"
+              aria-label="Add a boxel: any system name in it, flown or not"
+              onChange={(ev) => setAddInput(ev.target.value)}
+            />
             <button
               type="submit"
               className="fdb-chip fdb-chip--on"
-              disabled={!here}
+              disabled={!addTarget}
               title={
-                here
-                  ? `Save ${here.boxel} in ${here.sector} and show it`
-                  : "You are in a system with a catalogue name, which belongs to no boxel"
+                addWhat
+                  ? `Save ${addWhat.boxel} in ${addWhat.sector} and show it`
+                  : addInput.trim()
+                    ? "Type a system with a boxel name (sector, letters, mass code and number)"
+                    : "You are in a system with a catalogue name, which belongs to no boxel: paste a system of the boxel"
               }
             >
-              Current boxel{here ? `: ${here.boxel}` : ""}
+              {addWhat ? `Add ${addWhat.boxel}${typed ? "" : " (you are here)"}` : "Add"}
             </button>
-            <span className="boxel-plan">
-              <input
-                className="carriers-search__input"
-                value={planInput}
-                placeholder="Plan: any system, e.g. Eol Prou AB-C d1-23"
-                aria-label="Plan a boxel: any system name in it, flown or not"
-                onChange={(ev) => setPlanInput(ev.target.value)}
-                onKeyDown={(ev) => {
-                  if (ev.key !== "Enter") return;
-                  ev.preventDefault();
-                  if (plan) addBoxel(planInput.trim());
-                }}
-              />
-              <button
-                type="button"
-                className="fdb-chip fdb-chip--on"
-                disabled={!plan}
-                title={
-                  plan
-                    ? `Save ${plan.boxel} in ${plan.sector} and show it`
-                    : "Type a system with a boxel name (sector, letters, mass code and number)"
-                }
-                onClick={() => addBoxel(planInput.trim())}
-              >
-                Plan{plan ? `: ${plan.boxel}` : ""}
-              </button>
-            </span>
-            <label className="boxel-current__end">
-              <span className="dim tiny">Last system #</span>
-              <input
-                className="carriers-search__input"
-                inputMode="numeric"
-                value={endInput}
-                placeholder={endShownFor ? String(endShownFor.end) : "auto"}
-                title="The boxel's last system number, or a whole system name from it; Enter or Apply sets it for the boxel in Plan, else the one you are in. Pasting applies it at once. Empty: the highest one anyone has recorded"
-                onChange={(ev) => {
-                  const v = ev.target.value;
-                  const named = parseBoxel(v.trim());
-                  setEndInput(named?.index != null ? String(named.index) : v.replace(/\D/g, ""));
-                }}
-                onPaste={(ev) => {
-                  const text = ev.clipboardData.getData("text");
-                  if (!text.trim()) return;
-                  ev.preventDefault();
-                  applyEnd(text);
-                }}
-                onKeyDown={(ev) => {
-                  if (ev.key !== "Enter") return;
-                  ev.preventDefault();
-                  applyEnd(endInput);
-                }}
-              />
-              <button
-                type="button"
-                className="fdb-chip"
-                disabled={!endInput || !(plan || here)}
-                title={
-                  plan
-                    ? `Set ${plan.boxel} to end at -${endInput || "?"}`
-                    : here
-                      ? `Set ${here.boxel} to end at -${endInput || "?"}`
-                      : "Type a Plan system or be in a boxel first"
-                }
-                onClick={() => applyEnd(endInput)}
-              >
-                Apply
-              </button>
-            </label>
           </form>
           <button
             type="button"
@@ -584,13 +519,6 @@ export function BoxelScreen({
           </button>
         </header>
         {helpOpen ? <BoxelMassCodeHelp /> : null}
-        <label
-          className="boxel-header-option dim tiny"
-          title="The boxel within 500 ly likely to pay most in first footfalls per jump, as a line in the main screen's header (from the galaxy map's Expedition planner)"
-        >
-          <input type="checkbox" checked={nextInHeader} onChange={(ev) => setNextInHeader(ev.target.checked)} /> Show
-          Next boxel in the main screen
-        </label>
         <BoxelLookingFor here={here} onSave={addBoxel} />
 
         <div className={`boxel-screen__body${sideOpen ? "" : " boxel-screen__body--folded"}`}>
@@ -613,9 +541,10 @@ export function BoxelScreen({
             <div className="boxel-side__tabs" role="tablist" aria-label="Which boxels" onKeyDown={(ev) => tabListKeyDown(ev, { follow: true })}>
               {(
                 [
-                  ["saved", "Saved", saved ? saved.length - exploredCount : null],
-                  ["explored", "Fully explored", saved ? exploredCount : null],
-                  ["history", "History", showPrevious ? prevTotal : null],
+                  // Review P4 (owner, 2026-11-05): fully explored ones are saved too, so "Saved" said too little.
+                  ["saved", "To fly", saved ? saved.length - exploredCount : null],
+                  ["explored", "Done", saved ? exploredCount : null],
+                  ["history", "Flown through", showPrevious ? prevTotal : null],
                 ] as const
               ).map(([k, label, n]) => (
                 <button
@@ -643,7 +572,8 @@ export function BoxelScreen({
               <LoadingNote className="tiny" label="Reading…" />
             ) : saved.length === 0 ? (
               <p className="dim tiny">
-                No boxels yet. Press <strong>Current boxel</strong> in a system such as Eol Prou AB-C d1-23.
+                No boxels yet. Paste a system such as Eol Prou AB-C d1-23 in <strong>Add a boxel</strong>, or press{" "}
+                <strong>Add</strong> while you are in one.
               </p>
             ) : sideShown.length === 0 ? (
               <p className="dim tiny">
@@ -651,13 +581,13 @@ export function BoxelScreen({
                   ? "None yet: a boxel moves here when every system is flown or skipped."
                   : sideQuery.trim()
                     ? "No saved boxel matches."
-                    : "Every saved boxel is fully explored."}
+                    : "Every saved boxel is done."}
               </p>
             ) : (
               <ul className="boxel-side__list">
                 {sideShown.map((b) => {
                   const on = ids.includes(b.id);
-                  const done = b.next == null;
+                  const done = boxelDone(b);
                   return (
                     <li
                       key={b.id}
@@ -704,128 +634,20 @@ export function BoxelScreen({
                         {b.skipped.length ? ` · ${b.skipped.length} skipped` : ""}
                         {" · "}
                         <span className={b.notable ? "boxel-notable" : undefined}>{b.notable} notable</span>
+                        {b.endKnown ? <span title="You checked in the galaxy map that the next system does not exist"> · ends at -{b.end}</span> : null}
                       </span>
-                      <span className="boxel-side__actions">
-                        <button
-                          type="button"
-                          className="fdb-chip"
-                          disabled={running}
-                          title={
-                            looked.get(b.id)
-                              ? `Looked up on Spansh ${looked.get(b.id)!.fetchedAt.slice(0, 10)} (${looked.get(b.id)!.systems} systems): again`
-                              : "Fill the systems you have not flown from Spansh: stars, every body, species logged (a few requests, five seconds apart)"
-                          }
-                          onClick={() => lookUpBoxel(b)}
-                        >
-                          {looked.get(b.id) ? "Look up again" : "Look up"}
-                        </button>
-                        {(looked.get(b.id)?.highest ?? -1) > b.end && !b.flownBeyond.length ? (
-                          <button
-                            type="button"
-                            className="fdb-chip"
-                            title={`Spansh lists systems up to -${looked.get(b.id)!.highest}: the boxel goes further than -${b.end}.`}
-                            onClick={() => extendTo(b, looked.get(b.id)!.highest)}
-                          >
-                            Extend to -{looked.get(b.id)!.highest}
-                          </button>
-                        ) : null}
-                        {b.flownBeyond.length ? (
-                          <button
-                            type="button"
-                            className="fdb-chip"
-                            title={`You have flown -${b.flownBeyond.join(", -")} too: the boxel goes further than -${b.end}.`}
-                            onClick={() => extendTo(b, b.flownBeyond[b.flownBeyond.length - 1]!)}
-                          >
-                            Extend to -{b.flownBeyond[b.flownBeyond.length - 1]}
-                          </button>
-                        ) : null}
-                        {/*
-                          Finding the boxel's last system in the galaxy map (owner, 2026-10-06; ideas from
-                          EDJP and SHBOXSEARCH): the prefix lists the boxel in one search, the probe is the
-                          number after the end. Found: plot or target it and the boxel extends itself.
-                          Not found: Not there, and the end is known.
-                        */}
-                        <button
-                          type="button"
-                          className={`fdb-chip${b.run ? " fdb-chip--on" : ""}`}
-                          title={
-                            b.run
-                              ? "Finish the boxel run (F7 in the game)"
-                              : "Start a boxel run here: after every jump its next system is on the clipboard, wherever you are (F7 in the game; F8 / F9 step through its systems)"
-                          }
-                          onClick={() => void patch(b.id, { run: !b.run })}
-                        >
-                          {b.run ? "Finish run" : "Start run"}
-                        </button>
-                        {/* One button for the three (owner, 2026-10-06: crowded); the end, once known. */}
-                        {b.endKnown && !b.probe ? null : (
-                          <button
-                            type="button"
-                            className={`fdb-chip${findEndId === b.id ? " fdb-chip--on" : ""}`}
-                            aria-expanded={findEndId === b.id}
-                            title="Find this boxel's last system in the galaxy map: copy its prefix or the next number, and mark it Not there when the map finds nothing"
-                            onClick={() => setFindEndId(findEndId === b.id ? null : b.id)}
-                          >
-                            Find end {findEndId === b.id ? "▾" : "▸"}
-                          </button>
-                        )}
-                        {findEndId === b.id ? (
-                          <button
-                            type="button"
-                            className={`fdb-chip${copied === b.prefix ? " fdb-chip--on" : ""}`}
-                            title={`Copies "${b.prefix}": paste it in the galaxy map's search to list the boxel's systems the game knows`}
-                            onClick={() => copyText(b.prefix)}
-                          >
-                            {copied === b.prefix ? "Copied" : "Copy prefix"}
-                          </button>
-                        ) : null}
-                        {findEndId === b.id && b.probe ? (
-                          <>
-                            <button
-                              type="button"
-                              className={`fdb-chip${copied === b.probe ? " fdb-chip--on" : ""}`}
-                              title={`Copies ${b.probe}: search it in the galaxy map. Found: plot a route to it or target it, and the boxel extends itself. Not found: press Not there.`}
-                              onClick={() => copyText(b.probe!)}
-                            >
-                              {copied === b.probe ? "Copied" : `Probe -${b.end + 1}`}
-                            </button>
-                            <button
-                              type="button"
-                              className="fdb-chip"
-                              title={`The galaxy map did not find ${b.probe}: -${b.end} is this boxel's last system`}
-                              onClick={() => void patch(b.id, { lastIs: b.end })}
-                            >
-                              Not there
-                            </button>
-                          </>
-                        ) : b.endKnown ? (
-                          <span
-                            className="dim tiny"
-                            title="You checked in the galaxy map that the next system does not exist"
-                          >
-                            ends at -{b.end}
-                          </span>
-                        ) : null}
-                        {confirmId === b.id ? (
-                          <>
-                            <button type="button" className="fdb-chip boxel-del" onClick={() => remove(b.id)}>
-                              Delete
-                            </button>
-                            <button type="button" className="fdb-chip" onClick={() => setConfirmId(null)}>
-                              Keep
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="fdb-chip boxel-x"
-                            aria-label={`Delete ${b.boxel} from your boxels`}
-                            title="Delete from your boxels"
-                            onClick={() => setConfirmId(b.id)}
-                          >
-                            ×
-                          </button>
-                        )}
+                      <span className="boxel-side__actions boxel-side__actions--menu">
+                        <BoxelSideActions
+                          b={b}
+                          lookedAt={looked.get(b.id)}
+                          lookupRunning={running}
+                          copied={copied}
+                          onCopy={copyText}
+                          onLookUp={() => lookUpBoxel(b)}
+                          onPatch={(body) => void patch(b.id, body)}
+                          onSetEnd={(n) => addBoxel(b.lastSystem, n)}
+                          onDelete={() => remove(b.id)}
+                        />
                       </span>
                     </li>
                   );
@@ -927,73 +749,33 @@ export function BoxelScreen({
           <main className="boxel-main">
             {error ? <p className="fdb-empty">{error}</p> : null}
             {ticked.length ? (
+              // Review P7 (owner, 2026-11-05): nine pieces were one line; the sources' split is in the tooltip.
               <div className="fdb-summary">
                 <span>
                   <strong>{ticked.length === 1 ? ticked[0]!.boxel : `${ticked.length} boxels`}</strong>
                   {ticked.length === 1 ? ` in ${ticked[0]!.sector}` : ""}
                 </span>
-                <span>
-                  <strong>{allRows.filter((r) => r.flown).length}</strong> of {allRows.length} flown
+                <span title={sources.split}>
+                  <strong>{sources.flown.toLocaleString()}</strong> / {allRows.length.toLocaleString()} flown
+                  {sources.skipped ? ` · ${sources.skipped.toLocaleString()} skipped` : ""}
+                  {sources.elsewhere ? ` · ${sources.elsewhere.toLocaleString()} known elsewhere` : ""}
                 </span>
-                <span>
-                  <strong>{allRows.filter((r) => r.from === "index").length}</strong> more in the galaxy index
-                </span>
-                {allRows.some((r) => r.from === "lookup") ? (
-                  <span>
-                    <strong>{allRows.filter((r) => r.from === "lookup").length}</strong> from Spansh
-                  </span>
-                ) : null}
-                {allRows.some((r) => r.onRoute) ? (
-                  <span title="Not flown: on a route you plotted, or targeted in the galaxy map">
-                    <strong>{allRows.filter((r) => r.onRoute).length}</strong> on your routes
-                  </span>
-                ) : null}
-                {allRows.some((r) => r.gap) ? (
-                  <span title="Recorded nowhere, but a higher system of the boxel is known, so they exist (mass codes a–g number their systems without gaps)">
-                    <strong>{allRows.filter((r) => r.gap).length}</strong> exist unrecorded
-                  </span>
-                ) : null}
-                {lead?.next ? (
-                  <span className="boxel-next">
-                    <span className="dim">Next to fly </span>
-                    <strong>{lead.next}</strong>
-                    <CopySystemButton system={lead.next} />
-                  </span>
-                ) : null}
-                {lastCopied ? (
-                  <span
-                    className="boxel-next"
-                    title={`Put on the clipboard ${lastCopied.at.slice(11, 19)} by a jump or a boxel key (F6–F9)`}
-                  >
-                    <span className="dim">Copied </span>
-                    <strong>{lastCopied.name}</strong>
-                    {lastCopied.run ? <span className="boxel-side__here">run</span> : null}
-                  </span>
-                ) : null}
-                {autoCopy != null ? (
-                  <label
-                    className="boxel-autocopy dim tiny"
-                    title="Desktop app: after each jump into a saved boxel, the next system to fly is put on the clipboard, ready to paste in the galaxy map. F6 copies it again (Launcher → Key binds)."
-                  >
-                    <input
-                      type="checkbox"
-                      checked={autoCopy}
-                      onChange={(ev) =>
-                        void call(
-                          {
-                            method: "POST",
-                            headers: json,
-                            body: JSON.stringify({ autoCopyNext: ev.target.checked }),
-                          },
-                          "/api/boxels/options",
-                        )
-                      }
-                    />{" "}
-                    Copy after each jump
-                  </label>
-                ) : null}
               </div>
             ) : null}
+            {lead ? (
+              <BoxelFlyingStrip
+                lead={lead}
+                several={ticked.length > 1}
+                run={(saved ?? []).find((b) => b.run) ?? null}
+                lastCopied={lastCopied}
+                autoCopy={autoCopy}
+                onAutoCopy={(on) =>
+                  void call({ method: "POST", headers: json, body: JSON.stringify({ autoCopyNext: on }) }, "/api/boxels/options")
+                }
+                onPatch={(id, body) => void patch(id, body)}
+              />
+            ) : null}
+            {lead?.shortest && lead.order ? <BoxelOrderLine b={lead} /> : null}
             {lookup && (lookup.running || lookup.note) ? (
               <p className="boxel-lookup-status" role="status">
                 {lookup.running ? (
@@ -1034,10 +816,7 @@ export function BoxelScreen({
                   if (!b) return null;
                   const n = cutAsk.n;
                   const after = b.end - n;
-                  const flownFrom =
-                    allRows.filter((r) => r.boxelId === b.id && r.n >= n && r.flown).length +
-                    b.flownBeyond.length;
-                  const skipped = b.skipped.includes(n);
+                  // Offered only after the last system known to exist (knownMax), so nothing flown is cut.
                   return (
                     <div className="boxel-cut" role="alertdialog" aria-label="Delete from here">
                       <span>
@@ -1047,29 +826,8 @@ export function BoxelScreen({
                         </strong>
                         {after > 0 ? ` and the ${after.toLocaleString()} after it` : ""}? The boxel will end
                         at -{n - 1}.
-                        {flownFrom > 0 ? (
-                          <>
-                            {" "}
-                            <strong className="warn">
-                              {flownFrom} of the systems from -{n} on {flownFrom === 1 ? "is" : "are"} flown
-                            </strong>{" "}
-                            — the boxel goes on past it. To finish it without flying -{n}, skip it instead.
-                          </>
-                        ) : null}
                       </span>
                       <span className="boxel-cut__actions">
-                        {flownFrom > 0 && !skipped ? (
-                          <button
-                            type="button"
-                            className="fdb-chip fdb-chip--on"
-                            onClick={() => {
-                              setCutAsk(null);
-                              void patch(b.id, { skip: n, on: true });
-                            }}
-                          >
-                            Skip -{n} instead
-                          </button>
-                        ) : null}
                         <button
                           type="button"
                           className="fdb-chip boxel-del"
@@ -1081,7 +839,7 @@ export function BoxelScreen({
                           Delete from -{n}
                         </button>
                         <button type="button" className="fdb-chip" onClick={() => setCutAsk(null)}>
-                          Keep
+                          Cancel
                         </button>
                       </span>
                     </div>

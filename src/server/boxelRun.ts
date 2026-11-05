@@ -13,11 +13,15 @@
  * - Past the last system known comes the one after it (EDJP counts up the same way): boxels number
  *   their systems without gaps, so it likely exists — until he marks the end with Not there.
  *   A run ends when every system is flown and the end is known.
+ * - **Shortest order** (owner, 2026-11-04; shared/boxelOrder.ts): a boxel set to it takes its systems with a known
+ *   position in the shortest order from where he is, then the rest by number; previous / next step along that order.
  *
  * Delivery is the caller's (`deliver`): the desktop app's clipboard, or Windows' `clip` without it.
  */
 import { parseBoxel } from "../shared/boxel.js";
-import type { VisitedSystem } from "./boxel.js";
+import { shortestBoxelOrder, type Vec3 } from "../shared/boxelOrder.js";
+import { boxelPositions } from "./boxelPositions.js";
+import { BOXEL_MAX_ROWS, type VisitedSystem } from "./boxel.js";
 import type { SavedBoxelsService } from "./savedBoxels.js";
 
 export interface BoxelRun {
@@ -40,7 +44,11 @@ export function createBoxelRun(d: {
   sightings: () => Iterable<{ name: string }>;
   currentSystem: () => string | null;
   deliver: (name: string) => void;
+  /** System number → position for a boxel (default: server/boxelPositions.ts), and where he is: for the shortest order. */
+  positions?: (prefix: string) => ReadonlyMap<number, Vec3>;
+  here?: () => Vec3 | null;
 }): BoxelRun {
+  const positionsOf = d.positions ?? boxelPositions;
   /** The system last copied: where previous / next step from. */
   let cursor: { id: string; n: number } | null = null;
 
@@ -62,12 +70,17 @@ export function createBoxelRun(d: {
   const todoOf = (id: string) => {
     const r = d.saved.remaining(id, d.visited(), d.sightings(), d.currentSystem());
     if (!r) return null;
-    const probe = r.endKnown ? [] : [r.end + 1];
+    const probe = r.endKnown || r.end >= BOXEL_MAX_ROWS - 1 ? [] : [r.end + 1];
+    // The shortest order: previous / next step along it, so `todo` is the same list as `queue`. With no position known
+    // yet it is next in line as before, not the lowest number (review 2026-11-05).
+    const o = r.shortest ? shortestBoxelOrder(r.todo, positionsOf(r.prefix), d.here?.() ?? null) : null;
+    const order = o?.placed ? [...o.order, ...probe] : null;
     return {
       prefix: r.prefix,
-      todo: [...r.todo, ...probe],
-      queue: [...r.todo.filter((n) => n > r.anchor), ...probe, ...r.todo.filter((n) => n <= r.anchor)],
+      todo: order ?? [...r.todo, ...probe],
+      queue: order ?? [...r.todo.filter((n) => n > r.anchor), ...probe, ...r.todo.filter((n) => n <= r.anchor)],
       done: r.endKnown && !r.todo.length,
+      ordered: !!order,
     };
   };
 
@@ -101,6 +114,12 @@ export function createBoxelRun(d: {
       // Nothing copied yet in this boxel: the first press copies the next in line itself.
       if (cursor?.id !== id) return copy(id, r.prefix, r.queue[0]!);
       const from = cursor.n;
+      if (r.ordered) {
+        // Along the shortest order; one no longer in it (flown) starts again from its head.
+        const i = r.todo.indexOf(from);
+        const k = i < 0 ? 0 : Math.max(0, Math.min(r.todo.length - 1, i + dir));
+        return copy(id, r.prefix, r.todo[k]!);
+      }
       // The first one after (or before) the last copied; at either end it stays there.
       const pick =
         dir > 0

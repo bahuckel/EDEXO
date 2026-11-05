@@ -2,9 +2,9 @@ import { existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { SpeciesDatabase } from "../shared/types.js";
 import { normOrganicToken } from "./organicTracking.js";
-import { readGenusMinSampleDistanceM, speciesGenusSampleDistanceM } from "./speciesTreeLoader.js";
+import { sampleDistanceM } from "./speciesTreeLoader.js";
 import type { ExoOrganicTrackerInternal } from "./exoOrganicTracker.js";
-import { getSpeciesDataDir, resolveOrganicSampleSessionPath } from "./paths.js";
+import { resolveOrganicSampleSessionPath } from "./paths.js";
 import { bodyIdOfBodyKey, systemAddressOfBodyKey } from "../shared/bodyKey.js";
 import { writeFileAtomic } from "./atomicWrite.js";
 
@@ -61,23 +61,6 @@ export function organicSampleSessionPath(_projectRoot: string): string {
 /** The pre-move location, read once so a run in progress survives the upgrade. */
 function legacyOrganicSampleSessionPath(projectRoot: string): string {
   return join(projectRoot, "data", "organic_sample_session.json");
-}
-
-function resolveMinSampleDistanceMForGenus(
-  projectRoot: string,
-  db: SpeciesDatabase,
-  genusLocalised: string,
-): number {
-  const g = genusLocalised.trim().toLowerCase();
-  if (!g) return 0;
-  for (const e of db.species) {
-    if (e.genus.trim().toLowerCase() !== g) continue;
-    const rel = e.dataSourceRelPath;
-    if (!rel) return 0;
-    const m = readGenusMinSampleDistanceM(join(getSpeciesDataDir(projectRoot), rel));
-    return m != null && m > 0 ? m : 0;
-  }
-  return 0;
 }
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -219,8 +202,7 @@ export function loadOrganicSampleSessionFromDisk(
   const speciesDisplay = typeof p.speciesDisplay === "string" ? p.speciesDisplay : "—";
   const genusLocalised = typeof p.genusLocalised === "string" ? p.genusLocalised : "";
   // A genus the game names after a species ("Luteolum Anemone") matches none: then the species' own.
-  const minDb =
-    resolveMinSampleDistanceMForGenus(projectRoot, db, genusLocalised) || speciesGenusSampleDistanceM(db.species, speciesDisplay);
+  const minDb = sampleDistanceM(db.species, genusLocalised, speciesDisplay);
   const minSampleDistanceM =
     typeof p.minSampleDistanceM === "number" && Number.isFinite(p.minSampleDistanceM)
       ? p.minSampleDistanceM

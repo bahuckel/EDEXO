@@ -251,6 +251,12 @@ export interface HudPrefsDTO {
   /** The panel fill's opacity, 0.1–1 (text and lines stay solid). */
   opacity?: number;
   candOrder?: "likelihood" | "value";
+  /** Exo candidates' scanned species (3/3): in the order above, first, or left out (owner, 2026-11-05). */
+  candScanned?: "place" | "top" | "hidden";
+  /** Exo candidates: the most rows shown, 1–30 (default 9). */
+  candMax?: number;
+  /** Exo candidates: the species being sampled always first (default on). */
+  candActiveTop?: boolean;
   region?: boolean;
   audio?: boolean;
   /** Compact overlays: no explanatory lines, only the readings (guild tester, 2026-09-30). */

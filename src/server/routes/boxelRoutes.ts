@@ -3,7 +3,9 @@
   their table, the Spansh look-ups, the boxels flown before and the screen's options.
 */
 import { boxelSystems, boxelTable, previousBoxelsPage, type SystemStats } from "../boxel.js";
-import { parseBoxel } from "../../shared/boxel.js";
+import { parseBoxel, type SavedBoxelDTO } from "../../shared/boxel.js";
+import { shortestBoxelOrder } from "../../shared/boxelOrder.js";
+import { boxelPositions, setBoxelLookupSource } from "../boxelPositions.js";
 import { createBoxelLookups } from "../boxelLookup.js";
 import { boxelJournalFacts, notableBodiesForSystem, systemBodyTally } from "../snapshotSystemInfo.js";
 import type { GameStateStore } from "../gameState.js";
@@ -94,6 +96,7 @@ export function registerBoxelRoutes(
       });
     },
   });
+  setBoxelLookupSource((prefix) => lookups.get(prefix));
   /*
     Systems known to exist without being flown (auto-boxel detector, owner 2026-10-06): every route he
     plotted (the NavRoute finder) and every system he targeted in the galaxy map (journals' FSDTarget,
@@ -115,15 +118,28 @@ export function registerBoxelRoutes(
       const highest = looked ? Math.max(-1, ...Object.keys(looked.systems).map(Number)) : -1;
       if (highest > b.end) opts.savedBoxels!.add(`${b.prefix}${highest}`);
     }
+    const items = opts.savedBoxels!.list(
+      store ? store.visitedSystems.entries() : [],
+      store ? boxelStats(store) : undefined,
+      store?.currentSystem ?? null,
+      sightings(store),
+    );
+    return { ok: true, items: items.map((b) => (b.shortest ? withOrder(b, store) : b)), autoCopyNext: opts.savedBoxels!.autoCopyNext() };
+  };
+  /** A boxel flown in the shortest order (shared/boxelOrder.ts): what is left in that order, and its next system. */
+  const withOrder = (b: SavedBoxelDTO, store: GameStateStore | null): SavedBoxelDTO => {
+    const r = opts.savedBoxels!.remaining(b.id, store ? store.visitedSystems.entries() : [], sightings(store), store?.currentSystem ?? null);
+    if (!r) return b;
+    const p = store?.commanderPos;
+    const o = shortestBoxelOrder(r.todo, boxelPositions(b.prefix), p ? [p.x, p.y, p.z] : null);
     return {
-      ok: true,
-      items: opts.savedBoxels!.list(
-        store ? store.visitedSystems.entries() : [],
-        store ? boxelStats(store) : undefined,
-        store?.currentSystem ?? null,
-        sightings(store),
-      ),
-      autoCopyNext: opts.savedBoxels!.autoCopyNext(),
+      ...b,
+      order: o.order.map((n, i) => ({ n, ly: o.legs[i] ?? null })),
+      placed: o.placed,
+      orderLy: o.orderLy,
+      numericLy: o.numericLy,
+      // No position known: next in line as before; nothing left: the probe past the end, as the run takes it.
+      next: o.placed ? `${b.prefix}${o.order[0]}` : b.next,
     };
   };
   app.get("/api/boxels", (_req, res) => {
@@ -267,6 +283,8 @@ export function registerBoxelRoutes(
     else if (typeof body.lastIs === "number") done = opts.savedBoxels.confirmEnd(id, body.lastIs);
     // The boxel run (server/boxelRun.ts): `{ run: true }` makes this boxel the run, `{ run: false }` ends it.
     else if (typeof body.run === "boolean") done = opts.savedBoxels.setRun(body.run ? id : null);
+    // The shortest order (shared/boxelOrder.ts): `{ shortest: true }`, or `false` to fly by number again.
+    else if (typeof body.shortest === "boolean") done = opts.savedBoxels.setShortest(id, body.shortest);
     if (!done) {
       res.status(400).json({ ...savedList(), ok: false, error: "That system is not in this saved boxel." });
       return;

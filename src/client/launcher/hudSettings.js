@@ -11,6 +11,18 @@ import { HUD_MERGED, HUD_PATH_BY_SECTION, HUD_SECTION_BY_PATH, HUD_SECTION_LABEL
 var LS_HUD_THEME = "edexoHudTheme";
 var LS_HUD_CAND = "edexoHudCandOrder";
 var LS_HUD_REGION = "edexoHudRegion";
+/* Candidate settings (owner, 2026-11-05): scanned species placed / first / hidden, the most rows, the active scan first. */
+var LS_HUD_CAND_SCANNED = "edexoHudCandScanned";
+var LS_HUD_CAND_MAX = "edexoHudCandMax";
+var LS_HUD_CAND_ACTIVE_TOP = "edexoHudCandActiveTop";
+function readCandMax() {
+  try {
+    var n = Math.round(parseFloat(localStorage.getItem(LS_HUD_CAND_MAX) || ""));
+    return isFinite(n) ? Math.min(30, Math.max(1, n)) : 9;
+  } catch (e) {
+    return 9;
+  }
+}
 var LS_HUD_SCALE = "edexoHudScale";
 var LS_HUD_ALPHA = "edexoHudOpacity";
 var LS_HUD_AUDIO = "edexoHudAudio";
@@ -59,6 +71,9 @@ function hudPrefsNow() {
   try { var op = parseFloat(localStorage.getItem(LS_HUD_ALPHA) || ""); if (isFinite(op)) prefs.opacity = op; } catch (e) {}
   try { prefs.candOrder = localStorage.getItem(LS_HUD_CAND) || "likelihood"; } catch (e) {}
   try { prefs.region = localStorage.getItem(LS_HUD_REGION) !== "0"; } catch (e) {}
+  try { prefs.candScanned = localStorage.getItem(LS_HUD_CAND_SCANNED) || "place"; } catch (e) {}
+  prefs.candMax = readCandMax();
+  try { prefs.candActiveTop = localStorage.getItem(LS_HUD_CAND_ACTIVE_TOP) !== "0"; } catch (e) {}
   try { prefs.audio = localStorage.getItem(LS_HUD_AUDIO) === "1"; } catch (e) {}
   try { prefs.compact = localStorage.getItem(LS_HUD_COMPACT) === "1"; } catch (e) {}
   try { prefs.relevant = localStorage.getItem(LS_HUD_RELEVANT) === "1"; } catch (e) {}
@@ -254,6 +269,9 @@ var hudRelevant = document.getElementById("hudRelevant");
 var hudAudio = document.getElementById("hudAudio");
 var hudCandOrder = document.getElementById("hudCandOrder");
 var hudRegion = document.getElementById("hudRegion");
+var hudCandScanned = document.getElementById("hudCandScanned");
+var hudCandMax = document.getElementById("hudCandMax");
+var hudCandActiveTop = document.getElementById("hudCandActiveTop");
 var hudCorner = document.getElementById("hudCorner");
 var hudOrderList = document.getElementById("hudOrderList");
 export var hudOrder;
@@ -390,6 +408,9 @@ async function loadHudSettingsIntoModal() {
   renderSwatches();
   if (hudCandOrder) hudCandOrder.value = (function () { try { return localStorage.getItem(LS_HUD_CAND) || "likelihood"; } catch (e) { return "likelihood"; } })();
   if (hudRegion) hudRegion.checked = (function () { try { return localStorage.getItem(LS_HUD_REGION) !== "0"; } catch (e) { return true; } })();
+  if (hudCandScanned) hudCandScanned.value = (function () { try { var v = localStorage.getItem(LS_HUD_CAND_SCANNED); return v === "top" || v === "hidden" ? v : "place"; } catch (e) { return "place"; } })();
+  if (hudCandMax) hudCandMax.value = String(readCandMax());
+  if (hudCandActiveTop) hudCandActiveTop.checked = (function () { try { return localStorage.getItem(LS_HUD_CAND_ACTIVE_TOP) !== "0"; } catch (e) { return true; } })();
   if (hudAudio) hudAudio.checked = (function () { try { return localStorage.getItem(LS_HUD_AUDIO) === "1"; } catch (e) { return false; } })();
   if (hudCompact) hudCompact.checked = (function () { try { return localStorage.getItem(LS_HUD_COMPACT) === "1"; } catch (e) { return false; } })();
   if (hudType) hudType.value = (function () { try { return localStorage.getItem(LS_HUD_TYPE) || "original"; } catch (e) { return "original"; } })();
@@ -582,6 +603,25 @@ export function start() {
       try {
         localStorage.setItem(LS_HUD_REGION, hudRegion.checked ? "1" : "0");
       } catch (e) {}
+      syncHudPrefs();
+    });
+  }
+  if (hudCandScanned) {
+    hudCandScanned.addEventListener("change", function () {
+      try { localStorage.setItem(LS_HUD_CAND_SCANNED, hudCandScanned.value); } catch (e) {}
+      syncHudPrefs();
+    });
+  }
+  if (hudCandMax) {
+    hudCandMax.addEventListener("change", function () {
+      try { localStorage.setItem(LS_HUD_CAND_MAX, hudCandMax.value); } catch (e) {}
+      hudCandMax.value = String(readCandMax());
+      syncHudPrefs();
+    });
+  }
+  if (hudCandActiveTop) {
+    hudCandActiveTop.addEventListener("change", function () {
+      try { localStorage.setItem(LS_HUD_CAND_ACTIVE_TOP, hudCandActiveTop.checked ? "1" : "0"); } catch (e) {}
       syncHudPrefs();
     });
   }

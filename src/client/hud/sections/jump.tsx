@@ -4,6 +4,7 @@ import type { HudSnapshot } from "../types";
 import { api, esc } from "../core";
 import { pref } from "../theme";
 import { FuelPump, Head, type HudSection } from "../parts";
+import { liveProgressShort } from "@shared/routeProgress";
 
 /* ============================================================== Next jump ==================== */
 /*
@@ -205,7 +206,7 @@ function NeutronLive({ d }: { d: HudSnapshot }) {
     <div className={"jump__neutron" + (todo.length ? " jump__neutron--act" : "")} data-f="neutron">
       <span className="jump__neutron-k">
         {/* A Spansh carrier route follows his carrier (plan 1.3.6): the next stop is for the carrier's map. */}
-        {n.carrier ? "Carrier" : n.noNeutrons ? "Route" : "Neutron"} {n.at}/{n.total}
+        {n.carrier ? "Carrier" : n.noNeutrons ? "Route" : "Neutron"} {liveProgressShort(n)}
       </span>{" "}
       {todo.map((t, i) => (
         <Fragment key={i}>

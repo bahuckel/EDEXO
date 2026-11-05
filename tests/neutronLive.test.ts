@@ -125,6 +125,16 @@ describe("flying a neutron route", () => {
     expect(parseLiveHops(ROUTE)).toHaveLength(4);
   });
 
+  it("keeps the plan's fuel, FSD health and address for the drawer's list (review 2026-11-05)", () => {
+    const [, b] = parseLiveHops([hop("Sol", 0), { ...hop("PSR B", 300), jumpsLeft: 6, fsdHealth: 0.97, address: 1234567 }])!;
+    expect(b).toMatchObject({ jumpsLeft: 6, fsdHealth: 0.97, address: 1234567 });
+    // Nonsense is left out, not kept.
+    const [, c] = parseLiveHops([hop("Sol", 0), { ...hop("PSR B", 300), jumpsLeft: -1, fsdHealth: 7, address: 2 ** 60 }])!;
+    expect(c).not.toHaveProperty("jumpsLeft");
+    expect(c).not.toHaveProperty("fsdHealth");
+    expect(c).not.toHaveProperty("address");
+  });
+
   it("shares the clipboard with the boxel run: starting either ends the other", () => {
     const saved = createSavedBoxels({ filePath: null, onRun: (id) => id && live.stop() });
     const live = createNeutronLive({

@@ -17,7 +17,7 @@ import {
   loadExomasteryProfile,
   maxExomasteryProfileSampleCount,
 } from "./exomasteryProfile.js";
-import { clearExoOrganicGenusMinDistCache, setExoOrganicSpeciesDb } from "./exoOrganicTracker.js";
+import { setExoOrganicSpeciesDb } from "./exoOrganicTracker.js";
 import { clearSpeciesRarityCache, speciesRarity } from "./speciesRarityData.js";
 
 /**
@@ -64,7 +64,6 @@ function withRarity(db: SpeciesDatabase, root: string): SpeciesDatabase {
 
 export function loadSpeciesDatabase(): SpeciesDatabase {
   const root = getProjectRoot();
-  clearExoOrganicGenusMinDistCache();
   cachedDb = withRarity(loadSpeciesDatabaseFromTree(root), root);
   setExoOrganicSpeciesDb(cachedDb);
   // The foot catalog keeps its own copy of the tree; a reload has to reach it too.

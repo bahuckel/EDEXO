@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import type { FootTravelFix } from "./footTravelStatus.js";
 import { keepClearedMarks, withCodexScan, withoutCodexMarks, type SurfaceMark } from "./surfaceMarksFile.js";
 import { logScanLocate } from "./scanLocateLog.js";
@@ -25,8 +24,8 @@ import {
   wipeOrganicSampleSession,
   type OrganicSampleSessionHost,
 } from "./organicSampleSessionFile.js";
-import { getProjectRoot, getSpeciesDataDir } from "./paths.js";
-import { readGenusMinSampleDistanceM, speciesGenusSampleDistanceM } from "./speciesTreeLoader.js";
+import { getProjectRoot } from "./paths.js";
+import { sampleDistanceM, speciesGenusSampleDistanceM } from "./speciesTreeLoader.js";
 import { bodyKey } from "../shared/bodyKey.js";
 
 export type ExoOrganicAnchors = { latDeg: number; lonDeg: number; planetRadiusM: number };
@@ -103,12 +102,6 @@ export type ExoOrganicOverlayHost = {
 const minimapRadiusFor = (store: ExoOrganicOverlayHost): number =>
   clampRadarRadiusM(store.minimapRadiusM ?? RADAR_RADIUS_DEFAULT_M);
 
-const genusMinDistCache = new Map<string, number>();
-
-export function clearExoOrganicGenusMinDistCache(): void {
-  genusMinDistCache.clear();
-}
-
 type ExoOrganicJournalStore = ExoOrganicOverlayHost &
   OrganicSampleSessionHost & {
     footTravelOdometerEnabled: boolean;
@@ -180,38 +173,6 @@ function anchorFromMarks(
 
 function persistSoon(store: ExoOrganicJournalStore, projectRoot: string): void {
   schedulePersistOrganicSampleSession(store, projectRoot);
-}
-
-/**
- * The run's sample distance, from its genus, else from its species: the game names some genera after one of their
- * species ("Luteolum Anemone" for every Anemone, "Roseum Sinuous Tubers" for every Tubers), which no genus matches,
- * and the run's ring was 0 m and not drawn (owner, 2026-11-04: "the BIG circle around a log/sample ... is still not
- * visible").
- */
-function resolveMinSampleDistanceM(projectRoot: string, db: SpeciesDatabase, genusLocalised: string, species: string): number {
-  return genusMinSampleDistanceM(projectRoot, db, genusLocalised) || sampleDistanceForSpeciesLabel(species, db);
-}
-
-function genusMinSampleDistanceM(projectRoot: string, db: SpeciesDatabase, genusLocalised: string): number {
-  const g = genusLocalised.trim().toLowerCase();
-  if (!g) return 0;
-  const cached = genusMinDistCache.get(g);
-  if (cached !== undefined) return cached;
-  for (const e of db.species) {
-    if (e.genus.trim().toLowerCase() !== g) continue;
-    const rel = e.dataSourceRelPath;
-    if (!rel) {
-      genusMinDistCache.set(g, 0);
-      return 0;
-    }
-    const jsonPath = join(getSpeciesDataDir(projectRoot), rel);
-    const m = readGenusMinSampleDistanceM(jsonPath);
-    const v = m != null && m > 0 ? m : 0;
-    genusMinDistCache.set(g, v);
-    return v;
-  }
-  genusMinDistCache.set(g, 0);
-  return 0;
 }
 
 /**
@@ -403,7 +364,7 @@ export function restoreOrganicSessionFromJournal(
     bodyNameNorm: normOrganicToken(
       typeof last.BodyName === "string" && last.BodyName.trim() ? last.BodyName.trim() : `Body ${bodyId}`,
     ),
-    minSampleDistanceM: resolveMinSampleDistanceM(projectRoot, db, genusLoc, speciesDisplay),
+    minSampleDistanceM: sampleDistanceM(db.species, genusLoc, speciesDisplay),
     anchors,
     anchorSlots,
     recoveredSamples: counted.length - anchors.length,
@@ -466,7 +427,7 @@ export function ingestExoOrganicJournalLine(
               latDeg: retireHere.latDeg,
               lonDeg: retireHere.lonDeg,
               radiusM: retireHere.planetRadiusM,
-              withinM: Math.max(50, resolveMinSampleDistanceM(projectRoot, db, genusForRange, speciesDisplayFromLine(line))),
+              withinM: Math.max(50, sampleDistanceM(db.species, genusForRange, speciesDisplayFromLine(line))),
             },
     );
     // The plant's real spot against where its scans put it, to tune the placing (scanLocateLog.ts).
@@ -548,7 +509,7 @@ export function ingestExoOrganicJournalLine(
     }
 
     const speciesDisplay = speciesDisplayFromLine(line);
-    const minM = resolveMinSampleDistanceM(projectRoot, db, genusLoc, speciesDisplay);
+    const minM = sampleDistanceM(db.species, genusLoc, speciesDisplay);
 
     /** The first plant of a run: a fresh tracker anchored here, the map's mark, the foot session. */
     const startRun = (): void => {
@@ -861,17 +822,16 @@ export function buildExoMinimapDto(
     mistaking for the thing being collected.
   */
   const tracker = store.exoOrganicTracker;
-  const activeSpecies =
-    tracker && belongsHere({ bodyKey: tracker.bodyKey, bodyNameNorm: tracker.bodyNameNorm })
-      ? tracker.speciesDisplay.trim().toLowerCase()
-      : null;
-
+  const { activeSpecies, isRunSample } = runOn(store, belongsHere);
   for (const m of store.surfaceSampleMarks) {
     if (!belongsHere(m)) continue;
-    const isActive = activeSpecies != null && m.label.trim().toLowerCase() === activeSpecies;
+    const isActive = isRunSample(m);
     // The run's own distance for its marks; a leftover species' from its genus.
     const ringM = isActive ? minSampleDistanceM : sampleDistanceForSpeciesLabel(m.label);
-    push(m.latDeg, m.lonDeg, "sample", m.label, isActive, ringM, { name: m.label });
+    // Which of the run's scans it is (review P15): the slot of the anchor standing where the mark is.
+    const k = isActive && tracker ? tracker.anchors.findIndex((a) => samePlace(a, m)) : -1;
+    const scanNo = k >= 0 ? (tracker!.anchorSlots?.[k] ?? k) + 1 : undefined;
+    push(m.latDeg, m.lonDeg, "sample", m.label, isActive, ringM, { name: m.label, ...(scanNo ? { scanNo } : {}) });
   }
   /*
     The next plant to sample (owner, 2026-11-04: comp scan from the ship, then drive round them): a composition scan of
@@ -899,7 +859,8 @@ export function buildExoMinimapDto(
   for (const m of store.surfaceCodexMarks ?? []) {
     if (!belongsHere(m)) continue;
     const how = m.located ?? "scanned-from";
-    push(m.latDeg, m.lonDeg, "codex", `${m.label} (${m === target ? "next to sample, " : ""}${NOTE[how]})`, false, 0, {
+    // Active: a plant of the species being sampled (green on the radar); the others are drawn yellow (review P14).
+    push(m.latDeg, m.lonDeg, "codex", `${m.label} (${m === target ? "next to sample, " : ""}${NOTE[how]})`, isRunPlant(m), 0, {
       name: m.label,
       located: how,
       ...(how === "scanned-from" && m.headingDeg != null ? { scanHeadingDeg: m.headingDeg } : {}),
@@ -933,6 +894,31 @@ function belongsHereFor(fix: FootTravelFix, footKey: string): (m: { bodyKey: str
   return (m) => (onBodyNorm && m.bodyNameNorm ? m.bodyNameNorm === onBodyNorm : m.bodyKey === footKey);
 }
 
+/** A mark standing where a scan was taken (sessions keep exact coordinates). */
+const samePlace = (a: { latDeg: number; lonDeg: number }, m: { latDeg: number; lonDeg: number }) =>
+  Math.abs(a.latDeg - m.latDeg) < 1e-5 && Math.abs(a.lonDeg - m.lonDeg) < 1e-5;
+
+/**
+ * The species being sampled on this body (lower case; null: no run here), and whether a sample mark is one of its own:
+ * where its own scans stand, so an earlier, abandoned run of the same species here is a leftover (review 2026-11-05:
+ * its marks were green and ringed, and the walk-away arc pointed from them).
+ */
+function runOn(
+  store: ExoOrganicOverlayHost,
+  belongsHere: (m: { bodyKey: string; bodyNameNorm?: string }) => boolean,
+): { activeSpecies: string | null; isRunSample: (m: SurfaceMark) => boolean } {
+  const tracker = store.exoOrganicTracker;
+  const activeSpecies =
+    tracker && belongsHere({ bodyKey: tracker.bodyKey, bodyNameNorm: tracker.bodyNameNorm })
+      ? tracker.speciesDisplay.trim().toLowerCase()
+      : null;
+  const ofThisRun = (m: { latDeg: number; lonDeg: number }) => !tracker?.anchors.length || tracker.anchors.some((a) => samePlace(a, m));
+  return {
+    activeSpecies,
+    isRunSample: (m) => activeSpecies != null && m.label.trim().toLowerCase() === activeSpecies && ofThisRun(m),
+  };
+}
+
 /** How long the clear key waits for its second press. */
 export const CLEAR_ARM_MS = 3000;
 /** The clear key's first press: on which body, until when, and how many marks would go. */
@@ -943,7 +929,8 @@ let clearArm: { untilMs: number; count: number; body: string } | null = null;
  * and the radar asks for a second; a second press on the same body within {@link CLEAR_ARM_MS} moves this planet's
  * sample and composition-scan marks to the file's `cleared` list (surfaceMarksFile.ts keepClearedMarks), off the radar, the screen marker and everything that
  * reads the marks ("keep in memory file but just remove them from the screen and the calculations"). The ship and the
- * SRV stay. Null when there is nothing here to clear.
+ * SRV stay, and so do the samples of the run in progress (owner, 2026-11-05: "do not end the current sample run, just
+ * remove the comp scan things from the screen"): the game still measures from them. Null when there is nothing to clear.
  */
 export function pressClearMarksHere(
   store: ExoOrganicOverlayHost,
@@ -954,9 +941,11 @@ export function pressClearMarksHere(
 ): { armed: number } | { cleared: number } | null {
   const fix = store.exoOrganicLastFix;
   if (!fix) return null;
-  const here = belongsHereFor(fix, bodyKeyOnFoot ?? "\u0000near");
+  const onBody = belongsHereFor(fix, bodyKeyOnFoot ?? "\u0000near");
+  const { isRunSample } = runOn(store, onBody);
+  const here = (m: SurfaceMark) => onBody(m) && !isRunSample(m);
   const body = normStatusBodyName(fix.bodyName) ?? bodyKeyOnFoot ?? "";
-  const gone = [...store.surfaceSampleMarks.filter(here), ...(store.surfaceCodexMarks ?? []).filter(here)];
+  const gone = [...store.surfaceSampleMarks.filter(here), ...(store.surfaceCodexMarks ?? []).filter(onBody)];
   if (!clearArm || clearArm.untilMs <= nowMs || clearArm.body !== body) {
     clearArm = gone.length ? { untilMs: nowMs + CLEAR_ARM_MS, count: gone.length, body } : null;
     if (!gone.length) return null;
@@ -970,7 +959,7 @@ export function pressClearMarksHere(
   if (!gone.length) return null;
   keepClearedMarks(gone, new Date(nowMs).toISOString());
   store.surfaceSampleMarks = store.surfaceSampleMarks.filter((m) => !here(m));
-  if (store.surfaceCodexMarks) store.surfaceCodexMarks = store.surfaceCodexMarks.filter((m) => !here(m));
+  if (store.surfaceCodexMarks) store.surfaceCodexMarks = store.surfaceCodexMarks.filter((m) => !onBody(m));
   store.persistSurfaceMarks?.();
   changed?.();
   return { cleared: gone.length };
@@ -1038,8 +1027,6 @@ export function buildExoOrganicOverlayDto(
   const nearestSampleMeetsMin =
     distToNearestSampleM != null && minG > 0 ? distToNearestSampleM >= minG : null;
 
-  const minimap = buildExoMinimapDto(store, t.bodyKey, minG);
-
   const label = t.speciesDisplay;
   const baseCredits = lookupPrice(prices, label, label);
   const ff: 1 | 5 = store.firstFootfallBodies.has(t.bodyKey) ? 5 : 1;
@@ -1088,7 +1075,6 @@ export function buildExoOrganicOverlayDto(
     sampleCount: effectiveSampleCount(t),
     trackingBodyKey: t.bodyKey,
     distToNearestSampleM,
-    minimap,
     nearestSampleMeetsMin,
   };
 }

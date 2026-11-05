@@ -17,6 +17,8 @@ import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRe
 import { SHIP_NEAR_LS, type ScanRouteBodyDTO, type ScanRouteDTO } from "@shared/dto/routeSystem.js";
 
 export type ScanScale = "true" | "compact";
+/** Which bodies are named (owner, 2026-11-05): every one (as the zoom allows), the route's stops, or the next stop. */
+export type ScanNames = "all" | "route" | "next";
 
 /** Star colours by the first letter of the type; neutron stars and white dwarfs by theirs. */
 function starColour(cls: string | null): number {
@@ -75,6 +77,8 @@ export interface ScanRouteScene {
   fit(): void;
   /** Centre on a body, close enough to see what orbits it. */
   focus(id: number): void;
+  /** Which names show, and the next stop's id (for "next"). */
+  setNames(names: ScanNames, nextId: number | null): void;
   dispose(): void;
 }
 
@@ -169,15 +173,24 @@ export function createScanRouteScene(
     onGrid?.(step);
   }
 
-  /** Bodies at their size on screen, names where their orbit is big enough to tell apart (the true view). */
+  let names: ScanNames = "all";
+  let nextId: number | null = null;
+  /**
+   * Bodies at their size on screen (the true view), and the names: where their orbit is big enough to tell apart (route
+   * stops always), and only the route's or the next stop's when asked.
+   */
   function scaleToZoom(): void {
-    if (mode !== "true") return;
     const upp = unitsPerPx();
     for (const d of drawn) {
-      const s = d.size * PX_PER_SIZE * upp;
-      d.mesh.scale.setScalar(s);
-      d.halo?.scale.setScalar(s);
-      if (d.label) d.label.visible = d.stop || d.orbit / upp >= LABEL_MIN_PX || d.orbit === 0;
+      if (mode === "true") {
+        const s = d.size * PX_PER_SIZE * upp;
+        d.mesh.scale.setScalar(s);
+        d.halo?.scale.setScalar(s);
+      }
+      if (!d.label) continue;
+      const fits = mode !== "true" || d.stop || d.orbit / upp >= LABEL_MIN_PX || d.orbit === 0;
+      const wanted = names === "all" || (names === "route" ? d.stop : d.id === nextId);
+      d.label.visible = fits && wanted;
     }
   }
 
@@ -477,6 +490,11 @@ export function createScanRouteScene(
     },
     fit,
     focus,
+    setNames(n, id) {
+      names = n;
+      nextId = id;
+      render();
+    },
     dispose() {
       cancelAnimationFrame(frame);
       ro.disconnect();

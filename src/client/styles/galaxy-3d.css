@@ -1588,6 +1588,11 @@
 .g3d-neutron-table tr.is-waypoint td {
   color: var(--accent);
 }
+/* The route being flown: the stop on the clipboard (NeutronLiveStops.tsx). */
+.g3d-neutron-table tr.is-next td {
+  background: var(--accent-a06);
+  font-weight: 600;
+}
 /* The Spansh route drawer (SpanshRouteDrawer.tsx): wide enough for both value columns; each stop's species two lines. */
 .g3d-plan.g3d-spansh-drawer {
   width: min(460px, calc(100vw - 24px));

@@ -677,7 +677,7 @@
             </details>
 
             <details class="hud-group" data-group="content">
-              <summary title="What the HUDs list">What they show</summary>
+              <summary title="What the Exo candidates HUD lists, and in which order">Candidate settings</summary>
               <div class="hud-set-row">
                 <label for="hudCandOrder" title="The Exo candidates HUD: by how likely each genus is (as in the app), or by value, highest first.">Candidate order</label>
                 <select id="hudCandOrder">
@@ -687,6 +687,21 @@
               </div>
               <div class="hud-set-row">
                 <label title="A line with the codex region you are in, on the Exo candidates HUD."><input type="checkbox" id="hudRegion" checked /> Show the current region</label>
+              </div>
+              <div class="hud-set-row">
+                <label for="hudCandScanned" title="Species already scanned on this body (3/3): where the order above puts them, first, or left out of the list.">Scanned species</label>
+                <select id="hudCandScanned">
+                  <option value="place">In the order above</option>
+                  <option value="top">Scanned on top</option>
+                  <option value="hidden">Scanned hidden</option>
+                </select>
+              </div>
+              <div class="hud-set-row">
+                <label for="hudCandMax" title="The most species the HUD lists; the rest are counted in a last line. The phone lists them all.">Candidates shown at most</label>
+                <input type="number" id="hudCandMax" min="1" max="30" step="1" value="9" />
+              </div>
+              <div class="hud-set-row">
+                <label title="The species you are sampling now first in the list, whatever the order above."><input type="checkbox" id="hudCandActiveTop" checked /> Always show the active scan on top</label>
               </div>
             </details>
 

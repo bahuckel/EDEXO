@@ -27,6 +27,8 @@ import { CopySystemButton } from "../CopySystemButton";
 import { useRouteValues } from "../routeValues";
 import { G3D_HELP, MenuHead, MenuRow } from "./G3dMenu";
 import { keepNeutronMarks, type NeutronMark } from "./neutronMarks";
+import { handToNeutron } from "../NeutronDrawer";
+import { LiveRouteBanner, useLiveRoute } from "./LiveRouteBanner";
 
 const KIND_NAME: Record<SpanshRouteDTO["kind"], string> = {
   exobiology: "Exobiology",
@@ -96,13 +98,17 @@ function spanshCounts(route: SpanshRouteDTO): Record<"jumps" | "boosted" | "refu
 
 type RangeFrom = "spansh" | "ship";
 const noCompare = (error: string): Compare => ({ jumps: 0, boosted: 0, refuels: 0, rangeLy: null, marks: [], error });
+const NOT_DRAWN = "Not drawn on the map: the route you are flying keeps the line. Stop it, or Fly this one, to see it.";
 
 export function SpanshRouteDrawer({
   onRoute,
   onFocus,
+  onOpenNeutron,
 }: {
   onRoute: (marks: NeutronMark[]) => void;
   onFocus: (p: { x: number; y: number; z: number }) => void;
+  /** Switches to the Neutron drawer, its ends handed over (review P12). */
+  onOpenNeutron?: () => void;
 }) {
   const [text, setText] = useState(kept.text);
   const [route, setRoute] = useState<SpanshRouteDTO | null>(kept.route);
@@ -116,6 +122,8 @@ export function SpanshRouteDrawer({
   const [edexoOnMap, setEdexoOnMap] = useState(false);
   const [savedRoutes, setSavedRoutes] = useState<SavedSpanshRouteDTO[]>([]);
   const [fromCopy, setFromCopy] = useState(false);
+  // The route being flown, this one or the Neutron tab's: its banner and the one Stop (review P10).
+  const { view: live, refresh: refreshLive } = useLiveRoute();
 
   const loadSaved = () =>
     void fetch("/api/spansh-route/saved")
@@ -136,6 +144,23 @@ export function SpanshRouteDrawer({
     kept.floor = floor;
   }, [text, route, dropped, floor]);
 
+  /**
+   * The map's line: a route being flown keeps it (owner, 2026-11-05, review Q2: no second line, and a route only being
+   * read no longer replaces the flown one). False, with a note, when it was not drawn.
+   */
+  const drawUnlessFlying = async (marks: NeutronMark[]): Promise<boolean> => {
+    const live = await fetch("/api/neutron/live")
+      .then((r) => (r.ok ? (r.json() as Promise<{ active?: boolean }>) : null))
+      .catch(() => null);
+    if (live?.active) {
+      setNote(NOT_DRAWN);
+      return false;
+    }
+    keepNeutronMarks(marks);
+    onRoute(marks);
+    return true;
+  };
+
   /** Asks for a route (a link read from Spansh, or a file) and shows the answer. */
   const answer = async (ask: () => Promise<Response>) => {
     setBusy(true);
@@ -152,10 +177,8 @@ export function SpanshRouteDrawer({
         setFromCopy(a.saved === true);
         loadSaved();
         setDropped(new Set());
-        const marks = marksOf(a.route.stops);
-        keepNeutronMarks(marks);
-        onRoute(marks);
-        onFocus(a.route.stops[0]!);
+        if (await drawUnlessFlying(marksOf(a.route.stops))) onFocus(a.route.stops[0]!);
+        else if (a.note) setNote(`${a.note} ${NOT_DRAWN}`);
       } else if (a.state === "pending") setNote("Spansh is still planning this route: read it again in a moment.");
       else setError(a.error);
     } catch (e) {
@@ -216,19 +239,17 @@ export function SpanshRouteDrawer({
   };
 
   /** The map shows Spansh's route, or EDEXO's plan of the same ends. */
-  const showOnMap = (edexo: boolean, c: Compare | null = compare) => {
+  const showOnMap = async (edexo: boolean, c: Compare | null = compare) => {
     if (!route) return;
     const marks = edexo && c?.marks.length ? c.marks : marksOf(route.stops);
-    keepNeutronMarks(marks);
-    onRoute(marks);
-    setEdexoOnMap(edexo && !!c?.marks.length);
+    if (await drawUnlessFlying(marks)) setEdexoOnMap(edexo && !!c?.marks.length);
   };
 
   const compareWithEdexo = async () => {
     if (!route) return;
     setBusy(true);
     setCompare(null);
-    if (edexoOnMap) showOnMap(false, null);
+    if (edexoOnMap) void showOnMap(false, null);
     try {
       const a = route.stops[0]!;
       const b = route.stops[route.stops.length - 1]!;
@@ -289,7 +310,13 @@ export function SpanshRouteDrawer({
       const r = await fetch("/api/spansh-route/fly", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job: route.job, keep }),
+        // The stops too (review P13): a route forgotten from the kept list, or pushed out of it, still flies.
+        body: JSON.stringify({
+          job: route.job,
+          keep,
+          kind: route.kind,
+          stops: route.stops.map(({ name, x, y, z, jumps, neutron, refuel, inject }) => ({ name, x, y, z, jumps, neutron, refuel, inject })),
+        }),
       });
       const j = (await r.json()) as { next?: string | null; stops?: number; error?: string };
       if (!r.ok) throw new Error(j.error ?? `Failed (${r.status})`);
@@ -297,6 +324,7 @@ export function SpanshRouteDrawer({
       keepNeutronMarks(marks);
       onRoute(marks);
       setEdexoOnMap(false);
+      refreshLive();
       setNote(
         `${route.kind === "carrier" ? "Following" : "Flying"} ${j.stops} stop${j.stops === 1 ? "" : "s"}${j.next ? `: ${j.next} is on the clipboard` : ""}. F6 copies the next stop again.`,
       );
@@ -308,8 +336,19 @@ export function SpanshRouteDrawer({
   };
 
   const stopFlying = async () => {
-    await fetch("/api/neutron/live", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stop: true }) }).catch(() => null);
-    setNote("Stopped.");
+    const r = await fetch("/api/neutron/live", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stop: true }) }).catch(() => null);
+    // Said only when it did (review 2026-11-05: "Stopped." showed after a failed request too).
+    if (!r?.ok) return setError("Could not stop the route: is EDEXO's server running?");
+    refreshLive();
+    // Nothing flown now: the route read here gets the map's line, else the line goes.
+    if (route) {
+      keepNeutronMarks(marksOf(route.stops));
+      onRoute(marksOf(route.stops));
+    } else {
+      keepNeutronMarks([]);
+      onRoute([]);
+    }
+    setNote("Stopped: no stop is copied after a jump any more.");
   };
 
   const toggle = (i: number) =>
@@ -323,7 +362,8 @@ export function SpanshRouteDrawer({
   return (
     <aside className="g3d-drawer g3d-menu g3d-plan g3d-spansh-drawer" aria-label="Spansh route" data-testid="g3d-spansh">
       <MenuHead title="Spansh route" help={G3D_HELP.spansh} />
-      <div className="g3d-menu__section g3d-menu__section--first">
+      {live ? <LiveRouteBanner view={live} onStop={() => void stopFlying()} /> : null}
+      <div className={`g3d-menu__section${live ? "" : " g3d-menu__section--first"}`}>
         <MenuRow label="Spansh link" hint="The address of a Spansh results page (exobiology, road to riches, neutron, galaxy plotter or fleet carrier), or its job id">
           <input
             className="g3d-input g3d-row__val"
@@ -457,7 +497,7 @@ export function SpanshRouteDrawer({
                       onClick={() => {
                         setRangeFrom(k);
                         setCompare(null);
-                        if (edexoOnMap) showOnMap(false, null);
+                        if (edexoOnMap) void showOnMap(false, null);
                       }}
                     >
                       {label}
@@ -468,6 +508,26 @@ export function SpanshRouteDrawer({
               <button type="button" className="btn-top-toggle" disabled={busy} onClick={() => void compareWithEdexo()}>
                 Plan it with EDEXO too
               </button>
+              {onOpenNeutron ? (
+                <button
+                  type="button"
+                  className="btn-top-toggle"
+                  title="The Neutron tab with this route's start and end filled in, to plan it there with every option"
+                  onClick={() => {
+                    const ends = [route.stops[0]!, route.stops[route.stops.length - 1]!].map((s) => ({
+                      name: s.name,
+                      x: s.x,
+                      y: s.y,
+                      z: s.z,
+                      ...(s.id64 && Number.isSafeInteger(Number(s.id64)) ? { address: Number(s.id64) } : {}),
+                    }));
+                    handToNeutron(ends);
+                    onOpenNeutron();
+                  }}
+                >
+                  Open in Neutron tab
+                </button>
+              ) : null}
               {compare?.error ? (
                 <p className="g3d-panel__note g3d-panel__note--warn" data-testid="spansh-compare">
                   EDEXO could not plan it: {compare.error}
@@ -505,7 +565,7 @@ export function SpanshRouteDrawer({
                     {route.rangeLy ? `; Spansh at ${route.rangeLy} ly` : ""}. The Neutron tab plans and flies EDEXO&apos;s in full.
                   </p>
                   {compare.marks.length ? (
-                    <button type="button" className="btn-top-toggle" onClick={() => showOnMap(!edexoOnMap)}>
+                    <button type="button" className="btn-top-toggle" onClick={() => void showOnMap(!edexoOnMap)}>
                       {edexoOnMap ? "Show Spansh's route on the map" : "Show EDEXO's route on the map"}
                     </button>
                   ) : null}
@@ -522,9 +582,6 @@ export function SpanshRouteDrawer({
           <button type="button" className="btn-top-toggle" disabled={busy || keptStops.length < 2} onClick={() => void fly()}>
             {route.kind === "carrier" ? "Follow with my carrier" : "Fly this route"}
             {dropped.size ? ` (${keptStops.length - 1} stops)` : ""}
-          </button>
-          <button type="button" className="btn-top-toggle" onClick={() => void stopFlying()} title="Ends the route being flown (this one or the Neutron tab's)">
-            Stop
           </button>
 
           <table className="fdb-table g3d-neutron-table">

@@ -53,6 +53,12 @@ export function serverPref(key: string): string | null {
       return str(p.candOrder);
     case "edexoHudRegion":
       return bool(p.region);
+    case "edexoHudCandScanned":
+      return str(p.candScanned);
+    case "edexoHudCandMax":
+      return numStr(p.candMax);
+    case "edexoHudCandActiveTop":
+      return bool(p.candActiveTop);
     case "edexoHudAudio":
       return bool(p.audio);
     case "edexoHudCompact":

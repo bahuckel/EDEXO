@@ -85,6 +85,40 @@ describe("HUD candidates", () => {
     expect(rows.at(-1)?.textContent).toBe("+3 more — all of them in the app");
   });
 
+  it("candidate settings: the active scan first, scanned ones first or hidden, at most N rows (owner, 2026-11-05)", () => {
+    const snap = {
+      exoOverlayFocusBodyKey: "1:2",
+      bodies: [
+        {
+          ...body("1:2", "A 2", [
+            match("Aleoida", "arcus", 1),
+            match("Stratum", "tectonicas", 1, { organicAnalysisComplete: true }),
+            match("Tussock", "propagito", 1),
+            match("Osseus", "discus", 1),
+          ]),
+          genusLikelihoods: [],
+        },
+      ],
+      exoOrganicOverlay: { visible: true, trackingBodyKey: "1:2", speciesDisplay: "Tussock propagito", sampleCount: 1 },
+    };
+    const names = () => [...document.querySelectorAll(".hud-list li")].map((li) => (li.textContent ?? "").split(" ")[0]);
+    // As the launcher changes them: a storage event re-renders the HUD (main.tsx).
+    const set = (key: string, v: string) => {
+      window.localStorage.setItem(key, v);
+      window.dispatchEvent(new StorageEvent("storage", { key }));
+    };
+    HUD.render(snap);
+    expect(names()).toEqual(["Tussock", "Aleoida", "Stratum", "Osseus"]); // on by default
+    set("edexoHudCandScanned", "top");
+    expect(names()).toEqual(["Tussock", "Stratum", "Aleoida", "Osseus"]);
+    set("edexoHudCandActiveTop", "0");
+    expect(names()).toEqual(["Stratum", "Aleoida", "Tussock", "Osseus"]);
+    set("edexoHudCandScanned", "hidden");
+    set("edexoHudCandMax", "2");
+    const rows = [...document.querySelectorAll(".hud-list li")].map((li) => li.textContent);
+    expect(rows).toEqual([expect.stringContaining("Aleoida"), expect.stringContaining("Tussock"), "+1 more — all of them in the app", "1 scanned, not listed"]);
+  });
+
   it("capitalises the species and shows the live run's progress only for the active species", () => {
     HUD.render({
       exoOverlayFocusBodyKey: "1:2",

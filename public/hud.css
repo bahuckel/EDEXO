@@ -860,6 +860,26 @@ html.hud-type--title .hud-section--credit-bottom .hud-head {
   stroke-dasharray: none;
   stroke-width: 1.8;
 }
+/* Composition scans of other species than the one being sampled (review P14, owner 2026-11-05): yellow, green is the run's. */
+.minimap-codex--other,
+.minimap-codex-heading--other {
+  stroke: #ffd23f;
+}
+.minimap-arrow--codex-other {
+  fill: none;
+  stroke: #ffd23f;
+  stroke-width: 1.2;
+}
+/* The run's samples numbered 1-3 (review P15), so the Scan rows map to the dots. */
+.minimap-scan-no {
+  fill: var(--hud-text);
+  font-size: 6.5px;
+  font-weight: 700;
+  font-family: inherit;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.85);
+  stroke-width: 1.4px;
+}
 .minimap-target-line {
   stroke: var(--bio);
   stroke-width: 1.2;

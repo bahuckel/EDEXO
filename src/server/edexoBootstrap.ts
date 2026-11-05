@@ -392,6 +392,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     sightings: () => [...navRouteLog().systems, ...store.targetedSystems.values()],
     currentSystem: () => store.currentSystem,
     deliver: deliverToClipboard,
+    here: () => (store.commanderPos ? [store.commanderPos.x, store.commanderPos.y, store.commanderPos.z] : null),
   });
   /*
     A neutron route being flown (plan 8.5, server/neutronLive.ts): its next stop goes to the clipboard after each
