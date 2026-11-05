@@ -7,12 +7,20 @@
  * --check: 167 right, 3 not sure, 0 wrong held out).
  */
 import { createRequire } from "node:module";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { cutDistanceLine, findTextLines, numberFrom, readTargetDistance, type DistanceGlyphs } from "../src/shared/hudTargetDistance.js";
 import { GameStateStore } from "../src/server/gameState.js";
-import { HUD_DISTANCE_FRESH_MS, scanRouteShip, setHudDistance } from "../src/server/shipInSystem.js";
+import {
+  HUD_DISTANCE_FRESH_MS,
+  SCAN_ROUTE_VIEW_MS,
+  hudReadDistance,
+  markScanRouteViewed,
+  resetScanRouteViewForTests,
+  scanRouteShip,
+  setHudDistance,
+} from "../src/server/shipInSystem.js";
 import { steadyDistance } from "../src/client/aim/useDistanceReader.js";
-import { shipProgress } from "../src/client/scanRoute/scanRouteScene.js";
+import { legSpot, nextLeg, type ShipSpot } from "../src/client/scanRoute/scanRouteScene.js";
 
 const W = 900;
 const H = 900;
@@ -193,23 +201,84 @@ describe("the ship on the Scan route from the HUD's distance", () => {
   });
 });
 
-describe("the ship's arrow between the last body and the target", () => {
-  it("moves on with the distance, never back, holds without a fix, starts again for another pair", () => {
-    let p = shipProgress(null, "77:0>3", 1800, 2000);
-    expect(p!.key).toBe("77:0>3");
-    expect(p!.t).toBeCloseTo(0.1, 9);
-    p = shipProgress(p, "77:0>3", 500, 2000);
-    expect(p!.t).toBe(0.75);
-    // A frame not read, the target off the screen: where it was.
-    expect(shipProgress(p, "77:0>3", null, 2000)).toBe(p);
-    // Past the target the distance grows again: held at the target, not sent back.
-    p = shipProgress(p, "77:0>3", 0, 2000);
-    expect(shipProgress(p, "77:0>3", 300, 2000)!.t).toBe(1);
-    // Further than the way is long (flying off the other way first): at the last body.
-    expect(shipProgress(null, "77:0>3", 2500, 2000)!.t).toBe(0);
-    // Another target: from the start of its own way.
-    expect(shipProgress(p, "77:0>4", 900, 1000)!.t).toBeCloseTo(0.1, 9);
-    expect(shipProgress(p, "77:0>4", null, 1000)).toBeNull();
+describe("the ship's leg between where it was and the target", () => {
+  // Arrival star 0 at the origin, planet 9 (the target) 2,000 ls out, planet 5 elsewhere; the compact view's places
+  // mirror the true ones at a tenth.
+  const P: Record<number, { x: number; y: number; z: number }> = { 0: { x: 0, y: 0, z: 0 }, 9: { x: 2000, y: 0, z: 0 }, 5: { x: 0, y: 1000, z: 0 } };
+  const spot = (id: number): ShipSpot | null => (P[id] ? { pos: P[id]!, view: { x: P[id]!.x / 10, y: P[id]!.y / 10, z: 0 } } : null);
+  const fly = (leg: ReturnType<typeof nextLeg>, distLs: number | null, more: Partial<Parameters<typeof nextLeg>[1]> = {}) =>
+    nextLeg(leg, { addr: "77", atId: 0, atFrom: "journal", targetId: 9, distLs, ...more }, spot, more.atId ?? 0);
+
+  it("moves on with the distance, never back, and holds without one", () => {
+    let leg = fly(null, 1800);
+    expect(leg!.t).toBeCloseTo(0.1, 9);
+    leg = fly(leg, 500);
+    expect(leg!.t).toBe(0.75);
+    expect(fly(leg, null)).toBe(leg);
+    // Past the target the distance grows again: held at the target.
+    leg = fly(leg, 0);
+    expect(fly(leg, 300)!.t).toBe(1);
+  });
+
+  it("is not moved by the netlog passing near another body (owner 2026-11-05: a barycentre 8.3 ls off)", () => {
+    const leg = fly(fly(null, 1000), null, { atId: 8, atFrom: "netlog" });
+    expect(leg!.t).toBe(0.5);
+    // A journal event at another body ends it: a new leg from that body. Reaching the target ends it.
+    expect(fly(leg, null, { atId: 5, atFrom: "journal" })).toMatchObject({ fromId: 5, t: 0 });
+    expect(nextLeg(leg, { addr: "77", atId: 9, atFrom: "netlog", targetId: 9, distLs: null }, spot, 9)).toBeNull();
+  });
+
+  it("another target starts from where the ship is, not from a body", () => {
+    const leg = fly(null, 1000);
+    const at = legSpot(leg!, spot(9)!);
+    const next = nextLeg(leg, { addr: "77", atId: 0, atFrom: "journal", targetId: 5, distLs: null }, spot, 0)!;
+    expect(next).toMatchObject({ targetId: 5, t: 0, fromId: null });
+    expect(next.from.pos).toEqual(at.pos);
+    expect(next.from.view).toEqual(at.view);
+    // Its distance is measured from there: halfway from (1000, 0) to (0, 1000).
+    const len = Math.hypot(1000, 1000);
+    expect(nextLeg(next, { addr: "77", atId: 0, atFrom: "journal", targetId: 5, distLs: len / 2 }, spot, 0)!.t).toBeCloseTo(0.5, 9);
+  });
+
+  it("starts again in another system, and has nothing to do with no target", () => {
+    const leg = fly(null, 1000);
+    expect(nextLeg(leg, { addr: "78", atId: 0, atFrom: "journal", targetId: 9, distLs: null }, spot, 0)).toMatchObject({ addr: "78", t: 0 });
+    expect(fly(null, null, { targetId: null })).toBeNull();
+    // The target untargeted for a moment: the leg stays (the ship where it was).
+    expect(fly(leg, null, { targetId: null })).toBe(leg);
+  });
+});
+
+describe("the distance reader's trigger", () => {
+  it("holds while the Scan route shows, in supercruise, with a body of this system targeted; pushes when it changes", () => {
+    vi.useFakeTimers();
+    try {
+      resetScanRouteViewForTests();
+      const s = new GameStateStore();
+      s.apply({ timestamp: "2026-11-05T19:00:00Z", event: "FSDJump", StarSystem: "Here", SystemAddress: 77, StarPos: [0, 0, 0], BodyID: 0, Body: "Here A" } as never);
+      const now = Date.now();
+      expect(hudReadDistance(s, now)).toBe(false);
+      const push = vi.fn();
+      markScanRouteViewed(push, now);
+      expect(push).toHaveBeenCalledOnce();
+      // No target yet.
+      expect(hudReadDistance(s, now)).toBe(false);
+      s.statusDestination = { systemAddress: 77, bodyId: 3, name: "Here 3" };
+      expect(hudReadDistance(s, now)).toBe(true);
+      // Asked again while showing: no push; stops showing: one push when it lapses.
+      markScanRouteViewed(push, now + 250);
+      expect(push).toHaveBeenCalledOnce();
+      vi.advanceTimersByTime(SCAN_ROUTE_VIEW_MS + 200);
+      expect(push).toHaveBeenCalledTimes(2);
+      expect(hudReadDistance(s, now + 250 + SCAN_ROUTE_VIEW_MS + 1)).toBe(false);
+      // Out of supercruise.
+      markScanRouteViewed(push, now + 10_000);
+      s.apply({ timestamp: "2026-11-05T19:00:00Z", event: "SupercruiseExit", StarSystem: "Here", SystemAddress: 77, Body: "Here 3", BodyID: 3, BodyType: "Planet" } as never);
+      expect(hudReadDistance(s, now + 10_000)).toBe(false);
+    } finally {
+      resetScanRouteViewForTests();
+      vi.useRealTimers();
+    }
   });
 });
 

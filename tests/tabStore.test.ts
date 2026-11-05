@@ -4,7 +4,7 @@
  * the neighbour forward, the strip can be reordered, and the switch and the tabs are remembered.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { tabStore } from "../src/client/tabs/tabStore.js";
+import { showPickedSystem, tabStore } from "../src/client/tabs/tabStore.js";
 
 beforeEach(() => {
   localStorage.clear();
@@ -58,6 +58,37 @@ describe("tab view", () => {
       const { tabStore: streamer } = await import("../src/client/tabs/tabStore.js");
       expect(streamer.get()).toEqual({ on: false, tabs: [], active: "main" });
     } finally {
+      window.history.replaceState(null, "", "/");
+    }
+  });
+
+  it("a system picked in a screen: the screen stays, Main comes forward; a pop-up closes", () => {
+    // Owner, 2026-11-05: My discoveries closed and its left neighbour came forward instead of Compare.
+    tabStore.open("boxels");
+    tabStore.open("myExo");
+    const close = vi.fn();
+    showPickedSystem(close);
+    expect(tabStore.get()).toMatchObject({ tabs: ["boxels", "myExo"], active: "main" });
+    expect(close).not.toHaveBeenCalled();
+    tabStore.setOn(false);
+    showPickedSystem(close);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("in Colonize's window a picked system opens Compare's system map, through the app window", async () => {
+    const showInMain = vi.fn(async () => true);
+    const bridge = { report: vi.fn(), registry: async () => ({}), focus: async () => false, showInMain, on: () => () => {} };
+    (window as unknown as { edexoElectron?: unknown }).edexoElectron = { tabs: bridge };
+    window.history.replaceState(null, "", "/?screen=colonize");
+    try {
+      vi.resetModules();
+      const colonize = await import("../src/client/tabs/tabStore.js");
+      colonize.tabStore.open("myExo");
+      colonize.showPickedSystem(vi.fn());
+      expect(showInMain).toHaveBeenCalledWith("systemMap");
+      expect(colonize.tabStore.get().active).toBe("myExo");
+    } finally {
+      delete (window as unknown as { edexoElectron?: unknown }).edexoElectron;
       window.history.replaceState(null, "", "/");
     }
   });

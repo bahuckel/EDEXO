@@ -63,6 +63,8 @@ const HUD_KEYS = [
   "exoOrganicOverlay",
   "exoMinimap",
   "statusDestination",
+  // The Scan route's distance reader: when to read (shipInSystem.ts hudReadDistance).
+  "hudReadDistance",
   "jumpTarget",
   // A route the game did not save to NavRoute.json: the Next jump section's line with the jumps left (2026-11-01).
   "navRouteUnsaved",

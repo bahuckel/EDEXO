@@ -36,6 +36,7 @@ import {
   buildNotableBodiesForFocusedSystem,
 } from "./snapshotSystemInfo.js";
 import { bodyKey } from "../shared/bodyKey.js";
+import { hudReadDistance } from "./shipInSystem.js";
 import { ownCarrierJump } from "../shared/ownAssets.js";
 // The unsold exobiology's value moved to organicValue.ts (item 30); the live strip is still importable from here.
 export { organicLiveSummary } from "./organicValue.js";
@@ -365,6 +366,7 @@ export function buildSnapshot(
     exoOverlayFocusBodyKey,
     exoOverlayFocusBody,
     statusDestination: bootLoading ? null : store.statusDestination,
+    hudReadDistance: !bootLoading && hudReadDistance(store),
     jumpTarget: bootLoading ? null : withFirstFootfall(store.nextJumpTarget(), store),
     boxelCopied: store.boxelCopied,
     boxelsRevision: store.boxelsRevision,

@@ -12,6 +12,7 @@
  */
 import { tabListKeyDown } from "./ui/Tabs";
 import { withTransition } from "./motion";
+import { showPickedSystem } from "./tabs/tabStore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BoxelTableDTO, BoxelTableRowDTO, PreviousBoxelDTO, SavedBoxelDTO } from "@shared/boxel";
 import type { BoxelLookupStatus } from "@shared/boxel";
@@ -336,7 +337,7 @@ export function BoxelScreen({
       headers: json,
       body: JSON.stringify({ systemAddress, starSystem }),
     });
-    onClose();
+    showPickedSystem(onClose);
   };
   const openRow = (r: BoxelTableRowDTO) => {
     if (r.systemAddress != null)

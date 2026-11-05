@@ -350,6 +350,12 @@ export interface AppSnapshot {
    * already be showing the next one's candidates. Null when nothing is targeted.
    */
   statusDestination?: { systemAddress: number; bodyId: number; name: string } | null;
+  /**
+   * The Scan route's distance reader should read now (plan 1.3.8; owner 2026-11-05: only on triggers): the Scan route
+   * tab showing, the ship in supercruise, a body of the current system targeted. The screen marker's page starts and
+   * stops its capture on this (with the launcher's option on); it never asks for it.
+   */
+  hudReadDistance?: boolean;
 
   /**
    * The last hyperspace jump target from `StartJump` (JumpType Hyperspace), for the HUD's next-jump

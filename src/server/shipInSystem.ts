@@ -10,6 +10,8 @@
 import type { GameStateStore } from "./gameState.js";
 import type { ScanRouteShipDTO, ShipFlight } from "../shared/dto/routeSystem.js";
 import type { NetlogFix, NetlogPosition } from "./netlogPosition.js";
+import { bodyKey } from "../shared/bodyKey.js";
+import { barycentreSyntheticBodyId } from "./orbitUtils.js";
 
 /** The HUD's distance to the target, with the target it was read for; kept per store (one per server). */
 interface HudDistance {
@@ -19,7 +21,7 @@ interface HudDistance {
   atMs: number;
 }
 const hudDistanceByStore = new WeakMap<GameStateStore, HudDistance>();
-/** A HUD reading older than this is not used: the reader posts once a second while it reads. */
+/** A HUD reading older than this is not used: the reader posts four times a second while it reads. */
 export const HUD_DISTANCE_FRESH_MS = 4000;
 
 /**
@@ -31,6 +33,47 @@ export function setHudDistance(store: GameStateStore, distLs: number, nowMs = Da
   if (!dest || !(distLs >= 0) || !Number.isFinite(distLs)) return false;
   hudDistanceByStore.set(store, { distLs, systemAddress: dest.systemAddress, bodyId: dest.bodyId, atMs: nowMs });
   return true;
+}
+
+/**
+ * The Scan route tab showing (owner, 2026-11-05: read the distance "only when the Scan route tab is in focus"): its
+ * screen asks for the ship with `?view=1` every quarter second to second and a half while it shows (document visible,
+ * its tab in front). Seen within this, it counts as showing.
+ */
+export const SCAN_ROUTE_VIEW_MS = 3000;
+let scanRouteSeenMs = 0;
+let scanRouteGone: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * The Scan route's screen asked: it shows. `onChange` (the snapshot push) runs when it starts showing, and once more
+ * when it has not asked for SCAN_ROUTE_VIEW_MS, so the reader's trigger goes out without anyone asking for it.
+ */
+export function markScanRouteViewed(onChange: () => void, nowMs = Date.now()): void {
+  const was = nowMs - scanRouteSeenMs <= SCAN_ROUTE_VIEW_MS;
+  scanRouteSeenMs = nowMs;
+  if (!was) onChange();
+  if (scanRouteGone) clearTimeout(scanRouteGone);
+  scanRouteGone = setTimeout(() => {
+    scanRouteGone = null;
+    onChange();
+  }, SCAN_ROUTE_VIEW_MS + 100);
+  scanRouteGone.unref?.();
+}
+
+/** The distance reader's trigger: the Scan route showing, in supercruise, a body of this system targeted. */
+export function hudReadDistance(store: GameStateStore, nowMs = Date.now()): boolean {
+  const addr = store.currentSystemAddress;
+  const dest = store.statusDestination;
+  return (
+    nowMs - scanRouteSeenMs <= SCAN_ROUTE_VIEW_MS && store.shipFlight === "supercruise" && addr != null && !!dest && dest.systemAddress === addr
+  );
+}
+
+/** Tests only. */
+export function resetScanRouteViewForTests(): void {
+  scanRouteSeenMs = 0;
+  if (scanRouteGone) clearTimeout(scanRouteGone);
+  scanRouteGone = null;
 }
 
 /** The flight state after a journal event; the state before for any other event. */
@@ -79,12 +122,23 @@ export function scanRouteShip(store: GameStateStore, netlog: NetlogPosition | nu
     hud && targetId != null && hud.systemAddress === addr && hud.bodyId === targetId && store.shipFlight === "supercruise" && nowMs - hud.atMs <= HUD_DISTANCE_FRESH_MS
       ? { refId: targetId, distLs: hud.distLs, mode: "supercruise" as const, atMs: hud.atMs, from: "hud" as const }
       : null;
-  // The body last flown near (netlog) when that is newer than the journal's body; a far fix moves nothing.
+  /*
+    The body last flown near (netlog) when that is newer than the journal's body; a far fix moves nothing. Only a body
+    of the system's own: the game also measures from barycentres (owner 2026-11-05: flying at A 5 it measured from body
+    8, the barycentre A 5 and A 6 orbit, 8.3 ls off, and the ship jumped there).
+  */
   const near = netlog?.near() ?? null;
+  // Not a barycentre the FSS found here (kept under an id of its own, sold or not).
+  const barycentre = (id: number) => {
+    const k = bodyKey(addr!, barycentreSyntheticBodyId(id));
+    return store.explorationScans.has(k) || store.soldExplorationScans.has(k);
+  };
+  const nearBody = here(near) && !barycentre(near.bodyId) ? near : null;
   const journalAt = addr != null ? bodyIn(store.currentBodyKey, addr) : null;
   return {
     addr: addr != null ? String(addr) : null,
-    atId: here(near) ? near.bodyId : journalAt,
+    atId: nearBody ? nearBody.bodyId : journalAt,
+    atFrom: nearBody ? "netlog" : journalAt != null ? "journal" : null,
     targetId,
     flight: store.shipFlight,
     fix: fromHud ?? fromNetlog,

@@ -183,6 +183,19 @@ function createTabWindows(d) {
     }
     return false;
   });
+  /*
+    A system picked in a screen of another window (Colonize's, a detached one; owner 2026-11-05): the app window comes
+    forward with its Main tab ("main") or a screen opened (Colonize: the system map), to show it.
+  */
+  d.ipcMain.handle("edexo:tab-show-main", (ev, front) => {
+    const w = windows.get("main");
+    if (!live(w) || w.webContents === ev.sender || typeof front !== "string") return false;
+    if (w.isMinimized()) w.restore();
+    w.show();
+    w.focus();
+    w.webContents.send("edexo:tab-show", front);
+    return true;
+  });
   // A tab dropped outside every window: a new window at the drop point holds it.
   d.ipcMain.handle("edexo:tab-detach", (ev, req) => {
     const from = keyOf(ev.sender);

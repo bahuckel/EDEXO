@@ -3,6 +3,7 @@
  */
 import { tabListKeyDown } from "./ui/Tabs";
 import { withTransition } from "./motion";
+import { showPickedSystem } from "./tabs/tabStore";
 import { usePersistedState } from "./usePersistedState";
 import { footConfirmationLabel } from "@shared/footConfirmationLabel";
 import { CopySystemButton } from "./CopySystemButton";
@@ -88,7 +89,7 @@ function exobiologyColumns(
               title="Show this system in the app (journal view)"
               onClick={() => {
                 onNavigateEntry(e);
-                onClose();
+                showPickedSystem(onClose);
               }}
             >
               {e.bodyName}
@@ -179,6 +180,17 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
       typeof v === "object" &&
       typeof (v as { key?: unknown }).key === "string" &&
       ((v as { dir?: unknown }).dir === 1 || (v as { dir?: unknown }).dir === -1),
+  );
+  // A system, body or star row: the app shows it, Main to the front (the pop-up stays, as it always did).
+  const navigateSystem = useMemo(
+    () =>
+      onNavigateSystem
+        ? (systemAddress: number, bodyKey?: string) => {
+            onNavigateSystem(systemAddress, bodyKey);
+            showPickedSystem();
+          }
+        : undefined,
+    [onNavigateSystem],
   );
   const exoColumns = useMemo(() => exobiologyColumns(onNavigateEntry, onClose), [onNavigateEntry, onClose]);
   const [discoveries, setDiscoveries] = useState<DiscoveriesDTO | null>(null);
@@ -300,7 +312,7 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
                 data={discoveries}
                 tab={view}
                 layout={layout}
-                onNavigateSystem={onNavigateSystem}
+                onNavigateSystem={navigateSystem}
               />
             )
           ) : (
@@ -363,7 +375,7 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
                                 aria-label={`Focus journal view: ${e.starSystem ?? "system"} — ${e.bodyName}`}
                                 onClick={() => {
                                   onNavigateEntry(e);
-                                  onClose();
+                                  showPickedSystem(onClose);
                                 }}
                               >
                                 <svg

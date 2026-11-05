@@ -8,6 +8,7 @@ import { fmtLy } from "@shared/format";
 import type { CodexMapRegionSummaryDTO } from "@shared/dto/codexMap.js";
 import type { FinderHit } from "@shared/finder";
 import { SystemBookmarkButton } from "../BookmarkButton";
+import { showPickedSystem } from "../tabs/tabStore";
 import { CopySystemButton } from "../CopySystemButton";
 import { ExpeditionBoxelCard, targetLabelOf } from "../ExpeditionDrawer";
 import type { Selection } from "./engineTypes";
@@ -203,13 +204,14 @@ export function selectionPanel(selection: Selection | null, ctx: SelectionPanelC
             type="button"
             className="g3d-btn"
             title="Open it on the main screen: its bodies are fetched from Spansh"
-            onClick={() =>
+            onClick={() => {
               void fetch("/api/ui/view-system", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ systemAddress: h.systemAddress, starSystem: h.starSystem }),
-              })
-            }
+              });
+              showPickedSystem();
+            }}
           >
             Show on the main screen
           </button>

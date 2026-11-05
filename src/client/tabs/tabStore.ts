@@ -102,6 +102,7 @@ interface TabBridge {
   report(tabs: readonly string[]): void;
   registry(): Promise<Record<string, string[]>>;
   focus(kind: string): Promise<boolean>;
+  showInMain?(front: string): Promise<boolean>;
   detach(req: { kind: string; x: number; y: number }): Promise<boolean>;
   moved(req: { kind: string; from: string }): void;
   windowEmpty(): void;
@@ -110,7 +111,7 @@ interface TabBridge {
     cb: (
       m:
         | { type: "registry"; registry: Record<string, string[]> }
-        | { type: "remove" | "activate"; kind: string }
+        | { type: "remove" | "activate" | "show"; kind: string }
         | { type: "dragging"; on: boolean },
     ) => void,
   ): () => void;
@@ -288,6 +289,11 @@ if (TAB_BRIDGE) {
     if (m.type === "registry") elsewhere = m.registry;
     else if (m.type === "remove" && isKind(m.kind)) tabStore.close(m.kind);
     else if (m.type === "activate" && isKind(m.kind)) tabStore.activate(m.kind);
+    // Another window picked a system to show here: Main, or a screen opened for it.
+    else if (m.type === "show") {
+      if (m.kind === "main") tabStore.activate("main");
+      else if (isKind(m.kind)) tabStore.open(m.kind);
+    }
     // A tab dragged in any window: the strip stops being the window's drag handle until it ends.
     else if (m.type === "dragging") document.documentElement.classList.toggle("tab-dragging", m.on);
   });
@@ -309,4 +315,17 @@ export function useTabState(): TabState {
 export function useTabSelector<T>(select: (s: TabState) => T): T {
   const get = () => select(tabStore.get());
   return useSyncExternalStore(tabStore.subscribe, get, get);
+}
+
+/**
+ * A screen showed a system in the app (My discoveries, Bookmarks, Boxels, the galaxy map; owner 2026-11-05: "it should
+ * stay after a system is clicked, and it should take you to the COMPARE tab"). With Tab view the screen stays open and
+ * the app's Main tab comes to the front; in Colonize, Compare's system map opens on it (Colonize has neither); a
+ * detached window brings the app window forward. With Tab view off the pop-up closes (`closePopup`), as it always did.
+ */
+export function showPickedSystem(closePopup?: () => void): void {
+  if (!state.on) closePopup?.();
+  if (TAB_APP === "colonize") void TAB_BRIDGE?.showInMain?.("systemMap");
+  else if (IS_DETACHED) void TAB_BRIDGE?.showInMain?.("main");
+  else if (state.on) tabStore.activate("main");
 }

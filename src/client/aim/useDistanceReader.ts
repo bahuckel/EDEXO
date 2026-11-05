@@ -1,39 +1,16 @@
 /**
- * The distance reader running while it is wanted (plan 1.3.8): switched on in the launcher, the ship in supercruise
- * and a body of the current system targeted (asked of the server every 2 s, the Scan route's own `/api/scan-route/ship`).
- * Each reading is posted to this PC's server, which puts the ship on the Scan route between the last body and the
- * target. Stops 10 s after it is no longer wanted, so a moment without a target does not restart the capture.
+ * The distance reader running while it is wanted (plan 1.3.8): the launcher's option on and the server's trigger
+ * (`hudReadDistance` on the HUD socket: the Scan route tab showing, the ship in supercruise, a body of the current
+ * system targeted; owner 2026-11-05: read only on triggers, never search the screen all the time). Each reading is
+ * posted to this PC's server, which puts the ship on the Scan route between the last body and the target. Stops
+ * shortly after it is no longer wanted, so a moment without the trigger does not restart the capture.
  */
-import { useEffect, useRef, useState } from "react";
-import type { ScanRouteShipDTO } from "@shared/dto/routeSystem";
+import { useEffect, useRef } from "react";
 import type { TargetDistance } from "@shared/hudTargetDistance";
 import { startDistanceCapture, type DistanceCapture } from "./distanceCapture";
 
-const SHIP_POLL_MS = 2000;
-
-/** Supercruise with a body of this system targeted: the only time the HUD shows a target's distance worth reading. */
-function useTargetInSystem(on: boolean): boolean {
-  const [wanted, setWanted] = useState(false);
-  useEffect(() => {
-    if (!on) {
-      setWanted(false);
-      return;
-    }
-    let live = true;
-    const ask = () =>
-      void fetch("/api/scan-route/ship")
-        .then((r) => (r.ok ? (r.json() as Promise<ScanRouteShipDTO>) : null))
-        .then((s) => live && setWanted(!!s && s.flight === "supercruise" && s.targetId != null))
-        .catch(() => {});
-    ask();
-    const t = setInterval(ask, SHIP_POLL_MS);
-    return () => {
-      live = false;
-      clearInterval(t);
-    };
-  }, [on]);
-  return wanted;
-}
+/** How long the capture outlives its trigger (a push between two states, a tab switched for a moment). */
+const LINGER_MS = 2000;
 
 /**
  * A reading posted when it agrees with the one before (within half to twice it): a misread digit's jump is held one
@@ -45,10 +22,11 @@ export function steadyDistance(prev: { distLs: number; atMs: number } | null, ne
   return k >= 0.5 && k <= 2;
 }
 
-export function useDistanceReader(on: boolean): void {
-  const wanted = useTargetInSystem(on);
+export function useDistanceReader(wanted: boolean): void {
   const cap = useRef<DistanceCapture | null>(null);
   const starting = useRef(false);
+  const want = useRef(wanted);
+  want.current = wanted;
   useEffect(() => {
     let last: { distLs: number; atMs: number } | null = null;
     const post = (r: TargetDistance | null) => {
@@ -65,7 +43,10 @@ export function useDistanceReader(on: boolean): void {
         starting.current = true;
         void startDistanceCapture(post).then((c) => {
           starting.current = false;
-          if (!("error" in c)) cap.current = c;
+          if ("error" in c) return;
+          // Let go while it was starting: stopped at once.
+          if (want.current) cap.current = c;
+          else c.stop();
         });
       }
       return;
@@ -73,7 +54,7 @@ export function useDistanceReader(on: boolean): void {
     const t = setTimeout(() => {
       cap.current?.stop();
       cap.current = null;
-    }, 10_000);
+    }, LINGER_MS);
     return () => clearTimeout(t);
   }, [wanted]);
   useEffect(() => () => cap.current?.stop(), []);

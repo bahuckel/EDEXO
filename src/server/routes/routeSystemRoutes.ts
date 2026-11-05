@@ -7,7 +7,7 @@ import { createRouteSystemValues } from "../routeSystemValues.js";
 import { journalScanRoute, journalSystemValues, spanshScanRoute } from "../scanRouteView.js";
 import { explorationRecordsForSystem } from "../systemMap.js";
 import type { HttpServerOptions } from "../httpServerTypes.js";
-import { scanRouteShip } from "../shipInSystem.js";
+import { markScanRouteViewed, scanRouteShip } from "../shipInSystem.js";
 import { createNetlogPosition } from "../netlogPosition.js";
 import type { RouteSystemValuesDTO } from "../../shared/dto/routeSystem.js";
 
@@ -20,9 +20,11 @@ export function registerRouteSystemRoutes(app: express.Express, opts: HttpServer
   const netlog = createNetlogPosition();
 
   /** `/api/scan-route/ship` — where the ship is in the current system, polled by the Scan route every second or two. */
-  app.get("/api/scan-route/ship", (_req, res) => {
+  app.get("/api/scan-route/ship", (req, res) => {
     const store = opts.getJournalStore?.() ?? null;
     if (!store) return void res.status(503).json({ error: "The journals are not loaded yet." });
+    // The Scan route tab showing: the distance reader's trigger (hudReadDistance), pushed to the HUD socket.
+    if (req.query.view === "1") markScanRouteViewed(() => opts.scheduleBroadcast?.());
     res.json(scanRouteShip(store, netlog));
   });
 

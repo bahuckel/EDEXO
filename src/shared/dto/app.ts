@@ -280,7 +280,7 @@ export interface HudPrefsDTO {
   pitchReader?: boolean;
   /**
    * Read the target's distance off the game's HUD for the Scan route (plan 1.3.8; default off): the same local capture,
-   * once a second in supercruise with a body of the current system targeted.
+   * four times a second while the Scan route tab shows, in supercruise with a body of the current system targeted.
    */
   distanceReader?: boolean;
   /** Colonize HUD (1.3.0): the followed site's materials with bars (default on). */

@@ -74,6 +74,11 @@ function readMin(): number {
 
 /** How often the ship's place in the current system is asked for (ms): the netlog's fixes come about a second apart. */
 const SHIP_POLL_MS = 1500;
+/**
+ * In supercruise with a body of the system targeted, as often as the HUD's distance is read (four times a second; owner
+ * 2026-11-05: at every 1.5 s "I basically pass almost the entire system before it updates").
+ */
+const SHIP_POLL_FAST_MS = 250;
 const FLIGHT: Record<ScanRouteShipDTO["flight"], string> = {
   supercruise: "In supercruise",
   normal: "In normal space",
@@ -265,21 +270,35 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
       ac.abort();
     };
   }, [query]);
-  // The ship, every second or two while the tab shows.
+  /*
+    The ship, every second and a half while the tab shows, every quarter second flying to a target in supercruise. The
+    asking says the tab shows (`view=1`): the server's trigger for the HUD distance reader, which reads only then.
+  */
   useEffect(() => {
     let live = true;
-    const load = () =>
-      fetch("/api/scan-route/ship")
+    let t: ReturnType<typeof setTimeout> | null = null;
+    let fast = false;
+    const shows = () => document.visibilityState === "visible" && !!host.current?.offsetParent;
+    const tick = () => {
+      if (!live) return;
+      const next = () => {
+        if (live) t = setTimeout(tick, fast ? SHIP_POLL_FAST_MS : SHIP_POLL_MS);
+      };
+      if (!shows()) return next();
+      fetch("/api/scan-route/ship?view=1")
         .then((r) => (r.ok ? (r.json() as Promise<ScanRouteShipDTO>) : null))
-        .then((s) => live && s && setShip(s))
-        .catch(() => undefined);
-    void load();
-    const t = setInterval(() => {
-      if (document.visibilityState === "visible" && host.current?.offsetParent) void load();
-    }, SHIP_POLL_MS);
+        .then((s) => {
+          if (!live || !s) return;
+          fast = s.flight === "supercruise" && s.targetId != null;
+          setShip(s);
+        })
+        .catch(() => undefined)
+        .finally(next);
+    };
+    tick();
     return () => {
       live = false;
-      clearInterval(t);
+      if (t) clearTimeout(t);
     };
   }, []);
   const setNetlog = (on: boolean) =>
@@ -360,8 +379,10 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
   // The ship belongs on the view of the system it is in.
   const shipHere = d && ship && ship.addr === d.addr ? ship : null;
   useEffect(() => {
-    scene.current?.setShip(shipHere ? { atId: shipHere.atId, targetId: shipHere.targetId, fix: shipHere.fix } : null);
-  }, [shipHere?.atId, shipHere?.targetId, shipHere?.fix?.refId, shipHere?.fix?.distLs, view, scale]); // eslint-disable-line react-hooks/exhaustive-deps
+    scene.current?.setShip(
+      shipHere ? { atId: shipHere.atId, atFrom: shipHere.atFrom, targetId: shipHere.targetId, fix: shipHere.fix, nextInLine: d?.route.order[0] ?? null } : null,
+    );
+  }, [shipHere?.atId, shipHere?.atFrom, shipHere?.targetId, shipHere?.fix?.refId, shipHere?.fix?.distLs, d?.route.order[0], view, scale]); // eslint-disable-line react-hooks/exhaustive-deps
   /*
     The next stop (owner, 2026-11-05: "zoom to next target planet", "names only for next planet in line"): the body the
     game has targeted when it is one of the route's stops, else the route's first stop (the route starts where the ship is).
@@ -371,10 +392,19 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
   useEffect(() => {
     scene.current?.setNames(names, nextId);
   }, [names, nextId, view, scale]);
-  // After the view is drawn (the effect above `show`s it): framed on the next stop again whenever it or the view changes.
+  /*
+    After the view is drawn (the effect above `show`s it), again whenever the stop, the target or the view changes:
+    targeting the route's next stop, it is followed with the ship (owner, 2026-11-05: the zoom keeps the player on the
+    screen, closing in as the ship does); any other target ("out of order"), the view frames the next stop as before and
+    the ship's dotted line goes to the body targeted.
+  */
+  const inLine = order?.[0] ?? null;
+  const followShip = shipHere?.targetId != null && shipHere.targetId === inLine;
   useEffect(() => {
+    if (zoomNext && followShip) return void scene.current?.follow(inLine);
+    scene.current?.follow(null);
     if (zoomNext && nextId != null) scene.current?.focus(nextId);
-  }, [zoomNext, nextId, view, scale]);
+  }, [zoomNext, followShip, inLine, nextId, view, scale]);
   const factsId = hovered ?? picked;
   const facts = factsId != null ? byId.get(factsId) : undefined;
   const start = d?.startId != null ? byId.get(d.startId) : undefined;

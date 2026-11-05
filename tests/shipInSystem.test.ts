@@ -154,6 +154,19 @@ describe("the body the ship was last near (owner, 2026-11-01: overshooting a pla
     expect(scanRouteShip(s, netlog(fix(0, 3, t + 120_000), fix(0, 3, t + 120_000))).atId).toBe(0);
   });
 
+  it("never puts the ship at a barycentre the game measures from (owner 2026-11-05: body 8, 8.3 ls off)", () => {
+    const s = new GameStateStore();
+    s.apply({ timestamp: "2026-11-05T18:49:33Z", event: "FSDJump", StarSystem: "Here", SystemAddress: 77, StarPos: [0, 0, 0], BodyID: 1, Body: "Here A" } as never);
+    // The FSS found barycentre 8 (A 5 and A 6 orbit it).
+    s.apply({ timestamp: "2026-11-05T18:50:54Z", event: "ScanBaryCentre", StarSystem: "Here", SystemAddress: 77, BodyID: 8, SemiMajorAxis: 279303371906.28 } as never);
+    const t = Date.parse("2026-11-05T18:54:17Z");
+    const v = scanRouteShip(s, netlog(fix(8, 8.29, t), fix(8, 8.29, t)));
+    expect(v.atId).not.toBe(8);
+    expect(v.atFrom).toBe("journal");
+    // The planet itself, within 10 ls: there, by the netlog.
+    expect(scanRouteShip(s, netlog(fix(9, 1.16, t + 22_000), fix(9, 1.16, t + 22_000)))).toMatchObject({ atId: 9, atFrom: "netlog" });
+  });
+
   it("takes the journal's body when it is newer than the near fix", () => {
     const s = new GameStateStore();
     s.apply({ timestamp: "2026-11-01T15:10:00Z", event: "FSDJump", StarSystem: "Here", SystemAddress: 77, StarPos: [0, 0, 0], BodyID: 0, Body: "Here A" } as never);

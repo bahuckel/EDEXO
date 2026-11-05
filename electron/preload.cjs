@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("edexoElectron", {
     report: (tabs) => ipcRenderer.send("edexo:tabs-report", tabs),
     registry: () => ipcRenderer.invoke("edexo:tab-registry"),
     focus: (kind) => ipcRenderer.invoke("edexo:tab-focus", kind),
+    showInMain: (front) => ipcRenderer.invoke("edexo:tab-show-main", front),
     detach: (req) => ipcRenderer.invoke("edexo:tab-detach", req),
     moved: (req) => ipcRenderer.send("edexo:tab-moved", req),
     windowEmpty: () => ipcRenderer.send("edexo:tab-window-empty"),
@@ -25,7 +26,9 @@ contextBridge.exposeInMainWorld("edexoElectron", {
       const rem = (_e, k) => cb({ type: "remove", kind: k });
       const act = (_e, k) => cb({ type: "activate", kind: k });
       const drag = (_e, on) => cb({ type: "dragging", on: on === true });
+      const show = (_e, k) => cb({ type: "show", kind: k });
       ipcRenderer.on("edexo:tab-registry", reg);
+      ipcRenderer.on("edexo:tab-show", show);
       ipcRenderer.on("edexo:tab-remove", rem);
       ipcRenderer.on("edexo:tab-activate", act);
       ipcRenderer.on("edexo:tab-dragging", drag);
@@ -34,6 +37,7 @@ contextBridge.exposeInMainWorld("edexoElectron", {
         ipcRenderer.removeListener("edexo:tab-remove", rem);
         ipcRenderer.removeListener("edexo:tab-activate", act);
         ipcRenderer.removeListener("edexo:tab-dragging", drag);
+        ipcRenderer.removeListener("edexo:tab-show", show);
       };
     },
   },

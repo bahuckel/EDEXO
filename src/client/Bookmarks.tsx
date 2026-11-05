@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { withTransition } from "./motion";
+import { showPickedSystem } from "./tabs/tabStore";
 import { type BookmarkRowDTO, type BookmarksListDTO } from "@shared/bookmarks";
 import { useModal } from "./ui/useModal";
 import { LoadingNote } from "./ui/Loading";
@@ -81,7 +82,8 @@ export function BookmarksModal({
         });
       }
     })();
-    onClose();
+    // Main to the front, the bookmarks staying in their tab (a pop-up closes).
+    showPickedSystem(onClose);
   };
 
   return (

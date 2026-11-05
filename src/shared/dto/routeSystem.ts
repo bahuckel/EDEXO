@@ -125,6 +125,11 @@ export interface ScanRouteShipDTO {
    * it within {@link SHIP_NEAR_LS} of, whichever is newer; it stays there however far the ship flies on.
    */
   atId: number | null;
+  /**
+   * What put the ship at `atId`: a journal event (approached, dropped at, landed on, mapped, the arrival star) or the
+   * netlog passing near it. The Scan route keeps a ship it moved off the HUD's distance where it was over a netlog one.
+   */
+  atFrom?: "journal" | "netlog" | null;
   /** The body targeted in the game (Status.json Destination), when it is in this system. */
   targetId: number | null;
   flight: ShipFlight;

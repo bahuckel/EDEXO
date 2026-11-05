@@ -31,10 +31,11 @@ const hex = (r: number) =>
 /** Opened for the distance reader only (the screen marker off): no marks, no pitch reader. */
 const MARKS = new URLSearchParams(location.search).get("marks") !== "0";
 
-function useMinimap(): { glide: GlideState | null; reader: boolean; distance: boolean } {
+function useMinimap(): { glide: GlideState | null; reader: boolean; distance: boolean; readDistance: boolean } {
   const [glide, setGlide] = useState<GlideState | null>(null);
   const [reader, setReader] = useState(false);
   const [distance, setDistance] = useState(false);
+  const [readDistance, setReadDistance] = useState(false);
   useEffect(() => {
     let ws: WebSocket | null = null;
     let retry = 1000;
@@ -50,7 +51,12 @@ function useMinimap(): { glide: GlideState | null; reader: boolean; distance: bo
         try {
           const msg = JSON.parse(String(ev.data)) as {
             type?: string;
-            payload?: { exoMinimap?: MiniMap; journalBoot?: boolean; hudPrefs?: { pitchReader?: unknown; distanceReader?: unknown } | null };
+            payload?: {
+              exoMinimap?: MiniMap;
+              journalBoot?: boolean;
+              hudPrefs?: { pitchReader?: unknown; distanceReader?: unknown } | null;
+              hudReadDistance?: boolean;
+            };
           };
           if ((msg.type === "state" || msg.type === "exoLive") && msg.payload && "exoMinimap" in msg.payload)
           {
@@ -61,6 +67,7 @@ function useMinimap(): { glide: GlideState | null; reader: boolean; distance: bo
             setReader(msg.payload.hudPrefs?.pitchReader === true);
             setDistance(msg.payload.hudPrefs?.distanceReader === true);
           }
+          if (msg.type === "state" && msg.payload && "hudReadDistance" in msg.payload) setReadDistance(msg.payload.hudReadDistance === true);
         } catch {
           /* a malformed frame is skipped */
         }
@@ -77,7 +84,7 @@ function useMinimap(): { glide: GlideState | null; reader: boolean; distance: bo
       ws?.close();
     };
   }, []);
-  return { glide, reader, distance };
+  return { glide, reader, distance, readDistance };
 }
 
 /** Re-render four times a second while the marks glide between Status.json writes (glide.ts). */
@@ -287,7 +294,8 @@ const DEMO: ExoMinimapDTO | null = new URLSearchParams(location.search).has("dem
 function Aim() {
   const live = useMinimap();
   useGlideTick(live.glide);
-  useDistanceReader(!DEMO && live.distance);
+  // The launcher's option on, and the server's trigger (the Scan route showing, supercruise, a target here).
+  useDistanceReader(!DEMO && live.distance && live.readDistance);
   const map = !MARKS ? null : (DEMO ?? glidedMap(live.glide, Date.now()));
   // Near a planet in the ship (the first scan needs the pitch too, before there is any mark).
   const reader = usePitchReader(MARKS && !DEMO && live.reader && live.glide?.map.altitudeM != null);

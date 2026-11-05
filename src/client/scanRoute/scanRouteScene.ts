@@ -63,21 +63,70 @@ const TARGET_COLOUR = { dss: "#40d9cc", bio: "#5ce675", both: "#ffd166", codex: 
 /** The ship in the shown system (plan 1.3.5 R-1): the body it is at, the body targeted, the netlog's or the HUD's fix. */
 export interface ShipMark {
   atId: number | null;
+  atFrom?: "journal" | "netlog" | null;
   targetId: number | null;
+  /** The route's next stop: a target that is not it gets a dotted line of its own (owner 2026-11-05). */
+  nextInLine?: number | null;
   fix: { refId: number; distLs: number } | null;
 }
 
+type P3 = { x: number; y: number; z: number };
+/** A place both views can draw: in light-seconds (the true view; 3D) and in the compact view's units. */
+export interface ShipSpot {
+  pos: P3;
+  view: P3;
+}
 /**
- * How far along the way from the last body to the target the ship has come (0-1), for that pair (`key`): from the
- * target's distance (`distLs`, null without one) over the way's length. It only grows, so passing the target (the
- * distance grows again) holds it there, and a fix lost for a while (the target off the screen, a frame not read) keeps
- * it where it was; another pair starts again.
+ * The way the ship is flying, from the HUD's distance (or the netlog measuring from the target): from `from` to the
+ * target, `t` (0-1) of the way along. `atId` is the body the ship was put at when it began.
  */
-export function shipProgress(prev: { key: string; t: number } | null, key: string, distLs: number | null, lenLs: number): { key: string; t: number } | null {
-  const held = prev && prev.key === key ? prev : null;
-  if (distLs == null) return held;
-  const t = lenLs > 0 ? Math.max(0, Math.min(1, 1 - distLs / lenLs)) : 1;
-  return { key, t: Math.max(held?.t ?? 0, t) };
+export interface ShipLeg {
+  addr: string;
+  targetId: number;
+  atId: number | null;
+  from: ShipSpot;
+  /** The body the leg began at; null when it began on the way (another target picked in flight). */
+  fromId: number | null;
+  t: number;
+}
+
+const mix = (a: P3, b: P3, t: number): P3 => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t });
+/** Where a leg has got to. */
+export const legSpot = (leg: ShipLeg, to: ShipSpot): ShipSpot => ({ pos: mix(leg.from.pos, to.pos, leg.t), view: mix(leg.from.view, to.view, leg.t) });
+
+/**
+ * The ship's leg after a new word on it (owner, 2026-11-05: overshooting, the target off the screen, the ship jumped to
+ * another body "instead of using the last known real location"):
+ * - the distance to the target moves it on along the leg, never back (passing the target holds it there);
+ * - no distance (the target off the screen, a frame not read) keeps it where it was;
+ * - the netlog passing near another body does not move it (it measures from barycentres too); reaching the target, or
+ *   a journal event putting the ship at a body, ends the leg (the ship is at that body);
+ * - another target starts a new leg from where the ship is, not from a body.
+ * `spot` gives a body's place; `base` is the body the ship is at without a leg.
+ */
+export function nextLeg(
+  prev: ShipLeg | null,
+  ship: { addr: string; atId: number | null; atFrom?: "journal" | "netlog" | null; targetId: number | null; distLs: number | null },
+  spot: (id: number) => ShipSpot | null,
+  base: number | null,
+): ShipLeg | null {
+  let leg = prev && prev.addr === ship.addr ? prev : null;
+  if (leg && (ship.atId === leg.targetId || (ship.atFrom === "journal" && ship.atId !== leg.atId))) leg = null;
+  const to = ship.targetId != null ? spot(ship.targetId) : null;
+  if (!to || ship.targetId === base) return leg;
+  if (!leg || leg.targetId !== ship.targetId) {
+    const prevTo = leg ? spot(leg.targetId) : null;
+    const from = leg && prevTo ? legSpot(leg, prevTo) : base != null ? spot(base) : null;
+    if (!from) return null;
+    const fromId = leg && prevTo ? (leg.t === 0 ? leg.fromId : null) : base;
+    leg = { addr: ship.addr, targetId: ship.targetId!, atId: ship.atId, from, fromId, t: 0 };
+  }
+  if (ship.distLs != null) {
+    const len = Math.hypot(to.pos.x - leg.from.pos.x, to.pos.y - leg.from.pos.y, to.pos.z - leg.from.pos.z);
+    const t = len > 0 ? Math.max(0, Math.min(1, 1 - ship.distLs / len)) : 1;
+    if (t > leg.t) leg = { ...leg, t };
+  }
+  return leg;
 }
 
 export interface ScanRouteScene {
@@ -90,6 +139,11 @@ export interface ScanRouteScene {
   fit(): void;
   /** Centre on a body, close enough to see what orbits it. */
   focus(id: number): void;
+  /**
+   * Keep a body and the ship framed together (null: stop), easing the view over as the ship closes in; the commander
+   * panning or zooming the view pauses it until another body is followed.
+   */
+  follow(id: number | null): void;
   /** Which names show, and the next stop's id (for "next"). */
   setNames(names: ScanNames, nextId: number | null): void;
   dispose(): void;
@@ -139,8 +193,8 @@ export function createScanRouteScene(
   const shipGroup = new THREE.Group();
   scene.add(grid, group, shipGroup);
   let ship: ShipMark | null = null;
-  /** How far the ship has come towards the target (shipProgress). */
-  let progress: { key: string; t: number } | null = null;
+  /** The way the ship is flying to the target (nextLeg). */
+  let leg: ShipLeg | null = null;
   /** The ship's arrow and the line it travels, to turn the arrow towards the target as the view turns. */
   let shipArrow: { el: HTMLElement; from: THREE.Vector3; to: THREE.Vector3 } | null = null;
   let mode: ScanScale = "true";
@@ -352,15 +406,22 @@ export function createScanRouteScene(
     render();
   }
 
-  function focus(id: number) {
-    const b = shownData?.bodies.find((x) => x.id === id);
-    if (!b) return;
+  /** How far round a body to show: its own moons, or what it orbits at the edge. */
+  function spanOf(b: ScanRouteBodyDTO): number {
     const at = placeOf(b);
-    // Its own moons in view, and what it orbits at the edge: the widest orbit round it, or its own orbit.
     const kids = shownData!.bodies.filter((x) => x.parentId === b.id).map((x) => placeOf(x).distanceTo(at));
     const c = centreOf(b);
     const own = c ? c.distanceTo(at) : 0;
-    const span = Math.max(kids.length ? Math.max(...kids) * 1.3 : own * 0.7, mode === "true" ? 1 : 3);
+    return Math.max(kids.length ? Math.max(...kids) * 1.3 : own * 0.7, mode === "true" ? 1 : 3);
+  }
+
+  function focus(id: number) {
+    const b = shownData?.bodies.find((x) => x.id === id);
+    if (!b) return;
+    // The commander chose where to look: following waits for the next body.
+    followPaused = true;
+    const at = placeOf(b);
+    const span = spanOf(b);
     camera.position.set(at.x, at.y, span * 3);
     controls.target.copy(at);
     camera.up.set(0, 0, 1);
@@ -369,6 +430,61 @@ export function createScanRouteScene(
     gridSize = 0;
     render();
   }
+
+  /*
+    Following (owner, 2026-11-05: "the zoom in should always include the player as well, and gradually zoom in to the
+    location, keeping the player on the screen"): the body and the ship framed together from above, with room round
+    them, never closer than focusing on the body alone; eased there over about half a second, so each new place of the
+    ship (four a second in supercruise) slides the view rather than jumping it.
+  */
+  let followId: number | null = null;
+  let followPaused = false;
+  let shipAt: THREE.Vector3 | null = null;
+  let glide = 0;
+  const FOLLOW_MS = 450;
+  function followFrame(): void {
+    if (followId == null || followPaused || !shownData) return;
+    const b = shownData.bodies.find((x) => x.id === followId);
+    if (!b) return;
+    const at = placeOf(b);
+    let centre = at;
+    let dist = spanOf(b) * 3;
+    if (shipAt) {
+      centre = at.clone().add(shipAt).multiplyScalar(0.5);
+      const aspect = Math.max(0.2, host.clientWidth / Math.max(1, host.clientHeight));
+      const half = Math.max(Math.abs(at.y - shipAt.y) / 2, Math.abs(at.x - shipAt.x) / 2 / aspect);
+      dist = Math.max(dist, (half * 1.45) / Math.tan((camera.fov * Math.PI) / 360));
+    }
+    const goal = new THREE.Vector3(centre.x, centre.y, dist);
+    // Close enough already: no glide for a hair's move.
+    if (goal.distanceTo(camera.position) < dist * 0.01 && Math.abs(controls.target.x - centre.x) + Math.abs(controls.target.y - centre.y) < dist * 0.01) return;
+    const fromPos = camera.position.clone();
+    const fromTarget = controls.target.clone();
+    const toTarget = new THREE.Vector3(centre.x, centre.y, 0);
+    const t0 = performance.now();
+    cancelAnimationFrame(glide);
+    const step = () => {
+      const k = Math.min(1, (performance.now() - t0) / FOLLOW_MS);
+      const e = 1 - (1 - k) ** 3;
+      camera.position.lerpVectors(fromPos, goal, e);
+      controls.target.lerpVectors(fromTarget, toTarget, e);
+      camera.up.set(0, 0, 1);
+      camera.lookAt(controls.target);
+      controls.update();
+      gridSize = 0;
+      render();
+      glide = k < 1 ? requestAnimationFrame(step) : 0;
+    };
+    glide = requestAnimationFrame(step);
+  }
+  // The commander's own pan, tilt or wheel pauses following (the glide's own moves come through controls.update).
+  const pauseFollow = () => {
+    if (followId == null) return;
+    followPaused = true;
+    cancelAnimationFrame(glide);
+  };
+  renderer.domElement.addEventListener("pointerdown", pauseFollow);
+  renderer.domElement.addEventListener("wheel", pauseFollow, { passive: true });
 
   function show(d: ScanRouteDTO, scale: ScanScale) {
     const modeChanged = scale !== mode;
@@ -456,42 +572,54 @@ export function createScanRouteScene(
 
   /*
     The ship: at the body the journal or the netlog last put it near (else where the route starts). With a fix from the
-    target (the HUD's distance to it, or the netlog measuring from it): on the straight line from that body to the
-    target at that distance (supercruise flies mostly straight at it), never back along it (`progress`); else at the
-    netlog's body only when near it — a star tens of thousands of ls off, which the game measures from once a planet is
-    overshot, leaves the ship where it was. The fix's direction is in the game's axes, which the orbits' are not
-    (plan 1.3.5 R-1), so only the distance is used. A line runs on to the body targeted, the arrow pointing along it.
+    target (the HUD's distance to it, or the netlog measuring from it): on its leg to the target (nextLeg), from where
+    it was, never back, held where it was when the fix is lost; else at the netlog's body only when near it and no leg
+    has moved it. The fix's direction is in the game's axes, which the orbits' are not (plan 1.3.5 R-1), so only the
+    distance is used. A line runs on to the body targeted, the arrow pointing along it.
   */
   function drawShip(): void {
     clearGroup(shipGroup);
     shipArrow = null;
+    shipAt = null;
     const d = shownData;
     if (!ship || !d) return;
     const byId = (id: number | null) => (id == null ? undefined : d.bodies.find((b) => b.id === id));
     const base = byId(ship.atId) ?? byId(d.startId);
-    const target = ship.targetId !== base?.id ? byId(ship.targetId) : undefined;
+    const spot = (id: number): ShipSpot | null => {
+      const b = byId(id);
+      return b ? { pos: b.pos, view: b.viewPos } : null;
+    };
     const ref = ship.fix ? byId(ship.fix.refId) : undefined;
+    leg = nextLeg(
+      leg,
+      { addr: d.addr, atId: ship.atId, atFrom: ship.atFrom, targetId: ship.targetId, distLs: ship.fix && ship.fix.refId === ship.targetId ? ship.fix.distLs : null },
+      spot,
+      base?.id ?? null,
+    );
+    const target = byId(ship.targetId) && ship.targetId !== base?.id ? byId(ship.targetId) : undefined;
+    const legTo = leg ? spot(leg.targetId) : null;
+    const draw = (p: ShipSpot) => (mode === "true" ? flat(p.pos) : flat(p.view));
     let at: THREE.Vector3 | null = base ? placeOf(base) : null;
     let travelling = false;
-    if (base && target) {
-      const len = Math.hypot(target.pos.x - base.pos.x, target.pos.y - base.pos.y, target.pos.z - base.pos.z);
-      const toTarget = ship.fix && ref?.id === target.id ? ship.fix.distLs : null;
-      progress = shipProgress(progress, `${d.addr}:${base.id}>${target.id}`, toTarget, len);
-    } else progress = null;
-    if (ref && ship.fix && ref.id !== target?.id && ship.fix.distLs <= SHIP_NEAR_LS) {
-      at = placeOf(ref);
-      progress = null;
-    }
-    if (progress && base && target) {
-      at = placeOf(base).lerp(placeOf(target), progress.t);
-      travelling = progress.t > 0;
-    }
+    if (leg && legTo && (leg.t > 0 || leg.fromId == null)) {
+      at = draw(legSpot(leg, legTo));
+      travelling = true;
+    } else if (ref && ship.fix && ref.id !== ship.targetId && ship.fix.distLs <= SHIP_NEAR_LS) at = placeOf(ref);
     if (!at) return;
+    shipAt = at.clone();
     if (target) {
+      const ends = [at.clone().setZ(0.06), placeOf(target).setZ(0.06)];
+      // The route's next stop: a plain line on along the route. Another body targeted (out of order): the route stays
+      // as it is and a dotted blue line runs to the body the commander chose.
+      const offRoute = ship.nextInLine != null && target.id !== ship.nextInLine;
+      const dash = ends[0]!.distanceTo(ends[1]!) / 60;
       const line = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([at.clone().setZ(0.06), placeOf(target).setZ(0.06)]),
-        new THREE.LineBasicMaterial({ color: 0x7fe3ff, transparent: true, opacity: 0.7 }),
+        new THREE.BufferGeometry().setFromPoints(ends),
+        offRoute
+          ? new THREE.LineDashedMaterial({ color: 0x4d8dff, dashSize: dash, gapSize: dash, transparent: true, opacity: 0.9 })
+          : new THREE.LineBasicMaterial({ color: 0x7fe3ff, transparent: true, opacity: 0.7 }),
       );
+      if (offRoute) line.computeLineDistances();
       shipGroup.add(line);
     }
     const el = document.createElement("div");
@@ -528,13 +656,20 @@ export function createScanRouteScene(
       clear();
       clearGroup(shipGroup);
       shipArrow = null;
-      progress = null;
+      leg = null;
       render();
     },
     setShip(m) {
       ship = m;
       drawShip();
+      followFrame();
       render();
+    },
+    follow(id) {
+      if (id !== followId) followPaused = false;
+      followId = id;
+      if (id == null) cancelAnimationFrame(glide);
+      followFrame();
     },
     fit,
     focus,
@@ -551,7 +686,10 @@ export function createScanRouteScene(
       renderer.domElement.removeEventListener("pointermove", onMove);
       renderer.domElement.removeEventListener("pointerleave", onLeave);
       cancelAnimationFrame(hoverFrame);
+      cancelAnimationFrame(glide);
       renderer.domElement.removeEventListener("wheel", onWheel);
+      renderer.domElement.removeEventListener("pointerdown", pauseFollow);
+      renderer.domElement.removeEventListener("wheel", pauseFollow);
       clear();
       clearGroup(grid);
       clearGroup(shipGroup);
