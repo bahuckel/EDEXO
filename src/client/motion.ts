@@ -12,65 +12,27 @@
  */
 import { useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
+import { MOTION_EVENT, fxOn, fxSwitchedOn, motionLevel, type MotionFx, type MotionLevel } from "./motionCore";
 
-export type MotionLevel = "full" | "reduced" | "off";
+export * from "./motionCore";
 
-const KEY = "edexo.motion";
-const EVENT = "edexo:motion";
-
-function systemPrefersLess(): boolean {
-  return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-function stored(): MotionLevel | null {
-  try {
-    const v = localStorage.getItem(KEY);
-    return v === "full" || v === "reduced" || v === "off" ? v : null;
-  } catch {
-    return null;
-  }
-}
-
-export function motionLevel(): MotionLevel {
-  return stored() ?? (systemPrefersLess() ? "reduced" : "full");
-}
-
-/** Puts the level on <html> (before the first paint: main.tsx) and keeps it there when it changes anywhere. */
-export function applyMotion(): void {
-  if (typeof document === "undefined") return;
-  const set = () => {
-    document.documentElement.dataset.motion = motionLevel();
-  };
-  set();
-  window.addEventListener(EVENT, set);
-  // Another window of the app changed it.
-  window.addEventListener("storage", (e) => {
-    if (e.key === KEY) {
-      set();
-      window.dispatchEvent(new CustomEvent(EVENT));
-    }
-  });
-  if (typeof matchMedia === "function") matchMedia("(prefers-reduced-motion: reduce)").addEventListener?.("change", set);
-}
-
-export function setMotionLevel(level: MotionLevel): void {
-  try {
-    localStorage.setItem(KEY, level);
-  } catch {
-    /* storage blocked: this window, this session */
-  }
-  window.dispatchEvent(new CustomEvent(EVENT));
+function subscribe(cb: () => void): () => void {
+  window.addEventListener(MOTION_EVENT, cb);
+  return () => window.removeEventListener(MOTION_EVENT, cb);
 }
 
 export function useMotionLevel(): MotionLevel {
-  return useSyncExternalStore(
-    (cb) => {
-      window.addEventListener(EVENT, cb);
-      return () => window.removeEventListener(EVENT, cb);
-    },
-    motionLevel,
-    () => "full",
-  );
+  return useSyncExternalStore(subscribe, motionLevel, () => "full");
+}
+
+/** The effect plays (its switch on, the level "full"); follows changes made anywhere. */
+export function useFx(fx: MotionFx): boolean {
+  return useSyncExternalStore(subscribe, () => fxOn(fx), () => false);
+}
+
+/** The effect's switch in Options, whatever the level. */
+export function useFxSwitch(fx: MotionFx): boolean {
+  return useSyncExternalStore(subscribe, () => fxSwitchedOn(fx), () => true);
 }
 
 type ViewTransitionDocument = Document & { startViewTransition?: (cb: () => void) => unknown };

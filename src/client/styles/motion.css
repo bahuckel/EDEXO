@@ -116,3 +116,72 @@ html[data-motion="off"] *::after {
     box-shadow: 0 0 8px 2px var(--accent-a35);
   }
 }
+
+/* ==========================================================================================================
+   Effects (owner 2026-11-05: "so the app feels a bit better and more premium"). Each has a switch in Options › Look ›
+   Motion (motionCore.ts); they play under the level "full" only. A switched-off effect is in <html data-fx-off>.
+   ========================================================================================================== */
+
+/* ---- M5: the "?" explanations open fast first, then slow (ease-out, 350 ms) ---- */
+/* Fold help, a pop-up's help (ModalHead, so every Dialog) and the Boxels mass-code tables. They grow from nothing to
+   their own height (interpolate-size lets "auto" be animated); without the effect they fade in as before (pane-in). */
+:root {
+  --motion-expand: 350ms;
+  --motion-expand-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+html[data-motion="full"]:not([data-fx-off~="expand"]) :is(.fold-help, .modal-help, .boxel-help) {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  animation: card-expand var(--motion-expand) var(--motion-expand-ease);
+}
+/* The mass-code tables scroll inside their own panel once open. */
+html[data-motion="full"]:not([data-fx-off~="expand"]) .boxel-help {
+  overflow: auto;
+}
+@keyframes card-expand {
+  from {
+    height: 0;
+    padding-block: 0;
+    margin-block: 0;
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+/* ---- M2: pull a list down at its top to refresh it (ui/usePullToRefresh.ts) ---- */
+/* The list's children follow at 35 % of the pull; the mark above them says what letting go does. */
+[data-pull-refresh] {
+  position: relative;
+  overscroll-behavior-y: contain;
+}
+[data-pull-refresh] > * {
+  transition: translate 260ms var(--motion-ease-out);
+}
+[data-pull-refresh][data-pull] > * {
+  translate: 0 var(--pull, 0);
+  transition-duration: 90ms;
+}
+[data-pull-refresh][data-pull]::before {
+  content: "↓ Pull to refresh";
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--pull, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+[data-pull-refresh][data-pull="ready"]::before {
+  content: "↻ Let go to refresh";
+  color: var(--accent-bright);
+}
+[data-pull-refresh][data-pull="busy"]::before {
+  content: "↻ Refreshing…";
+  color: var(--accent-bright);
+}

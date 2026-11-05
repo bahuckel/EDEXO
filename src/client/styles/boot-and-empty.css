@@ -66,6 +66,39 @@
   opacity: 0.92;
 }
 
+/* M6 (JournalBootScreen useBootTick): loaded, the orb's place draws a circle, then a tick. */
+.journal-boot__tick {
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  overflow: visible;
+  filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+.journal-boot__tick circle,
+.journal-boot__tick path {
+  fill: none;
+  stroke: var(--accent-bright);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.journal-boot__tick-circle {
+  transform: rotate(-90deg);
+  transform-origin: center;
+  animation: journal-boot-draw 280ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.journal-boot__tick-mark {
+  animation: journal-boot-draw 190ms cubic-bezier(0.2, 0.8, 0.3, 1) 280ms forwards;
+}
+@keyframes journal-boot-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 @keyframes journal-boot-spin {
   to {
     transform: rotate(360deg);

@@ -1,0 +1,38 @@
+/* M3 Rolling number (RollingNumber.tsx): one column 0-9 per digit, moved to its digit; the app and the HUD pages. */
+.roll-num {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+}
+/* The number itself, for screen readers, copy and tests; the columns are drawn beside it. */
+.roll-num__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.roll-num__digits {
+  display: inline-flex;
+  vertical-align: top;
+  height: 1lh;
+  overflow: clip;
+  font-variant-numeric: tabular-nums;
+}
+.roll-char::before {
+  content: attr(data-c);
+  white-space: pre;
+}
+.roll-digit {
+  display: block;
+  height: 1lh;
+}
+.roll-digit::before {
+  content: "0\A 1\A 2\A 3\A 4\A 5\A 6\A 7\A 8\A 9";
+  display: block;
+  white-space: pre;
+  text-align: center;
+  transform: translateY(calc(var(--d) * -1lh));
+  transition: transform 520ms cubic-bezier(0.2, 0.8, 0.3, 1) var(--roll-delay, 0ms);
+}

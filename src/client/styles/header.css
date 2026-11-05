@@ -577,6 +577,19 @@
   gap: var(--s-4);
 }
 
+/* Options › Look › Motion: one switch per effect (owner 2026-11-05). */
+.options-motion-fx {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0 0 0.5rem;
+}
+.options-motion-fx__row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .options-oneline-label {
   font-weight: 600;
   color: var(--muted);

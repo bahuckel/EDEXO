@@ -21,9 +21,14 @@ import { start as trayGraphicsStart } from "./trayGraphics.js";
 import { start as wizardStart } from "./wizard.js";
 import { connectWs, loopPoll } from "./status.js";
 import { applyUiFont } from "../uiFont";
+import { applyMotion } from "../motionCore";
+import { installPressFx } from "../ui/pressFx";
 
 // The interface font chosen in the app's Options (Classic or EDEXO).
 applyUiFont();
+// The app's motion level and effects (Options › Look › Motion): the button press here too.
+applyMotion();
+installPressFx();
 networkStart();
 updateStart();
 whatsNewStart();

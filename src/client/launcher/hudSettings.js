@@ -6,6 +6,7 @@ import { btnOverlayMenu, launcherActionMsg } from "./status.js";
 import { apiUrl } from "./network.js";
 import { PRESETS } from "../hud/presets";
 import { HUD_MERGED, HUD_PATH_BY_SECTION, HUD_SECTION_BY_PATH, HUD_SECTION_LABEL, HUD_SECTION_ORDER, HUD_W, activeSections, hudMergeOn, hudPaths, hudPhoneSections, inHudQueue, pickOverlay, refreshPhoneSections, showSections } from "./hudOverlays.js";
+import { MOTION_EVENT, fxOn } from "../motionCore";
 
 /* ------------------------------------------------------------------ HUD settings (theme, order, corner) */
 var LS_HUD_THEME = "edexoHudTheme";
@@ -335,8 +336,88 @@ function renderOrderList() {
     li.appendChild(up);
     li.appendChild(down);
     li.appendChild(name);
+    if (fxOn("drag")) {
+      var grip = document.createElement("span");
+      grip.className = "hud-order__grip";
+      grip.textContent = "⠿";
+      grip.title = "Drag to move (the arrows move it one place)";
+      grip.setAttribute("aria-hidden", "true");
+      grip.addEventListener("pointerdown", function (ev) {
+        startOrderDrag(ev, li, i);
+      });
+      li.appendChild(grip);
+    }
     hudOrderList.appendChild(li);
   });
+}
+
+/*
+  M4 Drag to reorder (owner 2026-11-05): the row lifts to 105 % and follows the pointer, the rows it passes slide out
+  of its way, and it drops into the gap. The arrows stay for the keyboard. Options › Look › Motion › Drag to reorder
+  (level Full) in the app; off, there is no grip.
+*/
+// The grip comes and goes with the switch, changed here or in the app.
+window.addEventListener(MOTION_EVENT, function () {
+  renderOrderList();
+});
+function startOrderDrag(ev, li, from) {
+  if (ev.button !== 0 || !hudOrderList) return;
+  ev.preventDefault();
+  var rows = Array.prototype.slice.call(hudOrderList.children);
+  var rects = rows.map(function (r) {
+    return r.getBoundingClientRect();
+  });
+  var step = rects.length > 1 ? rects[1].top - rects[0].top : rects[0].height;
+  var startY = ev.clientY;
+  var to = from;
+  li.classList.add("is-lifted");
+  li.style.transform = "scale(1.05)";
+  hudOrderList.classList.add("is-sorting");
+  var grip = ev.currentTarget;
+  try {
+    grip.setPointerCapture(ev.pointerId);
+  } catch (e) {
+    /* no such pointer any more: the moves still reach the grip while over it */
+  }
+  function move(e) {
+    var dy = e.clientY - startY;
+    // Kept inside the list.
+    dy = Math.max(rects[0].top - rects[from].top, Math.min(rects[rects.length - 1].top - rects[from].top, dy));
+    li.style.transform = "translateY(" + dy + "px) scale(1.05)";
+    var mid = rects[from].top + rects[from].height / 2 + dy;
+    to = from;
+    for (var k = 0; k < rects.length; k++) {
+      if (k < from && mid < rects[k].top + rects[k].height / 2) {
+        to = k;
+        break;
+      }
+      if (k > from && mid > rects[k].top + rects[k].height / 2) to = k;
+    }
+    rows.forEach(function (r, k) {
+      if (r === li) return;
+      var shift = k > from && k <= to ? -step : k < from && k >= to ? step : 0;
+      r.style.transform = shift ? "translateY(" + shift + "px)" : "";
+    });
+  }
+  function end(e) {
+    grip.removeEventListener("pointermove", move);
+    grip.removeEventListener("pointerup", end);
+    grip.removeEventListener("pointercancel", end);
+    hudOrderList.classList.remove("is-sorting");
+    if (e.type === "pointerup" && to !== from) {
+      hudOrder.splice(to, 0, hudOrder.splice(from, 1)[0]);
+      renderOrderList();
+      pushLayout();
+      return;
+    }
+    li.classList.remove("is-lifted");
+    rows.forEach(function (r) {
+      r.style.transform = "";
+    });
+  }
+  grip.addEventListener("pointermove", move);
+  grip.addEventListener("pointerup", end);
+  grip.addEventListener("pointercancel", end);
 }
 
 /*

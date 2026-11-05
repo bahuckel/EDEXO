@@ -1,6 +1,7 @@
 import type { HudSnapshot } from "../types";
 import { fmtCr } from "../core";
 import { Head, type HudSection } from "../parts";
+import { RollingNumber } from "../../ui/RollingNumber";
 
 /* ============================================================== Data value ================== */
 function DataValue({ d }: { d: HudSnapshot }) {
@@ -14,7 +15,7 @@ function DataValue({ d }: { d: HudSnapshot }) {
       <div className="row">
         <span className="k">Organic</span>
         <span className="v" data-f="org">
-          {fmtCr(org)}
+          <RollingNumber text={fmtCr(org)} />
         </span>
       </div>
       {/* Only while ⊕ adds them (owner, 2026-10-25: "off" read as a fault); the note below says how to. */}
@@ -22,14 +23,14 @@ function DataValue({ d }: { d: HudSnapshot }) {
         <div className="row">
           <span className="k">Exploration scans</span>
           <span className="v" data-f="scan">
-            {fmtCr(scanCr)}
+            <RollingNumber text={fmtCr(scanCr)} />
           </span>
         </div>
       ) : null}
       <div className="row row--rule row--total">
         <span className="k">Total</span>
         <span className="v" data-f="tot">
-          {fmtCr(org + (scanOn ? scanCr : 0))}
+          <RollingNumber text={fmtCr(org + (scanOn ? scanCr : 0))} />
         </span>
       </div>
       {/* With ⊕ off this is the only word about scans, so compact mode keeps it, a little larger. */}

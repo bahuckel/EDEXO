@@ -27,6 +27,7 @@ import { LoadingNote, RefreshBar } from "./ui/Loading";
 import type { PoiQueryResultDTO } from "@shared/types";
 import { CopySystemButton } from "./CopySystemButton";
 import { fmtLyAway } from "@shared/format";
+import { usePullToRefresh } from "./ui/usePullToRefresh";
 
 const ly = fmtLyAway;
 
@@ -84,6 +85,8 @@ export function PoiModal({ onClose }: { onClose: () => void }) {
       if (seq === requestSeq.current) setQuerying(false);
     }
   }, [groups, organicOnly, minRating, search]);
+  // M2: pull the list down at its top to query again.
+  const pullRef = usePullToRefresh<HTMLDivElement>(load);
 
   useEffect(() => {
     void load();
@@ -251,7 +254,7 @@ export function PoiModal({ onClose }: { onClose: () => void }) {
 
             {/* Same scroller as Carriers: without it the panel clips instead of scrolling. */}
             <RefreshBar active={querying} />
-            <div className={`fdb-scroll${querying ? " is-refreshing" : ""}`} aria-busy={querying}>
+            <div ref={pullRef} className={`fdb-scroll${querying ? " is-refreshing" : ""}`} aria-busy={querying}>
               <table className="fdb-table carriers-table poi-table">
                 <thead>
                   <tr>

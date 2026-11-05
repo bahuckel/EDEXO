@@ -21,6 +21,7 @@ import {
   writeRouteHeaderMetricMode,
 } from "../routeHeader";
 import type { RouteHeaderMetricMode } from "../routeHeader";
+import { RollingNumber } from "../ui/RollingNumber";
 
 /*
   An AFMU repairs the FSD in flight (owner, 2026-10-13, the Laboratory): when one is fitted, the FSD warning says so and
@@ -94,14 +95,14 @@ export function CompareTray({
         <span className="data-value-label tray-tile__label">Data value</span>
         <span className="tray-tile__value">
           <span className={`data-value-amount ${dataValueFlash}`.trim()} title={fmtCrExact(totalDataCr)}>
-            {fmtCrShort(totalDataCr)} CR
+            <RollingNumber text={`${fmtCrShort(totalDataCr)} CR`} />
           </span>
           {snap.organicPendingSampleCount > 0 ? (
             <span
               className={`data-value-meta tray-tile__meta ${pendingSamplesFlash}`.trim()}
               title="Completed samples not yet sold"
             >
-              ({snap.organicPendingSampleCount})
+              <RollingNumber text={`(${snap.organicPendingSampleCount})`} />
             </span>
           ) : null}
         </span>

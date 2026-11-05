@@ -12,6 +12,7 @@ import { useRouteValues } from "../routeValues";
 import { fmtCrExact, fmtCrShort } from "@shared/format";
 import { createScanRouteScene, type ScanNames, type ScanRouteScene, type ScanScale } from "./scanRouteScene";
 import "../styles/scan-route.css";
+import { RollingNumber } from "../ui/RollingNumber";
 
 const MIN_KEY = "edexo.scanRoute.minDssCr";
 /** A bio body's expected value for a stop (0: every one), and CODEX bodies under it (owner, 2026-10-31). */
@@ -543,16 +544,22 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
                 <tbody>
                   <tr title="Every star and planet scanned with the FSS, the honk included">
                     <td>System scan value</td>
-                    <td>{fmtCrExact(d.totals.scanCr)}</td>
+                    <td>
+                      <RollingNumber text={fmtCrExact(d.totals.scanCr)} />
+                    </td>
                   </tr>
                   <tr title="Every planet mapped (in place of its scan), the stars scanned, the honk">
                     <td>System mapped value</td>
-                    <td>{fmtCrExact(d.totals.mappedCr)}</td>
+                    <td>
+                      <RollingNumber text={fmtCrExact(d.totals.mappedCr)} />
+                    </td>
                   </tr>
                   {d.totals.currentCr != null ? (
                     <tr title="What your own scans here sell for now">
                       <td>Current value</td>
-                      <td>{fmtCrExact(d.totals.currentCr)}</td>
+                      <td>
+                        <RollingNumber text={fmtCrExact(d.totals.currentCr)} />
+                      </td>
                     </tr>
                   ) : null}
                   {d.totals.codexNew ? (

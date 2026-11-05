@@ -14,6 +14,7 @@ import { useToast } from "./ui/feedback";
 import { LoadingNote } from "./ui/Loading";
 import type { AchievementDetailDTO, AchievementDTO, AchievementsDTO } from "@shared/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { RollingNumber } from "./ui/RollingNumber";
 
 const STEP = ["", "Bronze", "Silver", "Gold"] as const;
 const KIND_LABEL: Record<AchievementDTO["kind"], string> = {
@@ -175,7 +176,7 @@ function Row({
         </button>
         <Medal step={a.step} />
         <span className="ach-row__count">
-          {a.done}/{a.total}
+          <RollingNumber text={`${a.done}/${a.total}`} />
         </span>
         <button
           type="button"
@@ -450,7 +451,7 @@ export function AchievementsModal({ onClose }: { onClose: () => void }) {
                     {tracked.name}
                   </button>
                   <span>
-                    {tracked.done}/{tracked.total}
+                    <RollingNumber text={`${tracked.done}/${tracked.total}`} />
                   </span>
                   <Medal step={tracked.step} />
                   <button type="button" className="ach-link" onClick={() => void track(null)}>

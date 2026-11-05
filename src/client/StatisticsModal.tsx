@@ -31,6 +31,7 @@ import { PredictionQualitySection } from "./PredictionQuality";
 import { useModal } from "./ui/useModal";
 import { formatWeeks } from "@shared/carrierUpkeep";
 import type { RankEstimateDTO } from "@shared/rankProgress";
+import { RollingNumber } from "./ui/RollingNumber";
 
 /*
   A rank with about how many credits to the next one (shared/rankProgress.ts). The bar is the game's
@@ -523,7 +524,10 @@ export function StatisticsModal({ onClose }: { onClose: () => void }) {
           <div className={`fdb-scroll${busy ? " is-refreshing" : ""}`} aria-busy={busy}>
             <div className="fdb-summary">
               <span>
-                <strong>{fmtCrTick(data.totalCredits)}</strong> earned
+                <strong>
+                  <RollingNumber text={fmtCrTick(data.totalCredits)} />
+                </strong>{" "}
+                earned
               </span>
               <span className="dim">{hours(data.playedHours)} flown</span>
               {data.creditsPerHour != null ? (

@@ -8,7 +8,7 @@ import { UI_COMMAND_EVENT, useLiveSnapshot } from "./useLiveSnapshot";
 import { useToast } from "./ui/feedback";
 import { arrivalTripRanks, type ArrivalTrip } from "@shared/systemTriage";
 import { useCallback, lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { JournalBootScreen } from "./JournalBootScreen";
+import { JournalBootScreen, useBootTick } from "./JournalBootScreen";
 import type { EncyclopediaSpawnCompare } from "./EncyclopediaModal";
 import { EliteTipRotator } from "./EliteTipRotator";
 import type { AppSnapshot, BodyComputed, FootScannedEntry, UiCommand } from "@shared/types";
@@ -487,6 +487,8 @@ export function App() {
     },
     [focusBodyKey, toast],
   );
+  // The boot screen, held for the loaded tick (M6) once the journal is in.
+  const bootScreen = useBootTick(snapshot?.journalBoot);
 
   if (!snapshot) {
     return (
@@ -497,10 +499,10 @@ export function App() {
     );
   }
 
-  if (snapshot.journalBoot) {
+  if (bootScreen) {
     return (
       <div className="app-shell">
-        <JournalBootScreen boot={snapshot.journalBoot} connected={connected} />
+        <JournalBootScreen boot={bootScreen.boot} connected={connected} done={bootScreen.done} />
         <AppLegalFooter />
       </div>
     );

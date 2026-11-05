@@ -22,7 +22,7 @@
 import { isBool, isNum, oneOf, usePersistedState } from "./usePersistedState";
 import { withTransition } from "./motion";
 import { PAGE } from "./ui/tablePage";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CopySystemButton } from "./CopySystemButton";
 import { csvFileName, downloadCsv, toCsv, type CsvColumn } from "./csv";
 import { useModal } from "./ui/useModal";
@@ -30,6 +30,7 @@ import type { FirstDiscoveryBacklogDTO, FirstDiscoveryBacklogRowDTO } from "@sha
 import { fmtLyAway } from "@shared/format";
 import { Tooltip } from "./ui/Tooltip";
 import { LoadingNote } from "./ui/Loading";
+import { usePullToRefresh } from "./ui/usePullToRefresh";
 
 const crFmt = new Intl.NumberFormat("en-US");
 const cr = (n: number) => `${crFmt.format(Math.round(n))} CR`;
@@ -101,6 +102,9 @@ export function FirstDiscoveryBacklogModal({
     oneOf("value", "distance"),
   );
 
+  // M2: pulling the list down at its top fetches it again.
+  const [fetchNo, setFetchNo] = useState(0);
+  const pullRef = usePullToRefresh<HTMLDivElement>(useCallback(() => setFetchNo((n) => n + 1), []));
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -119,7 +123,7 @@ export function FirstDiscoveryBacklogModal({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchNo]);
 
   const rows: FirstDiscoveryBacklogRowDTO[] = useMemo(() => {
     const all = data?.rows ?? [];
@@ -315,7 +319,7 @@ export function FirstDiscoveryBacklogModal({
               </button>
             </div>
 
-            <div className="fdb-scroll">
+            <div ref={pullRef} className="fdb-scroll">
               <table className="fdb-table">
                 <thead>
                   <tr>

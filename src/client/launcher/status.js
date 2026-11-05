@@ -7,6 +7,7 @@ import { renderPollRates, renderRadarRadius } from "./options.js";
 import { renderJournalHealth, renderLiveStrip } from "./liveStrip.js";
 import { maybeShowWizard } from "./wizard.js";
 import { renderCommanders } from "./commanders.js";
+import { fxOn } from "../motionCore";
 
 const lamp = document.getElementById("statusLamp");
 const statusTitle = document.getElementById("statusTitle");
@@ -116,9 +117,43 @@ export function connectWs() {
   }
 }
 
+/** The journal boot was showing: its end draws the loaded tick (M6). */
+let booting = false;
+
+/*
+  M6 Success tick (owner 2026-11-05): when the journal boot ends, a circle and then a tick (470 ms) stand where the
+  lamp is for a moment (Options › Look › Motion › Loaded tick, level Full).
+*/
+function showLoadedTick() {
+  if (!fxOn("tick") || !lamp || !lamp.parentElement) return;
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("class", "status-tick");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  const circle = document.createElementNS(ns, "circle");
+  circle.setAttribute("cx", "12");
+  circle.setAttribute("cy", "12");
+  circle.setAttribute("r", "10");
+  circle.setAttribute("pathLength", "1");
+  circle.setAttribute("class", "status-tick__circle");
+  const mark = document.createElementNS(ns, "path");
+  mark.setAttribute("d", "M7.2 12.6 L10.6 16 L17 8.8");
+  mark.setAttribute("pathLength", "1");
+  mark.setAttribute("class", "status-tick__mark");
+  svg.append(circle, mark);
+  lamp.hidden = true;
+  lamp.parentElement.insertBefore(svg, lamp);
+  setTimeout(() => {
+    svg.remove();
+    lamp.hidden = false;
+  }, 1600);
+}
+
 function applyLauncherSnapshotData(data) {
   // The journal boot's progress stays inside the status card; the panel never leaves (2026-10-19).
   if (data.journalBoot) {
+    booting = true;
     const b = data.journalBoot;
     const p = Math.max(0, Math.min(100, Number(b.percent) || 0));
     lamp.className = "lamp busy";
@@ -134,6 +169,10 @@ function applyLauncherSnapshotData(data) {
 
   pollDelayMs = 2500;
   if (statusBoot) statusBoot.hidden = true;
+  if (booting) {
+    booting = false;
+    showLoadedTick();
+  }
 
   // The feeder's Spansh dump import: Options → Developer tools in the app (off by default since 1.2.20).
   const importDump = document.getElementById("btnImportDump");

@@ -319,6 +319,38 @@ h1 {
   background: var(--hud);
   animation: lampBlink 1.4s ease-in-out infinite;
 }
+/* M6 (status.js showLoadedTick): the journal boot ended, a circle then a tick where the lamp is. */
+.status-tick {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: -4px;
+  overflow: visible;
+  filter: drop-shadow(0 0 6px var(--ed-ok));
+}
+.status-tick circle,
+.status-tick path {
+  fill: none;
+  stroke: var(--ed-ok);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.status-tick__circle {
+  transform: rotate(-90deg);
+  transform-origin: center;
+  animation: status-tick-draw 280ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.status-tick__mark {
+  animation: status-tick-draw 190ms cubic-bezier(0.2, 0.8, 0.3, 1) 280ms forwards;
+}
+@keyframes status-tick-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
 /*
   The journal boot's progress inside the status card (2026-10-19): the launcher used to swap its whole panel for
   a full-panel progress screen during the 3 s cache restore, which read as a black window that then popped back.
@@ -1737,6 +1769,28 @@ input[type="checkbox"] {
 }
 .hud-order li span {
   flex: 1 1 auto;
+}
+/* M4 (hudSettings.js startOrderDrag): the grip, the lifted row, the rows sliding out of its way. */
+.hud-order li span.hud-order__grip {
+  flex: 0 0 auto;
+  padding: 0 2px;
+  color: var(--hud-dim);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.hud-order.is-sorting li {
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.hud-order.is-sorting li.is-lifted {
+  position: relative;
+  z-index: 1;
+  transition: none;
+  cursor: grabbing;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--hud);
+}
+.hud-order.is-sorting li.is-lifted .hud-order__grip {
+  cursor: grabbing;
 }
 .hud-order button {
   width: 1.6rem;

@@ -45,6 +45,7 @@ import { boxelColumns } from "./boxel/boxelColumns";
 import { BoxelOrderLine } from "./boxel/BoxelOrderLine";
 import { BoxelSideActions } from "./boxel/BoxelSideActions";
 import { BoxelFlyingStrip } from "./boxel/BoxelFlyingStrip";
+import { RollingNumber } from "./ui/RollingNumber";
 
 /*
   The labels and helpers and the table's columns live in boxel/ since the audit of 2026-10-22; the
@@ -756,7 +757,9 @@ export function BoxelScreen({
                   {ticked.length === 1 ? ` in ${ticked[0]!.sector}` : ""}
                 </span>
                 <span title={sources.split}>
-                  <strong>{sources.flown.toLocaleString()}</strong> / {allRows.length.toLocaleString()} flown
+                  <strong>
+                    <RollingNumber text={sources.flown.toLocaleString()} />
+                  </strong> / {allRows.length.toLocaleString()} flown
                   {sources.skipped ? ` · ${sources.skipped.toLocaleString()} skipped` : ""}
                   {sources.elsewhere ? ` · ${sources.elsewhere.toLocaleString()} known elsewhere` : ""}
                 </span>
