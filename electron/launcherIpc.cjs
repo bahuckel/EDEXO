@@ -186,6 +186,8 @@ function registerLauncherIpc(
   ipcMain.on("edexo:push-hud-prefs", (evt, prefs) => {
     if (!getMainWindow() || evt.sender !== getMainWindow().webContents) return;
     huds.pushPrefs(prefs);
+    // The Scan route's distance reader runs in the screen marker's window (aimWindow.cjs).
+    aim?.setReader(!!(prefs && typeof prefs === "object" && prefs.distanceReader === true));
   });
 
   // An overlay reporting how tall it actually is (hudWindows.cjs `resizeFromPage`).

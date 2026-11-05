@@ -4,7 +4,8 @@
  * (electron/aimWindow.cjs), fed by the HUD's own socket: the radar's frame (exoMinimap) at the Status.json rate.
  * The maths is project.ts. Later (owner): the hexagon holds a per-genus outline, animated open. With the launcher's
  * pitch reader on, this page also reads the HUD's pitch off the screen while there are plants to point at
- * (pitchCapture.ts): local only.
+ * (pitchCapture.ts): local only. With the launcher's distance reader on, it reads the target's distance in supercruise
+ * for the Scan route (useDistanceReader.ts); opened for that alone (`?marks=0`, aimWindow.cjs), it draws nothing.
  */
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -12,6 +13,7 @@ import type { ExoMinimapDTO } from "@shared/types";
 import { glidedMap, nextGlide, type GlideState } from "./glide";
 import { openMark, projectMarks, projectRings, viewOf, type ScreenMark, type ScreenRing, type View } from "./project";
 import { startPitchCapture, type PitchCapture, type PitchRead } from "./pitchCapture";
+import { useDistanceReader } from "./useDistanceReader";
 import "./aim.css";
 
 type MiniMap = ExoMinimapDTO | null;
@@ -26,9 +28,13 @@ const hex = (r: number) =>
     return `${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)}`;
   }).join(" ");
 
-function useMinimap(): { glide: GlideState | null; reader: boolean } {
+/** Opened for the distance reader only (the screen marker off): no marks, no pitch reader. */
+const MARKS = new URLSearchParams(location.search).get("marks") !== "0";
+
+function useMinimap(): { glide: GlideState | null; reader: boolean; distance: boolean } {
   const [glide, setGlide] = useState<GlideState | null>(null);
   const [reader, setReader] = useState(false);
+  const [distance, setDistance] = useState(false);
   useEffect(() => {
     let ws: WebSocket | null = null;
     let retry = 1000;
@@ -44,14 +50,17 @@ function useMinimap(): { glide: GlideState | null; reader: boolean } {
         try {
           const msg = JSON.parse(String(ev.data)) as {
             type?: string;
-            payload?: { exoMinimap?: MiniMap; journalBoot?: boolean; hudPrefs?: { pitchReader?: unknown } | null };
+            payload?: { exoMinimap?: MiniMap; journalBoot?: boolean; hudPrefs?: { pitchReader?: unknown; distanceReader?: unknown } | null };
           };
           if ((msg.type === "state" || msg.type === "exoLive") && msg.payload && "exoMinimap" in msg.payload)
           {
             const next = msg.payload.journalBoot ? null : (msg.payload.exoMinimap ?? null);
             setGlide((prev) => (next ? nextGlide(prev, next, Date.now()) : null));
           }
-          if (msg.type === "state" && msg.payload && "hudPrefs" in msg.payload) setReader(msg.payload.hudPrefs?.pitchReader === true);
+          if (msg.type === "state" && msg.payload && "hudPrefs" in msg.payload) {
+            setReader(msg.payload.hudPrefs?.pitchReader === true);
+            setDistance(msg.payload.hudPrefs?.distanceReader === true);
+          }
         } catch {
           /* a malformed frame is skipped */
         }
@@ -68,7 +77,7 @@ function useMinimap(): { glide: GlideState | null; reader: boolean } {
       ws?.close();
     };
   }, []);
-  return { glide, reader };
+  return { glide, reader, distance };
 }
 
 /** Re-render four times a second while the marks glide between Status.json writes (glide.ts). */
@@ -278,9 +287,10 @@ const DEMO: ExoMinimapDTO | null = new URLSearchParams(location.search).has("dem
 function Aim() {
   const live = useMinimap();
   useGlideTick(live.glide);
-  const map = DEMO ?? glidedMap(live.glide, Date.now());
+  useDistanceReader(!DEMO && live.distance);
+  const map = !MARKS ? null : (DEMO ?? glidedMap(live.glide, Date.now()));
   // Near a planet in the ship (the first scan needs the pitch too, before there is any mark).
-  const reader = usePitchReader(!DEMO && live.reader && live.glide?.map.altitudeM != null);
+  const reader = usePitchReader(MARKS && !DEMO && live.reader && live.glide?.map.altitudeM != null);
   const baseView = useView();
   // The page's own reading (held when frames go unread) over the server's echo of it (no round trip), and the screen's measured
   // pixels per degree over the one worked out from the settings' field of view.

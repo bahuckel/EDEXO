@@ -90,7 +90,8 @@ const NETLOG_NOTE: Record<ScanRouteShipDTO["netlog"]["state"], string> = {
   failed: "The game's settings file could not be written; the folder may need administrator rights.",
 };
 
-const fmtLs = (ls: number) => (ls >= 10_000 ? `${Math.round(ls).toLocaleString()} ls` : `${ls.toFixed(ls < 10 ? 1 : 0)} ls`);
+const fmtLs = (ls: number) =>
+  ls >= 10_000 ? `${Math.round(ls).toLocaleString()} ls` : ls < 1 ? `${ls.toFixed(2)} ls` : `${ls.toFixed(ls < 10 ? 1 : 0)} ls`;
 
 type Stop = { addr: number | null; name: string };
 type Hit = { addr: number; name: string; note: string };
@@ -602,6 +603,11 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
                     Live position (the game's network log)
                   </label>
                   <p className="dim">{NETLOG_NOTE[ship.netlog.state]}</p>
+                  {ship.fix?.from !== "hud" ? (
+                    <p className="dim">
+                      In supercruise, the launcher's HUD option "Read the target's distance off the HUD" moves the ship along to the target.
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
               <ol className="scan-route__list">
@@ -654,7 +660,7 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
   );
 }
 
-/** The ship's line under the start: its flight, the body targeted, and the netlog's fix with its age. */
+/** The ship's line under the start: its flight, the body targeted, and the netlog's or the HUD's fix with its age. */
 function ShipLine({ ship, byId }: { ship: ScanRouteShipDTO; byId: Map<number, ScanRouteBodyDTO> }) {
   const target = ship.targetId != null ? byId.get(ship.targetId) : undefined;
   const ref = ship.fix ? byId.get(ship.fix.refId) : undefined;
@@ -667,7 +673,7 @@ function ShipLine({ ship, byId }: { ship: ScanRouteShipDTO; byId: Map<number, Sc
       {ref ? (
         <span>
           {" "}
-          · {fmtLs(ship.fix!.distLs)} from {ref.short}
+          · {fmtLs(ship.fix!.distLs)} {ship.fix!.from === "hud" ? `to ${ref.short} (read off the HUD)` : `from ${ref.short}`}
           {age > 5 ? ` (${age} s ago)` : ""}
         </span>
       ) : null}

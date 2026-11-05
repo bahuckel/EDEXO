@@ -37,6 +37,7 @@ var LS_HUD_REFUEL_BAR = "edexoHudRefuelBar";
 var LS_HUD_RADAR_ALWAYS = "edexoHudRadarAlways";
 var LS_HUD_AIM = "edexoHudAim";
 var LS_HUD_PITCH_READER = "edexoHudPitchReader";
+var LS_HUD_DISTANCE_READER = "edexoHudDistanceReader";
 /* Colonize HUD (1.3.0): materials and other sites on unless switched off; finished lines off unless switched on. */
 var HUD_CZ_PREFS = [
   { id: "hudCzNeeds", ls: "edexoHudCzNeeds", key: "czNeeds", def: true },
@@ -84,6 +85,7 @@ function hudPrefsNow() {
   try { prefs.refuelBar = localStorage.getItem(LS_HUD_REFUEL_BAR) !== "0"; } catch (e) {}
   try { prefs.radarAlways = localStorage.getItem(LS_HUD_RADAR_ALWAYS) === "1"; } catch (e) {}
   try { prefs.pitchReader = localStorage.getItem(LS_HUD_PITCH_READER) === "1"; } catch (e) {}
+  try { prefs.distanceReader = localStorage.getItem(LS_HUD_DISTANCE_READER) === "1"; } catch (e) {}
   HUD_CZ_PREFS.forEach(function (p) { prefs[p.key] = readCzPref(p); });
   try { var tl = parseFloat(localStorage.getItem(LS_HUD_TILT) || ""); prefs.tilt = isFinite(tl) ? tl : 15; } catch (e) {}
   try { prefs.tiltMode = localStorage.getItem(LS_HUD_TILT_MODE) === "slant" ? "slant" : "turn"; } catch (e) {}
@@ -265,6 +267,7 @@ var hudRefuelBar = document.getElementById("hudRefuelBar");
 var hudRadarAlways = document.getElementById("hudRadarAlways");
 var hudAim = document.getElementById("hudAim");
 var hudPitchReader = document.getElementById("hudPitchReader");
+var hudDistanceReader = document.getElementById("hudDistanceReader");
 var hudCompact = document.getElementById("hudCompact");
 var hudRelevant = document.getElementById("hudRelevant");
 var hudAudio = document.getElementById("hudAudio");
@@ -630,6 +633,15 @@ export function start() {
     hudPitchReader.checked = (function () { try { return localStorage.getItem(LS_HUD_PITCH_READER) === "1"; } catch (e) { return false; } })();
     hudPitchReader.addEventListener("change", function () {
       try { localStorage.setItem(LS_HUD_PITCH_READER, hudPitchReader.checked ? "1" : "0"); } catch (e) {}
+      syncHudPrefs();
+    });
+  }
+  /* The Scan route's distance reader: opens the screen marker's window without its marks (electron aimWindow.cjs). */
+  if (hudDistanceReader) {
+    hudDistanceReader.checked = (function () { try { return localStorage.getItem(LS_HUD_DISTANCE_READER) === "1"; } catch (e) { return false; } })();
+    if (!window.edexoElectron) hudDistanceReader.disabled = true;
+    hudDistanceReader.addEventListener("change", function () {
+      try { localStorage.setItem(LS_HUD_DISTANCE_READER, hudDistanceReader.checked ? "1" : "0"); } catch (e) {}
       syncHudPrefs();
     });
   }

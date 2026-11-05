@@ -7,6 +7,8 @@
   running and, with "hide when unfocused", in front). The page draws nothing until there is a composition-scanned
   plant on the planet underfoot or flown over, so the window costs nothing to leave open. With the pitch reader on,
   its page captures the game's monitor (displayMedia below: that screen only, to this page only), on this PC only.
+  The Scan route's distance reader (the launcher's HUD option, plan 1.3.8) uses the same page and capture: with it on
+  and the marker off, the window opens with `?marks=0` and draws no marks, only reads the target's distance.
 
   Electron is passed in (as hudWindows.cjs does) so a test can drive it with fakes.
 */
@@ -27,7 +29,11 @@ function createAimWindow(deps) {
   /** @type {any} */
   let win = null;
   let on = false;
+  /** The distance reader (HUD prefs `distanceReader`): opens the window too, without the marks. */
+  let reader = false;
   let disposed = false;
+  /** The page's address as the switches want it. */
+  const pageUrl = (base) => `${base}/aim-overlay.html${on ? "" : "?marks=0"}`;
 
   function place() {
     if (!win || win.isDestroyed()) return;
@@ -53,7 +59,7 @@ function createAimWindow(deps) {
     win.on("closed", () => {
       win = null;
     });
-    void win.loadURL(`${base}/aim-overlay.html`).then(
+    void win.loadURL(pageUrl(base)).then(
       () => sync(),
       () => close(),
     );
@@ -65,10 +71,10 @@ function createAimWindow(deps) {
     if (w && !w.isDestroyed()) w.destroy();
   }
 
-  /** Open, show or hide as the switch and the HUDs' visibility say. */
+  /** Open, show or hide as the switches and the HUDs' visibility say. */
   function sync() {
     if (disposed) return;
-    if (!on) {
+    if (!on && !reader) {
       close();
       return;
     }
@@ -101,6 +107,13 @@ function createAimWindow(deps) {
       .catch(() => callback({}));
   }
 
+  /** The marker switched while the page is open for the reader: load it again with or without the marks. */
+  function reloadForMarks(was) {
+    if (was === on || !win || win.isDestroyed() || !reader) return;
+    const base = deps.getBaseUrl();
+    if (base) void win.loadURL(pageUrl(base)).catch(() => {});
+  }
+
   /** True for this window's own page (the only one the capture and its permission are for). */
   function isAimContents(wc) {
     return !!win && !win.isDestroyed() && wc === win.webContents;
@@ -125,11 +138,20 @@ function createAimWindow(deps) {
   return {
     /** The launcher's switch. */
     set(next) {
+      const was = on;
       on = next === true;
+      reloadForMarks(was);
       sync();
       return on;
     },
     isOn: () => on,
+    /** The distance reader (the launcher's HUD prefs, pushed at start and on each change). */
+    setReader(next) {
+      const was = reader;
+      reader = next === true;
+      if (was !== reader) sync();
+      return reader;
+    },
     displayMedia,
     isAimContents,
     captureSource,

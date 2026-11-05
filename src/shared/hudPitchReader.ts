@@ -164,7 +164,7 @@ export const styleInk = (s: HudStyleName): ((r: number, g: number, b: number) =>
 export type HudGlyphs = Partial<Record<HudStyleName, Readonly<Record<string, readonly (readonly number[])[]>>>>;
 
 /** Connected pieces of a mask (4-neighbour), in a region. */
-function components(mask: Uint8Array, w: number, x0: number, y0: number, x1: number, y1: number): Rect[] {
+export function components(mask: Uint8Array, w: number, x0: number, y0: number, x1: number, y1: number): Rect[] {
   const seen = new Uint8Array(mask.length);
   const out: Rect[] = [];
   const stack: number[] = [];
@@ -225,6 +225,17 @@ export function glyphVector(rgba: Rgba, w: number, c: Rect, gw = GLYPH_W, gh = G
 
 /** The digit a piece looks most like, or null when nothing is close enough (or two are about as close). */
 export function matchDigit(v: readonly number[], glyphs: Readonly<Record<string, readonly (readonly number[])[]>>): number | null {
+  const g = matchGlyph(v, glyphs);
+  return g == null ? null : Number(g);
+}
+
+/** The glyph (a table's key: a digit, a letter) a piece looks most like, or null when not sure. */
+export function matchGlyph(
+  v: readonly number[],
+  glyphs: Readonly<Record<string, readonly (readonly number[])[]>>,
+  minMatch = MIN_MATCH,
+  minMargin = MIN_MARGIN,
+): string | null {
   // The nearest sample of each digit (the samples differ with the background; an average blurs 0, 6 and 8 together:
   // 116 of 132 held-out digits right against 109, 2026-11-04).
   let best: string | null = null;
@@ -243,8 +254,8 @@ export function matchDigit(v: readonly number[], glyphs: Readonly<Record<string,
       best = d;
     } else if (dot > second) second = dot;
   }
-  if (best == null || bestScore < MIN_MATCH || bestScore - second < MIN_MARGIN) return null;
-  return Number(best);
+  if (best == null || bestScore < minMatch || bestScore - second < minMargin) return null;
+  return best;
 }
 
 /** One pitch box as found: its digit pieces (left to right, the string's full height), its minus, where it is. */

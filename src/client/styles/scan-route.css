@@ -145,6 +145,13 @@
   text-shadow: 0 0 4px #000, 0 0 8px rgba(127, 227, 255, 0.6);
   pointer-events: none;
 }
+/* Turned towards the target (scanRouteScene turnArrow); a little bigger on its way there. */
+.scan-route-ship__arrow {
+  display: inline-block;
+}
+.scan-route-ship.is-travelling {
+  font-size: 17px;
+}
 .scan-route__ship {
   margin: 0 0 4px;
   color: #7fe3ff;

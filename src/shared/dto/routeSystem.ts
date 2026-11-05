@@ -128,8 +128,11 @@ export interface ScanRouteShipDTO {
   /** The body targeted in the game (Status.json Destination), when it is in this system. */
   targetId: number | null;
   flight: ShipFlight;
-  /** The netlog's newest fix in this system: the body the game measures from and the distance to it. */
-  fix: { refId: number; distLs: number; mode: "supercruise" | "normal"; atMs: number } | null;
+  /**
+   * Where the ship is measured from: the netlog's newest fix in this system (the body the game measures from and the
+   * distance to it), or, while the launcher's distance reader reads it, the HUD's distance to the target (`from: "hud"`).
+   */
+  fix: { refId: number; distLs: number; mode: "supercruise" | "normal"; atMs: number; from: "netlog" | "hud" } | null;
   netlog: NetlogStatusDTO;
 }
 

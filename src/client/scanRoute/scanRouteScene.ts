@@ -60,11 +60,24 @@ const GRID_MAX = 100_000;
 
 const TARGET_COLOUR = { dss: "#40d9cc", bio: "#5ce675", both: "#ffd166", codex: "#c792ff" } as const;
 
-/** The ship in the shown system (plan 1.3.5 R-1): the body it is at, the body targeted, the netlog's fix. */
+/** The ship in the shown system (plan 1.3.5 R-1): the body it is at, the body targeted, the netlog's or the HUD's fix. */
 export interface ShipMark {
   atId: number | null;
   targetId: number | null;
   fix: { refId: number; distLs: number } | null;
+}
+
+/**
+ * How far along the way from the last body to the target the ship has come (0-1), for that pair (`key`): from the
+ * target's distance (`distLs`, null without one) over the way's length. It only grows, so passing the target (the
+ * distance grows again) holds it there, and a fix lost for a while (the target off the screen, a frame not read) keeps
+ * it where it was; another pair starts again.
+ */
+export function shipProgress(prev: { key: string; t: number } | null, key: string, distLs: number | null, lenLs: number): { key: string; t: number } | null {
+  const held = prev && prev.key === key ? prev : null;
+  if (distLs == null) return held;
+  const t = lenLs > 0 ? Math.max(0, Math.min(1, 1 - distLs / lenLs)) : 1;
+  return { key, t: Math.max(held?.t ?? 0, t) };
 }
 
 export interface ScanRouteScene {
@@ -126,6 +139,10 @@ export function createScanRouteScene(
   const shipGroup = new THREE.Group();
   scene.add(grid, group, shipGroup);
   let ship: ShipMark | null = null;
+  /** How far the ship has come towards the target (shipProgress). */
+  let progress: { key: string; t: number } | null = null;
+  /** The ship's arrow and the line it travels, to turn the arrow towards the target as the view turns. */
+  let shipArrow: { el: HTMLElement; from: THREE.Vector3; to: THREE.Vector3 } | null = null;
   let mode: ScanScale = "true";
   let bounds = 40;
   let shownKey = "";
@@ -202,6 +219,7 @@ export function createScanRouteScene(
       frame = 0;
       drawGrid();
       scaleToZoom();
+      turnArrow();
       renderer.render(scene, camera);
       labels.render(scene, camera);
     });
@@ -437,14 +455,16 @@ export function createScanRouteScene(
   }
 
   /*
-    The ship: at the body the journal or the netlog last put it near (else where the route starts). With the netlog's
-    fix: while the body it is measured from is the target, on the straight line to the target at that distance
-    (supercruise flies mostly straight at it); else at that body only when near it — a star tens of thousands of ls
-    off, which the game measures from once a planet is overshot, leaves the ship where it was. The fix's direction is in the game's axes, which the orbits' are not
-    (plan 1.3.5 R-1), so only the distance is used. A line runs on to the body targeted.
+    The ship: at the body the journal or the netlog last put it near (else where the route starts). With a fix from the
+    target (the HUD's distance to it, or the netlog measuring from it): on the straight line from that body to the
+    target at that distance (supercruise flies mostly straight at it), never back along it (`progress`); else at the
+    netlog's body only when near it — a star tens of thousands of ls off, which the game measures from once a planet is
+    overshot, leaves the ship where it was. The fix's direction is in the game's axes, which the orbits' are not
+    (plan 1.3.5 R-1), so only the distance is used. A line runs on to the body targeted, the arrow pointing along it.
   */
   function drawShip(): void {
     clearGroup(shipGroup);
+    shipArrow = null;
     const d = shownData;
     if (!ship || !d) return;
     const byId = (id: number | null) => (id == null ? undefined : d.bodies.find((b) => b.id === id));
@@ -452,11 +472,20 @@ export function createScanRouteScene(
     const target = ship.targetId !== base?.id ? byId(ship.targetId) : undefined;
     const ref = ship.fix ? byId(ship.fix.refId) : undefined;
     let at: THREE.Vector3 | null = base ? placeOf(base) : null;
-    if (ship.fix && ref && target && ref.id === target.id && base) {
+    let travelling = false;
+    if (base && target) {
       const len = Math.hypot(target.pos.x - base.pos.x, target.pos.y - base.pos.y, target.pos.z - base.pos.z);
-      const t = len > 0 ? Math.max(0, Math.min(1, 1 - ship.fix.distLs / len)) : 1;
-      at = placeOf(base).lerp(placeOf(target), t);
-    } else if (ref && ship.fix && ship.fix.distLs <= SHIP_NEAR_LS) at = placeOf(ref);
+      const toTarget = ship.fix && ref?.id === target.id ? ship.fix.distLs : null;
+      progress = shipProgress(progress, `${d.addr}:${base.id}>${target.id}`, toTarget, len);
+    } else progress = null;
+    if (ref && ship.fix && ref.id !== target?.id && ship.fix.distLs <= SHIP_NEAR_LS) {
+      at = placeOf(ref);
+      progress = null;
+    }
+    if (progress && base && target) {
+      at = placeOf(base).lerp(placeOf(target), progress.t);
+      travelling = progress.t > 0;
+    }
     if (!at) return;
     if (target) {
       const line = new THREE.Line(
@@ -466,14 +495,31 @@ export function createScanRouteScene(
       shipGroup.add(line);
     }
     const el = document.createElement("div");
-    el.className = "scan-route-ship";
-    el.textContent = "▲";
+    el.className = "scan-route-ship" + (travelling ? " is-travelling" : "");
     el.title = "Your ship";
+    const arrow = document.createElement("span");
+    arrow.className = "scan-route-ship__arrow";
+    arrow.textContent = "▲";
+    el.appendChild(arrow);
     const o = new CSS2DObject(el);
     o.position.copy(at);
-    // Above the body, clear of its name under it.
-    o.center.set(0.5, 1.3);
+    // On the line while travelling; at a body, above it, clear of its name under it.
+    if (travelling) o.center.set(0.5, 0.5);
+    else o.center.set(0.5, 1.3);
     shipGroup.add(o);
+    if (target) shipArrow = { el: arrow, from: at.clone(), to: placeOf(target) };
+  }
+
+  /** The arrow turned towards the target as drawn on the screen (the view tilts and turns). */
+  function turnArrow(): void {
+    if (!shipArrow) return;
+    const a = shipArrow.from.clone().project(camera);
+    const b = shipArrow.to.clone().project(camera);
+    const dx = (b.x - a.x) * host.clientWidth;
+    const dy = -(b.y - a.y) * host.clientHeight;
+    if (Math.hypot(dx, dy) < 1) return;
+    // The ▲ points up: turned by the line's angle on the screen plus a quarter turn.
+    shipArrow.el.style.transform = `rotate(${((Math.atan2(dy, dx) * 180) / Math.PI + 90).toFixed(1)}deg)`;
   }
 
   return {
@@ -481,6 +527,8 @@ export function createScanRouteScene(
     clear() {
       clear();
       clearGroup(shipGroup);
+      shipArrow = null;
+      progress = null;
       render();
     },
     setShip(m) {
