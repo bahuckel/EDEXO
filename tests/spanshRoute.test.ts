@@ -109,3 +109,31 @@ describe("a Spansh route", () => {
     expect(asked).toBe(false);
   });
 });
+
+describe("the exact plotter's ends", () => {
+  // Owner's Sol > Colonia export (2026-11-05): parameters name the ends by system address, the drawer showed the numbers.
+  it("are named from the stops with those addresses", () => {
+    const route = parseSpanshResult("0B004A0A-D929-11F1-A05B-E622D328DA96", {
+      parameters: { source_system: "10477373803", destination_system: "3238296097059" },
+      result: {
+        jumps: [
+          { name: "Sol", id64: "10477373803", x: 0, y: 0, z: 0, has_neutron: false, must_refuel: false, must_inject: 0 },
+          { name: "Kigandan", id64: "11666070513065", x: 7.5625, y: -72.25, z: 10.75, has_neutron: false, must_refuel: true },
+          { name: "Colonia", id64: "3238296097059", x: -9530.5, y: -910.28125, z: 19808.125, has_neutron: false },
+        ],
+      },
+    });
+    expect(route?.from).toBe("Sol");
+    expect(route?.to).toBe("Colonia");
+    expect(route?.stops[1]?.refuel).toBe(true);
+  });
+
+  it("stay as given when no stop has that address", () => {
+    const route = parseSpanshResult("0B004A0A-D929-11F1-A05B-E622D328DA96", {
+      parameters: { source_system: "123", destination_system: "Colonia" },
+      result: { jumps: [{ name: "Sol", id64: "10477373803", x: 0, y: 0, z: 0 }, { name: "Colonia", x: 1, y: 1, z: 1 }] },
+    });
+    expect(route?.from).toBe("123");
+    expect(route?.to).toBe("Colonia");
+  });
+});

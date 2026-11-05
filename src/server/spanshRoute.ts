@@ -143,14 +143,20 @@ export function parseSpanshResult(job: string, data: unknown): SpanshRouteDTO | 
   if (!stops.length) return null;
   // The first stop is where the route starts: no jumps to it.
   stops[0]!.jumps = 0;
-  const from = str(p.from) ?? str(p.source) ?? str(p.source_system) ?? stops[0]!.name;
+  // The exact plotter names its ends by system address ("10477373803"): the stop with that address gives the name
+  // (owner's Sol > Colonia file, 2026-11-05: the drawer showed the numbers).
+  const named = (v: string | null): string | null => {
+    if (v == null || !/^\d+$/.test(v)) return v;
+    return stops.find((s) => s.id64 === v)?.name ?? v;
+  };
+  const from = named(str(p.from) ?? str(p.source) ?? str(p.source_system)) ?? stops[0]!.name;
   const last = (v: unknown) => (Array.isArray(v) ? v[v.length - 1] : v);
   const toRaw = p.to ?? p.destination ?? p.destination_system ?? last(p.destinations) ?? last(p.destination_systems);
   return {
     job,
     kind,
     from,
-    to: str(toRaw),
+    to: named(str(toRaw)),
     rangeLy: num(p.range),
     stops,
     totalJumps: stops.reduce((a, s) => a + s.jumps, 0),
