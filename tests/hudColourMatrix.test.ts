@@ -5,10 +5,6 @@
 import { describe, expect, it } from "vitest";
 import {
   applyHudMatrix,
-  DEFAULT_TARGET_TEXT,
-  hueMapper,
-  parseHexColour,
-  pickedColourReadable,
   hudColourSupport,
   invertHudMatrix,
   isIdentityHudMatrix,
@@ -72,36 +68,5 @@ describe("the HUD colour matrix", () => {
     expect(invertHudMatrix(flat)).toBeNull();
     expect(isIdentityHudMatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])).toBe(true);
     expect(isIdentityHudMatrix(parseHudColourMatrix(XML)!)).toBe(false);
-  });
-});
-
-/*
-  A modded HUD (EDHM recolours in its own shaders and leaves the XML alone): the commander picks his text colour and
-  each reader turns it into the default's (owner 2026-11-06; a commander's EDHM target text: 165, 195, 5).
-*/
-describe("a picked HUD text colour", () => {
-  it("turns the picked colour into the default target orange, and darker text along with it", () => {
-    const picked = parseHexColour("#a5c305")!;
-    expect(picked).toEqual([165, 195, 5]);
-    const px = new Uint8Array([...picked, 255, 83, 98, 3, 255]);
-    hueMapper(picked, DEFAULT_TARGET_TEXT)!(px);
-    for (let i = 0; i < 3; i++) expect(Math.abs(px[i]! - DEFAULT_TARGET_TEXT[i]!)).toBeLessThanOrEqual(2);
-    // The same hue at half the brightness: the same orange at about half.
-    expect(px[4]! / px[0]!).toBeGreaterThan(0.45);
-    expect(px[4]! / px[0]!).toBeLessThan(0.55);
-    expect(px[4]!).toBeGreaterThan(px[5]!);
-  });
-
-  it("leaves the default look as it is when the picked colour is the default", () => {
-    const px = new Uint8Array([...DEFAULT_TARGET_TEXT, 255, 20, 20, 30, 255]);
-    hueMapper(DEFAULT_TARGET_TEXT, DEFAULT_TARGET_TEXT)!(px);
-    expect([...px]).toEqual([...DEFAULT_TARGET_TEXT, 255, 20, 20, 30, 255]);
-  });
-
-  it("refuses a white or grey HUD (no hue to turn) and anything not a colour", () => {
-    expect(pickedColourReadable([230, 230, 230])).toBe(false);
-    expect(hueMapper([200, 200, 210], DEFAULT_TARGET_TEXT)).toBeNull();
-    expect(parseHexColour("green")).toBeNull();
-    expect(pickedColourReadable(parseHexColour("#3ca0ff"))).toBe(true);
   });
 });

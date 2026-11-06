@@ -1052,15 +1052,18 @@ export function buildExoOrganicOverlayDto(
   const baseCredits = lookupPrice(prices, label, label);
   const ff: 1 | 5 = store.firstFootfallBodies.has(t.bodyKey) ? 5 : 1;
 
-  /** New codex (WasLogged false): 5× list — do not stack footfall again (matches main UI / pending organic valuation). */
-  const payNewCodex = baseCredits != null ? Math.round(baseCredits * 5) : null;
-  const payLoggedCodex = baseCredits != null ? Math.round(baseCredits * ff) : null;
+  /*
+    The list price × 5 on a first-footfall body, else × 1: the bonus is the first footfall's, never a new codex entry's
+    (owner 2026-11-06: a commander's HUD said "5,000,000 CR (new codex 5×)" where the app, rightly, said 1.00 M with the
+    footfall "other CMDR"). The same as the unsold value (organicValue.ts).
+  */
+  const payEstimate = baseCredits != null ? Math.round(baseCredits * ff) : null;
 
   let finalCredits: number | null = null;
   let analyseWasLogged: boolean | null = null;
   if (t.phase === "celebrate") {
     analyseWasLogged = t.analyseWasLogged === true;
-    finalCredits = baseCredits != null ? Math.round(baseCredits * (analyseWasLogged ? ff : 5)) : null;
+    finalCredits = payEstimate;
   }
 
   const celebrationRemainSec =
@@ -1088,8 +1091,7 @@ export function buildExoOrganicOverlayDto(
       separationForSecondSampleM != null ? Math.round(separationForSecondSampleM) : null,
     separationMeetsMin,
     baseCredits,
-    payNewCodex,
-    payLoggedCodex,
+    payEstimate,
     finalCredits,
     analyseWasLogged,
     footfallMult: ff,

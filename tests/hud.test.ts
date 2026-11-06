@@ -253,7 +253,7 @@ describe("HUD tracker", () => {
 
   /** Owner, 2026-10-02: the Log names the species, so the payout shows from the first scan. */
   it("shows the payout estimate from the first scan, with the walk guidance still under it", () => {
-    const run = (sampleCount: number) => {
+    const run = (sampleCount: number, footfallMult: 1 | 5 = 1) => {
       HUD.render({
         exoMinimap: { headingDeg: 0, radiusM: 500, minSampleDistanceM: 200, marks: [] },
         exoOrganicOverlay: {
@@ -263,17 +263,43 @@ describe("HUD tracker", () => {
           nearestSampleMeetsMin: true,
           minSampleDistanceM: 200,
           speciesDisplay: "Tussock propagito",
-          payNewCodex: 5_000_000,
-          payLoggedCodex: 1_000_000,
+          payEstimate: footfallMult === 5 ? 5_000_000 : 1_000_000,
+          footfallMult,
         },
       });
       return document.querySelector('[data-f="pay"]')?.textContent ?? "";
     };
     expect(run(0)).toBe("—");
-    expect(run(1)).toContain("new");
-    expect(run(1)).toContain("logged");
+    expect(run(1)).toMatch(/1\s?000\s?000/);
     expect(document.querySelector(".trk")?.textContent).toContain("from first sample before second");
-    expect(run(2)).toContain("logged");
+    // The 5× is the first footfall's only, never a new codex entry's (owner 2026-11-06, a commander's 5,000,000 "new
+    // codex 5×" where the app said 1.00 M, the footfall another commander's).
+    expect(run(2)).toMatch(/1\s?000\s?000/);
+    expect(run(2)).not.toContain("5×");
+    expect(run(2, 5)).toMatch(/5\s?000\s?000/);
+    expect(run(2, 5)).toContain("first footfall 5×");
+  });
+
+  it("completes at the list price where the footfall was another commander's, codex entry new or not", () => {
+    for (const analyseWasLogged of [false, true]) {
+      HUD.render({
+        exoMinimap: { headingDeg: 0, radiusM: 500, minSampleDistanceM: 500, marks: [] },
+        exoOrganicOverlay: {
+          visible: true,
+          phase: "celebrate",
+          sampleCount: 3,
+          minSampleDistanceM: 500,
+          speciesDisplay: "Bacterium Acies",
+          payEstimate: 1_000_000,
+          finalCredits: 1_000_000,
+          analyseWasLogged,
+          footfallMult: 1,
+        },
+      });
+      const pay = document.querySelector('[data-f="pay"]')?.textContent ?? "";
+      expect(pay).toMatch(/1\s?000\s?000/);
+      expect(pay).not.toContain("codex");
+    }
   });
 
   it("draws the walk-this-way arc only when the second sample would be too close", () => {

@@ -24,8 +24,8 @@ export interface ExoOrganicOverlayDTO {
   separationForSecondSampleM: number | null;
   separationMeetsMin: boolean | null;
   baseCredits: number | null;
-  payNewCodex: number | null;
-  payLoggedCodex: number | null;
+  /** The list price × the first-footfall bonus (5 or 1): what the species pays here. */
+  payEstimate: number | null;
   finalCredits: number | null;
   analyseWasLogged: boolean | null;
   footfallMult: 1 | 5;

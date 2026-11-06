@@ -132,43 +132,29 @@ function Distance({ d, waiting = false }: { d: HudSnapshot; waiting?: boolean })
         e.finalCredits != null ? (
           <>
             {fmtCr(e.finalCredits)}
-            {e.analyseWasLogged === true ? (
+            {e.footfallMult === 5 ? (
               <>
                 {" "}
-                <span style={{ opacity: 0.7 }}>(logged)</span>
+                <span style={{ opacity: 0.85 }}>(first footfall 5×)</span>
               </>
-            ) : (
-              <>
-                {" "}
-                <span style={{ opacity: 0.85 }}>(new codex 5×)</span>
-              </>
-            )}
+            ) : null}
           </>
         ) : (
           fmtCr(null)
         );
-      note =
-        e.analyseWasLogged === true
-          ? e.footfallMult === 5
-            ? "Includes first-footfall 5× on this body."
-            : "No first-footfall 5× on this body."
-          : e.footfallMult === 5
-            ? "5× new-codex payout (first footfall does not stack another ×5)."
-            : "5× new-codex payout.";
+      note = e.footfallMult === 5 ? "Includes the first-footfall 5× on this body." : "No first-footfall 5× on this body.";
       cele = "Complete — hiding in " + (e.celebrationRemainSec || 0) + "s";
     } else {
       /*
         The estimate from the first scan (owner, 2026-10-02: "show the value after Log, not after
         Sample"): the Log names the species, which is all the price needs. It waited for the second.
       */
-      const a = e.payLoggedCodex;
-      const b = e.payNewCodex;
-      if (e.sampleCount >= 1 && a != null && b != null) {
+      const a = e.payEstimate;
+      if (e.sampleCount >= 1 && a != null) {
         pay = (
           <span className="pay-est">
-            {fmtCr(b).replace(" CR", "")}
-            <small>new</small>· {fmtCr(a).replace(" CR", "")}
-            <small>logged</small>
+            {fmtCr(a)}
+            {e.footfallMult === 5 ? <small>first footfall 5×</small> : null}
           </span>
         );
       } else if (e.sampleCount >= 1) pay = "—";
@@ -180,7 +166,9 @@ function Distance({ d, waiting = false }: { d: HudSnapshot; waiting?: boolean })
           : "Need ≥ " + (e.minSampleDistanceM || "?") + " m from first sample before second.";
       } else if (e.sampleCount >= 2) {
         note =
-          "Estimates: new codex = 5× list; logged codex = list × footfall (×1 or ×5). These are not multiplied together.";
+          e.footfallMult === 5
+            ? "The list price × 5: you made the first footfall on this body."
+            : "The list price: the first footfall here was not yours (no 5×).";
       } else {
         noteExplain = false;
         note = "";
