@@ -47,7 +47,7 @@ export async function startPitchCapture(onRead: (r: PitchRead | null) => void): 
     const ty = Math.round(vh * TAPE.y0);
     const tw = Math.round(vw * (TAPE.x1 - TAPE.x0));
     const th = Math.round(vh * (TAPE.y1 - TAPE.y0));
-    const px = screen.crop(tx, ty, tw, th);
+    const px = screen.crop(tx, ty, tw, th, "pitch");
     if (!px) return null;
     const hd = readHudHeading(px, tw, th, HUD_PITCH_GLYPHS, { ox: tx, oy: ty, screen: { w: vw, h: vh } });
     return hd ? hd.headingDeg : null;
@@ -60,7 +60,7 @@ export async function startPitchCapture(onRead: (r: PitchRead | null) => void): 
     const ch = Math.round(vh * CROP);
     const cx0 = (vw - cw) / 2;
     const cy0 = (vh - ch) / 2;
-    const px = screen.crop(cx0, cy0, cw, ch);
+    const px = screen.crop(cx0, cy0, cw, ch, "pitch");
     if (!px) return onRead(null);
     const r = readHudPitch(px, cw, ch, HUD_PITCH_GLYPHS, { w: vw, h: vh });
     onRead(

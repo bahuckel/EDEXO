@@ -32,7 +32,7 @@ export async function startDistanceCapture(onRead: (r: TargetDistance | null) =>
   /** Where the last reading's line started, in screen pixels. */
   let near: { x: number; y: number } | null = null;
   const readIn = (x: number, y: number, w: number, h: number, vh: number): TargetDistance | null => {
-    const px = screen.crop(x, y, w, h);
+    const px = screen.crop(x, y, w, h, "distance");
     const r = px ? readTargetDistance(px, w, h, HUD_DISTANCE_GLYPHS, vh) : null;
     return r ? { ...r, x: r.x + x, y: r.y + y } : null;
   };

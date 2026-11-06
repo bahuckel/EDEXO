@@ -17,7 +17,17 @@ import { distanceArea, readTargetDistance } from "../src/shared/hudTargetDistanc
 import { HUD_DISTANCE_GLYPHS } from "../src/shared/hudDistanceGlyphs.js";
 import { readHudPitch } from "../src/shared/hudPitchReader.js";
 import { HUD_PITCH_GLYPHS } from "../src/shared/hudPitchGlyphs.js";
-import { applyHudMatrix, hudColourSupport, invertHudMatrix, recolourRgba, type HudColourMatrix } from "../src/shared/hudColourMatrix.js";
+import {
+  applyHudMatrix,
+  DEFAULT_PITCH_TEXT,
+  DEFAULT_TARGET_TEXT,
+  hudColourSupport,
+  hueMapper,
+  invertHudMatrix,
+  recolourRgba,
+  type HudColourMatrix,
+  type Rgb,
+} from "../src/shared/hudColourMatrix.js";
 
 /** Sample HUD colours: rows MatrixRed, MatrixGreen, MatrixBlue. */
 const PRESETS: Record<string, HudColourMatrix> = {
@@ -117,6 +127,9 @@ type Tally = { right: number; unsure: number; wrong: number };
 const tally = () => ({ raw: { right: 0, unsure: 0, wrong: 0 } as Tally, back: { right: 0, unsure: 0, wrong: 0 } as Tally });
 const score = (t: Tally, got: string | null, truth: string) => (got == null ? t.unsure++ : got === truth ? t.right++ : t.wrong++);
 
+/** EDHM-like looks: the default text turned into these colours (a commander's EDHM shot: 165, 195, 5). */
+const PICKED: Record<string, Rgb> = { "edhm-green": [165, 195, 5], "edhm-blue": [60, 160, 255], "edhm-magenta": [220, 60, 200] };
+
 for (const [what, file] of [
   ["distance", "docs/hud-distance-labels-05112026.txt"],
   ["pitch", "docs/hud-pitch-labels-06112026.txt"],
@@ -146,7 +159,36 @@ for (const [what, file] of [
       } else res[preset]!.back.unsure++;
     }
   }
+  // The picked-colour looks: to the colour as an EDHM-like mod would draw it (HUD pixels only), and back with "pick".
+  const own = what === "distance" ? DEFAULT_TARGET_TEXT : DEFAULT_PITCH_TEXT;
+  const pickRes = Object.fromEntries(Object.keys(PICKED).map((k) => [k, { right: 0, unsure: 0, wrong: 0 } as Tally]));
+  for (const { name, text } of list) {
+    const img = bmp(join(DIR, name));
+    const a =
+      what === "distance"
+        ? distanceArea(img.w, img.h)
+        : { x: Math.round(img.w * 0.3), y: Math.round(img.h * 0.3), w: Math.round(img.w * 0.4), h: Math.round(img.h * 0.4) };
+    const base = crop(img, a.x, a.y, a.w, a.h);
+    for (const [k, c] of Object.entries(PICKED)) {
+      const px = base.slice();
+      const to = hueMapper(own, c)!;
+      // Only the HUD's own pixels change colour, as the mod draws it.
+      const hud = new Uint8Array(px.length);
+      for (let i = 0; i < px.length; i += 4) if (!hudOnly || (Math.min(px[i]!, px[i + 1]!) - px[i + 2]! >= 40 && px[i]! >= 120)) hud[i] = 1;
+      const tmp = px.slice();
+      to(tmp);
+      for (let i = 0; i < px.length; i += 4) if (hud[i]) px.set(tmp.subarray(i, i + 3), i);
+      hueMapper(c, own)!(px);
+      const got =
+        what === "distance"
+          ? (readTargetDistance(px, a.w, a.h, HUD_DISTANCE_GLYPHS, img.h)?.text ?? null)
+          : ((r) => (r ? String(r.boxDeg) : null))(readHudPitch(px, a.w, a.h, HUD_PITCH_GLYPHS, { w: img.w, h: img.h }));
+      score(pickRes[k]!, got, text);
+      if (got != null && got !== text) console.log(`  wrong ${k} ${name}: read ${got}, is ${text}`);
+    }
+  }
   console.log(`\n${what}: ${list.length} shots (right / not sure / wrong)${hudOnly ? ", HUD pixels recoloured only" : ""}`);
+  for (const [k, t] of Object.entries(pickRes)) console.log(`  ${k.padEnd(13)} picked colour, read back ${t.right} / ${t.unsure} / ${t.wrong}`);
   for (const [preset, t] of Object.entries(res))
     console.log(
       `  ${preset.padEnd(8)} as shown ${t.raw.right} / ${t.raw.unsure} / ${t.raw.wrong}   inverse ${t.back.right} / ${t.back.unsure} / ${t.back.wrong}   app: ${hudColourSupport(PRESETS[preset])}`,

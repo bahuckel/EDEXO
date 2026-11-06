@@ -81,6 +81,78 @@ export function hudColourSupport(m: HudColourMatrix | null | undefined): HudColo
   return "undo";
 }
 
+/*
+  A modded HUD (EDHM and the like recolour the HUD in their own shaders, each part its own colour, and leave
+  GraphicsConfigurationOverride.xml alone; owner 2026-11-06): no matrix to undo. The commander picks the colour his HUD
+  text is drawn in, and each reader turns that colour into the default look's own: hue turned, saturation and brightness
+  scaled, every pixel alike. Measured on a commander's EDHM screenshot (target text cores about 165, 195, 5): the
+  target line was found and its figures and capital read at 0.91-0.97 (2026-11-06).
+*/
+export type Rgb = readonly [number, number, number];
+
+/** The default look's text the readers know: the target line's orange, the pitch boxes' yellow (gear up). */
+export const DEFAULT_TARGET_TEXT: Rgb = [250, 160, 30];
+export const DEFAULT_PITCH_TEXT: Rgb = [250, 230, 5];
+
+/** "#a5c305" to [165, 195, 5]; null for anything else. */
+export function parseHexColour(s: string | null | undefined): Rgb | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(s ?? "").trim());
+  if (!m) return null;
+  const n = parseInt(m[1]!, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function hsv(r: number, g: number, b: number): [number, number, number] {
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  let h = 0;
+  if (d > 0) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [(h < 0 ? h + 6 : h) / 6, max > 0 ? d / max : 0, max / 255];
+}
+
+/**
+ * A text colour the hue mapping can work from: coloured enough to carry a hue (a white or grey HUD has none to turn).
+ */
+export function pickedColourReadable(c: Rgb | null): boolean {
+  return !!c && hsv(...c)[1] >= 0.35 && hsv(...c)[2] >= 0.3;
+}
+
+/** Turns `from` into `to` and every pixel alike (in place); null when `from` cannot be read (pickedColourReadable). */
+export function hueMapper(from: Rgb | null, to: Rgb): ((rgba: Uint8Array | Uint8ClampedArray) => void) | null {
+  if (!from || !pickedColourReadable(from)) return null;
+  const [hf, sf, vf] = hsv(...from);
+  const [ht, st, vt] = hsv(...to);
+  const dh = ht - hf;
+  const ks = st / sf;
+  const kv = vt / vf;
+  return (rgba) => {
+    for (let p = 0; p < rgba.length; p += 4) {
+      const [h0, s0, v0] = hsv(rgba[p]!, rgba[p + 1]!, rgba[p + 2]!);
+      let h = (h0 + dh) % 1;
+      if (h < 0) h += 1;
+      const s = Math.min(1, s0 * ks);
+      const v = Math.min(1, v0 * kv);
+      // hsv to rgb
+      const i = Math.floor(h * 6);
+      const f = h * 6 - i;
+      const a = v * (1 - s);
+      const q = v * (1 - f * s);
+      const t = v * (1 - (1 - f) * s);
+      const [r, g, b] = [
+        [v, t, a],
+        [q, v, a],
+        [a, v, t],
+        [a, q, v],
+        [t, a, v],
+        [v, a, q],
+      ][i % 6]!;
+      rgba[p] = Math.round(r! * 255);
+      rgba[p + 1] = Math.round(g! * 255);
+      rgba[p + 2] = Math.round(b! * 255);
+    }
+  };
+}
+
 /** Recolour an RGBA buffer in place with `m` (the inverse brings a frame back to the default look), clamped to 0-255. */
 export function recolourRgba(rgba: Uint8Array | Uint8ClampedArray, m: HudColourMatrix): void {
   for (let i = 0; i < rgba.length; i += 4) {

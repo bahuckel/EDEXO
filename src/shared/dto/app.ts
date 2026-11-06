@@ -283,6 +283,13 @@ export interface HudPrefsDTO {
    * four times a second while the Scan route tab shows, in supercruise with a body of the current system targeted.
    */
   distanceReader?: boolean;
+  /**
+   * The HUD colours the readers expect (owner 2026-11-06): the game's default, the GUIColour matrix in
+   * GraphicsConfigurationOverride.xml, or a modded HUD (EDHM) whose text colour the commander picked (`hudTextColour`).
+   */
+  hudColour?: "default" | "xml" | "pick";
+  /** The modded HUD's text colour, "#rrggbb" (with `hudColour` "pick"). */
+  hudTextColour?: string;
   /** Colonize HUD (1.3.0): the followed site's materials with bars (default on). */
   czNeeds?: boolean;
   /** Colonize HUD: the other sites being built (default on). */

@@ -4,22 +4,27 @@
  * main process hands this page that one screen and nothing else (aimWindow.cjs). Nothing is kept, nothing leaves the PC.
  */
 
-import { recolourRgba, type HudColourMatrix } from "@shared/hudColourMatrix";
+/** Which reader a crop is for: each brings the commander's HUD colours back to its own part of the default look. */
+export type HudReaderName = "distance" | "pitch";
+type Recolour = (rgba: Uint8ClampedArray) => void;
 
 type Bridge = { getAimCaptureSource?: () => Promise<string | null> };
 
-/** The inverse of the commander's HUD colour (null: the default look), applied to every crop (main.tsx sets it). */
-let recolour: HudColourMatrix | null = null;
-export function setHudRecolour(inverse: HudColourMatrix | null): void {
-  recolour = inverse;
+/**
+ * The launcher's HUD colours choice, per reader (main.tsx sets it): the inverse of GraphicsConfigurationOverride.xml's
+ * matrix, or a modded HUD's picked text colour turned into the default's. Nothing for the default look.
+ */
+let recolour: Partial<Record<HudReaderName, Recolour | null>> = {};
+export function setHudRecolour(next: Partial<Record<HudReaderName, Recolour | null>>): void {
+  recolour = next;
 }
 
 export interface GameScreen {
   /** The capture's size, pixels (0 until the first frame). */
   width(): number;
   height(): number;
-  /** RGBA pixels of a part of the screen; null without a frame. */
-  crop(x: number, y: number, w: number, h: number): Uint8ClampedArray | null;
+  /** RGBA pixels of a part of the screen, in the default look for `reader`; null without a frame. */
+  crop(x: number, y: number, w: number, h: number, reader?: HudReaderName): Uint8ClampedArray | null;
   /** Let go; the capture stops when nobody holds it. */
   release(): void;
 }
@@ -77,7 +82,7 @@ export async function acquireGameScreen(): Promise<GameScreen | { error: string 
   return {
     width: () => s.video.videoWidth,
     height: () => s.video.videoHeight,
-    crop(x, y, w, h) {
+    crop(x, y, w, h, reader) {
       if (released || !s.video.videoWidth || w <= 0 || h <= 0) return null;
       const key = `${w}x${h}`;
       let canvas = canvases.get(key);
@@ -86,7 +91,8 @@ export async function acquireGameScreen(): Promise<GameScreen | { error: string 
       if (!ctx) return null;
       ctx.drawImage(s.video, x, y, w, h, 0, 0, w, h);
       const px = ctx.getImageData(0, 0, w, h).data;
-      if (recolour) recolourRgba(px, recolour);
+      const fix = reader ? recolour[reader] : null;
+      if (fix) fix(px);
       return px;
     },
     release() {

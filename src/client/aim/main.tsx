@@ -15,7 +15,16 @@ import { openMark, projectMarks, viewOf, type ScreenMark, type View } from "./pr
 import { startPitchCapture, type PitchCapture, type PitchRead } from "./pitchCapture";
 import { useDistanceReader } from "./useDistanceReader";
 import { setHudRecolour } from "./gameScreen";
-import { invertHudMatrix, type HudColourMatrix, type HudColourSupport } from "@shared/hudColourMatrix";
+import {
+  DEFAULT_PITCH_TEXT,
+  DEFAULT_TARGET_TEXT,
+  hueMapper,
+  invertHudMatrix,
+  parseHexColour,
+  recolourRgba,
+  type HudColourMatrix,
+  type HudColourSupport,
+} from "@shared/hudColourMatrix";
 import "./aim.css";
 
 type MiniMap = ExoMinimapDTO | null;
@@ -33,11 +42,19 @@ const hex = (r: number) =>
 /** Opened for the distance reader only (the screen marker off): no marks, no pitch reader. */
 const MARKS = new URLSearchParams(location.search).get("marks") !== "0";
 
-function useMinimap(): { glide: GlideState | null; reader: boolean; distance: boolean; readDistance: boolean } {
+function useMinimap(): {
+  glide: GlideState | null;
+  reader: boolean;
+  distance: boolean;
+  readDistance: boolean;
+  look: { mode: "default" | "xml" | "pick"; colour: string };
+} {
   const [glide, setGlide] = useState<GlideState | null>(null);
   const [reader, setReader] = useState(false);
   const [distance, setDistance] = useState(false);
   const [readDistance, setReadDistance] = useState(false);
+  // The launcher's HUD colours choice (default, the XML's matrix, a modded HUD's picked text colour).
+  const [look, setLook] = useState<{ mode: "default" | "xml" | "pick"; colour: string }>({ mode: "default", colour: "" });
   useEffect(() => {
     let ws: WebSocket | null = null;
     let retry = 1000;
@@ -56,7 +73,7 @@ function useMinimap(): { glide: GlideState | null; reader: boolean; distance: bo
             payload?: {
               exoMinimap?: MiniMap;
               journalBoot?: boolean;
-              hudPrefs?: { pitchReader?: unknown; distanceReader?: unknown } | null;
+              hudPrefs?: { pitchReader?: unknown; distanceReader?: unknown; hudColour?: unknown; hudTextColour?: unknown } | null;
               hudReadDistance?: boolean;
             };
           };
@@ -68,6 +85,11 @@ function useMinimap(): { glide: GlideState | null; reader: boolean; distance: bo
           if (msg.type === "state" && msg.payload && "hudPrefs" in msg.payload) {
             setReader(msg.payload.hudPrefs?.pitchReader === true);
             setDistance(msg.payload.hudPrefs?.distanceReader === true);
+            const hc = msg.payload.hudPrefs?.hudColour;
+            setLook({
+              mode: hc === "xml" || hc === "pick" ? hc : "default",
+              colour: typeof msg.payload.hudPrefs?.hudTextColour === "string" ? msg.payload.hudPrefs.hudTextColour : "",
+            });
           }
           if (msg.type === "state" && msg.payload && "hudReadDistance" in msg.payload) setReadDistance(msg.payload.hudReadDistance === true);
         } catch {
@@ -86,7 +108,7 @@ function useMinimap(): { glide: GlideState | null; reader: boolean; distance: bo
       ws?.close();
     };
   }, []);
-  return { glide, reader, distance, readDistance };
+  return { glide, reader, distance, readDistance, look };
 }
 
 /** Re-render four times a second while the marks glide between Status.json writes (glide.ts). */
@@ -179,7 +201,7 @@ function ReaderLine({ s, view, colour }: { s: ReaderState; view: View; colour: H
   if (s.kind === "off") return null;
   const text =
     colour === "unsupported" && !(s.kind === "read" && s.pitchDeg != null)
-      ? "Pitch reader: this HUD colour cannot be read (Options › Graphics, GUIColour)"
+      ? "Pitch reader: these HUD colours cannot be read (launcher › Radar & screen marker › HUD colours)"
       : s.kind === "starting"
       ? "Pitch reader: starting"
       : s.kind === "failed"
@@ -196,18 +218,44 @@ function ReaderLine({ s, view, colour }: { s: ReaderState; view: View; colour: H
   );
 }
 
-/** The game's view, and whether its HUD colour can be read (a recoloured HUD is brought back before reading). */
-function useView(): { view: View; colour: HudColourSupport } {
+/**
+ * The launcher's HUD colours choice applied to the readers' crops (gameScreen setHudRecolour): "xml" undoes
+ * GraphicsConfigurationOverride.xml's matrix where it can (hudColourSupport), "pick" turns a modded HUD's text colour into
+ * the default's (the target line's orange for the distance, the pitch boxes' yellow for the pitch). Says what it could
+ * not do, for the reader's line.
+ */
+function useHudLook(
+  look: { mode: "default" | "xml" | "pick"; colour: string },
+  matrix: HudColourMatrix | null,
+  xmlColour: HudColourSupport,
+): HudColourSupport {
+  const picked = look.mode === "pick" ? parseHexColour(look.colour) : null;
+  const toTarget = look.mode === "pick" ? hueMapper(picked, DEFAULT_TARGET_TEXT) : null;
+  const toPitch = look.mode === "pick" ? hueMapper(picked, DEFAULT_PITCH_TEXT) : null;
+  const inverse = look.mode === "xml" && xmlColour === "undo" && matrix ? invertHudMatrix(matrix) : null;
+  useEffect(() => {
+    const undo = inverse ? (px: Uint8ClampedArray) => recolourRgba(px, inverse) : null;
+    setHudRecolour(look.mode === "pick" ? { distance: toTarget, pitch: toPitch } : { distance: undo, pitch: undo });
+    // The mappers are rebuilt from these each render; their inputs are what matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [look.mode, look.colour, matrix, xmlColour]);
+  if (look.mode === "xml") return xmlColour === "undo" ? "undo" : xmlColour === "default" ? "default" : "unsupported";
+  if (look.mode === "pick") return toTarget ? "undo" : "unsupported";
+  return "default";
+}
+
+/** The game's view, and the XML's HUD colour matrix with whether the readers can undo it. */
+function useView(): { view: View; matrix: HudColourMatrix | null; colour: HudColourSupport } {
   const [fov, setFov] = useState<number | null>(null);
   const [colour, setColour] = useState<HudColourSupport>("default");
+  const [matrix, setMatrix] = useState<HudColourMatrix | null>(null);
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   useEffect(() => {
     void fetch("/api/elite-view")
       .then((r) => (r.ok ? r.json() : null))
       .then((v: { verticalFovDeg?: number | null; hudMatrix?: HudColourMatrix | null; hudColour?: HudColourSupport } | null) => {
         setFov(v?.verticalFovDeg ?? null);
-        // Owner 2026-11-06: a commander's custom HUD colour was not read. Only colours the inverse can undo are read.
-        setHudRecolour(v?.hudColour === "undo" && v.hudMatrix ? invertHudMatrix(v.hudMatrix) : null);
+        setMatrix(v?.hudMatrix ?? null);
         setColour(v?.hudColour ?? "default");
       })
       .catch(() => setFov(null));
@@ -215,7 +263,7 @@ function useView(): { view: View; colour: HudColourSupport } {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
-  return { view: viewOf(size.w, size.h, fov), colour };
+  return { view: viewOf(size.w, size.h, fov), matrix, colour };
 }
 
 function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
@@ -299,7 +347,9 @@ function Aim() {
   const map = !MARKS ? null : (DEMO ?? glidedMap(live.glide, Date.now()));
   // Near a planet in the ship (the first scan needs the pitch too, before there is any mark).
   const reader = usePitchReader(MARKS && !DEMO && live.reader && live.glide?.map.altitudeM != null);
-  const { view: baseView, colour } = useView();
+  const { view: baseView, matrix, colour: xmlColour } = useView();
+  // What the readers can do with the launcher's HUD colours choice (owner 2026-11-06: default, the XML, or EDHM).
+  const colour = useHudLook(live.look, matrix, xmlColour);
   // The page's own reading (held when frames go unread) over the server's echo of it (no round trip), and the screen's measured
   // pixels per degree over the one worked out from the settings' field of view.
   const own = reader.kind === "read" && reader.last ? reader.last : null;
