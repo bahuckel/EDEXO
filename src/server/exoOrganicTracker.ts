@@ -500,9 +500,19 @@ export function ingestExoOrganicJournalLine(
       t = store.exoOrganicTracker;
     }
 
-    const fix = resolveFootFixForOrganicLine(statusFix, line);
-    if (!fix) return;
+    /*
+      Where the scan was taken: Status.json read as the line landed, else the last good read (the poll's own, 10 a second).
+      A read caught mid-write gives nothing, and this used to drop the line outright, species switch and all: CMDR
+      Nimblor's "sample bacterium then stratum and then bacterium again, it then thinks im still sampling stratum until
+      i sample bacterium the third time and then it thinks its the first sample not the second" (2026-11-06). A scan
+      with no position at all still switches the species and counts; it only cannot be placed.
+    */
+    const lastGood = store.exoOrganicLastFix;
+    const fix =
+      resolveFootFixForOrganicLine(statusFix, line) ??
+      (lastGood && lastGood.planetRadiusM > 0 && Number.isFinite(lastGood.latDeg) && Number.isFinite(lastGood.lonDeg) ? lastGood : null);
 
+    // Sampling another species destroys the sample in progress (owner, 2026-11-06): its run ends here.
     if (t && t.bundleKey !== bundleKey) {
       wipeOrganicSampleSession(store, projectRoot);
       t = store.exoOrganicTracker;
@@ -511,7 +521,7 @@ export function ingestExoOrganicJournalLine(
     const speciesDisplay = speciesDisplayFromLine(line);
     const minM = sampleDistanceM(db.species, genusLoc, speciesDisplay);
 
-    /** The first plant of a run: a fresh tracker anchored here, the map's mark, the foot session. */
+    /** The first plant of a run: a fresh tracker anchored here (counted, unplaced, without a position), the map's mark, the foot session. */
     const startRun = (): void => {
       store.exoOrganicTracker = {
         bundleKey,
@@ -521,21 +531,23 @@ export function ingestExoOrganicJournalLine(
         genusLocalised: genusLoc,
         bodyNameNorm: bodyNameNormEarly,
         minSampleDistanceM: minM,
-        anchors: [{ latDeg: fix.latDeg, lonDeg: fix.lonDeg, planetRadiusM: fix.planetRadiusM }],
+        anchors: fix ? [{ latDeg: fix.latDeg, lonDeg: fix.lonDeg, planetRadiusM: fix.planetRadiusM }] : [],
+        ...(fix ? {} : { recoveredSamples: 1 }),
         phase: "tracking",
         celebrationUntil: 0,
       };
       // The anchors are this species' own and are wiped when the next one starts; the map wants
       // every plant taken on this body, so it keeps its own list.
-      store.addSurfaceSampleMark(
-        bk,
-        bodyNameNormEarly,
-        fix.latDeg,
-        fix.lonDeg,
-        speciesDisplay,
-        lineIso,
-        conditionsAtPlant,
-      );
+      if (fix)
+        store.addSurfaceSampleMark(
+          bk,
+          bodyNameNormEarly,
+          fix.latDeg,
+          fix.lonDeg,
+          speciesDisplay,
+          lineIso,
+          conditionsAtPlant,
+        );
       store.footSessionBodyKey = bk;
       store.footSessionBodyNameNorm = bodyNameNormEarly;
       if (store.footTravelOdometerEnabled) {
@@ -577,6 +589,12 @@ export function ingestExoOrganicJournalLine(
     */
     if (effectiveSampleCount(t) < 3) {
       if (scanKind === "log") return;
+      if (!fix) {
+        // Known to have happened, not where: counted like a scan the journal reported while the app was closed.
+        t.recoveredSamples = (t.recoveredSamples ?? 0) + 1;
+        persistSoon(store, projectRoot);
+        return;
+      }
       pushAnchor(
         t,
         { latDeg: fix.latDeg, lonDeg: fix.lonDeg, planetRadiusM: fix.planetRadiusM },
@@ -826,8 +844,11 @@ export function buildExoMinimapDto(
   for (const m of store.surfaceSampleMarks) {
     if (!belongsHere(m)) continue;
     const isActive = isRunSample(m);
-    // The run's own distance for its marks; a leftover species' from its genus.
-    const ringM = isActive ? minSampleDistanceM : sampleDistanceForSpeciesLabel(m.label);
+    // The run's own distance for its marks; a leftover species' from its genus. An abandoned sample of the species
+    // being sampled has none: sampling another genus destroyed it and the game no longer measures from it (owner,
+    // 2026-11-06: Stratum, Bacterium, Stratum, Stratum read as Stratum scanned three times).
+    const abandoned = !isActive && activeSpecies != null && m.label.trim().toLowerCase() === activeSpecies;
+    const ringM = isActive ? minSampleDistanceM : abandoned ? 0 : sampleDistanceForSpeciesLabel(m.label);
     // Which of the run's scans it is (review P15): the slot of the anchor standing where the mark is.
     const k = isActive && tracker ? tracker.anchors.findIndex((a) => samePlace(a, m)) : -1;
     const scanNo = k >= 0 ? (tracker!.anchorSlots?.[k] ?? k) + 1 : undefined;

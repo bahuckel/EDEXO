@@ -127,6 +127,8 @@ describe("the minimap payload", () => {
     const mm = build(h)!;
     const active = mm.marks.filter((m) => m.kind === "sample").map((m) => m.active);
     expect(active).toEqual([false, true]);
+    // Sampling another genus destroyed the old sample: no ring round it (owner, 2026-11-06).
+    expect(mm.marks.filter((m) => m.kind === "sample").map((m) => m.ringM ?? 0)).toEqual([0, h.exoOrganicTracker!.minSampleDistanceM]);
   });
 
   it("marks the run's composition scans active (green) and numbers its samples by scan (review P14, P15)", () => {
