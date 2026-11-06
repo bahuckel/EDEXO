@@ -284,12 +284,10 @@ export interface HudPrefsDTO {
    */
   distanceReader?: boolean;
   /**
-   * The HUD colours the readers expect (owner 2026-11-06): the game's default, the GUIColour matrix in
-   * GraphicsConfigurationOverride.xml, or a modded HUD (EDHM) whose text colour the commander picked (`hudTextColour`).
+   * The HUD colours the pitch reader expects (owner 2026-11-06): the game's default, or the GUIColour matrix in
+   * GraphicsConfigurationOverride.xml. The distance reader learns the colour from the screen (any HUD, EDHM's too).
    */
-  hudColour?: "default" | "xml" | "pick";
-  /** The modded HUD's text colour, "#rrggbb" (with `hudColour` "pick"). */
-  hudTextColour?: string;
+  hudColour?: "default" | "xml";
   /** Colonize HUD (1.3.0): the followed site's materials with bars (default on). */
   czNeeds?: boolean;
   /** Colonize HUD: the other sites being built (default on). */

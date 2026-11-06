@@ -4,8 +4,9 @@
  * (useDistanceReader.ts), for the distance under the target's name (shared/hudTargetDistance.ts). Nothing is kept,
  * nothing leaves the PC.
  */
-import { distanceArea, readTargetDistance, type TargetDistance } from "@shared/hudTargetDistance";
+import { distanceArea, readTargetDistanceAnyColour, type Rgb, type TargetDistance } from "@shared/hudTargetDistance";
 import { HUD_DISTANCE_GLYPHS } from "@shared/hudDistanceGlyphs";
+import { HUD_DISTANCE_GLYPHS_ORANGE } from "@shared/hudDistanceGlyphsOrange";
 import { acquireGameScreen } from "./gameScreen";
 
 /**
@@ -21,6 +22,12 @@ export const DISTANCE_EVERY_MS = 250;
  */
 const NEAR = { left: 0.12, right: 0.3, up: 0.1, down: 0.06 };
 
+/**
+ * Frames in a row without a reading before the learned HUD colour is let go and looked for again (2 s at four a
+ * second): the commander may have switched EDHM's theme, or the colour was a wrong guess.
+ */
+const FORGET_COLOUR_AFTER = 8;
+
 export interface DistanceCapture {
   stop(): void;
 }
@@ -31,10 +38,19 @@ export async function startDistanceCapture(onRead: (r: TargetDistance | null) =>
   if ("error" in screen) return screen;
   /** Where the last reading's line started, in screen pixels. */
   let near: { x: number; y: number } | null = null;
+  /*
+    The HUD's text colour, learned from the screen (owner 2026-11-06: EDHM themes draw it white, blue, red, ...; a
+    colour picker "introduces a lot of uncertainty"): looked for while unknown, then read in.
+  */
+  let colour: Rgb | null = null;
+  let misses = 0;
   const readIn = (x: number, y: number, w: number, h: number, vh: number): TargetDistance | null => {
-    const px = screen.crop(x, y, w, h, "distance");
-    const r = px ? readTargetDistance(px, w, h, HUD_DISTANCE_GLYPHS, vh) : null;
-    return r ? { ...r, x: r.x + x, y: r.y + y } : null;
+    // No colour correction from the launcher: the reader learns the colour itself.
+    const px = screen.crop(x, y, w, h);
+    const r = px ? readTargetDistanceAnyColour(px, w, h, HUD_DISTANCE_GLYPHS, vh, colour, HUD_DISTANCE_GLYPHS_ORANGE) : null;
+    if (!r) return null;
+    colour = r.colour;
+    return { ...r.reading, x: r.reading.x + x, y: r.reading.y + y };
   };
   const read = () => {
     const vw = screen.width();
@@ -51,6 +67,8 @@ export async function startDistanceCapture(onRead: (r: TargetDistance | null) =>
       r = readIn(a.x, a.y, a.w, a.h, vh);
     }
     near = r ? { x: r.x, y: r.y } : null;
+    misses = r ? 0 : misses + 1;
+    if (misses >= FORGET_COLOUR_AFTER) colour = null;
     onRead(r);
   };
   const timer = setInterval(read, DISTANCE_EVERY_MS);

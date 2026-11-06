@@ -47,9 +47,9 @@ describe("sanitizeHudPrefs", () => {
     });
   });
 
-  it("keeps the readers' HUD colours: a known choice and a #rrggbb colour only (2026-11-06)", () => {
-    expect(sanitizeHudPrefs({ hudColour: "pick", hudTextColour: "#A5C305" })).toEqual({ hudColour: "pick", hudTextColour: "#a5c305" });
-    expect(sanitizeHudPrefs({ hudColour: "edhm", hudTextColour: "green" })).toEqual({});
+  it("keeps the pitch reader's HUD colours: default or the XML only (2026-11-06; no picked colour)", () => {
+    expect(sanitizeHudPrefs({ hudColour: "xml" })).toEqual({ hudColour: "xml" });
+    expect(sanitizeHudPrefs({ hudColour: "pick", hudTextColour: "#A5C305" })).toEqual({});
   });
 
   it("keeps the candidate settings, the most rows within 1 to 30", () => {

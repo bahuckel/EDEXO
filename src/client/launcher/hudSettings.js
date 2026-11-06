@@ -38,9 +38,8 @@ var LS_HUD_RADAR_ALWAYS = "edexoHudRadarAlways";
 var LS_HUD_AIM = "edexoHudAim";
 var LS_HUD_PITCH_READER = "edexoHudPitchReader";
 var LS_HUD_DISTANCE_READER = "edexoHudDistanceReader";
-/* The readers' HUD colours (owner 2026-11-06): default, the XML's GUIColour matrix, or a modded HUD's picked text colour. */
+/* The pitch reader's HUD colours (owner 2026-11-06): default or the XML's GUIColour matrix. */
 var LS_HUD_COLOUR = "edexoHudColour";
-var LS_HUD_TEXT_COLOUR = "edexoHudTextColour";
 /* Colonize HUD (1.3.0): materials and other sites on unless switched off; finished lines off unless switched on. */
 var HUD_CZ_PREFS = [
   { id: "hudCzNeeds", ls: "edexoHudCzNeeds", key: "czNeeds", def: true },
@@ -89,8 +88,7 @@ function hudPrefsNow() {
   try { prefs.radarAlways = localStorage.getItem(LS_HUD_RADAR_ALWAYS) === "1"; } catch (e) {}
   try { prefs.pitchReader = localStorage.getItem(LS_HUD_PITCH_READER) === "1"; } catch (e) {}
   try { prefs.distanceReader = localStorage.getItem(LS_HUD_DISTANCE_READER) === "1"; } catch (e) {}
-  try { var hc = localStorage.getItem(LS_HUD_COLOUR); prefs.hudColour = hc === "xml" || hc === "pick" ? hc : "default"; } catch (e) {}
-  try { var tc = localStorage.getItem(LS_HUD_TEXT_COLOUR); if (tc && /^#[0-9a-f]{6}$/i.test(tc)) prefs.hudTextColour = tc; } catch (e) {}
+  try { prefs.hudColour = localStorage.getItem(LS_HUD_COLOUR) === "xml" ? "xml" : "default"; } catch (e) {}
   HUD_CZ_PREFS.forEach(function (p) { prefs[p.key] = readCzPref(p); });
   try { var tl = parseFloat(localStorage.getItem(LS_HUD_TILT) || ""); prefs.tilt = isFinite(tl) ? tl : 15; } catch (e) {}
   try { prefs.tiltMode = localStorage.getItem(LS_HUD_TILT_MODE) === "slant" ? "slant" : "turn"; } catch (e) {}
@@ -274,9 +272,6 @@ var hudAim = document.getElementById("hudAim");
 var hudPitchReader = document.getElementById("hudPitchReader");
 var hudDistanceReader = document.getElementById("hudDistanceReader");
 var hudColourSel = document.getElementById("hudColour");
-var hudTextColourRow = document.getElementById("hudTextColourRow");
-var hudTextColour = document.getElementById("hudTextColour");
-var hudTextColourPick = document.getElementById("hudTextColourPick");
 var hudCompact = document.getElementById("hudCompact");
 var hudRelevant = document.getElementById("hudRelevant");
 var hudAudio = document.getElementById("hudAudio");
@@ -654,41 +649,12 @@ export function start() {
       syncHudPrefs();
     });
   }
-  /* HUD colours: the choice, and the picked text colour (shown only for a modded HUD). */
+  /* HUD colours for the pitch reader: default or the XML's matrix. */
   if (hudColourSel) {
-    try { var hcNow = localStorage.getItem(LS_HUD_COLOUR); hudColourSel.value = hcNow === "xml" || hcNow === "pick" ? hcNow : "default"; } catch (e) {}
-    if (hudTextColour) {
-      try { var tcNow = localStorage.getItem(LS_HUD_TEXT_COLOUR); if (tcNow && /^#[0-9a-f]{6}$/i.test(tcNow)) hudTextColour.value = tcNow; } catch (e) {}
-    }
-    var showPick = function () { if (hudTextColourRow) hudTextColourRow.hidden = hudColourSel.value !== "pick"; };
-    showPick();
+    try { hudColourSel.value = localStorage.getItem(LS_HUD_COLOUR) === "xml" ? "xml" : "default"; } catch (e) {}
     hudColourSel.addEventListener("change", function () {
       try { localStorage.setItem(LS_HUD_COLOUR, hudColourSel.value); } catch (e) {}
-      // A first pick starts from the swatch's colour, so the readers have one at once.
-      if (hudColourSel.value === "pick" && hudTextColour) {
-        try { if (!localStorage.getItem(LS_HUD_TEXT_COLOUR)) localStorage.setItem(LS_HUD_TEXT_COLOUR, hudTextColour.value); } catch (e) {}
-      }
-      showPick();
       syncHudPrefs();
-    });
-  }
-  if (hudTextColour) {
-    hudTextColour.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_TEXT_COLOUR, hudTextColour.value); } catch (e) {}
-      syncHudPrefs();
-    });
-  }
-  if (hudTextColourPick) {
-    // Chromium's eyedropper: the commander clicks the colour on the game itself.
-    if (typeof window.EyeDropper !== "function") hudTextColourPick.hidden = true;
-    hudTextColourPick.addEventListener("click", function () {
-      if (typeof window.EyeDropper !== "function") return;
-      new window.EyeDropper().open().then(function (r) {
-        if (!r || !r.sRGBHex || !hudTextColour) return;
-        hudTextColour.value = r.sRGBHex;
-        try { localStorage.setItem(LS_HUD_TEXT_COLOUR, r.sRGBHex); } catch (e) {}
-        syncHudPrefs();
-      }).catch(function () { /* cancelled */ });
     });
   }
   if (hudRadarAlways) {

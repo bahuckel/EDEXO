@@ -16,9 +16,17 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
-import { cutDistanceLine, findTextLines, lineUnder, readTargetDistance, type DistanceGlyphs } from "../src/shared/hudTargetDistance.js";
+import {
+  cutDistanceLine,
+  candidateTextColours,
+  findTextLines,
+  lineUnder,
+  lookFromColour,
+  readTargetDistanceAnyColour,
+  type DistanceGlyphs,
+} from "../src/shared/hudTargetDistance.js";
 
-const MAX_PER_GLYPH = 16;
+const MAX_PER_GLYPH = 24;
 
 async function rgba(file: string): Promise<{ data: Uint8Array; w: number; h: number }> {
   if (/\.bmp$/i.test(file)) {
@@ -67,11 +75,18 @@ for (const { file, text } of pairs) {
   }
   const figures = m[1]!.replace(/[,.]/g, "");
   const img = await rgba(file);
-  const lines = findTextLines(img.data, img.w, img.h);
-  const cuts = lines
-    .filter((l) => lineUnder(lines, l))
-    .map((l) => cutDistanceLine(img.data, img.w, l))
-    .filter((c): c is NonNullable<typeof c> => !!c && c.figures.length === figures.length);
+  // In the colour the screen's HUD is drawn in (2026-11-06: his EDHM shots, white, blue, red, ...; the default orange
+  // the same way): the first colour found whose target line has the label's number of figures.
+  let cuts: { figures: number[][]; cap: number[]; small: number[] }[] = [];
+  for (const c of candidateTextColours(img.data, img.w, img.h)) {
+    const look = lookFromColour(c);
+    const lines = findTextLines(img.data, img.w, img.h, img.h, look);
+    cuts = lines
+      .filter((l) => lineUnder(lines, l))
+      .map((l) => cutDistanceLine(img.data, img.w, l, look))
+      .filter((x): x is NonNullable<typeof x> => !!x && x.figures.length === figures.length);
+    if (cuts.length) break;
+  }
   const samples: Sample[] = [];
   // Only an image with one such line: two (another label beside the target's) cannot say which is which.
   if (cuts.length === 1) {
@@ -101,7 +116,7 @@ if (check) {
     for (const [i, p] of per.entries()) {
       if (i % 2 !== half) continue;
       const img = await rgba(p.file);
-      const r = readTargetDistance(img.data, img.w, img.h, glyphs);
+      const r = readTargetDistanceAnyColour(img.data, img.w, img.h, glyphs)?.reading ?? null;
       if (!r) unsure++;
       else if (r.text === p.text) right++;
       else wrong.push(`${p.file.split(/[\\/]/).pop()}: ${r.text} (is ${p.text})`);
@@ -124,7 +139,7 @@ const out = [
   "/**",
   " * The HUD's target distance characters as the reader compares them (hudTargetDistance.ts; glyphVector 10 x 15, zero",
   " * mean, unit length): figures and the unit's capital (tall), the unit's small letter (small); every sample kept up to",
-  " * 16 a glyph, the reader matching the nearest. Built by scripts/build-hud-distance-glyphs.ts from the owner's F10",
+  " * 24 a glyph, the reader matching the nearest. Built by scripts/build-hud-distance-glyphs.ts from the owner's F10",
   " * cockpit screenshots with a known distance. Derived numbers, no image.",
   " */",
   'import type { DistanceGlyphs } from "./hudTargetDistance.js";',

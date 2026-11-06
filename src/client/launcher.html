@@ -571,24 +571,17 @@
                 <label title="Experimental, off by default. A dot in a circle on the screen for each plant your composition scanner named, where it is from the ship's nose; point at one and it opens into a hexagon with its name, distance and how it was placed. Over the whole game screen, clicks go through. Not yet accurate enough to rely on: the dot can sit a few degrees off the plant."><input type="checkbox" id="hudAim" /> Screen marker over the game (composition scans) <span class="hud-exp">Experimental</span></label>
               </div>
               <div class="hud-set-row">
-                <label title="Experimental, off by default. With the screen marker on: reads the ship's pitch and heading off the HUD (the pitch boxes beside its centre, the heading tape at its top) four times a second while you are in the ship near a planet, so the marker follows the nose live. Gear up and landing gear down are both read. Needs the game in borderless (not fullscreen); a recoloured HUD is set under HUD colours below. A frame it cannot read keeps the last good reading; with none, the marker keeps its own estimate."><input type="checkbox" id="hudPitchReader" /> Read the pitch off the HUD (screen marker) <span class="hud-exp">Experimental</span></label>
+                <label title="Experimental, off by default. With the screen marker on: reads the ship's pitch and heading off the HUD (the pitch boxes beside its centre, the heading tape at its top) four times a second while you are in the ship near a planet, so the marker follows the nose live. Gear up and landing gear down are both read. Needs the game in borderless (not fullscreen); it learns a recoloured HUD's colour (EDHM's too) from the screen. A frame it cannot read keeps the last good reading; with none, the marker keeps its own estimate."><input type="checkbox" id="hudPitchReader" /> Read the pitch off the HUD (screen marker) <span class="hud-exp">Experimental</span></label>
               </div>
               <div class="hud-set-row">
                 <label title="Experimental, off by default. While the Scan route tab shows, in supercruise with a body of this system targeted, reads the distance to it off the HUD (the line under the target's name, &quot;1,957Ls&quot;, &quot;13.1Mm&quot;) four times a second, so the Scan route moves your ship along the line from the last body to the target. At any other time it does not look at the screen. Works without the screen marker. Needs the game in borderless (not fullscreen); a recoloured HUD is set under HUD colours below. A frame it cannot read keeps the ship where it was."><input type="checkbox" id="hudDistanceReader" /> Read the target's distance off the HUD (Scan route) <span class="hud-exp">Experimental</span></label>
               </div>
               <div class="hud-set-row">
-                <label for="hudColour" title="Experimental. Which HUD colours the pitch and distance readers expect. Elite default: the game's own orange HUD. Custom GUIColour: you recoloured the HUD in GraphicsConfigurationOverride.xml; the readers undo that matrix (colours the game cuts off at full brightness, such as purple, cyan or white, cannot be read). EDHM / modded HUD: a shader mod recolours the HUD without that file; pick the colour your target's distance text is drawn in.">HUD colours <span class="hud-exp">Experimental</span></label>
-                <select id="hudColour" aria-label="HUD colours the readers expect">
+                <label for="hudColour" title="Experimental. The HUD colours the pitch reader expects. Elite default: the game's own orange HUD. Custom GUIColour: you recoloured the HUD in GraphicsConfigurationOverride.xml; the reader undoes that matrix (colours the game cuts off at full brightness, such as purple, cyan or white, cannot be read). The distance reader needs nothing here: it learns your HUD's colour from the screen, EDHM's themes included.">HUD colours (pitch reader) <span class="hud-exp">Experimental</span></label>
+                <select id="hudColour" aria-label="HUD colours the pitch reader expects">
                   <option value="default">Elite default</option>
                   <option value="xml">Custom GUIColour (GraphicsConfigurationOverride.xml)</option>
-                  <option value="pick">EDHM / modded HUD: pick the text colour</option>
                 </select>
-              </div>
-              <div class="hud-sub" id="hudTextColourRow" hidden>
-                <div class="hud-set-row">
-                  <label for="hudTextColour" title="The colour your HUD draws the target's name and distance in (the line under the target bracket). Pick from screen: click it on the game with the game showing. The readers turn this colour into the default orange before they read. A white or grey HUD has no colour to turn and cannot be read.">HUD text colour <input type="color" id="hudTextColour" value="#a5c305" /></label>
-                  <button type="button" class="btn btn-mini" id="hudTextColourPick" title="Then click the target's distance text on the game.">Pick from screen</button>
-                </div>
               </div>
               <p class="hud-hint">The pitch and distance readers work only on this PC: they look at the game's screen, keep nothing and send nothing anywhere.</p>
               <p class="hud-hint">The screen marker and the readers are experimental and off by default; they are still being tested.</p>

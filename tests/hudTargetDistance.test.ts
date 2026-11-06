@@ -8,7 +8,15 @@
  */
 import { createRequire } from "node:module";
 import { describe, expect, it, vi } from "vitest";
-import { cutDistanceLine, findTextLines, numberFrom, readTargetDistance, type DistanceGlyphs } from "../src/shared/hudTargetDistance.js";
+import {
+  cutDistanceLine,
+  findTextLines,
+  numberFrom,
+  readTargetDistance,
+  type DistanceGlyphs,
+  discoverTextColours,
+  readTargetDistanceAnyColour,
+} from "../src/shared/hudTargetDistance.js";
 import { GameStateStore } from "../src/server/gameState.js";
 import {
   HUD_DISTANCE_FRESH_MS,
@@ -48,8 +56,10 @@ function frame(): Uint8ClampedArray {
   for (let i = 0; i < W * H; i++) f.set([10, 10, 22, 255], i * 4);
   return f;
 }
+/** The colour the font is drawn in: the game's own, unless a test draws an EDHM-like HUD. */
+let INK: [number, number, number] = [240, 200, 0];
 const dot = (f: Uint8ClampedArray, x: number, y: number) => {
-  for (let sy = 0; sy < S; sy++) for (let sx = 0; sx < S; sx++) f.set([240, 200, 0, 255], ((y + sy) * W + x + sx) * 4);
+  for (let sy = 0; sy < S; sy++) for (let sx = 0; sx < S; sx++) f.set([...INK, 255], ((y + sy) * W + x + sx) * 4);
 };
 
 /** Draw `text` with its left edge at `x` and its baseline at `base`; monospaced, a comma or point a cell of its own. */
@@ -156,6 +166,48 @@ describe("the target's distance off the HUD", () => {
     const crop = new Uint8ClampedArray(600 * 600 * 4);
     for (let y = 0; y < 600; y++) crop.set(f.subarray(y * W * 4, (y * W + 600) * 4), y * 600 * 4);
     expect(readTargetDistance(crop, 600, 600, GLYPHS, H)?.distLs).toBe(357);
+  });
+});
+
+/*
+  Any HUD colour (owner 2026-11-06, his EDHM themes: white, blue, red, lavender text): the reader finds the target line
+  by its shape, learns its colour and reads in it.
+*/
+describe("the target's distance in any HUD colour", () => {
+  const drawn = (ink: [number, number, number], text: string) => {
+    INK = ink;
+    try {
+      const f = frame();
+      label(f, text, 300, 400);
+      return f;
+    } finally {
+      INK = [240, 200, 0];
+    }
+  };
+
+  it("learns white, red and the default orange from the line itself and reads in it", () => {
+    for (const ink of [[235, 235, 235], [230, 40, 40], [240, 200, 0]] as [number, number, number][]) {
+      const f = drawn(ink, "1,957Ls");
+      const r = readTargetDistanceAnyColour(f, W, H, GLYPHS);
+      expect(r?.reading.text).toBe("1,957Ls");
+      expect(Math.hypot(r!.colour[0] - ink[0], r!.colour[1] - ink[1], r!.colour[2] - ink[2])).toBeLessThan(20);
+    }
+  });
+
+  it("keeps reading in a colour it learned, and finds nothing in a colour that is not there", () => {
+    const f = drawn([90, 170, 255], "8.59Ls");
+    expect(discoverTextColours(f, W, H)[0]).toEqual([90, 170, 255]);
+    expect(readTargetDistanceAnyColour(f, W, H, GLYPHS, H, [90, 170, 255])?.reading.distLs).toBe(8.59);
+    expect(readTargetDistanceAnyColour(f, W, H, GLYPHS, H, [230, 40, 40])).toBeNull();
+  });
+
+  it("splits two characters a bold font joins (his white 0.87Ls: the 7 and the L one piece)", () => {
+    const f = drawn([235, 235, 235], "957Ls");
+    // A bridge between the 7 and the L at the baseline, as EDHM's heavier font draws them.
+    INK = [235, 235, 235];
+    for (let x = 300 + 2 * 6 * S + 4 * S; x < 300 + 3 * 6 * S; x++) dot(f, x, 400 - S + 1);
+    INK = [240, 200, 0];
+    expect(readTargetDistanceAnyColour(f, W, H, GLYPHS)?.reading.text).toBe("957Ls");
   });
 });
 

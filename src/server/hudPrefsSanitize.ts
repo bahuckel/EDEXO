@@ -36,8 +36,7 @@ export function sanitizeHudPrefs(raw: unknown): HudPrefsDTO | null {
   if (typeof r.radarAlways === "boolean") out.radarAlways = r.radarAlways;
   if (typeof r.pitchReader === "boolean") out.pitchReader = r.pitchReader;
   if (typeof r.distanceReader === "boolean") out.distanceReader = r.distanceReader;
-  if (r.hudColour === "default" || r.hudColour === "xml" || r.hudColour === "pick") out.hudColour = r.hudColour;
-  if (typeof r.hudTextColour === "string" && /^#[0-9a-f]{6}$/i.test(r.hudTextColour)) out.hudTextColour = r.hudTextColour.toLowerCase();
+  if (r.hudColour === "default" || r.hudColour === "xml") out.hudColour = r.hudColour;
   if (typeof r.czNeeds === "boolean") out.czNeeds = r.czNeeds;
   if (typeof r.czSites === "boolean") out.czSites = r.czSites;
   if (typeof r.czFinished === "boolean") out.czFinished = r.czFinished;

@@ -15,16 +15,7 @@ import { openMark, projectMarks, viewOf, type ScreenMark, type View } from "./pr
 import { startPitchCapture, type PitchCapture, type PitchRead } from "./pitchCapture";
 import { useDistanceReader } from "./useDistanceReader";
 import { setHudRecolour } from "./gameScreen";
-import {
-  DEFAULT_PITCH_TEXT,
-  DEFAULT_TARGET_TEXT,
-  hueMapper,
-  invertHudMatrix,
-  parseHexColour,
-  recolourRgba,
-  type HudColourMatrix,
-  type HudColourSupport,
-} from "@shared/hudColourMatrix";
+import { invertHudMatrix, recolourRgba, type HudColourMatrix, type HudColourSupport } from "@shared/hudColourMatrix";
 import "./aim.css";
 
 type MiniMap = ExoMinimapDTO | null;
@@ -47,14 +38,14 @@ function useMinimap(): {
   reader: boolean;
   distance: boolean;
   readDistance: boolean;
-  look: { mode: "default" | "xml" | "pick"; colour: string };
+  look: "default" | "xml";
 } {
   const [glide, setGlide] = useState<GlideState | null>(null);
   const [reader, setReader] = useState(false);
   const [distance, setDistance] = useState(false);
   const [readDistance, setReadDistance] = useState(false);
-  // The launcher's HUD colours choice (default, the XML's matrix, a modded HUD's picked text colour).
-  const [look, setLook] = useState<{ mode: "default" | "xml" | "pick"; colour: string }>({ mode: "default", colour: "" });
+  // The launcher's HUD colours choice for the pitch reader (default, or the XML's matrix).
+  const [look, setLook] = useState<"default" | "xml">("default");
   useEffect(() => {
     let ws: WebSocket | null = null;
     let retry = 1000;
@@ -73,7 +64,7 @@ function useMinimap(): {
             payload?: {
               exoMinimap?: MiniMap;
               journalBoot?: boolean;
-              hudPrefs?: { pitchReader?: unknown; distanceReader?: unknown; hudColour?: unknown; hudTextColour?: unknown } | null;
+              hudPrefs?: { pitchReader?: unknown; distanceReader?: unknown; hudColour?: unknown } | null;
               hudReadDistance?: boolean;
             };
           };
@@ -85,11 +76,7 @@ function useMinimap(): {
           if (msg.type === "state" && msg.payload && "hudPrefs" in msg.payload) {
             setReader(msg.payload.hudPrefs?.pitchReader === true);
             setDistance(msg.payload.hudPrefs?.distanceReader === true);
-            const hc = msg.payload.hudPrefs?.hudColour;
-            setLook({
-              mode: hc === "xml" || hc === "pick" ? hc : "default",
-              colour: typeof msg.payload.hudPrefs?.hudTextColour === "string" ? msg.payload.hudPrefs.hudTextColour : "",
-            });
+            setLook(msg.payload.hudPrefs?.hudColour === "xml" ? "xml" : "default");
           }
           if (msg.type === "state" && msg.payload && "hudReadDistance" in msg.payload) setReadDistance(msg.payload.hudReadDistance === true);
         } catch {
@@ -219,28 +206,18 @@ function ReaderLine({ s, view, colour }: { s: ReaderState; view: View; colour: H
 }
 
 /**
- * The launcher's HUD colours choice applied to the readers' crops (gameScreen setHudRecolour): "xml" undoes
- * GraphicsConfigurationOverride.xml's matrix where it can (hudColourSupport), "pick" turns a modded HUD's text colour into
- * the default's (the target line's orange for the distance, the pitch boxes' yellow for the pitch). Says what it could
- * not do, for the reader's line.
+ * The launcher's HUD colours choice applied to the pitch reader's crops (gameScreen setHudRecolour): "xml" undoes
+ * GraphicsConfigurationOverride.xml's matrix where it can (hudColourSupport). The distance reader learns the HUD's colour
+ * from the screen and needs none. Says what it could not do, for the reader's line.
  */
-function useHudLook(
-  look: { mode: "default" | "xml" | "pick"; colour: string },
-  matrix: HudColourMatrix | null,
-  xmlColour: HudColourSupport,
-): HudColourSupport {
-  const picked = look.mode === "pick" ? parseHexColour(look.colour) : null;
-  const toTarget = look.mode === "pick" ? hueMapper(picked, DEFAULT_TARGET_TEXT) : null;
-  const toPitch = look.mode === "pick" ? hueMapper(picked, DEFAULT_PITCH_TEXT) : null;
-  const inverse = look.mode === "xml" && xmlColour === "undo" && matrix ? invertHudMatrix(matrix) : null;
+function useHudLook(look: "default" | "xml", matrix: HudColourMatrix | null, xmlColour: HudColourSupport): HudColourSupport {
+  const inverse = look === "xml" && xmlColour === "undo" && matrix ? invertHudMatrix(matrix) : null;
   useEffect(() => {
-    const undo = inverse ? (px: Uint8ClampedArray) => recolourRgba(px, inverse) : null;
-    setHudRecolour(look.mode === "pick" ? { distance: toTarget, pitch: toPitch } : { distance: undo, pitch: undo });
-    // The mappers are rebuilt from these each render; their inputs are what matter.
+    setHudRecolour({ pitch: inverse ? (px: Uint8ClampedArray) => recolourRgba(px, inverse) : null });
+    // The inverse is rebuilt from these each render; its inputs are what matter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [look.mode, look.colour, matrix, xmlColour]);
-  if (look.mode === "xml") return xmlColour === "undo" ? "undo" : xmlColour === "default" ? "default" : "unsupported";
-  if (look.mode === "pick") return toTarget ? "undo" : "unsupported";
+  }, [look, matrix, xmlColour]);
+  if (look === "xml") return xmlColour === "undo" ? "undo" : xmlColour === "default" ? "default" : "unsupported";
   return "default";
 }
 

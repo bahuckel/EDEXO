@@ -59,6 +59,53 @@ const isStarPx = (r: number, g: number, b: number) => r > 200 && g > 200 && b > 
  */
 export const distanceInk = (r: number, g: number, b: number) => Math.max(0, Math.min(1, (Math.min(r, g) - b - 60) / 150));
 
+/**
+ * How the reader sees the HUD's text: which pixels are text, and how much of a stroke each holds (the glyph images).
+ * The game's own HUD is orange; EDHM and the like draw it in any colour, white often (owner 2026-11-06, his EDHM shots:
+ * white, light blue, red, lavender target text), so the reader learns the colour from the screen (discoverTextColours)
+ * and reads in it (lookFromColour).
+ */
+export interface TextLook {
+  isText(r: number, g: number, b: number): boolean;
+  ink(r: number, g: number, b: number): number;
+}
+export type Rgb = readonly [number, number, number];
+
+/** The game's default orange. */
+export const ORANGE_LOOK: TextLook = { isText: isTextPx, ink: distanceInk };
+
+/**
+ * Colour-blind, for finding: bright and either coloured or near white. Only where a target line can be is decided by
+ * the line's shape (figures, Ls/Mm, the time line under it), never by its colour.
+ */
+const findingLook = (bright: number, colourful: number): TextLook => ({
+  isText: (r, g, b) => {
+    const mx = Math.max(r, g, b);
+    const mn = Math.min(r, g, b);
+    return mx >= bright && (mx - mn >= colourful || mn >= bright);
+  },
+  ink: (r, g, b) => Math.max(0, Math.min(1, (Math.max(r, g, b) - 90) / 150)),
+});
+/*
+  Strict, then soft: most themes' text stands clear at 170, and lower its glow joins the digits to each other and to
+  the stars; EDHM's softer themes (his light blue) have most of their strokes between 120 and 170, found only at 130.
+*/
+const FINDING_LOOKS: readonly TextLook[] = [findingLook(170, 90), findingLook(130, 70)];
+
+/**
+ * Text in this colour (the strokes' core): a pixel within 28 % of it is text; the ink falls from 1 at the colour to 0
+ * at 60 % of its brightness away, so the glow round a stroke counts for little, as the orange ink did. (Matching the
+ * colour's hue at lower brightness as well found fewer lines on his EDHM shots: 135 against 170 of 175.)
+ */
+export function lookFromColour(c: Rgb): TextLook {
+  const n = Math.hypot(c[0], c[1], c[2]) || 1;
+  const dist = (r: number, g: number, b: number) => Math.hypot(r - c[0], g - c[1], b - c[2]);
+  return {
+    isText: (r, g, b) => dist(r, g, b) <= 0.28 * n,
+    ink: (r, g, b) => Math.max(0, Math.min(1, 1 - dist(r, g, b) / (0.6 * n))),
+  };
+}
+
 /** One line of text as found: its pieces left to right, its baseline and its capitals' height. */
 export interface TextLine {
   pieces: Rect[];
@@ -73,25 +120,66 @@ export interface TextLine {
 /** The part of the screen searched (shares of it): the bracket can be anywhere ahead, not under the cockpit's panels. */
 const AREA = { x0: 0.08, x1: 0.92, y0: 0.04, y1: 0.72 };
 
+/**
+ * A piece too wide for one character split at its thinnest column (fewest text pixels in its middle half), again
+ * until each part is one character wide or less. EDHM's bolder fonts join neighbours: his white theme's "0.87Ls" had
+ * the 7 and the L as one piece (2026-11-06), 1.8 of its height wide; one character with its glow is up to about one
+ * height wide (cut at 0.95, single orange figures split: 98 of 218 read).
+ */
+function splitJoined(mask: Uint8Array, w: number, c: Rect): Rect[] {
+  const ch = c.y1 - c.y0 + 1;
+  const cw = c.x1 - c.x0 + 1;
+  if (cw <= ch * 1.3 || cw > ch * 3.5) return [c];
+  const from = c.x0 + Math.floor(cw / 4);
+  const to = c.x1 - Math.floor(cw / 4);
+  // The thinnest column; of equally thin ones the nearest the middle, where two characters of one width meet.
+  const mid = (c.x0 + c.x1) / 2;
+  let best = -1;
+  let bestN = Infinity;
+  for (let x = from; x <= to; x++) {
+    let n = 0;
+    for (let y = c.y0; y <= c.y1; y++) n += mask[y * w + x]!;
+    if (n < bestN || (n === bestN && Math.abs(x - mid) < Math.abs(best - mid))) {
+      bestN = n;
+      best = x;
+    }
+  }
+  if (best < 0) return [c];
+  const shrink = (x0: number, x1: number): Rect | null => {
+    let y0 = Infinity;
+    let y1 = -1;
+    for (let y = c.y0; y <= c.y1; y++)
+      for (let x = x0; x <= x1; x++)
+        if (mask[y * w + x]) {
+          y0 = Math.min(y0, y);
+          y1 = Math.max(y1, y);
+        }
+    return y1 >= 0 ? { x0, y0, x1, y1 } : null;
+  };
+  return [shrink(c.x0, best - 1), shrink(best + 1, c.x1)].filter((r): r is Rect => !!r).flatMap((r) => splitJoined(mask, w, r));
+}
+
 /** Lines of the HUD's text in a frame: pieces about a character high, on one baseline, close together. */
-export function findTextLines(rgba: Rgba, w: number, h: number, screenH = h): TextLine[] {
+export function findTextLines(rgba: Rgba, w: number, h: number, screenH = h, look: TextLook = ORANGE_LOOK): TextLine[] {
   const mask = new Uint8Array(w * h);
   for (let i = 0, p = 0; i < w * h; i++, p += 4) {
     const r = rgba[p]!;
     const g = rgba[p + 1]!;
     const b = rgba[p + 2]!;
-    if (isTextPx(r, g, b) || isStarPx(r, g, b)) mask[i] = 1;
+    if (look.isText(r, g, b) || isStarPx(r, g, b)) mask[i] = 1;
   }
   // On the owner's 1440-row screen a digit is 15 px, a small letter 10.
   const minH = Math.max(5, screenH * 0.0055);
   const maxH = screenH * 0.017;
-  const pieces = components(mask, w, 0, 0, w, h).filter((c) => {
-    const ch = c.y1 - c.y0 + 1;
-    const cw = c.x1 - c.x0 + 1;
-    // Not a comma (short and narrow, hanging under the line): it would break the baseline the figures share.
-    const comma = ch <= screenH * 0.0085 && cw <= ch * 0.75;
-    return ch >= minH && ch <= maxH && cw <= ch * 1.6 && cw >= 2 && !comma;
-  });
+  const pieces = components(mask, w, 0, 0, w, h)
+    .flatMap((c) => splitJoined(mask, w, c))
+    .filter((c) => {
+      const ch = c.y1 - c.y0 + 1;
+      const cw = c.x1 - c.x0 + 1;
+      // Not a comma (short and narrow, hanging under the line): it would break the baseline the figures share.
+      const comma = ch <= screenH * 0.0085 && cw <= ch * 0.75;
+      return ch >= minH && ch <= maxH && cw <= ch * 1.6 && cw >= 2 && !comma;
+    });
   pieces.sort((a, b) => a.x0 - b.x0);
   const groups: Rect[][] = [];
   for (const c of pieces) {
@@ -156,7 +244,12 @@ export function numberFrom(digits: string, seps: readonly number[]): number | nu
  * small letter from the small letters' height, so "s" and "m" keep their shape). Null when the line is not of that
  * shape. The glyph builder cuts its samples with this.
  */
-export function cutDistanceLine(rgba: Rgba, w: number, line: TextLine): { figures: number[][]; cap: number[]; small: number[] } | null {
+export function cutDistanceLine(
+  rgba: Rgba,
+  w: number,
+  line: TextLine,
+  look: TextLook = ORANGE_LOOK,
+): { figures: number[][]; cap: number[]; small: number[] } | null {
   const p = line.pieces;
   if (p.length < 3 || p.length > 9) return null;
   const isTall = (c: Rect) => c.y1 - c.y0 + 1 >= line.dh * 0.82;
@@ -165,7 +258,7 @@ export function cutDistanceLine(rgba: Rgba, w: number, line: TextLine): { figure
   if (!isTall(cap) || isTall(small)) return null;
   const nums = p.slice(0, -2);
   if (!nums.every(isTall)) return null;
-  const vec = (c: Rect) => glyphVector(rgba, w, c, GLYPH_W, GLYPH_H, distanceInk);
+  const vec = (c: Rect) => glyphVector(rgba, w, c, GLYPH_W, GLYPH_H, look.ink);
   return {
     figures: nums.map(vec),
     cap: vec(cap),
@@ -173,15 +266,30 @@ export function cutDistanceLine(rgba: Rgba, w: number, line: TextLine): { figure
   };
 }
 
+/**
+ * The least a character's best glyph must score to be read: above the pitch reader's 0.75. On his EDHM shots a white
+ * 8 beside a star and a planet's edge scored 0.81 as a 6 (18.6 Mm read 16.6, 2026-11-06). Swept on 388 labelled shots:
+ * 0.75 and 0.8 kept that wrong read, 0.85 none (default 201 of 218, EDHM 152 of 170 read), 0.9 none and 35 fewer.
+ */
+const DISTANCE_MIN_MATCH = 0.85;
+
 /** A line read as a distance: digits, then a capital and a small letter (Ls, Mm, km); null when it is not one. */
-export function readDistanceLine(rgba: Rgba, w: number, line: TextLine, glyphs: DistanceGlyphs): TargetDistance | null {
-  const cut = cutDistanceLine(rgba, w, line);
+export function readDistanceLine(
+  rgba: Rgba,
+  w: number,
+  line: TextLine,
+  glyphs: DistanceGlyphs,
+  look: TextLook = ORANGE_LOOK,
+  minMatch = DISTANCE_MIN_MATCH,
+): TargetDistance | null {
+  const cut = cutDistanceLine(rgba, w, line, look);
   if (!cut) return null;
-  const unit = `${matchGlyph(cut.cap, glyphs.tall) ?? "?"}${matchGlyph(cut.small, glyphs.small) ?? "?"}`;
+  const m = (v: number[], g: DistanceGlyphs["tall"]) => matchGlyph(v, g, minMatch);
+  const unit = `${m(cut.cap, glyphs.tall) ?? "?"}${m(cut.small, glyphs.small) ?? "?"}`;
   if (unit !== "Ls" && unit !== "Mm" && unit !== "km") return null;
   let digits = "";
   for (const f of cut.figures) {
-    const d = matchGlyph(f, glyphs.tall);
+    const d = m(f, glyphs.tall);
     if (d == null || !/^\d$/.test(d)) return null;
     digits += d;
   }
@@ -203,15 +311,103 @@ export function lineUnder(lines: readonly TextLine[], line: TextLine): boolean {
  * The target's distance in a frame (or a crop of one: `screenH` is the whole screen's height, the text's size is
  * measured in it); null when no line reads as one, or more than one target line does.
  */
-export function readTargetDistance(rgba: Rgba, w: number, h: number, glyphs: DistanceGlyphs, screenH = h): TargetDistance | null {
-  const lines = findTextLines(rgba, w, h, screenH);
+export function readTargetDistance(
+  rgba: Rgba,
+  w: number,
+  h: number,
+  glyphs: DistanceGlyphs,
+  screenH = h,
+  look: TextLook = ORANGE_LOOK,
+  minMatch = DISTANCE_MIN_MATCH,
+): TargetDistance | null {
+  const lines = findTextLines(rgba, w, h, screenH, look);
   const found: TargetDistance[] = [];
   for (const l of lines) {
     if (!lineUnder(lines, l)) continue;
-    const r = readDistanceLine(rgba, w, l, glyphs);
+    const r = readDistanceLine(rgba, w, l, glyphs, look, minMatch);
     if (r) found.push(r);
   }
   return found.length === 1 ? found[0]! : null;
+}
+
+/** A line shaped like a distance: 3 to 9 pieces, figures and a capital as tall, a small letter last. */
+function distanceShaped(line: TextLine): boolean {
+  const p = line.pieces;
+  if (p.length < 3 || p.length > 9) return false;
+  const tall = (c: Rect) => c.y1 - c.y0 + 1 >= line.dh * 0.82;
+  return p.slice(0, -1).every(tall) && !tall(p[p.length - 1]!);
+}
+
+/**
+ * The colours target lines could be drawn in: every distance-shaped line with the time line under it, found
+ * colour-blind, gives the colour of its strokes' core (the median of its brightest tenth of pixels). Brightest first.
+ */
+export function discoverTextColours(rgba: Rgba, w: number, h: number, screenH = h): Rgb[] {
+  const out: Rgb[] = [];
+  for (const finding of FINDING_LOOKS) {
+  const lines = findTextLines(rgba, w, h, screenH, finding);
+  for (const l of lines) {
+    if (!distanceShaped(l) || !lineUnder(lines, l)) continue;
+    const px: [number, number, number, number][] = [];
+    for (const c of l.pieces)
+      for (let y = c.y0; y <= c.y1; y++)
+        for (let x = c.x0; x <= c.x1; x++) {
+          const i = (y * w + x) * 4;
+          const r = rgba[i]!;
+          const g = rgba[i + 1]!;
+          const b = rgba[i + 2]!;
+          px.push([r + g + b, r, g, b]);
+        }
+    px.sort((a, b) => b[0] - a[0]);
+    const top = px.slice(0, Math.max(3, Math.round(px.length / 10)));
+    const med = (k: 1 | 2 | 3) => top.map((q) => q[k]).sort((a, b) => a - b)[top.length >> 1]!;
+    const c: Rgb = [med(1), med(2), med(3)];
+    if (!out.some((o) => Math.hypot(o[0] - c[0], o[1] - c[1], o[2] - c[2]) < 30)) out.push(c);
+  }
+  }
+  return out.sort((a, b) => b[0] + b[1] + b[2] - (a[0] + a[1] + a[2]));
+}
+
+/**
+ * The game's own target text, its strokes' core (the finder's colour on his default shots, median of 87: 250, 215, 0).
+ * The colour-blind finder misses it on most of them (the orange glow joins the figures), so it is always tried.
+ */
+export const DEFAULT_TEXT_COLOUR: Rgb = [250, 215, 0];
+
+/** The colours to read a frame in: those found on it, then the game's default unless one of them is it. */
+export function candidateTextColours(rgba: Rgba, w: number, h: number, screenH = h): Rgb[] {
+  const found = discoverTextColours(rgba, w, h, screenH);
+  const d = DEFAULT_TEXT_COLOUR;
+  return found.some((c) => Math.hypot(c[0] - d[0], c[1] - d[1], c[2] - d[2]) < 40) ? found : [...found, d];
+}
+
+/** The orange table's own least match (hudDistanceGlyphsOrange.ts: 214 of 218 held out, no wrong, at 0.75). */
+const ORANGE_MIN_MATCH = 0.75;
+
+/**
+ * The target's distance in any HUD colour, with the colour it was read in, to keep for the next frames. The game's own
+ * orange first, as it always was read (ORANGE_LOOK and `orangeGlyphs`), unless a colour other than the default was
+ * learned; then `known` (the colour learned before), else each candidate colour, with `glyphs` (the any-colour table).
+ */
+export function readTargetDistanceAnyColour(
+  rgba: Rgba,
+  w: number,
+  h: number,
+  glyphs: DistanceGlyphs,
+  screenH = h,
+  known?: Rgb | null,
+  orangeGlyphs?: DistanceGlyphs,
+): { reading: TargetDistance; colour: Rgb } | null {
+  const d = DEFAULT_TEXT_COLOUR;
+  if (orangeGlyphs && (!known || Math.hypot(known[0] - d[0], known[1] - d[1], known[2] - d[2]) < 40)) {
+    const reading = readTargetDistance(rgba, w, h, orangeGlyphs, screenH, ORANGE_LOOK, ORANGE_MIN_MATCH);
+    if (reading) return { reading, colour: d };
+  }
+  for (const c of known ? [known] : candidateTextColours(rgba, w, h, screenH)) {
+    const reading = readTargetDistance(rgba, w, h, glyphs, screenH, lookFromColour(c));
+    if (reading) return { reading, colour: c };
+  }
+  return null;
 }
 
 /** The part of a screen the reader looks in, in pixels of a `w` x `h` screen. */
