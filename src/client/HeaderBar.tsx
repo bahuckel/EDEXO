@@ -32,6 +32,7 @@ import { DUE_CLASS, useGalaxyIndexDue } from "./galaxyIndexDue";
 import { CompareTray } from "./header/CompareTray";
 import { HeaderScreens } from "./header/HeaderScreens";
 import { CommanderSwitch } from "./header/CommanderSwitch";
+import { closingAttr, usePresence } from "./ui/usePresence";
 
 /** A notable body's quick facts, asked for from outside the header (the body strip's notable tabs). */
 export const NOTABLE_QUICK_EVENT = "edexo-notable-quick";
@@ -208,6 +209,7 @@ export const HeaderBar = memo(function HeaderBar({
   }, [snap.currentSystemAddress, hoverNotable]);
   useEffect(() => () => hoverNotable(null), [hoverNotable]);
   const [trayOpen, setTrayOpen] = useState(() => readLsBool(EDEXO_HEADER_TRAY_LS, true));
+  const tray = usePresence(trayOpen);
   /*
     The cockpit menu (WEBUI-REDESIGN 2.3): the six secondary destinations behind one button, so the
     app bar is search, status, alerts, menu, tray. Closes on outside click and Escape.
@@ -448,7 +450,11 @@ export const HeaderBar = memo(function HeaderBar({
         </div>
       </div>
 
-      {!compare ? (trayOpen ? <div className="header-tray header-tray--app" id="header-tray">{trayContent}</div> : null) : null}
+      {!compare && tray.mounted ? (
+        <div className="header-tray header-tray--app" id="header-tray" {...closingAttr(tray.closing)}>
+          {trayContent}
+        </div>
+      ) : null}
 
       {compare && snap.edsmMapSupplementForViewingSystem ? (
         <p className="header-edsm-map-note dim">
@@ -467,8 +473,9 @@ export const HeaderBar = memo(function HeaderBar({
         />
       ) : null}
 
-      {compare && trayOpen ? (
+      {compare && tray.mounted ? (
         <CompareTray
+          closing={tray.closing}
           snap={snap}
           scanDataOn={scanDataOn}
           totalDataCr={totalDataCr}

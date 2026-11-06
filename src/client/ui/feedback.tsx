@@ -10,6 +10,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useModal } from "./useModal";
+import { motionLevel } from "../motionCore";
+import { closingAttr, PRESENCE_EXIT_MS } from "./usePresence";
 
 /**
  * Toasts and a styled confirm, replacing `window.alert` / `window.confirm`.
@@ -28,6 +30,8 @@ type ToastItem = {
   id: number;
   kind: ToastKind;
   text: string;
+  /** Playing its exit (dismissed). */
+  leaving?: boolean;
 };
 
 type ConfirmRequest = {
@@ -58,11 +62,15 @@ export function UiFeedbackProvider({ children }: { children: ReactNode }) {
   >(null);
   const timers = useRef(new Map<number, number>());
 
+  // Out as it came in (owner, 2026-11-06: "opens with an animation but closes instantly"): marked leaving, then gone.
   const dismiss = useCallback((id: number) => {
     const t = timers.current.get(id);
     if (t != null) window.clearTimeout(t);
     timers.current.delete(id);
-    setToasts((list) => list.filter((x) => x.id !== id));
+    const gone = () => setToasts((list) => list.filter((x) => x.id !== id));
+    if (motionLevel() === "off") return gone();
+    setToasts((list) => list.map((x) => (x.id === id ? { ...x, leaving: true } : x)));
+    window.setTimeout(gone, PRESENCE_EXIT_MS);
   }, []);
 
   const push = useCallback(
@@ -119,6 +127,7 @@ function ToastStack({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id
         <div
           key={t.id}
           className={`toast toast--${t.kind}`}
+          {...closingAttr(!!t.leaving)}
           role={t.kind === "error" ? "alert" : "status"}
           aria-live={t.kind === "error" ? "assertive" : "polite"}
         >

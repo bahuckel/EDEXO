@@ -16,6 +16,7 @@ import { speciesPhotoVariant } from "./speciesPhotoVariant";
 import { heroPhotoUrlFor, predictedColourCause, titleCaseSpeciesWords } from "./speciesMatchHelpers";
 import { RarityGem } from "./RarityGem";
 import { chanceWhyText } from "./ChanceWhyList";
+import { closingAttr, usePresence } from "./ui/usePresence";
 
 type Match = BodyComputed["matches"][number];
 
@@ -90,6 +91,7 @@ export function SpeciesRow({
   hostStarTypes?: string[];
   children: ReactNode;
 }) {
+  const card = usePresence(open);
   const footfall = useFootfallCertainty();
   const ctx = useRowContext();
   const prog = rowProgress(m, ctx);
@@ -370,8 +372,8 @@ export function SpeciesRow({
         </span>
         <span className="srow-chevron" aria-hidden="true" />
       </button>
-      {open ? (
-        <div className="srow-card">
+      {card.mounted ? (
+        <div className="srow-card" {...closingAttr(card.closing)}>
           <div className="srow-card-inner">{children}</div>
         </div>
       ) : null}

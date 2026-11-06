@@ -28,6 +28,7 @@ import { Select } from "./ui/Select";
 import { IconSave } from "./ui/icons";
 import { CopySystemButton } from "./CopySystemButton";
 import { oneOf, usePersistedState } from "./usePersistedState";
+import { closingAttr } from "./ui/usePresence";
 
 /** A share for a table cell: `42 %`, `7.3 %`, and under 1 % as `1/158` (rare things read better that way). */
 const pct = (v: number) =>
@@ -129,7 +130,7 @@ const FOUND: { key: string; label: string; title?: string; fmt?: (v: number) => 
 const MASS_ROWS = MASS_CODE_LETTERS as readonly string[];
 
 /** Behind the screen's [?]: what a mass code says, as measured. */
-export function BoxelMassCodeHelp() {
+export function BoxelMassCodeHelp({ closing = false }: { closing?: boolean }) {
   const genera = useMemo(() => {
     const g = new Set<string>();
     for (const r of Object.values(BOXEL_BIO_RATES))
@@ -151,7 +152,7 @@ export function BoxelMassCodeHelp() {
     return r && r.n >= 500 ? (r.hits[k] ?? 0) / r.n : null;
   };
   return (
-    <section className="boxel-help fold-help" aria-label="What a mass code says">
+    <section className="boxel-help fold-help" aria-label="What a mass code says" {...closingAttr(closing)}>
       {/* Owner, 2026-10-06: straight to the point, the explanations on hover. */}
       <p
         className="boxel-help__lead"

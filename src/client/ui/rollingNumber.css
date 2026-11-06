@@ -16,6 +16,12 @@
 .roll-num__digits {
   display: inline-flex;
   vertical-align: top;
+  /*
+    Whole pixels a line (owner, 2026-11-06: "(168)" with the 6 higher and the 8 lower than the 1). Each digit is a line
+    of the 0-9 strip moved up by its digit; at 13 px the line was 14.94 px, so line 1, 6 and 8 sat at different pixel
+    fractions and the font snapped each its own way. `lh` here is the parent's line height, rounded.
+  */
+  line-height: round(1lh, 1px);
   height: 1lh;
   overflow: clip;
   font-variant-numeric: tabular-nums;

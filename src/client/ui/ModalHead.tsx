@@ -7,6 +7,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { withTransition } from "../motion";
 import { HelpToggle } from "./Fold";
+import { closingAttr, usePresence } from "./usePresence";
 
 export function ModalHead({
   title,
@@ -34,6 +35,7 @@ export function ModalHead({
 }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const helpId = useId();
+  const helpShown = usePresence(!!help && helpOpen);
   return (
     <>
       <div className="modal-head">
@@ -57,8 +59,8 @@ export function ModalHead({
           ) : null}
         </div>
       </div>
-      {help && helpOpen ? (
-        <div className="modal-help" id={helpId}>
+      {help && helpShown.mounted ? (
+        <div className="modal-help" id={helpId} {...closingAttr(helpShown.closing)}>
           {help}
         </div>
       ) : null}

@@ -47,6 +47,7 @@ import { BoxelOrderLine } from "./boxel/BoxelOrderLine";
 import { BoxelSideActions } from "./boxel/BoxelSideActions";
 import { BoxelFlyingStrip } from "./boxel/BoxelFlyingStrip";
 import { RollingNumber } from "./ui/RollingNumber";
+import { usePresence } from "./ui/usePresence";
 
 /*
   The labels and helpers and the table's columns live in boxel/ since the audit of 2026-10-22; the
@@ -108,6 +109,7 @@ export function BoxelScreen({
   const [sideOpen, setSideOpen] = usePersistedState("boxel.sideOpen", true, isBool);
   // The [?] beside the close button: the mass code tables (owner, 2026-10-05).
   const [helpOpen, setHelpOpen] = usePersistedState("boxel.helpOpen", false, isBool);
+  const massHelp = usePresence(helpOpen);
   const [prevDays, setPrevDays] = usePersistedState("boxel.previousDays", 30, isNum);
   const [previous, setPrevious] = useState<PreviousBoxelDTO[] | null>(null);
   /** History's total for the range and search, and whether a page is on its way. */
@@ -520,7 +522,7 @@ export function BoxelScreen({
             ×
           </button>
         </header>
-        {helpOpen ? <BoxelMassCodeHelp /> : null}
+        {massHelp.mounted ? <BoxelMassCodeHelp closing={massHelp.closing} /> : null}
         <BoxelLookingFor here={here} onSave={addBoxel} />
 
         <div className={`boxel-screen__body${sideOpen ? "" : " boxel-screen__body--folded"}`}>

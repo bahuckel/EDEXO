@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { closingAttr, usePresence } from "./usePresence";
 
 const HELP_LS_PREFIX = "edexo.help.";
 
@@ -86,6 +87,7 @@ export function FoldPanel({
 }) {
   const [open, toggle, setOpen] = useFold(foldKey, defaultOpen);
   const [helpOpen, setHelpOpen] = useState<boolean>(() => readFold(HELP_LS_PREFIX + foldKey, false));
+  const helpShown = usePresence(!!help && helpOpen);
   const toggleHelp = () => {
     const next = !helpOpen;
     setHelpOpen(next);
@@ -128,8 +130,8 @@ export function FoldPanel({
       </div>
       <div id={panelId} className="fold-body" aria-hidden={!open}>
         <div className={`fold-inner${bodyClassName ? ` ${bodyClassName}` : ""}`}>
-          {help && helpOpen ? (
-            <div id={`${panelId}-help`} className="fold-help">
+          {help && helpShown.mounted ? (
+            <div id={`${panelId}-help`} className="fold-help" {...closingAttr(helpShown.closing)}>
               {help}
             </div>
           ) : null}

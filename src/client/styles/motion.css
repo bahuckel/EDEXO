@@ -150,6 +150,66 @@ html[data-motion="full"]:not([data-fx-off~="expand"]) .boxel-help {
   }
 }
 
+/* ---- Out as they came in (owner, 2026-11-06: "opens with an animation but closes instantly") ---- */
+/* Panels React renders only while open stay for their exit, marked [data-closing] (ui/usePresence.ts, 220 ms): the
+   explanations, a species row's card, the header tray, a toast. Faded under Motion "reduced"; "off" removes them at
+   once (usePresence) and collapses every duration above. */
+:root {
+  --motion-exit: 200ms;
+}
+[data-closing] {
+  pointer-events: none;
+}
+:is(.fold-help, .modal-help, .boxel-help, .header-tray, .toast)[data-closing] {
+  animation: motion-fade-out var(--motion-exit) var(--motion-ease-in) forwards;
+}
+@keyframes motion-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+/* The explanations fold shut as they unfolded (M5), the effect's own switch. */
+html[data-motion="full"]:not([data-fx-off~="expand"]) :is(.fold-help, .modal-help, .boxel-help)[data-closing] {
+  animation: card-collapse var(--motion-exit) var(--motion-ease-in) forwards;
+}
+@keyframes card-collapse {
+  to {
+    height: 0;
+    padding-block: 0;
+    margin-block: 0;
+    opacity: 0;
+  }
+}
+/* A species row's card folds back into its row (species-rows.css srow-open, reversed). */
+.srow-card[data-closing] {
+  animation: srow-close var(--motion-exit) var(--motion-ease-in) forwards;
+}
+@keyframes srow-close {
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+/* The header tray and a toast lift away as they dropped in. */
+html[data-motion="full"] .header-tray[data-closing] {
+  animation: header-tray-out var(--motion-exit) var(--motion-ease-in) forwards;
+}
+@keyframes header-tray-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+html[data-motion="full"] .toast[data-closing] {
+  animation: toast-out var(--motion-exit) var(--motion-ease-in) forwards;
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
 /* ---- M2: pull a list down at its top to refresh it (ui/usePullToRefresh.ts) ---- */
 /* The list's children follow at 35 % of the pull; the mark above them says what letting go does. */
 [data-pull-refresh] {

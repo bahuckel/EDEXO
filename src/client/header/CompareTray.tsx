@@ -22,6 +22,7 @@ import {
 } from "../routeHeader";
 import type { RouteHeaderMetricMode } from "../routeHeader";
 import { RollingNumber } from "../ui/RollingNumber";
+import { closingAttr } from "../ui/usePresence";
 
 /*
   An AFMU repairs the FSD in flight (owner, 2026-10-13, the Laboratory): when one is fitted, the FSD warning says so and
@@ -41,7 +42,10 @@ export function CompareTray({
   pendingSamplesFlash,
   onToggleScanData,
   onOpenBreakdown,
+  closing = false,
 }: {
+  /** Folding away (HeaderBar's usePresence): the tray plays its exit. */
+  closing?: boolean;
   snap: AppSnapshot;
   scanDataOn: boolean;
   totalDataCr: number;
@@ -71,7 +75,7 @@ export function CompareTray({
   })();
 
   return (
-    <div className="header-data-value-row header-tray" id="header-tray">
+    <div className="header-data-value-row header-tray" id="header-tray" {...closingAttr(closing)}>
       <button
         type="button"
         className={`header-scan-data-plus${scanDataOn ? " header-scan-data-plus--on" : ""}`}
