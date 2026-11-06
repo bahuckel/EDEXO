@@ -4,7 +4,15 @@
  * main process hands this page that one screen and nothing else (aimWindow.cjs). Nothing is kept, nothing leaves the PC.
  */
 
+import { recolourRgba, type HudColourMatrix } from "@shared/hudColourMatrix";
+
 type Bridge = { getAimCaptureSource?: () => Promise<string | null> };
+
+/** The inverse of the commander's HUD colour (null: the default look), applied to every crop (main.tsx sets it). */
+let recolour: HudColourMatrix | null = null;
+export function setHudRecolour(inverse: HudColourMatrix | null): void {
+  recolour = inverse;
+}
 
 export interface GameScreen {
   /** The capture's size, pixels (0 until the first frame). */
@@ -77,7 +85,9 @@ export async function acquireGameScreen(): Promise<GameScreen | { error: string 
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (!ctx) return null;
       ctx.drawImage(s.video, x, y, w, h, 0, 0, w, h);
-      return ctx.getImageData(0, 0, w, h).data;
+      const px = ctx.getImageData(0, 0, w, h).data;
+      if (recolour) recolourRgba(px, recolour);
+      return px;
     },
     release() {
       if (released) return;

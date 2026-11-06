@@ -131,11 +131,36 @@ describe("readEliteView", () => {
     mkdirSync(g);
     writeFileSync(path.join(g, "DisplaySettings.xml"), "<DisplayConfig><ScreenWidth>3440</ScreenWidth><ScreenHeight>1440</ScreenHeight></DisplayConfig>");
     writeFileSync(path.join(g, "Settings.xml"), "<GraphicsOptions><FOV>54.320000</FOV></GraphicsOptions>");
-    expect(readEliteView(path.join(g, "DisplaySettings.xml"))).toEqual({ verticalFovDeg: 54.32, width: 3440, height: 1440 });
+    expect(readEliteView(path.join(g, "DisplaySettings.xml"))).toEqual({
+      verticalFovDeg: 54.32,
+      width: 3440,
+      height: 1440,
+      hudMatrix: null,
+      hudColour: "default",
+    });
+    // A custom HUD colour (owner 2026-11-06: a recoloured HUD was not read): the matrix, and that it can be undone.
+    writeFileSync(
+      path.join(g, "GraphicsConfigurationOverride.xml"),
+      "<GraphicsConfig><GUIColour><Default><MatrixRed>0, 0.47, 1</MatrixRed><MatrixGreen>0, 0.37, 0</MatrixGreen><MatrixBlue>1, 0, 0</MatrixBlue></Default></GUIColour></GraphicsConfig>",
+    );
+    expect(readEliteView(path.join(g, "DisplaySettings.xml"))).toMatchObject({
+      hudMatrix: [
+        [0, 0.47, 1],
+        [0, 0.37, 0],
+        [1, 0, 0],
+      ],
+      hudColour: "undo",
+    });
   });
 
   it("says nothing it could not read", () => {
     dir = mkdtempSync(path.join(tmpdir(), "edexo-view-"));
-    expect(readEliteView(path.join(dir, "Graphics", "DisplaySettings.xml"))).toEqual({ verticalFovDeg: null, width: null, height: null });
+    expect(readEliteView(path.join(dir, "Graphics", "DisplaySettings.xml"))).toEqual({
+      verticalFovDeg: null,
+      width: null,
+      height: null,
+      hudMatrix: null,
+      hudColour: "default",
+    });
   });
 });

@@ -1,9 +1,11 @@
 /**
  * The screen readers on a recoloured HUD (owner 2026-11-06: a commander's custom HUD colour was not read). Each of
  * the owner's labelled F10 shots is recoloured with sample GUIColour matrices (shared/hudColourMatrix.ts, as the game
- * does it, here over the whole frame), then read twice: as it is, and brought back with the inverse matrix first.
+ * does it), then read as it is and brought back with the inverse matrix, beside the app's verdict for the matrix
+ * (hudColourSupport: only "undo" matrices are read in the app). --hud-only recolours only the HUD's orange / yellow pixels, as the
+ * game does (the planet and the stars keep their colours); without it the whole frame.
  *
- *   npx tsx scripts/hud-colour-bench.ts [--every N]
+ *   npx tsx scripts/hud-colour-bench.ts [--every N] [--hud-only]
  *
  * Labels: docs/hud-distance-labels-05112026.txt (target distance) and docs/hud-pitch-labels-06112026.txt (pitch),
  * bare names in Pictures\Frontier Developments\Elite Dangerous. Nothing is written.
@@ -15,7 +17,7 @@ import { distanceArea, readTargetDistance } from "../src/shared/hudTargetDistanc
 import { HUD_DISTANCE_GLYPHS } from "../src/shared/hudDistanceGlyphs.js";
 import { readHudPitch } from "../src/shared/hudPitchReader.js";
 import { HUD_PITCH_GLYPHS } from "../src/shared/hudPitchGlyphs.js";
-import { invertHudMatrix, recolourRgba, type HudColourMatrix } from "../src/shared/hudColourMatrix.js";
+import { applyHudMatrix, hudColourSupport, invertHudMatrix, recolourRgba, type HudColourMatrix } from "../src/shared/hudColourMatrix.js";
 
 /** Sample HUD colours: rows MatrixRed, MatrixGreen, MatrixBlue. */
 const PRESETS: Record<string, HudColourMatrix> = {
@@ -44,6 +46,11 @@ const PRESETS: Record<string, HudColourMatrix> = {
     [0.2, 0.6, 0],
     [0, 0, 1],
   ],
+  blue2: [
+    [0, 0.47, 1],
+    [0, 0.37, 0],
+    [1, 0, 0],
+  ],
   white: [
     [1, 1, 1],
     [0, 1, 0],
@@ -53,6 +60,22 @@ const PRESETS: Record<string, HudColourMatrix> = {
 
 const DIR = join(homedir(), "Pictures", "Frontier Developments", "Elite Dangerous");
 const every = Number(process.argv[process.argv.indexOf("--every") + 1]) || 1;
+const hudOnly = process.argv.includes("--hud-only");
+
+/** The game's recolouring: every pixel, or (--hud-only) the HUD's orange / yellow ones (and their glow). */
+function recolourAsGame(px: Uint8Array, m: HudColourMatrix): void {
+  if (!hudOnly) return recolourRgba(px, m);
+  for (let i = 0; i < px.length; i += 4) {
+    const r = px[i]!;
+    const g = px[i + 1]!;
+    const b = px[i + 2]!;
+    if (Math.min(r, g) - b < 40 || r < 120) continue;
+    const [nr, ng, nb] = applyHudMatrix(m, r, g, b);
+    px[i] = Math.min(255, Math.max(0, nr));
+    px[i + 1] = Math.min(255, Math.max(0, ng));
+    px[i + 2] = Math.min(255, Math.max(0, nb));
+  }
+}
 
 function bmp(file: string): { data: Uint8Array; w: number; h: number } {
   const b = readFileSync(file);
@@ -114,7 +137,7 @@ for (const [what, file] of [
         return r ? String(r.boxDeg) : null;
       };
       const shown = base.slice();
-      recolourRgba(shown, m);
+      recolourAsGame(shown, m);
       score(res[preset]!.raw, read(shown), text);
       const inv = invertHudMatrix(m);
       if (inv) {
@@ -123,9 +146,9 @@ for (const [what, file] of [
       } else res[preset]!.back.unsure++;
     }
   }
-  console.log(`\n${what}: ${list.length} shots (right / not sure / wrong)`);
+  console.log(`\n${what}: ${list.length} shots (right / not sure / wrong)${hudOnly ? ", HUD pixels recoloured only" : ""}`);
   for (const [preset, t] of Object.entries(res))
     console.log(
-      `  ${preset.padEnd(8)} as shown ${t.raw.right} / ${t.raw.unsure} / ${t.raw.wrong}   brought back ${t.back.right} / ${t.back.unsure} / ${t.back.wrong}`,
+      `  ${preset.padEnd(8)} as shown ${t.raw.right} / ${t.raw.unsure} / ${t.raw.wrong}   inverse ${t.back.right} / ${t.back.unsure} / ${t.back.wrong}   app: ${hudColourSupport(PRESETS[preset])}`,
     );
 }

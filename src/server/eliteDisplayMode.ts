@@ -22,6 +22,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { optionsDirForJournalDir } from "./protonJournals.js";
+import { hudColourSupport, parseHudColourMatrix, type HudColourMatrix, type HudColourSupport } from "../shared/hudColourMatrix.js";
 
 export type EliteDisplayMode = "windowed" | "fullscreen" | "borderless" | "unknown";
 
@@ -82,6 +83,12 @@ export function readEliteDisplayMode(file = eliteDisplaySettingsPath()): EliteDi
  */
 export interface EliteView {
   verticalFovDeg: number | null;
+  /**
+   * The custom HUD colour (GraphicsConfigurationOverride.xml GUIColour, null: the default look) and whether the screen
+   * readers can read it (shared/hudColourMatrix.ts).
+   */
+  hudMatrix: HudColourMatrix | null;
+  hudColour: HudColourSupport;
   width: number | null;
   height: number | null;
 }
@@ -102,8 +109,11 @@ export function readEliteView(displayFile = eliteDisplaySettingsPath()): EliteVi
   const display = read(displayFile);
   const settings = read(path.join(path.dirname(displayFile), "Settings.xml"));
   const fov = num(settings, "FOV");
+  const hudMatrix = parseHudColourMatrix(read(path.join(path.dirname(displayFile), "GraphicsConfigurationOverride.xml")));
   return {
     verticalFovDeg: fov != null && fov >= 20 && fov <= 120 ? fov : null,
+    hudMatrix,
+    hudColour: hudColourSupport(hudMatrix),
     width: num(display, "ScreenWidth"),
     height: num(display, "ScreenHeight"),
   };

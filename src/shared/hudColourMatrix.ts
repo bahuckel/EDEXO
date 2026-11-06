@@ -54,6 +54,33 @@ export function invertHudMatrix(m: HudColourMatrix): HudColourMatrix | null {
   ];
 }
 
+/**
+ * The default look's brightest text: the pitch boxes' yellow cores and the target line's orange (hudPitchReader.ts
+ * isDigitPx, hudTargetDistance.ts isTextPx), at their top.
+ */
+const BRIGHTEST_TEXT: readonly (readonly [number, number, number])[] = [
+  [255, 235, 10],
+  [255, 160, 30],
+];
+
+/**
+ * Whether the readers can read a HUD drawn with `m`: "default" (nothing to do), "undo" (the inverse brings each frame
+ * back), "unsupported" (left unread rather than misread).
+ *
+ * Measured with scripts/hud-colour-bench.ts on the owner's labelled shots (2026-11-06): channel swaps and a common
+ * blue HUD (MatrixRed 0,0.47,1 / MatrixGreen 0,0.37,0 / MatrixBlue 1,0,0) undo with no wrong read (distance 35-36 of
+ * 37, pitch 13-16 of 17). Where the game's clamp at 255 cuts the text (purple pushing yellow to 265, cyan, white) the
+ * inverse cannot rebuild it and gave wrong pitch reads; a lookup table built through the clamp gave wrong distance reads.
+ */
+export type HudColourSupport = "default" | "undo" | "unsupported";
+
+export function hudColourSupport(m: HudColourMatrix | null | undefined): HudColourSupport {
+  if (!m || isIdentityHudMatrix(m)) return "default";
+  if (!invertHudMatrix(m)) return "unsupported";
+  for (const [r, g, b] of BRIGHTEST_TEXT) if (applyHudMatrix(m, r, g, b).some((v) => v > 255.5 || v < -0.5)) return "unsupported";
+  return "undo";
+}
+
 /** Recolour an RGBA buffer in place with `m` (the inverse brings a frame back to the default look), clamped to 0-255. */
 export function recolourRgba(rgba: Uint8Array | Uint8ClampedArray, m: HudColourMatrix): void {
   for (let i = 0; i < rgba.length; i += 4) {

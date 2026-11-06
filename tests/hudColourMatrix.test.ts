@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyHudMatrix,
+  hudColourSupport,
   invertHudMatrix,
   isIdentityHudMatrix,
   parseHudColourMatrix,
@@ -43,6 +44,19 @@ describe("the HUD colour matrix", () => {
     recolourRgba(px, m);
     recolourRgba(px, invertHudMatrix(m)!);
     expect([...px]).toEqual([250, 150, 0, 255]);
+  });
+
+  it("reads only the colours it can undo (bench 2026-11-06: no wrong read on those)", () => {
+    expect(hudColourSupport(null)).toBe("default");
+    expect(hudColourSupport([[1, 0, 0], [0, 1, 0], [0, 0, 1]])).toBe("default");
+    // Channel swaps and a common blue HUD: undone.
+    expect(hudColourSupport([[0, 0, 1], [0, 1, 0], [1, 0, 0]])).toBe("undo");
+    expect(hudColourSupport([[0, 0.47, 1], [0, 0.37, 0], [1, 0, 0]])).toBe("undo");
+    // Purple pushes the yellow text to 265, cyan and white past 255 too: the clamp cut it, left unread.
+    expect(hudColourSupport([[0.6, 0, 1], [0, 0.3, 0], [0, 0, 1]])).toBe("unsupported");
+    expect(hudColourSupport([[0, 0.7, 1], [0.2, 0.6, 0], [0, 0, 1]])).toBe("unsupported");
+    expect(hudColourSupport([[1, 1, 1], [0, 1, 0], [0, 0, 1]])).toBe("unsupported");
+    expect(hudColourSupport([[1, 1, 1], [1, 1, 1], [0, 0, 1]])).toBe("unsupported");
   });
 
   it("has no inverse when the matrix drops a colour, and knows the default", () => {

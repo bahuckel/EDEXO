@@ -14,6 +14,8 @@ import { glidedMap, nextGlide, type GlideState } from "./glide";
 import { openMark, projectMarks, viewOf, type ScreenMark, type View } from "./project";
 import { startPitchCapture, type PitchCapture, type PitchRead } from "./pitchCapture";
 import { useDistanceReader } from "./useDistanceReader";
+import { setHudRecolour } from "./gameScreen";
+import { invertHudMatrix, type HudColourMatrix, type HudColourSupport } from "@shared/hudColourMatrix";
 import "./aim.css";
 
 type MiniMap = ExoMinimapDTO | null;
@@ -173,10 +175,12 @@ function usePitchReader(wanted: boolean): ReaderState {
 }
 
 /** The reader's one line, bottom centre: so it shows whether it reads at all (owner, 2026-11-04). */
-function ReaderLine({ s, view }: { s: ReaderState; view: View }) {
+function ReaderLine({ s, view, colour }: { s: ReaderState; view: View; colour: HudColourSupport }) {
   if (s.kind === "off") return null;
   const text =
-    s.kind === "starting"
+    colour === "unsupported" && !(s.kind === "read" && s.pitchDeg != null)
+      ? "Pitch reader: this HUD colour cannot be read (Options › Graphics, GUIColour)"
+      : s.kind === "starting"
       ? "Pitch reader: starting"
       : s.kind === "failed"
         ? `Pitch reader: no screen capture (${s.error})`
@@ -192,19 +196,26 @@ function ReaderLine({ s, view }: { s: ReaderState; view: View }) {
   );
 }
 
-function useView(): View {
+/** The game's view, and whether its HUD colour can be read (a recoloured HUD is brought back before reading). */
+function useView(): { view: View; colour: HudColourSupport } {
   const [fov, setFov] = useState<number | null>(null);
+  const [colour, setColour] = useState<HudColourSupport>("default");
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   useEffect(() => {
     void fetch("/api/elite-view")
       .then((r) => (r.ok ? r.json() : null))
-      .then((v: { verticalFovDeg?: number | null } | null) => setFov(v?.verticalFovDeg ?? null))
+      .then((v: { verticalFovDeg?: number | null; hudMatrix?: HudColourMatrix | null; hudColour?: HudColourSupport } | null) => {
+        setFov(v?.verticalFovDeg ?? null);
+        // Owner 2026-11-06: a commander's custom HUD colour was not read. Only colours the inverse can undo are read.
+        setHudRecolour(v?.hudColour === "undo" && v.hudMatrix ? invertHudMatrix(v.hudMatrix) : null);
+        setColour(v?.hudColour ?? "default");
+      })
       .catch(() => setFov(null));
     const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
-  return viewOf(size.w, size.h, fov);
+  return { view: viewOf(size.w, size.h, fov), colour };
 }
 
 function Marker({ s, open }: { s: ScreenMark; open: boolean }) {
@@ -288,7 +299,7 @@ function Aim() {
   const map = !MARKS ? null : (DEMO ?? glidedMap(live.glide, Date.now()));
   // Near a planet in the ship (the first scan needs the pitch too, before there is any mark).
   const reader = usePitchReader(MARKS && !DEMO && live.reader && live.glide?.map.altitudeM != null);
-  const baseView = useView();
+  const { view: baseView, colour } = useView();
   // The page's own reading (held when frames go unread) over the server's echo of it (no round trip), and the screen's measured
   // pixels per degree over the one worked out from the settings' field of view.
   const own = reader.kind === "read" && reader.last ? reader.last : null;
@@ -314,7 +325,7 @@ function Aim() {
       {marks.map((s, i) => (
         <Marker key={i} s={s} open={s === open} />
       ))}
-      <ReaderLine s={reader} view={view} />
+      <ReaderLine s={reader} view={view} colour={colour} />
       {map?.clearArmed ? (
         <text className="aim-clear" x={view.width / 2} y={view.height * 0.66 + 24} textAnchor="middle">
           {`Press again to clear ${map.clearArmed} mark${map.clearArmed === 1 ? "" : "s"} on this planet`}
