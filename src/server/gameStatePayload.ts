@@ -13,48 +13,70 @@ import { JOURNAL_MERGE_CACHE_FORMAT, type JournalMergeCachePayload } from "./jou
 import { internParents, shareScanLists } from "./intern.js";
 import type { GameStateStore } from "./gameState.js";
 
+/*
+  The store's Map and Set fields the cache carries as they are, one line each (code review C8): resetAll clears them,
+  serialize writes their entries / values, hydrate puts them back. A new journal Map or Set needs only its line here and
+  a JOURNAL_MERGE_CACHE_FORMAT bump (tests/cacheRoundTripComplete.test.ts fails on a field left out). Fields read back
+  with checks or copies (systemVisitedAt, nspSeen, fssDiscoveryScanBySystem, the sold totals, systemPositions, ...)
+  stay written out below.
+*/
+export const CACHED_MAPS = [
+  "visitedSystems",
+  "bodies",
+  "explorationScans",
+  "soldExplorationScans",
+  "dssFirstMapperEligibleByBodyKey",
+  "dssMappingEfficientByBodyKey",
+  "orbitParentPlanetByBody",
+  "organicAnalyseByKey",
+  "bodyDetailedFootfallState",
+  "bodyFootfallFlag",
+  "bodyMappedFlag",
+  "codexRegionBySystem",
+  "organicRunStartedAt",
+  "codexSightings",
+  "achievementDone",
+  "greenCodexBodies",
+  "systemLife",
+] as const satisfies readonly (keyof GameStateStore & keyof JournalMergeCachePayload)[];
+
+export const CACHED_SETS = [
+  "soldBodyKeys",
+  "fssBodySignalsBodyKeys",
+  "dssMappedBodyKeys",
+  "archivedDssMappedBodyKeys",
+  "firstFootfallBodies",
+  "codexLoggedSpecies",
+  "codexRegionLogged",
+  "codexMapLogged",
+  "k10Systems",
+  "fssAllBodiesCompleteSystems",
+] as const satisfies readonly (keyof GameStateStore & keyof JournalMergeCachePayload)[];
+
+type AnyMap = Map<unknown, unknown>;
+type AnySet = Set<unknown>;
+
 /** Journal replay snapshot for disk cache (`format` must match {@link JOURNAL_MERGE_CACHE_FORMAT}). */
 export function serializeJournalMergePayload(store: GameStateStore): JournalMergeCachePayload {
+  const kept: Record<string, unknown[]> = {};
+  for (const k of CACHED_MAPS) kept[k] = [...(store[k] as AnyMap).entries()];
+  for (const k of CACHED_SETS) kept[k] = [...(store[k] as AnySet)];
   return {
+    ...(kept as Pick<JournalMergeCachePayload, (typeof CACHED_MAPS)[number] | (typeof CACHED_SETS)[number]>),
     format: JOURNAL_MERGE_CACHE_FORMAT,
     commanderName: store.commanderName,
     commanderFid: store.commanderFid,
     currentSystem: store.currentSystem,
     currentSystemAddress: store.currentSystemAddress,
     viewingSystemAddress: store.viewingSystemAddress,
-    visitedSystems: [...store.visitedSystems.entries()],
     systemVisitedAt: [...store.systemVisitedAt.entries()],
     systemStarClass: [...store.systemStarClass.entries()],
     targetedSystems: [...store.targetedSystems.entries()].map(([a, t]) => [a, t.name, t.starClass]),
-    bodies: [...store.bodies.entries()],
-    explorationScans: [...store.explorationScans.entries()],
-    soldExplorationScans: [...store.soldExplorationScans.entries()],
-    soldBodyKeys: [...store.soldBodyKeys],
-    fssBodySignalsBodyKeys: [...store.fssBodySignalsBodyKeys],
-    dssMappedBodyKeys: [...store.dssMappedBodyKeys],
-    archivedDssMappedBodyKeys: [...store.archivedDssMappedBodyKeys],
-    dssFirstMapperEligibleByBodyKey: [...store.dssFirstMapperEligibleByBodyKey.entries()],
-    dssMappingEfficientByBodyKey: [...store.dssMappingEfficientByBodyKey.entries()],
-    orbitParentPlanetByBody: [...store.orbitParentPlanetByBody.entries()],
     lastEventIso: store.lastEventIso,
     footJournalContextBuffer: store.footJournalContextBuffer.slice(),
-    organicAnalyseByKey: [...store.organicAnalyseByKey.entries()],
-    bodyDetailedFootfallState: [...store.bodyDetailedFootfallState.entries()],
     commanderPos: store.commanderPos,
-    bodyFootfallFlag: [...store.bodyFootfallFlag.entries()],
-    bodyMappedFlag: [...store.bodyMappedFlag.entries()],
-    firstFootfallBodies: [...store.firstFootfallBodies],
-    codexLoggedSpecies: [...store.codexLoggedSpecies],
-    codexRegionLogged: [...store.codexRegionLogged],
-    codexRegionBySystem: [...store.codexRegionBySystem.entries()],
-    organicRunStartedAt: [...store.organicRunStartedAt.entries()],
     fsdTarget: store.fsdTarget,
     lastJumpTarget: store.lastJumpTarget,
-    codexMapLogged: [...store.codexMapLogged],
-    codexSightings: [...store.codexSightings],
-    achievementDone: [...store.achievementDone],
-    greenCodexBodies: [...store.greenCodexBodies],
-    k10Systems: [...store.k10Systems],
     nspSeen: [...store.nspSeen],
     landingMinutesSamples: [...store.landingMinutesSamples],
     samplingMinutesSamples: [...store.samplingMinutesSamples],
@@ -64,8 +86,6 @@ export function serializeJournalMergePayload(store: GameStateStore): JournalMerg
     currentBodyKey: store.currentBodyKey,
     shipFlight: store.shipFlight,
     shipEventMs: store.shipEventMs,
-    fssAllBodiesCompleteSystems: [...store.fssAllBodiesCompleteSystems],
-    systemLife: [...store.systemLife.entries()],
     fssDiscoveryScanBySystem: [...store.fssDiscoveryScanBySystem.entries()],
     fssAllBodiesFoundCountBySystem: [...store.fssAllBodiesFoundCountBySystem.entries()],
     soldExplorationBySystem: [...store.soldExplorationBySystem.entries()],
@@ -119,13 +139,14 @@ export function hydrateJournalMergePayload(store: GameStateStore, data: JournalM
     return false;
   }
   store.resetAll();
+  for (const k of CACHED_MAPS) for (const [key, v] of (data[k] ?? []) as [unknown, unknown][]) (store[k] as AnyMap).set(key, v);
+  for (const k of CACHED_SETS) for (const v of (data[k] ?? []) as unknown[]) (store[k] as AnySet).add(v);
   store.commanderName = data.commanderName;
   store.commanderFid = data.commanderFid ?? null;
   store.currentSystem = data.currentSystem;
   store.currentSystemAddress = data.currentSystemAddress;
   store.viewingSystemAddress = data.viewingSystemAddress;
   store.lastEventIso = data.lastEventIso;
-  for (const [addr, name] of data.visitedSystems) store.visitedSystems.set(addr, name);
   store.systemVisitedAt.clear();
   for (const [a, t] of data.systemVisitedAt ?? []) if (typeof a === "number" && typeof t === "string") store.systemVisitedAt.set(a, t);
   store.systemStarClass.clear();
@@ -134,42 +155,18 @@ export function hydrateJournalMergePayload(store: GameStateStore, data: JournalM
   for (const [a, n, c] of data.targetedSystems ?? [])
     if (typeof a === "number" && typeof n === "string") store.targetedSystems.set(a, { name: n, starClass: typeof c === "string" ? c : "" });
   store.visitedSystemNames = null;
-  for (const [k, v] of data.bodies) store.bodies.set(k, v);
   store.bodyKeysBySystem = null;
   store.confirmedVariantsRevision += 1;
-  for (const [k, v] of data.explorationScans) store.explorationScans.set(k, v);
-  for (const [k, v] of data.soldExplorationScans ?? []) store.soldExplorationScans.set(k, v);
-  for (const k of data.soldBodyKeys ?? []) store.soldBodyKeys.add(k);
   // One copy of each list again: the cache wrote the body scans' and the records' lists apart (intern.ts).
   for (const m of [store.explorationScans, store.soldExplorationScans]) for (const r of m.values()) internParents(r.parents);
   shareScanLists(store.bodies, (k) => store.explorationScans.get(k) ?? store.soldExplorationScans.get(k));
   store.explorationScansRevision += 1;
-  for (const k of data.fssBodySignalsBodyKeys) store.fssBodySignalsBodyKeys.add(k);
-  for (const k of data.dssMappedBodyKeys) store.dssMappedBodyKeys.add(k);
-  for (const k of data.archivedDssMappedBodyKeys ?? []) store.archivedDssMappedBodyKeys.add(k);
-  for (const [k, v] of data.dssFirstMapperEligibleByBodyKey) store.dssFirstMapperEligibleByBodyKey.set(k, v);
-  for (const [k, v] of data.dssMappingEfficientByBodyKey) store.dssMappingEfficientByBodyKey.set(k, v);
-  for (const [k, v] of data.orbitParentPlanetByBody) store.orbitParentPlanetByBody.set(k, v);
   store.orbitParentRevision += 1;
   store.footJournalContextBuffer.length = 0;
   store.footJournalContextBuffer.push(...data.footJournalContextBuffer);
-  for (const [k, v] of data.organicAnalyseByKey) store.organicAnalyseByKey.set(k, v);
-  for (const [k, v] of data.bodyDetailedFootfallState) store.bodyDetailedFootfallState.set(k, v);
   store.commanderPos = data.commanderPos ?? null;
-  for (const [k, v] of data.bodyFootfallFlag ?? []) store.bodyFootfallFlag.set(k, v);
-  for (const [k, v] of data.bodyMappedFlag ?? []) store.bodyMappedFlag.set(k, v);
-  for (const k of data.firstFootfallBodies) store.firstFootfallBodies.add(k);
-  for (const k of data.codexLoggedSpecies ?? []) store.codexLoggedSpecies.add(k);
-  for (const k of data.codexRegionLogged ?? []) store.codexRegionLogged.add(k);
-  for (const [k, r] of data.codexRegionBySystem ?? []) store.codexRegionBySystem.set(k, r);
-  for (const [k, t] of data.organicRunStartedAt ?? []) store.organicRunStartedAt.set(k, t);
   store.fsdTarget = data.fsdTarget ?? null;
   store.lastJumpTarget = data.lastJumpTarget ?? null;
-  for (const k of data.codexMapLogged ?? []) store.codexMapLogged.add(k);
-  for (const [k, t] of data.codexSightings ?? []) store.codexSightings.set(k, t);
-  for (const [k, t] of data.achievementDone ?? []) store.achievementDone.set(k, t);
-  for (const [k, id] of data.greenCodexBodies ?? []) store.greenCodexBodies.set(k, id);
-  for (const a of data.k10Systems ?? []) store.k10Systems.add(a);
   for (const [a, names] of data.nspSeen ?? []) store.nspSeen.set(a, [...names]);
   store.landingMinutesSamples.push(...(data.landingMinutesSamples ?? []));
   store.samplingMinutesSamples.push(...(data.samplingMinutesSamples ?? []));
@@ -192,8 +189,6 @@ export function hydrateJournalMergePayload(store: GameStateStore, data: JournalM
   store.currentBodyKey = data.currentBodyKey ?? null;
   store.shipFlight = data.shipFlight ?? "unknown";
   store.shipEventMs = data.shipEventMs ?? 0;
-  for (const addr of data.fssAllBodiesCompleteSystems) store.fssAllBodiesCompleteSystems.add(addr);
-  for (const [addr, life] of data.systemLife ?? []) store.systemLife.set(addr, life);
   for (const [addr, row] of data.fssDiscoveryScanBySystem) {
     store.fssDiscoveryScanBySystem.set(addr, { ...row });
   }

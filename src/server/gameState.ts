@@ -1402,12 +1402,11 @@ export class GameStateStore {
    * DSS physical slack percents are user prefs and are intentionally preserved.
    */
   resetAll(): void {
-    this.bodies.clear();
+    // The journal Maps and Sets the cache carries, from its one table (gameStatePayload.ts CACHED_MAPS / CACHED_SETS).
+    for (const k of journalPayload.CACHED_MAPS) this[k].clear();
+    for (const k of journalPayload.CACHED_SETS) this[k].clear();
     this.bodyKeysBySystem = null;
     this.confirmedVariantsRevision += 1;
-    this.explorationScans.clear();
-    this.soldExplorationScans.clear();
-    this.soldBodyKeys.clear();
     this.explorationScansRevision += 1;
     this.edsmExplorationByKey.clear();
     this.commanderName = null;
@@ -1416,45 +1415,22 @@ export class GameStateStore {
     this.currentSystemAddress = null;
     this.commanderPos = null;
     this.viewingSystemAddress = null;
-    this.visitedSystems.clear();
     this.systemVisitedAt.clear();
     this.systemStarClass.clear();
     this.targetedSystems.clear();
     this.visitedSystemNames = null;
     this.lastEventIso = null;
-    this.organicAnalyseByKey.clear();
-    this.bodyDetailedFootfallState.clear();
-    this.bodyFootfallFlag.clear();
-    this.bodyMappedFlag.clear();
-    this.firstFootfallBodies.clear();
-    this.codexLoggedSpecies.clear();
-    this.codexRegionLogged.clear();
-    this.codexMapLogged.clear();
-    this.codexSightings.clear();
-    this.achievementDone.clear();
-    this.codexRegionBySystem.clear();
-    this.greenCodexBodies.clear();
     this.greenCodexMatcher.clear();
-    this.k10Systems.clear();
     this.nspSeen.clear();
     this.landingMinutesSamples.length = 0;
     this.samplingMinutesSamples.length = 0;
     this.scExitAt = null;
-    this.organicRunStartedAt.clear();
     this.pendingOrganicSales = [];
-    this.fssAllBodiesCompleteSystems.clear();
-    this.systemLife.clear();
     this.fssAllBodiesFoundCountBySystem.clear();
     this.soldExplorationBySystem.clear();
     this.soldOrganicBySystem.clear();
     this.fssDiscoveryScanBySystem.clear();
-    this.orbitParentPlanetByBody.clear();
     this.orbitParentRevision += 1;
-    this.dssMappedBodyKeys.clear();
-    this.archivedDssMappedBodyKeys.clear();
-    this.dssFirstMapperEligibleByBodyKey.clear();
-    this.dssMappingEfficientByBodyKey.clear();
-    this.fssBodySignalsBodyKeys.clear();
     this.footJournalContextBuffer.length = 0;
     this.pendingUiAutoSelectBodyKey = null;
     this.uiSelectedBodyKey = null;
