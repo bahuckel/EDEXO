@@ -31,11 +31,13 @@ export interface ColourStarNever {
   expected: number;
   /** The species' EDDN-year bodies. */
   speciesBodies: number;
+  /** Its bodies the year has under this class (absent: none); the 2026-10-29 cut kept a few (whole-year table). */
+  seen?: number;
 }
 
 let cache: {
   root: string;
-  bySpecies: Map<string, Map<string, { expected: number; speciesBodies: number }>>;
+  bySpecies: Map<string, Map<string, { expected: number; speciesBodies: number; seen?: number }>>;
 } | null = null;
 let rootOverride: string | null = null;
 
@@ -50,18 +52,18 @@ export function clearColourStarNeverCache(): void {
 
 function table(root: string) {
   if (cache?.root === root) return cache.bySpecies;
-  const bySpecies = new Map<string, Map<string, { expected: number; speciesBodies: number }>>();
+  const bySpecies = new Map<string, Map<string, { expected: number; speciesBodies: number; seen?: number }>>();
   try {
     const p = path.join(root, "data", "exomastery", "colour-star-never.json");
     if (existsSync(p)) {
       const j = JSON.parse(readFileSync(p, "utf8")) as {
-        species?: Record<string, Record<string, { expected?: number; speciesBodies?: number }>>;
+        species?: Record<string, Record<string, { expected?: number; speciesBodies?: number; seen?: number }>>;
       };
       for (const [id, classes] of Object.entries(j.species ?? {})) {
-        const m = new Map<string, { expected: number; speciesBodies: number }>();
+        const m = new Map<string, { expected: number; speciesBodies: number; seen?: number }>();
         for (const [cls, v] of Object.entries(classes)) {
           if (typeof v?.expected === "number" && typeof v.speciesBodies === "number") {
-            m.set(cls, { expected: v.expected, speciesBodies: v.speciesBodies });
+            m.set(cls, { expected: v.expected, speciesBodies: v.speciesBodies, ...(typeof v.seen === "number" && v.seen > 0 ? { seen: v.seen } : {}) });
           }
         }
         if (m.size) bySpecies.set(id, m);

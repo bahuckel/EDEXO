@@ -1,321 +1,406 @@
 {
  "formatVersion": 1,
- "builtAt": "2026-10-16",
- "source": "EDDN year (EDGalaxyData archive), each species logged on the exact body; colour star = the app's colourStarTypeFor (brightest star in the body's sky). Built by docs/perf/build_colour_star_never.py. 1.2.19: pairs from 10 expected and species from 100 bodies, none in hold-outs A / B / D.",
+ "builtAt": "2026-11-06",
+ "source": "Whole EDDN year (EDGalaxyData archive, 713k bodies), each species logged on the exact body, none in hold-out D either; colour star = the app's colourStarTypeFor (brightest star in the body's sky). Built by docs/perf/build_colour_star_never.py.",
  "minExpected": 10,
  "species": {
   "aleoida_aleoida_arcus": {
    "G": {
-    "expected": 456.3,
-    "speciesBodies": 2917
+    "expected": 1511.9,
+    "speciesBodies": 10312
    }
   },
   "aleoida_aleoida_coronamus": {
    "G": {
-    "expected": 457.7,
-    "speciesBodies": 2926
+    "expected": 1851.2,
+    "speciesBodies": 12626,
+    "seen": 1
    }
   },
   "aleoida_aleoida_gravis": {
    "G": {
-    "expected": 188.7,
-    "speciesBodies": 1206
+    "expected": 877.5,
+    "speciesBodies": 5985
    }
   },
   "aleoida_aleoida_laminiae": {
    "G": {
-    "expected": 385.9,
-    "speciesBodies": 2579
+    "expected": 1365.1,
+    "speciesBodies": 9690
    }
   },
   "aleoida_aleoida_spica": {
    "G": {
-    "expected": 190.2,
-    "speciesBodies": 1271
+    "expected": 940.8,
+    "speciesBodies": 6678
    }
   },
   "cactoida_cactoida_pullulanta": {
    "K": {
-    "expected": 425.2,
-    "speciesBodies": 1483
+    "expected": 1317.8,
+    "speciesBodies": 5120,
+    "seen": 3
    }
   },
   "cactoida_cactoida_vermis": {
    "B": {
-    "expected": 77.3,
-    "speciesBodies": 2336
+    "expected": 265.1,
+    "speciesBodies": 6677,
+    "seen": 1
+   }
+  },
+  "clypeus_clypeus_lacrimam": {
+   "TTS": {
+    "expected": 12.0,
+    "speciesBodies": 10354
+   }
+  },
+  "clypeus_clypeus_margaritus": {
+   "TTS": {
+    "expected": 21.8,
+    "speciesBodies": 6828
+   }
+  },
+  "clypeus_clypeus_speculumi": {
+   "L": {
+    "expected": 10.5,
+    "speciesBodies": 3670
+   }
+  },
+  "concha_concha_aureolas": {
+   "T": {
+    "expected": 10.8,
+    "speciesBodies": 9578
+   },
+   "TTS": {
+    "expected": 11.7,
+    "speciesBodies": 9578
+   }
+  },
+  "concha_concha_biconcavis": {
+   "L": {
+    "expected": 12.6,
+    "speciesBodies": 607
    }
   },
   "concha_concha_labiata": {
    "TTS": {
-    "expected": 30.1,
-    "speciesBodies": 11154
+    "expected": 48.8,
+    "speciesBodies": 27415
    }
   },
   "crystalline_shards_crystalline_shards": {
    "B": {
-    "expected": 39.4,
-    "speciesBodies": 1873
+    "expected": 23.5,
+    "speciesBodies": 2020
    },
    "TTS": {
-    "expected": 14.9,
-    "speciesBodies": 1873
+    "expected": 10.9,
+    "speciesBodies": 2020
    }
   },
   "electricae_electricae_pluma": {
    "F": {
-    "expected": 46.5,
-    "speciesBodies": 1731
+    "expected": 100.9,
+    "speciesBodies": 3881
    },
    "G": {
-    "expected": 78.1,
-    "speciesBodies": 1731
+    "expected": 169.2,
+    "speciesBodies": 3881
    },
    "TTS": {
-    "expected": 14.3,
-    "speciesBodies": 1731
+    "expected": 32.9,
+    "speciesBodies": 3881
    }
   },
   "fonticulua_fonticulua_campestris": {
    "H": {
-    "expected": 20.5,
-    "speciesBodies": 30022
+    "expected": 30.2,
+    "speciesBodies": 52172
    }
   },
   "frutexa_frutexa_collum": {
    "A": {
-    "expected": 43.0,
-    "speciesBodies": 562
+    "expected": 72.9,
+    "speciesBodies": 1134
    },
    "K": {
-    "expected": 147.6,
-    "speciesBodies": 562
+    "expected": 296.4,
+    "speciesBodies": 1134
    }
   },
   "frutexa_frutexa_fera": {
    "A": {
-    "expected": 229.5,
-    "speciesBodies": 2987
+    "expected": 368.9,
+    "speciesBodies": 7014
    }
   },
   "frutexa_frutexa_sponsae": {
    "A": {
-    "expected": 346.8,
-    "speciesBodies": 1299
+    "expected": 761.4,
+    "speciesBodies": 3299,
+    "seen": 1
    }
   },
   "osseus_osseus_cornibus": {
    "N": {
-    "expected": 55.1,
-    "speciesBodies": 1889
+    "expected": 97.5,
+    "speciesBodies": 5111
    }
   },
   "osseus_osseus_pellebantus": {
    "M": {
-    "expected": 160.7,
-    "speciesBodies": 1225
+    "expected": 541.1,
+    "speciesBodies": 4772,
+    "seen": 1
    },
    "N": {
-    "expected": 35.7,
-    "speciesBodies": 1225
+    "expected": 91.1,
+    "speciesBodies": 4772
    }
   },
   "osseus_osseus_spiralis": {
-   "N": {
-    "expected": 288.3,
-    "speciesBodies": 12329
-   }
-  },
-  "stratum_stratum_araneamus": {
-   "F": {
-    "expected": 1005.1,
-    "speciesBodies": 3177
-   },
-   "G": {
-    "expected": 270.1,
-    "speciesBodies": 3177
-   },
-   "L": {
-    "expected": 15.4,
-    "speciesBodies": 3177
-   },
-   "TTS": {
-    "expected": 12.7,
-    "speciesBodies": 3177
-   }
-  },
-  "stratum_stratum_cucumisis": {
-   "N": {
-    "expected": 147.1,
-    "speciesBodies": 3451
-   }
-  },
-  "stratum_stratum_excutitus": {
-   "G": {
-    "expected": 712.1,
-    "speciesBodies": 3888
-   }
-  },
-  "stratum_stratum_frigus": {
-   "A": {
-    "expected": 89.7,
-    "speciesBodies": 811
-   },
-   "G": {
-    "expected": 147.8,
-    "speciesBodies": 811
+   "D": {
+    "expected": 16.6,
+    "speciesBodies": 38043
    },
    "N": {
-    "expected": 34.6,
-    "speciesBodies": 811
-   }
-  },
-  "stratum_stratum_laminamus": {
-   "A": {
-    "expected": 110.7,
-    "speciesBodies": 1034
-   },
-   "G": {
-    "expected": 226.5,
-    "speciesBodies": 1034
-   },
-   "N": {
-    "expected": 27.5,
-    "speciesBodies": 1034
-   }
-  },
-  "stratum_stratum_limaxus": {
-   "G": {
-    "expected": 469.4,
-    "speciesBodies": 2558
-   },
-   "N": {
-    "expected": 109.7,
-    "speciesBodies": 2558
-   },
-   "B": {
-    "expected": 17.2,
-    "speciesBodies": 2558
-   }
-  },
-  "stratum_stratum_paleas": {
-   "B": {
-    "expected": 57.2,
-    "speciesBodies": 17590
-   },
-   "G": {
-    "expected": 3663.3,
-    "speciesBodies": 17590
-   }
-  },
-  "stratum_stratum_tectonicas": {
-   "B": {
-    "expected": 51.0,
-    "speciesBodies": 52275
-   }
-  },
-  "tussock_tussock_cultro": {
-   "TTS": {
-    "expected": 21.5,
-    "speciesBodies": 7058
-   }
-  },
-  "tussock_tussock_divisa": {
-   "A": {
-    "expected": 291.5,
-    "speciesBodies": 4174
-   },
-   "TTS": {
-    "expected": 12.7,
-    "speciesBodies": 4174
-   }
-  },
-  "tussock_tussock_ignis": {
-   "TTS": {
-    "expected": 22.6,
-    "speciesBodies": 8380
-   },
-   "B": {
-    "expected": 11.8,
-    "speciesBodies": 8380
-   }
-  },
-  "tussock_tussock_pennata": {
-   "A": {
-    "expected": 69.8,
-    "speciesBodies": 1174
-   }
-  },
-  "tussock_tussock_pennatis": {
-   "A": {
-    "expected": 331.0,
-    "speciesBodies": 5565
-   },
-   "TTS": {
-    "expected": 15.0,
-    "speciesBodies": 5565
-   }
-  },
-  "tussock_tussock_propagito": {
-   "B": {
-    "expected": 20.4,
-    "speciesBodies": 14448
-   },
-   "TTS": {
-    "expected": 39.0,
-    "speciesBodies": 14448
-   }
-  },
-  "tussock_tussock_stigmasis": {
-   "A": {
-    "expected": 66.2,
-    "speciesBodies": 866
-   }
-  },
-  "tussock_tussock_ventusa": {
-   "A": {
-    "expected": 149.2,
-    "speciesBodies": 2509
-   }
-  },
-  "tussock_tussock_virgam": {
-   "A": {
-    "expected": 436.9,
-    "speciesBodies": 2387
-   },
-   "B": {
-    "expected": 79.4,
-    "speciesBodies": 2387
-   }
-  },
-  "brain_trees_brain_tree_ostrinum": {
-   "N": {
-    "expected": 11.7,
-    "speciesBodies": 461
+    "expected": 615.8,
+    "speciesBodies": 38043
    }
   },
   "sinuous_tuber_sinuous_tubers_caeruleum": {
    "O": {
-    "expected": 17.8,
-    "speciesBodies": 511
+    "expected": 14.6,
+    "speciesBodies": 545
+   }
+  },
+  "stratum_stratum_araneamus": {
+   "F": {
+    "expected": 1348.0,
+    "speciesBodies": 4207
+   },
+   "G": {
+    "expected": 342.5,
+    "speciesBodies": 4207
+   },
+   "L": {
+    "expected": 24.1,
+    "speciesBodies": 4207
+   },
+   "TTS": {
+    "expected": 14.9,
+    "speciesBodies": 4207
+   }
+  },
+  "stratum_stratum_cucumisis": {
+   "N": {
+    "expected": 161.3,
+    "speciesBodies": 6232
+   }
+  },
+  "stratum_stratum_excutitus": {
+   "B": {
+    "expected": 30.8,
+    "speciesBodies": 10816
+   },
+   "G": {
+    "expected": 1936.6,
+    "speciesBodies": 10816
+   }
+  },
+  "stratum_stratum_frigus": {
+   "A": {
+    "expected": 97.3,
+    "speciesBodies": 1414
+   },
+   "G": {
+    "expected": 250.2,
+    "speciesBodies": 1414
+   },
+   "N": {
+    "expected": 36.6,
+    "speciesBodies": 1414
+   }
+  },
+  "stratum_stratum_laminamus": {
+   "A": {
+    "expected": 347.7,
+    "speciesBodies": 4279,
+    "seen": 1
+   },
+   "G": {
+    "expected": 893.6,
+    "speciesBodies": 4279,
+    "seen": 2
+   },
+   "N": {
+    "expected": 85.0,
+    "speciesBodies": 4279
+   }
+  },
+  "stratum_stratum_limaxus": {
+   "B": {
+    "expected": 17.2,
+    "speciesBodies": 6036
+   },
+   "G": {
+    "expected": 1081.7,
+    "speciesBodies": 6036
+   },
+   "N": {
+    "expected": 158.1,
+    "speciesBodies": 6036
+   }
+  },
+  "stratum_stratum_paleas": {
+   "B": {
+    "expected": 127.3,
+    "speciesBodies": 46040,
+    "seen": 1
+   },
+   "G": {
+    "expected": 8851.0,
+    "speciesBodies": 46040,
+    "seen": 3
+   }
+  },
+  "stratum_stratum_tectonicas": {
+   "B": {
+    "expected": 56.5,
+    "speciesBodies": 104863,
+    "seen": 1
    }
   },
   "tussock_tussock_albata": {
    "TTS": {
-    "expected": 12.2,
-    "speciesBodies": 4502
+    "expected": 24.2,
+    "speciesBodies": 13588
+   }
+  },
+  "tussock_tussock_capillum": {
+   "A": {
+    "expected": 16.0,
+    "speciesBodies": 6984
+   },
+   "TTS": {
+    "expected": 15.7,
+    "speciesBodies": 6984
    }
   },
   "tussock_tussock_caputus": {
    "TTS": {
-    "expected": 11.0,
-    "speciesBodies": 4059
+    "expected": 24.1,
+    "speciesBodies": 13558
    }
   },
   "tussock_tussock_catena": {
    "TTS": {
-    "expected": 12.9,
-    "speciesBodies": 4234
+    "expected": 30.2,
+    "speciesBodies": 12740
+   }
+  },
+  "tussock_tussock_cultro": {
+   "TTS": {
+    "expected": 54.9,
+    "speciesBodies": 23185
+   }
+  },
+  "tussock_tussock_divisa": {
+   "A": {
+    "expected": 608.4,
+    "speciesBodies": 11384
+   },
+   "TTS": {
+    "expected": 26.9,
+    "speciesBodies": 11384
+   }
+  },
+  "tussock_tussock_ignis": {
+   "A": {
+    "expected": 929.3,
+    "speciesBodies": 22328
+   },
+   "B": {
+    "expected": 13.6,
+    "speciesBodies": 22328
+   },
+   "TTS": {
+    "expected": 39.8,
+    "speciesBodies": 22328
+   }
+  },
+  "tussock_tussock_pennata": {
+   "A": {
+    "expected": 191.0,
+    "speciesBodies": 4588
+   }
+  },
+  "tussock_tussock_pennatis": {
+   "A": {
+    "expected": 539.9,
+    "speciesBodies": 12973
+   },
+   "TTS": {
+    "expected": 23.1,
+    "speciesBodies": 12973
+   }
+  },
+  "tussock_tussock_propagito": {
+   "B": {
+    "expected": 18.9,
+    "speciesBodies": 31064
+   },
+   "TTS": {
+    "expected": 55.3,
+    "speciesBodies": 31064
+   }
+  },
+  "tussock_tussock_serrati": {
+   "TTS": {
+    "expected": 17.2,
+    "speciesBodies": 9680
+   }
+  },
+  "tussock_tussock_stigmasis": {
+   "A": {
+    "expected": 150.7,
+    "speciesBodies": 2345,
+    "seen": 2
+   },
+   "B": {
+    "expected": 11.5,
+    "speciesBodies": 2345
+   },
+   "TTS": {
+    "expected": 11.5,
+    "speciesBodies": 2345
+   }
+  },
+  "tussock_tussock_ventusa": {
+   "A": {
+    "expected": 314.9,
+    "speciesBodies": 7567,
+    "seen": 1
+   },
+   "TTS": {
+    "expected": 13.5,
+    "speciesBodies": 7567
+   }
+  },
+  "tussock_tussock_virgam": {
+   "A": {
+    "expected": 1102.7,
+    "speciesBodies": 6728
+   },
+   "B": {
+    "expected": 268.3,
+    "speciesBodies": 6728,
+    "seen": 1
+   },
+   "TTS": {
+    "expected": 11.5,
+    "speciesBodies": 6728
    }
   }
  }

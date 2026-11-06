@@ -33,7 +33,9 @@ describe("soft_max_semi_major_axis_ls", () => {
     PlanetClass: "Rocky body",
     Atmosphere: "thin carbon dioxide atmosphere",
     AtmosphereType: "CarbonDioxide",
-    SurfaceGravity: 0.1 * 9.80665,
+    // Labiata's own gravity on wide orbits (EDDN year, 695 bodies at 18 ls or more: median 0.059 g). At 0.1 g a body
+    // past 18 ls falls inside a measured never (2026-11-06 whole-year table), which is not what these cases test.
+    SurfaceGravity: 0.06 * 9.80665,
     SurfaceTemperature: 170,
     SurfacePressure: 1000,
     Landable: true,

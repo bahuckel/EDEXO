@@ -57,6 +57,8 @@ export interface MeasuredExclusion {
   when: Condition[];
   speciesBodies: number;
   expected: number;
+  /** Bodies of the species the EDDN year has inside the rule (absent: none); the 2026-10-29 cut kept a few. */
+  seen?: number;
 }
 
 let cache: { root: string; bySpecies: Map<string, MeasuredExclusion[]> } | null = null;

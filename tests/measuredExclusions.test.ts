@@ -100,6 +100,21 @@ describe("in the matcher", () => {
     const b = matchDatabaseToScan(db, close, null, null, { includeBacterium: true, matchContext: ctx });
     expect(shownSpeciesMatches(b.matches)).toHaveLength(1);
   });
+
+  it("says how few grew there when the year has a find or two inside (2026-11-06 whole-year table)", () => {
+    writeFileSync(
+      path.join(root, "data", "exomastery", "measured-exclusions.json"),
+      JSON.stringify({
+        formatVersion: 1,
+        species: { concha_concha_aureolas: [{ when: [{ value: "sma_ls", op: ">=", is: 19.945804 }], speciesBodies: 9578, expected: 774.6, seen: 1 }] },
+      }),
+    );
+    setMeasuredExclusionsRootForTests(root);
+    const wide = { PlanetClass: "Rocky body", Landable: true, SemiMajorAxis: 25 * 299_792_458 } as unknown as PlanetScan;
+    const a = matchDatabaseToScan(db, wide, null, null, { includeBacterium: true, matchContext: ctx });
+    expect(a.matches[0]!.unlikelyReasons?.[0]?.detail).toMatch(/only 1 of its 9,578 bodies .* where about 775 would be expected/);
+    expect(a.matches[0]!.unlikelyReasons?.[0]?.detail).not.toMatch(/none of its/);
+  });
 });
 
 describe("1.2.19: pressure, gases and materials in the rules", () => {
