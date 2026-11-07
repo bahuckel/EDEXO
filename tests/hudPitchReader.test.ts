@@ -6,7 +6,16 @@
  * real table (hudPitchGlyphs.ts) is measured against real captures.
  */
 import { describe, expect, it } from "vitest";
-import { findPitchBoxes, glyphVector, readHudHeading, readHudPitch, type HudGlyphs } from "../src/shared/hudPitchReader.js";
+import {
+  discoverPitchColours,
+  findPitchBoxes,
+  glyphVector,
+  readHudHeading,
+  readHudPitch,
+  readHudPitchAnyColour,
+  type HudGlyphs,
+} from "../src/shared/hudPitchReader.js";
+import { lookFromColour, type Rgb } from "../src/shared/hudTextLook.js";
 import { GameStateStore } from "../src/server/gameState.js";
 import { applyLiveFix, setHudPitch } from "../src/server/liveFix.js";
 import { projectMarks, viewOf } from "../src/client/aim/project.js";
@@ -27,22 +36,22 @@ function frame(): Uint8ClampedArray {
   for (let i = 0; i < W * H; i++) f.set([110, 100, 92, 255], i * 4);
   return f;
 }
-const yellow = (f: Uint8ClampedArray, x: number, y: number) => f.set([240, 220, 10, 255], (y * W + x) * 4);
-const dot = (f: Uint8ClampedArray, x: number, y: number) => {
-  for (let sy = 0; sy < S; sy++) for (let sx = 0; sx < S; sx++) yellow(f, x + sx, y + sy);
+const YELLOW_RGB: Rgb = [240, 220, 10];
+const dot = (f: Uint8ClampedArray, x: number, y: number, c: Rgb) => {
+  for (let sy = 0; sy < S; sy++) for (let sx = 0; sx < S; sx++) f.set([...c, 255], ((y + sy) * W + x + sx) * 4);
 };
 
 /** Draw a string ("-10") with its left edge at `x`, centred on `y`. */
-function draw(f: Uint8ClampedArray, text: string, x: number, y: number): void {
+function draw(f: Uint8ClampedArray, text: string, x: number, y: number, c: Rgb = YELLOW_RGB): void {
   const top = Math.round(y - (7 * S) / 2);
   let cx = x;
   for (const ch of text) {
     if (ch === "-") {
-      for (let k = 0; k < 4; k++) dot(f, cx + k * S, top + 3 * S);
+      for (let k = 0; k < 4; k++) dot(f, cx + k * S, top + 3 * S, c);
       cx += 6 * S;
       continue;
     }
-    FONT[ch]!.forEach((row, ry) => [...row].forEach((c, rx) => c === "#" && dot(f, cx + rx * S, top + ry * S)));
+    FONT[ch]!.forEach((row, ry) => [...row].forEach((d, rx) => d === "#" && dot(f, cx + rx * S, top + ry * S, c)));
     cx += 7 * S;
   }
 }
@@ -137,6 +146,64 @@ describe("HUD pitch reader", () => {
     expect(r.boxDeg).toBe(29);
     expect(r.headingDeg).toBeCloseTo(29.4, 0);
     expect(r.pxPerDeg).toBeCloseTo(12, 0);
+  });
+
+  /*
+    A recoloured HUD (owner's EDHM shots, 2026-11-07): grey digits in a green outline, the ladder's labels the same grey
+    but free-standing. Dark ground, as on his planet.
+  */
+  const GREY: Rgb = [150, 150, 150];
+  const GREEN: Rgb = [0, 160, 0];
+  const dark = () => {
+    const f = new Uint8ClampedArray(W * H * 4);
+    for (let i = 0; i < W * H; i++) f.set([25, 15, 15, 255], i * 4);
+    return f;
+  };
+  /** A box: the string in grey, a 2-pixel green outline 8 rows above and below its digits, wider than the string. */
+  function boxed(f: Uint8ClampedArray, text: string, x: number, y: number): void {
+    draw(f, text, x, y, GREY);
+    const top = Math.round(y - (7 * S) / 2);
+    const right = x + text.length * 7 * S;
+    for (const ly of [top - 8, top - 7, top + 7 * S + 6, top + 7 * S + 7])
+      for (let lx = x - 30; lx < right + 10; lx++) f.set([...GREEN, 255], (ly * W + lx) * 4);
+  }
+  /** The font's glyphs cut in the grey's own ink, as the any-colour table is cut. */
+  const ANY: Record<string, number[][]> = Object.fromEntries(
+    Object.keys(FONT).map((d) => {
+      const f = dark();
+      boxed(f, d, 860, 450);
+      boxed(f, d, 1120, 450);
+      const pair = findPitchBoxes(f, W, H, { w: W, h: H }, lookFromColour(GREY), true)!;
+      return [d, [glyphVector(f, W, pair.left.digits[0]!, undefined, undefined, lookFromColour(GREY).ink)]];
+    }),
+  );
+
+  it("reads a recoloured HUD's boxes by their outline, learning the digits' and outline's colours", () => {
+    const f = dark();
+    boxed(f, "-10", 840, 480);
+    boxed(f, "-10", 1120, 480);
+    // The ladder's labels: the same grey, mirrored, nearer the centre line, no outline.
+    draw(f, "-9", 870, 440, GREY);
+    draw(f, "-9", 1100, 440, GREY);
+    expect(readHudPitch(f, W, H, GLYPHS)).toBeNull();
+    const [c] = discoverPitchColours(f, W, H);
+    expect(c!.text[0]).toBeGreaterThan(130);
+    expect(c!.frame[1]).toBeGreaterThan(c!.frame[0] + 100);
+    const r = readHudPitchAnyColour(f, W, H, GLYPHS, ANY)!;
+    expect(r.reading).toMatchObject({ boxDeg: -10, style: "learned" });
+    // The colours learned read the next frame without looking for them again.
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY, { w: W, h: H }, r.colours, false)?.reading.boxDeg).toBe(-10);
+  });
+
+  it("reads no recoloured pair without outlines, and the game's own look as before", () => {
+    const f = dark();
+    draw(f, "-10", 840, 450, GREY);
+    draw(f, "-10", 1120, 450, GREY);
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY)).toBeNull();
+    const g = frame();
+    draw(g, "-10", 840, 450);
+    draw(g, "-10", 1120, 450);
+    expect(readHudPitchAnyColour(g, W, H, GLYPHS, ANY)).toMatchObject({ reading: { boxDeg: -10, style: "yellow" }, colours: null });
   });
 
   it("says not sure for a digit it has no glyph for", () => {

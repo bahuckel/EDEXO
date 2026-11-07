@@ -17,6 +17,9 @@
  * Null when it cannot be sure.
  */
 import { components, glyphVector, matchGlyph, GLYPH_H, GLYPH_W } from "./hudPitchReader.js";
+import { findingLook, lookFromColour, MAX_TEXT_SHARE, sameColour, strokeColour, type Rgb, type TextLook } from "./hudTextLook.js";
+
+export { lookFromColour, type Rgb, type TextLook };
 
 type Rgba = Uint8Array | Uint8ClampedArray;
 interface Rect {
@@ -59,52 +62,14 @@ const isStarPx = (r: number, g: number, b: number) => r > 200 && g > 200 && b > 
  */
 export const distanceInk = (r: number, g: number, b: number) => Math.max(0, Math.min(1, (Math.min(r, g) - b - 60) / 150));
 
-/**
- * How the reader sees the HUD's text: which pixels are text, and how much of a stroke each holds (the glyph images).
- * The game's own HUD is orange; EDHM and the like draw it in any colour, white often (owner 2026-11-06, his EDHM shots:
- * white, light blue, red, lavender target text), so the reader learns the colour from the screen (discoverTextColours)
- * and reads in it (lookFromColour).
- */
-export interface TextLook {
-  isText(r: number, g: number, b: number): boolean;
-  ink(r: number, g: number, b: number): number;
-}
-export type Rgb = readonly [number, number, number];
-
 /** The game's default orange. */
 export const ORANGE_LOOK: TextLook = { isText: isTextPx, ink: distanceInk };
 
-/**
- * Colour-blind, for finding: bright and either coloured or near white. Only where a target line can be is decided by
- * the line's shape (figures, Ls/Mm, the time line under it), never by its colour.
- */
-const findingLook = (bright: number, colourful: number): TextLook => ({
-  isText: (r, g, b) => {
-    const mx = Math.max(r, g, b);
-    const mn = Math.min(r, g, b);
-    return mx >= bright && (mx - mn >= colourful || mn >= bright);
-  },
-  ink: (r, g, b) => Math.max(0, Math.min(1, (Math.max(r, g, b) - 90) / 150)),
-});
 /*
   Strict, then soft: most themes' text stands clear at 170, and lower its glow joins the digits to each other and to
   the stars; EDHM's softer themes (his light blue) have most of their strokes between 120 and 170, found only at 130.
 */
 const FINDING_LOOKS: readonly TextLook[] = [findingLook(170, 90), findingLook(130, 70)];
-
-/**
- * Text in this colour (the strokes' core): a pixel within 28 % of it is text; the ink falls from 1 at the colour to 0
- * at 60 % of its brightness away, so the glow round a stroke counts for little, as the orange ink did. (Matching the
- * colour's hue at lower brightness as well found fewer lines on his EDHM shots: 135 against 170 of 175.)
- */
-export function lookFromColour(c: Rgb): TextLook {
-  const n = Math.hypot(c[0], c[1], c[2]) || 1;
-  const dist = (r: number, g: number, b: number) => Math.hypot(r - c[0], g - c[1], b - c[2]);
-  return {
-    isText: (r, g, b) => dist(r, g, b) <= 0.28 * n,
-    ink: (r, g, b) => Math.max(0, Math.min(1, 1 - dist(r, g, b) / (0.6 * n))),
-  };
-}
 
 /** One line of text as found: its pieces left to right, its baseline and its capitals' height. */
 export interface TextLine {
@@ -162,12 +127,17 @@ function splitJoined(mask: Uint8Array, w: number, c: Rect): Rect[] {
 /** Lines of the HUD's text in a frame: pieces about a character high, on one baseline, close together. */
 export function findTextLines(rgba: Rgba, w: number, h: number, screenH = h, look: TextLook = ORANGE_LOOK): TextLine[] {
   const mask = new Uint8Array(w * h);
+  let marked = 0;
   for (let i = 0, p = 0; i < w * h; i++, p += 4) {
     const r = rgba[p]!;
     const g = rgba[p + 1]!;
     const b = rgba[p + 2]!;
-    if (look.isText(r, g, b) || isStarPx(r, g, b)) mask[i] = 1;
+    if (look.isText(r, g, b) || isStarPx(r, g, b)) {
+      mask[i] = 1;
+      marked++;
+    }
   }
+  if (marked > w * h * MAX_TEXT_SHARE) return [];
   // On the owner's 1440-row screen a digit is 15 px, a small letter 10.
   const minH = Math.max(5, screenH * 0.0055);
   const maxH = screenH * 0.017;
@@ -348,21 +318,8 @@ export function discoverTextColours(rgba: Rgba, w: number, h: number, screenH = 
   const lines = findTextLines(rgba, w, h, screenH, finding);
   for (const l of lines) {
     if (!distanceShaped(l) || !lineUnder(lines, l)) continue;
-    const px: [number, number, number, number][] = [];
-    for (const c of l.pieces)
-      for (let y = c.y0; y <= c.y1; y++)
-        for (let x = c.x0; x <= c.x1; x++) {
-          const i = (y * w + x) * 4;
-          const r = rgba[i]!;
-          const g = rgba[i + 1]!;
-          const b = rgba[i + 2]!;
-          px.push([r + g + b, r, g, b]);
-        }
-    px.sort((a, b) => b[0] - a[0]);
-    const top = px.slice(0, Math.max(3, Math.round(px.length / 10)));
-    const med = (k: 1 | 2 | 3) => top.map((q) => q[k]).sort((a, b) => a - b)[top.length >> 1]!;
-    const c: Rgb = [med(1), med(2), med(3)];
-    if (!out.some((o) => Math.hypot(o[0] - c[0], o[1] - c[1], o[2] - c[2]) < 30)) out.push(c);
+    const c = strokeColour(rgba, w, l.pieces);
+    if (!out.some((o) => sameColour(o, c))) out.push(c);
   }
   }
   return out.sort((a, b) => b[0] + b[1] + b[2] - (a[0] + a[1] + a[2]));
@@ -378,7 +335,7 @@ export const DEFAULT_TEXT_COLOUR: Rgb = [250, 215, 0];
 export function candidateTextColours(rgba: Rgba, w: number, h: number, screenH = h): Rgb[] {
   const found = discoverTextColours(rgba, w, h, screenH);
   const d = DEFAULT_TEXT_COLOUR;
-  return found.some((c) => Math.hypot(c[0] - d[0], c[1] - d[1], c[2] - d[2]) < 40) ? found : [...found, d];
+  return found.some((c) => sameColour(c, d, 40)) ? found : [...found, d];
 }
 
 /** The orange table's own least match (hudDistanceGlyphsOrange.ts: 214 of 218 held out, no wrong, at 0.75). */
@@ -399,7 +356,7 @@ export function readTargetDistanceAnyColour(
   orangeGlyphs?: DistanceGlyphs,
 ): { reading: TargetDistance; colour: Rgb } | null {
   const d = DEFAULT_TEXT_COLOUR;
-  if (orangeGlyphs && (!known || Math.hypot(known[0] - d[0], known[1] - d[1], known[2] - d[2]) < 40)) {
+  if (orangeGlyphs && (!known || sameColour(known, d, 40))) {
     const reading = readTargetDistance(rgba, w, h, orangeGlyphs, screenH, ORANGE_LOOK, ORANGE_MIN_MATCH);
     if (reading) return { reading, colour: d };
   }

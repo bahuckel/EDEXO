@@ -12,7 +12,12 @@
  *
  * Pure (a frame in, a reading out), so it is tested on the owner's screenshots; the capture is the screen marker's
  * (aim/). Null when it cannot be sure: no boxes (SRV, on foot, a menu), a glyph not close enough, the two disagreeing.
+ *
+ * A recoloured HUD (EDHM; owner 2026-11-07, his green theme: grey or white digits in a green box, the ladder's labels in
+ * the same grey) is read by readHudPitchAnyColour: the boxes found by their shape and their outline, the colours
+ * learned from them.
  */
+import { findingLook, lookFromColour, MAX_TEXT_SHARE, sameColour, strokeColour, type Rgb, type TextLook } from "./hudTextLook.js";
 
 export interface PitchReading {
   /** Degrees, the fraction from the ladder when its rungs were found (else the box's whole degrees). */
@@ -25,8 +30,8 @@ export interface PitchReading {
   boxDeg: number;
   /** Screen pixels per degree of pitch at the centre, from the ladder's rungs; null when fewer than two were found. */
   pxPerDeg: number | null;
-  /** The HUD's look it was read in (gear up yellow, gear down orange). */
-  style: HudStyleName;
+  /** The HUD's look it was read in (gear up yellow, gear down orange; "learned": a recoloured HUD's own colours). */
+  style: HudStyleName | "learned";
   /** The HUD's centre (the two boxes' midpoint), in the frame's pixels: where the nose points on the screen. */
   centre: { x: number; y: number };
 }
@@ -49,6 +54,7 @@ function refineFromLadder(
   boxDeg: number,
   rollDeg: number,
   expectPxPerDeg: number,
+  isLadder: (r: number, g: number, b: number) => boolean = isLadderPx,
 ): { pitchDeg: number; pxPerDeg: number } | null {
   const right = Math.max(...box.digits.map((c) => c.x1));
   const x0 = Math.round(right + box.dh * 0.6);
@@ -64,7 +70,7 @@ function refineFromLadder(
     let bestEnd = 0;
     for (let x = x0; x < x1; x++) {
       const i = (y * w + x) * 4;
-      if (isLadderPx(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!)) {
+      if (isLadder(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!)) {
         run++;
         if (run > best) {
           best = run;
@@ -147,21 +153,20 @@ const isStarPx = (r: number, g: number, b: number) => r > 200 && g > 200 && b > 
  * same orange beside them. Each look has its own digit colour, its own ink measure and its own glyphs.
  */
 export type HudStyleName = "yellow" | "orange";
-interface HudStyle {
-  isDigit: (r: number, g: number, b: number) => boolean;
-  ink: (r: number, g: number, b: number) => number;
-}
-const STYLES: Record<HudStyleName, HudStyle> = {
-  yellow: { isDigit: isDigitPx, ink: yellowness },
+const STYLES: Record<HudStyleName, TextLook> = {
+  yellow: { isText: isDigitPx, ink: yellowness },
   orange: {
-    isDigit: (r, g, b) => r >= 200 && g >= 135 && g <= 205 && b <= 75 && r - b >= 150,
+    isText: (r, g, b) => r >= 200 && g >= 135 && g <= 205 && b <= 75 && r - b >= 150,
     ink: (r, g, b) => Math.max(0, Math.min(1, (r - b - 80) / 120)),
   },
 };
 /** A look's ink measure (the glyph builder cuts samples with it). */
 export const styleInk = (s: HudStyleName): ((r: number, g: number, b: number) => number) => STYLES[s].ink;
 /** Each look's glyphs: a digit to its samples (glyphVector each); a reading matches the nearest sample. */
-export type HudGlyphs = Partial<Record<HudStyleName, Readonly<Record<string, readonly (readonly number[])[]>>>>;
+export type HudGlyphs = Partial<Record<HudStyleName, PitchGlyphs>>;
+/** One look's glyphs (or the any-colour table's, hudPitchGlyphsAny.ts). */
+export type PitchGlyphs = Readonly<Record<string, readonly (readonly number[])[]>>;
+const lookOf = (s: HudStyleName | TextLook): TextLook => (typeof s === "string" ? STYLES[s] : s);
 
 /** Connected pieces of a mask (4-neighbour), in a region. */
 export function components(mask: Uint8Array, w: number, x0: number, y0: number, x1: number, y1: number): Rect[] {
@@ -266,6 +271,8 @@ export interface PitchBox {
   y: number;
   /** Digit height, pixels. */
   dh: number;
+  /** The colour of the box's outline, when it was looked for and found (framedBy). */
+  frame: Rgb | null;
 }
 
 /**
@@ -351,6 +358,123 @@ function hasMinus(rgba: Rgba, w: number, left: number, top: number, bottom: numb
 }
 
 /**
+ * The box's outline: a line across the string just above it and one just below (owner's EDHM shots, 2026-11-07: the
+ * ladder's labels are the boxes' grey too, but stand free). Each line is traced from above (below) the digits' middle,
+ * column by column a row up or down at most, so it follows the box's tilt with the roll (a box's own tilt is not the
+ * pair's: the HUD is drawn in perspective); a line pixel is brighter than the pixels 3 rows above and below it in a
+ * colour channel, gaps of
+ * up to 3 pixels bridged (a tilted line is drawn in dashes). Both lines must span the digits and be two digits' height
+ * long. Their colour, or null.
+ */
+function framedBy(rgba: Rgba, w: number, h: number, box: PitchBox): Rgb | null {
+  const dh = box.dh;
+  const left = Math.min(...box.digits.map((c) => c.x0));
+  const right = Math.max(...box.digits.map((c) => c.x1));
+  const cx = Math.round((left + right) / 2);
+  const top = Math.min(...box.digits.map((c) => c.y0));
+  const bottom = Math.max(...box.digits.map((c) => c.y1));
+  // Brighter in any one channel: a faint green line over grey ground stands out in its green only (his 0331: 52 on 28).
+  const line = (x: number, y: number) => {
+    if (x < 0 || x >= w || y < 3 || y >= h - 3) return 0;
+    const i = (y * w + x) * 4;
+    const up = i - 3 * w * 4;
+    const dn = i + 3 * w * 4;
+    let c = 0;
+    for (let k = 0; k < 3; k++) c = Math.max(c, rgba[i + k]! - Math.max(rgba[up + k]!, rgba[dn + k]!));
+    return c;
+  };
+  const MIN = 18;
+  type Pt = { x0: number; y0: number; x1: number; y1: number };
+  const trace = (ya: number, yb: number): Pt[] | null => {
+    let y0 = -1;
+    let best = MIN - 1;
+    for (let y = ya; y <= yb; y++) {
+      const c = line(cx, y);
+      if (c > best) {
+        best = c;
+        y0 = y;
+      }
+    }
+    if (y0 < 0) return null;
+    let x0 = cx;
+    let x1 = cx;
+    const pts: Pt[] = [{ x0: cx, y0, x1: cx, y1: y0 }];
+    for (const dir of [-1, 1]) {
+      let y = y0;
+      let gap = 0;
+      for (let x = cx + dir; x >= 0 && x < w && gap <= 3; x += dir) {
+        let by = y;
+        let bc = MIN - 1;
+        for (const yy of [y, y - 1, y + 1]) {
+          const c = line(x, yy);
+          if (c > bc) {
+            bc = c;
+            by = yy;
+          }
+        }
+        if (bc < MIN) {
+          gap++;
+          continue;
+        }
+        gap = 0;
+        y = by;
+        pts.push({ x0: x, y0: y, x1: x, y1: y });
+        if (dir < 0) x0 = x;
+        else x1 = x;
+      }
+    }
+    return x0 <= left && x1 >= right && x1 - x0 + 1 >= dh * 2 ? pts : null;
+  };
+  // Clear of the digits' own soft edge.
+  const above = trace(Math.round(top - dh), Math.round(top - dh * 0.2));
+  const below = above && trace(Math.round(bottom + dh * 0.2), Math.round(bottom + dh));
+  return above && below ? strokeColour(rgba, w, [...above, ...below]) : null;
+}
+
+/**
+ * Nothing of the number left unread in a left box (his EDHM shots, 2026-11-07, both boxes alike: "-31" read 1, "66" read
+ * 6, "-74" read 74). Each column's most ink in the top, middle and bottom third of the digits' rows. Left of the digits
+ * read, a run inked in the top and the bottom third is a digit lost; with no minus read, a run inked in one third only
+ * is a minus lost (a rolled box tilts it out of the middle). Right of them, before the arrow, a run inked in all three
+ * thirds is a digit lost (the arrow's strokes leave the middle empty). Runs of a third of a digit's height count. The
+ * left box only: the right one's arrow points left, beside its digits.
+ */
+function nothingLeftOut(rgba: Rgba, w: number, box: PitchBox, ink: (r: number, g: number, b: number) => number): boolean {
+  const dh = box.dh;
+  const left = Math.min(...box.digits.map((c) => c.x0));
+  const right = Math.max(...box.digits.map((c) => c.x1));
+  const top = Math.min(...box.digits.map((c) => c.y0));
+  const bottom = Math.max(...box.digits.map((c) => c.y1));
+  const third = (bottom - top + 1) / 3;
+  const thirds = (x: number): [number, number, number] => {
+    const most: [number, number, number] = [0, 0, 0];
+    for (let y = top; y <= bottom; y++) {
+      const i = (y * w + x) * 4;
+      const k = y < top + third ? 0 : y > bottom - third ? 2 : 1;
+      most[k] = Math.max(most[k], ink(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!));
+    }
+    return most;
+  };
+  const run = dh * 0.3;
+  // A lost digit or minus stands next to the digits read; the box's own side is further out.
+  let digitRun = 0;
+  let barRun = 0;
+  for (let x = Math.max(0, Math.round(left - dh * 0.8)); x < Math.round(left - dh * 0.1); x++) {
+    const [hi, mid, lo] = thirds(x);
+    digitRun = hi > 0.4 && lo > 0.4 ? digitRun + 1 : 0;
+    barRun = [hi, mid, lo].filter((v) => v > 0.4).length === 1 && Math.min(hi, mid, lo) < 0.2 ? barRun + 1 : 0;
+    if (digitRun >= run || (!box.minus && barRun >= run)) return false;
+  }
+  digitRun = 0;
+  for (let x = Math.round(right + dh * 0.1); x < Math.min(w, Math.round(right + dh * 0.8)); x++) {
+    const [hi, mid, lo] = thirds(x);
+    digitRun = hi > 0.4 && mid > 0.4 && lo > 0.4 ? digitRun + 1 : 0;
+    if (digitRun >= run) return false;
+  }
+  return true;
+}
+
+/**
  * The frame may be a crop round the screen's centre (the capture reads only the middle): `screen` is the whole
  * screen's size, which the HUD's proportions are measured in. The crop's centre is the screen's.
  */
@@ -359,15 +483,19 @@ export interface FrameScreen {
   h: number;
 }
 
-/** The pitch boxes in an RGBA frame `w` x `h`: the mirrored pair of yellow number strings about the centre. */
+/**
+ * The pitch boxes in an RGBA frame `w` x `h`: the mirrored pair of yellow number strings about the centre. `framed`:
+ * only strings with the box's outline round them (a recoloured HUD, whose ladder labels are the digits' colour).
+ */
 export function findPitchBoxes(
   rgba: Rgba,
   w: number,
   h: number,
   screen: FrameScreen = { w, h },
-  styleName: HudStyleName = "yellow",
+  look: HudStyleName | TextLook = "yellow",
+  framed = false,
 ): { left: PitchBox; right: PitchBox } | null {
-  const style = STYLES[styleName];
+  const style = lookOf(look);
   const sw = screen.w;
   const sh = screen.h;
   const mask = new Uint8Array(w * h);
@@ -376,20 +504,27 @@ export function findPitchBoxes(
   const rx1 = Math.min(w, Math.ceil(w / 2 + sw * 0.2));
   const ry0 = Math.max(0, Math.floor(h / 2 - sh * 0.2));
   const ry1 = Math.min(h, Math.ceil(h / 2 + sh * 0.2));
+  let marked = 0;
   for (let y = ry0; y < ry1; y++)
     for (let x = rx0; x < rx1; x++) {
       const i = y * w + x;
-      if (style.isDigit(rgba[i * 4]!, rgba[i * 4 + 1]!, rgba[i * 4 + 2]!) || isStarPx(rgba[i * 4]!, rgba[i * 4 + 1]!, rgba[i * 4 + 2]!)) mask[i] = 1;
+      if (style.isText(rgba[i * 4]!, rgba[i * 4 + 1]!, rgba[i * 4 + 2]!) || isStarPx(rgba[i * 4]!, rgba[i * 4 + 1]!, rgba[i * 4 + 2]!)) {
+        mask[i] = 1;
+        marked++;
+      }
     }
+  if (marked > (rx1 - rx0) * (ry1 - ry0) * MAX_TEXT_SHARE) return null;
   const minH = Math.max(5, sh * 0.007);
   const maxH = sh * 0.03;
   const raw = components(mask, w, rx0, ry0, rx1, ry1);
-  const tall = joinStacked(raw, sh).filter((c) => {
+  const sized = joinStacked(raw, sh).filter((c) => {
     const ch = c.y1 - c.y0 + 1;
     // At full size the box's own straight edges are as bright as its digits: a digit is never that thin, nor that wide.
     const cw = c.x1 - c.x0 + 1;
     return ch >= minH && ch <= maxH && cw >= ch * 0.15 && cw <= ch * 2.2;
   });
+  // A piece round others is a box's outline drawn in its digits' colour (his EDHM cyan theme, 2026-11-07), not a digit.
+  const tall = sized.filter((c) => !sized.some((o) => o !== c && o.x0 > c.x0 && o.x1 < c.x1 && o.y0 > c.y0 && o.y1 < c.y1));
   tall.sort((a, b) => a.x0 - b.x0);
   // Strings: tall pieces on one row, close together.
   const strings: Rect[][] = [];
@@ -403,7 +538,7 @@ export function findPitchBoxes(
     if (s) s.push(c);
     else strings.push([c]);
   }
-  const boxes: PitchBox[] = strings.map((all) => {
+  const found: PitchBox[] = strings.map((all) => {
     // The box's arrow strokes sit on the digits' row but are shorter than them.
     const tallest = Math.max(...all.map((c) => c.y1 - c.y0 + 1));
     const g = all.filter((c) => c.y1 - c.y0 + 1 >= tallest * 0.75);
@@ -413,8 +548,10 @@ export function findPitchBoxes(
     const right = Math.max(...g.map((c) => c.x1));
     const dh = bottom - top + 1;
     const digits = g.flatMap((p) => splitWide(mask, w, { ...p, y0: top, y1: bottom }, dh));
-    return { digits, minus: hasMinus(rgba, w, left, top, bottom, style.ink), x: (left + right) / 2, y: (top + bottom) / 2, dh };
+    const box: PitchBox = { digits, minus: hasMinus(rgba, w, left, top, bottom, style.ink), x: (left + right) / 2, y: (top + bottom) / 2, dh, frame: null };
+    return framed && digits.length ? { ...box, frame: framedBy(rgba, w, h, box) } : box;
   });
+  const boxes = framed ? found.filter((b) => b.frame) : found;
   // The pair: mirrored about the centre (the boxes stand either side of the nose), the same size.
   let best: { left: PitchBox; right: PitchBox } | null = null;
   let bestErr = Infinity;
@@ -439,15 +576,18 @@ export function readBox(
   rgba: Rgba,
   w: number,
   b: PitchBox,
-  glyphs: Readonly<Record<string, readonly (readonly number[])[]>>,
-  styleName: HudStyleName = "yellow",
+  glyphs: PitchGlyphs,
+  look: HudStyleName | TextLook = "yellow",
+  minMatch = MIN_MATCH,
+  minMargin = MIN_MARGIN,
 ): number | null {
   if (!b.digits.length || b.digits.length > 2) return null;
+  const ink = lookOf(look).ink;
   let text = "";
   for (const c of b.digits) {
-    const d = matchDigit(glyphVector(rgba, w, c, GLYPH_W, GLYPH_H, STYLES[styleName].ink), glyphs);
+    const d = matchGlyph(glyphVector(rgba, w, c, GLYPH_W, GLYPH_H, ink), glyphs, minMatch, minMargin);
     if (d == null) return null;
-    text += String(d);
+    text += d;
   }
   const value = Number(text) * (b.minus ? -1 : 1);
   return Math.abs(value) <= 90 ? value : null;
@@ -462,34 +602,149 @@ export function readHudPitch(rgba: Rgba, w: number, h: number, glyphs: HudGlyphs
     const g = glyphs[styleName];
     if (!g) continue;
     const pair = findPitchBoxes(rgba, w, h, screen, styleName);
-    if (!pair) continue;
-    const l = readBox(rgba, w, pair.left, g, styleName);
-    const r = readBox(rgba, w, pair.right, g, styleName);
-    // Both, the same: a digit with no glyph yet is read as its nearest neighbour (a 6 as a 9, 2026-11-04 test), and two
-    // boxes agreeing on a wrong number is far rarer than one box being wrong.
-    if (l == null || r == null || l !== r) continue;
-    const rollDeg = (Math.atan2(pair.right.y - pair.left.y, pair.right.x - pair.left.x) * 180) / Math.PI;
-    const found = refineFromLadder(rgba, w, h, pair.left, l, rollDeg, screen.h * 0.01757);
-    // No rungs: the middle of the degree the box stands for (it drops the fraction: -9 is -9.0 to -9.99).
-    const mid = l === 0 ? 0 : l + 0.5 * Math.sign(l);
-    // A rung missed doubles the spacing (his -3 came out -1.8): the spacing must be the screen's (25.3 px a degree at
-    // 1440 rows, measured on 30 of his shots, within a fifth), and the result inside the box's own degree.
-    const lo = l < 0 ? l - 1 : l === 0 ? -1 : l;
-    const hi = l < 0 ? l : l === 0 ? 1 : l + 1;
-    const plausible =
-      !!found && Math.abs(found.pxPerDeg / (screen.h * 0.01757) - 1) <= 0.2 && found.pitchDeg >= lo - 0.15 && found.pitchDeg <= hi + 0.15;
-    const fine = plausible ? { ...found!, pitchDeg: Math.max(lo + 0.05, Math.min(hi - 0.05, found!.pitchDeg)) } : null;
-    return {
-      pitchDeg: fine ? fine.pitchDeg : mid,
-      rollDeg,
-      boxes: 2,
-      boxDeg: l,
-      pxPerDeg: fine ? fine.pxPerDeg : null,
-      style: styleName,
-      centre: { x: (pair.left.x + pair.right.x) / 2, y: (pair.left.y + pair.right.y) / 2 },
-    };
+    const r = pair && readPair(rgba, w, h, screen, pair, g, styleName, styleName, isLadderPx);
+    if (r) return r;
   }
   return null;
+}
+
+/** Both boxes of a pair read, the same, and the fraction from the ladder; null when not sure. */
+function readPair(
+  rgba: Rgba,
+  w: number,
+  h: number,
+  screen: FrameScreen,
+  pair: { left: PitchBox; right: PitchBox },
+  glyphs: PitchGlyphs,
+  look: HudStyleName | TextLook,
+  style: PitchReading["style"],
+  isLadder: (r: number, g: number, b: number) => boolean,
+  minMatch = MIN_MATCH,
+  minMargin = MIN_MARGIN,
+): PitchReading | null {
+  // A recoloured HUD's boxes: its learned colour can lose a dim digit or a tilted minus in both boxes at once. The left
+  // box only: the right one's arrow points left, beside its digits.
+  if (style === "learned" && !nothingLeftOut(rgba, w, pair.left, lookOf(look).ink)) return null;
+  const l = readBox(rgba, w, pair.left, glyphs, look, minMatch, minMargin);
+  const r = readBox(rgba, w, pair.right, glyphs, look, minMatch, minMargin);
+  // Both, the same: a digit with no glyph yet is read as its nearest neighbour (a 6 as a 9, 2026-11-04 test), and two
+  // boxes agreeing on a wrong number is far rarer than one box being wrong.
+  if (l == null || r == null || l !== r) return null;
+  const rollDeg = (Math.atan2(pair.right.y - pair.left.y, pair.right.x - pair.left.x) * 180) / Math.PI;
+  const found = refineFromLadder(rgba, w, h, pair.left, l, rollDeg, screen.h * 0.01757, isLadder);
+  // No rungs: the middle of the degree the box stands for (it drops the fraction: -9 is -9.0 to -9.99).
+  const mid = l === 0 ? 0 : l + 0.5 * Math.sign(l);
+  // A rung missed doubles the spacing (his -3 came out -1.8): the spacing must be the screen's (25.3 px a degree at
+  // 1440 rows, measured on 30 of his shots, within a fifth), and the result inside the box's own degree.
+  const lo = l < 0 ? l - 1 : l === 0 ? -1 : l;
+  const hi = l < 0 ? l : l === 0 ? 1 : l + 1;
+  const plausible =
+    !!found && Math.abs(found.pxPerDeg / (screen.h * 0.01757) - 1) <= 0.2 && found.pitchDeg >= lo - 0.15 && found.pitchDeg <= hi + 0.15;
+  const fine = plausible ? { ...found!, pitchDeg: Math.max(lo + 0.05, Math.min(hi - 0.05, found!.pitchDeg)) } : null;
+  return {
+    pitchDeg: fine ? fine.pitchDeg : mid,
+    rollDeg,
+    boxes: 2,
+    boxDeg: l,
+    pxPerDeg: fine ? fine.pxPerDeg : null,
+    style,
+    centre: { x: (pair.left.x + pair.right.x) / 2, y: (pair.left.y + pair.right.y) / 2 },
+  };
+}
+
+/** A recoloured HUD's pitch box colours: its digits' and its outline's (the ladder's rungs are drawn like the outline). */
+export interface PitchColours {
+  text: Rgb;
+  frame: Rgb;
+}
+
+/*
+  Strict, then soft: his green theme's gear-up digits are a dim grey (strokes 120-160), its gear-down ones white.
+*/
+const PITCH_FINDING_LOOKS: readonly TextLook[] = [findingLook(170, 90), findingLook(115, 60)];
+
+type Pair = { left: PitchBox; right: PitchBox };
+
+/** Each framed mirrored pair found colour-blind, with its colours. */
+function discoverPitchPairs(rgba: Rgba, w: number, h: number, screen: FrameScreen): { colours: PitchColours; pair: Pair }[] {
+  const out: { colours: PitchColours; pair: Pair }[] = [];
+  for (const finding of PITCH_FINDING_LOOKS) {
+    const pair = findPitchBoxes(rgba, w, h, screen, finding, true);
+    if (!pair) continue;
+    const text = strokeColour(rgba, w, [...pair.left.digits, ...pair.right.digits]);
+    if (!out.some((o) => sameColour(o.colours.text, text))) out.push({ colours: { text, frame: pair.left.frame! }, pair });
+  }
+  return out;
+}
+
+/** The colours a recoloured HUD draws its pitch boxes in: each framed mirrored pair found colour-blind gives one. */
+export function discoverPitchColours(rgba: Rgba, w: number, h: number, screen: FrameScreen = { w, h }): PitchColours[] {
+  return discoverPitchPairs(rgba, w, h, screen).map((p) => p.colours);
+}
+
+/** A box found colour-blind, its minus told in the learned colour's ink. */
+function minusIn(rgba: Rgba, w: number, b: PitchBox, look: TextLook): PitchBox {
+  const top = Math.min(...b.digits.map((c) => c.y0));
+  const bottom = Math.max(...b.digits.map((c) => c.y1));
+  return { ...b, minus: hasMinus(rgba, w, Math.min(...b.digits.map((c) => c.x0)), top, bottom, look.ink) };
+}
+
+/**
+ * The any-colour table's least match (as the distance reader's: a lower one let a wrong digit through), and how far ahead
+ * of the next digit: his cyan theme's slashed 0 read as 8 at 0.04 (a 40 read 48, held out); 0.05 and up none wrong,
+ * 0.06 for room (165 right, 158 not sure, 0 wrong of 323 held out, 2026-11-07).
+ */
+const ANY_MIN_MATCH = 0.85;
+const ANY_MIN_MARGIN = 0.06;
+
+/**
+ * The pitch in any HUD colour, with the colours it was read in, to keep for the next frames. The game's own yellow and
+ * orange first, as they always were read (`glyphs`), unless a recoloured HUD was learned; then `known`, else each colour
+ * found on the frame (`discover`: finding them doubles a frame's time, so the capture looks once a second), with
+ * `anyGlyphs` (hudPitchGlyphsAny.ts): only framed boxes, the ladder in the outline's colour.
+ */
+export function readHudPitchAnyColour(
+  rgba: Rgba,
+  w: number,
+  h: number,
+  glyphs: HudGlyphs,
+  anyGlyphs: PitchGlyphs,
+  screen: FrameScreen = { w, h },
+  known?: PitchColours | null,
+  discover = true,
+): { reading: PitchReading; colours: PitchColours | null } | null {
+  if (!known) {
+    const reading = readHudPitch(rgba, w, h, glyphs, screen);
+    if (reading) return { reading, colours: null };
+    if (!discover) return null;
+  }
+  for (const { colours, look, pair } of pitchPairsAnyColour(rgba, w, h, screen, known)) {
+    const reading = readPair(rgba, w, h, screen, pair, anyGlyphs, look, "learned", lookFromColour(colours.frame).isText, ANY_MIN_MATCH, ANY_MIN_MARGIN);
+    if (reading) return { reading, colours };
+  }
+  return null;
+}
+
+/**
+ * The framed pairs a recoloured HUD's pitch could be read from, in the order they are tried: `known`'s colours, else
+ * each found on the frame; in the learned colour, else as found colour-blind (a star beside a white box joins its string
+ * in the colour). The glyph builder cuts its samples from them (scripts/build-hud-pitch-glyphs-any.ts).
+ */
+export function pitchPairsAnyColour(
+  rgba: Rgba,
+  w: number,
+  h: number,
+  screen: FrameScreen = { w, h },
+  known?: PitchColours | null,
+): { colours: PitchColours; look: TextLook; pair: Pair }[] {
+  const out: { colours: PitchColours; look: TextLook; pair: Pair }[] = [];
+  for (const { colours, pair: seen } of known ? [{ colours: known, pair: null }] : discoverPitchPairs(rgba, w, h, screen)) {
+    const look = lookFromColour(colours.text);
+    const inColour = findPitchBoxes(rgba, w, h, screen, look, true);
+    if (inColour) out.push({ colours, look, pair: inColour });
+    if (seen) out.push({ colours, look, pair: { left: minusIn(rgba, w, seen.left, look), right: minusIn(rgba, w, seen.right, look) } });
+  }
+  return out;
 }
 
 /** The heading, read off the HUD's tape (hudPitchReader's sibling; owner 2026-11-04: on-screen data, live). */
@@ -543,7 +798,7 @@ function readHeadingIn(
   for (let y = by0; y < by1; y++)
     for (let x = bx0; x < bx1; x++) {
       const i = y * w + x;
-      if (style.isDigit(rgba[i * 4]!, rgba[i * 4 + 1]!, rgba[i * 4 + 2]!)) mask[i] = 1;
+      if (style.isText(rgba[i * 4]!, rgba[i * 4 + 1]!, rgba[i * 4 + 2]!)) mask[i] = 1;
     }
   const minH = Math.max(5, sh * 0.007);
   const pieces = components(mask, w, bx0, by0, bx1, by1).filter((c) => {

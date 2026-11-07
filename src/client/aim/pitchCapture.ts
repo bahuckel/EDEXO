@@ -5,14 +5,19 @@
  * middle of it for the HUD's pitch boxes (shared/hudPitchReader.ts) and the number posted to this PC's own server.
  * Nothing is kept, nothing leaves the PC. A frame it cannot read posts "not read": the marker keeps its own estimate.
  */
-import { readHudHeading, readHudPitch } from "@shared/hudPitchReader";
+import { readHudHeading, readHudPitchAnyColour, type PitchColours } from "@shared/hudPitchReader";
 import { HUD_PITCH_GLYPHS } from "@shared/hudPitchGlyphs";
+import { HUD_PITCH_GLYPHS_ANY } from "@shared/hudPitchGlyphsAny";
 import { acquireGameScreen } from "./gameScreen";
 
 /** How often a frame is read. */
 export const READ_EVERY_MS = 250;
 /** The middle share of the screen read, either way. */
 const CROP = 0.4;
+/** A recoloured HUD's learned colours are forgotten after this many frames unread (2 s), and looked for again. */
+const FORGET_COLOURS_AFTER = 8;
+/** Unread, the colours are looked for on every this many frames (once a second): finding them doubles a frame's time. */
+const DISCOVER_EVERY = 4;
 
 export interface PitchCapture {
   stop(): void;
@@ -41,6 +46,12 @@ const TAPE = { x0: 0.38, x1: 0.62, y0: 0.2, y1: 0.34 };
 export async function startPitchCapture(onRead: (r: PitchRead | null) => void): Promise<PitchCapture | { error: string }> {
   const screen = await acquireGameScreen();
   if ("error" in screen) return screen;
+  /*
+    A recoloured HUD's box colours (owner 2026-11-07, EDHM: grey or white digits in a green box), learned from the
+    screen: looked for while the default look does not read, then read in.
+  */
+  let colours: PitchColours | null = null;
+  let misses = 0;
   /** The heading off the tape strip of the frame (its own small crop). */
   const readHeading = (vw: number, vh: number): number | null => {
     const tx = Math.round(vw * TAPE.x0);
@@ -62,7 +73,11 @@ export async function startPitchCapture(onRead: (r: PitchRead | null) => void): 
     const cy0 = (vh - ch) / 2;
     const px = screen.crop(cx0, cy0, cw, ch, "pitch");
     if (!px) return onRead(null);
-    const r = readHudPitch(px, cw, ch, HUD_PITCH_GLYPHS, { w: vw, h: vh });
+    const found = readHudPitchAnyColour(px, cw, ch, HUD_PITCH_GLYPHS, HUD_PITCH_GLYPHS_ANY, { w: vw, h: vh }, colours, misses % DISCOVER_EVERY === 0);
+    const r = found?.reading ?? null;
+    if (found) colours = found.colours;
+    misses = r ? 0 : misses + 1;
+    if (misses >= FORGET_COLOURS_AFTER) colours = null;
     onRead(
       r
         ? {
