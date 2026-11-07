@@ -36,6 +36,17 @@ export function onSpeciesReload(listener: () => void): void {
 }
 
 /** Which load of the species database and price list this is: per-body caches are keyed on it. */
+/**
+ * The per-body results built on the species data (snapshot.ts's computeBody, the match cache) dropped: the next read
+ * computes them again. A reload of the tree does it, and so does "Refresh exomastery" (speciesCacheReload.ts), which
+ * clears the tables those results were ranked with (review 2026-11-07: they kept serving the old ones).
+ */
+export function dropSpeciesComputed(): void {
+  speciesDataGeneration += 1;
+  for (const l of reloadListeners) l();
+  bumpMatchCacheEpoch();
+}
+
 export function speciesGeneration(): number {
   return speciesDataGeneration;
 }
@@ -68,10 +79,8 @@ export function loadSpeciesDatabase(): SpeciesDatabase {
   setExoOrganicSpeciesDb(cachedDb);
   // The foot catalog keeps its own copy of the tree; a reload has to reach it too.
   clearFootCatalogSpeciesDb();
-  speciesDataGeneration += 1;
   // The per-body caches built on the old tree (snapshot.ts's computeBody) are dropped.
-  for (const l of reloadListeners) l();
-  bumpMatchCacheEpoch();
+  dropSpeciesComputed();
   cachedPrices = loadPriceList(root);
   if (!cachedDb.species.length) {
     console.warn("ED Exo Compare — no species loaded; add data/species/<genus>/… (*_new.json or *.json)");

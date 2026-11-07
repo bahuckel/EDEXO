@@ -9,6 +9,22 @@ import type express from "express";
  * Called first in createHttpServer, before any route is registered (moved out of httpServer.ts,
  * audit 2026-10-22).
  */
+/**
+ * The last middleware: an error any route passed on (a rejected handler above, a body too big or not JSON) answers
+ * JSON with its status and no detail. Without it Express's own page answered, with the stack and the install's
+ * absolute paths (the Windows user name) to any LAN client (review 2026-11-07). The error is logged here instead.
+ */
+export function answerErrorsAsJson(app: express.Express): void {
+  app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (res.headersSent) return next(err);
+    const e = err as { status?: unknown; statusCode?: unknown } | null;
+    const status = e?.status ?? e?.statusCode;
+    const code = typeof status === "number" && status >= 400 && status < 600 ? status : 500;
+    if (code >= 500) console.error("EDEXO route error:", err);
+    res.status(code).json({ error: code >= 500 ? "internal" : "bad request" });
+  });
+}
+
 export function catchAsyncRejections(app: express.Express): void {
   for (const method of ["get", "post", "put", "delete", "patch"] as const) {
     const register = app[method].bind(app) as (...args: unknown[]) => unknown;

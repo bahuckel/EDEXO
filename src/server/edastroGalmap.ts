@@ -232,11 +232,14 @@ async function fetchGalmapIndex(userAgent: string): Promise<GalmapIndex | null> 
 export async function getGalmapIndex(userAgent: string): Promise<GalmapIndex | null> {
   if (index) return index;
   if (!loading) {
-    loading = fetchGalmapIndex(userAgent).then((result) => {
-      if (result) index = result;
-      loading = null;
-      return result;
-    });
+    loading = fetchGalmapIndex(userAgent)
+      // A throw is a miss like any other, and the next call tries again (a kept rejection answered every later one).
+      .catch(() => null)
+      .then((result) => {
+        if (result) index = result;
+        loading = null;
+        return result;
+      });
   }
   return loading;
 }

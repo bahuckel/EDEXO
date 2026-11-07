@@ -15,6 +15,11 @@ import { regionForCoords, regionIndexForCoords, type RegionMapData } from "../sh
 
 let cached: RegionMapData | null | undefined;
 
+/** Drop the memo ("Refresh exomastery", speciesCacheReload.ts). */
+export function clearRegionMapCache(): void {
+  cached = undefined;
+}
+
 export function regionMapPath(projectRoot: string): string {
   return path.join(projectRoot, "data", "exomastery", "region-map.json");
 }

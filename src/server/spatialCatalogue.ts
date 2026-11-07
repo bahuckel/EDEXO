@@ -22,6 +22,11 @@ function withGuardianSites(cat: SpatialCatalogue): SpatialCatalogue {
 
 let cached: SpatialCatalogue | null | undefined;
 
+/** Drop the memo ("Refresh exomastery", speciesCacheReload.ts). */
+export function clearSpatialCatalogueCache(): void {
+  cached = undefined;
+}
+
 export function spatialCataloguePath(projectRoot: string): string {
   return path.join(projectRoot, "data", "exomastery", "spatial-catalogue.json");
 }

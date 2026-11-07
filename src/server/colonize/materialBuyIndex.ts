@@ -178,9 +178,14 @@ export class MaterialBuyIndex {
   private startPendingSave(): void {
     if (!this.savePending) return;
     this.savePending = false;
-    this.saveQueue = this.saveQueue.then(async () => {
-      await writeJsonAtomic(this.filePath, this.data, false);
-    });
+    // A failed write is logged and the queue goes on: a rejected link skipped every later save (review 2026-11-07).
+    this.saveQueue = this.saveQueue
+      .then(async () => {
+        await writeJsonAtomic(this.filePath, this.data, false);
+      })
+      .catch((e) => {
+        console.warn("EDEXO material buy index: save failed:", e instanceof Error ? e.message : e);
+      });
   }
 
   async flush(): Promise<void> {

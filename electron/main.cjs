@@ -126,6 +126,8 @@ const huds = createHudWindows({
   // One renderer process for all the HUD panel windows (hudHost.cjs).
   shareRenderer: true,
   guardWindow: (win) => guardWindowNavigation(win, ownBase, shell),
+  // The screen marker's window follows the game's monitor (resolution change, game moved).
+  onDisplayChange: () => aim?.sync(),
   onChange: () => {
     trayControl.refresh();
     // The screen marker shows and hides with the HUDs (hotkey, game running, in front).

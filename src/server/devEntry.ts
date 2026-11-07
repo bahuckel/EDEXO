@@ -93,5 +93,7 @@ process.on("uncaughtException", (e) => {
 
 process.on("unhandledRejection", (e) => {
   console.error("unhandledRejection:", e);
+  // The same log as a throw: it exited with none, so a rejection crash left nothing to send (review 2026-11-07).
+  writeCrashLog(`unhandledRejection: ${String(e && (e as Error).stack ? (e as Error).stack : e)}`);
   process.exit(1);
 });

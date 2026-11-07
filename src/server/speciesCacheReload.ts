@@ -1,11 +1,14 @@
 import { clearAchievementsCache } from "./achievements.js";
 import { clearBodyTypePriorCache } from "./bodyTypePrior.js";
+import { clearChanceCalibrationCache } from "./chanceCalibration.js";
+import { clearChanceRecalibrationCache } from "./chanceRecalibration.js";
 import { clearColourStarNeverCache } from "./colourStarNever.js";
 import { clearEddnTemperatureRangeCache } from "./eddnTemperatureRange.js";
 import { clearEddsnColourVariantsCache } from "./eddsnColourVariants.js";
 import { clearExomasteryProfileCache } from "./exomasteryProfile.js";
 import { clearExpeditionCache } from "./expeditionService.js";
 import { clearFieldGuideCache } from "./fieldGuide.js";
+import { clearFirmTemperatureEdgesCache } from "./firmTemperatureEdges.js";
 import {
   clearFootCatalogSpeciesDb,
   clearFootScannedCatalogCache,
@@ -17,8 +20,11 @@ import { clearLikelihoodDataCache } from "./likelihoodData.js";
 import { clearMeasuredExclusionsCache } from "./measuredExclusions.js";
 import { clearObservedEnvelopeCache } from "./observedEnvelope.js";
 import { clearPhotoCreditsCache } from "./photoCredits.js";
+import { clearRegionMapCache } from "./regionMapData.js";
 import { clearRegionSpeciesCache } from "./regionSpeciesData.js";
 import { clearEncyclopediaPayloadCache } from "./snapshot.js";
+import { clearSpatialCatalogueCache } from "./spatialCatalogue.js";
+import { dropSpeciesComputed } from "./speciesDb.js";
 import { clearHostStarObservationsCache } from "./speciesHostStarObservations.js";
 import { clearSpeciesPhotoCache } from "./speciesPhotos.js";
 import { clearPlanetClassObservationsCache } from "./speciesPlanetClassObservations.js";
@@ -67,4 +73,13 @@ export function reloadSpeciesDerivedCaches(): void {
   clearGenusPriorCache();
   resetGenusBodySplitCache();
   clearLikelihoodDataCache();
+  // Review 2026-11-07: the firm EDDN edges, the chance calibration and recalibration, the nebula / Guardian catalogue
+  // and the region map kept the old files until a restart.
+  clearFirmTemperatureEdgesCache();
+  clearChanceCalibrationCache();
+  clearChanceRecalibrationCache();
+  clearSpatialCatalogueCache();
+  clearRegionMapCache();
+  // Last: the per-body predictions ranked with the old tables go too (the refresh path does not reload the tree).
+  dropSpeciesComputed();
 }

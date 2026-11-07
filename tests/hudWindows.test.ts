@@ -9,7 +9,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const hw = require("../electron/hudWindows.cjs") as {
@@ -1052,5 +1052,40 @@ describe("the combine buttons follow a drop (owner, 2026-11-01: sometimes none b
     huds.dragFromPage(bottom, "end");
     expect(lastOffers(top!)?.below).toBe(true);
     huds.setMoveMode(false);
+  });
+});
+
+// Review 2026-11-07: the screen marker's window was re-placed only on HUD changes, never when the display changed
+// under it (a resolution change, the game moving monitors), so its marks and the readers' crop went stale.
+describe("a display change", () => {
+  it("re-places the HUD stack and tells the screen marker, once per burst", () => {
+    vi.useFakeTimers();
+    const handlers: Record<string, () => void> = {};
+    let displayChanges = 0;
+    const huds = hw.createHudWindows({
+      electron: {
+        app: { getPath: () => dir },
+        BrowserWindow: FakeWindow,
+        screen: {
+          getPrimaryDisplay: () => ({ workArea: WORK }),
+          getDisplayNearestPoint: nearestDisplay,
+          getCursorScreenPoint: () => ({ ...cursor }),
+          on: (ev: string, fn: () => void) => (handlers[ev] = fn),
+        },
+      },
+      getRuntime: () => runtime,
+      preloadPath: "preload.cjs",
+      onDisplayChange: () => (displayChanges += 1),
+    }) as Huds & { watchDisplays: () => void };
+    huds.setLayoutPathResolver(() => layoutFile);
+    huds.watchDisplays();
+    // Windows sends several events for one resolution change.
+    handlers["display-metrics-changed"]!();
+    handlers["display-metrics-changed"]!();
+    handlers["display-added"]!();
+    expect(displayChanges).toBe(0);
+    vi.advanceTimersByTime(300);
+    expect(displayChanges).toBe(1);
+    vi.useRealTimers();
   });
 });

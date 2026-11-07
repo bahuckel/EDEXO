@@ -244,3 +244,43 @@ describe("the genus chances, the Brain Tree / Tubers split and the ranking's tab
     clearGenusPriorCache();
   });
 });
+
+// Review 2026-11-07: three exported clearers (firm edges, chance calibration, recalibration) were called by nothing,
+// so Refresh exomastery left them on the old files. Every `clear…Cache` the server exports is on the list now, or
+// named here with the reason it is not species data.
+describe("Refresh exomastery's list", () => {
+  const NOT_SPECIES_DATA: Record<string, string> = {
+    clearBioBodiesCache: "galaxy bio-bodies file (galaxy idle release)",
+    clearBioIndexCache: "galaxy bio-index file (galaxy idle release)",
+    clearCollectionFocusCache: "the commander's collection config",
+    clearFirstDiscoveryBacklogCache: "the commander's journal backlog (test seam)",
+    clearGalaxyCatalogueCache: "galaxy value search over the downloaded index",
+    clearSharedExomasteryCache: "cleared first by reloadExomastery (edexoBootstrap.ts)",
+    clearSpeciesRarityCache: "cleared inside loadSpeciesDatabase (speciesDb.ts)",
+    clearStatisticsCache: "the commander's journal statistics",
+    clearVisitedImportCache: "the commander's visited-stars import",
+  };
+
+  it("holds every exported cache clearer of the server, or names why not", async () => {
+    const { readFileSync, readdirSync, statSync } = await import("node:fs");
+    const dir = join(__dirname, "../src/server");
+    const files: string[] = [];
+    const walk = (d: string) => {
+      for (const n of readdirSync(d)) {
+        const p = join(d, n);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (n.endsWith(".ts")) files.push(p);
+      }
+    };
+    walk(dir);
+    const clearers = new Set<string>();
+    for (const f of files)
+      for (const m of readFileSync(f, "utf8").matchAll(/export function (clear[A-Za-z]*Cache)\b/g)) clearers.add(m[1]!);
+    const src = readFileSync(join(dir, "speciesCacheReload.ts"), "utf8");
+    const body = src.slice(src.indexOf("function reloadSpeciesDerivedCaches"));
+    const missing = [...clearers].filter((c) => !body.includes(`${c}()`) && !(c in NOT_SPECIES_DATA)).sort();
+    expect(missing).toEqual([]);
+    // The list ends by dropping the predictions ranked with the old tables.
+    expect(body).toContain("dropSpeciesComputed()");
+  });
+});

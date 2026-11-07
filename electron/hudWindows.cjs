@@ -54,12 +54,14 @@ const HUD_KEEP_ON_TOP_MS = 15_000;
  *   getDiag?: () => ({ watchWindow: (win: any, kind: string) => void } | null),
  *   preloadPath: string,
  *   onChange?: () => void,
+ *   onDisplayChange?: () => void,
  * }} deps
  */
 function createHudWindows(deps) {
   const { app, BrowserWindow, screen } = deps.electron;
   if (!deps.getDiag) deps.getDiag = () => null;
   if (!deps.onChange) deps.onChange = () => {};
+  if (!deps.onDisplayChange) deps.onDisplayChange = () => {};
 
   /** @type {{ win: Electron.BrowserWindow, pathname: string }[]} */
   let hudOverlayStack = [];
@@ -1153,6 +1155,9 @@ function createHudWindows(deps) {
     relayoutTimer = setTimeout(() => {
       relayoutTimer = null;
       relayoutHudStack();
+      // The screen marker's window covers the game's monitor: it follows the same changes (review 2026-11-07: a
+      // resolution change or the game moving monitors left it, and the readers' crop, at the old bounds).
+      deps.onDisplayChange();
     }, 250);
   }
 

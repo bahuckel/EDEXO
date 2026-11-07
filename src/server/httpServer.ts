@@ -8,7 +8,7 @@ import type { HttpServerOptions, RouteContext } from "./httpServerTypes.js";
 import { dropDeflateOfferFromThisPc } from "./wsCompression.js";
 import { createWsHub } from "./wsHub.js";
 
-import { catchAsyncRejections } from "./routes/asyncErrors.js";
+import { answerErrorsAsJson, catchAsyncRejections } from "./routes/asyncErrors.js";
 import { registerSpeciesFilesRoutes } from "./routes/speciesFilesRoutes.js";
 import { registerGalaxyRoutes } from "./routes/galaxyRoutes.js";
 import { registerBoxelRoutes } from "./routes/boxelRoutes.js";
@@ -72,6 +72,7 @@ export function createHttpServer(opts: HttpServerOptions): {
   closeConnections: () => void;
 } {
   const app = express();
+  app.disable("x-powered-by");
   catchAsyncRejections(app);
   const root = getProjectRoot();
   const webRoot = getWebRoot(root);
@@ -187,6 +188,8 @@ export function createHttpServer(opts: HttpServerOptions): {
   registerRecordsRoutes(app, opts, routeCtx);
 
   registerExomasteryRoutes(app, opts, routeCtx);
+  // After every route: errors answer JSON, never Express's page with the stack.
+  answerErrorsAsJson(app);
 
   const server = http.createServer(app);
   // Before the hub's WebSocketServer adds its own upgrade listener: this PC's windows agree no deflate.
