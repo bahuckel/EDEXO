@@ -206,6 +206,19 @@ describe("HUD pitch reader", () => {
     expect(readHudPitchAnyColour(g, W, H, GLYPHS, ANY)).toMatchObject({ reading: { boxDeg: -10, style: "yellow" }, colours: null });
   });
 
+  it("finds the boxes in the hue EDHM's ini names, brightness free, and searches blind when the hint is wrong", () => {
+    const f = dark();
+    boxed(f, "-10", 840, 480);
+    boxed(f, "-10", 1120, 480);
+    // The ini says a brighter white than the screen shows (his 243 grey drawn at 150): the hue is what counts.
+    const hint = { text: [243, 243, 243] as Rgb, frame: [0, 213, 0] as Rgb };
+    expect(discoverPitchColours(f, W, H, { w: W, h: H }, hint)).toHaveLength(1);
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY, { w: W, h: H }, null, true, hint)?.reading.boxDeg).toBe(-10);
+    // A stale hint (another theme's purple) finds nothing; the blind search still reads.
+    const stale = { text: [120, 30, 200] as Rgb, frame: [255, 165, 0] as Rgb };
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY, { w: W, h: H }, null, true, stale)?.reading.boxDeg).toBe(-10);
+  });
+
   it("says not sure for a digit it has no glyph for", () => {
     const f = frame();
     draw(f, "-10", 840, 450);

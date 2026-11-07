@@ -40,6 +40,27 @@ export function lookFromColour(c: Rgb): TextLook {
   };
 }
 
+/**
+ * Text near a colour a mod's settings name (EDHM's ini, 2026-11-07): the same hue, the brightness free. The game draws a
+ * theme's colour in its own hue but not its value: his EDHM shots, ini 243 grey on screen 150 gear up and 239 gear
+ * down, (112, 48, 160) as (95, 14, 197); within 0.95 of the colour's direction on all ten themes measured. A pixel is
+ * text if it points the same way (cosine 0.95) and is at least 40 % as bright; for finding only, the colour itself is
+ * then learned from the strokes (strokeColour).
+ */
+export function hueLook(c: Rgb): TextLook {
+  const n = Math.sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]) || 1;
+  const u = [c[0] / n, c[1] / n, c[2] / n] as const;
+  const along = (r: number, g: number, b: number) => r * u[0] + g * u[1] + b * u[2];
+  return {
+    isText: (r, g, b) => {
+      const a = along(r, g, b);
+      if (a < 0.4 * n) return false;
+      return a * a >= 0.9025 * (r * r + g * g + b * b);
+    },
+    ink: (r, g, b) => Math.max(0, Math.min(1, (along(r, g, b) - 0.3 * n) / (0.5 * n))),
+  };
+}
+
 /** Two colours alike (the same HUD colour found twice). */
 export const sameColour = (a: Rgb, b: Rgb, within = 30) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2 < within * within;
 

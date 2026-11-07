@@ -17,7 +17,7 @@
  * the same grey) is read by readHudPitchAnyColour: the boxes found by their shape and their outline, the colours
  * learned from them.
  */
-import { findingLook, lookFromColour, MAX_TEXT_SHARE, sameColour, strokeColour, type Rgb, type TextLook } from "./hudTextLook.js";
+import { findingLook, hueLook, lookFromColour, MAX_TEXT_SHARE, sameColour, strokeColour, type Rgb, type TextLook } from "./hudTextLook.js";
 
 export interface PitchReading {
   /** Degrees, the fraction from the ladder when its rungs were found (else the box's whole degrees). */
@@ -280,7 +280,16 @@ export interface PitchBox {
  * star's soft edge left a gap through the 4). Digits side by side never stack, so they are not joined.
  */
 function joinStacked(pieces: Rect[], sh: number): Rect[] {
-  const out = pieces.map((p) => ({ ...p }));
+  /*
+    Only parts short of a digit (about 1.1 % of the screen's height) can join, and only those overlapping across: sorted
+    by x, each is compared with the next ones until they start right of it. Comparing every pair and restarting after
+    each join took 1.5 s on a star field's hundreds of specks (2026-11-07). Specks stay in: leaving out pieces under
+    3 px kept some real parts of a digit apart (his 1198 read 90 for 66).
+  */
+  const rest: Rect[] = [];
+  const out: Rect[] = [];
+  for (const p of pieces) (p.y1 - p.y0 + 1 < sh * 0.0095 ? out : rest).push({ ...p });
+  out.sort((a, b) => a.x0 - b.x0);
   let merged = true;
   while (merged) {
     merged = false;
@@ -288,11 +297,12 @@ function joinStacked(pieces: Rect[], sh: number): Rect[] {
       for (let j = i + 1; j < out.length && !merged; j++) {
         const a = out[i]!;
         const b = out[j]!;
+        if (b.x0 > a.x1) break;
         const overlap = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) + 1;
         const narrow = Math.min(a.x1 - a.x0, b.x1 - b.x0) + 1;
         const gap = Math.max(a.y0, b.y0) - Math.min(a.y1, b.y1) - 1;
         const tall = Math.max(a.y1, b.y1) - Math.min(a.y0, b.y0) + 1;
-        // Two parts each short of a digit (about 1.1 % of the screen's height), together about one.
+        // Two parts each short of a digit, together about one.
         const short = Math.max(a.y1 - a.y0, b.y1 - b.y0) + 1 < sh * 0.0095;
         if (overlap >= narrow * 0.5 && gap >= 0 && gap <= 3 && short && tall >= sh * 0.009 && tall <= sh * 0.013) {
           out[i] = { x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1) };
@@ -301,7 +311,7 @@ function joinStacked(pieces: Rect[], sh: number): Rect[] {
         }
       }
   }
-  return out;
+  return [...rest, ...out];
 }
 
 /** Split a piece wider than a digit at its thinnest columns, into as many digits as its width holds. */
@@ -665,9 +675,24 @@ const PITCH_FINDING_LOOKS: readonly TextLook[] = [findingLook(170, 90), findingL
 
 type Pair = { left: PitchBox; right: PitchBox };
 
-/** Each framed mirrored pair found colour-blind, with its colours. */
-function discoverPitchPairs(rgba: Rgba, w: number, h: number, screen: FrameScreen): { colours: PitchColours; pair: Pair }[] {
+/**
+ * Each framed mirrored pair found, with its colours: in the hue the mod's settings name (`hint`, EDHM's ini) when given,
+ * and colour-blind only when that finds none (the hint saves the two blind sweeps, and a stale one costs one sweep).
+ */
+function discoverPitchPairs(
+  rgba: Rgba,
+  w: number,
+  h: number,
+  screen: FrameScreen,
+  hint?: PitchColours | null,
+): { colours: PitchColours; pair: Pair }[] {
   const out: { colours: PitchColours; pair: Pair }[] = [];
+  const hinted = hint ? findPitchBoxes(rgba, w, h, screen, hueLook(hint.text), true) : null;
+  if (hinted) {
+    const text = strokeColour(rgba, w, [...hinted.left.digits, ...hinted.right.digits]);
+    out.push({ colours: { text, frame: hinted.left.frame! }, pair: hinted });
+    return out;
+  }
   for (const finding of PITCH_FINDING_LOOKS) {
     const pair = findPitchBoxes(rgba, w, h, screen, finding, true);
     if (!pair) continue;
@@ -678,8 +703,14 @@ function discoverPitchPairs(rgba: Rgba, w: number, h: number, screen: FrameScree
 }
 
 /** The colours a recoloured HUD draws its pitch boxes in: each framed mirrored pair found colour-blind gives one. */
-export function discoverPitchColours(rgba: Rgba, w: number, h: number, screen: FrameScreen = { w, h }): PitchColours[] {
-  return discoverPitchPairs(rgba, w, h, screen).map((p) => p.colours);
+export function discoverPitchColours(
+  rgba: Rgba,
+  w: number,
+  h: number,
+  screen: FrameScreen = { w, h },
+  hint?: PitchColours | null,
+): PitchColours[] {
+  return discoverPitchPairs(rgba, w, h, screen, hint).map((p) => p.colours);
 }
 
 /** A box found colour-blind, its minus told in the learned colour's ink. */
@@ -700,8 +731,9 @@ const ANY_MIN_MARGIN = 0.06;
 /**
  * The pitch in any HUD colour, with the colours it was read in, to keep for the next frames. The game's own yellow and
  * orange first, as they always were read (`glyphs`), unless a recoloured HUD was learned; then `known`, else each colour
- * found on the frame (`discover`: finding them doubles a frame's time, so the capture looks once a second), with
- * `anyGlyphs` (hudPitchGlyphsAny.ts): only framed boxes, the ladder in the outline's colour.
+ * found on the frame (`discover`: finding them doubles a frame's time, so the capture looks once a second; `hint`: the
+ * colours a mod's settings name, EDHM's ini, looked for first), with `anyGlyphs` (hudPitchGlyphsAny.ts): only framed
+ * boxes, the ladder in the outline's colour.
  */
 export function readHudPitchAnyColour(
   rgba: Rgba,
@@ -712,16 +744,20 @@ export function readHudPitchAnyColour(
   screen: FrameScreen = { w, h },
   known?: PitchColours | null,
   discover = true,
+  hint?: PitchColours | null,
 ): { reading: PitchReading; colours: PitchColours | null } | null {
   if (!known) {
     const reading = readHudPitch(rgba, w, h, glyphs, screen);
     if (reading) return { reading, colours: null };
     if (!discover) return null;
   }
-  for (const { colours, look, pair } of pitchPairsAnyColour(rgba, w, h, screen, known)) {
-    const reading = readPair(rgba, w, h, screen, pair, anyGlyphs, look, "learned", lookFromColour(colours.frame).isText, ANY_MIN_MATCH, ANY_MIN_MARGIN);
-    if (reading) return { reading, colours };
-  }
+  // The hint first; a hinted pair that does not read is followed by the colour-blind search (the theme bench: on light
+  // grey themes the hue matched a pair the search would not have chosen, 1,983 against 2,026 of 2,688 read).
+  for (const tryHint of hint && !known ? [hint, null] : [hint ?? null])
+    for (const { colours, look, pair } of pitchPairsAnyColour(rgba, w, h, screen, known, tryHint)) {
+      const reading = readPair(rgba, w, h, screen, pair, anyGlyphs, look, "learned", lookFromColour(colours.frame).isText, ANY_MIN_MATCH, ANY_MIN_MARGIN);
+      if (reading) return { reading, colours };
+    }
   return null;
 }
 
@@ -736,9 +772,10 @@ export function pitchPairsAnyColour(
   h: number,
   screen: FrameScreen = { w, h },
   known?: PitchColours | null,
+  hint?: PitchColours | null,
 ): { colours: PitchColours; look: TextLook; pair: Pair }[] {
   const out: { colours: PitchColours; look: TextLook; pair: Pair }[] = [];
-  for (const { colours, pair: seen } of known ? [{ colours: known, pair: null }] : discoverPitchPairs(rgba, w, h, screen)) {
+  for (const { colours, pair: seen } of known ? [{ colours: known, pair: null }] : discoverPitchPairs(rgba, w, h, screen, hint)) {
     const look = lookFromColour(colours.text);
     const inColour = findPitchBoxes(rgba, w, h, screen, look, true);
     if (inColour) out.push({ colours, look, pair: inColour });

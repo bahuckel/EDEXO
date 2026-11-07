@@ -7,6 +7,7 @@ import { eliteDisplaySettingsPath, eliteDisplayWarning, readEliteDisplayMode, re
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { linuxCheckForThisMachine } from "../linuxProbes.js";
 import { perfCount } from "../perf.js";
+import { readEdhmColours } from "../edhmColours.js";
 
 export function registerSystemInfoRoutes(
   app: express.Express,
@@ -55,6 +56,11 @@ export function registerSystemInfoRoutes(
   // The game's field of view and resolution, for the screen marker (aim-overlay.html).
   app.get("/api/elite-view", (_req, res) => {
     res.json(readEliteView(eliteDisplaySettingsPath(opts.getSnapshot().journalDir)));
+  });
+
+  // EDHM's pitch box colours from its own ini (edhmColours.ts), a hint for the screen marker's pitch reader; null without EDHM.
+  app.get("/api/hud-colours/edhm", (_req, res) => {
+    res.json({ edhm: readEdhmColours() });
   });
 
   app.get("/api/elite-display-mode", (_req, res) => {

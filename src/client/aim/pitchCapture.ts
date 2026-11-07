@@ -18,6 +18,8 @@ const CROP = 0.4;
 const FORGET_COLOURS_AFTER = 8;
 /** Unread, the colours are looked for on every this many frames (once a second): finding them doubles a frame's time. */
 const DISCOVER_EVERY = 4;
+/** EDHM's ini colours are asked for this often (F11 in game reloads a theme). */
+const EDHM_EVERY_MS = 5000;
 
 export interface PitchCapture {
   stop(): void;
@@ -52,6 +54,17 @@ export async function startPitchCapture(onRead: (r: PitchRead | null) => void): 
   */
   let colours: PitchColours | null = null;
   let misses = 0;
+  /* EDHM's own colours for the boxes (server edhmColours.ts), a hint for finding them; null without EDHM. */
+  let hint: PitchColours | null = null;
+  const askEdhm = () =>
+    void fetch("/api/hud-colours/edhm")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { edhm?: { pitchText: PitchColours["text"]; pitchFrame: PitchColours["frame"] } | null } | null) => {
+        hint = j?.edhm ? { text: j.edhm.pitchText, frame: j.edhm.pitchFrame } : null;
+      })
+      .catch(() => {});
+  askEdhm();
+  const edhmTimer = setInterval(askEdhm, EDHM_EVERY_MS);
   /** The heading off the tape strip of the frame (its own small crop). */
   const readHeading = (vw: number, vh: number): number | null => {
     const tx = Math.round(vw * TAPE.x0);
@@ -73,7 +86,7 @@ export async function startPitchCapture(onRead: (r: PitchRead | null) => void): 
     const cy0 = (vh - ch) / 2;
     const px = screen.crop(cx0, cy0, cw, ch, "pitch");
     if (!px) return onRead(null);
-    const found = readHudPitchAnyColour(px, cw, ch, HUD_PITCH_GLYPHS, HUD_PITCH_GLYPHS_ANY, { w: vw, h: vh }, colours, misses % DISCOVER_EVERY === 0);
+    const found = readHudPitchAnyColour(px, cw, ch, HUD_PITCH_GLYPHS, HUD_PITCH_GLYPHS_ANY, { w: vw, h: vh }, colours, misses % DISCOVER_EVERY === 0, hint);
     const r = found?.reading ?? null;
     if (found) colours = found.colours;
     misses = r ? 0 : misses + 1;
@@ -95,6 +108,7 @@ export async function startPitchCapture(onRead: (r: PitchRead | null) => void): 
   return {
     stop() {
       clearInterval(timer);
+      clearInterval(edhmTimer);
       screen.release();
     },
   };
