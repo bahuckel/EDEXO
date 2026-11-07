@@ -28,9 +28,9 @@
  * bodies are 15 % Thin Water anyway, and *that* is the finding. The per-body table follows, for
  * reading by hand and for grepping.
  *
- *   npx tsx scripts/species-dossier.ts                                  # Bacterium Tela
- *   npx tsx scripts/species-dossier.ts --species "Osseus discus"
- *   npx tsx scripts/species-dossier.ts --out docs/whatever.md
+ *   npx tsx scripts/probes/species-dossier.ts                                  # Bacterium Tela
+ *   npx tsx scripts/probes/species-dossier.ts --species "Osseus discus"
+ *   npx tsx scripts/probes/species-dossier.ts --out docs/whatever.md
  *
  * Paths are resolved relative to this repository, never hard-coded: `EXOMASTERY_FEEDER_DIR` and
  * `EDDN_COLLECTOR_DB` override the siblings it expects.
@@ -39,11 +39,11 @@ import path from "node:path";
 import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
-import { listJournalFilesChronological, readJournalFull } from "../src/server/journalWatcher.js";
-import { normaliseMaterial } from "../src/shared/speciesColour.js";
-import type { JournalLine } from "../src/shared/types.js";
+import { listJournalFilesChronological, readJournalFull } from "../../src/server/journalWatcher.js";
+import { normaliseMaterial } from "../../src/shared/speciesColour.js";
+import type { JournalLine } from "../../src/shared/types.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const argv = process.argv.slice(2);
 const argOf = (name: string, fallback: string): string => {
   const i = argv.indexOf(`--${name}`);
@@ -547,7 +547,7 @@ md.push(`# ${speciesName} — every body we have`);
 md.push("");
 md.push(
   `Generated ${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC by ` +
-    '`npx tsx scripts/species-dossier.ts --species "' +
+    '`npx tsx scripts/probes/species-dossier.ts --species "' +
     speciesName +
     '"`. Local-only, like everything under `docs/`.',
 );

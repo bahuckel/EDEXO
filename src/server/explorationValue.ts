@@ -1,9 +1,10 @@
 /**
  * Exploration (FSS / DSS) credit estimates from journal scan fields.
  *
- * Ported from EDMC Pioneer `src/pioneer/body_planet_calc.py` / body value helpers (GPL-2.0+),
- * which credit MattG’s exploration formulae thread:
+ * From MattG’s published exploration formulae (Frontier forums):
  * https://forums.frontier.co.uk/threads/exploration-value-formulae.232000/
+ * Our own code, measured against the owner's journals; EDMC Pioneer's figures were used only to confirm the results
+ * (owner 2026-11-07), none of its code is in here.
  *
  * Results are approximate — game version / Odyssey tweaks can shift payouts.
  */

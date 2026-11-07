@@ -11,20 +11,20 @@
  * skipped here makes the answer a different question, which is how the first tela probe reported
  * 99.4 %.
  *
- *   npx tsx scripts/panel-replay.ts [--n 25] [--species "Bacterium tela"]
+ *   npx tsx scripts/probes/panel-replay.ts [--n 25] [--species "Bacterium tela"]
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { matchDatabaseToScan } from "../src/server/matchSpecies.js";
-import { loadJournalMergeCacheForTool, probeMatchContexts } from "./probeCache.js";
-import { journalHostObservationFromSpeciesContext } from "../src/server/journalHostObservation.js";
-import { rankSpeciesOnBody, REGION_PRIOR_WEIGHT } from "../src/server/speciesLikelihood.js";
-import { demoteBelowPresenceFloor } from "../src/server/snapshot.js";
-import { genusShares } from "../src/shared/systemTriage.js";
-import type { BodyExoState, SpeciesMatchContext } from "../src/shared/types.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { matchDatabaseToScan } from "../../src/server/matchSpecies.js";
+import { loadJournalMergeCacheForTool, probeMatchContexts } from "../probeCache.js";
+import { journalHostObservationFromSpeciesContext } from "../../src/server/journalHostObservation.js";
+import { rankSpeciesOnBody, REGION_PRIOR_WEIGHT } from "../../src/server/speciesLikelihood.js";
+import { demoteBelowPresenceFloor } from "../../src/server/snapshot.js";
+import { genusShares } from "../../src/shared/systemTriage.js";
+import type { BodyExoState, SpeciesMatchContext } from "../../src/shared/types.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const argv = process.argv.slice(2);
 const argOf = (n: string, d: string) => {
   const i = argv.indexOf(`--${n}`);

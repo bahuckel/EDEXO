@@ -17,7 +17,7 @@
   overflow: hidden;
   border: 1px solid rgba(var(--accent-rgb), 0.32);
   background-color: #0a0908;
-  background-image: url("../../../fss-required.webp");
+  background-image: url("../assets/fss-required.webp");
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;

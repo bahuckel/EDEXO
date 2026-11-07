@@ -2,7 +2,7 @@
  * Species precision, phase 2: every planet class a species is found on that its row leaves out —
  * priced, all at once.
  *
- *   npx tsx scripts/precision-class-sweep.ts [--min-bodies 5] [--min-share 0.05]
+ *   npx tsx scripts/probes/precision-class-sweep.ts [--min-bodies 5] [--min-share 0.05]
  *
  * Tussock divisa was shown on 45.7 % of its own bodies because its row said Rocky and 95 of its 175
  * bodies are High Metal Content. Osseus cornibus and Recepta umbrux turned up the same shape on the
@@ -18,9 +18,9 @@
  */
 import path from "node:path";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
 import { createReplay, loadPatchedDb, loadTruthByBody, precisionDir, root, runMatcher, type Prepared } from "./precisionReplay.js";
-import type { SpeciesDatabase } from "../src/shared/types.js";
+import type { SpeciesDatabase } from "../../src/shared/types.js";
 
 const argv = process.argv.slice(2);
 const argNum = (n: string, d: number) => {
@@ -182,7 +182,7 @@ const pc = (a: number, b: number) => (b ? `${((100 * a) / b).toFixed(1)} %` : "�
 const out: string[] = [
   `# Planet-class sweep`,
   ``,
-  `Generated ${new Date().toISOString()} by \`scripts/precision-class-sweep.ts\`. Local only.`,
+  `Generated ${new Date().toISOString()} by \`scripts/probes/precision-class-sweep.ts\`. Local only.`,
   ``,
   `Every planet class holding at least ${MIN_BODIES} of a species' truth bodies and ${(MIN_SHARE * 100).toFixed(0)} % of them, that the species' row does not allow — added in a patched tree and the whole genus replayed.`,
   ``,

@@ -1,7 +1,7 @@
 /**
  * Species precision: a set of proposed row changes, replayed together over every slot.
  *
- *   npx tsx scripts/precision-whatif.ts '{"frutexa_frutexa_metallicum":{"planet_types":["High Metal Content"]}, …}'
+ *   npx tsx scripts/probes/precision-whatif.ts '{"frutexa_frutexa_metallicum":{"planet_types":["High Metal Content"]}, …}'
  *
  * The gate check prices one change on one genus. Changes that ship together can interact — two
  * gates that each look free can between them hide a body — so the set is loaded as one patched tree
@@ -9,13 +9,13 @@
  * current tree. Reported the way phase 1 reports: truth shown, truth listed, slot sizes, and every
  * species whose own recall moves, in either direction.
  */
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
 import { createReplay, loadPatchedDb, loadTruthByBody, root, runMatcher, type ConditionsPatch } from "./precisionReplay.js";
-import type { SpeciesDatabase } from "../src/shared/types.js";
+import type { SpeciesDatabase } from "../../src/shared/types.js";
 
 const patches = JSON.parse(process.argv[2] ?? "{}") as Record<string, ConditionsPatch>;
 if (!Object.keys(patches).length) {
-  console.error("usage: npx tsx scripts/precision-whatif.ts '<{speciesId: conditionsPatch}>'");
+  console.error("usage: npx tsx scripts/probes/precision-whatif.ts '<{speciesId: conditionsPatch}>'");
   process.exit(1);
 }
 const base = loadSpeciesDatabaseFromTree(root);

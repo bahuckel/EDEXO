@@ -29,11 +29,9 @@ export const RUNTIME_STATE = Object.freeze(["foot_scanned.json"]);
 /**
  * Shipped by accident rather than by decision: real content, but nothing in `src/` reads it.
  *
- * `spansh-dump-tests` is four Spansh route exports the tests and probes run against. Public data and
- * harmless, but 368 KB of fixtures in every download, and a release should carry what the app uses.
+ * (The four Spansh route exports the tests read live in tests/fixtures/spansh-dump-tests since 2026-11-07.)
  */
 export const NOT_SHIPPED = Object.freeze([
-  "spansh-dump-tests",
   /*
     The galaxy map's index (owner, 2026-10-04, plan 4.2): a separate download from the app's
     `galaxy-index` GitHub release, offered by the map itself (src/server/galaxyIndexFiles.ts). About
@@ -43,6 +41,11 @@ export const NOT_SHIPPED = Object.freeze([
   "galaxy/system-traits.bin.gz",
   // The game's picture of the galaxy (Frontier's): the maps draw their own since 1.2.12 (galaxyClouds.ts).
   "galaxy/milkyway-game-normalized.jpg",
+  // Imported at build time (src/shared/boxelRates.ts, boxelBioRates.ts, boxelPositionGolden.ts): already inside the
+  // bundles, nothing reads the files (review 2026-11-07).
+  "boxel/boxel-rates.json",
+  "boxel/boxel-bio-rates.json",
+  "boxel/boxel-position-golden.json",
 ]);
 
 const EXCLUDED = Object.freeze([...RUNTIME_STATE, ...NOT_SHIPPED]);

@@ -17,6 +17,7 @@ import { spawnSync } from "node:child_process";
 import { runPkg, writeCliLaunchers } from "./cliPack.mjs";
 import { mergeDataOverlays } from "./mergeDataOverlay.mjs";
 import { copyDataTree } from "./packagedData.mjs";
+import { DATA_LICENCE_TXT, LICENCE_TXT } from "./licenceText.mjs";
 
 const version = JSON.parse(readFileSync("package.json", "utf8")).version;
 const target = process.env.EDEXO_PKG_TARGET ?? "node22-linux-x64";
@@ -30,10 +31,13 @@ const TAG = "dist:linux";
 if (existsSync(outRoot)) rmSync(outRoot, { recursive: true, maxRetries: 10, retryDelay: 200 });
 mkdirSync(outDir, { recursive: true });
 
-const { server, client } = writeCliLaunchers();
+/*
+  One program: the client is the server on 127.0.0.1 that opens the browser, so its launcher runs the same binary with
+  those flags. A second pkg binary was the same 74.6 MB again (review 2026-11-07).
+*/
+const { server } = writeCliLaunchers();
 const cross = process.platform === "linux" ? [] : ["--no-bytecode", "--public"];
 runPkg(TAG, "Server (console)", server, join(outDir, "edexo-server"), target, cross);
-runPkg(TAG, "Client (console)", client, join(outDir, "edexo-client"), target, cross);
 
 cpSync(join("dist", "web"), join(outDir, "web"), { recursive: true });
 copyDataTree(join(outDir, "data"));
@@ -46,30 +50,29 @@ cpSync("data/LICENSE-DATA.txt", join(outDir, "LICENSE-DATA.txt"));
   The launchers. `readlink -f` so a symlink on the desktop still runs from the real folder, where
   `web/` and `data/` are; `exec` so the terminal's Ctrl+C reaches the server itself.
 */
-const sh = (binary, what) => `#!/usr/bin/env bash
+const sh = (flags, what) => `#!/usr/bin/env bash
 # EDEXO — ${what}
 # Flags pass through: --local (this PC only), --port <n>, --lan.
 set -euo pipefail
 here="$(dirname "$(readlink -f "$0")")"
 cd "$here"
-exec ./${binary} "$@"
+exec ./edexo-server ${flags}"$@"
 `;
 writeFileSync(
   join(outDir, "edexo-server.sh"),
-  sh("edexo-server", "server on 0.0.0.0:7111: this PC, your LAN and your phone. Open the printed address."),
+  sh("", "server on 0.0.0.0:7111: this PC, your LAN and your phone. Open the printed address."),
   { encoding: "utf8" },
 );
 writeFileSync(
   join(outDir, "edexo-client.sh"),
-  sh("edexo-client", "this PC only (127.0.0.1:7111), and opens your browser on the app."),
+  sh("--local --open ", "this PC only (127.0.0.1:7111), and opens your browser on the app."),
   { encoding: "utf8" },
 );
 
 const readme = `EDEXO ${version} — Linux (browser UI)
 
-UNTESTED: the first Linux release, not yet tried on a real desktop with the game running. What
-worked and what did not (distro, desktop, X11 or Wayland) is welcome as a GitHub issue:
-https://github.com/bahuckel/EDEXO/issues
+Few Linux players have reported back yet. What worked and what did not (distro, desktop, X11 or
+Wayland) is welcome as a GitHub issue: https://github.com/bahuckel/EDEXO/issues
 
 Run one of the launchers in this folder, from a terminal or your file manager:
 
@@ -91,10 +94,10 @@ Elite must run in Borderless: nothing can draw over an exclusive fullscreen game
 
 YOUR DATA
 Settings and caches: ~/.config/edexo-compare (or $XDG_CONFIG_HOME/edexo-compare).
-Keep this folder layout: the two programs plus "web" and "data" next to them.
+Keep this folder layout: edexo-server plus "web" and "data" next to it.
 
-Licence: code MIT (LICENSE); data CC BY-NC-SA 3.0 (LICENSE-DATA.txt); the species photographs
-are Elite Dangerous screenshots, Frontier's art under Frontier's terms (NOTICE.md).
+${LICENCE_TXT}
+${DATA_LICENCE_TXT}
 `;
 writeFileSync(join(outDir, "README.txt"), readme, "utf8");
 
@@ -112,7 +115,7 @@ function gnuTar() {
   throw new Error("GNU tar not found: install Git for Windows, or run this on Linux.");
 }
 
-const EXECUTABLE = ["edexo-server", "edexo-client", "edexo-server.sh", "edexo-client.sh"].map(
+const EXECUTABLE = ["edexo-server", "edexo-server.sh", "edexo-client.sh"].map(
   (f) => `${folder}/${f}`,
 );
 const tar = gnuTar();

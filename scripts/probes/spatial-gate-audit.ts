@@ -1,7 +1,7 @@
 /**
  * Do the *position* gates agree with an independent feed? — the fourth quarter of the gate audit.
  *
- *   npx tsx scripts/spatial-gate-audit.ts <capture.jsonl>
+ *   npx tsx scripts/probes/spatial-gate-audit.ts <capture.jsonl>
  *
  * ## Why this is a separate pass
  *
@@ -41,17 +41,17 @@
 import fs from "node:fs";
 import readline from "node:readline";
 import path from "node:path";
-import { getProjectRoot } from "../src/server/paths.js";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { loadSpatialCatalogue } from "../src/server/spatialCatalogue.js";
-import { loadRegionMap } from "../src/server/regionMapData.js";
-import { regionIndexForCoords } from "../src/shared/regionMap.js";
-import { regionalPresence } from "../src/server/regionSpeciesData.js";
-import { evaluateSpatialGate, gateForSpeciesId } from "../src/shared/spatialGates.js";
+import { getProjectRoot } from "../../src/server/paths.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { loadSpatialCatalogue } from "../../src/server/spatialCatalogue.js";
+import { loadRegionMap } from "../../src/server/regionMapData.js";
+import { regionIndexForCoords } from "../../src/shared/regionMap.js";
+import { regionalPresence } from "../../src/server/regionSpeciesData.js";
+import { evaluateSpatialGate, gateForSpeciesId } from "../../src/shared/spatialGates.js";
 
 const capture = process.argv[2];
 if (!capture) {
-  console.error("usage: npx tsx scripts/spatial-gate-audit.ts <capture.jsonl>");
+  console.error("usage: npx tsx scripts/probes/spatial-gate-audit.ts <capture.jsonl>");
   process.exit(1);
 }
 

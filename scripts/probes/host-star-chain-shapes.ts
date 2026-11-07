@@ -13,16 +13,16 @@
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadJournalMergeCacheForTool } from "./probeCache.js";
+import { loadJournalMergeCacheForTool } from "../probeCache.js";
 import {
   allStarParentIds,
   hostStarBodyIdsForExobiology,
   parseJournalParentEntry,
   resolveHostStarBodyId,
-} from "../src/server/orbitUtils.js";
-import type { BodyExoState, ExplorationScanRecord } from "../src/shared/types.js";
+} from "../../src/server/orbitUtils.js";
+import type { BodyExoState, ExplorationScanRecord } from "../../src/shared/types.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 void root;
 
 /** The rule as it stood before the ordering fix: walk `Parents[0]`, else the **lowest** star id. */

@@ -49,7 +49,7 @@ const TEMPERATURE_PATH = "body.surfaceTemperature";
  * **Re-swept 2026-09-09** against a corpus twice the size, and this floor held: neither step away
  * from it bought decidability without costing recall. The full table and the one near-miss (the
  * atmosphere floor at 20) are in speciesAtmosphereObservations.ts; the runner is
- * scripts/floor-sweep.ts.
+ * scripts/probes/floor-sweep.ts.
  */ export const MIN_TEMPERATURE_OBSERVATIONS = observationFloor("TEMPERATURE", 20);
 
 export interface TemperatureObservation {
@@ -88,7 +88,7 @@ export function observedAtTemperature(
     HIP 87621 2 b a is 467 K in Spansh and 467.999969 K on EDDN; 467 K is the observed maximum of both
     Concha renibus and Fungoida stabitis, and from EDDN's reading both species drop off that body's
     list; HIP 87621 1 does the same to Clypeus lacrimam at 698 K. Three slots in 112,372 replayed, so
-    no slack is added here. The precision replay's report (scripts/precision-phase1.ts, section "Less
+    no slack is added here. The precision replay's report (scripts/probes/precision-phase1.ts, section "Less
     than 1 K past a recorded temperature edge") lists every case, so a recurrence shows up there.
   */
   if (kelvin < hist.min || kelvin > hist.max) return null;

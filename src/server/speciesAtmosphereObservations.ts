@@ -75,7 +75,7 @@ export const NO_ATMOSPHERE = "";
  * Value-weighted recall moves the same way — 97.1 % → 96.7 %, 101.8 M → 114.7 M credits missed.
  *
  * **Every one of the five floors held.** Each shipped value reproduced the baseline exactly, which is
- * the control the run before it failed: see scripts/floor-sweep.ts and the cache guards in
+ * the control the run before it failed: see scripts/probes/floor-sweep.ts and the cache guards in
  * scripts/probeCache.ts, added after a sweep measured a corpus that was changing underneath it.
  */
 export const MIN_ATMOSPHERE_OBSERVATIONS = observationFloor("ATMOSPHERE", 10);

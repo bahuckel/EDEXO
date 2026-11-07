@@ -12,7 +12,7 @@
  *   data/species/<genus>/<genus>_photos/_large/<name>.webp   2048 px — the photo lightbox (not committed:
  *       ~25 MB; every dist script runs this first, and builds ship it in place of the 105 MB of
  *       originals — owner, 2026-10-04: 1024 px looked soft on a 4K screen)
- *   fss-required.webp                                                — CSS backdrop
+ *   src/client/assets/fss-required.webp                              — CSS backdrop (source docs/fss-required.png, local)
  *   public/edexo-icon-124.webp                                       — 62 px header mark at 2x
  *
  * The server falls back to the original whenever a derivative is missing, so photos a commander
@@ -93,7 +93,7 @@ async function speciesPhotos() {
 
 async function uiArt() {
   const jobs = [
-    ["fss-required.png", "fss-required.webp", 1400, 74],
+    ["docs/fss-required.png", "src/client/assets/fss-required.webp", 1400, 74],
     ["public/edexo-icon.png", "public/edexo-icon-124.webp", 124, 88],
   ];
   for (const [from, to, width, quality] of jobs) {

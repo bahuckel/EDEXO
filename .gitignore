@@ -39,10 +39,6 @@ EDExoCompare.lnk
 # ---------------------------------------------------------------------------
 # Large local-only data
 # ---------------------------------------------------------------------------
-# 57 MB duplicate of data/species from 2026-05-04. Git is the backup now —
-# delete the folder once the first push is verified.
-data/species_backup_*/
-
 # Optional: mirror of data/species/... for exomastery JSON merged into dist packs
 # (see scripts/mergeDataOverlay.mjs)
 /exomastery-overlay/
@@ -74,19 +70,15 @@ Thumbs.db
 !/README.md
 # The attribution and third-party notice: it has to reach the remote to do its job.
 !/NOTICE.md
+# The Chrome helper's install steps (README.md's Colonize section points at the folder).
+!/chrome-extension/README.md
 
-# Everything under docs/ except the two images the repo page uses.
+# Everything under docs/: local only (review 2026-11-07: edexo-scan.jpg, the last tracked file, was used by nothing).
 /docs/**
-!/docs/edexo-scan.jpg
-!/docs/species-screenshots/
-!/docs/species-screenshots/**
 
 # ---------------------------------------------------------------------------
 # Superseded / unused local files — kept on disk, not part of the project
 # ---------------------------------------------------------------------------
-# An older copy of the Electron entry point. The real one is electron/main.cjs,
-# which is what package.json "main" and electron-builder both point at.
-/main.cjs
 # Reminder note for the code-signing certificate. Never belongs in the repo.
 sign.txt
 
@@ -108,13 +100,13 @@ photo-contributions.txt
 # Generated report pages (galaxy coverage map and friends). Built from data/exomastery on demand.
 /build-artifacts/
 
-# The built galaxy biology index (~40 MB), from edastro's codex export.
-#
-# Ignored until its distribution is settled, not because it is large: it is derived from someone
-# else's dataset, and this repo is public and MIT. The builder that makes it is committed, so anyone
-# with the inputs can produce it; whether the artifact itself ships is the owner's call and needs a
-# line in NOTICE.md when it does.
-/data/galaxy/
+# The galaxy index files (bio-index.bin, system-traits.bin.gz): hundreds of MB, built from Spansh's and
+# EDSM's dumps by committed scripts and downloaded by the app from the galaxy-index release, never
+# committed. developer-populated-systems.json (280 KB, Spansh-derived, credited in NOTICE.md) is
+# committed: the app ships and reads it, and a clone without it built a quietly degraded app
+# (review 2026-11-07).
+/data/galaxy/*
+!/data/galaxy/developer-populated-systems.json
 
 # Local dev-harness launch config (Browser pane); not part of the app.
 /.claude/launch.json

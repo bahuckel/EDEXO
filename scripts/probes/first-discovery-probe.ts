@@ -14,19 +14,19 @@
  * Reads the journal merge cache, so the answer is specific to this commander. Run the app once
  * first if the cache does not exist.
  *
- *   npx tsx scripts/first-discovery-probe.ts
- *   npx tsx scripts/first-discovery-probe.ts --limit 40
+ *   npx tsx scripts/probes/first-discovery-probe.ts
+ *   npx tsx scripts/probes/first-discovery-probe.ts --limit 40
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { matchDatabaseToScan, shownSpeciesMatches } from "../src/server/matchSpecies.js";
-import { computeExoPayoutRangeFromMatches, resolveOrganicSlotCount } from "../src/server/exoPayoutRange.js";
-import { loadPriceList } from "../src/server/priceList.js";
-import { loadJournalMergeCacheForTool, probeMatchContexts } from "./probeCache.js";
-import type { BodyExoState, SpeciesMatchContext } from "../src/shared/types.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { matchDatabaseToScan, shownSpeciesMatches } from "../../src/server/matchSpecies.js";
+import { computeExoPayoutRangeFromMatches, resolveOrganicSlotCount } from "../../src/server/exoPayoutRange.js";
+import { loadPriceList } from "../../src/server/priceList.js";
+import { loadJournalMergeCacheForTool, probeMatchContexts } from "../probeCache.js";
+import type { BodyExoState, SpeciesMatchContext } from "../../src/shared/types.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const limitArg = process.argv.indexOf("--limit");
 const LIMIT = limitArg >= 0 ? Number(process.argv[limitArg + 1]) || 25 : 25;
 

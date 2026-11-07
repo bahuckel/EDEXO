@@ -5,7 +5,7 @@
  * that chose it. They are grouped here only so a sweep can move one without hand-editing constants
  * in five files — which is how a sweep gets a wrong answer: one edit missed, one run mislabelled.
  *
- * `EDEXO_FLOOR_<NAME>` overrides a floor for one process. It exists for `scripts/floor-sweep.ts` and
+ * `EDEXO_FLOOR_<NAME>` overrides a floor for one process. It exists for `scripts/probes/floor-sweep.ts` and
  * is not a supported setting: the shipped numbers are the ones measured against this corpus, and a
  * commander who guesses at them will quietly get worse predictions with nothing to say so. A bad
  * value is ignored rather than obeyed, because a typo silently disabling a gate is worse than a

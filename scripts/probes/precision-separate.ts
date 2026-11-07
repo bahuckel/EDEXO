@@ -1,10 +1,10 @@
 /**
  * Species precision, phase 2: what separates two species of one genus?
  *
- *   npx tsx scripts/precision-separate.ts --pair frutexa_frutexa_acus frutexa_frutexa_metallicum
- *   npx tsx scripts/precision-separate.ts --top 8          # the phase-1 confusion pairs, by credits at stake
- *   npx tsx scripts/precision-separate.ts --genus stratum --top 10
- *   npx tsx scripts/precision-separate.ts --pair A B --where "distance to parent star ls>=2460"
+ *   npx tsx scripts/probes/precision-separate.ts --pair frutexa_frutexa_acus frutexa_frutexa_metallicum
+ *   npx tsx scripts/probes/precision-separate.ts --top 8          # the phase-1 confusion pairs, by credits at stake
+ *   npx tsx scripts/probes/precision-separate.ts --genus stratum --top 10
+ *   npx tsx scripts/probes/precision-separate.ts --pair A B --where "distance to parent star ls>=2460"
  *
  * ## The question, shaped the way a gate is used
  *
@@ -36,11 +36,11 @@
  */
 import path from "node:path";
 import { readFileSync, writeFileSync } from "node:fs";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { loadPriceList, lookupPrice } from "../src/server/priceList.js";
-import { hostStarClassKey } from "../src/shared/hostStarClass.js";
-import { journalPressureToAtm } from "../src/shared/journalPhysics.js";
-import { atmosphereCompositionKey, normalizeScanAtmosphereForMatch } from "../src/shared/scanAtmosphereMatch.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { loadPriceList, lookupPrice } from "../../src/server/priceList.js";
+import { hostStarClassKey } from "../../src/shared/hostStarClass.js";
+import { journalPressureToAtm } from "../../src/shared/journalPhysics.js";
+import { atmosphereCompositionKey, normalizeScanAtmosphereForMatch } from "../../src/shared/scanAtmosphereMatch.js";
 import { createReplay, loadTruthByBody, precisionDir, root, type Prepared, type Source } from "./precisionReplay.js";
 
 const argv = process.argv.slice(2);
@@ -371,7 +371,7 @@ for (const [x, y] of pairs) {
   const say = (...l: string[]) => out.push(...l);
   const X = bodiesOf.get(x) ?? [];
   const Y = bodiesOf.get(y) ?? [];
-  say(`# ${short(x)} vs ${short(y)}`, ``, `Generated ${new Date().toISOString()} by \`scripts/precision-separate.ts\`. Local only.`, ``);
+  say(`# ${short(x)} vs ${short(y)}`, ``, `Generated ${new Date().toISOString()} by \`scripts/probes/precision-separate.ts\`. Local only.`, ``);
   say(`${short(x)}: ${X.length} bodies (${M(priceOf(x))}) · ${short(y)}: ${Y.length} bodies (${M(priceOf(y))}).${where ? ` Only where \`${where}\`.` : ""}`, ``);
 
   for (const [a, b, A, B] of [

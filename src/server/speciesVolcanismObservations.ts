@@ -52,7 +52,7 @@ export const NO_VOLCANISM = "none";
  * **Re-swept 2026-09-09** against a corpus twice the size, and this floor held: neither step away
  * from it bought decidability without costing recall. The full table and the one near-miss (the
  * atmosphere floor at 20) are in speciesAtmosphereObservations.ts; the runner is
- * scripts/floor-sweep.ts.
+ * scripts/probes/floor-sweep.ts.
  */ export const MIN_VOLCANISM_OBSERVATIONS = observationFloor("VOLCANISM", 5);
 
 /**

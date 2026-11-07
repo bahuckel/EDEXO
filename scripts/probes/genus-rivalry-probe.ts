@@ -16,17 +16,17 @@
  * atmosphere" and nothing else. If that is what the data shows, the app can model it as a fallback
  * instead of a candidate, which is a far stronger statement than a weighted likelihood.
  *
- *   npx tsx scripts/genus-rivalry-probe.ts                       # Bacterium, focus on tela
- *   npx tsx scripts/genus-rivalry-probe.ts --genus Osseus --species "Osseus discus"
+ *   npx tsx scripts/probes/genus-rivalry-probe.ts                       # Bacterium, focus on tela
+ *   npx tsx scripts/probes/genus-rivalry-probe.ts --genus Osseus --species "Osseus discus"
  */
 import path from "node:path";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { normaliseMaterial } from "../src/shared/speciesColour.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { normaliseMaterial } from "../../src/shared/speciesColour.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const feederDir = process.env.EXOMASTERY_FEEDER_DIR?.trim() || path.resolve(root, "..", "exomastery-feeder");
 const argv = process.argv.slice(2);
 const argOf = (n: string, d: string) => {

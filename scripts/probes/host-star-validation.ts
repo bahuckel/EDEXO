@@ -21,15 +21,15 @@
  * EDSM's `parents` and Spansh's can differ, and a disagreement about the *data* is not a disagreement
  * about the *rule*. Only bodies where both chains are identical test the rule.
  *
- *   npx tsx scripts/host-star-validation.ts <hoststar-rows.jsonl> <name-to-cache.json>
+ *   npx tsx scripts/probes/host-star-validation.ts <hoststar-rows.jsonl> <name-to-cache.json>
  *
  * Both inputs come from the scratchpad: one streaming pass over the dump, and a map from body name
  * to the local EDSM system cache that holds it.
  */
 import path from "node:path";
 import { existsSync, readFileSync } from "node:fs";
-import { resolveHostStarBodyId, hostStarBodyIdsForExobiology } from "../src/server/orbitUtils.js";
-import type { ExplorationScanRecord } from "../src/shared/types.js";
+import { resolveHostStarBodyId, hostStarBodyIdsForExobiology } from "../../src/server/orbitUtils.js";
+import type { ExplorationScanRecord } from "../../src/shared/types.js";
 
 const [rowsPath, cacheMapPath] = process.argv.slice(2);
 if (!rowsPath || !cacheMapPath) {

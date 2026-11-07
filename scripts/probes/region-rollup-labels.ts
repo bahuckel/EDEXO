@@ -1,7 +1,7 @@
 /**
  * Does the galaxy index call a species by the name the game calls it?
  *
- *   npx tsx scripts/region-rollup-labels.ts <capture.jsonl>
+ *   npx tsx scripts/probes/region-rollup-labels.ts <capture.jsonl>
  *
  * `data/galaxy/bio-index.bin` — and therefore `data/exomastery/region-species.json`, the table the
  * region gate and the region prior both read — labels its species layer through a bridge built in
@@ -35,13 +35,13 @@
 import fs from "node:fs";
 import readline from "node:readline";
 import path from "node:path";
-import { loadBioIndex } from "../src/server/bioIndex.js";
+import { loadBioIndex } from "../../src/server/bioIndex.js";
 
 const capture = process.argv[2];
 const genusFilter = process.argv[3] ?? null;
 const MIN = Number(process.env.MIN ?? 5);
 if (!capture) {
-  console.error("usage: npx tsx scripts/region-rollup-labels.ts <capture.jsonl> [genus-prefix]");
+  console.error("usage: npx tsx scripts/probes/region-rollup-labels.ts <capture.jsonl> [genus-prefix]");
   process.exit(1);
 }
 

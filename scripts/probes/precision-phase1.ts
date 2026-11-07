@@ -1,7 +1,7 @@
 /**
  * Species precision, phase 1: how many species does the app show for each genus slot, and which?
  *
- *   npx tsx scripts/precision-phase1.ts
+ *   npx tsx scripts/probes/precision-phase1.ts
  *
  * Reads `docs/precision/truth-table.jsonl` from phase 0 — every body × genus whose species the
  * sources agree on — and replays each body through the **shipped** matcher, the way the app sees
@@ -43,9 +43,9 @@
  */
 import path from "node:path";
 import { writeFileSync } from "node:fs";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { loadPriceList, lookupPrice } from "../src/server/priceList.js";
-import { loadExomasteryProfile } from "../src/server/exomasteryProfile.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { loadPriceList, lookupPrice } from "../../src/server/priceList.js";
+import { loadExomasteryProfile } from "../../src/server/exomasteryProfile.js";
 import { createReplay, loadTruthByBody, precisionDir as outDir, root, runMatcher, type Prepared, type RunMatch } from "./precisionReplay.js";
 
 const db = loadSpeciesDatabaseFromTree(root);
@@ -157,7 +157,7 @@ const HEAD = "| slots | truth shown | truth listed | mean size | size 1 | ≤ 2 
 const RULE = "|---:|---:|---:|---:|---:|---:|---:|---:|";
 
 const r: string[] = [];
-r.push(`# Species precision — phase 1 baseline`, ``, `Generated ${new Date().toISOString()} by \`scripts/precision-phase1.ts\`. Local only.`, ``);
+r.push(`# Species precision — phase 1 baseline`, ``, `Generated ${new Date().toISOString()} by \`scripts/probes/precision-phase1.ts\`. Local only.`, ``);
 r.push(
   `Replayed **${bodiesReplayed}** bodies (${seconds} s) → **${slots.length}** slots. ` +
     `Physics from: ${(["journal", "capture", "corpus"] as const).map((s) => `${s} ${slots.filter((x) => x.source === s).length}`).join(", ")} slots. ` +
@@ -268,7 +268,7 @@ r.push(`### Less than 1 K past a recorded temperature edge — ${edgeCases.lengt
 r.push(
   edgeCases.length
     ? "Spansh's whole-kelvin temperatures against the decimals of the journal and EDDN (see the comment in " +
-        "scripts/precision-phase1.ts). Known since 2026-09-29: HIP 87621 1 and 2 b a.\n\n" +
+        "scripts/probes/precision-phase1.ts). Known since 2026-09-29: HIP 87621 1 and 2 b a.\n\n" +
         edgeCases.join("\n")
     : "_none_",
   ``,

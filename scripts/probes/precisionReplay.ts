@@ -12,13 +12,13 @@ import { cpSync, createReadStream, existsSync, mkdtempSync, readdirSync, readFil
 import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { matchDatabaseToScan } from "../src/server/matchSpecies.js";
-import { mergeScanForExomastery } from "../src/server/footScannedCatalog.js";
-import { mapEdsmBodyToExplorationRecord } from "../src/server/edsmSystemHydration.js";
-import { buildSpeciesMatchContextFromRecords } from "../src/server/speciesMatchContext.js";
-import { loadSpatialCatalogue } from "../src/server/spatialCatalogue.js";
-import { loadJournalMergeCacheForTool } from "./probeCache.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { matchDatabaseToScan } from "../../src/server/matchSpecies.js";
+import { mergeScanForExomastery } from "../../src/server/footScannedCatalog.js";
+import { mapEdsmBodyToExplorationRecord } from "../../src/server/edsmSystemHydration.js";
+import { buildSpeciesMatchContextFromRecords } from "../../src/server/speciesMatchContext.js";
+import { loadSpatialCatalogue } from "../../src/server/spatialCatalogue.js";
+import { loadJournalMergeCacheForTool } from "../probeCache.js";
 import type {
   BodyExoState,
   ExplorationScanRecord,
@@ -26,9 +26,9 @@ import type {
   PlanetScan,
   SpeciesDatabase,
   SpeciesMatchContext,
-} from "../src/shared/types.js";
+} from "../../src/shared/types.js";
 
-export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const feederDir = process.env.EXOMASTERY_FEEDER_DIR?.trim() || path.resolve(root, "..", "exomastery-feeder");
 export const precisionDir = path.join(root, "docs", "precision");
 const clean = (v: unknown): string => String(v ?? "").trim();
@@ -69,7 +69,7 @@ export interface Prepared {
 export async function loadTruthByBody(): Promise<Map<string, TruthRow[]>> {
   const truthPath = path.join(precisionDir, "truth-table.jsonl");
   if (!existsSync(truthPath)) {
-    console.error("No truth table — run `npx tsx scripts/precision-phase0.ts` first.");
+    console.error("No truth table — run `npx tsx scripts/probes/precision-phase0.ts` first.");
     process.exit(1);
   }
   const out = new Map<string, TruthRow[]>();

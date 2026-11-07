@@ -5,7 +5,7 @@ data/
 docs/
 .edexo-cache/
 package-lock.json
-public/launcher.html
+src/client/launcher.html
 # Machine-written by `npm run fixture`; formatting it only churns on the next regeneration.
 tests/fixtures/match-golden.json
 *.png

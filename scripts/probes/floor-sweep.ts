@@ -9,8 +9,8 @@
  * are read once at module load and a single process cannot try two of them. Each run costs about two
  * and a half minutes, so a full grid is hours — pass only the values worth asking about.
  *
- *   npx tsx scripts/floor-sweep.ts                       # the default plan, ~25 min
- *   npx tsx scripts/floor-sweep.ts VOLCANISM 1 3 5 10    # one dimension, chosen values
+ *   npx tsx scripts/probes/floor-sweep.ts                       # the default plan, ~25 min
+ *   npx tsx scripts/probes/floor-sweep.ts VOLCANISM 1 3 5 10    # one dimension, chosen values
  *
  * What to read. **Recall** is the cost side: a floor that hides corpus evidence loses species the
  * commander actually found, and a species missed is a body flown to for nothing. **Decidability** is
@@ -26,7 +26,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** The values worth asking about, either side of each shipped floor. */
 const PLAN: Record<string, number[]> = {

@@ -4,6 +4,7 @@ import { runPkg as runPkgShared, writeCliLaunchers } from "./cliPack.mjs";
 import { mergeDataOverlays } from "./mergeDataOverlay.mjs";
 import { copyDataTree } from "./packagedData.mjs";
 import { signWindowsArtifactsIfConfigured } from "./sign-windows-artifacts.mjs";
+import { DATA_LICENCE_TXT, LICENCE_TXT } from "./licenceText.mjs";
 
 const outDir = join("dist", "cli-pack");
 const target = process.env.EDEXO_PKG_TARGET ?? "node22-win-x64";
@@ -38,7 +39,7 @@ cpSync(join("dist", "web"), join(outDir, "web"), { recursive: true });
 copyDataTree(join(outDir, "data"));
 mergeDataOverlays(join(outDir, "data"));
 
-const readme = `ED Exo Compare — Windows CLI build (no Electron, console stays open)
+const readme = `EDEXO — Windows CLI build (no Electron, console stays open)
 
 Run one of the executables in this folder:
 
@@ -50,6 +51,9 @@ Keep this folder layout: the .exe plus "web" and "data" next to it.
 Edit species under data/species/<Genus>/ and prices in data/price-list.json.
 
 Logs on errors: edexo-compare-startup-error.log / edexo-compare-crash.log next to the .exe.
+
+${LICENCE_TXT}
+${DATA_LICENCE_TXT}
 `;
 writeFileSync(join(outDir, "README.txt"), readme, "utf8");
 

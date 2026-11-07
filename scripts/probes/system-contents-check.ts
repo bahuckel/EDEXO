@@ -12,12 +12,12 @@
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { matchDatabaseToScan } from "../src/server/matchSpecies.js";
-import { loadJournalMergeCacheForTool } from "./probeCache.js";
-import type { BodyExoState, ExplorationScanRecord } from "../src/shared/types.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { matchDatabaseToScan } from "../../src/server/matchSpecies.js";
+import { loadJournalMergeCacheForTool } from "../probeCache.js";
+import type { BodyExoState, ExplorationScanRecord } from "../../src/shared/types.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const db = loadSpeciesDatabaseFromTree(root);
 const payload = loadJournalMergeCacheForTool();
 const bodies: BodyExoState[] = payload.bodies.map(([, b]) => b);

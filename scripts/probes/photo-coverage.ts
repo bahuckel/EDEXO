@@ -8,9 +8,9 @@
  *
  * `--wanted` prints just the list to hand over, one species per line.
  */
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { resolveSpeciesPhoto } from "../src/server/speciesPhotos.js";
-import { getProjectRoot } from "../src/server/paths.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { resolveSpeciesPhoto } from "../../src/server/speciesPhotos.js";
+import { getProjectRoot } from "../../src/server/paths.js";
 
 const root = getProjectRoot();
 const db = loadSpeciesDatabaseFromTree(root);

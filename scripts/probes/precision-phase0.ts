@@ -1,7 +1,7 @@
 /**
  * Species precision, phase 0: are the labels right before anything is measured on them?
  *
- *   npx tsx scripts/precision-phase0.ts [capture.jsonl]
+ *   npx tsx scripts/probes/precision-phase0.ts [capture.jsonl]
  *
  * The plan (`docs/species-precision-plan-20260923.md`) hunts for what separates two species of one
  * genus — down to a fraction of a percent of one crust material. A separator found on mislabelled
@@ -49,15 +49,15 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, create
 import { createInterface } from "node:readline";
 import { gunzipSync } from "node:zlib";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { listJournalFilesChronological, readJournalFull } from "../src/server/journalWatcher.js";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { findSpeciesEntryForLabel } from "../src/feeder/install.js";
-import { colourVariantRuleFor } from "../src/server/eddsnColourVariants.js";
-import { resolveColourVariant } from "../src/shared/colourVariants.js";
-import { spectralKeysFromJournalStarType } from "../src/shared/starSpectralKeys.js";
-import type { JournalLine, SpeciesEntry } from "../src/shared/types.js";
+import { listJournalFilesChronological, readJournalFull } from "../../src/server/journalWatcher.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { findSpeciesEntryForLabel } from "../../src/feeder/install.js";
+import { colourVariantRuleFor } from "../../src/server/eddsnColourVariants.js";
+import { resolveColourVariant } from "../../src/shared/colourVariants.js";
+import { spectralKeysFromJournalStarType } from "../../src/shared/starSpectralKeys.js";
+import type { JournalLine, SpeciesEntry } from "../../src/shared/types.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const feederDir = process.env.EXOMASTERY_FEEDER_DIR?.trim() || path.resolve(root, "..", "exomastery-feeder");
 const collectorDir = process.env.EDDN_COLLECTOR_DIR?.trim() || path.resolve(root, "..", "eddn-bio-collector");
 const journalDir =
@@ -634,7 +634,7 @@ const list = (xs: string[], max = 40) =>
   xs.length ? xs.slice(0, max).map((x) => `- ${x}`).join("\n") + (xs.length > max ? `\n- … ${xs.length - max} more` : "") : "_none_";
 
 const r: string[] = [];
-r.push(`# Species precision — phase 0 label check`, ``, `Generated ${new Date().toISOString()} by \`scripts/precision-phase0.ts\`. Local only.`, ``);
+r.push(`# Species precision — phase 0 label check`, ``, `Generated ${new Date().toISOString()} by \`scripts/probes/precision-phase0.ts\`. Local only.`, ``);
 r.push(`## Inputs`, ``);
 r.push(`- journals: ${journalFiles} files; ${journalCounts.scanOrganic} Log/Sample scans (${journalCounts.analyseSkipped} Analyse skipped), ${journalCounts.codex} organic codex entries; ${journalNoScan} claims without a body Scan, dropped`);
 r.push(`- corpus: ${corpusCounts.folders} species folders, ${corpusCounts.docs} pack records, ${corpusCounts.bodies} bodies with physics, ${corpusCounts.noCache} with no system cache`);

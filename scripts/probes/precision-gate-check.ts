@@ -2,8 +2,8 @@
  * Species precision, phase 2: one species' gates against every body it was found on — and, given a
  * proposed change, what that change would do before anybody decides on it.
  *
- *   npx tsx scripts/precision-gate-check.ts --species tussock_tussock_divisa
- *   npx tsx scripts/precision-gate-check.ts --species tussock_tussock_divisa \
+ *   npx tsx scripts/probes/precision-gate-check.ts --species tussock_tussock_divisa
+ *   npx tsx scripts/probes/precision-gate-check.ts --species tussock_tussock_divisa \
  *       --patch '{"planet_types":["Rocky","High Metal Content"]}'
  *
  * ## What it answers
@@ -26,11 +26,11 @@
  */
 import path from "node:path";
 import { writeFileSync } from "node:fs";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { resolvePlanetTemperatureBand, speciesMatchesCriteria } from "../src/server/matchSpecies.js";
-import { estimatedTemperatureRangeForScan } from "../src/server/planetTemperature.js";
-import { hostStarClassKey } from "../src/shared/hostStarClass.js";
-import { journalPressureToAtm } from "../src/shared/journalPhysics.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { resolvePlanetTemperatureBand, speciesMatchesCriteria } from "../../src/server/matchSpecies.js";
+import { estimatedTemperatureRangeForScan } from "../../src/server/planetTemperature.js";
+import { hostStarClassKey } from "../../src/shared/hostStarClass.js";
+import { journalPressureToAtm } from "../../src/shared/journalPhysics.js";
 import {
   createReplay,
   loadPatchedDb,
@@ -42,7 +42,7 @@ import {
   type Prepared,
   type Source,
 } from "./precisionReplay.js";
-import type { SpeciesDatabase } from "../src/shared/types.js";
+import type { SpeciesDatabase } from "../../src/shared/types.js";
 
 const argv = process.argv.slice(2);
 const argOf = (n: string) => {
@@ -51,7 +51,7 @@ const argOf = (n: string) => {
 };
 const speciesId = argOf("species");
 if (!speciesId) {
-  console.error("usage: npx tsx scripts/precision-gate-check.ts --species <id> [--patch '<conditions json>']");
+  console.error("usage: npx tsx scripts/probes/precision-gate-check.ts --species <id> [--patch '<conditions json>']");
   process.exit(1);
 }
 const patchRaw = argOf("patch");

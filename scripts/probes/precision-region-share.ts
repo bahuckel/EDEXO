@@ -1,7 +1,7 @@
 /**
  * Calibrating a relative region test before it touches the matcher.
  *
- *   npx tsx scripts/precision-region-share.ts
+ *   npx tsx scripts/probes/precision-region-share.ts
  *
  * ## The gap
  *
@@ -33,8 +33,8 @@
  */
 import path from "node:path";
 import { readFileSync, writeFileSync } from "node:fs";
-import { loadRegionSpecies } from "../src/server/regionSpeciesData.js";
-import { loadRegionMap } from "../src/server/regionMapData.js";
+import { loadRegionSpecies } from "../../src/server/regionSpeciesData.js";
+import { loadRegionMap } from "../../src/server/regionMapData.js";
 import { precisionDir, root } from "./precisionReplay.js";
 
 interface Slot {
@@ -111,7 +111,7 @@ const baseline = run(0, 0);
 const out: string[] = [
   `# Relative region test — calibration`,
   ``,
-  `Generated ${new Date().toISOString()} by \`scripts/precision-region-share.ts\`. ${slots.length} slots from phase 1. Local only.`,
+  `Generated ${new Date().toISOString()} by \`scripts/probes/precision-region-share.ts\`. ${slots.length} slots from phase 1. Local only.`,
   ``,
   `| cut (share of genus) | min genus records | truth shown | lost vs now | mean size | size 1 | journal truth | capture truth |`,
   `|---:|---:|---:|---:|---:|---:|---:|---:|`,

@@ -99,7 +99,7 @@ export function judgeRegionalPresence(count: number, bioSystems: number): Region
  * answer is the species' share of the genus there.
  *
  * Calibrated over 78,343 genus slots from the Spansh corpus, an EDDN capture and the commander's
- * journals (`scripts/precision-region-share.ts`):
+ * journals (`scripts/probes/precision-region-share.ts`):
  *
  * ```
  *   cut      truth lost   species per slot   exactly one     journal truth
@@ -155,7 +155,7 @@ export interface RegionGenusShareVerdict {
  * (0.3 % of Tubus there) and 15 of 36 Bacterium scopulum bodies with it (0.6 % of Bacterium in Inner
  * Orion Spur, and 1.2× its galaxy-wide share — exactly where it belongs).
  *
- * Calibrated over the 78,343 genus slots of the replay (`scripts/precision-phase1.ts`) and the
+ * Calibrated over the 78,343 genus slots of the replay (`scripts/probes/precision-phase1.ts`) and the
  * owner's journals (`scripts/accuracy-probe.ts`), on top of the 0.25 % share cut:
  *
  * ```

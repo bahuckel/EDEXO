@@ -27,23 +27,23 @@
  *
  * Nothing is changed here. The condition rows are data and the owner decides data.
  *
- *   npx tsx scripts/tela-probe.ts
- *   npx tsx scripts/tela-probe.ts --species "Bacterium cerbrus"   # the same report for another
+ *   npx tsx scripts/probes/tela-probe.ts
+ *   npx tsx scripts/probes/tela-probe.ts --species "Bacterium cerbrus"   # the same report for another
  */
 import path from "node:path";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { matchDatabaseToScan } from "../src/server/matchSpecies.js";
-import { collectResolvedOrganicLockSpeciesIds } from "../src/server/organicLocks.js";
-import { loadJournalMergeCacheForTool, probeMatchContexts } from "./probeCache.js";
-import { journalHostObservationFromSpeciesContext } from "../src/server/journalHostObservation.js";
-import { rankSpeciesOnBody, REGION_PRIOR_WEIGHT } from "../src/server/speciesLikelihood.js";
-import { demoteBelowPresenceFloor, PRESENCE_FLOOR_PCT } from "../src/server/snapshot.js";
-import { genusShares } from "../src/shared/systemTriage.js";
-import type { BodyExoState, SpeciesEntry, SpeciesMatchContext } from "../src/shared/types.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { matchDatabaseToScan } from "../../src/server/matchSpecies.js";
+import { collectResolvedOrganicLockSpeciesIds } from "../../src/server/organicLocks.js";
+import { loadJournalMergeCacheForTool, probeMatchContexts } from "../probeCache.js";
+import { journalHostObservationFromSpeciesContext } from "../../src/server/journalHostObservation.js";
+import { rankSpeciesOnBody, REGION_PRIOR_WEIGHT } from "../../src/server/speciesLikelihood.js";
+import { demoteBelowPresenceFloor, PRESENCE_FLOOR_PCT } from "../../src/server/snapshot.js";
+import { genusShares } from "../../src/shared/systemTriage.js";
+import type { BodyExoState, SpeciesEntry, SpeciesMatchContext } from "../../src/shared/types.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const argv = process.argv.slice(2);
 const wantedName = (() => {
   const i = argv.indexOf("--species");

@@ -24,19 +24,19 @@
  * absent rather than unrecorded, unlike the volcanism field in §21. A body whose scan carries no
  * material list at all is counted apart and never gated.
  *
- *   npx tsx scripts/material-gate-probe.ts
+ *   npx tsx scripts/probes/material-gate-probe.ts
  */
 import path from "node:path";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
-import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
-import { collectResolvedOrganicLockSpeciesIds } from "../src/server/organicLocks.js";
-import { loadJournalMergeCacheForTool } from "./probeCache.js";
-import { normaliseMaterial } from "../src/shared/speciesColour.js";
-import type { BodyExoState } from "../src/shared/types.js";
+import { loadSpeciesDatabaseFromTree } from "../../src/server/speciesTreeLoader.js";
+import { collectResolvedOrganicLockSpeciesIds } from "../../src/server/organicLocks.js";
+import { loadJournalMergeCacheForTool } from "../probeCache.js";
+import { normaliseMaterial } from "../../src/shared/speciesColour.js";
+import type { BodyExoState } from "../../src/shared/types.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const feederDir = process.env.EXOMASTERY_FEEDER_DIR?.trim() || path.resolve(root, "..", "exomastery-feeder");
 
 const db = loadSpeciesDatabaseFromTree(root);

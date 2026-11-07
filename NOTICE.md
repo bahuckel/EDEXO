@@ -132,6 +132,11 @@ Credited by link to the network rather than by commander name, at ED-DSN's reque
 photographs were taken on an expedition years ago and a significant number of those commanders can no
 longer be reached, so naming some and not others would be worse than naming none.
 
+### edGGG — [ed-ggg.github.io/edggg](https://ed-ggg.github.io/edggg/), by CMDR Arcanic
+
+The catalogue of green gas giants (`src/shared/gggCatalogue.ts`) and the cloud-ladder method the app follows are
+edGGG's, included with credit under their author's terms (also named in `data/LICENSE-DATA.txt`).
+
 ### Ship outlines — the HUD's Ship section
 
 The ships seen from above (`src/shared/shipOutlines.ts`) are simplified silhouettes traced from other
@@ -253,5 +258,19 @@ library as Ghostery packages it (GPL-3.0). This project is not affiliated with a
 
 ## Runtime dependencies
 
-`express` (MIT) and `ws` (MIT), and the browser's blocking bundle above. Everything else in
-`package.json` is a development dependency and is not redistributed with the application.
+Bundled into the application (their licence notices travel with it):
+
+- the server: `express` and its dependencies (MIT), `ws` (MIT), `sql.js` (MIT; its `sql-wasm.wasm` ships beside
+  it), and the browser's blocking bundle above;
+- the app's pages: React, `react-dom` and `scheduler` (MIT), three.js (MIT), Radix UI primitives and Floating UI
+  (MIT), Lucide icons (`lucide-react`, ISC), `html-to-image` (MIT), and the CSS Tailwind generates (MIT).
+
+Nothing else in `package.json` is redistributed: the rest are build and test tools.
+
+Exploration credits follow MattG's published exploration formulae
+([Frontier forums](https://forums.frontier.co.uk/threads/exploration-value-formulae.232000/)); EDMC Pioneer's figures
+were used only to confirm the results, none of its code is included.
+
+Also derived and shipped: EDCD's FDevIDs commodity table (`scripts/commodity.fdevids.csv`, compiled into the
+Colonize commodity list), and the Spansh-derived galaxy files the app downloads (`finder.bin`, `jumponium.bin.gz`, the
+galaxy index; see Spansh above). The EDEXO typeface in `public/fonts` is the project's own.

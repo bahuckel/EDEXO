@@ -20,7 +20,7 @@
  * The distinction matters because the panel cannot afford to promise a 5x it has no evidence for:
  * the commander finds out after flying there.
  *
- * `scripts/first-discovery-probe.ts` derives the first-discovery subset straight from the merge
+ * `scripts/probes/first-discovery-probe.ts` derives the first-discovery subset straight from the merge
  * cache and is the reference this module is checked against.
  *
  * **Why this is not part of the snapshot.** Matching one body costs ~53 ms, so the set costs ~45 s.
