@@ -611,9 +611,13 @@ export function readHudPitch(rgba: Rgba, w: number, h: number, glyphs: HudGlyphs
   for (const styleName of ["yellow", "orange"] as const) {
     const g = glyphs[styleName];
     if (!g) continue;
-    const pair = findPitchBoxes(rgba, w, h, screen, styleName);
-    const r = pair && readPair(rgba, w, h, screen, pair, g, styleName, styleName, isLadderPx);
-    if (r) return r;
+    // The boxes with their outline first: the ladder's "0" labels are a mirrored pair too, nearer the centre than the
+    // boxes when the nose is just under the horizon (his 0010, "-1" read 0); the plain nearest pair stays the fallback.
+    for (const framed of [true, false]) {
+      const pair = findPitchBoxes(rgba, w, h, screen, styleName, framed);
+      const r = pair && readPair(rgba, w, h, screen, pair, g, styleName, styleName, isLadderPx);
+      if (r) return r;
+    }
   }
   return null;
 }
@@ -746,10 +750,20 @@ export function readHudPitchAnyColour(
   discover = true,
   hint?: PitchColours | null,
 ): { reading: PitchReading; colours: PitchColours | null } | null {
-  if (!known) {
-    const reading = readHudPitch(rgba, w, h, glyphs, screen);
-    if (reading) return { reading, colours: null };
-    if (!discover) return null;
+  /*
+    The game's own look first, unless EDHM's ini says the HUD is recoloured (`hint`): a yellow EDHM theme passes for the
+    game's yellow, and that path, made for the default look, took the ladder's labels for the boxes (his Domini Inferni
+    shots, 1191 "21" read 25: ten wrong of 59). With a hint the recoloured path, outline required, goes first.
+  */
+  const defaultLook = () => {
+    const reading = known ? null : readHudPitch(rgba, w, h, glyphs, screen);
+    return reading ? { reading, colours: null } : null;
+  };
+  // A frame without the search (the capture looks for colours once a second): the game's look only.
+  if (!known && !discover) return defaultLook();
+  if (!hint) {
+    const found = defaultLook();
+    if (found) return found;
   }
   // The hint first; a hinted pair that does not read is followed by the colour-blind search (the theme bench: on light
   // grey themes the hue matched a pair the search would not have chosen, 1,983 against 2,026 of 2,688 read).
@@ -758,7 +772,7 @@ export function readHudPitchAnyColour(
       const reading = readPair(rgba, w, h, screen, pair, anyGlyphs, look, "learned", lookFromColour(colours.frame).isText, ANY_MIN_MATCH, ANY_MIN_MARGIN);
       if (reading) return { reading, colours };
     }
-  return null;
+  return hint ? defaultLook() : null;
 }
 
 /**
