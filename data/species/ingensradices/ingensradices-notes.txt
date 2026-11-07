@@ -1,0 +1,5 @@
+Known from one system only: HIP 87621 (Inner Orion Spur).
+So far found on Rocky and High Metal Content bodies with a thin carbon dioxide atmosphere, 468-698 K, with or without volcanism.
+One species: Ingensradices Unicus.
+Colony range: 1 m between samples.
+Tip: the game leaves it out of the biological signal count and a DSS never names it, so check HIP 87621's bodies even when they show no biological signals.

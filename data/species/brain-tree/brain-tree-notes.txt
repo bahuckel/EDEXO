@@ -1,12 +1,11 @@
-Key extraction notes (this one has hidden complexity)
-Volcanism is mandatory → this is a hard filter (unlike many other genera)
-System-level dependency matters a LOT:
-Most species require:
-Earth-like world OR
-gas giant with water-based life
-Temperature is a primary selector:
-This genus is heavily temperature-gated per species (don’t skip this in logic)
-Planet type further refines spawn:
-Same temp range ≠ same species → planet type decides final result
-Unique behavior:
-Spawns in large clustered fields, not isolated instances
+Grows on bodies with volcanism, airless or with a thin sulphur dioxide, carbon dioxide or helium atmosphere.
+Most species need a companion in the system: Earth-like world, Water world, Ammonia world, Water giant, or gas giant with water- or ammonia-based life. Lividum and Roseum do not.
+Aureum: Metal Rich or High Metal Content, 300-500 K.
+Ostrinum and Puniceum: Metal Rich or High Metal Content, no temperature rule.
+Lindigoticum: High Metal Content or Rocky, 300-500 K.
+Gypseeum: Rocky, 200-330 K.
+Lividum: Rocky, 225-500 K.
+Viride: Icy or Rocky Ice, 100-220 K.
+Roseum: any of those planet types, 200-500 K, and more atmospheres (also argon, oxygen and water).
+Colony range: 100 m between samples.
+Tip: often found near Guardian ruins, in clustered fields inside craters.

@@ -1,10 +1,9 @@
-Things that are good to know
-Frutexa is atmosphere-driven, meaning filtering starts with atmosphere first, not species selection.
-Temperature is a secondary constraint, only relevant for CO₂-based species.
-Only Frutexa metallicum can appear on High Metal Content worlds.
-All species share a strict 0.27g gravity cap, regardless of variation.
-The genus uses a hybrid logic model:
-deterministic mapping (atmosphere → candidates)
-conditional filters (temperature + planet type)
-Color is completely decoupled from species identity and depends only on parent star type, ensuring visual consistency across all variants.
-Rocky worlds act as the baseline environment, even when extra planet types are allowed.
+Grows on Rocky and High Metal Content bodies with a thin atmosphere, gravity up to 0.275 g.
+Ammonia, Rocky: Frutexa flabellum and Frutexa flammasis.
+Carbon dioxide, Rocky, below 195 K: Frutexa acus and Frutexa fera.
+Sulphur dioxide, Rocky or High Metal Content: Frutexa collum.
+Water, Rocky: Frutexa sponsae.
+High Metal Content with ammonia, carbon dioxide (below 195 K) or water, up to 400 K: Frutexa metallicum.
+Colony range: 150 m between samples.
+Colour follows the parent star: B Lime, F Green, G Emerald, M Grey, L Teal, T Tauri Mauve, white dwarf Indigo, neutron star Red.
+Tip: on a High Metal Content body only metallicum and collum are possible.

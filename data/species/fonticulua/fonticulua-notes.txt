@@ -1,13 +1,9 @@
-Key extraction notes (clean but important)
-Very clean logic (one of the simplest so far):
-Atmosphere → species (1:1 mapping)
-Strict biome restriction:
-ONLY Icy / Rocky Ice planets (hard filter)
-Universal constraints:
-Thin atmosphere required
-Max gravity 0.27g
-Sample distance 500m
-No temperature, volcanism, or system rules
-This makes it ideal for simple deterministic filtering
-Color system = fully unified
-Entire genus uses star-based colors only
+Grows on Icy and Rocky Ice bodies with a thin atmosphere, gravity up to 0.28 g; no temperature rule.
+Each species has its own atmosphere:
+Campestris: argon (50 % argon or more).
+Upupam: argon-rich (under 50 % argon, the rest usually nitrogen).
+Segmentatus: neon-rich (a trace of neon in nitrogen air).
+Lapida: nitrogen. Digitos: methane or methane-rich. Fluctus: oxygen.
+Colony range: 500 m between samples.
+Colour follows the parent star: O Grey, B Lime, A Green, F Yellow, G Teal, K Emerald, M Amethyst, L Mauve, T Orange, T Tauri Red, Y Ocher, Wolf-Rayet Indigo, white dwarf Turquoise, neutron star Sage, Herbig Ae/Be Maroon.
+Tip: check the argon share in the atmosphere composition; above 50 % means campestris, below means upupam.

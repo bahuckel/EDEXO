@@ -1,12 +1,10 @@
-Key extraction notes (this one is IMPORTANT)
-This is the most complex genus so far:
-Multi-layer logic: atmosphere → volcanism → color system
-Universal rule:
-Must have thin atmosphere (no exceptions)
-Volcanism is critical (don’t miss this in filtering):
-Some species will NOT spawn without it (omentum, scopulum, verrata, tela)
-Two different color systems exist:
-Material-based (most species)
-Star-based (rare cases like cerbrus, alcyoneum)
-There’s even a hidden edge case:
-Bacterium tela → can spawn in any atmosphere BUT requires volcanism
+Grows on any body with a thin atmosphere; the genus has no gravity or temperature rule.
+Atmosphere decides most species: Aurasus carbon dioxide; Cerbrus water, water-rich or sulphur dioxide; Alcyoneum ammonia; Informem nitrogen; Volu oxygen; Nebulus helium; Bullaris methane.
+Acies needs a neon atmosphere (50 % neon or more); Vesicula an argon atmosphere (50 % argon or more).
+Volcanism decides three: Omentum nitrogen or ammonia volcanism, Scopulum carbon or methane volcanism, Verrata water volcanism.
+Tela grows on thin-atmosphere High Metal Content, Rocky, Icy and Rocky Ice bodies that have volcanism or a surface temperature of 300 K or more.
+On hot water or sulphur dioxide bodies Tela and Cerbrus are about equally likely; nothing on the body separates them.
+Colony range: 500 m between samples.
+Colour of Aurasus, Cerbrus and Alcyoneum follows the parent star: O Turquoise, B Grey, A Yellow, F Lime, G Emerald, K Green, M Teal, L Sage, T Red, T Tauri Maroon, Wolf-Rayet Amethyst, white dwarf Ocher, neutron star Indigo.
+The others take their colour from a material on the body: antimony, polonium, ruthenium, technetium, tellurium or yttrium; for Omentum, Scopulum, Tela and Verrata cadmium, mercury, molybdenum, niobium, tungsten or tin.
+Tip: check the body's volcanism before landing; it can add Omentum, Scopulum, Verrata or Tela.

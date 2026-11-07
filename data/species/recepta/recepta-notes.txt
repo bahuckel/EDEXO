@@ -1,9 +1,8 @@
-Things that are good to know
-Recepta is one of the most structurally complex genera, because it actively builds and maintains a protective “bio-shell” rather than just growing externally.
-The genus is strictly sulfur dioxide–locked, making atmosphere filtering non-negotiable.
-Unlike earlier genera, Recepta is strongly dual-filtered (atmosphere + planet type), so it behaves like a conditional branching system.
-Growth is age-dependent and layered, meaning larger specimens are effectively “older evolutionary states.”
-The internal organism is rarely visible directly; most of what players see is engineered protective architecture, not raw biology.
-Distribution is naturally clustered and sparse, which makes full planetary coverage inefficient compared to ridge/biome targeting species like Fungoida.
-Recepta behaves almost like a self-contained micro-ecosystem, regulating internal chemistry independently from external conditions.
-Visually, it is one of the most geometrically artificial-looking biological forms, often mistaken for geological formations.
+Grows where the thin atmosphere contains sulphur dioxide (sulphur dioxide, carbon dioxide or oxygen atmospheres), on Icy, Rocky Ice, Rocky and High Metal Content bodies, gravity up to 0.275 g.
+Recepta conditivus: mostly on Icy bodies.
+Recepta deltahedronix: mostly on Rocky bodies.
+Recepta umbrux: on Icy and Rocky bodies alike.
+Nothing on the body tells the three apart; the lines above are only where each is found most.
+Colony range: 150 m between samples.
+Colour follows a material on the body: antimony, polonium, ruthenium, technetium, tellurium, yttrium, cadmium, mercury, molybdenum, niobium, tungsten or tin.
+Tip: check the atmosphere composition; no sulphur dioxide, no Recepta.

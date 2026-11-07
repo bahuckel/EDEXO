@@ -1,0 +1,8 @@
+Grows on cold Icy, Rocky, High Metal Content and Rocky Ice bodies, 20-273 K, with some volcanism (usually minor); never Metal Rich.
+Most bodies are airless; thin neon, neon-rich, helium, methane, argon, argon-rich or carbon dioxide atmospheres are possible (carbon dioxide only up to 0.01 atm).
+The body must be at least 12,000 Ls from the system's arrival (main) star.
+The system needs a companion: Earth-like world, Ammonia world, gas giant with water- or ammonia-based life, Water giant or Water world.
+Host star A, F, G, K, M, S or a brown dwarf; never O, B, white dwarf, neutron star or black hole.
+One species: Crystalline Shards.
+Colony range: 100 m between samples.
+Tip: measure the 12,000 Ls from the arrival star, not from the star the body orbits.

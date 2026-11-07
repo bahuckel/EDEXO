@@ -1,11 +1,7 @@
-Key extraction notes (clean and important)
-Atmosphere = main selector
-→ This genus is very cleanly split by atmosphere type (Ammonia / CO₂ / Water)
-Temperature only matters for CO₂ species
-→ cortexum and pullulanta require 180–195 K, others don’t
-Hard constraints (global):
-Thin atmosphere required
-Max gravity: 0.27g
-Only Rocky / High Metal Content planets
-Color system is simple (nice break from Anemone 😄):
-Entire genus uses star-type-based coloring only
+Grows on Rocky and High Metal Content bodies with a thin atmosphere, gravity up to 0.275 g.
+Carbon dioxide, 180-195 K: Cactoida cortexum and Cactoida pullulanta.
+Ammonia, no temperature rule: Cactoida lapis and Cactoida peperatis.
+Water, or rarely sulphur dioxide: Cactoida vermis.
+Species on the same line share the same conditions, so the body cannot tell them apart.
+Colony range: 300 m between samples.
+Colour follows the parent star: A Green, F Yellow, G Teal, M Amethyst, L Mauve, T Orange, T Tauri Red, neutron star Sage.

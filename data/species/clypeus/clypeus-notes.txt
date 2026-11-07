@@ -1,13 +1,7 @@
-Key extraction notes (this one is deceptively simple)
-All species share almost identical conditions
-→ Atmosphere, gravity, and temperature are global rules
-ONLY real differentiator = orbital distance
-Clypeus speculumi requires ≥ 2500 LS (~5 AU)
-No atmosphere split like other genera
-All 3 species spawn in both CO₂ and Water atmospheres
-Hard constraints:
-Thin atmosphere required
-Temp >190K
-Max gravity 0.27g
-Color system = clean
-Fully star-type based, no species variation
+Grows on Rocky and High Metal Content bodies with a thin carbon dioxide or water atmosphere, 190 K or warmer, gravity up to 0.275 g.
+Clypeus lacrimam: Rocky.
+Clypeus margaritus: High Metal Content.
+Clypeus speculumi: Rocky, at least 2,500 Ls from the star (rarely down to about 2,000 Ls).
+Colony range: 150 m between samples.
+Colour follows the parent star: A Orange, F Mauve, G Amethyst, K Grey, M Turquoise, L Teal, neutron star Yellow.
+Tip: on a Rocky body check the distance from the star; beyond 2,500 Ls both lacrimam and speculumi are possible.

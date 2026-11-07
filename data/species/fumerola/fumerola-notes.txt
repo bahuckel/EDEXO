@@ -1,9 +1,8 @@
-Things that are good to know
-Fumerola is geology-driven first, not atmosphere-driven like Frutexa or Fonticulua.
-The required trigger is the fumarole POI itself, not just planet type.
-Volcanism type is the primary species selector, making this genus more environmental-event based than biome-based.
-Unlike your previous genera, color is NOT star-based here — it depends on local mineral composition, making it a separate visual system.
-Species are tightly bound to specific geothermal chemistry types (water, carbon, silicate, nitrogen).
-This genus introduces a more “hazard interaction” model — players can actually be harmed by vent activity (important behavioral distinction).
-Distribution is cluster-dense (100m spacing), meaning it behaves more like localized colonies rather than sparse field biology.
-Fumerola represents a hybrid between biological + mineral deposition systems, which is why it visually appears semi-inorganic.
+Grows at fumaroles: bodies with active volcanism and geological signals, Icy, Rocky Ice, Rocky or High Metal Content, any thin atmosphere, gravity up to 0.275 g.
+Water volcanism: Fumerola aquatis (Icy, Rocky Ice, Rocky).
+Carbon or methane volcanism: Fumerola carbosis (Icy, Rocky Ice).
+Silicate, iron or rocky volcanism: Fumerola extremus (Rocky, High Metal Content, Rocky Ice).
+Nitrogen or ammonia volcanism: Fumerola nitris (Icy, Rocky Ice).
+Colony range: 100 m between samples.
+Colour follows a material on the body (cadmium, mercury, molybdenum, niobium, tungsten, tin and others), not the star.
+Tip: land near the geological sites; the plants grow on the vents, often in clusters on flat volcanic ground.

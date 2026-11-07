@@ -1,0 +1,9 @@
+Grows on Rocky, Icy, High Metal Content and Metal Rich bodies in systems lit by an O, B or giant A star; almost always airless, a thin atmosphere is rare.
+Each colour is its own species, set by the main star's class and luminosity plus the body type:
+O or Wolf-Rayet star: Puniceum Anemone on Icy bodies (65-870 K); Prasinum Bioluminescent on Rocky, High Metal Content and Metal Rich (also Herbig Ae/Be stars).
+B IV-V star: Luteolum Anemone on Rocky (200-1,100 K); Blatteum Bioluminescent on High Metal Content and Metal Rich.
+B I-III giant: Roseum Anemone on Rocky (200-450 K); Roseum Bioluminescent on High Metal Content and Metal Rich.
+B VI star or A I-III giant: Croceum Anemone on Rocky (200-450 K); Rubeum Bioluminescent on High Metal Content and Metal Rich.
+The Bioluminescent species have no temperature rule.
+Colony range: 100 m between samples.
+Tip: check the main star's class and luminosity on the system map before landing; together with the body type it names the species.

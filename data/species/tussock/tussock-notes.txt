@@ -1,8 +1,10 @@
-Tussock is one of the most widespread and high-density genera in Elite Dangerous, often acting as a “baseline bio layer” across many planets.
-It is atmosphere-first, but heavily refined by temperature bands inside CO₂ environments, making it more complex than it appears.
-Many species are visually similar, meaning explorers often rely on DSS heatmaps rather than direct observation.
-Tussock often creates the impression of “empty planets with only bacteria”, because it blends into terrain extremely well.
-The genus is heavily flat-terrain biased, but can extend into gentle slopes and mountain bases.
-CO₂ species show a full temperature ladder system (145K → 195K), making it one of the most structured thermal progressions in your dataset so far.
-Some species (like capillum) are infamous for low visibility + high density, making them easy to overlook even on populated biological worlds.
-Despite being “common,” Tussock is one of the most mechanically important genera for exobiology farming loops due to predictable distribution.
+Grows on Rocky and High Metal Content bodies with a thin atmosphere, gravity up to 0.275 g (Capillum also on Rocky Ice).
+Carbon dioxide, by temperature: Tussock pennata 145-155 K, ventusa 155-160 K, ignis 160-170 K, serrati 170-175 K, albata 175-180 K, caputus 180-190 K, triticum 190-195 K.
+Carbon dioxide, any temperature up to 195 K: Tussock pennatis and Tussock propagito.
+Argon or methane: Tussock capillum (mostly on Rocky Ice).
+Ammonia: Tussock catena, cultro and divisa.
+Sulphur dioxide: Tussock stigmasis.
+Water: Tussock virgam.
+Colony range: 200 m between samples.
+Colour follows the parent star: F Yellow, G Lime, K Green, M Emerald, L Sage, T Teal, Y Lime, Wolf-Rayet Orange, white dwarf Maroon, black hole Red.
+Tip: on carbon dioxide worlds the surface temperature narrows it to a few species; look on plains and low slopes.

@@ -1,15 +1,8 @@
-Key extraction notes (important nuances here)
-Atmosphere is the main split (very clean mapping):
-Ammonia → aureolas
-Nitrogen → biconcavis
-CO₂ → labiata + renibus
-Water → renibus only
-Temperature logic is subtle (easy to mess up):
-labiata → ONLY <190K
-renibus → 180–195K BUT ONLY for CO₂
-renibus (water) → NO temp restriction listed
-Mixed color systems (important for your engine):
-Star-based → aureolas, labiata
-Material-based → biconcavis, renibus
-Edge-case standout:
-Concha renibus = multi-atmosphere species (rare pattern)
+Grows on Rocky and High Metal Content bodies with a thin atmosphere, gravity up to 0.275 g.
+Ammonia: Concha aureolas.
+Nitrogen: Concha biconcavis.
+Carbon dioxide or carbon dioxide-rich, up to 195 K: Concha labiata. When it grows on a moon, the moon nearly always orbits within 28 Ls of its planet.
+Concha renibus: carbon dioxide at 180-195 K, or water, water-rich or (rarely) ammonia; it needs volcanism or a temperature of 180 K or more.
+Colony range: 150 m between samples.
+Colour of aureolas and labiata follows the parent star: A Teal, F Grey, G Turquoise, K Red, L Orange, neutron star Emerald.
+Colour of biconcavis and renibus follows a material on the body, not the star.
