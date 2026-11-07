@@ -6,7 +6,7 @@ import type express from "express";
 import type { CommandersDTO } from "../../shared/types.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { getHudBridge } from "../hudBridge.js";
-import { isLoopbackAddress } from "../lanAuth.js";
+import { isLoopbackAddress, localOnly } from "../lanAuth.js";
 import {
   isLauncherOpenMode,
   readColonizeOpenMode,
@@ -46,7 +46,7 @@ export function registerLauncherRoutes(
   });
 
   /** The launcher's "LAN access" switch; applies at the next start. From this PC only. */
-  app.post("/api/launcher/lan-access", (req, res) => {
+  app.post("/api/launcher/lan-access", localOnly, (req, res) => {
     if (!isLoopbackAddress(req.socket.remoteAddress)) {
       res.status(403).json({ ok: false, error: "LAN access can only be changed on the PC running the app." });
       return;

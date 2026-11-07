@@ -1,4 +1,5 @@
 
+import { localOnly } from "../lanAuth.js";
 import { getCachedSpeciesDatabase } from "../snapshot.js";
 import express from "express";
 import { getProjectRoot } from "../paths.js";
@@ -334,7 +335,7 @@ export function registerGalaxyRoutes(
     res.json(combinedStatus());
   });
   let combinedRunning = false;
-  app.post("/api/galaxy/index/download", (req, res) => {
+  app.post("/api/galaxy/index/download", localOnly, (req, res) => {
     // `{ extrasOnly: true }`: the index is current, only the stations and neutron stars are missing.
     const extrasOnly = (req.body as { extrasOnly?: unknown } | undefined)?.extrasOnly === true;
     if (!combinedRunning) {
@@ -403,7 +404,7 @@ export function registerGalaxyRoutes(
     void checkNavRouteSystemsOnEdsm(addresses);
     res.json({ ok: true });
   });
-  app.delete("/api/navroutes", (_req, res) => {
+  app.delete("/api/navroutes", localOnly, (_req, res) => {
     clearNavRouteLog();
     res.json({ ok: true });
   });

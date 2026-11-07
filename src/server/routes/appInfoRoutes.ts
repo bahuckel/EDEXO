@@ -60,7 +60,7 @@ export function registerAppInfoRoutes(
     }
   });
 
-  app.post("/api/app/open-update", (req, res) => {
+  app.post("/api/app/open-update", localOnly, (req, res) => {
     if (typeof opts.openUpdatePage !== "function") {
       res.status(501).json({ ok: false, error: "Not available" });
       return;

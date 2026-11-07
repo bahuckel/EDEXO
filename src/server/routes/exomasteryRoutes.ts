@@ -4,7 +4,7 @@ import { openLocalFile } from "../openUrl.js";
 import path from "node:path";
 import express from "express";
 import { getProjectRoot, getSpeciesDataDir } from "../paths.js";
-import { isLoopbackAddress } from "../lanAuth.js";
+import { isLoopbackAddress, localOnly } from "../lanAuth.js";
 
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { CONTENT_SECURITY_POLICY } from "../csp.js";
@@ -48,7 +48,7 @@ export function registerExomasteryRoutes(
       files: findVisitedCacheFiles(accountsRoot(), knownSystems()).map(({ path: _p, ...f }) => f),
     });
   });
-  app.post("/api/visited-cache/import", (req, res) => {
+  app.post("/api/visited-cache/import", localOnly, (req, res) => {
     if (!isLoopbackAddress(req.socket.remoteAddress)) {
       res.status(403).json({ ok: false, error: "Only on the PC running the app." });
       return;
@@ -67,7 +67,7 @@ export function registerExomasteryRoutes(
       res.status(400).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
     }
   });
-  app.post("/api/visited-cache/remove", (req, res) => {
+  app.post("/api/visited-cache/remove", localOnly, (req, res) => {
     if (!isLoopbackAddress(req.socket.remoteAddress)) {
       res.status(403).json({ ok: false, error: "Only on the PC running the app." });
       return;
@@ -107,7 +107,7 @@ export function registerExomasteryRoutes(
   });
 
   /** Open the shared-exomastery folder in Explorer — on the PC running the app only. */
-  app.post("/api/exomastery/open-shared-folder", (req, res) => {
+  app.post("/api/exomastery/open-shared-folder", localOnly, (req, res) => {
     if (!isLoopbackAddress(req.socket.remoteAddress)) {
       res
         .status(403)

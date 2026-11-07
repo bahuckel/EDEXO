@@ -2,6 +2,7 @@
   The Boxels screen's routes (split out of galaxyRoutes.ts, discuss item 30, 1.3.1): one boxel, the saved ones and
   their table, the Spansh look-ups, the boxels flown before and the screen's options.
 */
+import { localOnly } from "../lanAuth.js";
 import { boxelSystems, boxelTable, previousBoxelsPage, type SystemStats } from "../boxel.js";
 import { parseBoxel, type SavedBoxelDTO } from "../../shared/boxel.js";
 import { shortestBoxelOrder } from "../../shared/boxelOrder.js";
@@ -234,7 +235,7 @@ export function registerBoxelRoutes(
     });
   });
   app.get("/api/boxels/lookup", (_req, res) => res.json({ ok: true, status: lookups.status() }));
-  app.delete("/api/boxels/lookup", (_req, res) => {
+  app.delete("/api/boxels/lookup", localOnly, (_req, res) => {
     lookups.stop();
     res.json({ ok: true, status: lookups.status() });
   });
@@ -291,7 +292,7 @@ export function registerBoxelRoutes(
     }
     res.json(savedList());
   });
-  app.delete("/api/boxels/:id", (req, res) => {
+  app.delete("/api/boxels/:id", localOnly, (req, res) => {
     if (!opts.savedBoxels)
       return void res.status(501).json({ ok: false, error: "Not available in this build." });
     const gone = opts.savedBoxels.remove(String(req.params.id ?? ""));

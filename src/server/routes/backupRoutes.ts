@@ -6,7 +6,7 @@
  */
 import type express from "express";
 import { mkdirSync } from "node:fs";
-import { isLoopbackAddress } from "../lanAuth.js";
+import { isLoopbackAddress, localOnly } from "../lanAuth.js";
 import { openLocalFile } from "../openUrl.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
@@ -42,7 +42,7 @@ export function registerBackupRoutes(app: express.Express, opts: HttpServerOptio
     }
   });
 
-  app.post("/api/backup/settings", (req, res) => {
+  app.post("/api/backup/settings", localOnly, (req, res) => {
     if (!guard(req, res)) return;
     try {
       res.json({ ok: true, settings: service!.setSettings(req.body ?? {}) });
@@ -52,7 +52,7 @@ export function registerBackupRoutes(app: express.Express, opts: HttpServerOptio
   });
 
   /** Open the backups folder in Explorer / the file manager (made first, so there is one to open). */
-  app.post("/api/backup/open-folder", async (req, res) => {
+  app.post("/api/backup/open-folder", localOnly, async (req, res) => {
     if (!guard(req, res)) return;
     try {
       const { folder } = await service!.status();
@@ -100,7 +100,7 @@ export function registerBackupRoutes(app: express.Express, opts: HttpServerOptio
    * `{file, what: "app-data"}` stages the app data for the next start; `{file, what: "journals",
    * target, allowGameFolder}` writes the journals into `target`.
    */
-  app.post("/api/backup/restore", async (req, res) => {
+  app.post("/api/backup/restore", localOnly, async (req, res) => {
     if (!guard(req, res)) return;
     const b = (req.body ?? {}) as { file?: unknown; what?: unknown; target?: unknown; allowGameFolder?: unknown };
     if (typeof b.file !== "string" || !b.file) return void fail(res, new Error("Which backup?"));

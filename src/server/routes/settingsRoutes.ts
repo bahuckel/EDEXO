@@ -266,7 +266,7 @@ export function registerSettingsRoutes(
     res.json({ ok: true });
   });
 
-  app.post("/api/notices/clear-read", (_req, res) => {
+  app.post("/api/notices/clear-read", localOnly, (_req, res) => {
     if (typeof opts.clearReadNotices !== "function")
       return void res.status(501).json({ ok: false, error: "Not available" });
     res.json({ ok: true, removed: opts.clearReadNotices() });
@@ -681,7 +681,7 @@ export function registerSettingsRoutes(
     ctx.topicsMayHaveChanged();
   });
 
-  app.post("/api/ui/open-external", (req, res) => {
+  app.post("/api/ui/open-external", localOnly, (req, res) => {
     if (typeof opts.openAppView !== "function") {
       res.status(501).json({ ok: false, error: "Not available" });
       return;
@@ -703,7 +703,7 @@ export function registerSettingsRoutes(
     res.json(opts.openAppView(view));
   });
 
-  app.post("/api/settings/open-miss-log", (req, res) => {
+  app.post("/api/settings/open-miss-log", localOnly, (req, res) => {
     if (typeof opts.openExoMissLog !== "function") {
       res.status(501).json({ ok: false, error: "Not available" });
       return;

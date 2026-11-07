@@ -2,6 +2,7 @@
  * `/api/bookmarks` — the commander's bookmarks (server/bookmarks.ts). Open to the phone as well: a
  * bookmark is the commander's own note, and marking a system from the second screen is the point.
  */
+import { localOnly } from "../lanAuth.js";
 import type express from "express";
 import { parseBookmarkInput } from "../../shared/bookmarks.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
@@ -33,7 +34,7 @@ export function registerBookmarksRoutes(app: express.Express, opts: HttpServerOp
     res.json({ ok: true, bookmark: saved });
   });
 
-  app.delete("/api/bookmarks/:id", (req, res) => {
+  app.delete("/api/bookmarks/:id", localOnly, (req, res) => {
     if (!ready(res)) return;
     const gone = service!.remove(String(req.params.id ?? ""));
     if (gone) opts.scheduleBroadcast?.();

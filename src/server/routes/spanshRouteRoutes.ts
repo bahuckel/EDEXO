@@ -7,6 +7,7 @@
  * absent); `kind` and `stops` stand in for a route no longer kept on disk.
  */
 import type express from "express";
+import { localOnly } from "../lanAuth.js";
 import { fetchSpanshRoute, spanshJobFromText, spanshRouteHops } from "../spanshRoute.js";
 import { openSpanshRouteFile, resolveSpanshRoutesPath, type SpanshRouteFile } from "../spanshRouteFile.js";
 import type { HttpServerOptions } from "../httpServerTypes.js";
@@ -80,7 +81,7 @@ export function registerSpanshRouteRoutes(app: express.Express, opts: HttpServer
     res.json({ routes: routes().list() });
   });
 
-  app.delete("/api/spansh-route/saved", (req, res) => {
+  app.delete("/api/spansh-route/saved", localOnly, (req, res) => {
     const job = spanshJobFromText(String(req.query.job ?? ""));
     if (!job) return void res.status(400).json({ error: "job: a Spansh job id" });
     res.json({ removed: routes().remove(job), routes: routes().list() });
