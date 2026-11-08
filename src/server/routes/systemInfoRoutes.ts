@@ -58,7 +58,7 @@ export function registerSystemInfoRoutes(
     res.json(readEliteView(eliteDisplaySettingsPath(opts.getSnapshot().journalDir)));
   });
 
-  // EDHM's pitch box colours from its own ini (edhmColours.ts), a hint for the screen marker's pitch reader; null without EDHM.
+  // EDHM's HUD colours from its own ini (edhmColours.ts), hints for the screen marker's pitch and distance readers; null without EDHM.
   app.get("/api/hud-colours/edhm", (_req, res) => {
     res.json({ edhm: readEdhmColours() });
   });

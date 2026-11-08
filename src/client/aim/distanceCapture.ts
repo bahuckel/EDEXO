@@ -7,6 +7,7 @@
 import { distanceArea, readTargetDistanceAnyColour, type Rgb, type TargetDistance } from "@shared/hudTargetDistance";
 import { HUD_DISTANCE_GLYPHS } from "@shared/hudDistanceGlyphs";
 import { HUD_DISTANCE_GLYPHS_ORANGE } from "@shared/hudDistanceGlyphsOrange";
+import { watchEdhmHint } from "./edhmHint";
 import { acquireGameScreen } from "./gameScreen";
 
 /**
@@ -44,10 +45,15 @@ export async function startDistanceCapture(onRead: (r: TargetDistance | null) =>
   */
   let colour: Rgb | null = null;
   let misses = 0;
+  /* EDHM's main text colour (server edhmColours.ts), a hint for finding the line; null without EDHM or in orange. */
+  let hint: Rgb | null = null;
+  const stopEdhm = watchEdhmHint((e) => {
+    hint = e?.targetText ?? null;
+  });
   const readIn = (x: number, y: number, w: number, h: number, vh: number): TargetDistance | null => {
     // No colour correction from the launcher: the reader learns the colour itself.
     const px = screen.crop(x, y, w, h);
-    const r = px ? readTargetDistanceAnyColour(px, w, h, HUD_DISTANCE_GLYPHS, vh, colour, HUD_DISTANCE_GLYPHS_ORANGE) : null;
+    const r = px ? readTargetDistanceAnyColour(px, w, h, HUD_DISTANCE_GLYPHS, vh, colour, HUD_DISTANCE_GLYPHS_ORANGE, hint) : null;
     if (!r) return null;
     colour = r.colour;
     return { ...r.reading, x: r.reading.x + x, y: r.reading.y + y };
@@ -75,6 +81,7 @@ export async function startDistanceCapture(onRead: (r: TargetDistance | null) =>
   return {
     stop() {
       clearInterval(timer);
+      stopEdhm();
       screen.release();
     },
   };

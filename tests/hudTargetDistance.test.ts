@@ -201,6 +201,18 @@ describe("the target's distance in any HUD colour", () => {
     expect(readTargetDistanceAnyColour(f, W, H, GLYPHS, H, [230, 40, 40])).toBeNull();
   });
 
+  it("finds a dim text in the hue EDHM's ini names, and searches colour-blind when the hint is stale", () => {
+    // Too dim for the colour-blind finder (its softest look wants 130); the ini's colour is brighter, the hue the same.
+    const dim = drawn([110, 40, 120], "1,957Ls");
+    expect(readTargetDistanceAnyColour(dim, W, H, GLYPHS)).toBeNull();
+    const r = readTargetDistanceAnyColour(dim, W, H, GLYPHS, H, null, undefined, [220, 80, 240]);
+    expect(r?.reading.text).toBe("1,957Ls");
+    expect(r?.colour).toEqual([110, 40, 120]);
+    // A green hint over white text (a theme changed, the ini not yet re-read): read all the same.
+    const white = drawn([235, 235, 235], "8.59Ls");
+    expect(readTargetDistanceAnyColour(white, W, H, GLYPHS, H, null, undefined, [0, 255, 0])?.reading.distLs).toBe(8.59);
+  });
+
   it("splits two characters a bold font joins (his white 0.87Ls: the 7 and the L one piece)", () => {
     const f = drawn([235, 235, 235], "957Ls");
     // A bridge between the 7 and the L at the baseline, as EDHM's heavier font draws them.

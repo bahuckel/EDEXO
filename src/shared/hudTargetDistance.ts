@@ -17,7 +17,7 @@
  * Null when it cannot be sure.
  */
 import { components, glyphVector, matchGlyph, GLYPH_H, GLYPH_W } from "./hudPitchReader.js";
-import { findingLook, lookFromColour, MAX_TEXT_SHARE, sameColour, strokeColour, type Rgb, type TextLook } from "./hudTextLook.js";
+import { findingLook, hueLook, lookFromColour, MAX_TEXT_SHARE, sameColour, strokeColour, type Rgb, type TextLook } from "./hudTextLook.js";
 
 export { lookFromColour, type Rgb, type TextLook };
 
@@ -310,17 +310,18 @@ function distanceShaped(line: TextLine): boolean {
 
 /**
  * The colours target lines could be drawn in: every distance-shaped line with the time line under it, found
- * colour-blind, gives the colour of its strokes' core (the median of its brightest tenth of pixels). Brightest first.
+ * colour-blind (or in the hue of `hint`), gives the colour of its strokes' core (the median of its brightest tenth of
+ * pixels). Brightest first.
  */
-export function discoverTextColours(rgba: Rgba, w: number, h: number, screenH = h): Rgb[] {
+export function discoverTextColours(rgba: Rgba, w: number, h: number, screenH = h, hint?: Rgb | null): Rgb[] {
   const out: Rgb[] = [];
-  for (const finding of FINDING_LOOKS) {
-  const lines = findTextLines(rgba, w, h, screenH, finding);
-  for (const l of lines) {
-    if (!distanceShaped(l) || !lineUnder(lines, l)) continue;
-    const c = strokeColour(rgba, w, l.pieces);
-    if (!out.some((o) => sameColour(o, c))) out.push(c);
-  }
+  for (const finding of hint ? [hueLook(hint)] : FINDING_LOOKS) {
+    const lines = findTextLines(rgba, w, h, screenH, finding);
+    for (const l of lines) {
+      if (!distanceShaped(l) || !lineUnder(lines, l)) continue;
+      const c = strokeColour(rgba, w, l.pieces);
+      if (!out.some((o) => sameColour(o, c))) out.push(c);
+    }
   }
   return out.sort((a, b) => b[0] + b[1] + b[2] - (a[0] + a[1] + a[2]));
 }
@@ -345,6 +346,9 @@ const ORANGE_MIN_MATCH = 0.75;
  * The target's distance in any HUD colour, with the colour it was read in, to keep for the next frames. The game's own
  * orange first, as it always was read (ORANGE_LOOK and `orangeGlyphs`), unless a colour other than the default was
  * learned; then `known` (the colour learned before), else each candidate colour, with `glyphs` (the any-colour table).
+ * `hint`, the colour a mod's settings name for the text (EDHM's ini, server edhmColours.ts), is looked for first, by
+ * its hue: the lines found in it give the colour; the colour-blind search follows when none reads (a stale hint), and
+ * the game's orange goes last.
  */
 export function readTargetDistanceAnyColour(
   rgba: Rgba,
@@ -354,17 +358,29 @@ export function readTargetDistanceAnyColour(
   screenH = h,
   known?: Rgb | null,
   orangeGlyphs?: DistanceGlyphs,
+  hint?: Rgb | null,
 ): { reading: TargetDistance; colour: Rgb } | null {
   const d = DEFAULT_TEXT_COLOUR;
-  if (orangeGlyphs && (!known || sameColour(known, d, 40))) {
+  const orange = () => {
+    if (!orangeGlyphs || (known && !sameColour(known, d, 40))) return null;
     const reading = readTargetDistance(rgba, w, h, orangeGlyphs, screenH, ORANGE_LOOK, ORANGE_MIN_MATCH);
-    if (reading) return { reading, colour: d };
-  }
-  for (const c of known ? [known] : candidateTextColours(rgba, w, h, screenH)) {
-    const reading = readTargetDistance(rgba, w, h, glyphs, screenH, lookFromColour(c));
-    if (reading) return { reading, colour: c };
-  }
-  return null;
+    return reading ? { reading, colour: d } : null;
+  };
+  const inColours = (colours: readonly Rgb[]) => {
+    for (const c of colours) {
+      const reading = readTargetDistance(rgba, w, h, glyphs, screenH, lookFromColour(c));
+      if (reading) return { reading, colour: c };
+    }
+    return null;
+  };
+  if (known) return orange() ?? inColours([known]);
+  if (!hint) return orange() ?? inColours(candidateTextColours(rgba, w, h, screenH));
+  const hinted = discoverTextColours(rgba, w, h, screenH, hint);
+  return (
+    inColours(hinted) ??
+    inColours(candidateTextColours(rgba, w, h, screenH).filter((c) => !hinted.some((o) => sameColour(o, c)))) ??
+    orange()
+  );
 }
 
 /** The part of a screen the reader looks in, in pixels of a `w` x `h` screen. */

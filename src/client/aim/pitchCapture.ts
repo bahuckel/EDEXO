@@ -8,6 +8,7 @@
 import { readHudHeading, readHudPitchAnyColour, type PitchColours } from "@shared/hudPitchReader";
 import { HUD_PITCH_GLYPHS } from "@shared/hudPitchGlyphs";
 import { HUD_PITCH_GLYPHS_ANY } from "@shared/hudPitchGlyphsAny";
+import { watchEdhmHint } from "./edhmHint";
 import { acquireGameScreen } from "./gameScreen";
 
 /** How often a frame is read. */
@@ -18,8 +19,6 @@ const CROP = 0.4;
 const FORGET_COLOURS_AFTER = 8;
 /** Unread, the colours are looked for on every this many frames (once a second): finding them doubles a frame's time. */
 const DISCOVER_EVERY = 4;
-/** EDHM's ini colours are asked for this often (F11 in game reloads a theme). */
-const EDHM_EVERY_MS = 5000;
 
 export interface PitchCapture {
   stop(): void;
@@ -56,15 +55,9 @@ export async function startPitchCapture(onRead: (r: PitchRead | null) => void): 
   let misses = 0;
   /* EDHM's own colours for the boxes (server edhmColours.ts), a hint for finding them; null without EDHM. */
   let hint: PitchColours | null = null;
-  const askEdhm = () =>
-    void fetch("/api/hud-colours/edhm")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: { edhm?: { pitchText: PitchColours["text"]; pitchFrame: PitchColours["frame"] } | null } | null) => {
-        hint = j?.edhm ? { text: j.edhm.pitchText, frame: j.edhm.pitchFrame } : null;
-      })
-      .catch(() => {});
-  askEdhm();
-  const edhmTimer = setInterval(askEdhm, EDHM_EVERY_MS);
+  const stopEdhm = watchEdhmHint((e) => {
+    hint = e ? { text: e.pitchText, frame: e.pitchFrame } : null;
+  });
   /** The heading off the tape strip of the frame (its own small crop). */
   const readHeading = (vw: number, vh: number): number | null => {
     const tx = Math.round(vw * TAPE.x0);
@@ -108,7 +101,7 @@ export async function startPitchCapture(onRead: (r: PitchRead | null) => void): 
   return {
     stop() {
       clearInterval(timer);
-      clearInterval(edhmTimer);
+      stopEdhm();
       screen.release();
     },
   };
