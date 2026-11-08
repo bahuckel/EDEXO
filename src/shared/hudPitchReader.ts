@@ -607,13 +607,20 @@ export function readBox(
  * Read the HUD's pitch from an RGBA frame `w` x `h`; null when it cannot be sure. `glyphs`: digit to glyph vector
  * (hudPitchGlyphs.ts). Both boxes must read the same number (in full-size frames both read clean).
  */
-export function readHudPitch(rgba: Rgba, w: number, h: number, glyphs: HudGlyphs, screen: FrameScreen = { w, h }): PitchReading | null {
+export function readHudPitch(
+  rgba: Rgba,
+  w: number,
+  h: number,
+  glyphs: HudGlyphs,
+  screen: FrameScreen = { w, h },
+  framings: readonly boolean[] = [true, false],
+): PitchReading | null {
   for (const styleName of ["yellow", "orange"] as const) {
     const g = glyphs[styleName];
     if (!g) continue;
     // The boxes with their outline first: the ladder's "0" labels are a mirrored pair too, nearer the centre than the
     // boxes when the nose is just under the horizon (his 0010, "-1" read 0); the plain nearest pair stays the fallback.
-    for (const framed of [true, false]) {
+    for (const framed of framings) {
       const pair = findPitchBoxes(rgba, w, h, screen, styleName, framed);
       const r = pair && readPair(rgba, w, h, screen, pair, g, styleName, styleName, isLadderPx);
       if (r) return r;
@@ -689,19 +696,19 @@ function discoverPitchPairs(
   h: number,
   screen: FrameScreen,
   hint?: PitchColours | null,
-): { colours: PitchColours; pair: Pair }[] {
-  const out: { colours: PitchColours; pair: Pair }[] = [];
+): { colours: PitchColours; pair: Pair; hinted: boolean }[] {
+  const out: { colours: PitchColours; pair: Pair; hinted: boolean }[] = [];
   const hinted = hint ? findPitchBoxes(rgba, w, h, screen, hueLook(hint.text), true) : null;
   if (hinted) {
     const text = strokeColour(rgba, w, [...hinted.left.digits, ...hinted.right.digits]);
-    out.push({ colours: { text, frame: hinted.left.frame! }, pair: hinted });
+    out.push({ colours: { text, frame: hinted.left.frame! }, pair: hinted, hinted: true });
     return out;
   }
   for (const finding of PITCH_FINDING_LOOKS) {
     const pair = findPitchBoxes(rgba, w, h, screen, finding, true);
     if (!pair) continue;
     const text = strokeColour(rgba, w, [...pair.left.digits, ...pair.right.digits]);
-    if (!out.some((o) => sameColour(o.colours.text, text))) out.push({ colours: { text, frame: pair.left.frame! }, pair });
+    if (!out.some((o) => sameColour(o.colours.text, text))) out.push({ colours: { text, frame: pair.left.frame! }, pair, hinted: false });
   }
   return out;
 }
@@ -755,24 +762,45 @@ export function readHudPitchAnyColour(
     game's yellow, and that path, made for the default look, took the ladder's labels for the boxes (his Domini Inferni
     shots, 1191 "21" read 25: ten wrong of 59). With a hint the recoloured path, outline required, goes first.
   */
-  const defaultLook = () => {
-    const reading = known ? null : readHudPitch(rgba, w, h, glyphs, screen);
+  const defaultLook = (framings?: readonly boolean[]) => {
+    const reading = known ? null : readHudPitch(rgba, w, h, glyphs, screen, framings);
     return reading ? { reading, colours: null } : null;
   };
   // A frame without the search (the capture looks for colours once a second): the game's look only.
   if (!known && !discover) return defaultLook();
+  /*
+    Without a hint the game's framed boxes first, its unframed pairs only after the recoloured path: on an orange or
+    gold EDHM theme those were the ladder's labels (theme bench, colour-unknown frames: 1203 "79" read 75 on Orokin
+    Vision Black, 1226 "-70" read -75 on three themes).
+  */
   if (!hint) {
-    const found = defaultLook();
+    const found = defaultLook([true]);
     if (found) return found;
   }
   // The hint first; a hinted pair that does not read is followed by the colour-blind search (the theme bench: on light
   // grey themes the hue matched a pair the search would not have chosen, 1,983 against 2,026 of 2,688 read).
-  for (const tryHint of hint && !known ? [hint, null] : [hint ?? null])
-    for (const { colours, look, pair } of pitchPairsAnyColour(rgba, w, h, screen, known, tryHint)) {
+  let hintOnScreen = false;
+  for (const tryHint of hint && !known ? [hint, null] : [hint ?? null]) {
+    const tries = pitchPairsAnyColour(rgba, w, h, screen, known, tryHint);
+    hintOnScreen ||= tries.some((t) => t.hinted);
+    for (const { colours, look, pair } of tries) {
       const reading = readPair(rgba, w, h, screen, pair, anyGlyphs, look, "learned", lookFromColour(colours.frame).isText, ANY_MIN_MATCH, ANY_MIN_MARGIN);
-      if (reading) return { reading, colours };
+      if (!reading) continue;
+      // A minus in both boxes of the same pair cut the other way, missed in this cut: not sure (his 1009, a rolled box's
+      // outline across the digits' bottom rows hid it: -15 read 15). The other way round is a dim minus the other cut
+      // missed, and reads right.
+      const near = (a: PitchBox, b: PitchBox) => Math.abs(a.x - b.x) < a.dh && Math.abs(a.y - b.y) < a.dh;
+      if (reading.boxDeg >= 0 && tries.some((t) => near(t.pair.left, pair.left) && t.pair.left.minus && t.pair.right.minus)) return null;
+      return { reading, colours };
     }
-  return hint ? defaultLook() : null;
+  }
+  /*
+    The game's own look last: its unframed pairs without a hint; with one, only when the hinted colours are not on the
+    frame (a stale hint). Boxes in the hinted colours that did not read are not the game's look: on orange themes its
+    orange table read them (theme bench, 1198 "66" read 68 on Coach Purple and Orange).
+  */
+  if (hintOnScreen) return null;
+  return defaultLook(hint ? [true, false] : [false]);
 }
 
 /**
@@ -787,13 +815,13 @@ export function pitchPairsAnyColour(
   screen: FrameScreen = { w, h },
   known?: PitchColours | null,
   hint?: PitchColours | null,
-): { colours: PitchColours; look: TextLook; pair: Pair }[] {
-  const out: { colours: PitchColours; look: TextLook; pair: Pair }[] = [];
-  for (const { colours, pair: seen } of known ? [{ colours: known, pair: null }] : discoverPitchPairs(rgba, w, h, screen, hint)) {
+): { colours: PitchColours; look: TextLook; pair: Pair; hinted: boolean }[] {
+  const out: { colours: PitchColours; look: TextLook; pair: Pair; hinted: boolean }[] = [];
+  for (const { colours, pair: seen, hinted } of known ? [{ colours: known, pair: null, hinted: false }] : discoverPitchPairs(rgba, w, h, screen, hint)) {
     const look = lookFromColour(colours.text);
     const inColour = findPitchBoxes(rgba, w, h, screen, look, true);
-    if (inColour) out.push({ colours, look, pair: inColour });
-    if (seen) out.push({ colours, look, pair: { left: minusIn(rgba, w, seen.left, look), right: minusIn(rgba, w, seen.right, look) } });
+    if (inColour) out.push({ colours, look, pair: inColour, hinted });
+    if (seen) out.push({ colours, look, pair: { left: minusIn(rgba, w, seen.left, look), right: minusIn(rgba, w, seen.right, look) }, hinted });
   }
   return out;
 }

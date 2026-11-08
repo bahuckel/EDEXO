@@ -219,6 +219,20 @@ describe("HUD pitch reader", () => {
     expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY, { w: W, h: H }, null, true, stale)?.reading.boxDeg).toBe(-10);
   });
 
+  it("does not take the game's own look for boxes in the hinted colours that did not read; a stale hint still does", () => {
+    const f = dark();
+    boxed(f, "-10", 840, 480);
+    boxed(f, "-10", 1120, 480);
+    // The game's yellow, as an orange EDHM theme passes for it (theme bench: 1198 "66" read 68 by the orange table).
+    draw(f, "-20", 870, 400);
+    draw(f, "-20", 1100, 400);
+    const noOne = Object.fromEntries(Object.entries(ANY).filter(([d]) => d !== "1"));
+    const hint = { text: [243, 243, 243] as Rgb, frame: [0, 213, 0] as Rgb };
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, noOne, { w: W, h: H }, null, true, hint)).toBeNull();
+    const stale = { text: [120, 30, 200] as Rgb, frame: [255, 165, 0] as Rgb };
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, noOne, { w: W, h: H }, null, true, stale)?.reading).toMatchObject({ boxDeg: -20, style: "yellow" });
+  });
+
   it("says not sure for a digit it has no glyph for", () => {
     const f = frame();
     draw(f, "-10", 840, 450);

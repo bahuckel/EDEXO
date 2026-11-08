@@ -10,7 +10,9 @@
  * sample per digit and box from the first pair whose boxes hold the pitch's digits and sign, cut in that pair's colour.
  * Every sample is kept up to MAX_PER_DIGIT a digit, spread over the images.
  * --check: before writing, each half of the images is read with glyphs from the other half (the any-colour reader
- * alone, the default tables left out), and the misses listed. The images are not kept; only the numbers go in the table.
+ * alone, the default tables left out), and the misses listed; every other image by default, --blocks for the first half
+ * against the second (the shots run theme by theme, so it is near a theme the table has not seen: neighbouring shots
+ * of one scene flatter the default split). The images are not kept; only the numbers go in the table.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -18,7 +20,11 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { glyphVector, GLYPH_H, GLYPH_W, pitchPairsAnyColour, readHudPitchAnyColour, type PitchGlyphs } from "../src/shared/hudPitchReader.js";
 
-const MAX_PER_DIGIT = 24;
+/**
+ * 96, was 24: an even spread of 24 over the list dropped whole themes' looks (his Blue and Teal 8 matched a 0: 1126 "-18"
+ * read -10). Held out by blocks 2026-11-08: 24 → 397 right, 48 → 436, 96 → 459, all (~250) → 465, one wrong each.
+ */
+const MAX_PER_DIGIT = 96;
 
 async function rgba(file: string): Promise<{ data: Uint8Array; w: number; h: number }> {
   if (/\.bmp$/i.test(file)) {
@@ -45,8 +51,9 @@ async function rgba(file: string): Promise<{ data: Uint8Array; w: number; h: num
 
 const args = process.argv.slice(2);
 const check = args.includes("--check");
+const halfOf = (i: number) => (args.includes("--blocks") ? (i < per.length / 2 ? 0 : 1) : i % 2);
 const pairs = args
-  .filter((a) => a !== "--check")
+  .filter((a) => !a.startsWith("--"))
   .flatMap((a) => (a.startsWith("@") ? readFileSync(a.slice(1), "utf8").split(/\r?\n/).filter((l) => l.trim()) : [a]))
   .map((a) => {
     const at = a.lastIndexOf("=");
@@ -86,9 +93,9 @@ if (check) {
   let unsure = 0;
   const wrong: string[] = [];
   for (const half of [0, 1]) {
-    const glyphs: PitchGlyphs = table(per.filter((_, i) => i % 2 !== half));
+    const glyphs: PitchGlyphs = table(per.filter((_, i) => halfOf(i) !== half));
     for (const [i, p] of per.entries()) {
-      if (i % 2 !== half) continue;
+      if (halfOf(i) !== half) continue;
       const img = await rgba(p.file);
       const r = readHudPitchAnyColour(img.data, img.w, img.h, {}, glyphs)?.reading ?? null;
       if (!r) unsure++;
@@ -105,7 +112,7 @@ console.log(Object.keys(all).sort().map((d) => `${d}x${all[d]!.length}`).join(" 
 const out = [
   "/**",
   " * The HUD pitch boxes' digits in any HUD colour as the reader compares them (hudPitchReader.ts readHudPitchAnyColour;",
-  " * glyphVector 10 x 15, zero mean, unit length, cut in each box's learned colour), every sample kept up to 24 a digit:",
+  ` * glyphVector 10 x 15, zero mean, unit length, cut in each box's learned colour), up to ${MAX_PER_DIGIT} samples a digit:`,
   " * the reader matches the nearest. Built by scripts/build-hud-pitch-glyphs-any.ts from the owner's F10 cockpit",
   " * screenshots with a known pitch, default HUD and EDHM. Derived numbers, no image.",
   " */",
