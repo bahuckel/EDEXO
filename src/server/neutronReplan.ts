@@ -12,7 +12,7 @@ import type { GameStateStore } from "./gameState.js";
 import { touchGalaxyMemory } from "./galaxyMemory.js";
 import type { NeutronIndex } from "./neutronIndex.js";
 import { loadNeutronIndex } from "./neutronIndex.js";
-import { parseLiveHops, type Here, type NeutronLive } from "./neutronLive.js";
+import { parseLiveHops, type Here, type LiveHop, type NeutronLive } from "./neutronLive.js";
 import { applyJumponium, planNeutronRoute } from "./neutronRoute.js";
 import { lawFor, neutronShip } from "./neutronShip.js";
 import { recipeFor } from "../shared/jumponium.js";
@@ -105,13 +105,20 @@ export function createNeutronReplanner(deps: {
         No fuel-safe neutron way from here (a refuel missed, a guild mate 2026-11-08): the planner's answer is the
         game's plot to the destination, which replaced the stops ahead, put the destination on the clipboard and never
         re-plotted again. The route stays and the HUD says to scoop a star: the fuel watch re-plots once he has.
+        A later leg with no way (less fuel at its destination than the route had planned) keeps the route's own stops
+        from that destination on; the fuel watch re-plots there, and says to scoop then if it must.
       */
       const flown = neutronLive.hops();
       const at = neutronLive.position(here)?.at ?? 0;
-      const stranded = route.unsafeLegs.includes(1) && !!flown?.slice(at + 1).some((h) => h.kind === "neutron");
-      if (stranded && neutronLive.active() && neutronLive.version() === version) neutronLive.setNoFuelWay(true);
-      else if (hops && neutronLive.active() && neutronLive.version() === version) {
-        neutronLive.replace(hops, left.targets);
+      const ahead = legsOf(flown?.slice(at + 1) ?? []);
+      const lost = route.unsafeLegs.find((w) => ahead[w - 1]?.some((h) => h.kind === "neutron"));
+      const current = neutronLive.active() && neutronLive.version() === version;
+      if (lost === 1 && current) neutronLive.setNoFuelWay(true);
+      else if (hops && current) {
+        const next = lost
+          ? [hops[0]!, ...legsOf(hops.slice(1)).slice(0, lost - 1).flat(), ...ahead.slice(lost - 1).flat()]
+          : hops;
+        neutronLive.replace(next, left.targets);
         /*
           replace() moves the version on, and the flag below was cleared only for the version asked for: after
           every re-plot that landed the HUD said "re-plotting" until the route ended, and offRoute() stayed false,
@@ -129,4 +136,19 @@ export function createNeutronReplanner(deps: {
     }
   };
   return { replan };
+}
+
+/** The stops of each leg in turn: a leg ends at its destination's "waypoint" hop. */
+function legsOf(hops: LiveHop[]): LiveHop[][] {
+  const out: LiveHop[][] = [];
+  let leg: LiveHop[] = [];
+  for (const h of hops) {
+    leg.push(h);
+    if (h.kind === "waypoint") {
+      out.push(leg);
+      leg = [];
+    }
+  }
+  if (leg.length) out.push(leg);
+  return out;
 }

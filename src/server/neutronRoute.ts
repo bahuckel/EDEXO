@@ -533,17 +533,29 @@ async function searchLeg(
   */
   const candidates = (u: Node, left: number, r: number, reach: number, isNeutron: boolean) => {
     const got = bound === Infinity ? firstCandidates(u, left, r, reach, isNeutron) : keptCandidates(u, left, r, reach, isNeutron);
-    if (isNeutron) return got;
+    if (isNeutron && u.key !== "start") return got;
     /*
       Where no supercharge starts (a leg's start off a neutron star), the neutron stars a normal jump away go on
       whatever they gain: one next to the start brings the end no nearer by itself, and the gain rule left it out for
       one five jumps on (a guild mate, 2026-11-08: "instead of the neutron right next to the system I refueled at").
+      And from a leg's start, the scoopable ones in one hop, behind too: a ship that missed a refuel, at a neutron
+      star with fuel for one supercharge, could only go on dry, and the re-plot found no way at all (same report).
     */
     const have = new Set(got.cands.map((c) => c.n.i));
     const close: Cand[] = [];
-    for (const n of index.within(u.pos, r)) if (!have.has(n.i)) close.push({ n, gain: left - dist(n, to), d: dist(u.pos, n) });
+    const scoop: Cand[] = [];
+    const hop = isNeutron ? reach : r;
+    for (const n of index.within(u.pos, hop)) {
+      if (have.has(n.i) || n.i === u.star?.i) continue;
+      const c = { n, gain: left - dist(n, to), d: dist(u.pos, n) };
+      if (!isNeutron) close.push(c);
+      if (u.key === "start" && n.scoopLs != null && n.scoopLs <= MAX_SCOOP_LS) scoop.push(c);
+    }
     close.sort((a, b) => a.d - b.d);
-    return close.length ? { ...got, cands: [...got.cands, ...close.slice(0, NEIGHBOURS / 4)] } : got;
+    scoop.sort((a, b) => a.d - b.d);
+    const extra = close.slice(0, NEIGHBOURS / 4);
+    for (const c of scoop.slice(0, NEIGHBOURS / 4)) if (!extra.includes(c)) extra.push(c);
+    return extra.length ? { ...got, cands: [...got.cands, ...extra] } : got;
   };
   /*
     The first passes pick neighbours as plans always did, from the stars in reach at this fuel, so their route is the

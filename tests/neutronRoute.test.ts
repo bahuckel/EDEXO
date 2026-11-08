@@ -183,6 +183,19 @@ describe("neutron route", () => {
     expect(r.jumps).toBe(11);
   });
 
+  it("goes back to a refuel stop from a neutron star with one jump of fuel left (a refuel missed, 2026-11-08)", async () => {
+    // Neutron stars every 200 ly, every third scoopable (0, 600, 1200 ...); the ship sits at the one at 800 with fuel
+    // for one supercharge. Forward it would arrive dry at 1000, or need two jumps to reach 1200: only 600 behind works.
+    const idx = line(0, 1800, 200, 3);
+    const r = await planNeutronRoute(idx, [{ name: "N4", x: 800, y: 0, z: 0 }, { name: "B", x: 2000, y: 0, z: 0 }], {
+      rangeLy: 51.1,
+      jumpsPerTank: 3,
+      jumpsNow: 1,
+    });
+    expect(r.unsafeLegs).toEqual([]);
+    expect(r.hops[1]).toMatchObject({ name: "N3", jumps: 1, boosted: 1, refuel: true });
+  });
+
   it("says the fuel it plans aboard at each stop, on arrival and on leaving (plan 1.3.4 S-9)", async () => {
     // Tank: 3 jumps, counted in whole jumps (no drive law): each hop burns its jumps, a refuel fills the tank.
     const idx = line(50, 1850, 200, 3);

@@ -160,6 +160,27 @@ describe("re-plotting a neutron route", () => {
     expect(t.live.view(here)?.noFuelWay).toBeUndefined();
   });
 
+  it("keeps the route's own stops on a later leg the re-plot found no neutron way for", async () => {
+    const t = setup(() => INDEX);
+    const two = { ...PLAN, targets: [{ name: "Mid", x: 500, y: 0, z: 0 }, ...PLAN.targets] };
+    t.live.start(
+      [hop("Sol", 0, "start"), hop("PSR A", 200), hop("Mid", 500, "waypoint"), hop("PSR C", 700), hop("Colonia", 900, "waypoint")],
+      { name: "Sol", pos: { x: 0, y: 0, z: 0 } },
+      two,
+    );
+    // The first leg re-plotted through PSR B; the second, from Mid with less fuel, only by the game's plot.
+    const p = planned("Somewhere", 300);
+    t.planRoute.mockResolvedValueOnce({
+      ...p,
+      hops: [p.hops[0]!, p.hops[1]!, { ...p.hops[2]!, name: "Mid", x: 500 }, { ...p.hops[2]!, boosted: 0, jumps: 8 }],
+      unsafeLegs: [2],
+    });
+    await t.replanner.replan();
+    expect(t.live.hops()?.map((h) => h.name)).toEqual(["Somewhere", "PSR B", "Mid", "PSR C", "Colonia"]);
+    expect(t.copied.at(-1)).toBe("PSR B");
+    expect(t.live.view({ name: "Somewhere", pos: null })?.noFuelWay).toBeUndefined();
+  });
+
   it("takes the game's plot when the route had no neutron star ahead anyway", async () => {
     const t = setup(() => INDEX);
     t.live.start([hop("Sol", 0, "start"), hop("Colonia", 900, "waypoint")], { name: "Sol", pos: { x: 0, y: 0, z: 0 } }, PLAN);
