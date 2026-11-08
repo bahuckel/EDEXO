@@ -170,6 +170,19 @@ describe("neutron route", () => {
     expect(r.jumps).toBe(10);
   });
 
+  it("takes the neutron star next to the start, though it brings the end no nearer (a guild mate, 2026-11-08)", async () => {
+    // One 5 ly behind the start, then one every 200 ly: the gain rule alone went 4 normal jumps to the one at 195.
+    const idx = line(-5, 1795, 200);
+    const r = await planNeutronRoute(idx, [A, { name: "B", x: 1995, y: 0, z: 0 }], {
+      rangeLy: 51.1,
+      jumpsPerTank: 100,
+      jumpsNow: 100,
+    });
+    expect(r.hops[1]).toMatchObject({ name: "N0", jumps: 1, boosted: 0 });
+    // 1 jump to it, then 10 supercharges.
+    expect(r.jumps).toBe(11);
+  });
+
   it("says the fuel it plans aboard at each stop, on arrival and on leaving (plan 1.3.4 S-9)", async () => {
     // Tank: 3 jumps, counted in whole jumps (no drive law): each hop burns its jumps, a refuel fills the tank.
     const idx = line(50, 1850, 200, 3);

@@ -140,6 +140,39 @@ describe("re-plotting a neutron route", () => {
     expect(t.live.view({ name: "Somewhere", pos: null })?.replanWhy).toBeUndefined();
   });
 
+  it("keeps the stops when no fuel-safe neutron way is left, and says to scoop (a refuel missed, 2026-11-08)", async () => {
+    const t = setup(() => INDEX);
+    const copiedBefore = [...t.copied];
+    // The planner's answer with too little fuel: the game's plot straight to the destination.
+    t.planRoute.mockResolvedValueOnce({
+      ...planned("Somewhere", 300),
+      hops: [planned("Somewhere", 300).hops[0]!, { ...planned("Somewhere", 300).hops[2]!, boosted: 0, jumps: 12, scoopOnWay: true }],
+      unsafeLegs: [1],
+    });
+    await t.replanner.replan({ why: "9 t less fuel than planned", fuelT: 2 });
+    expect(t.live.hops()?.map((h) => h.name)).toEqual(["Sol", "PSR A", "Colonia"]);
+    expect(t.copied).toEqual(copiedBefore);
+    const here = { name: "Somewhere", pos: null };
+    expect(t.live.view(here)).toMatchObject({ next: "PSR A", replanning: false, noFuelWay: true });
+    // Scooped: the next re-plot finds a neutron way and the note goes.
+    await t.replanner.replan({ why: "30 t more fuel than planned", fuelT: 32 });
+    expect(t.live.hops()?.map((h) => h.name)).toEqual(["Somewhere", "PSR B", "Colonia"]);
+    expect(t.live.view(here)?.noFuelWay).toBeUndefined();
+  });
+
+  it("takes the game's plot when the route had no neutron star ahead anyway", async () => {
+    const t = setup(() => INDEX);
+    t.live.start([hop("Sol", 0, "start"), hop("Colonia", 900, "waypoint")], { name: "Sol", pos: { x: 0, y: 0, z: 0 } }, PLAN);
+    t.planRoute.mockResolvedValueOnce({
+      ...planned("Somewhere", 300),
+      hops: [planned("Somewhere", 300).hops[0]!, planned("Somewhere", 300).hops[2]!],
+      unsafeLegs: [1],
+    });
+    await t.replanner.replan();
+    expect(t.live.hops()?.map((h) => h.name)).toEqual(["Somewhere", "Colonia"]);
+    expect(t.live.view({ name: "Somewhere", pos: null })?.noFuelWay).toBeUndefined();
+  });
+
   it("leaves a route started meanwhile alone", async () => {
     const t = setup(() => INDEX);
     const first = t.replanner.replan();

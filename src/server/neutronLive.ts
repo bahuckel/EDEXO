@@ -79,6 +79,11 @@ export interface NeutronLive {
   replace(hops: LiveHop[], targets: LivePlan["targets"]): string | null;
   /** Planning again from here is under way (the HUD says so), and why, when it is not the ship leaving the route. */
   setReplanning(on: boolean, why?: string | null): void;
+  /**
+   * A re-plot found no fuel-safe neutron way from here and kept the route: the HUD says to scoop a star; cleared by
+   * the next route, re-plot or stop reached.
+   */
+  setNoFuelWay(on: boolean): void;
   /** The stop reached last, the one after, and whether the ship is in that stop's system; null with no route. */
   position(here: Here): { at: number; hop: LiveHop; next: LiveHop | null; onStop: boolean } | null;
   /** Bumped with every new route, for the galaxy map to draw the new one. */
@@ -223,6 +228,7 @@ export function createNeutronLive(opts: {
   let done: { destination: string; carrier?: boolean } | null = null;
   let replanning = false;
   let replanWhy: string | null = null;
+  let noFuelWay = false;
   let version = 1;
 
   const persist = (): void => {
@@ -262,6 +268,7 @@ export function createNeutronLive(opts: {
       // A re-plot of the route before is not this route's: it neither shows nor lands here (version below).
       replanning = false;
       replanWhy = null;
+      noFuelWay = false;
       version++;
       persist();
       return copyNext();
@@ -294,6 +301,7 @@ export function createNeutronLive(opts: {
       if (!st) return null;
       const was = st.hops[st.at + 1]?.name ?? null;
       st = { ...st, hops, at: 0, plan: st.plan ? { ...st.plan, targets } : null };
+      noFuelWay = false;
       version++;
       persist();
       const next = hops[1]?.name ?? null;
@@ -302,6 +310,9 @@ export function createNeutronLive(opts: {
     setReplanning(on, why = null) {
       replanning = on;
       replanWhy = on ? why : null;
+    },
+    setNoFuelWay(on) {
+      noFuelWay = on && st != null;
     },
     position(here) {
       if (!st) return null;
@@ -314,6 +325,7 @@ export function createNeutronLive(opts: {
       done = null;
       replanning = false;
       replanWhy = null;
+      noFuelWay = false;
       version++;
       persist();
     },
@@ -332,6 +344,7 @@ export function createNeutronLive(opts: {
           break;
         }
       if (hit < 0) return null;
+      noFuelWay = false;
       if (hit === st.hops.length - 1) {
         done = { destination: st.hops[hit]!.name, ...(st.follow === "carrier" ? { carrier: true } : {}) };
         st = null;
@@ -388,6 +401,7 @@ export function createNeutronLive(opts: {
         done: false,
         replanning,
         ...(replanning && replanWhy ? { replanWhy } : {}),
+        ...(noFuelWay && !replanning ? { noFuelWay: true } : {}),
         destination: st.hops[st.hops.length - 1]!.name,
         ...(carrier ? { carrier: true } : {}),
         ...(!carrier && !st.hops.some((h) => h.kind === "neutron") ? { noNeutrons: true } : {}),

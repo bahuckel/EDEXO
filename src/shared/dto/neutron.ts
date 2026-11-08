@@ -27,6 +27,11 @@ export interface NeutronLiveDTO {
   replanning: boolean;
   /** Why, when it is not the ship leaving the route: the tank differs from the plan's (plan 1.3.4 S-9). */
   replanWhy?: string;
+  /**
+   * The last re-plot found no fuel-safe neutron way from here (a refuel missed) and kept the route rather than hand
+   * over the game's plot to the destination (a guild mate, 2026-11-08): scoop a star, and it plans again.
+   */
+  noFuelWay?: boolean;
   /** The last stop is reached: shown until the next jump. */
   done: boolean;
   /** The route's last stop. */

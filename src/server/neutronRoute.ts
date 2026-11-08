@@ -531,8 +531,20 @@ async function searchLeg(
     bubble has 2 within 240 ly of Sol), the extra distance in normal jumps. Kept per star and range: a star is
     expanded again with other fuel, and building the list (thousands of stars near the core) was most of a plan's time.
   */
-  const candidates = (u: Node, left: number, r: number, reach: number, isNeutron: boolean) =>
-    bound === Infinity ? firstCandidates(u, left, r, reach, isNeutron) : keptCandidates(u, left, r, reach, isNeutron);
+  const candidates = (u: Node, left: number, r: number, reach: number, isNeutron: boolean) => {
+    const got = bound === Infinity ? firstCandidates(u, left, r, reach, isNeutron) : keptCandidates(u, left, r, reach, isNeutron);
+    if (isNeutron) return got;
+    /*
+      Where no supercharge starts (a leg's start off a neutron star), the neutron stars a normal jump away go on
+      whatever they gain: one next to the start brings the end no nearer by itself, and the gain rule left it out for
+      one five jumps on (a guild mate, 2026-11-08: "instead of the neutron right next to the system I refueled at").
+    */
+    const have = new Set(got.cands.map((c) => c.n.i));
+    const close: Cand[] = [];
+    for (const n of index.within(u.pos, r)) if (!have.has(n.i)) close.push({ n, gain: left - dist(n, to), d: dist(u.pos, n) });
+    close.sort((a, b) => a.d - b.d);
+    return close.length ? { ...got, cands: [...got.cands, ...close.slice(0, NEIGHBOURS / 4)] } : got;
+  };
   /*
     The first passes pick neighbours as plans always did, from the stars in reach at this fuel, so their route is the
     one a plan had before the refining passes, which can then only improve on it.

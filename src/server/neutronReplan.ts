@@ -101,7 +101,16 @@ export function createNeutronReplanner(deps: {
           ).route
         : route;
       const hops = parseLiveHops(planned.hops);
-      if (hops && neutronLive.active() && neutronLive.version() === version) {
+      /*
+        No fuel-safe neutron way from here (a refuel missed, a guild mate 2026-11-08): the planner's answer is the
+        game's plot to the destination, which replaced the stops ahead, put the destination on the clipboard and never
+        re-plotted again. The route stays and the HUD says to scoop a star: the fuel watch re-plots once he has.
+      */
+      const flown = neutronLive.hops();
+      const at = neutronLive.position(here)?.at ?? 0;
+      const stranded = route.unsafeLegs.includes(1) && !!flown?.slice(at + 1).some((h) => h.kind === "neutron");
+      if (stranded && neutronLive.active() && neutronLive.version() === version) neutronLive.setNoFuelWay(true);
+      else if (hops && neutronLive.active() && neutronLive.version() === version) {
         neutronLive.replace(hops, left.targets);
         /*
           replace() moves the version on, and the flag below was cleared only for the version asked for: after

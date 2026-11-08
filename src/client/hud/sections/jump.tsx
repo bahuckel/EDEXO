@@ -183,6 +183,14 @@ function NeutronLive({ d }: { d: HudSnapshot }) {
       </div>
     );
   const todo: ReactNode[] = [];
+  // A re-plot found no fuel-safe neutron way from here (a refuel missed): the route stays until the tank is fuller.
+  if (n.noFuelWay)
+    todo.push(
+      <span key="nofuel" className="jump__neutron-do jump__neutron-do--fuel">
+        <FuelPump level="red" />
+        Too little fuel for a neutron way from here: scoop a star nearby, the route re-plots after
+      </span>,
+    );
   if (n.refuelHere)
     todo.push(
       <span key="fuel" className="jump__neutron-do jump__neutron-do--fuel">

@@ -16,6 +16,8 @@ export interface LiveRouteView {
   replanning: boolean;
   /** Why the re-plot, when it is the fuel aboard and not the ship leaving the route. */
   replanWhy?: string;
+  /** The last re-plot found no fuel-safe neutron way from here and kept the route. */
+  noFuelWay?: boolean;
   /** A Spansh fleet carrier route: the carrier's jumps move it on, and the stop is pasted in the carrier's route. */
   carrier?: boolean;
   progress?: RouteProgressDTO;
@@ -40,6 +42,11 @@ export function LiveRouteBanner({ view, onStop }: { view: LiveRouteView; onStop:
         <p className="g3d-panel__note">
           {view.replanWhy ? `${view.replanWhy[0]!.toUpperCase()}${view.replanWhy.slice(1)}` : "Off the route"}: re-plotting from where
           you are…
+        </p>
+      ) : null}
+      {view.noFuelWay && !view.replanning ? (
+        <p className="g3d-panel__note">
+          Too little fuel for a neutron way from here: scoop a star nearby, and the route re-plots once the tank is fuller.
         </p>
       ) : null}
       <button
