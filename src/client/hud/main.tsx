@@ -63,9 +63,9 @@ type ElectronHud = {
   hudDrag?: (phase: string) => Promise<unknown>;
   hudChain?: (dir: "below" | "right") => Promise<unknown>;
   hudUnchain?: () => Promise<unknown>;
-  onHudChainOffers?: (cb: (v: unknown) => void) => void;
-  onHudPrefs?: (cb: (p: unknown) => void) => void;
-  onHudMoveMode?: (cb: (v: unknown) => void) => void;
+  onHudChainOffers?: (cb: (v: unknown) => void) => () => void;
+  onHudPrefs?: (cb: (p: unknown) => void) => () => void;
+  onHudMoveMode?: (cb: (v: unknown) => void) => () => void;
   resizeHudOverlay?: (o: { height?: number; scale?: number; idle?: boolean }) => Promise<unknown>;
 };
 const electron = (): ElectronHud | undefined =>

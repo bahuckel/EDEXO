@@ -126,16 +126,31 @@ export function resolveFootFixForOrganicLine(
 export type FootFixRead =
   { kind: "fix"; fix: FootTravelFix } | { kind: "off-surface" } | { kind: "unreadable" };
 
-export function readStatusJsonFootFixText(rawText: string): FootFixRead {
+export type StatusJson = Record<string, unknown>;
+
+/**
+ * `Status.json` parsed once, for every reader below (the live tick parsed it three times, review 2026-11-07 §2.5); null
+ * for a torn read (Elite rewrites this file in place; catching it mid-write is expected, not an error) or anything but
+ * an object.
+ */
+export function parseStatusJson(rawText: string): StatusJson | null {
   let j: unknown;
   try {
     j = JSON.parse(rawText);
   } catch {
-    // Torn read. Elite rewrites this file in place; catching it mid-write is expected, not an error.
-    return { kind: "unreadable" };
+    return null;
   }
-  if (!j || typeof j !== "object") return { kind: "unreadable" };
-  const fix = footFixFromParsed(j as Record<string, unknown>);
+  return j && typeof j === "object" ? (j as StatusJson) : null;
+}
+
+export function readStatusJsonFootFixText(rawText: string): FootFixRead {
+  return statusFootFix(parseStatusJson(rawText));
+}
+
+/** {@link readStatusJsonFootFixText} on a parsed file (null: it could not be parsed). */
+export function statusFootFix(o: StatusJson | null): FootFixRead {
+  if (!o) return { kind: "unreadable" };
+  const fix = footFixFromParsed(o);
   return fix ? { kind: "fix", fix } : { kind: "off-surface" };
 }
 
@@ -182,14 +197,12 @@ function footFixFromParsed(o: Record<string, unknown>): FootTravelFix | null {
 export type StatusDestination = { systemAddress: number; bodyId: number; name: string };
 
 export function parseStatusJsonDestination(rawText: string): StatusDestination | null {
-  let j: unknown;
-  try {
-    j = JSON.parse(rawText);
-  } catch {
-    return null;
-  }
-  if (!j || typeof j !== "object") return null;
-  const dest = (j as Record<string, unknown>).Destination;
+  const o = parseStatusJson(rawText);
+  return o ? statusDestination(o) : null;
+}
+
+export function statusDestination(status: StatusJson): StatusDestination | null {
+  const dest = status.Destination;
   if (!dest || typeof dest !== "object") return null;
   const o = dest as Record<string, unknown>;
   const systemAddress = pickFinite(o, ["System", "system"]);
@@ -204,14 +217,11 @@ export type StatusJsonFuelTons = { fuelMain: number; fuelReserve: number; cargo?
 
 /** `Status.json` `Fuel.FuelMain` / `Fuel.FuelReservoir` (tonnes). */
 export function parseStatusJsonFuel(rawText: string): StatusJsonFuelTons | null {
-  let j: unknown;
-  try {
-    j = JSON.parse(rawText);
-  } catch {
-    return null;
-  }
-  if (!j || typeof j !== "object") return null;
-  const o = j as Record<string, unknown>;
+  const o = parseStatusJson(rawText);
+  return o ? statusFuel(o) : null;
+}
+
+export function statusFuel(o: StatusJson): StatusJsonFuelTons | null {
   const fuelRaw = o.Fuel ?? o.fuel;
   if (!fuelRaw || typeof fuelRaw !== "object") return null;
   const fuel = fuelRaw as Record<string, unknown>;

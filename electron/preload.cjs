@@ -79,17 +79,13 @@ contextBridge.exposeInMainWorld("edexoElectron", {
   getAimCaptureSource: () => ipcRenderer.invoke("edexo:aim-capture-source"),
   /** A HUD page's drag while placing: "start", "move", "end", or "done" to finish placing. */
   hudDrag: (phase) => ipcRenderer.invoke("edexo:hud-drag", { phase }),
-  /** HUD pages: placing mode on or off (`{ on }`). */
-  onHudMoveMode: (cb) => {
-    ipcRenderer.on("edexo:hud-move-mode", (_evt, v) => cb(v));
-  },
+  /** HUD pages: placing mode on or off (`{ on }`). Returns an unsubscribe, as every `on…` here. */
+  onHudMoveMode: (cb) => listen("edexo:hud-move-mode", cb),
   /** HUD pages while placing: chain this HUD with the one touching it (`"below"` / `"right"`), or a group apart. */
   hudChain: (dir) => ipcRenderer.invoke("edexo:hud-chain", { dir }),
   hudUnchain: () => ipcRenderer.invoke("edexo:hud-unchain"),
   /** HUD pages: `{ on, below, right, group }` — which chain buttons to show while placing. */
-  onHudChainOffers: (cb) => {
-    ipcRenderer.on("edexo:hud-chain-offers", (_evt, v) => cb(v));
-  },
+  onHudChainOffers: (cb) => listen("edexo:hud-chain-offers", cb),
   /** Close to tray: `{ enabled, available, reason? }` (owner, 2026-09-28; close, not minimise, since 2026-10-01). */
   getTrayPref: () => ipcRenderer.invoke("edexo:get-tray-pref"),
   /** @param {{ enabled: boolean }} opts */
@@ -109,18 +105,12 @@ contextBridge.exposeInMainWorld("edexoElectron", {
   setKeybinds: (next) => ipcRenderer.invoke("edexo:set-keybinds", next),
   /** While a new bind is being recorded the current ones are released (`{ on: true }`), then restored. */
   pauseKeybinds: (opts) => ipcRenderer.invoke("edexo:pause-keybinds", opts),
-  /** HUDs shown or hidden, however it was changed (hotkey, tray, launcher): `{ hidden, count }`. */
   /** How long a key bind took to reach the page and be drawn (main.cjs writes it to hud-events.log). */
   uiAck: (r) => ipcRenderer.send("edexo:ui-ack", r),
   /** Key binds for the app window's page (main.cjs uiCommandEverywhere): `{ cmd, dir }`. */
-  onUiCommand: (cb) => {
-    const h = (_evt, cmd) => cb(cmd);
-    ipcRenderer.on("edexo:ui-command", h);
-    return () => ipcRenderer.removeListener("edexo:ui-command", h);
-  },
-  onHudVisibility: (cb) => {
-    ipcRenderer.on("edexo:hud-visibility", (_evt, v) => cb(v));
-  },
+  onUiCommand: (cb) => listen("edexo:ui-command", cb),
+  /** HUDs shown or hidden, however it was changed (hotkey, tray, launcher): `{ hidden, count }`. */
+  onHudVisibility: (cb) => listen("edexo:hud-visibility", cb),
   /**
    * The exobiology UI in its own window; the launcher stays open. Brings it forward when it is open.
    *
@@ -165,9 +155,7 @@ contextBridge.exposeInMainWorld("edexoElectron", {
   /** Launcher → every HUD window, as a setting changes (the HUDs have their own session). */
   pushHudPrefs: (prefs) => ipcRenderer.send("edexo:push-hud-prefs", prefs),
   /** HUD side of {@link pushHudPrefs}. */
-  onHudPrefs: (cb) => {
-    ipcRenderer.on("edexo:hud-prefs", (_evt, prefs) => cb(prefs));
-  },
+  onHudPrefs: (cb) => listen("edexo:hud-prefs", cb),
   /*
     The EDEXO browser's toolbar (plan 9, electron/browserTabs.cjs): one named call per thing the toolbar does,
     plain values in and out, each checked in the main process, which also refuses them from any window but the
@@ -234,6 +222,13 @@ contextBridge.exposeInMainWorld("edexoElectron", {
     },
   },
 });
+
+/** `cb` with each message on `channel` (the event left out); the returned function stops it (code review E). */
+function listen(channel, cb) {
+  const h = (_evt, v) => cb(v);
+  ipcRenderer.on(channel, h);
+  return () => ipcRenderer.removeListener(channel, h);
+}
 
 /** Every browser call is one plain object to one channel; the main process checks the op and its values. */
 function browserCall(msg) {

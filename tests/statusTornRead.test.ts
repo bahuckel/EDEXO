@@ -14,7 +14,16 @@
  * wearing different clothes.
  */
 import { describe, expect, it } from "vitest";
-import { readStatusJsonFootFixText, parseStatusJsonFootFix } from "../src/server/footTravelStatus.js";
+import {
+  parseStatusJson,
+  parseStatusJsonDestination,
+  parseStatusJsonFootFix,
+  parseStatusJsonFuel,
+  readStatusJsonFootFixText,
+  statusDestination,
+  statusFootFix,
+  statusFuel,
+} from "../src/server/footTravelStatus.js";
 
 /** What the game writes while standing on a planet. */
 const onFoot = JSON.stringify({
@@ -68,5 +77,34 @@ describe("telling a torn read from being off the surface", () => {
     expect(parseStatusJsonFootFix(onFoot)?.latDeg).toBe(12.5);
     expect(parseStatusJsonFootFix(inShip)).toBeNull();
     expect(parseStatusJsonFootFix("{")).toBeNull();
+  });
+});
+
+describe("one parse a tick (review 2026-11-07 §2.5)", () => {
+  const flying = JSON.stringify({
+    Flags: 0,
+    Latitude: 3,
+    Longitude: 4,
+    PlanetRadius: 1_500_000,
+    Fuel: { FuelMain: 12.5, FuelReservoir: 0.4 },
+    Cargo: 3,
+    Destination: { System: 123, Body: 7, Name: "Probe 1 b" },
+  });
+
+  it("gives the fix, the destination and the fuel from one parsed file, as the text readers do", () => {
+    for (const text of [flying, onFoot, inShip]) {
+      const status = parseStatusJson(text)!;
+      expect(statusFootFix(status)).toEqual(readStatusJsonFootFixText(text));
+      expect(statusDestination(status)).toEqual(parseStatusJsonDestination(text));
+      expect(statusFuel(status)).toEqual(parseStatusJsonFuel(text));
+    }
+    const status = parseStatusJson(flying)!;
+    expect(statusDestination(status)).toEqual({ systemAddress: 123, bodyId: 7, name: "Probe 1 b" });
+    expect(statusFuel(status)).toEqual({ fuelMain: 12.5, fuelReserve: 0.4, cargo: 3 });
+  });
+
+  it("parses a torn or non-object file to null, which reads as unreadable", () => {
+    for (const text of ["", "{", flying.slice(0, 20), "42", "null"]) expect(parseStatusJson(text)).toBeNull();
+    expect(statusFootFix(null).kind).toBe("unreadable");
   });
 });

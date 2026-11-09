@@ -71,11 +71,7 @@ import { createGamePresence } from "./gamePresence.js";
 import { buildFieldGuide } from "./fieldGuide.js";
 import { buildDiscoveries } from "./discoveries.js";
 import { flushFootScannedCatalog } from "./footScannedCatalog.js";
-import {
-  parseStatusJsonDestination,
-  parseStatusJsonFuel,
-  readStatusJsonFootFixText,
-} from "./footTravelStatus.js";
+import { parseStatusJson, statusDestination, statusFootFix, statusFuel } from "./footTravelStatus.js";
 import {
   getProjectRoot,
   resolveCommanderDataDir,
@@ -1316,15 +1312,16 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
           `true -> null -> true`: an edge, so the HUD played the "far enough now" cue again. The
           owner heard it on every radar update instead of once per boundary crossing.
         */
-        const read = readStatusJsonFootFixText(raw);
-        if (read.kind === "unreadable") return;
+        const status = parseStatusJson(raw);
+        if (!status) return;
+        const read = statusFootFix(status);
         const fix = read.kind === "fix" ? read.fix : null;
         // The odometer's sample, the nose's pitch from the flight path, and the radar's fix (null: off the surface).
         applyLiveFix(store, fix);
         // The targeted body: the HUD's candidate list, and a one-shot jump to its Body tab. Pushed
         // only when it actually changes — see `applyStatusDestination`.
-        const destChanged = store.applyStatusDestination(parseStatusJsonDestination(raw));
-        const fuel = parseStatusJsonFuel(raw);
+        const destChanged = store.applyStatusDestination(statusDestination(status));
+        const fuel = statusFuel(status);
         const fuelChanged = store.applyLiveShipFuel(
           fuel != null ? fuel.fuelMain : null,
           fuel != null ? fuel.fuelReserve : null,
