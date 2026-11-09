@@ -16,7 +16,7 @@
  * Pure (a frame in, a reading out), tested on the owner's screenshots; the capture is the screen marker's (aim/).
  * Null when it cannot be sure.
  */
-import { components, glyphVector, matchGlyph, GLYPH_H, GLYPH_W } from "./hudPitchReader.js";
+import { components, glyphVector, matchGlyph, scratchMask, GLYPH_H, GLYPH_W } from "./hudPitchReader.js";
 import { findingLook, hueLook, lookFromColour, MAX_TEXT_SHARE, sameColour, strokeColour, type Rgb, type TextLook } from "./hudTextLook.js";
 
 export { lookFromColour, type Rgb, type TextLook };
@@ -126,7 +126,7 @@ function splitJoined(mask: Uint8Array, w: number, c: Rect): Rect[] {
 
 /** Lines of the HUD's text in a frame: pieces about a character high, on one baseline, close together. */
 export function findTextLines(rgba: Rgba, w: number, h: number, screenH = h, look: TextLook = ORANGE_LOOK): TextLine[] {
-  const mask = new Uint8Array(w * h);
+  const mask = scratchMask("text", w * h).fill(0, 0, w * h);
   let marked = 0;
   for (let i = 0, p = 0; i < w * h; i++, p += 4) {
     const r = rgba[p]!;

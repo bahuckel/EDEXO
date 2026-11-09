@@ -89,6 +89,18 @@ describe("HUD pitch reader", () => {
     expect(readHudPitch(g, W, H, GLYPHS)?.boxDeg).toBe(19);
   });
 
+  it("keeps nothing of the last frame in its kept masks (review §4.3.4)", () => {
+    const f = frame();
+    draw(f, "-20", 840, 450);
+    draw(f, "-20", 1120, 450);
+    expect(readHudPitch(f, W, H, GLYPHS)?.boxDeg).toBe(-20);
+    // The same size, nothing drawn: the masks from the read above are reused and must read as empty.
+    expect(readHudPitch(frame(), W, H, GLYPHS)).toBeNull();
+    // A smaller crop next, then the full frame again: still read.
+    expect(readHudPitch(frame().subarray(0, 400 * 300 * 4), 400, 300, GLYPHS, { w: W, h: H })).toBeNull();
+    expect(readHudPitch(f, W, H, GLYPHS)?.boxDeg).toBe(-20);
+  });
+
   it("reads a nose-up pitch without a minus, and the roll from the boxes' tilt", () => {
     const f = frame();
     draw(f, "89", 850, 430);

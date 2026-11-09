@@ -168,9 +168,24 @@ export type HudGlyphs = Partial<Record<HudStyleName, PitchGlyphs>>;
 export type PitchGlyphs = Readonly<Record<string, readonly (readonly number[])[]>>;
 const lookOf = (s: HudStyleName | TextLook): TextLook => (typeof s === "string" ? STYLES[s] : s);
 
+/*
+  Masks kept from frame to frame (review §4.3.4): a new frame-sized array per look and per pass was megabytes of garbage
+  a frame, four frames a second. Each slot belongs to one caller, used within one call that never reaches another
+  caller of the same slot. The caller clears the region it reads with fill (a memset): writing every cell 0 or 1 in
+  the mask loop was 5 % slower than a fresh array.
+*/
+type ScratchSlot = "look" | "heading" | "text" | "seen";
+const scratch: Record<ScratchSlot, Uint8Array> = { look: new Uint8Array(0), heading: new Uint8Array(0), text: new Uint8Array(0), seen: new Uint8Array(0) };
+/** A slot's mask, at least `n` cells; its old contents left in it. */
+export function scratchMask(slot: ScratchSlot, n: number): Uint8Array {
+  if (scratch[slot].length < n) scratch[slot] = new Uint8Array(n);
+  return scratch[slot];
+}
+
 /** Connected pieces of a mask (4-neighbour), in a region. */
 export function components(mask: Uint8Array, w: number, x0: number, y0: number, x1: number, y1: number): Rect[] {
-  const seen = new Uint8Array(mask.length);
+  const seen = scratchMask("seen", mask.length);
+  for (let y = y0; y < y1; y++) seen.fill(0, y * w + x0, y * w + x1);
   const out: Rect[] = [];
   const stack: number[] = [];
   for (let y = y0; y < y1; y++)
@@ -532,12 +547,13 @@ function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: 
   const style = lookOf(look);
   const sw = screen.w;
   const sh = screen.h;
-  const mask = new Uint8Array(w * h);
+  const mask = scratchMask("look", w * h);
   // The middle 40 % of the screen, either way (or all of a crop that is no bigger).
   const rx0 = Math.max(0, Math.floor(w / 2 - sw * 0.2));
   const rx1 = Math.min(w, Math.ceil(w / 2 + sw * 0.2));
   const ry0 = Math.max(0, Math.floor(h / 2 - sh * 0.2));
   const ry1 = Math.min(h, Math.ceil(h / 2 + sh * 0.2));
+  for (let y = ry0; y < ry1; y++) mask.fill(0, y * w + rx0, y * w + rx1);
   let marked = 0;
   for (let y = ry0; y < ry1; y++)
     for (let x = rx0; x < rx1; x++) {
@@ -903,11 +919,12 @@ function readHeadingIn(
   const { ox, oy, screen } = at;
   const sh = screen.h;
   // The box's digits: the brightest yellow, in the band the tape's box stands in (a quarter of the way down).
-  const mask = new Uint8Array(w * h);
+  const mask = scratchMask("heading", w * h);
   const by0 = Math.max(0, Math.round(sh * 0.22) - oy);
   const by1 = Math.min(h, Math.round(sh * 0.32) - oy);
   const bx0 = Math.max(0, Math.round(screen.w * 0.44) - ox);
   const bx1 = Math.min(w, Math.round(screen.w * 0.56) - ox);
+  for (let y = by0; y < by1; y++) mask.fill(0, y * w + bx0, y * w + bx1);
   for (let y = by0; y < by1; y++)
     for (let x = bx0; x < bx1; x++) {
       const i = y * w + x;
