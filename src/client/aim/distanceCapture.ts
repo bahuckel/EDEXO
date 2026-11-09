@@ -4,11 +4,10 @@
  * (useDistanceReader.ts), for the distance under the target's name (shared/hudTargetDistance.ts). Nothing is kept,
  * nothing leaves the PC.
  */
-import { distanceArea, readTargetDistanceAnyColour, type Rgb, type TargetDistance } from "@shared/hudTargetDistance";
-import { HUD_DISTANCE_GLYPHS } from "@shared/hudDistanceGlyphs";
-import { HUD_DISTANCE_GLYPHS_ORANGE } from "@shared/hudDistanceGlyphsOrange";
+import { distanceArea, type Rgb, type TargetDistance } from "@shared/hudTargetDistance";
 import { watchEdhmHint } from "./edhmHint";
 import { acquireGameScreen } from "./gameScreen";
+import { readEvery, startReaderThread } from "./readerThread";
 
 /**
  * How often a frame is read: as the pitch reader (owner, 2026-11-05, of once a second: "I basically pass almost the
@@ -50,15 +49,18 @@ export async function startDistanceCapture(onRead: (r: TargetDistance | null) =>
   const stopEdhm = watchEdhmHint((e) => {
     hint = e?.targetText ?? null;
   });
-  const readIn = (x: number, y: number, w: number, h: number, vh: number): TargetDistance | null => {
+  /* The reading itself in a worker (readerThread.ts): the marks keep moving while a frame is read. */
+  const thread = startReaderThread();
+  let stopped = false;
+  const readIn = async (x: number, y: number, w: number, h: number, vh: number): Promise<TargetDistance | null> => {
     // No colour correction from the launcher: the reader learns the colour itself.
     const px = screen.crop(x, y, w, h);
-    const r = px ? readTargetDistanceAnyColour(px, w, h, HUD_DISTANCE_GLYPHS, vh, colour, HUD_DISTANCE_GLYPHS_ORANGE, hint) : null;
-    if (!r) return null;
+    const r = px ? await thread.run({ kind: "distance", px, w, h, screenH: vh, colour, hint }) : null;
+    if (!r || stopped) return null;
     colour = r.colour;
     return { ...r.reading, x: r.reading.x + x, y: r.reading.y + y };
   };
-  const read = () => {
+  const read = async () => {
     const vw = screen.width();
     const vh = screen.height();
     if (!vw || !vh) return onRead(null);
@@ -66,21 +68,28 @@ export async function startDistanceCapture(onRead: (r: TargetDistance | null) =>
     if (near) {
       const x = Math.max(0, Math.round(near.x - vh * NEAR.left));
       const y = Math.max(0, Math.round(near.y - vh * NEAR.up));
-      r = readIn(x, y, Math.min(vw - x, Math.round(vh * (NEAR.left + NEAR.right))), Math.min(vh - y, Math.round(vh * (NEAR.up + NEAR.down))), vh);
+      r = await readIn(x, y, Math.min(vw - x, Math.round(vh * (NEAR.left + NEAR.right))), Math.min(vh - y, Math.round(vh * (NEAR.up + NEAR.down))), vh);
     }
-    if (!r) {
+    if (!r && !stopped) {
       const a = distanceArea(vw, vh);
-      r = readIn(a.x, a.y, a.w, a.h, vh);
+      r = await readIn(a.x, a.y, a.w, a.h, vh);
     }
+    if (stopped) return;
     near = r ? { x: r.x, y: r.y } : null;
     misses = r ? 0 : misses + 1;
     if (misses >= FORGET_COLOUR_AFTER) colour = null;
     onRead(r);
   };
-  const timer = setInterval(read, DISTANCE_EVERY_MS);
+  const timer = readEvery(DISTANCE_EVERY_MS, () =>
+    read().catch(() => {
+      if (!stopped) onRead(null);
+    }),
+  );
   return {
     stop() {
+      stopped = true;
       clearInterval(timer);
+      thread.stop();
       stopEdhm();
       screen.release();
     },

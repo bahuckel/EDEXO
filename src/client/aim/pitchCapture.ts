@@ -5,11 +5,10 @@
  * middle of it for the HUD's pitch boxes (shared/hudPitchReader.ts) and the number posted to this PC's own server.
  * Nothing is kept, nothing leaves the PC. A frame it cannot read posts "not read": the marker keeps its own estimate.
  */
-import { readHudHeading, readHudPitchAnyColour, type PitchColours } from "@shared/hudPitchReader";
-import { HUD_PITCH_GLYPHS } from "@shared/hudPitchGlyphs";
-import { HUD_PITCH_GLYPHS_ANY } from "@shared/hudPitchGlyphsAny";
+import type { PitchColours } from "@shared/hudPitchReader";
 import { watchEdhmHint } from "./edhmHint";
 import { acquireGameScreen } from "./gameScreen";
+import { readEvery, startReaderThread } from "./readerThread";
 
 /** How often a frame is read. */
 export const READ_EVERY_MS = 250;
@@ -58,18 +57,21 @@ export async function startPitchCapture(onRead: (r: PitchRead | null) => void): 
   const stopEdhm = watchEdhmHint((e) => {
     hint = e ? { text: e.pitchText, frame: e.pitchFrame } : null;
   });
+  /* The reading itself in a worker (readerThread.ts): the marks keep moving while a frame is read. */
+  const thread = startReaderThread();
+  let stopped = false;
   /** The heading off the tape strip of the frame (its own small crop). */
-  const readHeading = (vw: number, vh: number): number | null => {
+  const readHeading = async (vw: number, vh: number): Promise<number | null> => {
     const tx = Math.round(vw * TAPE.x0);
     const ty = Math.round(vh * TAPE.y0);
     const tw = Math.round(vw * (TAPE.x1 - TAPE.x0));
     const th = Math.round(vh * (TAPE.y1 - TAPE.y0));
     const px = screen.crop(tx, ty, tw, th, "pitch");
     if (!px) return null;
-    const hd = readHudHeading(px, tw, th, HUD_PITCH_GLYPHS, { ox: tx, oy: ty, screen: { w: vw, h: vh } });
+    const hd = await thread.run({ kind: "heading", px, w: tw, h: th, ox: tx, oy: ty, screen: { w: vw, h: vh } });
     return hd ? hd.headingDeg : null;
   };
-  const read = () => {
+  const read = async () => {
     const vw = screen.width();
     const vh = screen.height();
     if (!vw || !vh) return onRead(null);
@@ -79,28 +81,34 @@ export async function startPitchCapture(onRead: (r: PitchRead | null) => void): 
     const cy0 = (vh - ch) / 2;
     const px = screen.crop(cx0, cy0, cw, ch, "pitch");
     if (!px) return onRead(null);
-    const found = readHudPitchAnyColour(px, cw, ch, HUD_PITCH_GLYPHS, HUD_PITCH_GLYPHS_ANY, { w: vw, h: vh }, colours, misses % DISCOVER_EVERY === 0, hint);
+    const found = await thread.run({ kind: "pitch", px, w: cw, h: ch, screen: { w: vw, h: vh }, colours, discover: misses % DISCOVER_EVERY === 0, hint });
+    if (stopped) return;
     const r = found?.reading ?? null;
     if (found) colours = found.colours;
     misses = r ? 0 : misses + 1;
     if (misses >= FORGET_COLOURS_AFTER) colours = null;
-    onRead(
-      r
-        ? {
-            pitchDeg: r.pitchDeg,
-            rollDeg: r.rollDeg,
-            pxPerDeg: r.pxPerDeg,
-            screenH: vh,
-            headingDeg: readHeading(vw, vh),
-            centre: { fx: (r.centre.x + cx0) / vw, fy: (r.centre.y + cy0) / vh },
-          }
-        : null,
-    );
+    if (!r) return onRead(null);
+    const headingDeg = await readHeading(vw, vh);
+    if (stopped) return;
+    onRead({
+      pitchDeg: r.pitchDeg,
+      rollDeg: r.rollDeg,
+      pxPerDeg: r.pxPerDeg,
+      screenH: vh,
+      headingDeg,
+      centre: { fx: (r.centre.x + cx0) / vw, fy: (r.centre.y + cy0) / vh },
+    });
   };
-  const timer = setInterval(read, READ_EVERY_MS);
+  const timer = readEvery(READ_EVERY_MS, () =>
+    read().catch(() => {
+      if (!stopped) onRead(null);
+    }),
+  );
   return {
     stop() {
+      stopped = true;
       clearInterval(timer);
+      thread.stop();
       stopEdhm();
       screen.release();
     },
