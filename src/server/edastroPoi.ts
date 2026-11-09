@@ -36,6 +36,7 @@ import { parseCarrierQuery, textMatchesQuery } from "../shared/carrierSearch.js"
 import { EDASTRO_USER_AGENT } from "./edastroCarriers.js";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 import type { PoiDataStatusDTO, PoiRowDTO } from "../shared/types.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 const POI_URL = "https://edastro.com/gec/json/combined";
 
@@ -238,7 +239,7 @@ export async function fetchPoiData(opts?: {
   }
   resetPoiMemo();
   try {
-    writeFileSync(
+    writeFileAtomic(
       resolvePoiMetaPath(),
       JSON.stringify({ fetchedAtMs: nowMs, rowCount: rows.length }, null, 2),
       "utf8",

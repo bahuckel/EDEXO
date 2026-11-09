@@ -18,9 +18,10 @@
  * Delete that file to invalidate every paired device.
  */
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
 import type { RequestHandler } from "express";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 /** `?k=` in a LAN URL — short, because it is typed by hand off a phone screen often enough. */
 export const LAN_KEY_QUERY = "k";
@@ -114,7 +115,7 @@ export function loadOrCreateLanKey(file: string): string {
   }
   const key = generateLanKey();
   try {
-    writeFileSync(file, `${key}\n`, "utf8");
+    writeFileAtomic(file, `${key}\n`, "utf8");
   } catch {
     /* in-memory only for this run */
   }

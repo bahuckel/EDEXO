@@ -14,13 +14,14 @@
  * The import is the ids in the app's own folder (`edexo-visited-cache.json`), never written into the journal
  * store; Remove deletes the file. The ids never leave the machine.
  */
-import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { optionsDirForJournalDir } from "./protonJournals.js";
 import type { BioIndex } from "./bioIndex.js";
 import { id64Boxel } from "../shared/id64.js";
 import type { MassCode } from "../shared/boxelAdvice.js";
 import { resolveCommanderDataDir } from "./paths.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 const MAGIC = "VisitedStars";
 const HEADER = 0x30;
@@ -131,7 +132,7 @@ export function importVisitedCache(
     fileModifiedAt: statSync(src).mtime.toISOString(),
     ids: [...new Set(ids.map(String))],
   };
-  writeFileSync(file, JSON.stringify(value), "utf8");
+  writeFileAtomic(file, JSON.stringify(value), "utf8");
   cache = { file, value };
   return value;
 }

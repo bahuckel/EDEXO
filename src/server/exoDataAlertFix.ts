@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import type { ExoDataAlertDTO, SpeciesDatabase, SpeciesEntry } from "../shared/types.js";
 import { getExoDataFixWriteRoots, getSpeciesDataDir, resolveSpeciesFixesDir } from "./paths.js";
@@ -9,6 +9,7 @@ import {
   volcanismMaterialToCodexToken,
 } from "../shared/volcanismMatch.js";
 import { spectralKeysFromJournalStarType } from "../shared/starSpectralKeys.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 const FIX_SCHEMA = "edexo.fix_stub.v1" as const;
 
@@ -97,7 +98,7 @@ function writeMergedFixFile(absFixPath: string, merged: FixStubFileV1) {
   } catch {
     /* ignore */
   }
-  writeFileSync(absFixPath, `${JSON.stringify(merged, null, 2)}\n`, "utf8");
+  writeFileAtomic(absFixPath, `${JSON.stringify(merged, null, 2)}\n`, "utf8");
 }
 
 function readExistingStub(absFixPath: string): FixStubFileV1 | null {

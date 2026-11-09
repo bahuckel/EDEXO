@@ -44,6 +44,7 @@ import { fetchDssaData, readDssaByCallsign } from "./edastroDssa.js";
 import { networkForCallsign } from "../shared/carrierNetworks.js";
 import type { CarrierDataStatusDTO, CarrierRowDTO } from "../shared/types.js";
 import { APP_USER_AGENT } from "./appVersion.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 const CARRIERS_URL = "https://edastro.com/mapcharts/files/fleetcarriers.csv";
 
@@ -100,7 +101,7 @@ function readMeta(): CarrierCacheMeta | null {
 
 function writeMeta(meta: CarrierCacheMeta): void {
   try {
-    writeFileSync(resolveCarrierMetaPath(), JSON.stringify(meta, null, 2), "utf8");
+    writeFileAtomic(resolveCarrierMetaPath(), JSON.stringify(meta, null, 2), "utf8");
   } catch {
     /* best effort; a lost meta file costs one full download, not correctness */
   }

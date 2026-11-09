@@ -23,7 +23,6 @@ import {
   renameSync,
   rmSync,
   statSync,
-  writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { Readable, type Writable } from "node:stream";
@@ -33,6 +32,7 @@ import type { UpdateDownloadDTO } from "../shared/types.js";
 import { APP_USER_AGENT, APP_VERSION } from "./appVersion.js";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 import { compareVersions, type ReleaseAsset, type ReleaseForm } from "./updateCheck.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 /** What `ready.json` holds: the checked file Electron puts in place on the next restart. */
 export interface StagedUpdate {
@@ -206,7 +206,7 @@ export function createAppUpdater(o: AppUpdaterOptions) {
     rmSync(final, { force: true });
     renameSync(part, final);
     const staged: StagedUpdate = { version: v, form: o.form, file: final, sha256: got, stagedAt: new Date().toISOString() };
-    writeFileSync(join(dir, READY_FILE), JSON.stringify(staged, null, 2));
+    writeFileAtomic(join(dir, READY_FILE), JSON.stringify(staged, null, 2));
   }
 
   return {

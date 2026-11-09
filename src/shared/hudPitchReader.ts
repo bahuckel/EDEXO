@@ -188,12 +188,22 @@ export function components(mask: Uint8Array, w: number, x0: number, y0: number, 
         if (jx > c.x1) c.x1 = jx;
         if (jy < c.y0) c.y0 = jy;
         if (jy > c.y1) c.y1 = jy;
-        for (const k of [j - 1, j + 1, j - w, j + w]) {
-          const kx = k % w;
-          const ky = (k - kx) / w;
-          if (kx < x0 || kx >= x1 || ky < y0 || ky >= y1 || !mask[k] || seen[k]) continue;
-          seen[k] = 1;
-          stack.push(k);
+        // The four neighbours inline (an array literal for them was a 4-element allocation per pixel visited).
+        if (jx > x0 && mask[j - 1] && !seen[j - 1]) {
+          seen[j - 1] = 1;
+          stack.push(j - 1);
+        }
+        if (jx + 1 < x1 && mask[j + 1] && !seen[j + 1]) {
+          seen[j + 1] = 1;
+          stack.push(j + 1);
+        }
+        if (jy > y0 && mask[j - w] && !seen[j - w]) {
+          seen[j - w] = 1;
+          stack.push(j - w);
+        }
+        if (jy + 1 < y1 && mask[j + w] && !seen[j + w]) {
+          seen[j + w] = 1;
+          stack.push(j + w);
         }
       }
       out.push(c);
@@ -505,6 +515,20 @@ export function findPitchBoxes(
   look: HudStyleName | TextLook = "yellow",
   framed = false,
 ): { left: PitchBox; right: PitchBox } | null {
+  const found = lookBoxes(rgba, w, h, screen, look);
+  return found && pitchPair(framed ? framedOnly(rgba, w, h, found) : found, w, h, screen);
+}
+
+/** The boxes with the box's outline round them, the outline found. */
+function framedOnly(rgba: Rgba, w: number, h: number, found: PitchBox[]): PitchBox[] {
+  return found.filter((b) => b.digits.length).map((b) => ({ ...b, frame: framedBy(rgba, w, h, b) })).filter((b) => b.frame);
+}
+
+/**
+ * Every number string in a look, as a box without its outline; null when the look marks too much of the frame. The
+ * framed and the plain search share them: building them twice was half of an unread frame's time.
+ */
+function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: HudStyleName | TextLook): PitchBox[] | null {
   const style = lookOf(look);
   const sw = screen.w;
   const sh = screen.h;
@@ -558,11 +582,15 @@ export function findPitchBoxes(
     const right = Math.max(...g.map((c) => c.x1));
     const dh = bottom - top + 1;
     const digits = g.flatMap((p) => splitWide(mask, w, { ...p, y0: top, y1: bottom }, dh));
-    const box: PitchBox = { digits, minus: hasMinus(rgba, w, left, top, bottom, style.ink), x: (left + right) / 2, y: (top + bottom) / 2, dh, frame: null };
-    return framed && digits.length ? { ...box, frame: framedBy(rgba, w, h, box) } : box;
+    return { digits, minus: hasMinus(rgba, w, left, top, bottom, style.ink), x: (left + right) / 2, y: (top + bottom) / 2, dh, frame: null };
   });
-  const boxes = framed ? found.filter((b) => b.frame) : found;
-  // The pair: mirrored about the centre (the boxes stand either side of the nose), the same size.
+  return found;
+}
+
+/** The pair: mirrored about the centre (the boxes stand either side of the nose), the same size. */
+function pitchPair(boxes: PitchBox[], w: number, h: number, screen: FrameScreen): { left: PitchBox; right: PitchBox } | null {
+  const sw = screen.w;
+  const sh = screen.h;
   let best: { left: PitchBox; right: PitchBox } | null = null;
   let bestErr = Infinity;
   for (const l of boxes)
@@ -614,14 +642,19 @@ export function readHudPitch(
   glyphs: HudGlyphs,
   screen: FrameScreen = { w, h },
   framings: readonly boolean[] = [true, false],
+  /** Each look's boxes, kept between calls on the same frame (readHudPitchAnyColour tries the framed, later the plain). */
+  seen?: Map<HudStyleName, PitchBox[] | null>,
 ): PitchReading | null {
   for (const styleName of ["yellow", "orange"] as const) {
     const g = glyphs[styleName];
     if (!g) continue;
     // The boxes with their outline first: the ladder's "0" labels are a mirrored pair too, nearer the centre than the
     // boxes when the nose is just under the horizon (his 0010, "-1" read 0); the plain nearest pair stays the fallback.
+    const found = seen?.has(styleName) ? seen.get(styleName)! : lookBoxes(rgba, w, h, screen, styleName);
+    seen?.set(styleName, found);
+    if (!found) continue;
     for (const framed of framings) {
-      const pair = findPitchBoxes(rgba, w, h, screen, styleName, framed);
+      const pair = pitchPair(framed ? framedOnly(rgba, w, h, found) : found, w, h, screen);
       const r = pair && readPair(rgba, w, h, screen, pair, g, styleName, styleName, isLadderPx);
       if (r) return r;
     }
@@ -762,8 +795,9 @@ export function readHudPitchAnyColour(
     game's yellow, and that path, made for the default look, took the ladder's labels for the boxes (his Domini Inferni
     shots, 1191 "21" read 25: ten wrong of 59). With a hint the recoloured path, outline required, goes first.
   */
+  const seen = new Map<HudStyleName, PitchBox[] | null>();
   const defaultLook = (framings?: readonly boolean[]) => {
-    const reading = known ? null : readHudPitch(rgba, w, h, glyphs, screen, framings);
+    const reading = known ? null : readHudPitch(rgba, w, h, glyphs, screen, framings, seen);
     return reading ? { reading, colours: null } : null;
   };
   // A frame without the search (the capture looks for colours once a second): the game's look only.

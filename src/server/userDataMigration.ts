@@ -28,7 +28,7 @@
  * `EDEXO_LEGACY_USER_DATA_DIR`, so this migration knows exactly where to look rather than guessing
  * at Electron's naming.
  */
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   SPECIES_DATA_DIR_CONFIG,
@@ -38,6 +38,7 @@ import {
   resolveLanKeyPath,
   resolveUserSettingsJsonPath,
 } from "./paths.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 /** Files carried over when the new location does not have them. Order is report order. */
 const COPY_IF_MISSING = [USER_SETTINGS_FILENAME, "edexo-compare-lan-key.txt", SPECIES_DATA_DIR_CONFIG];
@@ -107,7 +108,7 @@ function mergeOutlierLogs(legacyPath: string, currentPath: string): number {
   if (add.length === 0) return 0;
 
   const joined = current && !current.endsWith("\n") ? `${current}\n` : current;
-  writeFileSync(currentPath, `${joined}${add.join("\n")}\n`, "utf8");
+  writeFileAtomic(currentPath, `${joined}${add.join("\n")}\n`, "utf8");
   return add.length;
 }
 

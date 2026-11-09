@@ -7,7 +7,7 @@
  * hundred bytes); stations from the last check, or the file's own date before the first, and download only when the
  * release holds another dump. Checked every ten minutes, the first a couple of minutes after start; timers unref'd.
  */
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 import { fetchCarrierData, readCarrierStatus } from "./edastroCarriers.js";
@@ -18,6 +18,7 @@ import {
   stationsReleaseIsNewer,
   stationsStatus,
 } from "./stationsIndex.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 /** The intervals offered (hours); 0 = off. */
 export const AUTO_REFRESH_HOURS = [0, 6, 12, 24, 48] as const;
@@ -60,7 +61,7 @@ function readState(): StoredState {
 
 function writeState(s: StoredState): void {
   try {
-    writeFileSync(statePath(), JSON.stringify(s, null, 2), "utf8");
+    writeFileAtomic(statePath(), JSON.stringify(s, null, 2), "utf8");
   } catch {
     /* best effort: a lost file means the defaults and one early check */
   }

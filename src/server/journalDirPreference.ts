@@ -13,10 +13,11 @@
  *
  * Extracted from `edexoBootstrap.ts` so this can be tested without booting the server.
  */
-import { existsSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import { resolveJournalPathsPath } from "./paths.js";
 import { findLinuxJournalDirs, type ProtonFs } from "./protonJournals.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 /** The file name, in both the current location and the old one. */
 export const PATHS_FILE = "edexo-compare-paths.json";
@@ -97,7 +98,7 @@ export function loadPersistedJournalDir(projectRoot: string): string | null {
 /** Write the preference to the current location. Best-effort: a read-only home is not fatal. */
 export function persistJournalDirPreference(journalDir: string): void {
   try {
-    writeFileSync(
+    writeFileAtomic(
       resolveJournalPathsPath(),
       `${JSON.stringify({ journalDir: path.normalize(journalDir.trim()) }, null, 2)}\n`,
       "utf8",
