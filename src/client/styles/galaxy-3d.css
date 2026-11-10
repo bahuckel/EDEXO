@@ -50,7 +50,8 @@
   padding: 6px 10px;
   background: rgba(10, 8, 12, 0.82);
   border: 1px solid var(--accent-a25);
-  backdrop-filter: blur(3px);
+  /* No backdrop blur over the map's canvas: behind a near-opaque fill it showed nothing and made the compositor
+     read the WebGL canvas every frame (review 2026-11-07 §4.2). The same for the two panels below. */
   font-size: var(--fs-xs);
   color: var(--text-dim);
 }
@@ -606,7 +607,6 @@
   padding: 12px 14px;
   background: rgba(10, 8, 12, 0.9);
   border: 1px solid var(--accent-a35);
-  backdrop-filter: blur(3px);
 }
 .g3d-panel__close {
   position: absolute;
@@ -776,7 +776,6 @@
   padding: 10px 12px;
   background: rgba(10, 8, 12, 0.9);
   border: 1px solid var(--accent-a35);
-  backdrop-filter: blur(3px);
 }
 .g3d-codex__regions {
   margin: 0;
@@ -1327,7 +1326,8 @@
   display: block;
   height: 100%;
   background: var(--accent);
-  transition: width 0.4s ease;
+  transform-origin: left;
+  transition: transform 0.4s ease;
 }
 
 /* The NavRoute star finder (owner, 2026-10-04). */

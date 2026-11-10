@@ -4,7 +4,7 @@
  * storage under `edexo.*`, which an OBS browser source does not share. So:
  *
  * - the app on the streamer's PC (not a phone, not the streamer view itself) reports its `edexo.*`
- *   settings to the server whenever they change, checked once a second;
+ *   settings to the server a second after one changes;
  * - the streamer view puts them into its own storage before its first paint, and again whenever the
  *   server says they changed (serverChanges.ts), and then draws the app afresh so every panel reads them.
  *
@@ -36,11 +36,21 @@ function snapshot(): Record<string, string> {
 
 const isLoopback = () => ["127.0.0.1", "localhost", "[::1]", "::1"].includes(window.location.hostname);
 
-/** In the app on this PC: report the settings when they change. */
+/**
+ * In the app on this PC: report the settings when they change.
+ *
+ * Looked at a second after a write to an `edexo.*` key, this page's own or another window's (the `storage` event),
+ * instead of reading and stringifying every key once a second while nothing changed (review 2026-11-07 §4.2, D14).
+ */
 export function startUiMirrorSource(): void {
   if (!isLoopback()) return;
   let last = "";
+  let timer = 0;
+  const schedule = () => {
+    if (!timer) timer = window.setTimeout(tick, 1000);
+  };
   const tick = () => {
+    timer = 0;
     const values = snapshot();
     const s = JSON.stringify(values);
     if (s === last) return;
@@ -50,11 +60,34 @@ export function startUiMirrorSource(): void {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ values }),
     }).catch(() => {
-      last = ""; // try again next tick
+      last = ""; // try again shortly
+      schedule();
     });
   };
+  onSettingWrite(schedule);
   tick();
-  window.setInterval(tick, 1000);
+}
+
+/** `cb` after any write to an `edexo.*` key in local storage, from this page or another window of the app. */
+export function onSettingWrite(cb: () => void): void {
+  if (typeof Storage === "undefined") return;
+  const ours = (s: Storage, key?: string) => s === window.localStorage && (key == null || String(key).startsWith(PREFIX));
+  const { setItem, removeItem, clear } = Storage.prototype;
+  Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
+    setItem.call(this, key, value);
+    if (ours(this, key)) cb();
+  };
+  Storage.prototype.removeItem = function (this: Storage, key: string) {
+    removeItem.call(this, key);
+    if (ours(this, key)) cb();
+  };
+  Storage.prototype.clear = function (this: Storage) {
+    clear.call(this);
+    if (ours(this)) cb();
+  };
+  window.addEventListener("storage", (e) => {
+    if (e.key == null || e.key.startsWith(PREFIX)) cb();
+  });
 }
 
 export interface Mirror {

@@ -7,6 +7,24 @@ import { useState } from "react";
 import { isBool, usePersistedState } from "../usePersistedState";
 
 /**
+ * One remembered answer per call site, kept while every input is the same object (review 2026-11-07 §4.2, D12).
+ *
+ * The tabs are render functions, not components (tabContext.ts), so they cannot hold a useMemo. Without one the
+ * search's urgent render filtered every row with the old query (useDeferredValue saved nothing), and the columns,
+ * a new array each time, made the table sort every row again.
+ */
+export function lastAnswer<R>(): (inputs: readonly unknown[], make: () => R) => R {
+  let last: readonly unknown[] | null = null;
+  let value: R;
+  return (inputs, make) => {
+    if (last && last.length === inputs.length && last.every((v, i) => Object.is(v, inputs[i]))) return value;
+    value = make();
+    last = inputs;
+    return value;
+  };
+}
+
+/**
  * A filter that is on when any chip is picked; an empty set means "everything".
  *
  * Folded by default behind its label (owner, 2026-10-04: "they take too much space … shown at all

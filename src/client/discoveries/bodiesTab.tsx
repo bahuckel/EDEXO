@@ -11,10 +11,15 @@ import { readableAtmosphereType } from "@shared/atmosphereLabel";
 import { fuzzyRankAny } from "../fuzzyMatch";
 import { CopySystemButton } from "../CopySystemButton";
 import { Table, type Column } from "../ui/DataTable";
-import { ChipRow, featureOptions, hasPickedFeature, Search, topValues } from "./filters";
+import { ChipRow, featureOptions, hasPickedFeature, lastAnswer, Search, topValues } from "./filters";
 import { cr, date, num } from "./format";
 import { GreenMarkControl } from "./GreenMarkControl";
 import type { DiscoveriesTabContext } from "./tabContext";
+
+const columnsFor = lastAnswer<Column<DiscoveryBodyRow>[]>();
+const classesFor = lastAnswer<ReturnType<typeof topValues>>();
+const featuresFor = lastAnswer<ReturnType<typeof featureOptions>>();
+const filteredFor = lastAnswer<DiscoveryBodyRow[]>();
 
 export function renderBodiesTab({
   data,
@@ -35,7 +40,7 @@ export function renderBodiesTab({
   greenOf,
   markGreen,
 }: DiscoveriesTabContext) {
-  const columns: Column<DiscoveryBodyRow>[] = [
+  const columns = columnsFor([onNavigateSystem, greenOf, markGreen], () => [
     {
       key: "name",
       label: "Body",
@@ -159,53 +164,55 @@ export function renderBodiesTab({
       ),
     },
     { key: "when", label: "Scanned", value: (r) => r.scannedAt, render: (r) => date(r.scannedAt) },
-  ];
+  ]);
 
   // Every class present, however few: see `topValues`. Seventeen of them on this commander's
   // data, which is a readable row of chips and a complete one.
-  const classes = topValues(data.bodies, (r) => r.planetClass, Infinity);
-  const filtered = data.bodies.filter((r) => {
-    if (classFilter.size && !classFilter.has(r.planetClass)) return false;
-    if (flagFilter.has("landable") && r.landable !== true) return false;
-    if (flagFilter.has("bio") && !(r.bioSignals && r.bioSignals > 0)) return false;
-    if (flagFilter.has("species") && r.speciesConfirmed.length === 0) return false;
-    if (flagFilter.has("dss") && !r.dssMapped) return false;
-    /*
-      "First discovery" asks the same question here as on the Systems tab: is the *system* his.
+  const classes = classesFor([data.bodies], () => topValues(data.bodies, (r) => r.planetClass, Infinity));
+  const filtered = filteredFor([data.bodies, q, classFilter, flagFilter, featureFilter, greenOf], () =>
+    data.bodies.filter((r) => {
+      if (classFilter.size && !classFilter.has(r.planetClass)) return false;
+      if (flagFilter.has("landable") && r.landable !== true) return false;
+      if (flagFilter.has("bio") && !(r.bioSignals && r.bioSignals > 0)) return false;
+      if (flagFilter.has("species") && r.speciesConfirmed.length === 0) return false;
+      if (flagFilter.has("dss") && !r.dssMapped) return false;
+      /*
+        "First discovery" asks the same question here as on the Systems tab: is the *system* his.
 
-      It used to read the body's own flag, which is a different and much looser thing — first to
-      scan a body in somebody else's system. Filtering Earth-likes gave **25** where the Systems
-      tab, asking about the system, gave **6**. Both numbers were correct answers to different
-      questions and only one of them is what the label says.
+        It used to read the body's own flag, which is a different and much looser thing — first to
+        scan a body in somebody else's system. Filtering Earth-likes gave **25** where the Systems
+        tab, asking about the system, gave **6**. Both numbers were correct answers to different
+        questions and only one of them is what the label says.
 
-      The body's own flag keeps its own chip, because it is still worth asking.
-    */
-    if (flagFilter.has("first") && r.firstDiscoveredSystem !== true) return false;
-    if (flagFilter.has("bodyfirst") && !r.firstDiscoverer) return false;
-    if (flagFilter.has("footfall") && !r.firstFootfall) return false;
-    if (flagFilter.has("terra") && !isTerraformableState(r.terraformState)) return false;
-    if (flagFilter.has("volcanic") && !r.volcanism) return false;
-    if (flagFilter.has("atmo") && !r.atmosphere) return false;
-    if (flagFilter.has("green") && !greenOf(r).verdict) return false;
-    if (!hasPickedFeature(featureFilter, r.featureKeys)) return false;
-    if (!q) return true;
-    return (
-      fuzzyRankAny(
-        [
-          r.bodyName,
-          r.system,
-          r.planetClass,
-          r.atmosphere ?? "",
-          readableAtmosphereType(r.atmosphere) ?? "",
-          r.volcanism ?? "",
-          ...r.speciesConfirmed,
-          greenOf(r).verdict ? `green gas giant ggg ${greenOf(r).verdict!.level}` : "",
-          ...(r.features ?? []),
-        ],
-        q,
-      ) != null
-    );
-  });
+        The body's own flag keeps its own chip, because it is still worth asking.
+      */
+      if (flagFilter.has("first") && r.firstDiscoveredSystem !== true) return false;
+      if (flagFilter.has("bodyfirst") && !r.firstDiscoverer) return false;
+      if (flagFilter.has("footfall") && !r.firstFootfall) return false;
+      if (flagFilter.has("terra") && !isTerraformableState(r.terraformState)) return false;
+      if (flagFilter.has("volcanic") && !r.volcanism) return false;
+      if (flagFilter.has("atmo") && !r.atmosphere) return false;
+      if (flagFilter.has("green") && !greenOf(r).verdict) return false;
+      if (!hasPickedFeature(featureFilter, r.featureKeys)) return false;
+      if (!q) return true;
+      return (
+        fuzzyRankAny(
+          [
+            r.bodyName,
+            r.system,
+            r.planetClass,
+            r.atmosphere ?? "",
+            readableAtmosphereType(r.atmosphere) ?? "",
+            r.volcanism ?? "",
+            ...r.speciesConfirmed,
+            greenOf(r).verdict ? `green gas giant ggg ${greenOf(r).verdict!.level}` : "",
+            ...(r.features ?? []),
+          ],
+          q,
+        ) != null
+      );
+    }),
+  );
 
   return (
     <>
@@ -231,7 +238,7 @@ export function renderBodiesTab({
       />
       <ChipRow
         label="Feature"
-        options={featureOptions(data.bodies)}
+        options={featuresFor([data.bodies], () => featureOptions(data.bodies))}
         picked={featureFilter}
         onToggle={toggleFeature}
       />

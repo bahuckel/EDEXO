@@ -42,17 +42,20 @@
   outline: 1px solid var(--accent);
   outline-offset: -1px;
 }
-/* the chance, as a bar behind the row: the eye ranks before it reads */
+/* the chance, as a bar behind the row: the eye ranks before it reads. `--chance` is 0-1; the bar is scaled, not
+   sized, so a change animates without a layout each frame (review 2026-11-07 §4.2). */
 .srow-main::before {
   content: "";
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  width: var(--chance, 0%);
+  width: 100%;
+  transform: scaleX(var(--chance, 0));
+  transform-origin: left;
   background: linear-gradient(90deg, var(--accent-a10), var(--accent-a06) 60%, transparent);
   pointer-events: none;
-  transition: width var(--fold-ms, 260ms) ease;
+  transition: transform var(--fold-ms, 260ms) ease;
 }
 .srow--live .srow-main::before {
   background: linear-gradient(90deg, rgba(123, 224, 123, 0.16), rgba(123, 224, 123, 0.06) 60%, transparent);

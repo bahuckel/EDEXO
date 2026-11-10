@@ -8,9 +8,14 @@ import type { DiscoverySystemRow } from "@shared/types";
 import { fuzzyRankAny } from "../fuzzyMatch";
 import { CopySystemButton } from "../CopySystemButton";
 import { Table, type Column } from "../ui/DataTable";
-import { ChipRow, featureOptions, hasPickedFeature, Search, topValues } from "./filters";
+import { ChipRow, featureOptions, hasPickedFeature, lastAnswer, Search, topValues } from "./filters";
 import { count, cr, date } from "./format";
 import type { DiscoveriesTabContext } from "./tabContext";
+
+const columnsFor = lastAnswer<Column<DiscoverySystemRow>[]>();
+const optionsFor = lastAnswer<ReturnType<typeof topValues>>();
+const featuresFor = lastAnswer<ReturnType<typeof featureOptions>>();
+const filteredFor = lastAnswer<DiscoverySystemRow[]>();
 
 export function renderSystemsTab({
   data,
@@ -29,7 +34,7 @@ export function renderSystemsTab({
   featureFilter,
   toggleFeature,
 }: DiscoveriesTabContext) {
-  const columns: Column<DiscoverySystemRow>[] = [
+  const columns = columnsFor([onNavigateSystem], () => [
     {
       key: "name",
       label: "System",
@@ -122,40 +127,42 @@ export function renderSystemsTab({
         "What selling actually paid. Exobiology is exact; cartographic is apportioned across a sale by body count.",
     },
     { key: "visited", label: "Visited", value: (r) => r.firstVisit, render: (r) => date(r.firstVisit) },
-  ];
+  ]);
 
-  const regions = topValues(data.systems, (r) => r.region);
-  const filtered = data.systems.filter((r) => {
-    if (classFilter.size && !(r.region && classFilter.has(r.region))) return false;
-    if (flagFilter.has("bio") && r.bioSignals <= 0) return false;
-    if (flagFilter.has("species") && r.speciesConfirmed <= 0) return false;
-    /*
-      Two different questions, and they used to share one chip.
+  const regions = optionsFor([data.systems], () => topValues(data.systems, (r) => r.region));
+  const filtered = filteredFor([data.systems, q, classFilter, flagFilter, featureFilter], () =>
+    data.systems.filter((r) => {
+      if (classFilter.size && !(r.region && classFilter.has(r.region))) return false;
+      if (flagFilter.has("bio") && r.bioSignals <= 0) return false;
+      if (flagFilter.has("species") && r.speciesConfirmed <= 0) return false;
+      /*
+        Two different questions, and they used to share one chip.
 
-      "First discovery" now means the system is his — the game decides that on the main star, and
-      it is what puts his name on it. The old behaviour, at least one body he was first to scan,
-      is still worth having and keeps its own chip: a system somebody else found where he still
-      took bodies nobody had.
+        "First discovery" now means the system is his — the game decides that on the main star, and
+        it is what puts his name on it. The old behaviour, at least one body he was first to scan,
+        is still worth having and keeps its own chip: a system somebody else found where he still
+        took bodies nobody had.
 
-      The owner reported the old chip "showing systems that I recognize that I wasnt the first
-      there", which is exactly what a body-count filter does.
-    */
-    if (flagFilter.has("sysfirst") && r.firstDiscoveredSystem !== true) return false;
-    if (flagFilter.has("firsts") && r.firstDiscoveries <= 0) return false;
-    if (flagFilter.has("footfall") && r.firstFootfalls <= 0) return false;
-    if (flagFilter.has("sold") && r.soldExplorationCredits == null && r.soldExobiologyCredits == null)
-      return false;
-    if (flagFilter.has("unsold") && (r.soldExplorationCredits != null || r.soldExobiologyCredits != null))
-      return false;
-    if (flagFilter.has("earthlike") && r.earthLikes <= 0) return false;
-    if (flagFilter.has("water") && r.waterWorlds <= 0) return false;
-    if (flagFilter.has("ammonia") && r.ammoniaWorlds <= 0) return false;
-    if (flagFilter.has("terra") && r.terraformables <= 0) return false;
-    if (flagFilter.has("full") && !r.fullyScanned) return false;
-    if (!hasPickedFeature(featureFilter, r.featureKeys)) return false;
-    if (!q) return true;
-    return fuzzyRankAny([r.name, r.region ?? "", r.primaryStarType ?? ""], q) != null;
-  });
+        The owner reported the old chip "showing systems that I recognize that I wasnt the first
+        there", which is exactly what a body-count filter does.
+      */
+      if (flagFilter.has("sysfirst") && r.firstDiscoveredSystem !== true) return false;
+      if (flagFilter.has("firsts") && r.firstDiscoveries <= 0) return false;
+      if (flagFilter.has("footfall") && r.firstFootfalls <= 0) return false;
+      if (flagFilter.has("sold") && r.soldExplorationCredits == null && r.soldExobiologyCredits == null)
+        return false;
+      if (flagFilter.has("unsold") && (r.soldExplorationCredits != null || r.soldExobiologyCredits != null))
+        return false;
+      if (flagFilter.has("earthlike") && r.earthLikes <= 0) return false;
+      if (flagFilter.has("water") && r.waterWorlds <= 0) return false;
+      if (flagFilter.has("ammonia") && r.ammoniaWorlds <= 0) return false;
+      if (flagFilter.has("terra") && r.terraformables <= 0) return false;
+      if (flagFilter.has("full") && !r.fullyScanned) return false;
+      if (!hasPickedFeature(featureFilter, r.featureKeys)) return false;
+      if (!q) return true;
+      return fuzzyRankAny([r.name, r.region ?? "", r.primaryStarType ?? ""], q) != null;
+    }),
+  );
 
   return (
     <>
@@ -188,7 +195,7 @@ export function renderSystemsTab({
       />
       <ChipRow
         label="Feature"
-        options={featureOptions(data.systems)}
+        options={featuresFor([data.systems], () => featureOptions(data.systems))}
         picked={featureFilter}
         onToggle={toggleFeature}
       />

@@ -47,30 +47,34 @@
   (src/client/uiFont.ts). Four weights; the browser downloads one only when text uses it, so Classic costs nothing. Its
   caps and x-height match Bahnschrift's at the same size; a character it lacks falls back to Bahnschrift, then the
   system. A page that never runs uiFont.ts (none today) keeps Bahnschrift.
+
+  `fallback`, not `block` (review 2026-11-07 §4.2): text waits at most 100 ms for the face, then shows in the
+  fallback and takes the face when it arrives (within 3 s). From this PC it is there well inside 100 ms, so the
+  overlays never show the fallback; the LAN phone view no longer shows blank text for up to 3 s on a first load.
 */
 @font-face {
   font-family: "EDEXO";
   src: url("/fonts/EDEXO-Regular.woff2") format("woff2");
   font-weight: 100 499;
-  font-display: block;
+  font-display: fallback;
 }
 @font-face {
   font-family: "EDEXO";
   src: url("/fonts/EDEXO-SemiBold.woff2") format("woff2");
   font-weight: 500 649;
-  font-display: block;
+  font-display: fallback;
 }
 @font-face {
   font-family: "EDEXO";
   src: url("/fonts/EDEXO-Bold.woff2") format("woff2");
   font-weight: 650 749;
-  font-display: block;
+  font-display: fallback;
 }
 @font-face {
   font-family: "EDEXO";
   src: url("/fonts/EDEXO-ExtraBold.woff2") format("woff2");
   font-weight: 750 1000;
-  font-display: block;
+  font-display: fallback;
 }
 :root[data-font="edexo"] {
   --hud-font: "EDEXO", "Bahnschrift", "Segoe UI", system-ui, -apple-system, sans-serif;

@@ -87,7 +87,7 @@ export function GalaxyIndexDownload() {
       {d ? (
         <div className="g3d-index-download__progress" aria-live="polite">
           <div className="g3d-index-download__bar">
-            <span style={{ width: `${pct ?? 5}%` }} />
+            <span style={{ transform: `scaleX(${(pct ?? 5) / 100})` }} />
           </div>
           <span>
             {d.name}: {mb(d.done)}

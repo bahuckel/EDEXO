@@ -182,7 +182,7 @@ export function SpeciesRow({
         className="srow-main"
         onClick={onToggle}
         aria-expanded={open}
-        style={{ ["--chance" as string]: chancePct != null ? `${chancePct}%` : "0%" }}
+        style={{ ["--chance" as string]: chancePct != null ? chancePct / 100 : 0 }}
         title={open ? "Fold the card" : "Unfold the full card"}
       >
         <img

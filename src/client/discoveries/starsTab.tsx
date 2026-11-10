@@ -8,9 +8,14 @@ import type { DiscoveryStarRow } from "@shared/types";
 import { fuzzyRankAny } from "../fuzzyMatch";
 import { CopySystemButton } from "../CopySystemButton";
 import { Table, type Column } from "../ui/DataTable";
-import { ChipRow, featureOptions, hasPickedFeature, Search, topValues } from "./filters";
+import { ChipRow, featureOptions, hasPickedFeature, lastAnswer, Search, topValues } from "./filters";
 import { cr, date, num } from "./format";
 import type { DiscoveriesTabContext } from "./tabContext";
+
+const columnsFor = lastAnswer<Column<DiscoveryStarRow>[]>();
+const optionsFor = lastAnswer<ReturnType<typeof topValues>>();
+const featuresFor = lastAnswer<ReturnType<typeof featureOptions>>();
+const filteredFor = lastAnswer<DiscoveryStarRow[]>();
 
 export function renderStarsTab({
   data,
@@ -29,7 +34,7 @@ export function renderStarsTab({
   featureFilter,
   toggleFeature,
 }: DiscoveriesTabContext) {
-  const columns: Column<DiscoveryStarRow>[] = [
+  const columns = columnsFor([onNavigateSystem], () => [
     {
       key: "name",
       label: "Star",
@@ -96,7 +101,7 @@ export function renderStarsTab({
       ),
     },
     { key: "when", label: "Scanned", value: (r) => r.scannedAt, render: (r) => date(r.scannedAt) },
-  ];
+  ]);
 
   /*
     Every star type, for the same reason as planet class.
@@ -106,17 +111,19 @@ export function renderStarsTab({
     survived at rank 12 by luck rather than design. Twenty-three chips is the same order as the
     seventeen on Bodies and reads as one row.
   */
-  const types = topValues(data.stars, (r) => r.starType, Infinity);
-  const filtered = data.stars.filter((r) => {
-    if (classFilter.size && !classFilter.has(r.starType)) return false;
-    // Same question, same answer as the other two tabs. A secondary star in somebody else's system
-    // is his to have scanned first and still not his system.
-    if (flagFilter.has("first") && r.firstDiscoveredSystem !== true) return false;
-    if (flagFilter.has("bodyfirst") && !r.firstDiscoverer) return false;
-    if (!hasPickedFeature(featureFilter, r.featureKeys)) return false;
-    if (!q) return true;
-    return fuzzyRankAny([r.bodyName, r.system, r.starType, r.luminosity ?? "", r.region ?? ""], q) != null;
-  });
+  const types = optionsFor([data.stars], () => topValues(data.stars, (r) => r.starType, Infinity));
+  const filtered = filteredFor([data.stars, q, classFilter, flagFilter, featureFilter], () =>
+    data.stars.filter((r) => {
+      if (classFilter.size && !classFilter.has(r.starType)) return false;
+      // Same question, same answer as the other two tabs. A secondary star in somebody else's system
+      // is his to have scanned first and still not his system.
+      if (flagFilter.has("first") && r.firstDiscoveredSystem !== true) return false;
+      if (flagFilter.has("bodyfirst") && !r.firstDiscoverer) return false;
+      if (!hasPickedFeature(featureFilter, r.featureKeys)) return false;
+      if (!q) return true;
+      return fuzzyRankAny([r.bodyName, r.system, r.starType, r.luminosity ?? "", r.region ?? ""], q) != null;
+    }),
+  );
 
   return (
     <>
@@ -133,7 +140,7 @@ export function renderStarsTab({
       />
       <ChipRow
         label="Feature"
-        options={featureOptions(data.stars)}
+        options={featuresFor([data.stars], () => featureOptions(data.stars))}
         picked={featureFilter}
         onToggle={toggleFeature}
       />

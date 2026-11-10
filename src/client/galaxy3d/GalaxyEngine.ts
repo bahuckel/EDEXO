@@ -357,7 +357,8 @@ export class GalaxyEngine {
     window.addEventListener("blur", this.onBlur);
 
     this.resize();
-    this.loop();
+    // One frame loop: resize() has started it when the map is shown; a hidden one starts when it is shown.
+    this.wake();
   }
 
   // ---------------------------------------------------------------------------------------- setup
@@ -414,6 +415,7 @@ export class GalaxyEngine {
 
   resize(): void {
     if (!this.shown()) return;
+    this.wake();
     const w = this.host.clientWidth;
     const h = this.host.clientHeight;
     const ratio = Math.min(window.devicePixelRatio, 2);
@@ -1718,6 +1720,12 @@ export class GalaxyEngine {
 
   invalidate(): void {
     this.needsRender = true;
+    this.wake();
+  }
+
+  /** Start the frame loop again if it stopped while the map was hidden. */
+  private wake(): void {
+    if (!this.disposed && this.raf === 0 && this.shown()) this.raf = requestAnimationFrame(this.loop);
   }
 
   // ---------------------------------------------------------------------------- Elite controls
@@ -1785,9 +1793,16 @@ export class GalaxyEngine {
 
   private loop = (): void => {
     if (this.disposed) return;
+    /*
+      Hidden behind another tab: nothing to draw, and the loop stops (review 2026-11-07 §4.2): a hidden pane in the
+      same window is not throttled like a hidden page, so it ran 60 empty frames a second. The host's
+      ResizeObserver calls resize() when it is shown again, which wakes it; a frame asked for meanwhile waits.
+    */
+    if (!this.shown()) {
+      this.raf = 0;
+      return;
+    }
     this.raf = requestAnimationFrame(this.loop);
-    // Hidden behind another tab: nothing to draw; a frame asked for meanwhile waits until it is shown.
-    if (!this.shown()) return;
     const now = performance.now();
     const flying = this.stepFlight();
     if (this.elite && this.keys.size) this.stepKeys(now);
