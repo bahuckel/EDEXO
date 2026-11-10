@@ -9,12 +9,12 @@ import { createHash } from "node:crypto";
 import type http from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 import { ChangeTopics } from "./changeTopics.js";
-import type { AppSnapshot, ExoLiveDTO, UiCommand } from "../shared/types.js";
+import type { AppSnapshot, BodyComputed, ExoLiveDTO, UiCommand } from "../shared/types.js";
 import { perfBytes, perfCount, perfTime } from "./perf.js";
 import { requestIsAuthorized, requestOriginIsAllowed } from "./lanAuth.js";
 import { frameSendOptions } from "./wsCompression.js";
 import { GZIP_MIN_BYTES } from "./routes/httpHelpers.js";
-import { parseWsChannel, slimSnapshotForChannel, type WsChannel } from "./wsChannels.js";
+import { appFieldsBodiesUnslimmed, parseWsChannel, slimBodyForApp, slimSnapshotForChannel, type WsChannel } from "./wsChannels.js";
 
 export interface WsHub {
   /** An event to every Colonize window (`colonize` sockets), as `{ type: "colonize", event, payload }`. */
@@ -184,49 +184,80 @@ export function createWsHub(deps: {
     `bodies` one level deeper (UI review P1b): a scan or a sample changes one body, but the field went
     out whole — MBs in a rich system. When some bodies are unchanged, the push carries `bodiesDelta`
     instead: every body key in order, and only the bodies that changed; the client takes the rest
-    from its copy. Each body is serialized once either way (the field's JSON is built from them).
+    from its copy.
   */
   let lastBodyDigest = new Map<string, string>();
+  /*
+    Same object, same JSON (review 2026-11-07 §4.1): stringifying and hashing every field was ~6.7 ms a push in a
+    system of 114 bio bodies, more than building the snapshot. The body cache (bodyCompute.ts computeBody) hands back
+    the same BodyComputed while every input of its signature stands, and nothing changes one afterwards: its slimmed
+    JSON's digest and length are kept against it (not the JSON, RAM audit 2026-10-22), and the JSON is made only for
+    a body that is sent. Two big fields are one memoised object while their inputs stand, never changed in place:
+    journalSystems (buildJournalSystems) and footScannedEntries (ownFootEntriesNewestFirst).
+  */
+  const bodyMemo = new WeakMap<BodyComputed, { digest: string; length: number }>();
+  const SAME_OBJECT_SAME_JSON = new Set(["journalSystems", "footScannedEntries"]);
+  let lastFieldObject = new Map<string, { value: unknown; digest: string; length: number }>();
   const pushMessage = (snap: AppSnapshot, channel: WsChannel): string => {
     if (channel !== "app") return stateMessage(snap, channel);
     const prev = lastFieldDigest.get(channel);
     const next = new Map<string, string>();
+    const nextObjects = new Map<string, { value: unknown; digest: string; length: number }>();
     const parts: string[] = [];
     const unchanged: string[] = [];
     let bodiesDelta = "";
     let bodyDigest: Map<string, string> | null = null;
-    for (const [k, v] of Object.entries(slimSnapshotForChannel(snap, channel))) {
-      let items: { key: string; json: string; digest: string }[] | null = null;
-      let j: string | undefined;
-      let d: string;
+    for (const [k, v] of Object.entries(appFieldsBodiesUnslimmed(snap))) {
+      if (v === undefined) continue;
       if (k === "bodies" && Array.isArray(v)) {
-        items = (v as AppSnapshot["bodies"]).map((b) => {
-          const json = JSON.stringify(b);
-          return { key: b.state.key, json, digest: digestOf(json) };
+        const items = (v as BodyComputed[]).map((b) => {
+          let json: string | null = null;
+          let m = bodyMemo.get(b);
+          if (!m) {
+            json = JSON.stringify(slimBodyForApp(b));
+            m = { digest: digestOf(json), length: json.length };
+            bodyMemo.set(b, m);
+          }
+          return { b, key: b.state.key, digest: m.digest, length: m.length, json };
         });
-        j = `[${items.map((i) => i.json).join(",")}]`;
+        const jsonOf = (i: (typeof items)[number]) => (i.json ??= JSON.stringify(slimBodyForApp(i.b)));
+        // The field's JSON is `[` + the bodies joined by `,` + `]`.
+        const length = items.reduce((n, i) => n + i.length, 0) + Math.max(0, items.length - 1) + 2;
         // JSON holds no raw newline, so the joined digests stand for the bodies in their order.
-        d = `#bodies${j.length}:${createHash("sha1")
+        const d = `#bodies${length}:${createHash("sha1")
           .update(items.map((i) => i.digest).join("\n"))
           .digest("base64")}`;
-      } else {
-        j = v === undefined ? undefined : JSON.stringify(v);
-        if (j === undefined) continue;
-        d = digestOf(j);
+        next.set(k, d);
+        bodyDigest = new Map(items.map((i) => [i.key, i.digest]));
+        const whole = () => `${JSON.stringify(k)}:[${items.map(jsonOf).join(",")}]`;
+        if (length >= OMIT_UNCHANGED_MIN_BYTES && prev?.get(k) === d) unchanged.push(k);
+        else if (prev?.has(k) && bodyDigest.size === items.length) {
+          const changed = items.filter((i) => lastBodyDigest.get(i.key) !== i.digest);
+          const changedBytes = changed.reduce((n, i) => n + i.length, 0);
+          if (changed.length < items.length && changedBytes < length / 2) {
+            bodiesDelta = `,"bodiesDelta":{"keys":${JSON.stringify(items.map((i) => i.key))},"changed":[${changed
+              .map(jsonOf)
+              .join(",")}]}`;
+          } else parts.push(whole());
+        } else parts.push(whole());
+        continue;
       }
+      const kept = SAME_OBJECT_SAME_JSON.has(k) ? lastFieldObject.get(k) : undefined;
+      let j: string | null = null;
+      let d: string;
+      let length: number;
+      if (kept && kept.value === v) ({ digest: d, length } = kept);
+      else {
+        j = JSON.stringify(v);
+        d = digestOf(j);
+        length = j.length;
+      }
+      if (SAME_OBJECT_SAME_JSON.has(k)) nextObjects.set(k, { value: v, digest: d, length });
       next.set(k, d);
-      if (items) bodyDigest = new Map(items.map((i) => [i.key, i.digest]));
-      if (j.length >= OMIT_UNCHANGED_MIN_BYTES && prev?.get(k) === d) unchanged.push(k);
-      else if (items && prev?.has(k) && new Set(items.map((i) => i.key)).size === items.length) {
-        const changed = items.filter((i) => lastBodyDigest.get(i.key) !== i.digest);
-        const changedBytes = changed.reduce((n, i) => n + i.json.length, 0);
-        if (changed.length < items.length && changedBytes < j.length / 2) {
-          bodiesDelta = `,"bodiesDelta":{"keys":${JSON.stringify(items.map((i) => i.key))},"changed":[${changed
-            .map((i) => i.json)
-            .join(",")}]}`;
-        } else parts.push(`${JSON.stringify(k)}:${j}`);
-      } else parts.push(`${JSON.stringify(k)}:${j}`);
+      if (length >= OMIT_UNCHANGED_MIN_BYTES && prev?.get(k) === d) unchanged.push(k);
+      else parts.push(`${JSON.stringify(k)}:${j ?? JSON.stringify(v)}`);
     }
+    lastFieldObject = nextObjects;
     // Nothing at all changed since the last push (same fields, same content): no frame.
     if (prev && prev.size === next.size && [...next].every(([k, d]) => prev.get(k) === d)) return "";
     lastFieldDigest.set(channel, next);

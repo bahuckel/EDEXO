@@ -19,7 +19,7 @@ import {
   loadStarRolesConfig,
   type ExoMatchRun,
 } from "./systemMap.js";
-import { ownFootEntriesWithBackups } from "./footScannedCatalog.js";
+import { ownFootEntriesNewestFirst } from "./footScannedCatalog.js";
 import { buildExoMinimapDto, buildExoOrganicOverlayDto } from "./exoOrganicTracker.js";
 import { timingFromSamples } from "../shared/systemTriage.js";
 import { exoOutlierTally } from "./exoOutlierLog.js";
@@ -246,9 +246,7 @@ export function buildSnapshot(
 
   const footScannedEntries = bootLoading
     ? []
-    : perfTime("snap.footCatalog", () =>
-        ownFootEntriesWithBackups(projectRoot).sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)),
-      );
+    : perfTime("snap.footCatalog", () => ownFootEntriesNewestFirst(projectRoot));
 
   const notableBodies = bootLoading
     ? []

@@ -399,8 +399,38 @@ describe("how the file is written (discuss item 21)", () => {
     flushPredictionAudit();
     expect(existsSync(changes())).toBe(false);
     const text = readFileSync(auditPath, "utf8");
-    expect(text.startsWith('{"formatVersion":1')).toBe(true);
+    expect(text.startsWith('{"formatVersion":2')).toBe(true);
     expect(JSON.parse(text).records).toHaveLength(1);
+  });
+
+  it("keeps each reason text once in the file and gives it back whole on the next start (review 2026-11-07 §4.1)", () => {
+    const why = (detail: string) => [{ field: "Atmosphere", detail, soft: true }];
+    const hidden = (id: string, detail: string) =>
+      ({ entry: { id, genus: "Bacterium", displayName: id }, presenceProbabilityPercent: 1, unlikely: true, unlikelyReasons: why(detail) }) as unknown as SpeciesMatch;
+    const matches = [hidden("bacterium_a", "Codex lists Ammonia; got Argon."), hidden("bacterium_b", "Codex lists Ammonia; got Argon."), hidden("bacterium_c", "other")];
+    recordPredictionForBody({ body: body(), matches, db });
+    recordPredictionForBody({ body: body({ key: "42:8" }), matches, db });
+    const before = JSON.stringify(predictionRecords());
+    flushPredictionAudit();
+    const file = JSON.parse(readFileSync(auditPath, "utf8"));
+    expect(file.details).toEqual(["Codex lists Ammonia; got Argon.", "other"]);
+    expect(file.records[1].stages[0].offered[1].blockedBy).toEqual([{ field: "Atmosphere", d: 0, soft: true }]);
+    resetPredictionAuditForTests();
+    expect(JSON.stringify(predictionRecords())).toBe(before);
+  });
+
+  it("rewrites a format 1 file as format 2 on first read, every reason text kept", async () => {
+    const { writeFileSync } = await import("node:fs");
+    const offer = { speciesId: "bacterium_a", name: "bacterium_a", genus: "Bacterium", rank: null, percent: 1, unlikely: true, blockedBy: [{ field: "PlanetClass", detail: "Codex lists Rocky body", soft: true }] };
+    const rec = { bodyKey: "42:7", bodyName: "b", stages: [{ stage: "fss", at: "2026-10-01T00:00:00Z", offered: [offer], dropped: [] }], truth: [], outcomes: [], final: true, updatedAt: "2026-10-01T00:00:00Z" };
+    writeFileSync(auditPath, JSON.stringify({ formatVersion: 1, records: [rec] }));
+    resetPredictionAuditForTests();
+    expect(predictionRecords()[0]!.stages[0]!.offered[0]!.blockedBy).toEqual(offer.blockedBy);
+    const file = JSON.parse(readFileSync(auditPath, "utf8"));
+    expect(file.formatVersion).toBe(2);
+    expect(file.details).toEqual(["Codex lists Rocky body"]);
+    resetPredictionAuditForTests();
+    expect(predictionRecords()[0]).toEqual(rec);
   });
 
   it("reads the changes after the file on the next start, the last line for a body winning", async () => {

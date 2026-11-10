@@ -1,6 +1,7 @@
 
 import { localOnly } from "../lanAuth.js";
 import { getCachedSpeciesDatabase } from "../snapshot.js";
+import type { SpeciesDatabase } from "../../shared/types.js";
 import express from "express";
 import { getProjectRoot } from "../paths.js";
 import { perfCount } from "../perf.js";
@@ -78,6 +79,14 @@ import {
   jumponiumIndexStatus,
   probeJumponiumRelease,
 } from "../jumponiumIndex.js";
+
+/** Species id → genus folder, once per species tree (a reload makes a new one) instead of per filter request (D9). */
+const genusDirs = new WeakMap<SpeciesDatabase, Map<string, string>>();
+function genusDirById(db: SpeciesDatabase): Map<string, string> {
+  let m = genusDirs.get(db);
+  if (!m) genusDirs.set(db, (m = new Map(db.species.map((e) => [e.id, e.genusDataDir]))));
+  return m;
+}
 
 export function registerGalaxyRoutes(
   app: express.Express,
@@ -239,7 +248,7 @@ export function registerGalaxyRoutes(
         .map((s) => s.trim())
         .filter(Boolean)
         .slice(0, 200);
-    const genusOf = new Map(getCachedSpeciesDatabase().species.map((e) => [e.id, e.genusDataDir]));
+    const genusOf = genusDirById(getCachedSpeciesDatabase());
     const { bits, matched } = galaxyFilterMask(
       {
         species: list("species"),

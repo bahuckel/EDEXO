@@ -264,36 +264,39 @@ export async function importCapture(
 
   const bodyByKey = new Map<string, Json>();
   for (const sys of parsed.systems.values()) for (const b of sys.bodies) bodyByKey.set(bodyIdentityKey(sys.name, String(b.name)), b);
-  ctx.store.applyEddnSightings(
-    toAdd.map(({ label, s }) => {
-      const b = bodyByKey.get(bodyIdentityKey(s.systemName, s.bodyName));
-      return {
-        systemName: s.systemName,
-        bodyName: s.bodyName,
-        bodySubtype: typeof b?.subType === "string" ? b.subType : "",
-        distanceLs: typeof b?.distanceToArrival === "number" ? b.distanceToArrival : null,
-        speciesLabel: label,
-        genus: genusFromLandmark(label),
-      };
-    }),
-  );
-  ctx.store.setSystemCoords(
-    [...new Set(toAdd.map(({ s }) => s.systemName))]
-      .map((n) => [...parsed.systems.values()].find((x) => x.name === n)!)
-      .filter((x) => x.coords)
-      .map((x) => ({ name: x.name, ...x.coords! })),
-  );
-  ctx.store.setBodyIdentityByName(
-    toAdd
-      .map(({ s }) => bodyByKey.get(bodyIdentityKey(s.systemName, s.bodyName)))
-      .filter((b): b is Json => !!b && typeof b.bodyId === "number")
-      .map((b) => ({
-        systemName: [...parsed.systems.values()].find((x) => x.bodies.includes(b))!.name,
-        bodyName: String(b.name),
-        bodyId: b.bodyId as number,
-        bodyId64: typeof b.id64 === "string" ? b.id64 : null,
-      })),
-  );
+  // One save for the three steps (feederDb.ts holdWrites).
+  ctx.store.holdWrites(() => {
+    ctx.store.applyEddnSightings(
+      toAdd.map(({ label, s }) => {
+        const b = bodyByKey.get(bodyIdentityKey(s.systemName, s.bodyName));
+        return {
+          systemName: s.systemName,
+          bodyName: s.bodyName,
+          bodySubtype: typeof b?.subType === "string" ? b.subType : "",
+          distanceLs: typeof b?.distanceToArrival === "number" ? b.distanceToArrival : null,
+          speciesLabel: label,
+          genus: genusFromLandmark(label),
+        };
+      }),
+    );
+    ctx.store.setSystemCoords(
+      [...new Set(toAdd.map(({ s }) => s.systemName))]
+        .map((n) => [...parsed.systems.values()].find((x) => x.name === n)!)
+        .filter((x) => x.coords)
+        .map((x) => ({ name: x.name, ...x.coords! })),
+    );
+    ctx.store.setBodyIdentityByName(
+      toAdd
+        .map(({ s }) => bodyByKey.get(bodyIdentityKey(s.systemName, s.bodyName)))
+        .filter((b): b is Json => !!b && typeof b.bodyId === "number")
+        .map((b) => ({
+          systemName: [...parsed.systems.values()].find((x) => x.bodies.includes(b))!.name,
+          bodyName: String(b.name),
+          bodyId: b.bodyId as number,
+          bodyId64: typeof b.id64 === "string" ? b.id64 : null,
+        })),
+    );
+  });
   return report;
 }
 

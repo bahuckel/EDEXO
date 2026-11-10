@@ -34,6 +34,11 @@
  * `edexo-predictions.json.changes.jsonl` (the whole record, the last line for a body wins). The lines are folded back
  * into the file — the "compaction" — when the log is first read, at shutdown, and every few hundred changes. A file
  * from an older build (pretty) is compacted the first time it is read.
+ *
+ * Format 2 (review 2026-11-07 §4.1): the matcher's reason texts were half the file (14 MB of 29 on the owner's PC) and
+ * only 1,910 different strings over 103,681 uses. The file now keeps each text once in `details` and a reason points at
+ * it with `d`; nothing is dropped. Loading shares one string per repeated text, name and id, which also shrinks the
+ * resident Map. A format 1 file is rewritten as format 2 the first time it is read.
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -180,8 +185,69 @@ export interface PredictionRecord {
 }
 
 export interface PredictionAuditFile {
-  formatVersion: 1;
+  formatVersion: 2;
+  /** Each reason text once; a stored reason's `d` is its index here. */
+  details: string[];
   records: PredictionRecord[];
+}
+
+/** A reason as stored: `d` in a format 2 file, `detail` in a format 1 file and in a changes line. */
+type StoredReason = { field: string; d?: number; detail?: string; soft: boolean };
+
+/** The file as written: each reason text once, the reasons pointing at it. */
+function fileText(records: Iterable<PredictionRecord>): string {
+  const details: string[] = [];
+  const index = new Map<string, number>();
+  const ref = (text: string) => {
+    let i = index.get(text);
+    if (i === undefined) {
+      i = details.length;
+      details.push(text);
+      index.set(text, i);
+    }
+    return i;
+  };
+  const out: unknown[] = [];
+  for (const r of records) {
+    out.push({
+      ...r,
+      stages: r.stages.map((s) => ({
+        ...s,
+        offered: s.offered.map((o) =>
+          o.blockedBy?.length
+            ? { ...o, blockedBy: o.blockedBy.map((b): StoredReason => ({ field: b.field, d: ref(b.detail), soft: b.soft })) }
+            : o,
+        ),
+      })),
+    });
+  }
+  return `${JSON.stringify({ formatVersion: 2, details, records: out })}\n`;
+}
+
+/**
+ * One string for each repeated text: JSON.parse makes a new one per use, ~100,000 copies of 1,910 reasons and of
+ * the same few hundred names and ids. A format 2 reason gets its text back from `details`.
+ */
+function shareStrings(r: PredictionRecord, details: string[] | null, pool: Map<string, string>): void {
+  const one = (v: string) => {
+    const had = pool.get(v);
+    if (had !== undefined) return had;
+    pool.set(v, v);
+    return v;
+  };
+  for (const s of r.stages ?? []) {
+    for (const o of s.offered ?? []) {
+      o.speciesId = one(o.speciesId);
+      o.name = one(o.name);
+      o.genus = one(o.genus);
+      if (!o.blockedBy) continue;
+      o.blockedBy = (o.blockedBy as StoredReason[]).map((b) => ({
+        field: one(b.field),
+        detail: one((typeof b.d === "number" ? details?.[b.d] : b.detail) ?? ""),
+        soft: b.soft,
+      }));
+    }
+  }
 }
 
 /**
@@ -228,14 +294,17 @@ function load(): Map<string, PredictionRecord> {
   const m = new Map<string, PredictionRecord>();
   const p = resolvePredictionAuditPath();
   let compactNeeded = false;
+  const pool = new Map<string, string>();
   if (existsSync(p)) {
     try {
-      const text = readFileSync(p, "utf8");
-      // Written by an older build, pretty-printed: compacted once, now.
-      if (text.startsWith("{\n")) compactNeeded = true;
-      const parsed = JSON.parse(text) as Partial<PredictionAuditFile>;
+      const parsed = JSON.parse(readFileSync(p, "utf8")) as Partial<PredictionAuditFile> | { formatVersion?: 1; records?: PredictionRecord[] };
+      // Written by an older build (pretty, or format 1): rewritten once, now.
+      if (parsed.formatVersion !== 2) compactNeeded = true;
+      const details = parsed.formatVersion === 2 && Array.isArray(parsed.details) ? parsed.details : null;
       for (const r of parsed.records ?? []) {
-        if (r?.bodyKey) m.set(r.bodyKey, r);
+        if (!r?.bodyKey) continue;
+        shareStrings(r, details, pool);
+        m.set(r.bodyKey, r);
       }
     } catch {
       /*
@@ -260,7 +329,9 @@ function load(): Map<string, PredictionRecord> {
       compactNeeded = true;
       try {
         const r = JSON.parse(line) as PredictionRecord;
-        if (r?.bodyKey) m.set(r.bodyKey, r);
+        if (!r?.bodyKey) continue;
+        shareStrings(r, null, pool);
+        m.set(r.bodyKey, r);
       } catch {
         /* a torn line */
       }
@@ -283,7 +354,7 @@ function compactNow(): void {
   const file = resolvePredictionAuditPath();
   try {
     mkdirSync(path.dirname(file), { recursive: true });
-    writeFileAtomic(file, `${JSON.stringify({ formatVersion: 1, records: [...m.values()] } satisfies PredictionAuditFile)}\n`, "utf8");
+    writeFileAtomic(file, fileText(m.values()), "utf8");
     rmSync(changesPath(), { force: true });
     dirty.clear();
     appended = 0;

@@ -133,6 +133,30 @@ describe("snapshot pushes", () => {
     expect(((q.payload as Record<string, unknown>).bodies as unknown[]).length).toBe(2);
   });
 
+  it("knows a body or list handed back as the same object is unchanged, and a new object by its content (review 2026-11-07 §4.1)", async () => {
+    const body = (key: string, n: number) => ({ state: { key, bodyName: `B ${key}`, n }, matches: [], pad: "x".repeat(3000) });
+    const one = body("1", 0);
+    const two = body("2", 0);
+    const list = big("A");
+    const t = await start({ bodies: [one, two], journalSystems: list, footScannedEntries: big("F") });
+    await t.next(1);
+    t.set({ bodies: [one, two], journalSystems: list, footScannedEntries: big("F"), tick: 1 });
+    const p1 = await t.next(2);
+    expect(Object.keys(p1.payload as object).sort()).toEqual(["bodies", "footScannedEntries", "journalSystems", "tick"]);
+    // The body cache's same objects, one body recomputed (a new object, same key, new content).
+    t.set({ bodies: [one, body("2", 1)], journalSystems: list, footScannedEntries: big("F"), tick: 2 });
+    const p2 = await t.next(3);
+    expect(p2.unchanged).toEqual(["journalSystems", "footScannedEntries"]);
+    const d = p2.bodiesDelta as { changed: { state: { key: string; n: number } }[] };
+    expect(d.changed.map((b) => [b.state.key, b.state.n])).toEqual([["2", 1]]);
+    // A recomputed body with the same content is still unchanged, and a new list object with new content goes out.
+    t.set({ bodies: [one, body("2", 1)], journalSystems: big("B"), footScannedEntries: big("F"), tick: 3 });
+    const p3 = await t.next(4);
+    expect(p3.bodiesDelta).toBeUndefined();
+    expect(p3.unchanged).toEqual(["bodies", "footScannedEntries"]);
+    expect(((p3.payload as Record<string, unknown>).journalSystems as { starSystem: string }[])[0]!.starSystem).toBe("B 0");
+  });
+
   it("serves a candidate's habitat detail that the pushes leave out", async () => {
     const detail = { stats: [{ id: "s" }], atmosphereClimateStats: [], compositionGroups: [] };
     const bodies = [

@@ -25,4 +25,34 @@ describe("feeder persist", () => {
     const b = await openFeederStore(file);
     expect(b.db.exec("SELECT x FROM t")[0]!.values).toEqual([[42]]);
   });
+
+  it("saves the steps of an import once, at the end, and what was committed before a throw (review 2026-11-07 §4.1)", async () => {
+    const file = path.join(dir, "corpus.sqlite");
+    const store = await openFeederStore(file);
+    let saves = 0;
+    const persist = store.persist.bind(store);
+    store.persist = () => {
+      saves++;
+      persist();
+    };
+    const coords = (name: string) => [{ name, x: 1, y: 2, z: 3 }];
+    store.holdWrites(() => {
+      store.setSystemCoords(coords("A"));
+      store.setSystemCoords(coords("B"));
+      expect(saves).toBe(0);
+    });
+    expect(saves).toBe(1);
+    store.setSystemCoords(coords("C"));
+    expect(saves).toBe(2);
+    expect(() =>
+      store.holdWrites(() => {
+        store.setSystemCoords(coords("D"));
+        throw new Error("stop");
+      }),
+    ).toThrow("stop");
+    expect(saves).toBe(3);
+    // Nothing committed inside: no save.
+    store.holdWrites(() => {});
+    expect(saves).toBe(3);
+  });
 });

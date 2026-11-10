@@ -805,6 +805,21 @@ export function ownFootEntriesWithBackups(projectRoot: string): FootScannedEntry
   return out;
 }
 
+let footListMemo: { key: string; rows: FootScannedEntry[] } | null = null;
+
+/**
+ * {@link ownFootEntriesWithBackups}, newest first: My exobiology's list in every snapshot. Copied and sorted on every
+ * push (659 KB catalog) until it was kept on the catalog's signature (review 2026-11-07 §4.1); the same array comes
+ * back while nothing changed, which also lets the socket skip re-hashing it. Never mutate the result.
+ */
+export function ownFootEntriesNewestFirst(projectRoot: string): FootScannedEntry[] {
+  const key = `${footScannedCatalogSignature(projectRoot)}#${sharedSignature()}`;
+  if (footListMemo?.key === key) return footListMemo.rows;
+  const rows = ownFootEntriesWithBackups(projectRoot).sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+  footListMemo = { key, rows };
+  return rows;
+}
+
 export function augmentMatchesWithFootCatalog(
   matches: SpeciesMatch[],
   body: BodyExoState,

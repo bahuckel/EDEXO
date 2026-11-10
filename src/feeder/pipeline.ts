@@ -177,33 +177,36 @@ export async function importCsv(ctx: FeederContext, csvPath: string): Promise<Im
    * where a body carries a biological signal and the species may be inferred rather than seen; no
    * such rows enter the corpus today.
    */
-  ctx.store.applyCsvRows(rows, "exomastery");
-
-  /**
-   * Everything the JSON knows that the CSV cannot express, applied while we have it.
-   *
-   * Coordinates place a system for the spatial gates and the sector map, and the body id is what
-   * ties a corpus row to a journal scan. Both were previously filled by a separate pass over EDSM;
-   * a route export that already carries them makes that pass smaller by exactly this much.
-   */
   let coordsApplied = 0;
   let identitiesApplied = 0;
-  if (file.systems.length > 0) {
-    coordsApplied = ctx.store.setSystemCoords(
-      file.systems.map((sys) => ({ name: sys.name, x: sys.x, y: sys.y, z: sys.z })),
-    );
-  }
-  const identifiable = file.bodies.filter((b) => b.bodyId != null);
-  if (identifiable.length > 0) {
-    identitiesApplied = ctx.store.setBodyIdentityByName(
-      identifiable.map((b) => ({
-        systemName: b.systemName,
-        bodyName: b.bodyName,
-        bodyId: b.bodyId!,
-        bodyId64: b.bodyId64,
-      })),
-    );
-  }
+  // One save for the import, not one per step (feederDb.ts holdWrites).
+  ctx.store.holdWrites(() => {
+    ctx.store.applyCsvRows(rows, "exomastery");
+
+    /**
+     * Everything the JSON knows that the CSV cannot express, applied while we have it.
+     *
+     * Coordinates place a system for the spatial gates and the sector map, and the body id is what
+     * ties a corpus row to a journal scan. Both were previously filled by a separate pass over EDSM;
+     * a route export that already carries them makes that pass smaller by exactly this much.
+     */
+    if (file.systems.length > 0) {
+      coordsApplied = ctx.store.setSystemCoords(
+        file.systems.map((sys) => ({ name: sys.name, x: sys.x, y: sys.y, z: sys.z })),
+      );
+    }
+    const identifiable = file.bodies.filter((b) => b.bodyId != null);
+    if (identifiable.length > 0) {
+      identitiesApplied = ctx.store.setBodyIdentityByName(
+        identifiable.map((b) => ({
+          systemName: b.systemName,
+          bodyName: b.bodyName,
+          bodyId: b.bodyId!,
+          bodyId64: b.bodyId64,
+        })),
+      );
+    }
+  });
 
   ctx.speciesIndex = ctx.store.rebuildSpeciesIndex();
   ctx.cumulativeCsvRows = ctx.store.getCumulativeCsvRows();

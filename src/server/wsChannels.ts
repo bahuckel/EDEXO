@@ -280,6 +280,14 @@ export function findMatchDetail(
   return null;
 }
 
+/** The app channel's fields with `bodies` still as computed: the socket push slims only the bodies it sends. */
+export function appFieldsBodiesUnslimmed(snap: AppSnapshot): Partial<AppSnapshot> {
+  return {
+    ...snap,
+    exoOverlayFocusBody: snap.exoOverlayFocusBody ? slimBodyForApp(snap.exoOverlayFocusBody) : snap.exoOverlayFocusBody,
+  };
+}
+
 export function slimSnapshotForChannel(snap: AppSnapshot, channel: WsChannel): Partial<AppSnapshot> {
   if (channel === "shell") {
     const out: Record<string, unknown> = { ...snap };
@@ -288,13 +296,7 @@ export function slimSnapshotForChannel(snap: AppSnapshot, channel: WsChannel): P
     return out as Partial<AppSnapshot>;
   }
   if (channel === "app") {
-    return {
-      ...snap,
-      bodies: snap.bodies ? snap.bodies.map(slimBodyForApp) : snap.bodies,
-      exoOverlayFocusBody: snap.exoOverlayFocusBody
-        ? slimBodyForApp(snap.exoOverlayFocusBody)
-        : snap.exoOverlayFocusBody,
-    };
+    return { ...appFieldsBodiesUnslimmed(snap), bodies: snap.bodies ? snap.bodies.map(slimBodyForApp) : snap.bodies };
   }
   const out: Record<string, unknown> = {};
   const keys: readonly (keyof AppSnapshot)[] =

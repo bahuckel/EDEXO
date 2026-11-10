@@ -49,6 +49,7 @@ export class FeederStore {
     try {
       writeFileSync(tmp, Buffer.from(data));
       renameSync(tmp, this.dbPath);
+      this.unsaved = false;
     } catch (e) {
       try {
         rmSync(tmp, { force: true });
@@ -59,12 +60,31 @@ export class FeederStore {
     }
   }
 
+  private held = 0;
+  private unsaved = false;
+
+  /**
+   * The transactions inside `fn` reach disk once, when it ends (review 2026-11-07 §4.1): each one exported and
+   * rewrote the whole database (119 MB), three or four times an import. A throw still saves what was committed
+   * before it, as the per-transaction saves did.
+   */
+  holdWrites<T>(fn: () => T): T {
+    this.held++;
+    try {
+      return fn();
+    } finally {
+      this.held--;
+      if (this.held === 0 && this.unsaved) this.persist();
+    }
+  }
+
   private transaction<T>(fn: () => T): T {
     try {
       this.db.run("BEGIN;");
       const r = fn();
       this.db.run("COMMIT;");
-      this.persist();
+      if (this.held) this.unsaved = true;
+      else this.persist();
       return r;
     } catch (e) {
       try {

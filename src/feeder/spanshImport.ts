@@ -298,9 +298,11 @@ export async function importSpanshExport(
   // Nothing is written when a gate failed. A partially-imported corpus is worse than none, because
   // it looks finished.
   if (opts.apply && failures.length === 0) {
-    planetsWritten = store.setBodyMapped(bodyUpdates);
-    systemsWithCoords = store.setSystemCoordsById64(coordUpdates);
-    store.persist();
+    // One save for both (feederDb.ts holdWrites).
+    store.holdWrites(() => {
+      planetsWritten = store.setBodyMapped(bodyUpdates);
+      systemsWithCoords = store.setSystemCoordsById64(coordUpdates);
+    });
   }
 
   return {

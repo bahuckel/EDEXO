@@ -221,11 +221,13 @@ export async function backfillBodyIdentity(
   let planetsWritten = 0;
   let systemsWritten = 0;
   if (opts.apply) {
-    planetsWritten = store.setBodyIdentity(updates);
-    systemsWritten = store.setSystemEdsmIds(
-      [...systemUpdates].map(([normSystem, edsmId]) => ({ normSystem, edsmId })),
-    );
-    store.persist();
+    // One save for both (feederDb.ts holdWrites).
+    store.holdWrites(() => {
+      planetsWritten = store.setBodyIdentity(updates);
+      systemsWritten = store.setSystemEdsmIds(
+        [...systemUpdates].map(([normSystem, edsmId]) => ({ normSystem, edsmId })),
+      );
+    });
   }
 
   return {
