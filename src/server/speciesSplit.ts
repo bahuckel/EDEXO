@@ -22,6 +22,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { ExplorationScanRecord, PlanetScan, SpeciesMatch } from "../shared/types.js";
+import { atmosphereTypeKeyOf } from "../shared/scanAtmosphereMatch.js";
 import type { SpatialCatalogue } from "../shared/spatialGates.js";
 import { regionForSystem } from "./regionMapData.js";
 
@@ -92,10 +93,13 @@ function lumClass(l: string | undefined): string {
   const m = /^(I[ab]{0,2}|II|III|IV|V[ab]{0,2}|VI|VII)/.exec(l);
   return m ? m[1]!.replace(/[ab]+$/, "") : "other";
 }
-function atmoKey(t: string | undefined): string {
-  const s = (t ?? "").trim();
-  if (!s || s.toLowerCase() === "none" || s.toLowerCase() === "no atmosphere") return "none";
-  return s.replace(/^(hot|thin|thick)\s+/i, "").trim().toLowerCase().replace(/ /g, "");
+/*
+  The app's one atmosphere key (review 2026-11-10 A5): this file's own stripped one leading word, so EDSM / Spansh's
+  "Hot thin Carbon dioxide" read "thincarbondioxide" and "Thin Argon-rich" "argon-rich", matched no species' support,
+  and the split went uniform over the model's answer. The table's levels are the journal's types ("argonrich").
+*/
+function atmoKey(scan: PlanetScan): string {
+  return atmosphereTypeKeyOf(scan) || "none";
 }
 function atmoDensity(scan: PlanetScan): string {
   const a = String(scan.Atmosphere ?? "").toLowerCase();
@@ -157,7 +161,7 @@ export function splitFacts(i: SplitInputs): { cat: Record<string, string>; num: 
   const cat: Record<string, string> = {};
   const n: Record<string, number> = {};
   cat.cls = String(sc.PlanetClass ?? "?").toLowerCase() || "?";
-  cat.atmo = atmoKey(sc.AtmosphereType);
+  cat.atmo = atmoKey(sc);
   cat.dens = atmoDensity(sc);
   const comp = (sc.AtmosphereComposition ?? sc.atmosphereComposition) as { Name?: string; Percent?: number }[] | undefined;
   const gases = new Map((Array.isArray(comp) ? comp : []).map((c) => [String(c.Name ?? "").toLowerCase(), num(c.Percent) || 0]));
@@ -264,6 +268,9 @@ export function genusSplit(root: string, genus: string, facts: ReturnType<typeof
     for (const c of cols) s += t.w?.[c] ?? 0;
     z.set(id, f.supportSets.get(id)?.has(pair) ? s : -50);
   }
+  // No species of the genus was ever seen on this class and atmosphere: the table has nothing to say, and a
+  // uniform split would replace the ranking model's answer (A5).
+  if (![...z.values()].some((v) => v > -50)) return null;
   const top = Math.max(...z.values());
   let sum = 0;
   for (const [id, v] of z) {
@@ -291,7 +298,8 @@ export function applySpeciesSplit(matches: SpeciesMatch[], inputs: SplitInputs):
     if (rows.length < 2) continue;
     if (!rows.every((m) => f.genera[genus]![m.entry.id])) continue;
     facts ??= splitFacts(inputs);
-    const shares = genusSplit(inputs.root, genus, facts)!;
+    const shares = genusSplit(inputs.root, genus, facts);
+    if (!shares) continue;
     const sum = rows.reduce((a, m) => a + (shares.get(m.entry.id) ?? 0), 0);
     if (!(sum > 0)) continue;
     const total = rows.reduce((a, m) => a + (m.presenceProbabilityPercent ?? 0), 0);

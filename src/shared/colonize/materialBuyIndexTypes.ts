@@ -43,7 +43,7 @@ export type MaterialBuyListing = {
 };
 
 export type MaterialBuyIndexFile = {
-  version: 3;
+  version: 4;
   /** normSystemName(reference) → commodityId → row */
   systems: Record<string, Record<string, MaterialBuyIndexRow>>;
 };

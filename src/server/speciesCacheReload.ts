@@ -2,6 +2,9 @@ import { clearAchievementsCache } from "./achievements.js";
 import { clearBodyTypePriorCache } from "./bodyTypePrior.js";
 import { clearChanceCalibrationCache } from "./chanceCalibration.js";
 import { clearChanceRecalibrationCache } from "./chanceRecalibration.js";
+import { clearCodexFirstCache } from "./codexFirst.js";
+import { clearCodexMapCache } from "./codexMap.js";
+import { clearCodexVariantCountsCache } from "./codexVariantCounts.js";
 import { clearColourStarNeverCache } from "./colourStarNever.js";
 import { clearEddnTemperatureRangeCache } from "./eddnTemperatureRange.js";
 import { clearEddsnColourVariantsCache } from "./eddsnColourVariants.js";
@@ -14,7 +17,10 @@ import {
   clearFootScannedCatalogCache,
   flushFootScannedCatalog,
 } from "./footScannedCatalog.js";
+import { clearGalaxyRegionNamesCache } from "./galaxyBodyScan.js";
 import { resetGenusBodySplitCache } from "./genusBodySplit.js";
+import { clearGenusCooccurrenceCache } from "./genusCooccurrenceTable.js";
+import { clearGeologyCache } from "./geology.js";
 import { clearGenusPriorCache } from "./genusPrior.js";
 import { clearLikelihoodDataCache } from "./likelihoodData.js";
 import { clearMeasuredExclusionsCache } from "./measuredExclusions.js";
@@ -28,6 +34,8 @@ import { dropSpeciesComputed } from "./speciesDb.js";
 import { clearHostStarObservationsCache } from "./speciesHostStarObservations.js";
 import { clearSpeciesPhotoCache } from "./speciesPhotos.js";
 import { clearPlanetClassObservationsCache } from "./speciesPlanetClassObservations.js";
+import { clearSpeciesProvenanceCache } from "./speciesProvenance.js";
+import { clearSpeciesRarityCache } from "./speciesRarityData.js";
 import { clearSpeciesSplitCache } from "./speciesSplit.js";
 import { clearGenusPhotosFolderCache } from "./speciesTreeLoader.js";
 import { clearStarlightRangesCache } from "./starlightRanges.js";
@@ -41,8 +49,9 @@ import { clearStarlightRangesCache } from "./starlightRanges.js";
  * watcher path dropped the foot catalog's unwritten rows (code review A8, 2026-09-27). The catalog is
  * written first now, so clearing its cache cannot lose a find.
  *
- * Its own module (audit 2026-10-22), so the list is easy to audit: a missed entry here has happened three
- * times (A8, B10). tests/dataCacheReload.test.ts reads this file's text.
+ * Its own module (audit 2026-10-22), so the list is easy to audit: a missed entry here has happened four
+ * times (A8, B10, review 2026-11-10 §5). tests/dataCacheReload.test.ts fails on a module under src/server that reads
+ * data/exomastery, data/species or data/codex into a module-level cache whose clearer is not called here.
  */
 export function reloadSpeciesDerivedCaches(): void {
   flushFootScannedCatalog();
@@ -80,6 +89,16 @@ export function reloadSpeciesDerivedCaches(): void {
   clearChanceRecalibrationCache();
   clearSpatialCatalogueCache();
   clearRegionMapCache();
+  // Review 2026-11-10 §5: genus co-occurrence, colour rarity and region sites, the codex region tables, geology,
+  // the region names of the galaxy scan, sector provenance and rarity were kept until a restart.
+  clearGenusCooccurrenceCache();
+  clearCodexVariantCountsCache();
+  clearCodexFirstCache();
+  clearCodexMapCache();
+  clearGeologyCache();
+  clearGalaxyRegionNamesCache();
+  clearSpeciesProvenanceCache();
+  clearSpeciesRarityCache();
   // Last: the per-body predictions ranked with the old tables go too (the refresh path does not reload the tree).
   dropSpeciesComputed();
 }

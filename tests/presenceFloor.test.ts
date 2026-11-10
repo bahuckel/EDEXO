@@ -12,7 +12,7 @@ import {
   PRESENCE_FLOOR_PCT,
   demoteBelowPresenceFloor,
 } from "../src/server/snapshot.js";
-import { signalMultipliers } from "../src/server/presenceFloors.js";
+import { signalMultipliers, twinGenusRows } from "../src/server/presenceFloors.js";
 import type { BodyExoState, SpeciesDatabase, SpeciesMatch } from "../src/shared/types.js";
 
 const db: SpeciesDatabase = { species: [] };
@@ -70,6 +70,23 @@ describe("the chance floor", () => {
     demoteBelowPresenceFloor(ms, body(), db);
     expect(shownIds(ms)).toEqual(["fonticulua_campestris"]);
     expect(ms[1]!.unlikelyReasons?.[0]?.detail).toContain("0.7 %");
+  });
+
+  // Review 2026-11-10 A3: a twin moon's DSS genera are a hint here, not this body's list. The likeliest row of each
+  // stays listed until this body has its own DSS; the twin's species is not the hint (twins differ by up to 120 K).
+  it("keeps the likeliest row of each genus a twin moon's DSS named, until this body's own DSS", () => {
+    const twin = [{ Genus: "$Codex_Ent_Fungoids_Genus_Name;", Genus_Localised: "Fungoida" }];
+    const rows = () => [
+      match("fonticulua_campestris", 100),
+      match("fungoida_bullarum", 0.3),
+      match("fungoida_setisis", 0.6),
+    ];
+    const ms = rows();
+    demoteBelowPresenceFloor(ms, body({ siblingGenusHints: twin }), db);
+    expect(shownIds(ms)).toEqual(["fonticulua_campestris", "fungoida_setisis"]);
+    // Once this body has its own DSS list, the twin's says nothing.
+    expect(twinGenusRows(rows(), body({ siblingGenusHints: twin, genusHints: twin })).size).toBe(0);
+    expect([...twinGenusRows(rows(), body({ siblingGenusHints: twin }))].map((m) => m.entry.id)).toEqual(["fungoida_setisis"]);
   });
 
   it("keeps the best row rather than emptying the panel", () => {

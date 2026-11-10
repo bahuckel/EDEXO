@@ -64,8 +64,8 @@ function stationSearchRowKey(row: SpanshStationSearchRow): string {
 /**
  * Spansh station search uses `name` / `symbol`; only rows with supply/stock for sale.
  *
- * The result keeps `sell_price` (what the commander pays, Spansh's own field) beside `buy_price` (the same figure,
- * the name the rest of Colonize reads), so normalising a normalised market again gives the same rows. It did not:
+ * The result carries what the commander pays (Spansh's `buy_price`) in both `buy_price` and `sell_price`, so normalising
+ * a normalised market again gives the same rows, whichever field a reader takes. It did not:
  * the search normalised each market once, the index writer (hitsFromBuyPayload) a second time, found no `sell_price`
  * and dropped every row - background Spansh scans saved no seller at all (owner's profile, 2026-10-23).
  */

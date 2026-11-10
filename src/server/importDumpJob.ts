@@ -8,6 +8,7 @@ import { formatImportReport, importSpanshExport } from "../feeder/spanshImport.j
 import { feederDataDirExists } from "../feeder/paths.js";
 import { resolveImportDumpLedgerPath } from "./paths.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { isNetworkOrDevicePath } from "./networkPath.js";
 
 /*
   "Import Spansh export" from the launcher. Same importer and gates as `feeder -- import-dump`;
@@ -45,7 +46,8 @@ export function createImportDumpJob(): {
     return null;
   }
   function fileMtimeIso(file: string | null | undefined): string | null {
-    if (!file) return null;
+    // The status route takes the file from a query, which any web page can send (review 2026-11-10 C1).
+    if (!file || isNetworkOrDevicePath(file)) return null;
     try {
       return statSync(file).mtime.toISOString();
     } catch {

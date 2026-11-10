@@ -14,8 +14,8 @@ import type { DepotSnapshot } from "../../../src/shared/colonize/types";
 import type { MaterialBuyListing, MaterialBuyStationHit } from "../../../src/shared/colonize/materialBuyIndexTypes";
 
 const market = (rows: [string, number, number][]) =>
-  // Spansh's sell_price is what the commander pays (stationSellOffer.ts).
-  rows.map(([commodity, supply, price]) => ({ commodity, supply, sell_price: price, buy_price: price + 10, demand: 0 }));
+  // Spansh's buy_price is what the commander pays, with stock; sell_price is the station's, with demand (B1).
+  rows.map(([commodity, supply, price]) => ({ commodity, supply, buy_price: price, sell_price: price - 10, demand: 0 }));
 
 const station = (mid: string, name: string, rows: [string, number, number][]) => ({
   name,

@@ -74,4 +74,15 @@ describe("mergeBuyStationHits", () => {
     expect(m.supply).toBe(9_044_741);
     expect(m.marketId).toBe("1");
   });
+
+  // Review 2026-11-10 B2: the larger stock won, with the newer date, so a station kept 50,000 t after a fresh look
+  // found 300 t and never aged out.
+  it("takes the stock from the newer sighting, in either order", () => {
+    const old = hit({ stationName: "Desheret", dataSource: "spansh", supply: 50_000, buyPrice: 4100, foundAtIso: "2026-10-01T00:00:00.000Z" });
+    const fresh = hit({ stationName: "Desheret", dataSource: "spansh", supply: 300, buyPrice: 4200, foundAtIso: "2026-11-09T00:00:00.000Z" });
+    for (const [a, b] of [[old, fresh], [fresh, old]] as const) {
+      const m = mergeBuyStationHits(a, b);
+      expect([m.supply, m.buyPrice]).toEqual([300, 4200]);
+    }
+  });
 });

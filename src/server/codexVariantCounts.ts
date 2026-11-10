@@ -124,6 +124,12 @@ interface RegionSites {
 /** Read per region on the first click there: a few regions a session, each ~100-180 KB. */
 const sitesCache = new Map<string, RegionSites | null>();
 
+/** Refresh exomastery (speciesCacheReload.ts): the colour counts and region sites are read again. */
+export function clearCodexVariantCountsCache(): void {
+  cache = null;
+  sitesCache.clear();
+}
+
 function loadSites(root: string, regionName: string): RegionSites | null {
   const region = regionJoinKey(regionName);
   const cacheKey = `${root}|${region}`;

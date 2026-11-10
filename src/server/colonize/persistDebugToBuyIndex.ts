@@ -28,12 +28,8 @@ export async function persistSpanshDebugToBuyIndex(args: {
     const id = commodityMergeBucket(hit.symbol || label) || commodityMergeBucket(label);
     if (!id) continue;
     const supply = typeof hit.supply === "number" && hit.supply > 0 ? hit.supply : null;
-    const buyPrice =
-      typeof hit.sellPrice === "number"
-        ? hit.sellPrice
-        : typeof hit.buyPrice === "number"
-          ? hit.buyPrice
-          : null;
+    // The commander pays the dump's buyPrice (with supply), not its sellPrice (review 2026-11-10 B1).
+    const buyPrice = typeof hit.buyPrice === "number" ? hit.buyPrice : null;
     if (!isCommanderBuyOffer(supply, buyPrice)) continue;
     const stationName = hit.stationName.trim() || "—";
     if (

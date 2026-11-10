@@ -62,6 +62,17 @@ describe("backup folder risk", () => {
     expect((await assessBackupFolder("Q:/Backups", data, probe)).level).toBe("unknown"); // no such drive
   });
 
+  // Review 2026-11-10 C1: the folder comes from a query any web page can send, and a stat of a share sends the
+  // account's NTLM response there. Mixed slashes passed the old prefix test and still resolve to a share.
+  it("never asks the disk about a share, however its slashes are mixed", async () => {
+    const asked: string[] = [];
+    const watching: DiskProbe = { ...probe, volumeOf: (p) => (asked.push(p), probe.volumeOf(p)) };
+    for (const share of [String.raw`\\host\s\x`, "//host/s/x", String.raw`\/host/s/x`, String.raw`/\host\s\x`, String.raw`\\?\UNC\host\s`]) {
+      expect(await assessBackupFolder(share, data, watching)).toMatchObject({ network: true });
+    }
+    expect(asked).toEqual([]);
+  });
+
   it("with no journal folder set, compares with the app data only", async () => {
     expect(await assessBackupFolder("F:/Backups", { journals: null, appData: "C:/app" }, probe)).toMatchObject({
       level: "same-disk",

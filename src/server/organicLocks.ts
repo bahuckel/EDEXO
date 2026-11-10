@@ -50,10 +50,12 @@ export function collectOwnOrganicLockSpeciesIds(
   locks: OrganicGenusLock[] | null | undefined,
   db: SpeciesDatabase,
 ): string[] {
-  return collectResolvedOrganicLockSpeciesIds(
-    (locks ?? []).filter((l) => !l.fromSibling),
-    db,
-  );
+  return collectResolvedOrganicLockSpeciesIds(ownOrganicLocks(locks), db);
+}
+
+/** This body's own locks: not the ones copied from a sibling moon as a hint (`fromSibling`). */
+export function ownOrganicLocks(locks: OrganicGenusLock[] | null | undefined): OrganicGenusLock[] {
+  return (locks ?? []).filter((l) => !l.fromSibling);
 }
 
 /** Species entry ids unambiguously confirmed by on-foot ScanOrganic locks (genus + species/variant labels). */
@@ -118,32 +120,6 @@ export function applyOrganicGenusLocks(
     if (sid === undefined) return true;
     return e.id === sid;
   });
-}
-
-/**
- * True when an on-foot ScanOrganic lock unambiguously maps to a genus folder other than `bacterium`.
- * Used to drop bacterium candidates when DSS did not list bacterium but a sample confirmed another genus.
- */
-export function organicScanConfirmsNonBacteriumGenus(
-  locks: OrganicGenusLock[] | null | undefined,
-  db: SpeciesDatabase,
-): boolean {
-  if (!locks?.length) return false;
-
-  for (const lock of locks) {
-    const loc = lock.genusLocalised?.trim() || "";
-    const sym = lock.genusSymbol?.trim() || "";
-    const hint = { Genus_Localised: loc || sym, Genus: sym || loc };
-    if (!hint.Genus_Localised) continue;
-
-    const narrowedByLock = filterByGenusHints(db.species, [hint]);
-    const dirs = new Set(narrowedByLock.map((s) => s.genusDataDir));
-    if (dirs.size !== 1) continue;
-    const dir = [...dirs][0]!;
-    const sid = resolveLockToSpeciesId(lock, dir, db);
-    if (sid && dir.trim().toLowerCase() !== "bacterium") return true;
-  }
-  return false;
 }
 
 /**

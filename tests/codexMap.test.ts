@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { codexMapRegion, codexMapRegions, resetCodexMapCacheForTests } from "../src/server/codexMap.js";
+import { codexMapRegion, codexMapRegions, clearCodexMapCache } from "../src/server/codexMap.js";
 import { codexEntryKey, codexMapKeyFromLine } from "../src/shared/codexLog.js";
 import { regionJoinKey } from "../src/shared/regionMap.js";
 import { GameStateStore } from "../src/server/gameState.js";
@@ -38,7 +38,7 @@ function fixtureRoot(): string {
   return root;
 }
 
-afterEach(() => resetCodexMapCacheForTests());
+afterEach(() => clearCodexMapCache());
 
 describe("codex map", () => {
   it("keys a journal CodexEntry the way EDSM names the entry, per region", () => {

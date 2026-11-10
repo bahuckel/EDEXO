@@ -16,6 +16,7 @@
 import { execFile } from "node:child_process";
 import { statSync } from "node:fs";
 import path from "node:path";
+import { isNetworkOrDevicePath } from "./networkPath.js";
 
 export type FolderRiskLevel = "same-volume" | "same-disk" | "separate" | "unknown";
 
@@ -53,15 +54,14 @@ function nearestExisting(p: string): string | null {
   }
 }
 
-const isNetworkPath = (p: string) => /^(\\\\|\/\/)[^\\/]+[\\/][^\\/]+/.test(p);
-
 export async function assessBackupFolder(
   folder: string,
   data: { journals: string | null; appData: string },
   probe: DiskProbe = systemDiskProbe,
 ): Promise<FolderRisk> {
   const base: FolderRisk = { level: "unknown", against: null, folderVolume: null, dataVolume: null, usb: false, network: false };
-  if (isNetworkPath(folder)) return { ...base, level: "separate", network: true };
+  // Before any stat: the folder can come from a request's query (review 2026-11-10 C1).
+  if (isNetworkOrDevicePath(folder)) return { ...base, level: "separate", network: true };
   const fv = probe.volumeOf(folder);
   if (!fv) return base;
   const targets: { name: "journals" | "app data"; dir: string }[] = [];

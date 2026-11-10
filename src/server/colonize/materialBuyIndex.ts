@@ -19,7 +19,11 @@ import type { CheckoutOfferSource } from "../../shared/colonize/types";
 import type { MaterialBuyIndexFile, MaterialBuyIndexRow, MaterialBuyStationHit } from "../../shared/colonize/materialBuyIndexTypes";
 
 const INDEX_FILENAME = "material-buy-index.json";
-const INDEX_VERSION = 3;
+/*
+  4 (review 2026-11-10 B1): Spansh / EDSM sellers carry what the commander pays (buy price). A version-3 file is read
+  without its Spansh and EDSM hits, which held the station's sell price; journal and Inara hits are kept.
+*/
+const INDEX_VERSION = 4 as const;
 /** A single remembered station usually means a truncated Spansh recall — keep scanning until we have more. */
 const MATERIAL_BUY_MIN_STATIONS_FOR_FRESH = 2;
 const MAX_STATIONS_PER_COMMODITY = 80;
@@ -139,9 +143,13 @@ export class MaterialBuyIndex {
   private async readFromDisk(): Promise<void> {
     try {
       const raw = await fs.readFile(this.filePath, "utf8");
-      const parsed = JSON.parse(raw) as MaterialBuyIndexFile;
+      const parsed = JSON.parse(raw) as Omit<MaterialBuyIndexFile, "version"> & { version?: number };
       if (parsed?.version === INDEX_VERSION && parsed.systems && typeof parsed.systems === "object") {
-        this.data = parsed;
+        this.data = { version: INDEX_VERSION, systems: parsed.systems };
+      } else if (parsed?.version === 3 && parsed.systems && typeof parsed.systems === "object") {
+        await backupUnreadableJson(this.filePath, 3);
+        const { systems } = pruneBuyIndexBySources(parsed.systems, new Set<CheckoutOfferSource>(["spansh", "edsm"]));
+        this.data = { version: INDEX_VERSION, systems };
       } else {
         /**
          * An index this build cannot read is about to be replaced by the next save. Keep a copy:

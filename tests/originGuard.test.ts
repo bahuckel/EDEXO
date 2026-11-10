@@ -52,6 +52,17 @@ describe("Host and Origin", () => {
     expect((await request(port, "GET", "/api/status", { Host: "localhost:5173" })).status).toBe(200); // dev proxy
   });
 
+  // Review 2026-11-10 C1: `<img src="http://127.0.0.1:7111/api/…?file=\\host\x">` on any web page is a GET
+  // the Origin test lets through. The browser says where it comes from; another site gets no API answer.
+  it("refuses an API request a page of another site sent, GETs included; same-origin, direct and script ones pass", async () => {
+    const port = await start();
+    const get = (site?: string, path = "/api/status") =>
+      request(port, "GET", path, { Host: `127.0.0.1:${port}`, ...(site ? { "Sec-Fetch-Site": site } : {}) });
+    expect((await get("cross-site")).status).toBe(403);
+    expect((await get("cross-site", "/api/feeder/import-dump/status?file=x")).status).toBe(403);
+    for (const site of ["same-origin", "none", undefined]) expect((await get(site)).status).toBe(200);
+  });
+
   it("refuses a cross-site POST, and lets the app's own and Origin-less requests through", async () => {
     const port = await start();
     const foreign = await request(port, "POST", "/api/notices/clear-read", {

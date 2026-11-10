@@ -56,8 +56,8 @@ export function codexRegionsData(projectRoot: string): CodexRegionsFile | null {
   return load(projectRoot);
 }
 
-/** Test seam. */
-export function resetCodexMapCacheForTests(): void {
+/** Refresh exomastery (speciesCacheReload.ts) and tests. */
+export function clearCodexMapCache(): void {
   cached = null;
 }
 

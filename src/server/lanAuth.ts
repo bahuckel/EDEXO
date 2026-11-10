@@ -204,6 +204,15 @@ export function requestOriginIsAllowed(
 
 export function createOriginGuard(allowedHost: (hostName: string) => boolean): RequestHandler {
   return (req, res, next) => {
+    /*
+      No API answer to a page of another site (review 2026-11-10 C1), GETs included, which the Origin test below lets
+      through: an `<img>` on any web page could make a GET route stat a network path on this PC. Browsers send
+      `Sec-Fetch-Site`; the app's windows, the phone and OBS are same-origin or "none", and scripts send nothing.
+    */
+    if (req.headers["sec-fetch-site"] === "cross-site" && (req.path === "/api" || req.path.startsWith("/api/"))) {
+      res.status(403).json({ error: "foreign_origin" });
+      return;
+    }
     const m = req.method.toUpperCase();
     const checkOrigin = m !== "GET" && m !== "HEAD" && m !== "OPTIONS";
     if (requestOriginIsAllowed(req, allowedHost, { checkOrigin })) {

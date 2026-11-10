@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { codexFirstCheck, resetCodexFirst } from "../src/server/codexFirst.js";
+import { codexFirstCheck, clearCodexFirstCache } from "../src/server/codexFirst.js";
 import {
   eddnLedgerStatus,
   ledgerTokenToCodexId,
@@ -23,7 +23,7 @@ const row = (token: string, region: string, category = "$Codex_Category_Biology;
 const fakeFetch = (body: string, ok = true) =>
   (async () => new Response(body, { status: ok ? 200 : 500 })) as unknown as typeof fetch;
 
-afterEach(() => resetCodexFirst());
+afterEach(() => clearCodexFirstCache());
 
 describe("the EDDN collector's ledger", () => {
   it("reads its tokens as EDSM's codex ids, plants only", () => {

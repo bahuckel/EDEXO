@@ -52,7 +52,7 @@ import { dssHintsIncludeBacterium } from "../shared/genusHints.js";
 import { filterByGenusHints } from "./genusMatchUtils.js";
 import {
   applyOrganicGenusLocks,
-  organicScanConfirmsNonBacteriumGenus,
+  ownOrganicLocks,
   collectOwnOrganicLockSpeciesIds,
 } from "./organicLocks.js";
 import { spectralKeysFromJournalStarType } from "../shared/starSpectralKeys.js";
@@ -1508,14 +1508,14 @@ export function matchDatabaseToScan(
       }
     }
   }
-  narrowed = applyOrganicGenusLocks(narrowed, organicGenusLocks, db);
-  if (
-    includeBacterium &&
-    !dssHintsIncludeBacterium(genusHints) &&
-    organicScanConfirmsNonBacteriumGenus(organicGenusLocks, db)
-  ) {
-    narrowed = narrowed.filter((e) => !isBacteriumSpeciesEntry(e));
-  }
+  /*
+    Only this body's own finds narrow a genus to their species (review 2026-11-10 A1). A twin moon's (`fromSibling`)
+    are a hint: twins differ by up to 120 K and a genus's species by 5-10 K bands, so the twin's species often fails
+    here, and as a filter it left the genus with no row at all.
+    No rule drops Bacterium for a sample of another genus (A2): with a DSS list the genus filter above already did
+    it; without one (FSS only) it removed the commonest genus from a body whose other signals were unknown.
+  */
+  narrowed = applyOrganicGenusLocks(narrowed, ownOrganicLocks(organicGenusLocks), db);
   // Species the game leaves out of the signal count are never named by a DSS, so no genus filter
   // or lock may remove them; their own gates (a known system) decide.
   for (const e of species) {

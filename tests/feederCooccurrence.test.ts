@@ -7,7 +7,7 @@ import { setFeederDataDirForTests } from "../src/feeder/paths.js";
 import { importCsv, openFeeder, type FeederContext } from "../src/feeder/pipeline.js";
 import { buildCooccurrenceTable, writeCooccurrenceTable } from "../src/feeder/cooccurrence.js";
 import {
-  clearGenusCooccurrenceCacheForTests,
+  clearGenusCooccurrenceCache,
   loadGenusCooccurrenceTable,
 } from "../src/server/genusCooccurrenceTable.js";
 import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
@@ -34,7 +34,7 @@ beforeEach(async () => {
 afterEach(() => {
   ctx?.store.close();
   setFeederDataDirForTests(null);
-  clearGenusCooccurrenceCacheForTests();
+  clearGenusCooccurrenceCache();
   rmSync(corpus, { recursive: true, force: true });
 });
 

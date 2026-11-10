@@ -53,4 +53,28 @@ describe("the matcher on a sibling moon", () => {
     expect(gravisRow([lock(true)])?.approximateMatch).not.toBe(true);
     expect(gravisRow([lock(false)])?.approximateMatch).toBe(true);
   });
+
+  // Review 2026-11-10 A1: the sibling's gravis narrowed Aleoida to gravis, which fails 182 K, and dropped every
+  // Bacterium: the moon showed no Aleoida and no Bacterium at all.
+  it("keeps the species that fits here and every Bacterium when a sibling's find is copied over", () => {
+    const ids = (locks: OrganicGenusLock[]) =>
+      matchDatabaseToScan(db, fiveC, null, locks, { includeBacterium: true }).matches.map((m) => m.entry.id);
+    const bare = ids([]);
+    const withSibling = ids([lock(true)]);
+    expect(bare).toContain("aleoida_aleoida_coronamus");
+    expect(withSibling).toContain("aleoida_aleoida_coronamus");
+    expect(withSibling.filter((id) => id.startsWith("bacterium_"))).toEqual(bare.filter((id) => id.startsWith("bacterium_")));
+    expect(bare.some((id) => id.startsWith("bacterium_"))).toBe(true);
+  });
+
+  // Review 2026-11-10 A2: on a body with no DSS (FSS count only), the commander's own sample of another genus
+  // removed every Bacterium row, though Bacterium may well be one of the signals not yet found.
+  it("keeps every Bacterium after an own sample of another genus on a body with no DSS", () => {
+    const bacteria = (locks: OrganicGenusLock[]) =>
+      matchDatabaseToScan(db, fiveC, null, locks, { includeBacterium: true })
+        .matches.map((m) => m.entry.id)
+        .filter((id) => id.startsWith("bacterium_"));
+    expect(bacteria([lock(false)])).toEqual(bacteria([]));
+    expect(bacteria([]).length).toBeGreaterThan(0);
+  });
 });

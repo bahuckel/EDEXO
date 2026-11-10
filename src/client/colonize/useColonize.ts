@@ -197,8 +197,9 @@ export function useColonize() {
         const offers: ShopHistoryCachedOffer[] = [];
         for (const row of brief.rows) {
           const id = commodityMergeBucket(row.name) || commodityMergeBucket(row.nameLocalised);
-          if (!id || (row.stock ?? 0) <= 0 || row.sellPrice == null) continue;
-          offers.push({ commodityId: id, label: (row.nameLocalised || row.name).trim() || row.name, supply: row.stock ?? 0, buyPrice: row.sellPrice });
+          // Market.json's BuyPrice is what the commander pays (with Stock); SellPrice is what the station pays.
+          if (!id || (row.stock ?? 0) <= 0 || row.buyPrice == null) continue;
+          offers.push({ commodityId: id, label: (row.nameLocalised || row.name).trim() || row.name, supply: row.stock ?? 0, buyPrice: row.buyPrice });
         }
         if (offers.length) record(offers);
       })

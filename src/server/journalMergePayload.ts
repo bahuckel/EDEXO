@@ -128,8 +128,11 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
       R-1); and `currentBodyKey` now moves on a DSS (SAAScanComplete) as well.
   42: `jumponium.mats` — manufactured and encoded materials aboard, for the Laboratory's Guardian tab (1.3.7,
       shared/guardianTech.ts); a full re-read counts them from the last Materials line on.
+  43: a twin moon's DSS genera go to `siblingGenusHints`, no longer into the body's own `genusHints` (review 2026-11-10
+      A3); cached twins had them merged into their own list. And a re-scan after a sale fills its gaps from the sold copy
+      (A9).
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 42;
+export const JOURNAL_MERGE_CACHE_FORMAT = 43;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {

@@ -139,9 +139,10 @@ function formatCompositionList(raw: unknown): string {
   }
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
     const parts: string[] = [];
+    // A solid composition: the journal's 0-1 fractions, and EDSM / Spansh's per cent stored as fractions too (A4).
     for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
       const sym = ELEMENT_SYMBOL[k.trim().toLowerCase()] ?? k.trim();
-      if (typeof v === "number" && Number.isFinite(v)) parts.push(`${sym} ${v.toFixed(1)}%`);
+      if (typeof v === "number" && Number.isFinite(v)) parts.push(`${sym} ${(v * 100).toFixed(1)}%`);
     }
     return parts.join(", ");
   }

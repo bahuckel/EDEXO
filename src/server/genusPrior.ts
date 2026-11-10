@@ -30,6 +30,7 @@ import type { BodyExoState, PlanetScan, SpeciesMatch, SpeciesMatchContext } from
 import { gateForSpeciesId } from "../shared/spatialGates.js";
 import { atmosphereKey, bodyFacts, volcanismKind } from "./genusBodySplit.js";
 import { measuredPastPrior } from "./measuredOdds.js";
+import { twinGenusRows } from "./presenceFloors.js";
 
 /** How hard the dump's genus frequencies pull against the ranking model (0 = model only, 1 = prior only). */
 export const GENUS_PRIOR_WEIGHT = 0.75;
@@ -169,8 +170,11 @@ export function genusPriorFor(
  */
 export function vetoUnseenGenera(
   // Any match rows: the body tab's, the system map's and the backlog's (owner, 2026-10-07).
-  matches: Pick<SpeciesMatch, "entry" | "unlikely" | "unlikelyReasons" | "organicAnalysisComplete" | "spatialGateUnresolved">[],
-  b: Pick<BodyExoState, "genusHints" | "biologicalSignals">,
+  matches: Pick<
+    SpeciesMatch,
+    "entry" | "unlikely" | "unlikelyReasons" | "organicAnalysisComplete" | "spatialGateUnresolved" | "presenceProbabilityPercent"
+  >[],
+  b: Pick<BodyExoState, "genusHints" | "siblingGenusHints" | "biologicalSignals">,
   scan: PlanetScan | null,
   ctx: Pick<SpeciesMatchContext, "parentStarType" | "systemMainStarClass"> | null | undefined,
   root: string,
@@ -186,6 +190,8 @@ export function vetoUnseenGenera(
   const shown = matches.filter((m) => !m.unlikely);
   const genera = new Set(shown.map((m) => genusPriorKey(m.entry.genus)));
   const protectedGenera = new Set<string>();
+  // A genus a similar twin moon's DSS named (review 2026-11-10 A3).
+  for (const m of twinGenusRows(shown, b)) protectedGenera.add(genusPriorKey(m.entry.genus));
   for (const m of shown) {
     const k = genusPriorKey(m.entry.genus);
     if (

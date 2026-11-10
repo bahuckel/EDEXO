@@ -11,6 +11,11 @@ import { getProjectRoot } from "./paths.js";
 
 let memo: { root: string; table: GeologyTable | null } | null = null;
 
+/** Refresh exomastery (speciesCacheReload.ts). */
+export function clearGeologyCache(): void {
+  memo = null;
+}
+
 /** `data/exomastery/geology-by-volcanism.json`, read once; null when the build has none. */
 export function geologyTable(root = getProjectRoot()): GeologyTable | null {
   if (memo?.root === root) return memo.table;

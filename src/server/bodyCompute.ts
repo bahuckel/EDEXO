@@ -540,7 +540,9 @@ export function lowChanceWhy(m: SpeciesMatch, k: { why: string; pct: number } | 
               ? `The DSS found ${genus} here, and this is ${k.pct.toFixed(1)} % of it — over the 1 % the list needs once the genus is known. The chance beside it is for the body as a whole.`
               : k?.why === "genusBest"
                 ? `The DSS found ${genus} here, and this is the likeliest ${genus} the list has.`
-                : "It can grow on this body; the model has little to go on.";
+                : k?.why === "twin"
+                  ? `A similar moon's DSS found ${genus}; the likeliest ${genus} here stays listed until this body is mapped.`
+                  : "It can grow on this body; the model has little to go on.";
   return (
     `Shown at ${pct < 0.05 ? "under 0.1" : pct.toFixed(1)} %: ${why} ` +
     `It is a [CODEX FIRST]: nobody has logged it in this region yet, so it is worth a look. ` +

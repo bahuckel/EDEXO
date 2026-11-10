@@ -1009,6 +1009,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     showFixStubNativeDialog: showEdexoNativeFixInfo,
     clearExomasteryProfileCache: () => {
       reloadSpeciesDerivedCaches();
+      // The tree too (review 2026-11-10 §5): entries carry observedTemperatureK / colourVariant from the profiles.
+      loadSpeciesDatabase();
     },
     resetExobiology: () => {
       store.resetExobiologyTracking();

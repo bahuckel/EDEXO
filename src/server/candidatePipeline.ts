@@ -152,6 +152,11 @@ export function rankCandidates(
   markSampledDespiteUnlikely(matches, b, db);
   // Last, on the chances as shown: the map was fitted on them (chanceRecalibration.ts; owner, 2026-11-02).
   recalibrateFssChances(matches, !!b.genusHints?.length, root);
+  /*
+    Before a DSS too, one genus's species add up to at most 100 % (review 2026-11-10 A6: Tussock read 174.7 % on a
+    7-signal body). After the map, so the floors and the fitted map see the numbers they were measured on.
+  */
+  if (!b.genusHints?.length) capGenusTotals(matches);
   return split;
 }
 
@@ -162,7 +167,11 @@ export function rankCandidates(
  * true about 54 %. Order and the floors are untouched (a scaled row only moves down, never below what it was hidden at).
  */
 export function capNamedGeneraAfterDss(matches: SpeciesMatch[], b: Pick<BodyExoState, "genusHints">): void {
-  if (!b.genusHints?.length) return;
+  if (b.genusHints?.length) capGenusTotals(matches);
+}
+
+/** The shown rows of each genus scaled down together to 100 % where they add up to more; others untouched. */
+export function capGenusTotals(matches: SpeciesMatch[]): void {
   const total = new Map<string, number>();
   for (const m of matches) {
     const p = m.presenceProbabilityPercent;

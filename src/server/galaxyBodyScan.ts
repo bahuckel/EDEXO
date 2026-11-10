@@ -459,6 +459,11 @@ function empty(regionId: number, available: boolean): GalaxyBodyScanDTO {
 
 let regionNamesCache: readonly (string | null)[] | null = null;
 
+/** Refresh exomastery (speciesCacheReload.ts): `data/exomastery/region-map.json` is read again. */
+export function clearGalaxyRegionNamesCache(): void {
+  regionNamesCache = null;
+}
+
 function regionNames(): readonly (string | null)[] {
   if (regionNamesCache) return regionNamesCache;
   try {

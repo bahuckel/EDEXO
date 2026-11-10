@@ -37,6 +37,11 @@ import { loadFootScannedCatalog } from "./footScannedCatalog.js";
 
 let cached: Map<string, Record<string, number>> | null | undefined;
 
+/** Refresh exomastery (speciesCacheReload.ts). */
+export function clearSpeciesProvenanceCache(): void {
+  cached = undefined;
+}
+
 export function sectorSystemsPath(projectRoot: string): string {
   return path.join(projectRoot, "data", "exomastery", "sector-systems.json");
 }

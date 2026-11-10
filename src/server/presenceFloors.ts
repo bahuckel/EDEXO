@@ -12,6 +12,7 @@ import type {
 } from "../shared/types.js";
 import type { GameStateStore } from "./gameState.js";
 import { collectOwnOrganicLockSpeciesIds } from "./organicLocks.js";
+import { filterByGenusHints } from "./genusMatchUtils.js";
 import { regionIndexForSystem } from "./regionMapData.js";
 import { REGION_PRIOR_WEIGHT, rankSpeciesOnBody } from "./speciesLikelihood.js";
 import { applyMeasuredOdds } from "./measuredOdds.js";
@@ -224,7 +225,7 @@ export function presenceFloorFor(speciesId: string): number {
  * less (owner, 2026-10-09). Read once the whole pipeline has run; the chance can still move after the
  * floor (the genus prior), which is one of the answers.
  */
-export type FloorKept = "sampled" | "approximate" | "best" | "passed" | "genusShare" | "genusBest";
+export type FloorKept = "sampled" | "approximate" | "best" | "passed" | "genusShare" | "genusBest" | "twin";
 const floorKept = new WeakMap<SpeciesMatch, { why: FloorKept; pct: number }>();
 export function floorKeptReason(m: SpeciesMatch): { why: FloorKept; pct: number } | null {
   return floorKept.get(m) ?? null;
@@ -252,6 +253,29 @@ export function floorKeptReason(m: SpeciesMatch): { why: FloorKept; pct: number 
  *  - **Argue with the commander's own boots.** A species he has sampled on this body stays, whatever
  *    the model thinks of it.
  */
+/**
+ * The likeliest shown row of each genus a similar twin moon's DSS named (`siblingGenusHints`, review 2026-11-10 A3),
+ * before this body has a DSS of its own: the twin's genus is the hint, not its species (twins differ by up to 120 K).
+ * These rows keep their place: the presence floor and the genus veto pass them over.
+ */
+export function twinGenusRows<M extends Pick<SpeciesMatch, "entry" | "unlikely" | "presenceProbabilityPercent">>(
+  matches: M[],
+  b: Pick<BodyExoState, "genusHints" | "siblingGenusHints">,
+): Set<M> {
+  const out = new Set<M>();
+  if (b.genusHints?.length || !b.siblingGenusHints?.length) return out;
+  const named = new Set(filterByGenusHints(matches.map((m) => m.entry), b.siblingGenusHints).map((e) => e.genusDataDir));
+  const best = new Map<string, M>();
+  for (const m of matches) {
+    if (m.unlikely || !named.has(m.entry.genusDataDir)) continue;
+    const prev = best.get(m.entry.genusDataDir);
+    if (!prev || (m.presenceProbabilityPercent ?? Infinity) > (prev.presenceProbabilityPercent ?? Infinity))
+      best.set(m.entry.genusDataDir, m);
+  }
+  for (const m of best.values()) out.add(m);
+  return out;
+}
+
 export function demoteBelowPresenceFloor(
   matches: SpeciesMatch[],
   b: BodyExoState,
@@ -270,6 +294,7 @@ export function demoteBelowPresenceFloor(
   if (shown.length === 0) return;
 
   const keepAtLeast = 1;
+  const twin = twinGenusRows(shown, b);
   // Highest chance first, so the one row that survives an all-below-floor body is the best of them.
   // An unmeasured row sorts with the survivors rather than the casualties: it is not a weak claim,
   // it is no claim.
@@ -285,7 +310,8 @@ export function demoteBelowPresenceFloor(
       !Number.isFinite(pct) ||
       m.organicAnalysisComplete === true ||
       m.approximateMatch === true ||
-      confirmed.has(m.entry.id);
+      confirmed.has(m.entry.id) ||
+      twin.has(m);
     const floor = presenceFloorFor(m.entry.id);
     if (immune || pct >= floor || kept < keepAtLeast) {
       kept++;
@@ -298,7 +324,9 @@ export function demoteBelowPresenceFloor(
                 ? "approximate"
                 : pct >= floor
                   ? "passed"
-                  : "best",
+                  : twin.has(m)
+                    ? "twin"
+                    : "best",
           pct,
         });
       }

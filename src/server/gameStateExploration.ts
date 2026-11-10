@@ -98,7 +98,12 @@ export function mergeExplorationScan(store: GameStateStore, line: JournalLine, t
     return;
   }
   const k = bodyKey(systemAddress, bodyId);
-  const prev = store.explorationScans.get(k);
+  /*
+    The archived copy too, after a sale or a death (review 2026-11-10 A9): the record below fills its gaps from `prev`
+    and the sold copy is deleted once this one is stored, so a re-scan built from the live map alone lost the physics
+    a later line does not repeat (a Detailed scan's materials, composition, orbit).
+  */
+  const prev = store.explorationScans.get(k) ?? store.soldExplorationScans.get(k);
   const pickStr = (v: unknown): string | undefined =>
     typeof v === "string" && v.trim() ? v.trim() : undefined;
   const pickNum = (v: unknown): number | undefined =>
@@ -347,10 +352,11 @@ export function syncExoStateFromSiblingMoons(store: GameStateStore, systemAddres
       siblings and so cannot say whose DSS it was.
     */
     const selfOwnGenera = store.dssMappedBodyKeys.has(sk);
+    // Kept apart from this body's own list (review 2026-11-10 A3): a twin's genera are a hint, not its DSS.
     if (sib.genusHints?.length && !selfOwnGenera) {
-      const merged = mergeGenusHints(self.genusHints, sib.genusHints);
-      if (merged && merged.length > (self.genusHints?.length ?? 0)) {
-        self.genusHints = merged;
+      const merged = mergeGenusHints(self.siblingGenusHints ?? null, sib.genusHints);
+      if (merged && merged.length > (self.siblingGenusHints?.length ?? 0)) {
+        self.siblingGenusHints = merged;
         changed = true;
       }
     }
@@ -407,7 +413,8 @@ export function propagateExoAmongSimilarMoons(
      * three signals and was never DSS'd. The gate it accused was correct: 4 c is 154 K and every
      * Tubus starts at 160.
      *
-     * Hints merge (below) because a genus really seen next door is worth suggesting here. A count
+     * Hints merge (below, into `siblingGenusHints`, never this body's own list: review 2026-11-10 A3) because a genus
+     * really seen next door is worth suggesting here. A count
      * cannot merge — it is a fact about one body, and the sibling's own is the only one that is
      * about this one.
      */
@@ -423,7 +430,7 @@ export function propagateExoAmongSimilarMoons(
       if (sourceBody.biologicalSignals != null && !sibOwnCount)
         b.biologicalSignals = sourceBody.biologicalSignals;
       if (sourceBody.genusHints?.length && !sibOwnGenera) {
-        b.genusHints = mergeGenusHints(b.genusHints, sourceBody.genusHints);
+        b.siblingGenusHints = mergeGenusHints(b.siblingGenusHints ?? null, sourceBody.genusHints);
       }
       if (sourceBody.signalHints?.length) {
         const set = new Set<string>([...(b.signalHints ?? []), ...sourceBody.signalHints]);
@@ -436,7 +443,7 @@ export function propagateExoAmongSimilarMoons(
       // one's, and overwriting it deleted genera the commander went on to scan there. See the
       // `fss_signals` branch above, which has always merged.
       if (sourceBody.genusHints?.length && !sibOwnGenera) {
-        b.genusHints = mergeGenusHints(b.genusHints, sourceBody.genusHints);
+        b.siblingGenusHints = mergeGenusHints(b.siblingGenusHints ?? null, sourceBody.genusHints);
       }
       if (sourceBody.signalHints?.length) {
         const set = new Set<string>([...(b.signalHints ?? []), ...sourceBody.signalHints]);
@@ -445,7 +452,7 @@ export function propagateExoAmongSimilarMoons(
     } else if (mode === "dss_complete") {
       b.dssComplete = true;
       if (sourceBody.genusHints?.length && !sibOwnGenera) {
-        b.genusHints = mergeGenusHints(b.genusHints, sourceBody.genusHints);
+        b.siblingGenusHints = mergeGenusHints(b.siblingGenusHints ?? null, sourceBody.genusHints);
       }
       if (sourceBody.biologicalSignals != null && !sibOwnCount)
         b.biologicalSignals = sourceBody.biologicalSignals;

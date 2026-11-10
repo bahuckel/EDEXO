@@ -227,8 +227,8 @@ export function codexVariantId(projectRoot: string, displayName: string, colour:
   return idMemo.map.get(`${species}|${colour.trim().toLowerCase()}`) ?? null;
 }
 
-/** For tests. */
-export function resetCodexFirst(): void {
+/** Refresh exomastery (speciesCacheReload.ts) and tests. */
+export function clearCodexFirstCache(): void {
   memo = null;
   idMemo = null;
   edMemo = null;

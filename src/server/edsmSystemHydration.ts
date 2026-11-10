@@ -178,6 +178,16 @@ export function mapBarycentreBodyToExplorationRecord(
   };
 }
 
+/** `{"Ice": 6, "Rock": 62.7}` (per cent, EDSM / Spansh) → `{Ice: 0.06, Rock: 0.627}` (the journal's fractions). */
+export function solidCompositionAsFractions(raw: unknown): Record<string, number> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "number" && Number.isFinite(v)) out[k] = v / 100;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 export function mapEdsmBodyToExplorationRecord(
   body: Record<string, unknown>,
   systemAddress: number,
@@ -285,8 +295,14 @@ export function mapEdsmBodyToExplorationRecord(
   const mat = mapMaterialsToJournal(body.materials);
   if (mat) rec.materials = mat;
 
-  const comp = body.solidComposition;
-  if (comp && typeof comp === "object") rec.composition = comp;
+  /*
+    EDSM and Spansh send per cent (`{"Rock": 62.7}`); the journal's `Composition`, which every reader of
+    `rec.composition` expects, is a 0-1 fraction (review 2026-11-10 A4). Stored as sent, a 6 % ice body read as
+    600 %: measured exclusions fired on it ("ice content ≥ 38 %" hid Bacterium cerbrus) and the split tables put
+    every hydrated body in their last bin.
+  */
+  const comp = solidCompositionAsFractions(body.solidComposition);
+  if (comp) rec.composition = comp;
 
   /*
     EDSM and Spansh send `{"Carbon dioxide": 99.01}`; everything downstream reads the journal's list

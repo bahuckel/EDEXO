@@ -127,6 +127,15 @@ describe("selling cartographic data", () => {
     st.apply(sellCartographic);
     expect(st.physicsExplorationScan(KEY)).not.toBeNull();
   });
+
+  // Review 2026-11-10 A9: a re-scan after the sale filled its gaps from the live map only, then deleted the archive.
+  it("keeps what a re-scan after the sale does not repeat", () => {
+    st.apply(j({ ...(scan as object), Composition: { Ice: 0.06, Rock: 0.627, Metal: 0.313 } }));
+    st.apply(sellCartographic);
+    st.apply(j({ ...(scan as object), Composition: {} }));
+    expect(st.explorationScans.get(KEY)?.composition).toEqual({ Ice: 0.06, Rock: 0.627, Metal: 0.313 });
+    expect(st.soldExplorationScans.has(KEY)).toBe(false);
+  });
 });
 
 describe("selling the organic samples", () => {

@@ -11,6 +11,7 @@ import { atmosphereKey } from "../src/server/genusBodySplit.js";
 import { atmosphereObservationKey } from "../src/server/speciesAtmosphereObservations.js";
 import { atmosphereCompositionKey, atmosphereTypeKeyOf, normalizeScanAtmosphereForMatch } from "../src/shared/scanAtmosphereMatch.js";
 import { atmosphereTypeFromDump } from "../src/server/galaxyBodyScan.js";
+import { splitFacts } from "../src/server/speciesSplit.js";
 import type { PlanetScan } from "../src/shared/types.js";
 
 const PAIRS: [string, string[]][] = [
@@ -33,6 +34,8 @@ const PAIRS: [string, string[]][] = [
   ["", ["No atmosphere", "None"]],
 ];
 const scan = (t: string) => ({ AtmosphereType: t }) as unknown as PlanetScan;
+const splitAtmo = (t: string) =>
+  splitFacts({ scan: scan(t), rec: null, stars: [], coords: null, signals: null, catalogue: null, root: "" }).cat.atmo ?? "";
 const KEYERS: [string, (t: string) => string][] = [
   ["bodyTypeAtmosphere", (t) => bodyTypeAtmosphere(t)],
   ["genus prior atmosphereKey", (t) => atmosphereKey(t)],
@@ -40,6 +43,8 @@ const KEYERS: [string, (t: string) => string][] = [
   ["atmosphereTypeKeyOf", (t) => atmosphereTypeKeyOf(scan(t))],
   ["atmosphereCompositionKey", (t) => atmosphereCompositionKey(normalizeScanAtmosphereForMatch(scan(t)))],
   ["galaxy dump -> atmosphereTypeKeyOf", (t) => atmosphereTypeKeyOf(scan(atmosphereTypeFromDump(t) ?? ""))],
+  // Review 2026-11-10 A5: the species split tables had a keyer of their own.
+  ["species split splitFacts", splitAtmo],
 ];
 
 describe("atmosphere keys across sources", () => {
@@ -53,5 +58,7 @@ describe("atmosphere keys across sources", () => {
   it("keeps -rich apart where the tables tell them apart", () => {
     expect(atmosphereTypeKeyOf(scan("NeonRich"))).not.toBe(atmosphereTypeKeyOf(scan("Neon")));
     expect(atmosphereKey("Thin Neon-rich")).not.toBe(atmosphereKey("Thin Neon"));
+    // In the split table's own levels (data/exomastery/species-split.json categories.atmo).
+    expect(["Thin Argon-rich", "Hot thin Carbon dioxide", "None"].map(splitAtmo)).toEqual(["argonrich", "carbondioxide", "none"]);
   });
 });

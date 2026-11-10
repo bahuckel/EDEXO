@@ -46,8 +46,14 @@ export interface BodyExoState {
   geologicalSignals?: number | null;
   /** Surface geology codex entries he logged on this body (`codex_ent_fumarole_…` keys). */
   geologyLogged?: string[];
-  /** From SAASignalsFound after DSS */
+  /** From SAASignalsFound after DSS: this body's own, never a twin moon's (see `siblingGenusHints`). */
   genusHints: GenusHint[] | null;
+  /**
+   * Genera a similar twin moon's DSS named (review 2026-11-10 A3). A hint, never this body's DSS: twins at different
+   * counts do not carry the same genera, and used as the list it made a genus the twin lacks unreachable here. Before
+   * this body's own DSS the likeliest row of each keeps its place (presence floor, genus veto); nothing is filtered.
+   */
+  siblingGenusHints?: GenusHint[] | null;
   dssComplete: boolean;
   scan: PlanetScan | null;
   /**

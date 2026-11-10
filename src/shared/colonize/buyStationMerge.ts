@@ -44,8 +44,18 @@ export function mergeBuyStationHits(a: MaterialBuyStationHit, b: MaterialBuyStat
   const other = primary === a ? b : a;
   const newer = Date.parse(a.foundAtIso) >= Date.parse(b.foundAtIso) ? a : b;
   const typeWinner = typeQuality(a.stationType) >= typeQuality(b.stationType) ? a : b;
+  /*
+    Stock from the newer sighting (review 2026-11-10 B2): the larger of the two kept a station at 50,000 t after a
+    fresh look found 300 t, with a fresh date, so it never aged out. The larger only when neither is newer.
+  */
+  const ta = Date.parse(a.foundAtIso);
+  const tb = Date.parse(b.foundAtIso);
   const supply =
-    a.supply != null && b.supply != null ? Math.max(a.supply, b.supply) : (a.supply ?? b.supply);
+    a.supply != null && b.supply != null
+      ? Number.isFinite(ta) && Number.isFinite(tb) && ta !== tb
+        ? (ta > tb ? a : b).supply
+        : Math.max(a.supply, b.supply)
+      : (a.supply ?? b.supply);
   return {
     ...primary,
     systemName: primary.systemName || other.systemName,

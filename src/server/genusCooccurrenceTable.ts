@@ -45,7 +45,7 @@ export function loadGenusCooccurrenceTable(projectRoot: string): GenusCooccurren
   return table;
 }
 
-/** Test seam — the loader caches per root, and a test that writes a table needs the next read to see it. */
-export function clearGenusCooccurrenceCacheForTests(): void {
+/** Refresh exomastery (speciesCacheReload.ts), and a test that writes a table and needs the next read to see it. */
+export function clearGenusCooccurrenceCache(): void {
   cache.clear();
 }

@@ -100,15 +100,10 @@ function parseMarketPayload(payload: unknown): EdsmCommodityRow[] | null {
     const name = typeof r.name === "string" ? r.name : id;
     const stock = typeof r.stock === "number" ? r.stock : 0;
     if (!id || stock <= 0) continue;
-    const sellPrice =
-      typeof r.sellPrice === "number"
-        ? r.sellPrice
-        : typeof r.sell_price === "number"
-          ? r.sell_price
-          : typeof r.buyPrice === "number"
-            ? r.buyPrice
-            : 0;
-    out.push({ id, name, buyPrice: sellPrice, stock });
+    // What the commander pays is EDSM's `buyPrice` (with stock), not `sellPrice` (with demand): review 2026-11-10 B1.
+    const buyPrice =
+      typeof r.buyPrice === "number" ? r.buyPrice : typeof r.buy_price === "number" ? r.buy_price : 0;
+    out.push({ id, name, buyPrice, stock });
   }
   return out;
 }

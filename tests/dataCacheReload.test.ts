@@ -256,7 +256,6 @@ describe("Refresh exomastery's list", () => {
     clearFirstDiscoveryBacklogCache: "the commander's journal backlog (test seam)",
     clearGalaxyCatalogueCache: "galaxy value search over the downloaded index",
     clearSharedExomasteryCache: "cleared first by reloadExomastery (edexoBootstrap.ts)",
-    clearSpeciesRarityCache: "cleared inside loadSpeciesDatabase (speciesDb.ts)",
     clearStatisticsCache: "the commander's journal statistics",
     clearVisitedImportCache: "the commander's visited-stars import",
   };
@@ -282,5 +281,45 @@ describe("Refresh exomastery's list", () => {
     expect(missing).toEqual([]);
     // The list ends by dropping the predictions ranked with the old tables.
     expect(body).toContain("dropSpeciesComputed()");
+  });
+});
+
+/*
+  Review 2026-11-10 §5: the list was kept by hand and missed a cache a fourth time (genus co-occurrence, colour rarity).
+  Any module under src/server that reads data/exomastery, data/species or data/codex and keeps something at module
+  level must have a clear / reset / drop function that the button's list calls, or be named below with its reason.
+*/
+describe("every cache of a refreshed data file", () => {
+  const NOT_DATA: Record<string, string> = {
+    "paths.ts": "the install's folders, not a data file",
+    "routes/galaxyRoutes.ts": "a WeakMap keyed by the species database: a reload makes a new key",
+  };
+
+  it("is cleared by Refresh exomastery", async () => {
+    const { readFileSync, readdirSync, statSync } = await import("node:fs");
+    const serverDir = join(__dirname, "../src/server");
+    const reload = readFileSync(join(serverDir, "speciesCacheReload.ts"), "utf8");
+    const listed = reload.slice(reload.indexOf("function reloadSpeciesDerivedCaches"));
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (name.endsWith(".ts")) files.push(p);
+      }
+    };
+    walk(serverDir);
+    const missing: string[] = [];
+    for (const file of files) {
+      const rel = file.slice(serverDir.length + 1).replace(/\\/g, "/");
+      if (rel === "speciesCacheReload.ts" || rel in NOT_DATA) continue;
+      const src = readFileSync(file, "utf8");
+      const readsData = /"data", "(exomastery|species|codex)"|data\/(exomastery|species|codex)\/|"(exomastery|species|codex)", "/.test(src);
+      const keeps = /^let |^const [A-Za-z_]+ *(:[^=]*)?= *new (Map|WeakMap|Set)\b/m.test(src);
+      if (!readsData || !keeps) continue;
+      const clearers = [...src.matchAll(/export function ((?:clear|reset|drop)[A-Za-z]*)\(/g)].map((m) => m[1]!);
+      if (!clearers.some((c) => listed.includes(`${c}()`))) missing.push(rel);
+    }
+    expect(missing).toEqual([]);
   });
 });
