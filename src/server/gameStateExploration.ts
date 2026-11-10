@@ -348,8 +348,8 @@ export function syncExoStateFromSiblingMoons(store: GameStateStore, systemAddres
       back over the answer the game had just given, and Tubus reappeared on a body the commander
       had personally confirmed does not have it.
 
-      `dssMappedBodyKeys` is the right test and not `dssComplete`, which propagates between
-      siblings and so cannot say whose DSS it was.
+      `dssMappedBodyKeys` is the right test (`dssComplete` no longer propagates between siblings either, owner
+      2026-11-11, but a cache from before can still hold a copied one).
     */
     const selfOwnGenera = store.dssMappedBodyKeys.has(sk);
     // Kept apart from this body's own list (review 2026-11-10 A3): a twin's genera are a hint, not its DSS.
@@ -359,10 +359,6 @@ export function syncExoStateFromSiblingMoons(store: GameStateStore, systemAddres
         self.siblingGenusHints = merged;
         changed = true;
       }
-    }
-    if (sib.dssComplete && !self.dssComplete) {
-      self.dssComplete = true;
-      changed = true;
     }
     if (sib.scan?.PlanetClass && !self.scan?.PlanetClass) {
       self.scan = buildSiblingPlanetScan(store, sib.scan, systemAddress, bodyId, selfRec);
@@ -450,7 +446,7 @@ export function propagateExoAmongSimilarMoons(
         b.signalHints = set.size ? [...set] : b.signalHints;
       }
     } else if (mode === "dss_complete") {
-      b.dssComplete = true;
+      // Mapped is a fact about one body, like its count (owner 2026-11-11): a twin showed "DSS ✓" unmapped.
       if (sourceBody.genusHints?.length && !sibOwnGenera) {
         b.siblingGenusHints = mergeGenusHints(b.siblingGenusHints ?? null, sourceBody.genusHints);
       }

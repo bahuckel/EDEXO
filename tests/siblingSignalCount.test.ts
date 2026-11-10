@@ -179,6 +179,19 @@ describe("a sibling's own signal count", () => {
     expect((body(18)?.genusHints ?? []).length).toBe(3);
   });
 
+  // Owner 2026-11-11: mapped is a fact about one body; an unmapped twin showed "DSS ✓".
+  it("does not mark a twin mapped when its sibling's DSS completes; its own DSS does", () => {
+    const complete = (bodyId: number, name: string) =>
+      ({ timestamp: T, event: "SAAScanComplete", BodyName: name, BodyID: bodyId, SystemAddress: SYS }) as unknown as JournalLine;
+    store.apply(complete(18, "Plio Aip NM-U d3-13 4 b"));
+    store.apply(saaSignals(18, "Plio Aip NM-U d3-13 4 b", 3, ["Bacterial", "Tubus", "Tussocks"]));
+    store.apply(moonScan(20, "Plio Aip NM-U d3-13 4 c", 154.121689));
+    expect(body(18)?.dssComplete).toBe(true);
+    expect(body(20)?.dssComplete ?? false).toBe(false);
+    store.apply(complete(20, "Plio Aip NM-U d3-13 4 c"));
+    expect(body(20)?.dssComplete).toBe(true);
+  });
+
   // As a twin's hint, never as this body's own DSS list (review 2026-11-10 A3): at 2 signals against the twin's 3,
   // the list was guaranteed to hold a genus 4 c lacks, and as its own list it filtered the matcher.
   it("carries the genera across regardless, as a twin's hint, because a hint is not a count", () => {

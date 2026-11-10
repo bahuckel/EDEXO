@@ -131,8 +131,10 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
   43: a twin moon's DSS genera go to `siblingGenusHints`, no longer into the body's own `genusHints` (review 2026-11-10
       A3); cached twins had them merged into their own list. And a re-scan after a sale fills its gaps from the sold copy
       (A9).
+  44: a twin moon no longer inherits `dssComplete` from its sibling (owner 2026-11-11): cached twins read "DSS ✓"
+      unmapped.
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 43;
+export const JOURNAL_MERGE_CACHE_FORMAT = 44;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {
