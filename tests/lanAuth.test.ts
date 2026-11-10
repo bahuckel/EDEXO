@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { IncomingMessage } from "node:http";
@@ -139,6 +139,17 @@ describe("loadOrCreateLanKey", () => {
     expect(first.length).toBeGreaterThanOrEqual(16);
     expect(readFileSync(file, "utf8").trim()).toBe(first);
     expect(loadOrCreateLanKey(file)).toBe(first);
+  });
+
+  // POSIX modes only mean something off Windows (review 2026-11-07 §7).
+  it.skipIf(process.platform === "win32")("keeps the key file readable by its owner only, an old one too", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "edexo-lan-"));
+    const file = path.join(dir, "lan-key.txt");
+    loadOrCreateLanKey(file);
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+    chmodSync(file, 0o644);
+    loadOrCreateLanKey(file);
+    expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 
   it("replaces a stored value too short to be a key", () => {

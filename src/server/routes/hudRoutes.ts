@@ -1,5 +1,6 @@
 import { getHudBridge } from "../hudBridge.js";
 import express from "express";
+import { localOnly } from "../lanAuth.js";
 
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { setHudPitch } from "../liveFix.js";
@@ -9,8 +10,9 @@ export function registerHudRoutes(app: express.Express, opts: HttpServerOptions,
   /*
     The pitch the screen marker's page read off the game's HUD (aim/main.tsx, the launcher's pitch reader): local, from
     this PC's own capture, to this PC's own server. `{ pitchDeg, rollDeg }`, or `{}` when it could not read the HUD.
+    `localOnly` (review 2026-11-07 §7): only this PC captures its screen; a LAN client could only forge a reading.
   */
-  app.post("/api/hud-pitch", (req, res) => {
+  app.post("/api/hud-pitch", localOnly, (req, res) => {
     const store = opts.getJournalStore?.();
     if (!store) return void res.status(503).json({ ok: false });
     const b = (req.body ?? {}) as { pitchDeg?: unknown; rollDeg?: unknown };
@@ -24,7 +26,7 @@ export function registerHudRoutes(app: express.Express, opts: HttpServerOptions,
     The target's distance the screen marker's page read off the HUD (aim/useDistanceReader.ts, the launcher's distance
     reader): local, `{ distLs }`, for the body Status.json says is targeted now. The Scan route's ship follows it.
   */
-  app.post("/api/hud-target-distance", (req, res) => {
+  app.post("/api/hud-target-distance", localOnly, (req, res) => {
     const store = opts.getJournalStore?.();
     if (!store) return void res.status(503).json({ ok: false });
     const d = (req.body ?? {}) as { distLs?: unknown };

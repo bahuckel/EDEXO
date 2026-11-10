@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import express from "express";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { answerErrorsAsJson, catchAsyncRejections } from "../src/server/routes/asyncErrors.js";
+import { answerErrorsAsJson, catchAsyncRejections, redactForOtherDevices } from "../src/server/routes/asyncErrors.js";
 
 let server: http.Server | null = null;
 
@@ -55,5 +55,27 @@ describe("route errors", () => {
     const res = await fetch(`${base}/echo`, { method: "POST", headers: { "content-type": "application/json" }, body: "{nope" });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "bad request" });
+  });
+});
+
+describe("answers to other devices (review 2026-11-07 §7, 2026-11-10 C5)", () => {
+  it("lose the home folder, nested texts too; this PC's own pages keep the whole message", async () => {
+    const home = (await import("node:os")).homedir();
+    const message = `EPERM: operation not permitted, open '${home}/Saved Games/x.json'`;
+    for (const local of [false, true]) {
+      const app = express();
+      app.use(redactForOtherDevices(() => local));
+      app.get("/fail", (_req, res) => res.status(500).json({ ok: false, error: message, status: { error: message } }));
+      server = http.createServer(app);
+      await new Promise<void>((r) => server!.listen(0, "127.0.0.1", () => r()));
+      const res = await fetch(`http://127.0.0.1:${(server!.address() as AddressInfo).port}/fail`);
+      expect(res.headers.get("content-type")).toMatch(/^application\/json/);
+      const body = (await res.json()) as { ok: boolean; error: string; status: { error: string } };
+      expect(body.ok).toBe(false);
+      const want = local ? message : "EPERM: operation not permitted, open '~/Saved Games/x.json'";
+      expect([body.error, body.status.error]).toEqual([want, want]);
+      await new Promise<void>((r) => server!.close(() => r()));
+      server = null;
+    }
   });
 });

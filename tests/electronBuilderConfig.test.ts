@@ -34,6 +34,16 @@ describe("electron-builder files", () => {
     expect(loadConfig("1").files).toContain("electron/diag.cjs");
   });
 
+  // Review 2026-11-07 §7: the exe cannot be run as a bare Node or with a debugger attached.
+  it("burns the run-as-node, NODE_OPTIONS and inspect fuses off, in every build", () => {
+    for (const diag of [undefined, "1"])
+      expect((loadConfig(diag) as unknown as { electronFuses: object }).electronFuses).toEqual({
+        runAsNode: false,
+        enableNodeOptionsEnvironmentVariable: false,
+        enableNodeCliInspectArguments: false,
+      });
+  });
+
   /*
     Every file the Electron main process loads has to be packed, or the packaged app dies at start
     with "Cannot find module" while the dev run works. main.cjs was split into hudWindows.cjs and

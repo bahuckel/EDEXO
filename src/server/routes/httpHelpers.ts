@@ -2,6 +2,7 @@ import path from "node:path";
 import { gzip as gzipCb } from "node:zlib";
 import express from "express";
 import { isLoopbackAddress } from "../lanAuth.js";
+import { forOtherDevices } from "../otherDevices.js";
 
 /** Below this, framing and CPU cost more than the bytes saved. */
 export const GZIP_MIN_BYTES = 8192;
@@ -15,6 +16,8 @@ export const GZIP_MIN_BYTES = 8192;
  *
  * Not for this PC's own windows (load-time audit 2026-10-22): over loopback the bytes cost nothing
  * and the gzip and the window's gunzip are pure cost (0.8-10 MB on each window's first load).
+ *
+ * Another device gets it without the home folder (otherDevices.ts), as every `res.json` answer.
  */
 export function sendJson(
   req: express.Request,
@@ -22,11 +25,12 @@ export function sendJson(
   body: string,
   onSent?: (rawBytes: number, sentBytes: number) => void,
 ): void {
-  const raw = Buffer.from(body, "utf8");
+  const local = isLoopbackAddress(req.socket?.remoteAddress);
+  const raw = Buffer.from(local ? body : forOtherDevices(body), "utf8");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Vary", "Accept-Encoding");
   const acceptsGzip = String(req.headers["accept-encoding"] ?? "").includes("gzip");
-  if (!acceptsGzip || raw.length < GZIP_MIN_BYTES || isLoopbackAddress(req.socket?.remoteAddress)) {
+  if (!acceptsGzip || raw.length < GZIP_MIN_BYTES || local) {
     onSent?.(raw.length, raw.length);
     res.end(raw);
     return;

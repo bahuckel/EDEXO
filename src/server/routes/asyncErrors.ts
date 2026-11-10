@@ -1,4 +1,5 @@
 import type express from "express";
+import { forOtherDevices } from "../otherDevices.js";
 
 /**
  * Express 4 does not catch a rejected async handler: the rejection goes unhandled and the dev entry
@@ -47,4 +48,25 @@ export function catchAsyncRejections(app: express.Express): void {
       );
     };
   }
+}
+
+/**
+ * A JSON answer to another device carries no home folder anywhere in it (review 2026-11-07 §7, 2026-11-10 C5): some
+ * 40 routes answer `e.message`, which for a file error holds the path and with it the Windows account name, and
+ * status answers carry the journal file's and folders' paths. Home folder → `~` over the serialised body
+ * (otherDevices.ts); this PC's own pages keep the whole answer. sendJson (/api/state) does the same itself.
+ */
+export function redactForOtherDevices(isLocal: (req: express.Request) => boolean): express.RequestHandler {
+  return (req, res, next) => {
+    if (!isLocal(req)) {
+      const json = res.json.bind(res);
+      res.json = (body?: unknown) => {
+        const text = body === undefined ? undefined : JSON.stringify(body);
+        if (text === undefined) return json(body);
+        if (!res.get("Content-Type")) res.type("json");
+        return res.send(forOtherDevices(text));
+      };
+    }
+    next();
+  };
 }

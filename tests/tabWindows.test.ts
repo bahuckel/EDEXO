@@ -125,6 +125,9 @@ describe("tab windows", () => {
     await handle.get("edexo:tab-detach")!({ sender: main.webContents }, { kind: "poi", x: 0, y: 0 });
     const win = FakeWindow.made[1]!;
     const key = new URL(win.webContents.url).searchParams.get("tabwin")!;
+    // A page that is not one of the tab windows is not listened to (review 2026-11-07 §7).
+    on.get("edexo:tab-moved")!({ sender: {} as never }, { kind: "poi", from: key });
+    expect(win.webContents.sent).not.toContainEqual(["edexo:tab-remove", "poi"]);
     on.get("edexo:tab-moved")!({ sender: main.webContents }, { kind: "poi", from: key });
     expect(win.webContents.sent).toContainEqual(["edexo:tab-remove", "poi"]);
     on.get("edexo:tab-window-empty")!({ sender: win.webContents });

@@ -7,7 +7,7 @@ import { getProjectRoot, getSpeciesDataDir } from "../paths.js";
 import { isLoopbackAddress, localOnly } from "../lanAuth.js";
 
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
-import { CONTENT_SECURITY_POLICY } from "../csp.js";
+import { contentSecurityPolicyFor } from "../csp.js";
 import {
   eliteAccountsRoot,
   findVisitedCacheFiles,
@@ -145,7 +145,7 @@ export function registerExomasteryRoutes(
         const norm = absPath.replace(/\\/g, "/").toLowerCase();
         if (norm.endsWith(".html")) {
           res.setHeader("Cache-Control", "no-store, max-age=0, must-revalidate");
-          res.setHeader("Content-Security-Policy", CONTENT_SECURITY_POLICY);
+          res.setHeader("Content-Security-Policy", contentSecurityPolicyFor(res.req.headers.host));
         } else if (/\/assets\//.test(norm)) {
           res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         }
@@ -168,7 +168,7 @@ export function registerExomasteryRoutes(
       return;
     }
     res.setHeader("Cache-Control", "no-store, max-age=0, must-revalidate");
-    res.setHeader("Content-Security-Policy", CONTENT_SECURITY_POLICY);
+    res.setHeader("Content-Security-Policy", contentSecurityPolicyFor(req.headers.host));
     res.sendFile(path.join(webRoot, "index.html"), {
       etag: false,
       lastModified: false,

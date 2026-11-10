@@ -31,8 +31,10 @@ export function renameWithRetry(from: string, to: string, tries = 5): void {
 
 export function writeFileAtomic(file: string, data: string, options: WriteFileOptions = "utf8"): void {
   const tmp = `${file}.tmp-${process.pid}`;
+  // A `mode` in the options is the new file's (the temporary file is opened here, so writeFileSync would ignore it).
+  const mode = typeof options === "object" && options?.mode != null ? options.mode : undefined;
   try {
-    const fd = openSync(tmp, "w");
+    const fd = openSync(tmp, "w", mode);
     try {
       writeFileSync(fd, data, options);
       fsyncSync(fd);

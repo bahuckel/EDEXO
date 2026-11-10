@@ -16,6 +16,12 @@ function registerLauncherIpc(
 ) {
   const { app, dialog, ipcMain, BrowserWindow } = electron;
   const { closeToTray, setCloseToTray, trayAvailability } = tray;
+  /*
+    What changes this PC's windows and settings answers the launcher only (review 2026-11-07 §7, code review E): every
+    caller is a launcher script, and another of the app's pages (or a frame inside one) has no business opening HUDs,
+    moving them or switching the tray and the screen marker. A refused call gets the current state back.
+  */
+  const fromLauncher = (evt) => !!getMainWindow() && !getMainWindow().isDestroyed() && evt.sender === getMainWindow().webContents;
 
   ipcMain.handle("edexo:foot-overlay-state", () => ({
     opened: huds.paths().length > 0,
@@ -26,7 +32,10 @@ function registerLauncherIpc(
   // The screen marker (aimWindow.cjs): the launcher's switch, off by default.
   // The screen marker's pitch reader: the game monitor's capture id, to the marker's own page only (aimWindow.cjs).
   ipcMain.handle("edexo:aim-capture-source", (evt) => (aim ? aim.captureSource(evt.sender) : null));
-  ipcMain.handle("edexo:set-aim-overlay", (_evt, opts) => ({ on: aim ? aim.set(!!(opts && typeof opts === "object" && opts.on === true)) : false }));
+  ipcMain.handle("edexo:set-aim-overlay", (evt, opts) => {
+    if (!fromLauncher(evt)) return { on: false, refused: true };
+    return { on: aim ? aim.set(!!(opts && typeof opts === "object" && opts.on === true)) : false };
+  });
 
   ipcMain.handle("edexo:open-app-window", () => appWindows.openAppUiWindow(iconForChild));
   ipcMain.handle("edexo:open-colonize-window", () => appWindows.openColonizeWindow(iconForChild));
@@ -57,8 +66,8 @@ function registerLauncherIpc(
     else gpuSafe.writeGpuSafe(gpuSafeDir, { auto: false, reason: "turned off in the launcher", at: new Date().toISOString() });
     return graphicsPref();
   });
-  ipcMain.handle("edexo:set-tray-pref", (_evt, opts) => {
-    setCloseToTray(!!(opts && typeof opts === "object" && opts.enabled));
+  ipcMain.handle("edexo:set-tray-pref", (evt, opts) => {
+    if (fromLauncher(evt)) setCloseToTray(!!(opts && typeof opts === "object" && opts.enabled));
     return { enabled: closeToTray(), ...trayAvailability() };
   });
   ipcMain.handle("edexo:hotkey-status", () => ({
@@ -67,7 +76,6 @@ function registerLauncherIpc(
   }));
   ipcMain.handle("edexo:get-keybinds", () => keybinds.get());
   // Global keys are the launcher's to change (1.2.19 review): no other page, whatever it is, registers shortcuts.
-  const fromLauncher = (evt) => !!getMainWindow() && !getMainWindow().isDestroyed() && evt.sender === getMainWindow().webContents;
   ipcMain.handle("edexo:pause-keybinds", (evt, opts) =>
     fromLauncher(evt) ? keybinds.pause(!!(opts && typeof opts === "object" && opts.on)) : keybinds.get(),
   );
@@ -79,29 +87,37 @@ function registerLauncherIpc(
     return r;
   });
 
-  ipcMain.handle("edexo:open-hud-overlay", async (_evt, opts) =>
-    huds.request(hudPathFrom(opts), hudWidthFrom(opts), hudHeightFrom(opts), iconForChild, "open"),
+  const refusedHuds = () => ({ opened: false, paths: huds.paths(), refused: true });
+  ipcMain.handle("edexo:open-hud-overlay", async (evt, opts) =>
+    fromLauncher(evt)
+      ? huds.request(hudPathFrom(opts), hudWidthFrom(opts), hudHeightFrom(opts), iconForChild, "open")
+      : refusedHuds(),
   );
 
-  ipcMain.handle("edexo:toggle-hud-overlay", async (_evt, opts) =>
-    huds.request(hudPathFrom(opts), hudWidthFrom(opts), hudHeightFrom(opts), iconForChild, "toggle"),
+  ipcMain.handle("edexo:toggle-hud-overlay", async (evt, opts) =>
+    fromLauncher(evt)
+      ? huds.request(hudPathFrom(opts), hudWidthFrom(opts), hudHeightFrom(opts), iconForChild, "toggle")
+      : refusedHuds(),
   );
 
   /*
     The merged HUD. One window, its sections chosen by the query string; changing the sections is
     a `set` (the open window navigates) rather than a close-and-reopen, so it does not blink.
   */
-  ipcMain.handle("edexo:set-hud-overlay", async (_evt, opts) =>
-    huds.request(
-      hudPathFrom(opts, "/hud-overlay.html"),
-      hudWidthFrom(opts),
-      hudHeightFrom(opts),
-      iconForChild,
-      "set",
-    ),
+  ipcMain.handle("edexo:set-hud-overlay", async (evt, opts) =>
+    fromLauncher(evt)
+      ? huds.request(
+          hudPathFrom(opts, "/hud-overlay.html"),
+          hudWidthFrom(opts),
+          hudHeightFrom(opts),
+          iconForChild,
+          "set",
+        )
+      : refusedHuds(),
   );
 
-  ipcMain.handle("edexo:close-hud-overlay", async (_evt, opts) => {
+  ipcMain.handle("edexo:close-hud-overlay", async (evt, opts) => {
+    if (!fromLauncher(evt)) return { closed: false, paths: huds.paths(), refused: true };
     const o = opts && typeof opts === "object" ? opts : {};
     if (typeof o.pathname !== "string" || !o.pathname.trim()) {
       return { closed: false, paths: huds.paths() };
@@ -110,10 +126,11 @@ function registerLauncherIpc(
   });
 
   ipcMain.handle("edexo:get-hud-layout", () => huds.layout());
-  ipcMain.handle("edexo:set-hud-layout", (_evt, opts) =>
-    huds.setLayout(opts && typeof opts === "object" ? opts : {}),
+  ipcMain.handle("edexo:set-hud-layout", (evt, opts) =>
+    fromLauncher(evt) ? huds.setLayout(opts && typeof opts === "object" ? opts : {}) : huds.layout(),
   );
-  ipcMain.handle("edexo:toggle-hud-visibility", (_evt, opts) => {
+  ipcMain.handle("edexo:toggle-hud-visibility", (evt, opts) => {
+    if (!fromLauncher(evt)) return { hidden: undefined, refused: true };
     const o = opts && typeof opts === "object" ? opts : {};
     return { hidden: huds.toggleVisibility(typeof o.hidden === "boolean" ? o.hidden : undefined) };
   });
@@ -196,9 +213,11 @@ function registerLauncherIpc(
   );
   // Free move: the launcher starts and ends placing; a HUD page reports its drag (only HUD windows
   // in placing mode are listened to, see hudWindows.dragFromPage).
-  ipcMain.handle("edexo:set-hud-move-mode", (_evt, opts) => ({
-    moving: huds.setMoveMode(!!(opts && typeof opts === "object" && opts.on === true)),
-  }));
+  ipcMain.handle("edexo:set-hud-move-mode", (evt, opts) =>
+    fromLauncher(evt)
+      ? { moving: huds.setMoveMode(!!(opts && typeof opts === "object" && opts.on === true)) }
+      : { moving: false, refused: true },
+  );
   ipcMain.handle("edexo:hud-drag", (evt, opts) => {
     const phase = opts && typeof opts === "object" ? opts.phase : null;
     if (!["start", "move", "end", "done", "frame", "hover"].includes(phase)) return { ok: false };
@@ -211,7 +230,8 @@ function registerLauncherIpc(
   });
   ipcMain.handle("edexo:hud-unchain", (evt) => huds.unchainFromPage(BrowserWindow.fromWebContents(evt.sender)));
 
-  ipcMain.handle("edexo:toggle-foot-overlay", async () => {
+  ipcMain.handle("edexo:toggle-foot-overlay", async (evt) => {
+    if (!fromLauncher(evt)) return refusedHuds();
     try {
       return await huds.request("/distance-overlay.html", 404, 330, iconForChild, "toggle");
     } catch (e) {

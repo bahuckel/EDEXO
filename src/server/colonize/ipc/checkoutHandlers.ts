@@ -90,7 +90,12 @@ export function checkoutHandlers({ store, buyIndex }: IpcContext) {
     checkoutBasketMulti: async (payload) => {
       if (!payload || typeof payload !== "object") return { ok: false as const, err: "Invalid payload." };
       const p = asRecord(payload);
-      const { journalDir, filters, routingMode, skipCache, forceLiveScan, cacheOnly } = parseCheckoutRequest(p);
+      const { journalDir: asked, filters, routingMode, skipCache, forceLiveScan, cacheOnly } = parseCheckoutRequest(p);
+      /*
+        The docked market is read from this server's own journal folder, never from a folder the request names
+        (review 2026-11-07 §7): the page only ever echoed the snapshot's, which a LAN page gets without its home folder.
+      */
+      const journalDir = asked ? store.getJournalDir().trim() || null : null;
       const refs = parseSystemNames(p.referenceSystems);
       if (!refs.length) return { ok: false as const, err: "No reference systems." };
       const items = parseCheckoutItems(p.items);

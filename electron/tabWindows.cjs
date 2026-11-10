@@ -208,6 +208,8 @@ function createTabWindows(d) {
   });
   // A tab dropped on another window's strip: the window it came from lets go of it.
   d.ipcMain.on("edexo:tab-moved", (ev, req) => {
+    // From one of the tab windows only (review 2026-11-07 §7), like tab-detach.
+    if (!keyOf(ev.sender)) return;
     const from = windows.get(req?.from);
     if (live(from) && from.webContents !== ev.sender) from.webContents.send("edexo:tab-remove", req.kind);
   });

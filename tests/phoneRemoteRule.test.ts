@@ -31,6 +31,9 @@ const PC_ONLY = [
   "/api/ui/open-external",
   "/api/settings/open-miss-log",
   "/api/exobiology/reset",
+  // Only this PC captures its own screen (review 2026-11-07 §7).
+  "/api/hud-pitch",
+  "/api/hud-target-distance",
 ];
 
 describe("the phone as a remote", () => {

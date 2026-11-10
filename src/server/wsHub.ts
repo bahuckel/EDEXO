@@ -11,7 +11,8 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { ChangeTopics } from "./changeTopics.js";
 import type { AppSnapshot, BodyComputed, ExoLiveDTO, UiCommand } from "../shared/types.js";
 import { perfBytes, perfCount, perfTime } from "./perf.js";
-import { requestIsAuthorized, requestOriginIsAllowed } from "./lanAuth.js";
+import { isLoopbackAddress, requestIsAuthorized, requestOriginIsAllowed } from "./lanAuth.js";
+import { forOtherDevices } from "./otherDevices.js";
 import { frameSendOptions } from "./wsCompression.js";
 import { GZIP_MIN_BYTES } from "./routes/httpHelpers.js";
 import { appFieldsBodiesUnslimmed, parseWsChannel, slimBodyForApp, slimSnapshotForChannel, type WsChannel } from "./wsChannels.js";
@@ -46,8 +47,13 @@ export function createWsHub(deps: {
   isOwnLanHost: (name: string) => boolean;
 }): WsHub {
   const { lanKey, isOwnLanHost } = deps;
+  /** Sockets from another device: their frames go without the home folder (otherDevices.ts, review 2026-11-10 C5). */
+  const otherDevice = new WeakSet<WebSocket>();
   /** Every frame goes out through here: small ones raw, big ones deflated where deflate was agreed (wsCompression.ts). */
-  const sendFrame = (ws: WebSocket, msg: string): void => ws.send(msg, frameSendOptions(msg));
+  const sendFrame = (ws: WebSocket, msg: string): void => {
+    const out = otherDevice.has(ws) ? forOtherDevices(msg) : msg;
+    ws.send(out, frameSendOptions(out));
+  };
   const clients = new Set<WebSocket>();
   /** What each socket asked for with its hello; "app" (the full state) until it says otherwise. */
   const channelOf = new WeakMap<WebSocket, WsChannel>();
@@ -338,6 +344,7 @@ export function createWsHub(deps: {
     });
 
     wss.on("connection", (ws, req) => {
+      if (!isLoopbackAddress(req.socket?.remoteAddress)) otherDevice.add(ws);
       let wantsEvents = false;
       try {
         wantsEvents = new URL(req.url ?? "/ws", "http://x").searchParams.get("channel") === "events";

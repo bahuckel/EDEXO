@@ -68,6 +68,18 @@ module.exports = {
   appId: "com.edexo.compare",
   productName: "EDExoCompare",
   copyright,
+  /*
+    Electron fuses (review 2026-11-07 §7): the built exe ignores ELECTRON_RUN_AS_NODE, NODE_OPTIONS and --inspect, so
+    it cannot be started as a bare Node or with a debugger attached by whatever runs it. Nothing here uses them: the
+    server is a utility process, the diagnostic build profiles through the in-process inspector, NODE_COMPILE_CACHE is
+    its own variable. Cookie encryption, asar-only loading and asar integrity are left as they are (the first would sign
+    the browser's saved sessions out).
+  */
+  electronFuses: {
+    runAsNode: false,
+    enableNodeOptionsEnvironmentVariable: false,
+    enableNodeCliInspectArguments: false,
+  },
   directories: {
     output: "dist/electron-out",
     buildResources: "build",

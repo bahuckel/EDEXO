@@ -18,7 +18,7 @@
  * Delete that file to invalidate every paired device.
  */
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, statSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
 import type { RequestHandler } from "express";
 import { writeFileAtomic } from "./atomicWrite.js";
@@ -100,6 +100,22 @@ export function lanUrlWithKey(baseUrl: string, lanKey: string | null): string {
   return u.toString();
 }
 
+/*
+  The key file readable by its owner only (review 2026-11-07 §7): it was written with the default mode, 0644 on Linux,
+  so any account on the machine could read the key. Windows keeps the user profile's own ACL either way.
+*/
+const KEY_FILE_MODE = 0o600;
+
+/** A key file from before is narrowed to the owner too; best-effort. */
+function tightenKeyFile(file: string): void {
+  if (process.platform === "win32") return;
+  try {
+    if ((statSync(file).mode & 0o077) !== 0) chmodSync(file, KEY_FILE_MODE);
+  } catch {
+    /* the key still works */
+  }
+}
+
 /**
  * Read the stored key, or mint and store one. Best-effort: if the file cannot be written the key
  * still works for this run, it just will not survive a restart.
@@ -108,14 +124,17 @@ export function loadOrCreateLanKey(file: string): string {
   try {
     if (existsSync(file)) {
       const stored = readFileSync(file, "utf8").trim();
-      if (stored.length >= 16) return stored;
+      if (stored.length >= 16) {
+        tightenKeyFile(file);
+        return stored;
+      }
     }
   } catch {
     /* fall through and mint a new one */
   }
   const key = generateLanKey();
   try {
-    writeFileAtomic(file, `${key}\n`, "utf8");
+    writeFileAtomic(file, `${key}\n`, { encoding: "utf8", mode: KEY_FILE_MODE });
   } catch {
     /* in-memory only for this run */
   }
