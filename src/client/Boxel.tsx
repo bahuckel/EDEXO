@@ -13,6 +13,7 @@
 import { tabListKeyDown } from "./ui/Tabs";
 import { withTransition } from "./motion";
 import { showPickedSystem } from "./tabs/tabStore";
+import { useTabInFront } from "./tabs/TabHost";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BoxelTableDTO, BoxelTableRowDTO, PreviousBoxelDTO, SavedBoxelDTO } from "@shared/boxel";
 import type { BoxelLookupStatus } from "@shared/boxel";
@@ -150,8 +151,26 @@ export function BoxelScreen({
     }
   }, []);
 
+  /*
+    Behind other tabs (review 2026-11-10 F4) a change only marks the screen stale: every FSS scan and jump re-read the
+    list and the whole table of a Boxels tab nobody was looking at. It reads once when its tab comes to the front.
+  */
+  const inFront = useTabInFront();
+  const inFrontNow = useRef(inFront);
+  inFrontNow.current = inFront;
+  const staleBehind = useRef(false);
+  const callWhenInFront = useCallback(() => {
+    if (inFrontNow.current) void call();
+    else staleBehind.current = true;
+  }, [call]);
+  useEffect(() => {
+    if (!inFront || !staleBehind.current) return;
+    staleBehind.current = false;
+    void call();
+  }, [inFront, call]);
+
   // After every jump, route, target, copy or run change: the side menu and the table read again.
-  useEffect(() => void call(), [currentSystem, revision, call]);
+  useEffect(() => callWhenInFront(), [currentSystem, revision, callWhenInFront]);
 
   const ids = useMemo(() => {
     if (!saved) return [];
@@ -197,8 +216,8 @@ export function BoxelScreen({
       firstScan.current = false;
       return;
     }
-    void call();
-  }, [scanKey, call]);
+    callWhenInFront();
+  }, [scanKey, callWhenInFront]);
 
   /*
     Look up (plan Q1): the boxel's systems from Spansh, pages five seconds apart. Polled while it
@@ -292,11 +311,27 @@ export function BoxelScreen({
   );
   const previousRef = useRef<PreviousBoxelDTO[] | null>(null);
   previousRef.current = previous;
+  /*
+    Page one again after a jump or a save, not after a scan (F4: a scan re-read the saved list, a new object, and
+    scrolled History back to the top), and only in front.
+  */
+  const savedIdsKey = saved ? saved.map((b) => b.id).join(",") : "";
+  const historyStale = useRef(false);
   useEffect(() => {
     if (!showPrevious) return;
+    if (!inFrontNow.current) {
+      historyStale.current = true;
+      return;
+    }
     const t = window.setTimeout(() => loadPrevious(true), prevQuery ? 200 : 0);
     return () => window.clearTimeout(t);
-  }, [showPrevious, loadPrevious, prevQuery, saved, currentSystem]);
+  }, [showPrevious, loadPrevious, prevQuery, savedIdsKey, currentSystem]);
+  // Back in front after a jump or a save behind the other tabs: page one once; nothing moved, the list stays.
+  useEffect(() => {
+    if (!inFront || !showPrevious || !historyStale.current) return;
+    historyStale.current = false;
+    loadPrevious(true);
+  }, [inFront, showPrevious, loadPrevious]);
   // The end of the list in view: the next page.
   const prevHasMore = previous != null && prevTotal != null && previous.length < prevTotal;
   useEffect(() => {

@@ -12,13 +12,23 @@ export interface ReaderThread {
 }
 
 /**
+ * Whether the game runs and is in front (Electron's foreground watcher, aimWindow.cjs). True until told otherwise:
+ * outside the desktop app nothing tells, and the readers read as before.
+ */
+let gameInFront = true;
+export function setGameInFront(on: boolean): void {
+  gameInFront = on;
+}
+
+/**
  * `read` every `ms`; a frame still being read when the next is due makes the next one skipped, not queued behind it.
- * Returns the interval's id for clearInterval.
+ * Nothing is read while another program is in front (review 2026-11-10 E3): the capture then shows that program, and
+ * nothing read there is the game's. Returns the interval's id for clearInterval.
  */
 export function readEvery(ms: number, read: () => Promise<void>): ReturnType<typeof setInterval> {
   let busy = false;
   return setInterval(() => {
-    if (busy) return;
+    if (busy || !gameInFront) return;
     busy = true;
     void read().finally(() => {
       busy = false;

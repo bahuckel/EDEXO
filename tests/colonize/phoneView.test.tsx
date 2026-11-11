@@ -83,7 +83,12 @@ vi.mock("../../src/client/colonize/api", () => {
       };
     },
   });
-  return { colonizeApi: api, colonizeReadOnly: () => true, useColonizeAppState: () => ({ state: {}, connected: true }) };
+  return {
+    colonizeApi: api,
+    colonizeReadOnly: () => true,
+    useColonizeAppState: () => ({ state: {}, connected: true }),
+    onColonizeReconnect: listen,
+  };
 });
 vi.mock("../../src/client/colonize/uiStateSync", () => ({
   loadColonizeUiState: () => Promise.resolve("server"),

@@ -161,6 +161,10 @@ aim = createAimWindow({
   },
   guardWindow: (win) => guardWindowNavigation(win, ownBase, shell),
   desktopCapturer,
+  isGameInFront: () => {
+    const l = huds.layout();
+    return !l.gameAway && !l.focusAway;
+  },
 });
 
 function showLauncher() {

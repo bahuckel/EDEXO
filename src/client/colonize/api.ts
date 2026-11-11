@@ -76,6 +76,19 @@ const notifyState = () => {
 
 let socket: WebSocket | null = null;
 let retryMs = 500;
+/** Opened once already: a later open is a reconnect (the phone waking, the server restarted). */
+let everOpen = false;
+const reconnectSubs = new Set<() => void>();
+
+/**
+ * `fn` each time the socket comes back after a drop (review 2026-11-10 F1): the server pushes only on change, so what
+ * changed while it was down never arrived, and the depots stayed stale until the next change. Returns an unsubscribe.
+ */
+export function onColonizeReconnect(fn: () => void): () => void {
+  connect();
+  reconnectSubs.add(fn);
+  return () => void reconnectSubs.delete(fn);
+}
 function connect(): void {
   if (socket || typeof window === "undefined") return;
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -87,6 +100,8 @@ function connect(): void {
     // Older servers ignore the address; the hello names the channel either way.
     ws.send(JSON.stringify({ type: "hello", channel: "colonize" }));
     notifyState();
+    if (everOpen) for (const fn of reconnectSubs) fn();
+    everOpen = true;
   };
   ws.onmessage = (ev) => {
     type Frame = { type?: string; event?: string; payload?: unknown };

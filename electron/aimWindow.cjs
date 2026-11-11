@@ -15,6 +15,15 @@
 const { hudWindowOptions } = require("./hudWindowOptions.cjs");
 
 /**
+ * The game monitor's screen among the capture sources. Another monitor only when there is no other to pick (one
+ * screen, its id not reported): read on the wrong screen, the readers matched glyphs on whatever it showed (review
+ * 2026-11-10 E3).
+ */
+function gameSource(sources, want) {
+  return sources.find((s) => String(s.display_id) === want) ?? (sources.length === 1 ? sources[0] : undefined);
+}
+
+/**
  * @param {{
  *   BrowserWindow: any,
  *   getBaseUrl: () => string | null,
@@ -23,6 +32,7 @@ const { hudWindowOptions } = require("./hudWindowOptions.cjs");
  *   isAllowed: () => boolean,
  *   guardWindow?: (win: any) => void,
  *   desktopCapturer?: any,
+ *   isGameInFront?: () => boolean,
  * }} deps
  */
 function createAimWindow(deps) {
@@ -84,6 +94,19 @@ function createAimWindow(deps) {
     }
     if (win.isDestroyed()) return;
     place();
+    /*
+      Whether the game is running and in front, for the readers (review 2026-11-10 E3): with another program in front
+      the capture shows that program, so they read nothing until the game is back. Told on every change, and after a
+      load (open calls sync then). Not tied to the window's own visibility: the HUD hotkey hides the window too, and the
+      distance reader keeps reading for the Scan route then.
+    */
+    if (deps.isGameInFront) {
+      try {
+        win.webContents.send("edexo:aim-game-front", deps.isGameInFront());
+      } catch {
+        /* the page reloading */
+      }
+    }
     if (deps.isAllowed()) {
       if (!win.isVisible()) win.showInactive();
       win.setAlwaysOnTop(true, "screen-saver");
@@ -101,7 +124,7 @@ function createAimWindow(deps) {
     deps.desktopCapturer
       .getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } })
       .then((sources) => {
-        const src = sources.find((s) => String(s.display_id) === want) ?? sources[0];
+        const src = gameSource(sources, want);
         callback(src ? { video: src } : {});
       })
       .catch(() => callback({}));
@@ -128,7 +151,7 @@ function createAimWindow(deps) {
     const want = String(deps.getDisplay().id ?? "");
     try {
       const sources = await deps.desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } });
-      const src = sources.find((s) => String(s.display_id) === want) ?? sources[0];
+      const src = gameSource(sources, want);
       return src ? src.id : null;
     } catch {
       return null;
@@ -163,4 +186,4 @@ function createAimWindow(deps) {
   };
 }
 
-module.exports = { createAimWindow };
+module.exports = { createAimWindow, gameSource };

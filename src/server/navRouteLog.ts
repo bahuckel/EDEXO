@@ -64,6 +64,11 @@ let routes: NavRouteRecord[] = [];
 const systems = new Map<number, NavRouteSystem>();
 let loadedFrom: string | null = null;
 let lastKey = "";
+/**
+ * Moves on every change to the kept systems (each change is followed by a save) and on loading another commander's
+ * file: the map asks with the revision it holds and gets the list again only when it moved (review 2026-11-10 F3).
+ */
+let revision = 0;
 
 function filePath(): string {
   return path.join(resolveCommanderDataDir(), "edexo-navroutes.json");
@@ -73,6 +78,7 @@ function ensureLoaded(): void {
   const f = filePath();
   if (loadedFrom === f) return;
   loadedFrom = f;
+  revision++;
   routes = [];
   systems.clear();
   if (!existsSync(f)) return;
@@ -88,6 +94,7 @@ function ensureLoaded(): void {
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 function saveSoon(): void {
+  revision++;
   if (saveTimer) return;
   saveTimer = setTimeout(() => {
     saveTimer = null;
@@ -103,6 +110,7 @@ export function flushNavRouteLog(): void {
   saveNow();
 }
 function saveNow(): void {
+  revision++;
   try {
     const f = filePath();
     const body: FileShape = { formatVersion: 1, routes, systems: [...systems.values()] };
@@ -192,6 +200,12 @@ export function plottedSystem(address: number): NavRouteSystem | null {
 export function plottedSystemsCompact(): [number, string, string, number, number, number, 0 | 1 | 2, number][] {
   ensureLoaded();
   return [...systems.values()].map((s) => [s.address, s.name, s.starClass, s.pos[0], s.pos[1], s.pos[2], s.edsm === undefined ? 0 : s.edsm ? 1 : 2, s.routes]);
+}
+
+/** The kept systems' revision (see {@link revision}). */
+export function plottedRevision(): number {
+  ensureLoaded();
+  return revision;
 }
 
 /** Kept systems whose name holds `q` (at least 3 letters), most recently plotted first. */

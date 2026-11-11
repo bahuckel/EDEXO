@@ -1,4 +1,4 @@
-import type { colonizeApi } from "../api";
+import { onColonizeReconnect, type colonizeApi } from "../api";
 import { useCallback, useEffect, useRef, useState, startTransition } from "react";
 import type { ColonizeSnapshot } from "../../../shared/colonize/types";
 import { colonizeWindowSnapSig, stabilizeSnapshot } from "./snapshotStability";
@@ -44,6 +44,9 @@ export function useColonizeSnapshot(api: typeof colonizeApi) {
       if (timer) clearTimeout(timer);
     };
   }, [refresh]);
+
+  // Back after the socket dropped: read the whole snapshot again (what changed meanwhile was never pushed).
+  useEffect(() => onColonizeReconnect(() => void refresh()), [refresh]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;

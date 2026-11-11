@@ -3,6 +3,7 @@
  * GalaxyMap3D.tsx (audit 2026-10-22) as a plain function rather than a component, so the element tree is
  * the one the map drew before.
  */
+import { useSyncExternalStore } from "react";
 import { fmtLy } from "@shared/format";
 import { expeditionTip, targetLabelOf } from "../ExpeditionDrawer";
 import { formatCount, formatValue } from "./clusters";
@@ -171,4 +172,38 @@ export function hoverTip(
       <em>Click for the list</em>
     </>
   ) : null;
+}
+
+/**
+ * The system under the pointer, outside React state (review 2026-11-10 F5): as the root's state every hover change
+ * re-rendered this whole screen and its open drawer. Only `HoverTip` (below) listens.
+ */
+export function createHoverStore() {
+  let value: HoverInfo | null = null;
+  const listeners = new Set<() => void>();
+  return {
+    get: () => value,
+    set: (v: HoverInfo | null) => {
+      if (v === value) return;
+      value = v;
+      for (const l of listeners) l();
+    },
+    subscribe: (l: () => void) => {
+      listeners.add(l);
+      return () => void listeners.delete(l);
+    },
+  };
+}
+export type HoverStore = ReturnType<typeof createHoverStore>;
+
+/** The hover card, the only part of the screen that redraws as the pointer moves over systems. */
+export function HoverTip({ store, lookups }: { store: HoverStore; lookups: MapLookups }) {
+  const hover = useSyncExternalStore(store.subscribe, store.get, store.get);
+  const tip = hoverTip(hover, lookups);
+  if (!hover || !tip) return null;
+  return (
+    <div className="g3d-tip" style={{ transform: `translate(${Math.round(hover.x + 16)}px, ${Math.round(hover.y - 10)}px)` }}>
+      {tip}
+    </div>
+  );
 }

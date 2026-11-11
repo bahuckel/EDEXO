@@ -163,6 +163,9 @@ export function spanshCsvAsResult(
   return { result: iTritium >= 0 ? { jumps, tritium_stored: 0 } : { jumps }, parameters: {} };
 }
 
+/** The most rows of a Spansh CSV read (see importSpanshRouteFile). */
+export const MAX_CSV_ROWS = 5_000;
+
 /** A file's route, or why not. `lookup` places a CSV's systems (normalised name → x/y/z). */
 export async function importSpanshRouteFile(fileName: string, text: string, lookup: CoordsLookup, norm: (s: string) => string): Promise<SpanshRouteAnswer> {
   const body = String(text ?? "");
@@ -182,21 +185,32 @@ export async function importSpanshRouteFile(fileName: string, text: string, look
   } else {
     // A CSV: every system name first, placed in one look-up.
     const names = new Set<string>();
-    const lines = trimmed.split(/\r?\n/);
+    const all = trimmed.split(/\r?\n/);
+    /*
+      At most MAX_CSV_ROWS rows (review 2026-11-10 C8): each system the galaxy index does not know is looked up over
+      the network, and one file of 50,000 made-up names was 50,000 look-ups. A plotter's route is hundreds of rows.
+    */
+    const cut = all.length - 1 > MAX_CSV_ROWS;
+    const lines = cut ? all.slice(0, MAX_CSV_ROWS + 1) : all;
     const head = csvFields(lines[0] ?? "").map((h) => h.toLowerCase());
     const iSys = head.findIndex((h) => h === "system name" || h === "system");
     if (iSys < 0) return { state: "error", error: "Not a Spansh route: a Spansh CSV starts with a \"System Name\" column." };
-    for (const l of lines.slice(1, 50_001)) {
+    for (const l of lines.slice(1)) {
       const n = csvFields(l)[iSys];
       if (n) names.add(n);
     }
     const coords = await lookup([...names]);
     const missing: string[] = [];
-    const asResult = spanshCsvAsResult(trimmed, (n) => coords.get(norm(n)), missing);
+    const asResult = spanshCsvAsResult(cut ? lines.join("\n") : trimmed, (n) => coords.get(norm(n)), missing);
     if (!asResult) return { state: "error", error: "Not a Spansh route EDEXO can read." };
     data = asResult;
+    const notes: string[] = [];
+    if (cut) notes.push(`Only the first ${MAX_CSV_ROWS.toLocaleString("en-US")} rows were read.`);
     if (missing.length)
-      note = `${missing.length} system${missing.length === 1 ? "" : "s"} could not be placed on the map and ${missing.length === 1 ? "is" : "are"} left out: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? " …" : ""}.`;
+      notes.push(
+        `${missing.length} system${missing.length === 1 ? "" : "s"} could not be placed on the map and ${missing.length === 1 ? "is" : "are"} left out: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? " …" : ""}.`,
+      );
+    if (notes.length) note = notes.join(" ");
   }
   const d = data as { job?: unknown };
   const job = (typeof d.job === "string" ? spanshJobFromText(d.job) : null) ?? importJobId(body);

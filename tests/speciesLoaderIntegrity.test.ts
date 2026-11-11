@@ -49,3 +49,17 @@ describe("the species loader", () => {
     expect(db.species.every((e) => e.genusDataDir === "tubus")).toBe(true);
   });
 });
+
+describe("the photo folder cache", () => {
+  it("keeps real genus folders, not every name a request makes up (review 2026-11-10 C7)", async () => {
+    const { clearGenusPhotosFolderCache, findGenusPhotosFolder, genusPhotosFolderCacheSize } = await import(
+      "../src/server/speciesTreeLoader.js"
+    );
+    clearGenusPhotosFolderCache();
+    const species = path.join(getProjectRoot(), "data", "species");
+    for (let i = 0; i < 500; i++) expect(findGenusPhotosFolder(path.join(species, `nope-${i}`), `nope-${i}`)).toBeNull();
+    expect(genusPhotosFolderCacheSize()).toBe(0);
+    expect(findGenusPhotosFolder(path.join(species, "tubus"), "tubus")).not.toBeNull();
+    expect(genusPhotosFolderCacheSize()).toBe(1);
+  });
+});

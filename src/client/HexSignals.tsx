@@ -20,6 +20,7 @@
 import { useEffect, useRef, useState } from "react";
 import { APP_THEME_EVENT, backdropAccentRgb } from "./appTheme";
 import { runHexSignals, type BackdropLevel, type BackdropOptions } from "./hexSignalsEngine";
+import { tabStore } from "./tabs/tabStore";
 
 const LEVEL_KEY = "edexo.backdrop";
 const OFF_KEY = "edexo.backdropOff";
@@ -172,21 +173,43 @@ export function HexSignals() {
       after 30 seconds when it is merely behind another window (the game in front). Back with the focus or the window.
     */
     let blurTimer: number | null = null;
+    /*
+      And while a screen tab is in front (review 2026-11-10 F5): its pane is opaque over the whole window below the tab
+      strip, and the backdrop drew at 30 fps under it.
+    */
+    let windowPaused = false;
+    const coveredNow = () => {
+      const t = tabStore.get();
+      return t.on && t.active !== "main";
+    };
+    let covered = coveredNow();
+    const apply = () => setPaused(windowPaused || covered);
+    const pauseWindow = (p: boolean) => {
+      windowPaused = p;
+      apply();
+    };
+    const offTabs = tabStore.subscribe(() => {
+      const c = coveredNow();
+      if (c === covered) return;
+      covered = c;
+      apply();
+    });
+    if (covered) apply();
     const clearBlur = () => {
       if (blurTimer != null) window.clearTimeout(blurTimer);
       blurTimer = null;
     };
     const onVisibility = () => {
-      if (document.hidden) setPaused(true);
-      else if (document.hasFocus()) setPaused(false);
+      if (document.hidden) pauseWindow(true);
+      else if (document.hasFocus()) pauseWindow(false);
     };
     const onBlur = () => {
       clearBlur();
-      blurTimer = window.setTimeout(() => setPaused(true), BLUR_PAUSE_MS);
+      blurTimer = window.setTimeout(() => pauseWindow(true), BLUR_PAUSE_MS);
     };
     const onFocus = () => {
       clearBlur();
-      if (!document.hidden) setPaused(false);
+      if (!document.hidden) pauseWindow(false);
     };
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onBlur);
@@ -194,6 +217,7 @@ export function HexSignals() {
     if (!document.hasFocus()) onBlur();
     return () => {
       clearBlur();
+      offTabs();
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("focus", onFocus);

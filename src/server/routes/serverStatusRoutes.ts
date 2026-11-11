@@ -63,7 +63,9 @@ export function registerServerStatusRoutes(
     }
   });
 
+  // Cached like Frontier's (review 2026-11-10 C8: every page asked EDSM through here, uncached).
   app.get("/api/elite-server-status/edsm", async (_req, res) => {
+    if (fromCache("edsm", res)) return;
     const url = "https://www.edsm.net/api-status-v1/elite-server";
     try {
       const r = await fetchWithTimeout(url, 12_000);
@@ -74,11 +76,9 @@ export function registerServerStatusRoutes(
       const j = (await r.json()) as { message?: string; status?: number; type?: string };
       const statusText = typeof j.message === "string" && j.message.trim() ? j.message.trim() : "Unknown";
       const healthy = Number(j.status) === 1 && String(j.type).toLowerCase() === "success";
-      res.json({
-        ok: true as const,
-        healthy,
-        statusText,
-      });
+      const body = { ok: true as const, healthy, statusText };
+      cached.set("edsm", { at: Date.now(), body });
+      res.json(body);
     } catch {
       res.status(502).json({ ok: false });
     }

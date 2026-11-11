@@ -71,6 +71,7 @@ import {
   makeCellMask,
   makeRenderTarget,
   NAMES_MAX,
+  NAMES_RETRY_MS,
   PLANE_UNDER_CLOUDS,
   ringRadius,
   SOL,
@@ -228,6 +229,13 @@ export class GalaxyEngine {
   private selected: Selection | null = null;
   private readonly names = new Map<number, string>();
   private namesInflight = false;
+  /**
+   * After a failed `/api/galaxy/names` (server busy, galaxy index missing) no new request before this time; and the
+   * systems an answer left out are not asked for again (review 2026-11-10 F2: with the pointer resting on a system, a
+   * failure re-asked every frame, each with a GPU pick and a full render).
+   */
+  private namesRetryAt = 0;
+  private readonly namesMissing = new Set<number>();
   private systemLabels: {
     ordinal: number;
     x: number;
@@ -1630,16 +1638,24 @@ export class GalaxyEngine {
   // ---------------------------------------------------------------------------------------- names
 
   private async fetchNames(ordinals: number[]): Promise<void> {
-    const want = ordinals.filter((o) => !this.names.has(o));
-    if (!want.length || this.namesInflight) return;
+    const want = ordinals.filter((o) => !this.names.has(o) && !this.namesMissing.has(o));
+    if (!want.length || this.namesInflight || Date.now() < this.namesRetryAt) return;
     this.namesInflight = true;
+    let added = false;
     try {
-      const r = await fetch(`${this.api}/api/galaxy/names?i=${want.slice(0, 400).join(",")}`, {
+      const asked = want.slice(0, 400);
+      const r = await fetch(`${this.api}/api/galaxy/names?i=${asked.join(",")}`, {
         signal: this.requests.signal,
       });
       const got = r.ok ? ((await r.json()) as Record<string, string>) : null;
+      if (!got) this.namesRetryAt = Date.now() + NAMES_RETRY_MS;
       if (got && !this.disposed) {
-        for (const [k, v] of Object.entries(got)) this.names.set(Number(k), v);
+        for (const [k, v] of Object.entries(got)) {
+          this.names.set(Number(k), v);
+          added = true;
+        }
+        for (const o of asked) if (!(String(o) in got)) this.namesMissing.add(o);
+        if (this.namesMissing.size > NAMES_MAX) this.namesMissing.clear();
         // A long session of flying about asks for tens of thousands; the oldest go (plan 2.5).
         if (this.names.size > NAMES_MAX) {
           for (const k of this.names.keys()) {
@@ -1649,10 +1665,12 @@ export class GalaxyEngine {
         }
       }
     } catch {
-      /* labels wait for the next try */
+      // Labels wait for the next try, a few seconds on.
+      this.namesRetryAt = Date.now() + NAMES_RETRY_MS;
     } finally {
       this.namesInflight = false;
-      if (!this.disposed) {
+      // Only a new name redraws the tooltip: a failure redrawn at once asked again on the next frame.
+      if (!this.disposed && added) {
         this.hovered = null; // let the tooltip pick up the name
         if (this.hoverQueued === null && this.lastMouse) this.hoverQueued = this.lastMouse;
         this.invalidate();

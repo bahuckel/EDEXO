@@ -14,7 +14,6 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import {
   GalaxyEngine,
   type EngineStats,
-  type HoverInfo,
   type MarkerItem,
   type Selection,
 } from "./galaxy3d/GalaxyEngine";
@@ -112,7 +111,7 @@ import {
   type SpanshFindHit,
 } from "./galaxy3d/mapConstants";
 import type { MapLookups } from "./galaxy3d/pointLookup";
-import { hoverTip } from "./galaxy3d/hoverTip";
+import { createHoverStore, HoverTip } from "./galaxy3d/hoverTip";
 import { selectionPanel } from "./galaxy3d/selectionPanel";
 import { ViewMenu } from "./galaxy3d/ViewMenu";
 import { TargetsMenu } from "./galaxy3d/TargetsMenu";
@@ -162,7 +161,7 @@ export function GalaxyMap3D() {
   const [colour, setColour] = usePersistedState<Colour>("galaxy.view.colour", 0, isColour);
   const [exposure, setExposure] = usePersistedState("galaxy.view.exposure", 1.2, isExposure);
   const [layers, setLayers] = usePersistedState("galaxy.layer.base", BASE_LAYERS, isBaseLayers);
-  const [hover, setHover] = useState<HoverInfo | null>(null);
+  const hoverStore = useMemo(createHoverStore, []);
   const [selection, setSelection] = useKeptState<Selection | null>("galaxy.selection", null);
   /*
     Carriers & Stations measures from the picked system, else the ship (R4, owner 2026-10-23). A row picked in the
@@ -356,7 +355,7 @@ export function GalaxyMap3D() {
     const e = new GalaxyEngine(el, {
       tier: graphics.tier,
       onStats: setStats,
-      onHover: setHover,
+      onHover: hoverStore.set,
       onSelect: setSelection,
       onPlaneClick: (g) => {
         // The Codex mode: a click on the map picks the region under it.
@@ -516,7 +515,7 @@ export function GalaxyMap3D() {
       e.dispose();
       pool.forEach((d) => d.remove());
     };
-  }, [graphics.tier, track, setSelection, setCodexRegion]);
+  }, [graphics.tier, track, setSelection, setCodexRegion, hoverStore]);
 
   /*
     Where the ship is and this session's jumps, while the map is in front: behind another tab it stays
@@ -1351,7 +1350,6 @@ export function GalaxyMap3D() {
     codexSystems,
     neutronHops,
   };
-  const tip = hoverTip(hover, lookups);
 
   const panel = selectionPanel(selection, {
     ...lookups,
@@ -1394,14 +1392,7 @@ export function GalaxyMap3D() {
       <div ref={host} className="g3d-canvas" />
       <div ref={labelLayer} className="g3d-labels" aria-hidden="true" />
 
-      {hover && tip ? (
-        <div
-          className="g3d-tip"
-          style={{ transform: `translate(${Math.round(hover.x + 16)}px, ${Math.round(hover.y - 10)}px)` }}
-        >
-          {tip}
-        </div>
-      ) : null}
+      <HoverTip store={hoverStore} lookups={lookups} />
 
       {selection ? (
         <aside className="g3d-panel" aria-label="Selected" data-testid="g3d-panel">

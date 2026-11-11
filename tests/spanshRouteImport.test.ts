@@ -46,6 +46,18 @@ describe("Spansh route from a file", () => {
     expect(a.route.stops.map((s) => s.name)).toEqual(["Sol", "Colonia"]);
   });
 
+  // Review 2026-11-10 C8: each name the galaxy index lacks is a network look-up; a file of 50,000 was 50,000.
+  it("reads at most 5,000 rows of a CSV and says so", async () => {
+    const rows = ['"System Name","Distance To Arrival","Distance Remaining","Neutron Star","Jumps"'];
+    for (let i = 0; i < 6_000; i++) rows.push(`"Made Up ${i}","0","0","No","1"`);
+    rows[1] = '"Sol","0","22000","No","0"';
+    const ask = vi.fn(async (names: string[]) => new Map(names.filter((n) => COORDS[norm(n)]).map((n) => [norm(n), COORDS[norm(n)]!] as const)));
+    const a = await importSpanshRouteFile("big.csv", rows.join("\n"), ask, norm);
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(ask.mock.calls[0]![0].length).toBeLessThanOrEqual(5_000);
+    if (a.state === "ok") expect(a.note).toMatch(/first 5,000 rows/);
+  });
+
   it("reads a neutron plotter CSV, placing its systems by name", async () => {
     const csv = [
       '"System Name","Distance To Arrival","Distance Remaining","Neutron Star","Jumps"',

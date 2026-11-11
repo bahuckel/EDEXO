@@ -31,6 +31,8 @@ export default defineConfig({
       "/ws": { target: `ws://${API}`, ws: true, changeOrigin: true },
     },
   },
+  // Module workers, split into chunks: the HUD readers' worker loads only its own glyph tables (review 2026-11-10 E7).
+  worker: { format: "es" },
   build: {
     outDir: "../../dist/web",
     emptyOutDir: true,

@@ -20,6 +20,8 @@ const RELEASE_PAGE = "https://github.com/bahuckel/EDEXO/releases/tag/";
 export const RELEASE_DOWNLOAD = "https://github.com/bahuckel/EDEXO/releases/download/";
 /** One answer per hour is plenty; GitHub allows an unauthenticated caller 60 requests an hour. */
 const MEMO_MS = 60 * 60 * 1000;
+/** The least time between two asks, the launcher's button included. */
+const FORCE_FLOOR_MS = 60 * 1000;
 const TIMEOUT_MS = 10_000;
 
 /** `v1.2.3` or `v1.2.3-zip` — the only tag shapes this repo publishes. Anything else is ignored. */
@@ -283,6 +285,8 @@ export function createUpdateChecker(o: UpdateCheckerOptions = {}) {
     check(force = false): Promise<UpdateInfoDTO> {
       if (inflight) return inflight;
       if (!force && checkedAt && now() - checkedAt < MEMO_MS) return Promise.resolve(answer());
+      // The button too waits a minute between asks (review 2026-11-10 C8: GitHub allows 60 an hour without a token).
+      if (force && checkedAt && now() - checkedAt < FORCE_FLOOR_MS) return Promise.resolve(answer());
       inflight = refresh().finally(() => {
         inflight = null;
       });

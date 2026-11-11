@@ -99,3 +99,44 @@ describe("the NavRoute log", () => {
     expect(asked).toEqual([]);
   });
 });
+
+describe("the plotted list's revision (review 2026-11-10 F3)", () => {
+  it("moves when the kept systems change, not when the same route is seen again", async () => {
+    const { plottedRevision } = await import("../src/server/navRouteLog.js");
+    const r1 = [wp(1, "Sol", "G"), wp(2, "Neut A", "N")];
+    recordNavRoute(r1, "2026-10-04T10:00:00Z");
+    const after = plottedRevision();
+    recordNavRoute(r1, "2026-10-04T10:01:00Z");
+    expect(plottedRevision()).toBe(after);
+    recordNavRoute([wp(2, "Neut A", "N"), wp(3, "Wolf B", "W")], "2026-10-04T11:00:00Z");
+    expect(plottedRevision()).toBeGreaterThan(after);
+  });
+
+  it("is what the map asks with: the whole list once, then unchanged", async () => {
+    const { createHttpServer } = await import("../src/server/httpServer.js");
+    recordNavRoute([wp(1, "Sol", "G"), wp(2, "Neut A", "N")], "2026-10-04T10:00:00Z");
+    const { server, listening } = createHttpServer({
+      port: 0,
+      bindHost: "127.0.0.1",
+      getSnapshot: () => ({}) as never,
+      getStatus: () => ({}) as never,
+      getCommanderPosition: () => null,
+      getCommanderSystem: () => null,
+    });
+    await listening;
+    try {
+      const port = (server.address() as { port: number }).port;
+      const get = async (q = "") => (await fetch(`http://127.0.0.1:${port}/api/navroutes/plotted${q}`)).json();
+      const whole = (await get()) as { rev: number; visitedCount: number; systems: unknown[] };
+      expect(whole.systems).toHaveLength(2);
+      expect(await get(`?since=${whole.rev}&visited=${whole.visitedCount}`)).toEqual({
+        rev: whole.rev,
+        visitedCount: whole.visitedCount,
+        unchanged: true,
+      });
+      expect(((await get(`?since=${whole.rev - 1}&visited=0`)) as { systems: unknown[] }).systems).toHaveLength(2);
+    } finally {
+      await new Promise((r) => server.close(() => r(null)));
+    }
+  });
+});

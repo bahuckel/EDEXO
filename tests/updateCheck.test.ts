@@ -124,11 +124,28 @@ describe("createUpdateChecker", () => {
     const f = vi.fn(async () =>
       ok ? new Response(JSON.stringify(RELEASES)) : new Response("{}", { status: 403 }),
     ) as unknown as typeof fetch;
-    const c = createUpdateChecker({ fetchImpl: f, current: "1.1.8", form: "zip" });
+    let t = 1_000_000;
+    const c = createUpdateChecker({ fetchImpl: f, current: "1.1.8", form: "zip", now: () => t });
     await c.check();
     ok = false;
+    t += 61_000;
     const a = await c.check(true);
     expect(a).toMatchObject({ latest: "1.1.9", newer: true, error: "GitHub answered HTTP 403" });
+  });
+
+  // GitHub allows 60 asks an hour without a token (review 2026-11-10 C8): the button waits a minute between asks.
+  it("asks GitHub at most once a minute, the button included", async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify(RELEASES))) as unknown as typeof fetch;
+    let t = 1_000_000;
+    const c = createUpdateChecker({ fetchImpl: f, current: "1.1.8", form: "zip", now: () => t });
+    await c.check(true);
+    await c.check(true);
+    t += 59_000;
+    await c.check(true);
+    expect(f).toHaveBeenCalledTimes(1);
+    t += 2_000;
+    await c.check(true);
+    expect(f).toHaveBeenCalledTimes(2);
   });
 
   it("reports a network failure without throwing", async () => {

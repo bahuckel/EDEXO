@@ -46,6 +46,7 @@ import {
   lastNavRoute,
   navRouteLog,
   plottedSystem,
+  plottedRevision,
   plottedSystemsCompact,
 } from "../navRouteLog.js";
 import { plottedTag } from "../../shared/plottedTag.js";
@@ -389,9 +390,28 @@ export function registerGalaxyRoutes(
    * Every system on a route the commander plotted in the game (plan 1.3.3 R-2), for the map's "Plotted systems"
    * layer: compact rows (navRouteLog.ts `plottedSystemsCompact`) with whether the journals have him there.
    */
-  app.get("/api/navroutes/plotted", (_req, res) => {
+  /*
+    `?since=<rev>&visited=<n>` (review 2026-11-10 F3): the map asks again on every jump, and the list (up to 200,000
+    systems) rarely changes then. Same revision and the same count of visited systems: `{unchanged}`. Only more
+    visited systems: the visited plotted addresses alone. Otherwise the whole list.
+  */
+  app.get("/api/navroutes/plotted", (req, res) => {
     const store = opts.getJournalStore?.() ?? null;
-    res.json({ systems: plottedSystemsCompact().map((r) => [...r, store?.visitedSystems.has(r[0]) ? 1 : 0]) });
+    const rev = plottedRevision();
+    const visitedCount = store?.visitedSystems.size ?? 0;
+    const since = Number(req.query.since);
+    if (req.query.since !== undefined && since === rev) {
+      if (Number(req.query.visited) === visitedCount) return void res.json({ rev, visitedCount, unchanged: true });
+      const visited = plottedSystemsCompact()
+        .map((r) => r[0])
+        .filter((a) => store?.visitedSystems.has(a));
+      return void res.json({ rev, visitedCount, visited });
+    }
+    res.json({
+      rev,
+      visitedCount,
+      systems: plottedSystemsCompact().map((r) => [...r, store?.visitedSystems.has(r[0]) ? 1 : 0]),
+    });
   });
   /** One plotted system with its tag (`?addr=`): the map's panel for a system the galaxy index does not have. */
   app.get("/api/navroutes/system", (req, res) => {

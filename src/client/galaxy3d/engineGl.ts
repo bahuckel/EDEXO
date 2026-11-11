@@ -28,6 +28,8 @@ export const SYSTEM_DISTANCE = 1_600;
 
 /** System names kept for labels and the hover card; past this the oldest are asked for again. */
 export const NAMES_MAX = 20_000;
+/** How long a failed names request waits before the next (review 2026-11-10 F2). */
+export const NAMES_RETRY_MS = 5_000;
 
 /**
  * The Milky Way's two layers (owner, 2026-10-04): the drawing laid faintly on the plane, and the 3D

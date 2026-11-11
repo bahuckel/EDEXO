@@ -15,8 +15,14 @@ import { openMark, projectMarks, viewOf, type ScreenMark, type View } from "./pr
 import { startPitchCapture, type PitchCapture, type PitchRead } from "./pitchCapture";
 import { useDistanceReader } from "./useDistanceReader";
 import { setHudRecolour } from "./gameScreen";
-import { invertHudMatrix, recolourRgba, type HudColourMatrix, type HudColourSupport } from "@shared/hudColourMatrix";
+import { invertHudMatrix, type HudColourMatrix, type HudColourSupport } from "@shared/hudColourMatrix";
 import "./aim.css";
+import { setGameInFront } from "./readerThread";
+
+/* The game in front or not (aimWindow.cjs): the readers read only while it is (review 2026-11-10 E3). */
+(window as unknown as { edexoElectron?: { onAimGameFront?: (cb: (on: unknown) => void) => () => void } }).edexoElectron?.onAimGameFront?.(
+  (on) => setGameInFront(on !== false),
+);
 
 type MiniMap = ExoMinimapDTO | null;
 
@@ -213,7 +219,7 @@ function ReaderLine({ s, view, colour }: { s: ReaderState; view: View; colour: H
 function useHudLook(look: "default" | "xml", matrix: HudColourMatrix | null, xmlColour: HudColourSupport): HudColourSupport {
   const inverse = look === "xml" && xmlColour === "undo" && matrix ? invertHudMatrix(matrix) : null;
   useEffect(() => {
-    setHudRecolour({ pitch: inverse ? (px: Uint8ClampedArray) => recolourRgba(px, inverse) : null });
+    setHudRecolour({ pitch: inverse });
     // The inverse is rebuilt from these each render; its inputs are what matter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [look, matrix, xmlColour]);

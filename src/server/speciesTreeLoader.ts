@@ -63,13 +63,23 @@ export function clearGenusPhotosFolderCache(): void {
   genusPhotosFolderCache.clear();
 }
 
+/** Test seam: how many folders the cache holds. */
+export function genusPhotosFolderCacheSize(): number {
+  return genusPhotosFolderCache.size;
+}
+
 /** Subfolder like `Stratum_photos` next to genus json. */
 export function findGenusPhotosFolder(genusDirPath: string, folderBaseName: string): string | null {
   const cacheKey = `${genusDirPath}::${folderBaseName}`;
   const cached = genusPhotosFolderCache.get(cacheKey);
   if (cached !== undefined) return cached;
   const resolved = findGenusPhotosFolderUncached(genusDirPath, folderBaseName);
-  genusPhotosFolderCache.set(cacheKey, resolved);
+  /*
+    Only real genus folders are kept (review 2026-11-10 C7): the key comes from a URL segment
+    (`/species-photos/:genusDir/:file`), and every made-up name added an entry for as long as the app ran. There are
+    some 30 genera; the cap is a backstop.
+  */
+  if ((resolved !== null || isDir(genusDirPath)) && genusPhotosFolderCache.size < 256) genusPhotosFolderCache.set(cacheKey, resolved);
   return resolved;
 }
 

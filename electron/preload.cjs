@@ -77,6 +77,8 @@ contextBridge.exposeInMainWorld("edexoElectron", {
   setAimOverlay: (opts) => ipcRenderer.invoke("edexo:set-aim-overlay", opts),
   /** The screen marker's page: the game monitor's capture id (null for any other page). @returns {Promise<string | null>} */
   getAimCaptureSource: () => ipcRenderer.invoke("edexo:aim-capture-source"),
+  /** The screen marker's page: whether the game runs and is in front (`true` / `false`), on every change. */
+  onAimGameFront: (cb) => listen("edexo:aim-game-front", cb),
   /** A HUD page's drag while placing: "start", "move", "end", or "done" to finish placing. */
   hudDrag: (phase) => ipcRenderer.invoke("edexo:hud-drag", { phase }),
   /** HUD pages: placing mode on or off (`{ on }`). Returns an unsubscribe, as every `on…` here. */

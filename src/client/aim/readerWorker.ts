@@ -4,10 +4,11 @@
  */
 import { runReaderJob, type ReaderJob } from "./readerJobs";
 
-self.onmessage = (e: MessageEvent<{ id: number; job: ReaderJob }>) => {
+self.onmessage = async (e: MessageEvent<{ id: number; job: ReaderJob }>) => {
   const { id, job } = e.data;
   try {
-    self.postMessage({ id, result: runReaderJob(job) });
+    // Async only for the first job of a kind, which loads its glyph tables (readerJobs.ts).
+    self.postMessage({ id, result: await runReaderJob(job) });
   } catch (err) {
     self.postMessage({ id, error: err instanceof Error ? err.message : String(err) });
   }
