@@ -13,7 +13,9 @@
  * `--species <species id...>`: a genus with several species, from the EDDN year's identified bodies
  * (`docs/perf/eddn_species_contexts.py`, one `<display name slug>.contexts.jsonl` per species; 2026-10-14 for
  * Anemone, whose feeder profiles held 4-25 bodies and no ranking histograms). With `--histograms-only` only the
- * histograms are written into the installed profile (what Anemone got; see the note in the loop).
+ * histograms are written into the installed profile (what Anemone got; see the note in the loop); `--no-envelope`
+ * with it also turns the profile's observed-temperature envelope off (review 2026-11-07 §3.2.2: a 20-74 body
+ * profile's envelope is where those bodies were, not the species' range).
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -171,6 +173,7 @@ for (const { entry, file, label } of jobs) {
     const raw = JSON.parse(readFileSync(target, "utf8")) as Record<string, unknown>;
     raw.histograms = histograms;
     raw.displayHistograms = displayHistograms;
+    if (flags.has("--no-envelope")) raw.observedEnvelope = false;
     const changed = flags.has("--write") && writeJsonIfChanged(target, `${JSON.stringify(raw, null, 2)}\n`);
     console.log(
       `  histograms ${Object.keys(histograms).length} from ${rows.length} bodies -> ${path.basename(target)} ` +

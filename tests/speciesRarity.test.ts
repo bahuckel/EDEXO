@@ -161,4 +161,24 @@ describe("the tier rule, on a body that meets every condition (owner, 2026-10-04
     expect(r.ok).toBe(false);
     expect(r.reasons.some((x) => x.field === "Region")).toBe(true);
   });
+
+  // Review 2026-11-07 B14: the exemption was decided where the region gate runs, before temperature and pressure.
+  it("carries it beside a temperature miss too, which is judged after the region gate", () => {
+    const cold = { ...scan, SurfaceTemperature: 120 } as PlanetScan;
+    const r = speciesMatchesCriteria(speculumi, cold, resolvePlanetTemperatureBand(cold, null), null, {
+      regionName: "Aquila's Halo",
+      orbitDistanceFromParentStarLs: 3_558,
+      surfacePressureAtm: 0.0627,
+    } as SpeciesMatchContext);
+    expect(r.ok).toBe(false);
+    expect(r.reasons.some((x) => /Temperature/.test(x.field))).toBe(true);
+    expect(r.reasons.some((x) => x.field === "Region")).toBe(true);
+  });
+
+  it("a lifted objection keeps the passing row's own lines (source, notes, orbit factor)", () => {
+    const r = run(3_558);
+    const fields = r.reasons.map((x) => x.field);
+    expect(fields.indexOf("Region")).toBeLessThan(fields.length);
+    if (speculumi.dataSourceRelPath) expect(fields).toContain("Source");
+  });
 });

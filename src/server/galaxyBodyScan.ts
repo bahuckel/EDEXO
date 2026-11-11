@@ -89,7 +89,7 @@ import { loadSpatialCatalogue } from "./spatialCatalogue.js";
 import { getCachedPriceIndex, getCachedSpeciesDatabase } from "./snapshot.js";
 import { lookupPrice } from "./priceList.js";
 import { ATM_TO_PA, EARTH_G_MS2 } from "../shared/journalPhysics.js";
-import { spectralKeysFromJournalStarType } from "../shared/starSpectralKeys.js";
+import { hostStarClassKeys } from "../shared/hostStarGates.js";
 import { journalPlanetClass } from "../shared/spanshPlanetClass.js";
 import { sectorCellFromCoords, sectorCellKey } from "../shared/sectorName.js";
 import { getProjectRoot } from "./paths.js";
@@ -388,15 +388,15 @@ function companionClasses(
  *
  * The dump writes a spectral class (`K3`, `M9`) where the journal writes a `StarType`, so the
  * fragment gates read the raw string — `parentStarTypeIncludesAnyOf: ["K"]` is a substring test and
- * `K3` contains `K`. The class *set* needs the shared parser, which also knows that `M_RedGiant8`
- * is an M (§41); when that finds nothing, the leading letters are the class.
+ * `K3` contains `K`. The class *set* is the app's own key (hostStarClass.ts, as speciesMatchContext
+ * builds it from journals): `DA0` is `D` there, `WN0` is `W`. The colour parser this read before named
+ * `DA`/`WN`/`AEBE`, which no host gate lists, and turned the dump's 18 long names (`White Dwarf (DA)
+ * Star`, `Neutron Star`, `Black Hole`, `Wolf-Rayet N Star`) into `WHI`/`NEU`/`BLA`/`WOL`, so the
+ * allow-list gates (Shards, Pluma, the Anemones) refused instead of reading the star (review 2026-11-07
+ * §3.2.4, measured on bio-bodies.bin 2026-11-11).
  */
-function hostStarClassesOf(starType: string): string[] {
-  if (!starType) return [];
-  const keys = spectralKeysFromJournalStarType(starType);
-  if (keys.length > 0) return keys;
-  const head = starType.match(/^([A-Za-z]{1,3})/);
-  return head ? [head[1]!.toUpperCase()] : [];
+export function hostStarClassesOf(starType: string): string[] {
+  return hostStarClassKeys([starType]);
 }
 
 /** Which species the commander asked about, resolved against the database. */

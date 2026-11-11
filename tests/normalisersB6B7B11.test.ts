@@ -56,4 +56,20 @@ describe("restoring a demoted row", () => {
     restoreDemotionsBelowSignalCount(strict2, unlikely2, null, new Set(["a", "c"]));
     expect(strict2.find((m) => m.entry.id === "c_c")?.presenceFactor).toBe(0.07);
   });
+
+  // Review 2026-11-07 §3.2.3: a row hidden only by the region or a measured exclusion stayed hidden until a DSS.
+  it("brings back a row hidden only by the region or a measured exclusion, after the star rows", () => {
+    const only = (id: string, genus: string, field: string) =>
+      row(id, genus, { unlikely: true, unlikelyReasons: [{ field, detail: "x", soft: true }] });
+    const strict: Row[] = [row("a_a", "a")];
+    const unlikely: Row[] = [only("r_r", "r", "Region"), only("n_n", "n", "Never found here"), only("s_s", "s", "StarType")];
+    restoreDemotionsBelowSignalCount(strict, unlikely, 3, null);
+    expect(strict.map((m) => m.entry.id)).toEqual(["a_a", "s_s", "r_r"]);
+    expect(unlikely.map((m) => m.entry.id)).toEqual(["n_n"]);
+
+    const strict2: Row[] = [row("a_a", "a")];
+    const unlikely2: Row[] = [only("n_n", "n", "Never found here"), only("x_x", "x", "AtmosphereType")];
+    restoreDemotionsBelowSignalCount(strict2, unlikely2, 3, null);
+    expect(strict2.map((m) => m.entry.id)).toEqual(["a_a", "n_n"]);
+  });
 });

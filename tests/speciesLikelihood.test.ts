@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -143,6 +143,29 @@ describe("speciesLogScore", () => {
     expect(speciesLogScore(common, scan, null, null, { root })!.logScore).toBeGreaterThan(
       speciesLogScore(rare, scan, null, null, { root })!.logScore,
     );
+  });
+
+  // Review 2026-11-07 B15: the smoothing counted labels, so one bucket written two ways took two bins' share.
+  it("smooths a categorical term over its buckets, not over how many ways the labels spell them", () => {
+    const withVolcanism = (id: string, volcanism: Record<string, number>): SpeciesEntry => {
+      const e = species(id, id, BROAD);
+      const f = path.join(root, "data", "species", id, "exomastery", `${id}_exomastery.json`);
+      const doc = JSON.parse(readFileSync(f, "utf8")) as { categorical: Record<string, Record<string, number>> };
+      doc.categorical = { "body.volcanismType": volcanism };
+      writeFileSync(f, JSON.stringify(doc), "utf8");
+      return e;
+    };
+    const split = withVolcanism("split", { "Minor Metallic Magma": 50, "Major Metallic Magma": 50, "No volcanism": 100 });
+    const merged = withVolcanism("merged", { "Metallic Magma": 100, "No volcanism": 100 });
+    writePrevalence({ split: 100, merged: 100 });
+    clearLikelihoodDataCacheForTests();
+    clearExomasteryProfileCache();
+
+    const scan = { ...scanAtGravityG(0.35), Volcanism: "major metallic magma volcanism" } as PlanetScan;
+    const a = speciesLogScore(split, scan, null, null, { root, volcanismWeight: 1 })!;
+    const b = speciesLogScore(merged, scan, null, null, { root, volcanismWeight: 1 })!;
+    expect(a.terms).toBe(2);
+    expect(a.logLik).toBeCloseTo(b.logLik, 9);
   });
 
   it("has no opinion when there is no edges file to read", () => {

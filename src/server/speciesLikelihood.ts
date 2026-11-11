@@ -177,6 +177,31 @@ export const VOLCANISM_TERM_WEIGHT = 3;
  */
 export const REGION_PRIOR_WEIGHT = 0.25;
 
+/**
+ * A categorical histogram read in buckets: its total, the count in `want`'s bucket, and how many buckets it fills.
+ *
+ * The categories are the buckets, not the labels (review 2026-11-07 B15): the hit is summed over every label in the
+ * bucket, so counting `Minor Metallic Magma` and `Major Metallic Magma` as two bins gave one bucket two shares of the
+ * smoothing mass.
+ */
+function bucketedCounts(
+  path: string,
+  counts: Record<string, number>,
+  want: string,
+): { total: number; hit: number; categories: number } {
+  let total = 0;
+  let hit = 0;
+  const buckets = new Set<string>();
+  for (const [label, n] of Object.entries(counts)) {
+    if (!Number.isFinite(n) || n <= 0) continue;
+    total += n;
+    const b = bucketCategoricalValue(path, label);
+    buckets.add(b);
+    if (b === want) hit += n;
+  }
+  return { total, hit, categories: buckets.size };
+}
+
 /** Laplace smoothing, in pseudo-observations per bin. */
 export const BIN_SMOOTHING = 0.5;
 
@@ -453,30 +478,14 @@ export function speciesLogScore(
     // §27 is what happens when the two are compared as free text.
     const want = bucketCategoricalValue(path, raw);
     if (!want) continue;
-    let total = 0;
-    let hit = 0;
-    let categories = 0;
-    for (const [label, n] of Object.entries(counts)) {
-      if (!Number.isFinite(n) || n <= 0) continue;
-      total += n;
-      categories++;
-      if (bucketCategoricalValue(path, label) === want) hit += n;
-    }
-    if (total <= 0 || categories < 1) continue;
-    let lp = logSmoothed(hit, total, categories);
+    const own = bucketedCounts(path, counts, want);
+    if (own.total <= 0 || own.categories < 1) continue;
+    let lp = logSmoothed(own.hit, own.total, own.categories);
     const ambientCat = opts?.ambient?.categorical?.[path];
     if (ambientCat) {
-      let ambientTotal = 0;
-      let ambientHit = 0;
-      let ambientCategories = 0;
-      for (const [label, n] of Object.entries(ambientCat)) {
-        if (!Number.isFinite(n) || n <= 0) continue;
-        ambientTotal += n;
-        ambientCategories++;
-        if (bucketCategoricalValue(path, label) === want) ambientHit += n;
-      }
-      if (ambientTotal > 0 && ambientCategories > 0) {
-        lp -= logSmoothed(ambientHit, ambientTotal, ambientCategories);
+      const amb = bucketedCounts(path, ambientCat, want);
+      if (amb.total > 0 && amb.categories > 0) {
+        lp -= logSmoothed(amb.hit, amb.total, amb.categories);
       }
     }
     if (/volcanism/i.test(path)) {

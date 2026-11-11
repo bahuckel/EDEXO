@@ -180,6 +180,23 @@ export interface CriteriaMatchResult {
 }
 
 /**
+ * A Region objection the "logged here" exemption may lift, with the line it becomes when it does. Decided in
+ * speciesMatchesCriteria once every gate has spoken (review 2026-11-07 B14): judged where the region gate runs, a
+ * soft planet-class miss before it blocked the exemption and a temperature miss after it did not.
+ */
+const LOGGED_HERE = new WeakMap<MatchReason, MatchReason>();
+
+/** The lines a passing row ends with: where its data came from, and its codex notes. */
+function sourceAndNotes(entry: SpeciesEntry): MatchReason[] {
+  const out: MatchReason[] = [];
+  if (entry.dataSourceRelPath) out.push({ field: "Source", detail: entry.dataSourceRelPath });
+  for (const n of entry.criteria.matchContextNotes ?? []) {
+    if (n?.trim()) out.push({ field: "Note", detail: n.trim() });
+  }
+  return out;
+}
+
+/**
  * All journal gates except temperature and pressure (used to pick fallback candidates).
  */
 export function speciesMatchesExcludingTempPressure(
@@ -897,17 +914,18 @@ export function speciesMatchesExcludingTempPressure(
     /*
       Logged in the region at all, on a body that meets every other condition: it grows there (owner,
       2026-10-04: "exempt it if logged at least once"). Clypeus speculumi in Aquila's Halo, 4 systems
-      against an uncommon species' 10, was hidden on 5 of 606 of its own known-spawn bodies.
+      against an uncommon species' 10, was hidden on 5 of 606 of its own known-spawn bodies. "Every other
+      condition" includes temperature and pressure, so speciesMatchesCriteria lifts it (LOGGED_HERE).
     */
-    const loggedHere = tierVerdict.presence === "absent" && tierVerdict.count >= 1 && failures.length === 0;
-    if (loggedHere) {
-      reasons.push({ field: "Region", detail: tierRegionDetail(ctx.regionName, tierVerdict, false) });
-    } else if (tierVerdict.presence === "absent") {
-      failures.push({
+    if (tierVerdict.presence === "absent") {
+      const failure: MatchReason = {
         field: "Region",
         soft: true,
         detail: tierRegionDetail(ctx.regionName, tierVerdict, true),
-      });
+      };
+      if (tierVerdict.count >= 1)
+        LOGGED_HERE.set(failure, { field: "Region", detail: tierRegionDetail(ctx.regionName, tierVerdict, false) });
+      failures.push(failure);
     } else if (tierVerdict.presence === "present") {
       reasons.push({ field: "Region", detail: tierRegionDetail(ctx.regionName, tierVerdict, false) });
     }
@@ -930,18 +948,12 @@ export function speciesMatchesExcludingTempPressure(
       reasons: failures,
       softOnly: failures.every((f) => f.soft === true),
       passed: reasons,
+      // Kept for a lifted Region objection (LOGGED_HERE); nothing reads it on a failed result otherwise.
+      ...(presenceFactor !== undefined ? { presenceFactor } : {}),
     };
   }
 
-  if (entry.dataSourceRelPath) {
-    reasons.push({ field: "Source", detail: entry.dataSourceRelPath });
-  }
-
-  if (c.matchContextNotes?.length) {
-    for (const n of c.matchContextNotes) {
-      if (n?.trim()) reasons.push({ field: "Note", detail: n.trim() });
-    }
-  }
+  reasons.push(...sourceAndNotes(entry));
 
   return presenceFactor !== undefined ? { ok: true, reasons, presenceFactor } : { ok: true, reasons };
 }
@@ -1429,6 +1441,10 @@ export function speciesMatchesCriteria(
     }
   }
 
+  // The region objection was the only one: logged here, it grows here.
+  const lifted = failures.length === 1 ? LOGGED_HERE.get(failures[0]!) : undefined;
+  if (lifted) failures.length = 0;
+
   if (failures.length > 0) {
     return {
       ok: false,
@@ -1438,7 +1454,7 @@ export function speciesMatchesCriteria(
     };
   }
 
-  const ok = { ok: true, reasons: [...base.reasons, ...extraOkReasons] };
+  const ok = { ok: true, reasons: lifted ? [...basePassed, lifted, ...sourceAndNotes(entry), ...extraOkReasons] : [...base.reasons, ...extraOkReasons] };
   const pf =
     base.presenceFactor !== undefined || envelopeFactor !== undefined || orbitFactor !== undefined
       ? (base.presenceFactor ?? 1) * (envelopeFactor ?? 1) * (orbitFactor ?? 1)

@@ -24,7 +24,7 @@ import {
 import { calibrationLine } from "./chanceCalibration.js";
 import { measuredOddsNote } from "./measuredOdds.js";
 import { regionalSpeciesCount } from "./regionSpeciesData.js";
-import { speciesLogScore, TERM_DAMPING } from "./speciesLikelihood.js";
+import { REGION_PRIOR_WEIGHT, speciesLogScore, TERM_DAMPING } from "./speciesLikelihood.js";
 import { valueForNumericPath, valueForCategoricalPath } from "./exomasteryBodyValues.js";
 import { splitColumnLabel, splitContributions, splitFacts, type SplitInputs } from "./speciesSplit.js";
 
@@ -165,6 +165,34 @@ function withinGenus(
   return out;
 }
 
+/**
+ * What the region prior moved each row by, against the genus's other rows: the prior with the region (as
+ * presenceFloors ranks) minus the prior without it, centred like the field nudges. The [?] panel listed the region
+ * with no weight, so a row lifted or sunk by it read as unexplained (review 2026-11-07 B13).
+ */
+function regionNudges(rows: SpeciesMatch[], inputs: CandidateInputs & { scan: PlanetScan }, root: string): Map<string, number> {
+  const out = new Map<string, number>();
+  const regionIndex = inputs.ctx.regionIndex;
+  if (regionIndex == null || rows.length < 2) return out;
+  const moved = new Map<string, number>();
+  for (const m of rows) {
+    const withRegion = speciesLogScore(m.entry, inputs.scan, inputs.rec, inputs.journalHost, {
+      root,
+      regionPrior: true,
+      regionIndex,
+      regionPriorWeight: REGION_PRIOR_WEIGHT,
+    });
+    const without = speciesLogScore(m.entry, inputs.scan, inputs.rec, inputs.journalHost, { root });
+    if (withRegion && without) moved.set(m.entry.id, withRegion.logPrior - without.logPrior);
+  }
+  if (moved.size < 2) return out;
+  let sum = 0;
+  for (const v of moved.values()) sum += v;
+  const mean = sum / moved.size;
+  for (const [id, v] of moved) if (Math.abs(v - mean) >= MIN_NUDGE) out.set(id, Math.round((v - mean) * 10) / 10);
+  return out;
+}
+
 export function explainChances(
   matches: SpeciesMatch[],
   b: BodyExoState,
@@ -188,6 +216,7 @@ export function explainChances(
   for (const [genus, rows] of byGenus) {
     const split = opts.splitGenera.has(genus) ? opts.splitInputs : null;
     const fields = withinGenus(rows, genus, withScan, split, root);
+    const byRegion = regionNudges(rows, withScan, root);
     for (const m of rows) {
       const lines: ChanceWhyLine[] = [];
       if (prior) {
@@ -208,7 +237,7 @@ export function explainChances(
       if (regional != null && inputs.ctx.regionName) {
         lines.push({
           label: `logged in ${regional.toLocaleString("en-US")} system${regional === 1 ? "" : "s"} of ${inputs.ctx.regionName} (EDAstro codex)`,
-          weight: null,
+          weight: byRegion.get(m.entry.id) ?? null,
           kind: "region",
         });
       }

@@ -11,7 +11,7 @@
  * §47 removed the second location. Printing the path and its age stays anyway, because the cheapest
  * defence against measuring the wrong thing is saying out loud what was measured.
  */
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import v8 from "node:v8";
 import { gunzipSync } from "node:zlib";
@@ -22,8 +22,23 @@ import { resolveJournalMergeCacheRoot } from "../src/server/paths.js";
 import { buildSpeciesMatchContextFromRecords } from "../src/server/speciesMatchContext.js";
 import type { BodyExoState, ExplorationScanRecord, SpeciesMatchContext } from "../src/shared/types.js";
 
+/**
+ * The app keeps one merge per commander since 1.3.1 (`commanders/<fid>/.edexo-cache`), and a tool has no active
+ * commander, so the profile root has none. The newest commander's file then.
+ */
 export function journalMergeCachePath(): string {
-  return path.join(resolveJournalMergeCacheRoot(), "journal-merge.payload.v8gz");
+  const root = resolveJournalMergeCacheRoot();
+  const own = path.join(root, "journal-merge.payload.v8gz");
+  if (existsSync(own)) return own;
+  const commanders = path.join(path.dirname(root), "commanders");
+  let best = own;
+  let bestAt = -1;
+  for (const fid of existsSync(commanders) ? readdirSync(commanders) : []) {
+    const f = path.join(commanders, fid, ".edexo-cache", "journal-merge.payload.v8gz");
+    const at = existsSync(f) ? statSync(f).mtimeMs : -1;
+    if (at > bestAt) [best, bestAt] = [f, at];
+  }
+  return best;
 }
 
 function ageOf(file: string): string {

@@ -8,6 +8,8 @@ import path from "node:path";
 import type { BodyExoState, PlanetScan, SpeciesMatch } from "../src/shared/types.js";
 import { explainChances } from "../src/server/chanceWhy.js";
 import { chanceWhyText } from "../src/client/ChanceWhyList.js";
+import { regionIndexForSystem } from "../src/server/regionMapData.js";
+import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
 
 const root = path.resolve(__dirname, "..");
 const scan = {
@@ -55,5 +57,25 @@ describe("why this chance", () => {
     // A genus with one shown row has nothing to be set against.
     expect(fieldsOf(m[2]!).size).toBe(0);
     expect(chanceWhyText(m[0]!)).toContain("Against the other Concha here:");
+  });
+
+  // Review 2026-11-07 B13: the region line had no weight, though the ranking moves the chance by it (0.25 weight).
+  it("weighs the region line by what the region prior moved the row, against the genus", () => {
+    const regionIndex = regionIndexForSystem(root, 0, 0)!;
+    // Real entries: the ranking finds a profile by the entry's own names.
+    const db = loadSpeciesDatabaseFromTree(root);
+    const real = (id: string, pct: number) =>
+      ({ entry: db.species.find((e) => e.id === id)!, reasons: [], presenceProbabilityPercent: pct }) as unknown as SpeciesMatch;
+    const m = [real("tussock_tussock_caputus", 30), real("tussock_tussock_pennatis", 5)];
+    const body = { biologicalSignals: 2, genusHints: ["Tussock"], systemAddress: 1, bodyId: 2 } as unknown as BodyExoState;
+    explainChances(m, body, { scan, rec: null, ctx: { regionIndex, regionName: "Inner Orion Spur" }, journalHost: null }, root, {
+      splitGenera: new Set(),
+      splitInputs: null,
+    });
+    const weight = (x: SpeciesMatch) => x.chanceWhy?.find((l) => l.kind === "region")?.weight;
+    const cap = weight(m[0]!);
+    const pen = weight(m[1]!);
+    expect(cap).toBeGreaterThan(0);
+    expect(pen).toBeCloseTo(-cap!, 1);
   });
 });
