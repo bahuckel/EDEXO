@@ -204,7 +204,7 @@ export type EdexoRuntime = {
    * The downloaded, checked update waiting for a restart, and the folder it sits in; null when there
    * is none (appUpdater.ts). Electron installs it on the way out (electron/updater.cjs).
    */
-  stagedUpdate: () => { version: string; form: string; file: string; dir: string } | null;
+  stagedUpdate: () => { version: string; form: string; file: string; sha256: string; dir: string } | null;
 };
 
 export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
@@ -1462,7 +1462,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     },
     stagedUpdate: () => {
       const st = appUpdater.staged();
-      return st ? { version: st.version, form: st.form, file: st.file, dir: resolveUpdateDir() } : null;
+      // The hash too: Electron checks the file against it again on the way out (review 2026-11-10 D1).
+      return st ? { version: st.version, form: st.form, file: st.file, sha256: st.sha256, dir: resolveUpdateDir() } : null;
     },
   };
 }

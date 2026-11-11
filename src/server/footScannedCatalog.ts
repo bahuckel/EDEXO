@@ -3,9 +3,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  renameSync,
   statSync,
-  writeFileSync,
 } from "node:fs";
 import { sharedFindsWithOwnership, sharedSignature } from "./sharedExomastery.js";
 import { dirname, join } from "node:path";
@@ -45,6 +43,7 @@ import { resolveSpeciesPhoto } from "./speciesPhotos.js";
 import { isBacteriumSpeciesEntry } from "../shared/speciesBacterium.js";
 import { lookupPrice } from "./priceList.js";
 import { REL_TOLERANCE, withinRelative, buildFootScanMatchPayload } from "./footScanCompare.js";
+import { setAsideUnreadable, writeFileAtomic } from "./atomicWrite.js";
 export { buildFootScanMatchPayload } from "./footScanCompare.js";
 
 /** Where the catalog used to live, relative to the project root. See {@link catalogPath}. */
@@ -377,9 +376,7 @@ export function flushFootScannedCatalog(): void {
     try {
       mkdirSync(dirname(path), { recursive: true });
       // Temp file and rename: a crash mid-write must not leave half a catalog of his finds.
-      const tmp = `${path}.tmp`;
-      writeFileSync(tmp, `${JSON.stringify(file, null, 2)}\n`, "utf8");
-      renameSync(tmp, path);
+      writeFileAtomic(path, `${JSON.stringify(file, null, 2)}\n`, "utf8");
       const st = statSync(path);
       footCatalogCache.set(path, { mtimeMs: st.mtimeMs, size: st.size, file });
       pendingCatalogWrites.delete(path);
@@ -472,14 +469,16 @@ export function loadFootScannedCatalog(projectRoot: string): FootScannedFile {
 
   try {
     const raw = JSON.parse(readFileSync(path, "utf8")) as FootScannedFile;
-    if (!raw || raw.formatVersion !== 1 || !Array.isArray(raw.entries)) {
-      footCatalogCache.delete(path);
-      return EMPTY_FOOT_CATALOG;
-    }
+    if (!raw || raw.formatVersion !== 1 || !Array.isArray(raw.entries)) throw new Error("not a foot catalog");
     footCatalogCache.set(path, { mtimeMs: stat.mtimeMs, size: stat.size, file: raw });
     return raw;
   } catch {
+    /*
+      Moved aside before the empty catalog is used (review 2026-11-10 C6): the next find was written over a torn file
+      as a catalog holding that find alone.
+    */
     footCatalogCache.delete(path);
+    setAsideUnreadable(path);
     return EMPTY_FOOT_CATALOG;
   }
 }

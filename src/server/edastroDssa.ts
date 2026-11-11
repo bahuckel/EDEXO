@@ -26,10 +26,11 @@
  * join is still listed — it just cannot be ranked — because dropping a curated deep-space service
  * carrier for want of a coordinate is a worse answer than showing it without a distance.
  */
-import { readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 import { EDASTRO_USER_AGENT, parseEdastroDate, splitCsvLine } from "./edastroCarriers.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 const DSSA_URL = "https://edastro.com/mapcharts/files/DSSAdeployments.csv";
 
@@ -146,9 +147,7 @@ export async function fetchDssaData(): Promise<{ ok: boolean; count?: number; er
 
   const path = resolveDssaCachePath();
   try {
-    const tmp = `${path}.part`;
-    writeFileSync(tmp, text, "utf8");
-    renameSync(tmp, path);
+    writeFileAtomic(path, text, "utf8");
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Could not save the DSSA list." };
   }

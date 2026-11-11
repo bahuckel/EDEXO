@@ -24,7 +24,7 @@ import {
   rmSync,
   statSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { Readable, type Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as WebReadableStream } from "node:stream/web";
@@ -95,6 +95,8 @@ export function readStagedUpdate(dir: string, current = APP_VERSION): StagedUpda
     )
       return null;
     if (compareVersions(j.version, current) <= 0 || !existsSync(j.file)) return null;
+    // The file this folder holds, never one named elsewhere (review 2026-11-10 C4: a restored ready.json named a share).
+    if (resolve(dirname(j.file)) !== resolve(dir)) return null;
     return j as StagedUpdate;
   } catch {
     return null;

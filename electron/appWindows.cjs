@@ -241,6 +241,11 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
   return {
     openAppUiWindow,
     openColonizeWindow,
+    /** A detached tab window's links and navigation, the same as the app window's (review 2026-11-10 D4). */
+    attachLinks(win) {
+      const base = ownBase();
+      if (base) attachAppPageLinks(win, base, undefined);
+    },
     closeAppWindow() {
       if (appUiWindow && !appUiWindow.isDestroyed()) appUiWindow.close();
     },

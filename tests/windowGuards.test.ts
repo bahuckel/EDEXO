@@ -12,10 +12,13 @@ const { guardWindowNavigation, restrictPermissions } = require("../electron/wind
   restrictPermissions: (ses: unknown) => void;
 };
 
+type Fake = ReturnType<typeof fakeWindow>;
 function fakeWindow() {
   let openHandler: ((d: { url: string }) => { action: string }) | null = null;
-  const listeners: Record<string, (e: { preventDefault: () => void }, url: string) => void> = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const listeners: Record<string, (...a: any[]) => void> = {};
   return {
+    listeners,
     win: {
       webContents: {
         setWindowOpenHandler: (h: typeof openHandler) => (openHandler = h),
@@ -48,6 +51,21 @@ describe("window guards", () => {
       "http://127.0.0.1:71119/",
       "https://evil.example/",
     ]);
+  });
+
+  // Review 2026-11-10 D5: a window a guarded one opens inherits the bridge; it and its own children are guarded too.
+  it("guards the windows a guarded window opens, and theirs", () => {
+    const external: string[] = [];
+    const shell = { openExternal: async (u: string) => void external.push(u) };
+    const parent = fakeWindow();
+    guardWindowNavigation(parent.win, () => "http://127.0.0.1:7111", shell);
+    const child: Fake = fakeWindow();
+    parent.listeners["did-create-window"]!(child.win);
+    const grandchild: Fake = fakeWindow();
+    child.listeners["did-create-window"]!(grandchild.win);
+    expect(grandchild.open("https://github.com/bahuckel/EDEXO")).toBe("deny");
+    expect(grandchild.navigate("https://evil.example/")).toBe(true);
+    expect(external).toEqual(["https://github.com/bahuckel/EDEXO", "https://evil.example/"]);
   });
 
   it("grants the clipboard, fullscreen and pointer lock, and nothing else", () => {

@@ -23,6 +23,8 @@
   the HUDs from outside the game.
 */
 
+const { writeFileAtomic } = require("./atomicWrite.cjs");
+
 /*
   `group` is the launcher's folding section (owner, 2026-10-06: "key-binds in launcher under collapsible
   categories"), in the order of GROUPS.
@@ -94,10 +96,8 @@ function createKeybinds(deps) {
 
   function save() {
     try {
-      const p = deps.filePath();
-      const tmp = `${p}.tmp`;
-      deps.fs.writeFileSync(tmp, JSON.stringify({ binds }, null, 2), "utf8");
-      deps.fs.renameSync(tmp, p);
+      // Flushed, and renamed with a retry while Windows holds the file (plan 1.3).
+      writeFileAtomic(deps.filePath(), JSON.stringify({ binds }, null, 2), "utf8");
     } catch {
       /* the binds still work this session */
     }

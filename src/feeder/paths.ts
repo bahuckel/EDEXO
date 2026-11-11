@@ -34,10 +34,10 @@ import {
   readdirSync,
   renameSync,
   statSync,
-  writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { getProjectRoot, resolveUserSettingsJsonPath } from "../server/paths.js";
+import { writeFileAtomic } from "../server/atomicWrite.js";
 
 /**
  * The repository root.
@@ -86,7 +86,7 @@ export function setConfiguredFeederDataDir(dir: string | null): { ok: boolean; e
   const cfg = feederDataDirConfigPath();
   try {
     if (dir == null || !dir.trim()) {
-      writeFileSync(cfg, JSON.stringify({ feederDataDir: "" }, null, 2), "utf8");
+      writeFileAtomic(cfg, JSON.stringify({ feederDataDir: "" }, null, 2), "utf8");
       resolvedDataDir = null;
       return { ok: true };
     }
@@ -94,7 +94,7 @@ export function setConfiguredFeederDataDir(dir: string | null): { ok: boolean; e
     if (!existsSync(abs)) return { ok: false, error: "Path does not exist." };
     if (!statSync(abs).isDirectory()) return { ok: false, error: "Corpus path must be a folder." };
     mkdirSync(dirname(cfg), { recursive: true });
-    writeFileSync(cfg, JSON.stringify({ feederDataDir: abs }, null, 2), "utf8");
+    writeFileAtomic(cfg, JSON.stringify({ feederDataDir: abs }, null, 2), "utf8");
     resolvedDataDir = null; // re-resolve on the next read rather than serving the old answer
     return { ok: true };
   } catch (e) {

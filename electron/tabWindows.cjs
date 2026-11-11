@@ -139,10 +139,17 @@ function createTabWindows(d) {
     if (saved?.maximized && !opts.at) win.maximize();
     d.trackWindowState(`tab:${key}`, win);
     d.enableZoom(win);
-    win.webContents.setWindowOpenHandler(({ url }) => {
-      if (/^https?:\/\//i.test(url) && !url.startsWith(`${base}/`)) d.onExternalLink(url);
-      return { action: "deny" };
-    });
+    /*
+      The app window's links and navigation guard (review 2026-11-10 D4): an own page opens in a window of its own
+      (Privacy, Terms, the classic map did nothing here), a link out goes to the browser, and the window never
+      navigates to another site with the bridge.
+    */
+    if (typeof d.attachLinks === "function") d.attachLinks(win);
+    else
+      win.webContents.setWindowOpenHandler(({ url }) => {
+        if (/^https?:\/\//i.test(url) && !url.startsWith(`${base}/`)) d.onExternalLink(url);
+        return { action: "deny" };
+      });
     win.on("focus", () => focused(key));
     win.on("closed", () => {
       focusOrder = focusOrder.filter((k) => k !== key);
@@ -171,6 +178,8 @@ function createTabWindows(d) {
   // Bring the window holding a tab forward, the tab in front. False: no other window has it.
   d.ipcMain.handle("edexo:tab-focus", (ev, kind) => {
     const from = keyOf(ev.sender);
+    // From one of the tab windows only (review 2026-11-10 D6), like tab-detach.
+    if (!from) return false;
     for (const [k, tabs] of registry) {
       if (k === from || !tabs.includes(kind)) continue;
       const w = windows.get(k);
@@ -189,7 +198,7 @@ function createTabWindows(d) {
   */
   d.ipcMain.handle("edexo:tab-show-main", (ev, front) => {
     const w = windows.get("main");
-    if (!live(w) || w.webContents === ev.sender || typeof front !== "string") return false;
+    if (!keyOf(ev.sender) || !live(w) || w.webContents === ev.sender || typeof front !== "string") return false;
     if (w.isMinimized()) w.restore();
     w.show();
     w.focus();
@@ -218,7 +227,8 @@ function createTabWindows(d) {
     The strip's empty part is the window's drag handle, and Windows gives a drop there to nobody — a tab
     let go on it opened a new window (owner, 2026-10-06: "I need to drop it close to the +").
   */
-  d.ipcMain.on("edexo:tab-dragging", (_ev, on) => {
+  d.ipcMain.on("edexo:tab-dragging", (ev, on) => {
+    if (!keyOf(ev.sender)) return;
     for (const w of windows.values()) if (live(w)) w.webContents.send("edexo:tab-dragging", on === true);
   });
   // A detached window whose last tab left.

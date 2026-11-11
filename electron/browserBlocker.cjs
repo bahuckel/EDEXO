@@ -17,13 +17,19 @@
   lists name, small scripts that run in the page before its own code and take the ads out of what the player is
   sent. YouTube serves its ads from the same servers as its videos, so blocking requests cannot stop them. The
   scripts come from uBlock Origin's scriptlet library as Ghostery packages it for this engine (resources.json),
-  downloaded like the lists, never shipped in the app; uBlock's "quick fixes" list carries the YouTube rules. Both
-  change often (YouTube changes its player often), so they are refreshed daily, the rest weekly.
+  downloaded like the lists, never shipped in the app; uBlock's "quick fixes" list carries the YouTube rules and is
+  refreshed daily (YouTube changes its player often), the rest weekly.
+
+  The scriptlets are code run inside browsed pages, the pages passwords fill in on, so they are pinned (review
+  2026-11-10 D3, plan 1.7): one commit of Ghostery's repository and the file's SHA-256, checked on every download.
+  A file that does not match is refused. A new pin comes with an EDEXO release; the file on disk is fetched again
+  only when it no longer matches the pin.
 */
 
 const fs = require("node:fs");
 const path = require("node:path");
 const { Worker } = require("node:worker_threads");
+const { createHash } = require("node:crypto");
 const { writeFileAtomic } = require("./atomicWrite.cjs");
 
 const LISTS = [
@@ -56,13 +62,17 @@ const LISTS = [
     daily: true,
   },
 ];
-/** The scriptlets the lists' `##+js(...)` rules run (uBlock Origin's library, packaged by Ghostery for its engine). */
+/**
+ * The scriptlets the lists' `##+js(...)` rules run (uBlock Origin's library, packaged by Ghostery for its engine),
+ * pinned: commit 7f5784d (2026-08-14, the newest change to the file on 2026-11-11, the same bytes as `master`).
+ */
 const RESOURCES = {
   key: "resources",
   name: "uBlock scriptlets (packaged by Ghostery)",
-  url: "https://raw.githubusercontent.com/ghostery/adblocker/master/packages/adblocker/assets/ublock-origin/resources.json",
-  daily: true,
+  url: "https://raw.githubusercontent.com/ghostery/adblocker/7f5784d0a1dc177171ee3d6d39a7e4ac7a7eecec/packages/adblocker/assets/ublock-origin/resources.json",
+  sha256: "5ce0ce483f0e5514308ccb0240960a9dd7bfeab417debeef96960dce2c95f690",
 };
+const sha256Of = (text) => createHash("sha256").update(text).digest("hex");
 const DOWNLOADS = [...LISTS, RESOURCES];
 /** What the lists weighed when measured (2026-10-13), for the "needs N MB" line before the first download. */
 const ESTIMATE_BYTES = 5_800_000;
@@ -123,9 +133,21 @@ function createBrowserBlocker(o) {
   }
   const fileOf = (d) =>
     d === RESOURCES ? path.join(dir, "resources.json") : path.join(listDir, `${d.key}.txt`);
-  /** The downloads due again (daily or weekly), or never fetched (a list added in a newer version). */
+  /** The pinned scriptlets on disk, unless missing or not the pin's bytes (an older pin, a damaged file). */
+  const resourcesPinned = () => {
+    try {
+      return sha256Of(fs.readFileSync(fileOf(RESOURCES))) === RESOURCES.sha256;
+    } catch {
+      return false;
+    }
+  };
+  /**
+   * The downloads due again (daily or weekly), or never fetched (a list added in a newer version); the scriptlets
+   * only when the file is not the pinned one.
+   */
   const stale = () =>
     DOWNLOADS.filter((d) => {
+      if (d === RESOURCES) return !resourcesPinned();
       const at = Date.parse(meta.fetched[d.key] ?? "");
       return !Number.isFinite(at) || Date.now() - at > (d.daily ? DAY_MS : WEEK_MS);
     });
@@ -169,7 +191,9 @@ function createBrowserBlocker(o) {
     if (!parts.length) throw new Error("No filter lists downloaded yet.");
     let resources = null;
     try {
-      resources = fs.readFileSync(fileOf(RESOURCES), "utf8");
+      const text = fs.readFileSync(fileOf(RESOURCES), "utf8");
+      // Only the pinned bytes run in pages (a file from before the pin, or damaged, waits for its download).
+      if (sha256Of(text) === RESOURCES.sha256) resources = text;
     } catch {
       /* no scriptlets yet: everything else still blocks */
     }
@@ -194,10 +218,11 @@ function createBrowserBlocker(o) {
     return true;
   }
 
-  /** A download checked: a filter list starts with its header or a comment, the scriptlets are JSON with some. */
+  /** A download checked: a filter list starts with its header or a comment, the scriptlets are the pinned bytes. */
   function check(d, text) {
     if (text.length > MAX_LIST_BYTES) return false;
     if (d !== RESOURCES) return /^\s*[![]/.test(text);
+    if (sha256Of(text) !== RESOURCES.sha256) return false;
     try {
       const j = JSON.parse(text);
       return Array.isArray(j.scriptlets) && j.scriptlets.length > 0;
@@ -211,11 +236,18 @@ function createBrowserBlocker(o) {
     progress = { done: 0, total: which.length };
     o.onChange();
     const now = new Date().toISOString();
+    /** The scriptlets refused: the lists still go in, then the refusal is the job's error. */
+    let refused = null;
     for (const d of which) {
       const r = await o.fetch(d.url);
       if (!r.ok) throw new Error(`${d.name}: ${r.status} ${r.statusText}`);
       const text = await r.text();
-      if (!check(d, text)) throw new Error(`${d.name} is not what it should be.`);
+      if (!check(d, text)) {
+        if (d !== RESOURCES) throw new Error(`${d.name} is not what it should be.`);
+        refused = new Error(`${d.name} did not match the pinned copy; not used.`);
+        progress = { done: progress.done + 1, total: which.length };
+        continue;
+      }
       writeFileAtomic(fileOf(d), text);
       meta.fetched[d.key] = now;
       progress = { done: progress.done + 1, total: which.length };
@@ -236,7 +268,12 @@ function createBrowserBlocker(o) {
       aside first, and for the seconds of the parse nothing was blocked and the browser showed its gate). A failed
       build keeps the old engine and its file.
     */
-    await buildFromLists();
+    try {
+      await buildFromLists();
+    } catch (e) {
+      if (!refused) throw e;
+    }
+    if (refused) throw refused;
   }
 
   /** One job at a time: "download" (asked for by the commander), "load", or the weekly "refresh". */
@@ -264,7 +301,7 @@ function createBrowserBlocker(o) {
     download: () => run("download", download),
     /**
      * At the browser's first open in a session: the engine, then in the background what is due again — the
-     * scriptlets and quick fixes daily, the rest weekly, and any list a newer version added.
+     * quick fixes daily, the rest weekly, any list a newer version added, and the scriptlets when the pin changed.
      */
     async ensure() {
       released = false;

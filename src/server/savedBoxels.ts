@@ -7,10 +7,11 @@
  * Two corrections per system (owner, 2026-09-30): cut the list from a system on (a last number typed
  * too high), and skip a system (one he will not fly — it still completes the boxel).
  */
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { boxelIndexOf, parseBoxel, type SavedBoxelDTO } from "../shared/boxel.js";
 import { BOXEL_MAX_ROWS, visitedEntry, type SystemStats, type VisitedSystem } from "./boxel.js";
+import { setAsideUnreadable, writeFileAtomic } from "./atomicWrite.js";
 
 interface Stored {
   id: string;
@@ -85,10 +86,8 @@ export function createSavedBoxels(opts: {
 
   function persist(): void {
     if (!opts.filePath) return;
-    const tmp = `${opts.filePath}.tmp`;
     try {
-      writeFileSync(tmp, `${JSON.stringify({ formatVersion: 1, autoCopyNext: autoCopy, run, items }, null, 1)}\n`, "utf8");
-      renameSync(tmp, opts.filePath);
+      writeFileAtomic(opts.filePath, `${JSON.stringify({ formatVersion: 1, autoCopyNext: autoCopy, run, items }, null, 1)}\n`, "utf8");
     } catch {
       /* kept in memory; the next change tries again */
     }
@@ -337,6 +336,8 @@ function load(filePath: string | null): { items: Stored[]; autoCopy: boolean; ru
       }));
     return { items, autoCopy: raw.autoCopyNext !== false, run: typeof raw.run === "string" ? raw.run : null };
   } catch {
+    // Moved aside, not overwritten by the next save (review 2026-11-10 C6).
+    setAsideUnreadable(filePath);
     return { items: [], autoCopy: true, run: null };
   }
 }

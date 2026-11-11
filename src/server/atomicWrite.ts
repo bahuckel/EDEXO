@@ -29,7 +29,7 @@ export function renameWithRetry(from: string, to: string, tries = 5): void {
   }
 }
 
-export function writeFileAtomic(file: string, data: string, options: WriteFileOptions = "utf8"): void {
+export function writeFileAtomic(file: string, data: string | NodeJS.ArrayBufferView, options: WriteFileOptions = "utf8"): void {
   const tmp = `${file}.tmp-${process.pid}`;
   // A `mode` in the options is the new file's (the temporary file is opened here, so writeFileSync would ignore it).
   const mode = typeof options === "object" && options?.mode != null ? options.mode : undefined;
@@ -49,5 +49,21 @@ export function writeFileAtomic(file: string, data: string, options: WriteFileOp
       /* nothing left to tidy */
     }
     throw e;
+  }
+}
+
+/**
+ * A user-data file that no longer reads is moved aside as `<name>.unreadable-<time>`, not left for the next save to
+ * replace with what is in memory (review 2026-11-10 C6): bookmarks, saved boxels, gas-giant marks and the foot
+ * catalog started empty over a torn or empty file, and the next change wrote that emptiness over his data. The copy
+ * is for recovering by hand. Best-effort: the path of the copy, or null when it could not be moved.
+ */
+export function setAsideUnreadable(file: string): string | null {
+  const aside = `${file}.unreadable-${Date.now()}`;
+  try {
+    renameWithRetry(file, aside);
+    return aside;
+  } catch {
+    return null;
   }
 }

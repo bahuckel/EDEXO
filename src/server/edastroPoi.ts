@@ -29,7 +29,7 @@
  *   out for the rest, and **never render `mainImage`** — 200 rows of hotlinked photographs would put
  *   this app's users on someone's hobby image server on every panel open.
  */
-import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { poiGroup, poiIsOrganic, poiTypeLabel, type PoiGroup } from "../shared/gecCategories.js";
 import { parseCarrierQuery, textMatchesQuery } from "../shared/carrierSearch.js";
@@ -231,9 +231,7 @@ export async function fetchPoiData(opts?: {
 
   const path = resolvePoiCachePath();
   try {
-    const tmp = `${path}.part`;
-    writeFileSync(tmp, text, "utf8");
-    renameSync(tmp, path);
+    writeFileAtomic(path, text, "utf8");
   } catch (e) {
     return { ok: false, status: before, error: e instanceof Error ? e.message : "Could not save the file." };
   }

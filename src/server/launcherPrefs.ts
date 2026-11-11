@@ -7,9 +7,10 @@
  * a rebuilt or re-downloaded exe opens the UI where it did last time. localStorage stays as the
  * fallback for a launcher that cannot reach this route.
  */
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { resolveUserSettingsJsonPath } from "./paths.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 export const LAUNCHER_OPEN_MODES = ["browser", "window", "phone"] as const;
 export type LauncherOpenMode = (typeof LAUNCHER_OPEN_MODES)[number];
@@ -69,9 +70,7 @@ function writeLauncherPref(key: string, value: unknown): void {
   const prev = readPrefsFile();
   const base = prev === null ? {} : prev === "unreadable" ? { lanAccess: false } : prev;
   const file = launcherPrefsPath();
-  const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify({ ...base, [key]: value }, null, 2), "utf8");
-  renameSync(tmp, file);
+  writeFileAtomic(file, JSON.stringify({ ...base, [key]: value }, null, 2), "utf8");
 }
 
 /*

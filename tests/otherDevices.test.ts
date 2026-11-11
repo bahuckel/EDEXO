@@ -4,21 +4,14 @@
  * asyncErrors.test.ts). Decided by the peer's address, not by field or channel names; this PC's own windows keep
  * the paths.
  *
- * A test cannot connect from another address without listening on the LAN (a firewall prompt), so the routes' own
- * loopback check is switched here; lanAuth's key and origin checks keep their real one and pass as this PC.
+ * Another device without a LAN bind (which would raise a firewall prompt): the server-side socket's `remoteAddress` is
+ * set to a LAN address as each connection arrives; with no access key set the server lets it in.
  */
 import os from "node:os";
 import path from "node:path";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
-
-const peer = vi.hoisted(() => ({ remote: true }));
-vi.mock("../src/server/lanAuth.js", async (orig) => ({
-  ...(await orig<typeof import("../src/server/lanAuth.js")>()),
-  isLoopbackAddress: () => !peer.remote,
-}));
-
 import { createHttpServer } from "../src/server/httpServer.js";
 import { forOtherDevices } from "../src/server/otherDevices.js";
 import type { AppSnapshot } from "../src/shared/types.js";
@@ -44,14 +37,13 @@ describe("forOtherDevices", () => {
 const closers: (() => Promise<void>)[] = [];
 afterEach(async () => {
   for (const c of closers.splice(0)) await c();
-  peer.remote = true;
 });
 
 const journalDir = path.join(os.homedir(), "Saved Games", "Frontier Developments", "Elite Dangerous");
 const journalPath = path.join(journalDir, "Journal.2026-11-10T101010.01.log");
 const account = path.basename(os.homedir()).toLowerCase();
 
-async function start() {
+async function start(remote = true) {
   const snap = { journalDir, journalPath, port: 7111 } as unknown as AppSnapshot;
   const { server, listening } = createHttpServer({
     port: 0,
@@ -61,6 +53,7 @@ async function start() {
     getCommanderPosition: () => null,
     getCommanderSystem: () => null,
   });
+  if (remote) server.prependListener("connection", (s) => Object.defineProperty(s, "remoteAddress", { value: "192.168.1.50" }));
   await listening;
   closers.push(() => new Promise((r) => server.close(() => r())));
   return `127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -94,8 +87,7 @@ describe("answers to another device", () => {
   });
 
   it("this PC's own windows keep the whole path", async () => {
-    peer.remote = false;
-    const host = await start();
+    const host = await start(false);
     const status = (await (await fetch(`http://${host}/api/status`)).json()) as { journalPath: string };
     expect(status.journalPath).toBe(journalPath);
     const frame = JSON.parse(await firstFrame(`ws://${host}/ws?channel=launcher`)) as { payload: { journalDir: string } };

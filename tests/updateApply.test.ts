@@ -16,9 +16,11 @@ const updater = require("../electron/updater.cjs") as {
   selfUpdateForm: (o: { isPackaged: boolean; platform?: string; env?: Record<string, string>; execPath?: string }) => string | null;
   removeOldCopy: (form: string, env?: Record<string, string>, execPath?: string) => void;
   installOnQuit: (
-    staged: { form: string; file: string; version: string },
+    staged: { form: string; file: string; version: string; sha256?: string },
     o: { form: string; scriptPath: string; logPath: string; pids: number[]; env?: Record<string, string>; execPath?: string; start?: boolean },
-  ) => { how: string; execPath?: string };
+  ) => { how: string; execPath?: string; refused?: string };
+  sha256File: (file: string) => string;
+  MOVED_MARK: string;
 };
 const SCRIPT = path.resolve(__dirname, "..", "electron", "update-apply.ps1");
 const win = process.platform === "win32";
@@ -78,7 +80,7 @@ describe.runIf(win && process.env.EDEXO_SWAP_TESTS === "1")("the swap on Windows
     writeFileSync(staged, "new exe");
     const app = fakeApp(1500);
     updater.installOnQuit(
-      { form: "portable", file: staged, version: "9.9.9" },
+      { form: "portable", file: staged, version: "9.9.9", sha256: updater.sha256File(staged) },
       { form: "portable", scriptPath: SCRIPT, logPath: path.join(dir, "update.log"), pids: [app.pid!], env: { PORTABLE_EXECUTABLE_FILE: target }, start: false },
     );
     // Still the old one while the app runs.
@@ -104,7 +106,7 @@ describe.runIf(win && process.env.EDEXO_SWAP_TESTS === "1")("the swap on Windows
     const zip = path.join(dir, "EDExoCompare-9.9.9-win-x64.zip");
     zipFolder(src, zip);
     updater.installOnQuit(
-      { form: "zip", file: zip, version: "9.9.9" },
+      { form: "zip", file: zip, version: "9.9.9", sha256: updater.sha256File(zip) },
       { form: "zip", scriptPath: SCRIPT, logPath: path.join(dir, "update.log"), pids: [], execPath: path.join(program, "EDExoCompare.exe"), env: {}, start: false },
     );
     await waitFor(() => logOf().includes("update: installed") || logOf().includes("update: FAILED"));
@@ -137,7 +139,7 @@ describe.runIf(win && process.env.EDEXO_SWAP_TESTS === "1")("the swap on Windows
     const { program, zip } = folderAndZip();
     const run = `
       const u = require(${JSON.stringify(path.resolve(__dirname, "..", "electron", "updater.cjs"))});
-      u.installOnQuit({ form: "zip", file: ${JSON.stringify(zip)}, version: "9.9.9" }, { form: "zip",
+      u.installOnQuit({ form: "zip", file: ${JSON.stringify(zip)}, version: "9.9.9", sha256: u.sha256File(${JSON.stringify(zip)}) }, { form: "zip",
         scriptPath: ${JSON.stringify(SCRIPT)}, logPath: ${JSON.stringify(path.join(dir, "update.log"))},
         pids: [process.pid], execPath: ${JSON.stringify(path.join(program, "EDExoCompare.exe"))}, env: {}, start: false });
       setTimeout(() => process.exit(0), 300);`;
@@ -156,7 +158,7 @@ describe.runIf(win && process.env.EDEXO_SWAP_TESTS === "1")("the swap on Windows
     try {
       await new Promise((r) => setTimeout(r, 800));
       updater.installOnQuit(
-        { form: "zip", file: zip, version: "9.9.9" },
+        { form: "zip", file: zip, version: "9.9.9", sha256: updater.sha256File(zip) },
         { form: "zip", scriptPath: SCRIPT, logPath: path.join(dir, "update.log"), pids: [], execPath: path.join(program, "EDExoCompare.exe"), env: {}, start: false },
       );
       await waitFor(() => logOf().includes("update: installed") || logOf().includes("update: FAILED"), 60_000);
@@ -184,7 +186,7 @@ describe.runIf(win && process.env.EDEXO_SWAP_TESTS === "1")("the swap on Windows
     const zip = path.join(dir, "EDEXO-9.9.9-win-x64.zip");
     zipFolder(src, zip);
     updater.installOnQuit(
-      { form: "zip", file: zip, version: "9.9.9" },
+      { form: "zip", file: zip, version: "9.9.9", sha256: updater.sha256File(zip) },
       { form: "zip", scriptPath: SCRIPT, logPath: path.join(dir, "update.log"), pids: [], execPath: path.join(program, "EDExoCompare.exe"), env: {}, start: false },
     );
     await waitFor(() => logOf().includes("update: installed") || logOf().includes("update: FAILED"));
@@ -216,7 +218,7 @@ describe.runIf(win && process.env.EDEXO_SWAP_TESTS === "1")("the swap on Windows
     const zip = path.join(dir, "EDExoCompare-1.3.0-win-x64.zip");
     zipFolder(src, zip);
     updater.installOnQuit(
-      { form: "zip", file: zip, version: "1.3.0" },
+      { form: "zip", file: zip, version: "1.3.0", sha256: updater.sha256File(zip) },
       { form: "zip", scriptPath: oldScript, logPath: path.join(dir, "update.log"), pids: [], execPath: path.join(program, "EDExoCompare.exe"), env: {}, start: false },
     );
     await waitFor(() => logOf().includes("update: installed") || logOf().includes("update: FAILED"));
@@ -235,7 +237,7 @@ describe.runIf(win && process.env.EDEXO_SWAP_TESTS === "1")("the swap on Windows
     const zip = path.join(dir, "bad.zip");
     zipFolder(src, zip);
     updater.installOnQuit(
-      { form: "zip", file: zip, version: "9.9.9" },
+      { form: "zip", file: zip, version: "9.9.9", sha256: updater.sha256File(zip) },
       { form: "zip", scriptPath: SCRIPT, logPath: path.join(dir, "update.log"), pids: [], execPath: path.join(program, "EDExoCompare.exe"), env: {}, start: false },
     );
     await waitFor(() => logOf().includes("update: installed") || logOf().includes("update: FAILED"));

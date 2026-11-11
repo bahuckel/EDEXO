@@ -9,7 +9,7 @@
  * the radar's frames on each Status.json poll included.
  */
 import type http from "node:http";
-import { isLoopbackAddress } from "./lanAuth.js";
+import { requestIsFromThisPc } from "./lanAuth.js";
 import { GZIP_MIN_BYTES } from "./routes/httpHelpers.js";
 
 /**
@@ -18,7 +18,7 @@ import { GZIP_MIN_BYTES } from "./routes/httpHelpers.js";
  * the listeners in the order they were added.
  */
 export function dropDeflateOfferFromThisPc(req: http.IncomingMessage): void {
-  if (isLoopbackAddress(req.socket?.remoteAddress)) delete req.headers["sec-websocket-extensions"];
+  if (requestIsFromThisPc(req)) delete req.headers["sec-websocket-extensions"];
 }
 
 /** A frame under GZIP_MIN_BYTES goes raw; a bigger one is deflated where the socket negotiated it (the LAN). */

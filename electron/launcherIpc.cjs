@@ -37,8 +37,14 @@ function registerLauncherIpc(
     return { on: aim ? aim.set(!!(opts && typeof opts === "object" && opts.on === true)) : false };
   });
 
-  ipcMain.handle("edexo:open-app-window", () => appWindows.openAppUiWindow(iconForChild));
-  ipcMain.handle("edexo:open-colonize-window", () => appWindows.openColonizeWindow(iconForChild));
+  // The launcher's two buttons, from the launcher only (review 2026-11-10 D6; openUi.js is the only caller).
+  const refusedWindow = { opened: false, error: "only the launcher opens this window", refused: true };
+  ipcMain.handle("edexo:open-app-window", (evt) =>
+    fromLauncher(evt) ? appWindows.openAppUiWindow(iconForChild) : refusedWindow,
+  );
+  ipcMain.handle("edexo:open-colonize-window", (evt) =>
+    fromLauncher(evt) ? appWindows.openColonizeWindow(iconForChild) : refusedWindow,
+  );
 
   ipcMain.handle("edexo:get-tray-pref", () => ({ enabled: closeToTray(), ...trayAvailability() }));
   /*

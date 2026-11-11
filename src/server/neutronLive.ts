@@ -12,9 +12,10 @@
  * is well off it ({@link NeutronLive.offRoute}), the route is planned again from where the ship is to the
  * destinations not reached yet (owner, 2026-10-13: "always taking into consideration your current location").
  */
-import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import type { NeutronLiveDTO } from "../shared/dto/neutron.js";
 import { routeProgress } from "../shared/routeProgress.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 export type { NeutronLiveDTO };
 
@@ -238,9 +239,7 @@ export function createNeutronLive(opts: {
         if (existsSync(opts.filePath)) unlinkSync(opts.filePath);
         return;
       }
-      const tmp = `${opts.filePath}.tmp`;
-      writeFileSync(tmp, `${JSON.stringify({ formatVersion: 1, ...st })}\n`, "utf8");
-      renameSync(tmp, opts.filePath);
+      writeFileAtomic(opts.filePath, `${JSON.stringify({ formatVersion: 1, ...st })}\n`, "utf8");
     } catch {
       /* kept in memory; the next change tries again */
     }

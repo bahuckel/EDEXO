@@ -12,7 +12,7 @@
  * its own file, never the journal merge, the discoveries or the visited list. A system of the boxel
  * Spansh does not list is "not on Spansh" — undiscovered as far as anyone uploaded.
  */
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { boxelIndexOf, parseBoxel, type BoxelLookupStatus, type BoxelNotableDTO } from "../shared/boxel.js";
 import {
   BODY_TRAITS,
@@ -27,6 +27,7 @@ import { isTerraformableState } from "../shared/terraformState.js";
 import { classifyGreenGiant } from "../shared/greenGasGiant.js";
 import { APP_USER_AGENT } from "./appVersion.js";
 import { BOXEL_MAX_ROWS } from "./boxel.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 const SEARCH_URL = "https://spansh.co.uk/api/systems/search";
 /** Check EDSM's spacing (navRouteLog.ts): one request every five seconds. */
@@ -168,10 +169,8 @@ export function createBoxelLookups(opts: {
   function persist(): void {
     if (!opts.filePath) return;
     records = records.filter(fresh);
-    const tmp = `${opts.filePath}.tmp`;
     try {
-      writeFileSync(tmp, `${JSON.stringify({ formatVersion: 1, boxels: records })}\n`, "utf8");
-      renameSync(tmp, opts.filePath);
+      writeFileAtomic(opts.filePath, `${JSON.stringify({ formatVersion: 1, boxels: records })}\n`, "utf8");
     } catch {
       /* kept in memory */
     }

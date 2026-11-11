@@ -197,7 +197,7 @@ function uiCommandEverywhere(cmd) {
 }
 ipcMain.on("edexo:ui-ack", (_e, r) => {
   if (!r || typeof r !== "object" || !keyTimingOn()) return;
-  huds.log(`key ${String(r.cmd)} in the page: got it +${Number(r.got)} ms, drawn +${Number(r.drawn)} ms`);
+  huds.log(`key ${String(r.cmd).slice(0, 40)} in the page: got it +${Number(r.got)} ms, drawn +${Number(r.drawn)} ms`);
 });
 
 /*
@@ -271,6 +271,8 @@ const tabWindows = createTabWindows({
   trackWindowState,
   enableZoom,
   onExternalLink: (url) => void shell.openExternal(url),
+  // appWindows is made just below; a detached window only opens after both exist.
+  attachLinks: (win) => appWindows.attachLinks(win),
 });
 
 /** The app, Colonize and galaxy map windows (appWindows.cjs). */

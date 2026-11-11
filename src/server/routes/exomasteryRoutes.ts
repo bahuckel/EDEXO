@@ -4,7 +4,7 @@ import { openLocalFile } from "../openUrl.js";
 import path from "node:path";
 import express from "express";
 import { getProjectRoot, getSpeciesDataDir } from "../paths.js";
-import { isLoopbackAddress, localOnly } from "../lanAuth.js";
+import { localOnly, requestIsFromThisPc } from "../lanAuth.js";
 
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { contentSecurityPolicyFor } from "../csp.js";
@@ -49,7 +49,7 @@ export function registerExomasteryRoutes(
     });
   });
   app.post("/api/visited-cache/import", localOnly, (req, res) => {
-    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+    if (!requestIsFromThisPc(req)) {
       res.status(403).json({ ok: false, error: "Only on the PC running the app." });
       return;
     }
@@ -68,7 +68,7 @@ export function registerExomasteryRoutes(
     }
   });
   app.post("/api/visited-cache/remove", localOnly, (req, res) => {
-    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+    if (!requestIsFromThisPc(req)) {
       res.status(403).json({ ok: false, error: "Only on the PC running the app." });
       return;
     }
@@ -108,7 +108,7 @@ export function registerExomasteryRoutes(
 
   /** Open the shared-exomastery folder in Explorer — on the PC running the app only. */
   app.post("/api/exomastery/open-shared-folder", localOnly, (req, res) => {
-    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+    if (!requestIsFromThisPc(req)) {
       res
         .status(403)
         .json({ ok: false, error: "The folder opens on the PC running the app, so only from there." });

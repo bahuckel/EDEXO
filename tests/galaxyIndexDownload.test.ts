@@ -2,12 +2,14 @@
  * The galaxy index as a separate download (owner, 2026-10-04, plan 4.2): it lands beside the settings,
  * a cut download never looks like an index, and the downloaded copy wins over the project's.
  */
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   downloadGalaxyIndex,
+  GALAXY_INDEX_RELEASE_API,
   galaxyIndexFilePath,
   galaxyIndexStatus,
   bioIndexSystemCount,
@@ -27,11 +29,23 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-const serve = (failOn?: string) =>
+const sha = (s: string | Uint8Array) => createHash("sha256").update(s).digest("hex");
+/** The release listing for these file bodies, with GitHub's checksums. */
+const listing = (bodies: Record<string, string | Uint8Array>) =>
+  new Response(JSON.stringify({ assets: Object.entries(bodies).map(([name, b]) => ({ name, digest: `sha256:${sha(b)}` })) }));
+/** The release: its listing with GitHub's checksums (`wrongFor` lists a wrong one), and the two files. */
+const serve = (failOn?: string, wrongFor?: string, prefix = "index") =>
   (async (url: string) => {
+    if (String(url) === GALAXY_INDEX_RELEASE_API) {
+      const assets = ["bio-index.bin", "system-traits.bin.gz"].map((name) => ({
+        name,
+        digest: `sha256:${sha(name === wrongFor ? "something else" : `${prefix}:${name}`)}`,
+      }));
+      return new Response(JSON.stringify({ assets }), { status: 200 });
+    }
     const name = String(url).split("/").pop()!;
     if (name === failOn) return new Response("nope", { status: 404 });
-    const body = new TextEncoder().encode(`index:${name}`);
+    const body = new TextEncoder().encode(`${prefix}:${name}`);
     return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
   }) as unknown as typeof fetch;
 
@@ -58,6 +72,18 @@ describe("the galaxy index download", () => {
     expect(done).toBe(0);
     expect(galaxyIndexStatus().error).toMatch(/system-traits\.bin\.gz: HTTP 404/);
     expect(galaxyIndexFilePath("system-traits.bin.gz").startsWith(dir)).toBe(false);
+  });
+
+  // Review 2026-11-10 (plan 1.6): checked against GitHub's checksum, and the two files go in together or not at all.
+  it("replaces nothing when a file does not match GitHub's checksum", async () => {
+    await downloadGalaxyIndex(() => {}, serve());
+    let done = 0;
+    // A newer release whose bio index checks out and whose traits file does not: neither goes in.
+    await downloadGalaxyIndex(() => (done += 1), serve(undefined, "system-traits.bin.gz", "newer"));
+    expect(done).toBe(0);
+    expect(galaxyIndexStatus().error).toMatch(/system-traits\.bin\.gz does not match/);
+    expect(readFileSync(galaxyIndexFilePath("bio-index.bin"), "utf8")).toBe("index:bio-index.bin");
+    expect(readdirSync(path.dirname(galaxyIndexFilePath("bio-index.bin"))).some((n) => n.endsWith(".part"))).toBe(false);
   });
 
   // Owner, 2026-10-07: with an index here the map offered no download at all; now it says when the release differs.
@@ -110,6 +136,8 @@ describe("the galaxy index in systems, not megabytes (owner, 2026-10-12)", () =>
       return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
     }) as unknown as typeof fetch;
     await downloadGalaxyIndex(() => undefined, (async (url: string) => {
+      if (String(url) === GALAXY_INDEX_RELEASE_API)
+        return listing({ "bio-index.bin": header(5_337_927), "system-traits.bin.gz": "index:system-traits.bin.gz" });
       const name = String(url).split("/").pop()!;
       const body = name === "bio-index.bin" ? header(5_337_927) : new TextEncoder().encode(`index:${name}`);
       return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
@@ -125,7 +153,8 @@ describe("the galaxy index in systems, not megabytes (owner, 2026-10-12)", () =>
 // Code review A10 (2026-10-14): a connection that stops sending used to leave "downloading" up for good.
 describe("a stalled galaxy index download", () => {
   it("gives up after the idle time, says so, and leaves no half file", async () => {
-    const stalled = (async () => {
+    const stalled = (async (url: string) => {
+      if (String(url) === GALAXY_INDEX_RELEASE_API) return listing({ "bio-index.bin": "x", "system-traits.bin.gz": "y" });
       const stream = new ReadableStream<Uint8Array>({
         start(c) {
           c.enqueue(new TextEncoder().encode("half"));

@@ -19,10 +19,12 @@ import {
   rmSync,
   statSync,
 } from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { getProjectRoot, resolveUserSettingsJsonPath } from "./paths.js";
+import { APP_USER_AGENT } from "./appVersion.js";
 
 export const GALAXY_INDEX_FILES = ["bio-index.bin", "system-traits.bin.gz"] as const;
 export type GalaxyIndexFile = (typeof GALAXY_INDEX_FILES)[number];
@@ -30,6 +32,29 @@ export type GalaxyIndexFile = (typeof GALAXY_INDEX_FILES)[number];
 /** Where the release keeps them: one release, updated when the index is rebuilt. */
 export const GALAXY_INDEX_BASE_URL =
   "https://github.com/bahuckel/EDEXO/releases/download/galaxy-index";
+
+/** The release's own listing: each file with GitHub's SHA-256 of it (`digest`). */
+export const GALAXY_INDEX_RELEASE_API = "https://api.github.com/repos/bahuckel/EDEXO/releases/tags/galaxy-index";
+
+/**
+ * Each index file's SHA-256 as GitHub lists it (review 2026-11-10, plan 1.6, as the app update does): a download is
+ * checked against it before it replaces anything. No checksum for a file, no download.
+ */
+async function releaseDigests(fetchImpl: typeof fetch, signal: AbortSignal): Promise<Map<string, string>> {
+  const r = await fetchImpl(GALAXY_INDEX_RELEASE_API, {
+    headers: { Accept: "application/vnd.github+json", "User-Agent": APP_USER_AGENT },
+    signal,
+  });
+  if (!r.ok) throw new Error(`The release's checksums: HTTP ${r.status}`);
+  const j = (await r.json()) as { assets?: { name?: unknown; digest?: unknown }[] };
+  const out = new Map<string, string>();
+  for (const a of j.assets ?? []) {
+    const m = typeof a.digest === "string" ? /^sha256:([0-9a-f]{64})$/i.exec(a.digest) : null;
+    if (typeof a.name === "string" && m) out.set(a.name, m[1]!.toLowerCase());
+  }
+  for (const name of GALAXY_INDEX_FILES) if (!out.has(name)) throw new Error(`GitHub lists no checksum for ${name}`);
+  return out;
+}
 
 function userGalaxyDir(): string {
   return path.join(path.dirname(resolveUserSettingsJsonPath()), "galaxy");
@@ -204,6 +229,7 @@ export async function downloadGalaxyIndex(
   const dir = userGalaxyDir();
   mkdirSync(dir, { recursive: true });
   try {
+    const digests = await releaseDigests(fetchImpl, AbortSignal.timeout(timeouts.connectMs));
     for (const name of GALAXY_INDEX_FILES) {
       downloading = { name, done: 0, total: null };
       /*
@@ -235,18 +261,22 @@ export async function downloadGalaxyIndex(
         downloading = { name, done: 0, total: Number.isFinite(total) && total > 0 ? total : null };
         const part = path.join(dir, `${name}.part`);
         const body = Readable.fromWeb(r.body as import("node:stream/web").ReadableStream<Uint8Array>);
+        const hash = createHash("sha256");
         body.on("data", (chunk: Buffer) => {
           stall();
+          hash.update(chunk);
           if (downloading) downloading = { ...downloading, done: downloading.done + chunk.length };
         });
         await pipeline(body, createWriteStream(part), { signal: ac.signal });
-        renameSync(part, path.join(dir, name));
+        if (hash.digest("hex") !== digests.get(name)) throw new Error(`${name} does not match GitHub's checksum`);
       } catch (e) {
         throw ac.signal.aborted && ac.signal.reason instanceof Error ? ac.signal.reason : e;
       } finally {
         clearTimeout(idle);
       }
     }
+    // Both in, or neither (review 2026-11-10 C18): renamed once both are checked, never one beside the other's old copy.
+    for (const name of GALAXY_INDEX_FILES) renameSync(path.join(dir, `${name}.part`), path.join(dir, name));
     downloading = null;
     remoteSizes = null; // asked again next time: the files here are now the release's
     onDone();

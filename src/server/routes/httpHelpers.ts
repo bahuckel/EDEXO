@@ -1,7 +1,7 @@
 import path from "node:path";
 import { gzip as gzipCb } from "node:zlib";
 import express from "express";
-import { isLoopbackAddress } from "../lanAuth.js";
+import { requestIsFromThisPc } from "../lanAuth.js";
 import { forOtherDevices } from "../otherDevices.js";
 
 /** Below this, framing and CPU cost more than the bytes saved. */
@@ -25,7 +25,7 @@ export function sendJson(
   body: string,
   onSent?: (rawBytes: number, sentBytes: number) => void,
 ): void {
-  const local = isLoopbackAddress(req.socket?.remoteAddress);
+  const local = requestIsFromThisPc(req);
   const raw = Buffer.from(local ? body : forOtherDevices(body), "utf8");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Vary", "Accept-Encoding");

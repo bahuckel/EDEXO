@@ -22,7 +22,7 @@
  * (so the same body never comes back after being read), the records, and the settings.
  */
 import { rareColourPhrase, type ColourRarity } from "../shared/rareColour.js";
-import { existsSync, readFileSync, renameSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import type { ExplorationScanRecord } from "../shared/types.js";
 import { BODY_FEATURES, bodyFeatures, directParent, featureRecordFromScan, inVoidCross } from "../shared/bodyFeatures.js";
 import { customRuleHits } from "../shared/customBodyRules.js";
@@ -47,7 +47,7 @@ import {
   type RecordMarkDTO,
   type RecordSubject,
 } from "../shared/notices.js";
-import { writeFileAtomic } from "./atomicWrite.js";
+import { setAsideUnreadable, writeFileAtomic } from "./atomicWrite.js";
 
 type Line = Record<string, unknown>;
 
@@ -990,11 +990,7 @@ function load(filePath: string | null): NoticesFile {
       next save: it holds the commander's notify settings, and those were silently reset to the
       defaults (code review 2026-10-10, A5). Kept as `.unreadable-<time>` to recover by hand.
     */
-    try {
-      renameSync(filePath, `${filePath}.unreadable-${Date.now()}`);
-    } catch {
-      /* left where it is; the next save replaces it */
-    }
+    setAsideUnreadable(filePath);
     return fresh;
   }
 }

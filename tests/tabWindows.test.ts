@@ -69,6 +69,7 @@ class FakeWindow {
 
 function setup(states: Record<string, unknown> = {}) {
   FakeWindow.made = [];
+  const linked: unknown[] = [];
   const on = new Map<string, Handler>();
   const handle = new Map<string, Handler>();
   let written: Record<string, unknown> = { ...states };
@@ -88,10 +89,11 @@ function setup(states: Record<string, unknown> = {}) {
     trackWindowState: () => {},
     enableZoom: () => {},
     onExternalLink: () => {},
+    attachLinks: (w: unknown) => linked.push(w),
   });
   const main = new FakeWindow({});
   tw.attachMain(main);
-  return { tw, main, on, handle, states: () => written };
+  return { tw, main, on, handle, states: () => written, linked };
 }
 
 describe("tab windows", () => {
@@ -171,6 +173,24 @@ describe("tab windows", () => {
     const again = setup({ tabWindows: [key] });
     again.tw.restore();
     expect(FakeWindow.made[1]!.webContents.url).toBe(`http://127.0.0.1:7111/?tabwin=${key}`);
+  });
+
+  // Review 2026-11-10 D4 / D6: a detached window gets the app window's links and navigation guard; the tab channels
+  // answer the tab windows only.
+  it("gives a detached window the app window's links, and ignores a page that is not a tab window", async () => {
+    const { main, on, handle, linked } = setup();
+    await handle.get("edexo:tab-detach")!({ sender: main.webContents }, { kind: "galaxy", x: 0, y: 0 });
+    const win = FakeWindow.made[1]!;
+    expect(linked).toEqual([win]);
+    on.get("edexo:tabs-report")!({ sender: win.webContents }, ["galaxy"]);
+    const stranger = { sender: new FakeContents() };
+    expect(await handle.get("edexo:tab-focus")!(stranger, "galaxy")).toBe(false);
+    expect(win.focused).toBe(false);
+    expect(await handle.get("edexo:tab-show-main")!(stranger, "main")).toBe(false);
+    expect(main.webContents.sent.some(([c]) => c === "edexo:tab-show")).toBe(false);
+    on.get("edexo:tab-dragging")!(stranger, true);
+    expect(win.webContents.sent.some(([c]) => c === "edexo:tab-dragging")).toBe(false);
+    expect(await handle.get("edexo:tab-show-main")!({ sender: win.webContents }, "main")).toBe(true);
   });
 
   // Key binds reach the app window's page over IPC, not through the server's socket (owner, 2026-10-07).

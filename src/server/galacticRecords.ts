@@ -9,10 +9,11 @@
  * world`). Some of EDAstro's minimums are placeholders from bad reports (a 6,371 km "gas giant"), so
  * the app calls them EDAstro's records, not facts.
  */
-import { readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 import { APP_USER_AGENT } from "./appVersion.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 const BASE = "https://edastro.com/records/";
 const PAGES = [
@@ -203,8 +204,7 @@ export async function fetchGalacticRecords(opts: { force?: boolean; fetchImpl?: 
   }
   if (!records.length) throw new Error("EDAstro's records pages changed shape: nothing could be read.");
   const path = resolveGalacticRecordsPath();
-  writeFileSync(`${path}.tmp`, JSON.stringify({ formatVersion: 1, fetchedAtMs: Date.now(), records } satisfies RecordsFile), "utf8");
-  renameSync(`${path}.tmp`, path);
+  writeFileAtomic(path, JSON.stringify({ formatVersion: 1, fetchedAtMs: Date.now(), records } satisfies RecordsFile), "utf8");
   memo = null;
   return readGalacticRecordsStatus();
 }

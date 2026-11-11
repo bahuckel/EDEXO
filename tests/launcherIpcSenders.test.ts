@@ -24,13 +24,14 @@ function setup() {
     setMoveMode: vi.fn(() => true),
   };
   const aim = { set: vi.fn(() => true), captureSource: () => null, setReader: () => {} };
+  const appWindows = { openAppUiWindow: vi.fn(() => ({ opened: true })), openColonizeWindow: vi.fn(() => ({ opened: true })) };
   const setCloseToTray = vi.fn();
   registerLauncherIpc(
     {
       electron: { app: {}, dialog: {}, ipcMain: { handle: (ch: string, fn: never) => handle.set(ch, fn), on: () => {} }, BrowserWindow: {} },
       huds,
       aim,
-      appWindows: {},
+      appWindows,
       keybinds: {},
       trayControl: {},
       quitFlow: {},
@@ -43,7 +44,7 @@ function setup() {
     },
     null,
   );
-  return { handle, launcher, huds, aim, setCloseToTray };
+  return { handle, launcher, huds, aim, setCloseToTray, appWindows };
 }
 
 describe("launcher IPC senders", () => {
@@ -58,6 +59,9 @@ describe("launcher IPC senders", () => {
     ["edexo:toggle-foot-overlay", undefined],
     ["edexo:set-aim-overlay", { on: true }],
     ["edexo:set-tray-pref", { enabled: true }],
+    // Review 2026-11-10 D6: the launcher's two window buttons.
+    ["edexo:open-app-window", undefined],
+    ["edexo:open-colonize-window", undefined],
   ];
 
   it("changes nothing for a page that is not the launcher", async () => {
@@ -71,6 +75,8 @@ describe("launcher IPC senders", () => {
     expect(t.huds.setMoveMode).not.toHaveBeenCalled();
     expect(t.aim.set).not.toHaveBeenCalled();
     expect(t.setCloseToTray).not.toHaveBeenCalled();
+    expect(t.appWindows.openAppUiWindow).not.toHaveBeenCalled();
+    expect(t.appWindows.openColonizeWindow).not.toHaveBeenCalled();
   });
 
   it("does what the launcher asks", async () => {
@@ -84,5 +90,7 @@ describe("launcher IPC senders", () => {
     expect(t.huds.setMoveMode).toHaveBeenCalledWith(true);
     expect(t.aim.set).toHaveBeenCalledWith(true);
     expect(t.setCloseToTray).toHaveBeenCalledWith(true);
+    expect(t.appWindows.openAppUiWindow).toHaveBeenCalledTimes(1);
+    expect(t.appWindows.openColonizeWindow).toHaveBeenCalledTimes(1);
   });
 });

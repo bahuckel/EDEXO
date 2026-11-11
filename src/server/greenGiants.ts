@@ -5,7 +5,7 @@
  * ladder), a K10 anomaly in the system (from the journals or EDAstro's codex file), and the commander's
  * call.
  */
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import type { ExplorationScanRecord } from "../shared/types.js";
 import { bodyKey } from "../shared/bodyKey.js";
 import {
@@ -16,6 +16,7 @@ import {
   type GreenGiantMark,
   type GreenGiantVerdict,
 } from "../shared/greenGasGiant.js";
+import { setAsideUnreadable, writeFileAtomic } from "./atomicWrite.js";
 
 export interface GreenGiantMarkRow {
   mark: GreenGiantMark;
@@ -38,10 +39,8 @@ export function createGreenGiantMarks(opts: { filePath: string | null; now?: () 
 
   function persist(): void {
     if (!opts.filePath) return;
-    const tmp = `${opts.filePath}.tmp`;
     try {
-      writeFileSync(tmp, `${JSON.stringify({ formatVersion: 1, marks: Object.fromEntries(marks) }, null, 1)}\n`, "utf8");
-      renameSync(tmp, opts.filePath);
+      writeFileAtomic(opts.filePath, `${JSON.stringify({ formatVersion: 1, marks: Object.fromEntries(marks) }, null, 1)}\n`, "utf8");
     } catch {
       /* kept in memory; the next call tries again */
     }
@@ -70,7 +69,8 @@ function load(filePath: string | null): Map<string, GreenGiantMarkRow> {
       if (v && (v.mark === "yes" || v.mark === "no")) m.set(k, v);
     }
   } catch {
-    /* a broken file starts empty rather than stopping the app */
+    // A broken file starts empty rather than stopping the app, moved aside first (review 2026-11-10 C6).
+    setAsideUnreadable(filePath);
   }
   return m;
 }

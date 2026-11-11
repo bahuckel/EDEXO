@@ -31,12 +31,13 @@
  * directly; nothing of it is in this repository or the installer.
  */
 import { K10_CODEX_ID } from "../shared/greenGasGiant.js";
-import { readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 import { splitCsvLine } from "./edastroCarriers.js";
 import { APP_USER_AGENT } from "./appVersion.js";
 import { regionJoinKey } from "../shared/regionMap.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 export const NSP_URL = "https://edastro.com/mapcharts/files/codex-data.csv";
 /** What the button says; the real figure comes from the server's Content-Length once it starts. */
@@ -459,9 +460,7 @@ export function edastroBioRegionIds(): { ids: ReadonlySet<string>; fetchedAtMs: 
 
 function writeNspFile(file: NspFile): void {
   const p = resolveNspCachePath();
-  const tmp = `${p}.tmp`;
-  writeFileSync(tmp, JSON.stringify(file), "utf8");
-  renameSync(tmp, p);
+  writeFileAtomic(p, JSON.stringify(file), "utf8");
   memo = null;
   checked = null;
 }

@@ -10,9 +10,10 @@
  * profiles are, how many sample packs are on disk — is computed live instead, so the panel is only
  * as stale as the numbers that genuinely require the store.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { feederDataDir } from "./paths.js";
+import { writeFileAtomic } from "../server/atomicWrite.js";
 
 export const FEEDER_STATUS_SNAPSHOT_VERSION = 1;
 
@@ -44,7 +45,7 @@ export function writeFeederStatusSnapshot(
   };
   try {
     mkdirSync(feederDataDir(), { recursive: true });
-    writeFileSync(feederStatusSnapshotPath(), `${JSON.stringify(full, null, 2)}\n`, "utf8");
+    writeFileAtomic(feederStatusSnapshotPath(),`${JSON.stringify(full, null, 2)}\n`, "utf8");
   } catch {
     /* best-effort: the snapshot is a convenience for the UI, never something a run depends on */
   }

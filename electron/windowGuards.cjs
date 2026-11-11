@@ -40,6 +40,9 @@ function guardWindowNavigation(win, getBase, shell) {
     e.preventDefault();
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
   });
+  // A window this one opens inherits the bridge, so it gets the same guard, and its own children too (review
+  // 2026-11-10 D5: Privacy → Terms → "Project on GitHub" opened github.com in a window with the bridge).
+  win.webContents.on("did-create-window", (child) => guardWindowNavigation(child, getBase, shell));
 }
 
 /** @param {import("electron").Session} ses */

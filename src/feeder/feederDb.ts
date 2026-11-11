@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import initSqlJs, { type Database, type SqlValue } from "sql.js";
 import { genusFromLandmark, occurrenceKey, type SpeciesIndexEntry, type SpanshExoRow } from "./csvImport.js";
@@ -6,6 +6,7 @@ import { PROJECT_ROOT } from "./paths.js";
 import { asClaimOrigin, type ClaimOrigin } from "../shared/provenance.js";
 import { runExec, queryOne, queryAll, normSystem, normBody, normSpeciesLabel } from "./feederSql.js";
 import { META_CUMULATIVE, migrateSchema } from "./feederSchema.js";
+import { writeFileAtomic } from "../server/atomicWrite.js";
 
 /**
  * sql.js's WebAssembly: `node_modules` in a checkout, `resources/sql-wasm/` in the packaged app, where
@@ -44,20 +45,9 @@ export class FeederStore {
    * a full disk mid-write left a truncated database, the only copy of what was imported.
    */
   persist(): void {
-    const data = this.db.export();
-    const tmp = `${this.dbPath}.${process.pid}.tmp`;
-    try {
-      writeFileSync(tmp, Buffer.from(data));
-      renameSync(tmp, this.dbPath);
-      this.unsaved = false;
-    } catch (e) {
-      try {
-        rmSync(tmp, { force: true });
-      } catch {
-        /* nothing to clean */
-      }
-      throw e;
-    }
+    // Flushed before the rename and the rename retried while Windows holds the file (writeFileAtomic, plan 1.3).
+    writeFileAtomic(this.dbPath, Buffer.from(this.db.export()), {});
+    this.unsaved = false;
   }
 
   private held = 0;

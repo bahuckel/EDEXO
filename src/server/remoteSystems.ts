@@ -16,7 +16,7 @@
  * discoveries, the data value or the visited-systems list; it lives in its own file in the user data
  * folder for 30 days, then is fetched again.
  */
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { BodyExoState, GenusHint, RemoteBioBody, RemoteSystemRecord } from "../shared/types.js";
 import { APP_USER_AGENT } from "./appVersion.js";
@@ -25,6 +25,7 @@ import { spanshDumpToExplorationRecords } from "./spanshSystemHydration.js";
 import { planetScanFromExplorationRecord } from "./footScannedCatalog.js";
 import { genusNameForCodexToken } from "../shared/codexGenusNames.js";
 import { bodyKey } from "../shared/bodyKey.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 const DUMP_URL = "https://spansh.co.uk/api/dump";
 const SYSTEM_URL = "https://spansh.co.uk/api/system";
@@ -250,9 +251,7 @@ export function writeRemoteSystemToCache(system: RemoteSystemRecord, nowMs = Dat
   const p = remoteSystemsCachePath();
   try {
     mkdirSync(dirname(p), { recursive: true });
-    const tmp = `${p}.tmp`;
-    writeFileSync(tmp, JSON.stringify({ format: 5, systems } satisfies CacheFile), "utf8");
-    renameSync(tmp, p);
+    writeFileAtomic(p, JSON.stringify({ format: 5, systems } satisfies CacheFile), "utf8");
   } catch {
     /* a cache that cannot be written only costs a fetch next time */
   }

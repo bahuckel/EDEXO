@@ -10,11 +10,12 @@
  * a minute's pause after a rate limit, and only the systems the commander asked about. The answers
  * are kept: a system does not stop being known.
  */
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { EDSM_USER_AGENT } from "./edsmSystemHydration.js";
 import type { NavRouteWaypointDTO } from "./navRouteFuel.js";
 import { resolveCommanderDataDir } from "./paths.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 export interface NavRouteSystem {
   address: number;
@@ -105,8 +106,7 @@ function saveNow(): void {
   try {
     const f = filePath();
     const body: FileShape = { formatVersion: 1, routes, systems: [...systems.values()] };
-    writeFileSync(`${f}.tmp`, JSON.stringify(body));
-    renameSync(`${f}.tmp`, f);
+    writeFileAtomic(f, JSON.stringify(body), "utf8");
   } catch {
     /* a later save tries again */
   }

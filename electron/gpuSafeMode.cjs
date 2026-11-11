@@ -15,6 +15,7 @@
  */
 const fs = require("fs");
 const path = require("path");
+const { writeFileAtomic } = require("./atomicWrite.cjs");
 
 const GPU_SAFE_FILE = "gpu-safe-mode.json";
 /** Given to the one start after an automatic switch, so a second crash cannot loop. */
@@ -43,7 +44,7 @@ function readGpuSafe(dir) {
 function writeGpuSafe(dir, rec) {
   try {
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, GPU_SAFE_FILE), JSON.stringify({ on: true, ...rec }, null, 2), "utf8");
+    writeFileAtomic(path.join(dir, GPU_SAFE_FILE),JSON.stringify({ on: true, ...rec }, null, 2), "utf8");
     return true;
   } catch {
     return false;

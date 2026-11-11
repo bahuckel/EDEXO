@@ -5,7 +5,7 @@ import type { PhotoStampPrefs } from "../../shared/types.js";
 import { isJournalHistoryPreset } from "../../shared/journalHistoryPreset.js";
 import { feederDataDirExists, feederInboxDir, setConfiguredFeederDataDir } from "../../feeder/paths.js";
 import { parseSpanshRouteFile, summariseSpanshRouteFile } from "../../feeder/spanshRouteFile.js";
-import { isLoopbackAddress, localOnly } from "../lanAuth.js";
+import { localOnly, requestIsFromThisPc } from "../lanAuth.js";
 import { isEdsmCatchUpScope } from "../edsmCatchUp.js";
 
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
@@ -671,7 +671,7 @@ export function registerSettingsRoutes(
   // The streamer view redraws when the streamer changes a setting (R2: it asked every second).
   ctx.watchTopic("ui-mirror", () => uiMirror().rev);
   app.post("/api/ui/mirror", (req, res) => {
-    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+    if (!requestIsFromThisPc(req)) {
       res
         .status(403)
         .json({ ok: false, error: "Only the app on the PC running it sets the streamer view's settings." });
@@ -686,7 +686,7 @@ export function registerSettingsRoutes(
       res.status(501).json({ ok: false, error: "Not available" });
       return;
     }
-    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+    if (!requestIsFromThisPc(req)) {
       res.status(403).json({
         ok: false,
         error: "A browser opens on the PC running the app, so it can only be opened from there.",
@@ -708,7 +708,7 @@ export function registerSettingsRoutes(
       res.status(501).json({ ok: false, error: "Not available" });
       return;
     }
-    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+    if (!requestIsFromThisPc(req)) {
       res.status(403).json({
         ok: false,
         error: "The miss log opens on the PC running the app, so it can only be opened from there.",

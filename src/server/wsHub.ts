@@ -11,7 +11,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { ChangeTopics } from "./changeTopics.js";
 import type { AppSnapshot, BodyComputed, ExoLiveDTO, UiCommand } from "../shared/types.js";
 import { perfBytes, perfCount, perfTime } from "./perf.js";
-import { isLoopbackAddress, requestIsAuthorized, requestOriginIsAllowed } from "./lanAuth.js";
+import { requestIsAuthorized, requestIsFromThisPc, requestOriginIsAllowed } from "./lanAuth.js";
 import { forOtherDevices } from "./otherDevices.js";
 import { frameSendOptions } from "./wsCompression.js";
 import { GZIP_MIN_BYTES } from "./routes/httpHelpers.js";
@@ -344,7 +344,7 @@ export function createWsHub(deps: {
     });
 
     wss.on("connection", (ws, req) => {
-      if (!isLoopbackAddress(req.socket?.remoteAddress)) otherDevice.add(ws);
+      if (!requestIsFromThisPc(req)) otherDevice.add(ws);
       let wantsEvents = false;
       try {
         wantsEvents = new URL(req.url ?? "/ws", "http://x").searchParams.get("channel") === "events";

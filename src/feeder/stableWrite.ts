@@ -6,7 +6,8 @@
  * commits unreadable. A file whose content is the same apart from its top-level stamps is left as it
  * is, old stamp and all — the stamp then says when the content last changed.
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { writeFileAtomic } from "../server/atomicWrite.js";
 
 export const STAMP_KEYS = ["generatedAt", "builtAt"] as const;
 
@@ -32,6 +33,6 @@ export function sameApartFromStamps(path: string, text: string): boolean {
 /** Write `text` unless the file already says the same apart from its stamps. True when written. */
 export function writeJsonIfChanged(path: string, text: string): boolean {
   if (sameApartFromStamps(path, text)) return false;
-  writeFileSync(path, text, "utf8");
+  writeFileAtomic(path, text, "utf8");
   return true;
 }

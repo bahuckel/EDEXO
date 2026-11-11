@@ -25,7 +25,7 @@
  * Nothing here retains a system name, a body, a faction or a commander. The panel shows totals, and
  * a cache of the owner's movements is not something this app needs on disk to draw a bar chart.
  */
-import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
@@ -33,6 +33,7 @@ import { incomeFromJournalLine, INCOME_EVENT_NAMES, type IncomeEvent } from "../
 import type { CarrierLedgerBreak } from "../shared/carrierUpkeep.js";
 import type { RankLine } from "../shared/rankProgress.js";
 import { resolveCommanderDataDir } from "./paths.js";
+import { writeFileAtomic } from "./atomicWrite.js";
 
 /** Counted rather than listed: the panel wants "how many", never "which". */
 export interface ActivityCounts {
@@ -456,9 +457,7 @@ async function scanParts(files: readonly string[]): Promise<JournalScan> {
 
   if (changed) {
     try {
-      const tmp = `${path}.part`;
-      writeFileSync(tmp, JSON.stringify({ version: CACHE_VERSION, parts } satisfies CacheFile), "utf8");
-      renameSync(tmp, path);
+      writeFileAtomic(path, JSON.stringify({ version: CACHE_VERSION, parts } satisfies CacheFile), "utf8");
     } catch {
       /* a cache that cannot be written costs seconds on the next open, not correctness */
     }

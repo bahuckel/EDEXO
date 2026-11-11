@@ -7,6 +7,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { ROUTE_REACH } from "../src/server/routeReach.js";
 
 const dir = join(__dirname, "../src/server/routes");
 type Route = { method: string; path: string; pcOnly: boolean };
@@ -14,7 +15,12 @@ const routes: Route[] = [];
 for (const f of readdirSync(dir).filter((n) => n.endsWith(".ts"))) {
   const s = readFileSync(join(dir, f), "utf8");
   for (const m of s.matchAll(/app\.(get|post|put|delete|patch)\(\s*"([^"]+)",\s*([A-Za-z]+)?/g))
-    routes.push({ method: m[1]!, path: m[2]!, pcOnly: m[3] === "localOnly" });
+    // `localOnly` in the file, or a `pc` row in the route table (routeAccess.ts adds it; plan 1.1).
+    routes.push({
+      method: m[1]!,
+      path: m[2]!,
+      pcOnly: m[3] === "localOnly" || ROUTE_REACH[`${m[1]!.toUpperCase()} ${m[2]!}`] === "pc",
+    });
 }
 
 const PC_ONLY = [
@@ -34,6 +40,8 @@ const PC_ONLY = [
   // Only this PC captures its own screen (review 2026-11-07 §7).
   "/api/hud-pitch",
   "/api/hud-target-distance",
+  // The game's AppConfigLocal.xml, rewritten or deleted (review 2026-11-10 C3).
+  "/api/scan-route/netlog",
 ];
 
 describe("the phone as a remote", () => {

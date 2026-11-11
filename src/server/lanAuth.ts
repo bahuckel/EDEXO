@@ -47,6 +47,23 @@ export function isLoopbackAddress(addr: string | null | undefined): boolean {
   return /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(v4);
 }
 
+/** Headers a proxy adds to say who the real client is. */
+const PROXY_HEADERS = ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "true-client-ip", "forwarded"] as const;
+
+/**
+ * From this PC itself: a loopback peer that is not a proxy relaying someone else (review 2026-11-10 C2). A tunnel or
+ * reverse proxy on this PC (the Cloudflare tunnel service, for one) connects over loopback, so every request through
+ * it read as this PC's own: no access key, and every PC-only route. A request naming another client in a proxy
+ * header is another device, whatever socket it came in on.
+ */
+export function requestIsFromThisPc(req: {
+  socket?: { remoteAddress?: string | null } | null;
+  headers?: Record<string, string | string[] | undefined>;
+}): boolean {
+  if (!isLoopbackAddress(req.socket?.remoteAddress)) return false;
+  return !PROXY_HEADERS.some((h) => req.headers?.[h] !== undefined);
+}
+
 export function parseCookieHeader(raw: string | undefined | null): Record<string, string> {
   const out: Record<string, string> = {};
   if (!raw) return out;
@@ -85,9 +102,15 @@ export function readLanKeyFromRequest(req: IncomingMessage): { key: string | nul
   return { key: cookie ?? null, fromQuery: false };
 }
 
+/** Relayed by a proxy on this PC: a loopback socket naming another client (see {@link requestIsFromThisPc}). */
+function relayedByProxy(req: Parameters<typeof requestIsFromThisPc>[0]): boolean {
+  return isLoopbackAddress(req.socket?.remoteAddress) && !requestIsFromThisPc(req);
+}
+
 export function requestIsAuthorized(req: IncomingMessage, lanKey: string | null): boolean {
-  if (!lanKey) return true;
-  if (isLoopbackAddress(req.socket?.remoteAddress)) return true;
+  // LAN access off: the server listens on this PC only, and a tunnel on this PC must not reopen it (review C2).
+  if (!lanKey) return !relayedByProxy(req);
+  if (requestIsFromThisPc(req)) return true;
   return keysMatch(readLanKeyFromRequest(req).key, lanKey);
 }
 
@@ -193,7 +216,7 @@ export function requestOriginIsAllowed(
 ): boolean {
   const ours = (name: string | null) => name !== null && (isLoopbackHostName(name) || allowedHost(name));
   const host = req.headers.host ? hostNameOf(req.headers.host) : null;
-  if (req.headers.host && isLoopbackAddress(req.socket?.remoteAddress) && !ours(host)) return false;
+  if (req.headers.host && requestIsFromThisPc(req) && !ours(host)) return false;
   if (!opts.checkOrigin) return true;
   const origin = req.headers.origin;
   if (origin === undefined) return true;
@@ -229,7 +252,7 @@ export function createOriginGuard(allowedHost: (hostName: string) => boolean): R
  * 1.4). A paired phone or tablet can still read and use everything else.
  */
 export const localOnly: RequestHandler = (req, res, next) => {
-  if (isLoopbackAddress(req.socket?.remoteAddress)) {
+  if (requestIsFromThisPc(req)) {
     next();
     return;
   }
@@ -239,10 +262,12 @@ export const localOnly: RequestHandler = (req, res, next) => {
 export function createLanAuthGuard(lanKey: string | null): RequestHandler {
   return (req, res, next) => {
     if (!lanKey) {
-      next();
+      // LAN access off: the server listens on this PC only, and a tunnel on this PC must not reopen it (review C2).
+      if (relayedByProxy(req)) res.status(403).json({ error: "lan_access_off" });
+      else next();
       return;
     }
-    if (isLoopbackAddress(req.socket?.remoteAddress)) {
+    if (requestIsFromThisPc(req)) {
       next();
       return;
     }

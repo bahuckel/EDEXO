@@ -2,7 +2,7 @@
  * Bookmarks, kept in `edexo-bookmarks.json` beside the user settings (shared/bookmarks.ts has the
  * what and why).
  */
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import {
   PRESET_TAGS,
@@ -11,6 +11,7 @@ import {
   type BookmarkInput,
   type BookmarksListDTO,
 } from "../shared/bookmarks.js";
+import { setAsideUnreadable, writeFileAtomic } from "./atomicWrite.js";
 
 type Vec3 = { x: number; y: number; z: number };
 
@@ -30,10 +31,8 @@ export function createBookmarksService(opts: { filePath: string | null; now?: ()
 
   function persist(): void {
     if (!opts.filePath) return;
-    const tmp = `${opts.filePath}.tmp`;
     try {
-      writeFileSync(tmp, `${JSON.stringify({ formatVersion: 1, items }, null, 1)}\n`, "utf8");
-      renameSync(tmp, opts.filePath);
+      writeFileAtomic(opts.filePath, `${JSON.stringify({ formatVersion: 1, items }, null, 1)}\n`, "utf8");
     } catch {
       /* the list stays in memory; the next save tries again */
     }
@@ -101,6 +100,8 @@ function load(filePath: string | null): BookmarkDTO[] {
       .filter((b): b is BookmarkDTO => !!b && typeof b === "object" && typeof (b as BookmarkDTO).id === "string")
       .map((b) => ({ ...b, tags: normaliseTags(b.tags), note: typeof b.note === "string" ? b.note : "" }));
   } catch {
+    // Moved aside, not overwritten by the next save (review 2026-11-10 C6).
+    setAsideUnreadable(filePath);
     return [];
   }
 }

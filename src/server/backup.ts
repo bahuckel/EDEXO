@@ -109,6 +109,7 @@ export function appDataExclusion(rel: string, s: Pick<BackupSettings, "includeKe
   if (top === ".edexo-cache") return "cache (rebuilt from the journals)";
   if (top === "diag") return "diagnostics";
   if (top === RESTORE_PENDING_DIR || top.startsWith(BEFORE_RESTORE_PREFIX)) return "an earlier restore";
+  if (top === "update") return "a downloaded update (fetched again)";
   if (base === "edexo-bio-bodies.bin" && !s.includeBioBodies) return "large cache (rebuilt by re-importing the Spansh dump)";
   if (
     [
@@ -499,8 +500,35 @@ function insideFolder(root: string, to: string): boolean {
 }
 
 /**
+ * Why a backup's app-data file is not restored, or null when it is (review 2026-11-10 C4). A zip in a shared backup
+ * folder may be one the commander did not make: its `update/ready.json` named any executable as the update to install,
+ * and its LAN key and launcher prefs switched LAN access on with a key someone else knew. Never restored: anything a
+ * backup leaves out whatever the options (caches, an earlier restore, window positions, an update), and the LAN key;
+ * the launcher prefs come back without `lanAccess` (see {@link restoredFileText}).
+ */
+export function restoreExclusion(rel: string): string | null {
+  const never = appDataExclusion(rel, { includeKeys: true, includeBioBodies: true });
+  if (never) return never;
+  if (path.posix.basename(rel) === "edexo-compare-lan-key.txt") return "the LAN key (pair the devices again)";
+  return null;
+}
+
+/** What a restored file is written as: the launcher prefs without LAN access, which is switched on here only. */
+export function restoredFileText(rel: string, data: Buffer): Buffer {
+  if (path.posix.basename(rel) !== "edexo-launcher-prefs.json") return data;
+  try {
+    const j = JSON.parse(data.toString("utf8")) as Record<string, unknown>;
+    if (!j || typeof j !== "object" || Array.isArray(j) || !("lanAccess" in j)) return data;
+    delete j.lanAccess;
+    return Buffer.from(JSON.stringify(j, null, 2), "utf8");
+  } catch {
+    return data;
+  }
+}
+
+/**
  * Stage a backup's app data for the next start. Returns how many files were staged. Anything staged
- * earlier and not yet applied is replaced.
+ * earlier and not yet applied is replaced. What {@link restoreExclusion} names is left out.
  */
 export async function stageAppDataRestore(backupPath: string, appDataDir: string): Promise<number> {
   const staging = path.join(appDataDir, RESTORE_PENDING_DIR);
@@ -512,11 +540,11 @@ export async function stageAppDataRestore(backupPath: string, appDataDir: string
   let n = 0;
   for (const e of await listZip(backupPath)) {
     const rel = safeZipRel(e.name, "app-data/");
-    if (!rel) continue;
+    if (!rel || restoreExclusion(rel)) continue;
     const to = path.join(staging, ...rel.split("/"));
     if (!insideFolder(staging, to)) continue;
     await mkdir(path.dirname(to), { recursive: true });
-    await writeFile(to, await readZipEntry(backupPath, e));
+    await writeFile(to, restoredFileText(rel, await readZipEntry(backupPath, e)));
     n++;
   }
   await writeFile(path.join(appDataDir, `${RESTORE_PENDING_DIR}.json`), JSON.stringify({ from: path.basename(backupPath), staged: new Date().toISOString(), files: n }), "utf8");

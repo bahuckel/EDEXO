@@ -2,7 +2,7 @@
   The Boxels screen's routes (split out of galaxyRoutes.ts, discuss item 30, 1.3.1): one boxel, the saved ones and
   their table, the Spansh look-ups, the boxels flown before and the screen's options.
 */
-import { localOnly } from "../lanAuth.js";
+import { localOnly, requestIsFromThisPc } from "../lanAuth.js";
 import { boxelSystems, boxelTable, previousBoxelsPage, type SystemStats } from "../boxel.js";
 import { parseBoxel, type SavedBoxelDTO } from "../../shared/boxel.js";
 import { shortestBoxelOrder } from "../../shared/boxelOrder.js";
@@ -277,6 +277,9 @@ export function registerBoxelRoutes(
     const id = String(req.params.id ?? "");
     const body = (req.body ?? {}) as Record<string, unknown>;
     let done = false;
+    // The cut drops systems: a delete, which the phone rule keeps on this PC (review 2026-11-10 C3).
+    if (typeof body.cutFrom === "number" && !requestIsFromThisPc(req))
+      return void res.status(403).json({ ok: false, error: "Systems are cut from a boxel on the PC running the app." });
     if (typeof body.cutFrom === "number") done = opts.savedBoxels.cutFrom(id, body.cutFrom);
     else if (typeof body.skip === "number")
       done = opts.savedBoxels.setSkipped(id, body.skip, body.on !== false);

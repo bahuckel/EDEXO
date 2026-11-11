@@ -6,14 +6,14 @@
  */
 import type express from "express";
 import { mkdirSync } from "node:fs";
-import { isLoopbackAddress, localOnly } from "../lanAuth.js";
+import { localOnly, requestIsFromThisPc } from "../lanAuth.js";
 import { openLocalFile } from "../openUrl.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 
 export function registerBackupRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
   const service = opts.backup;
   const guard = (req: express.Request, res: express.Response): boolean => {
-    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+    if (!requestIsFromThisPc(req)) {
       res.status(403).json({ ok: false, error: "Backups are managed on the PC running the app." });
       return false;
     }
