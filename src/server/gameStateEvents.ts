@@ -52,6 +52,7 @@ import type { GameStateStore } from "./gameState.js";
 import { noteShipLine } from "./eyeHeight.js";
 import * as explorationSales from "./gameStateSales.js";
 import * as explorationMerge from "./gameStateExploration.js";
+import { compositionFromJournal } from "../shared/journalPhysics.js";
 
 const FOOT_JOURNAL_BUFFER_MAX = 600;
 
@@ -703,7 +704,7 @@ export function onScan(store: GameStateStore, line: JournalLine, ts: string): vo
     WasFootfalled: typeof wfRaw === "boolean" ? wfRaw : undefined,
     materials: line.Materials as PlanetScan["materials"],
     atmosphereComposition: line.AtmosphereComposition as PlanetScan["atmosphereComposition"],
-    composition: line.Composition as PlanetScan["composition"],
+    composition: compositionFromJournal(line.Composition) ?? undefined,
     radius: line.Radius as number | undefined,
     MassEM: line.MassEM as number | undefined,
     RotationPeriod: (line as Record<string, unknown>).RotationPeriod as number | undefined,

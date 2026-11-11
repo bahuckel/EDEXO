@@ -21,6 +21,35 @@ export const MIXED_PRESSURE_PA_THRESHOLD = 40;
 
 export const ATM_TO_PA = 101_325;
 
+declare const unitBrand: unique symbol;
+/**
+ * A share from 0 to 1, as the journal's `Composition` writes it (review 2026-11-10 Phase 3). Branded so a per cent
+ * cannot be stored where a fraction is read: EDSM and Spansh send `{"Ice": 6}` for 6 %, and kept as sent a 6 % ice
+ * body read as 600 % (A4). Made only by the converters below.
+ */
+export type Fraction = number & { readonly [unitBrand]: "fraction" };
+/** A body's solid composition (`Ice`, `Rock`, `Metal`), each a {@link Fraction}. */
+export type SolidComposition = Readonly<Record<string, Fraction>>;
+
+function compositionOf(raw: unknown, scale: number): SolidComposition | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out: Record<string, Fraction> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "number" && Number.isFinite(v)) out[k] = (scale === 1 ? v : v / scale) as Fraction;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** The journal's `Composition` (`{"Ice": 0.06, "Rock": 0.627}`, already fractions); null when it holds no number. */
+export function compositionFromJournal(raw: unknown): SolidComposition | null {
+  return compositionOf(raw, 1);
+}
+
+/** EDSM / Spansh `solidComposition` in per cent (`{"Ice": 6, "Rock": 62.7}`) → fractions. */
+export function compositionFromPercent(raw: unknown): SolidComposition | null {
+  return compositionOf(raw, 100);
+}
+
 /** Speculative “thin atmosphere” cutoff for exobiology matching (atm after {@link journalPressureToAtm}); tunable in data. */
 export const THIN_ATMOSPHERE_MAX_ATM = 0.1;
 

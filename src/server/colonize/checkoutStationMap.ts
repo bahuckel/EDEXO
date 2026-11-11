@@ -17,6 +17,7 @@ import {
 import { compareLy, lyOrLast, nearerLy, toLy } from "../../shared/colonize/systemDistanceLy";
 import { normalizeSpanshMarketArray } from "./spanshStationBuySearch";
 import { isCommanderBuyOffer } from "../../shared/colonize/stationSellOffer";
+import { playerBuyPriceOf } from "../../shared/colonize/marketPrice";
 
 export const SPANSH_RESULTS_INGEST_MAX = 80;
 
@@ -81,7 +82,7 @@ export function marketRowForCommodity(
     const sup = typeof row.supply === "number" ? row.supply : 0;
     const minSup = Math.max(minQty, minSupplyFilter ?? 0);
     if (sup < minSup) continue;
-    const buyPrice = typeof row.buy_price === "number" ? row.buy_price : null;
+    const buyPrice = playerBuyPriceOf(row);
     if (!isCommanderBuyOffer(sup, buyPrice)) continue;
     return { buyPrice, supply: sup };
   }
@@ -334,7 +335,7 @@ export function stationSellsNeed(
       if (!comm || !marketRowMatchesNeed(need, comm)) continue;
       const sup = typeof row.supply === "number" ? row.supply : 0;
       if (sup <= 0) continue;
-      const buyPrice = typeof row.buy_price === "number" ? row.buy_price : null;
+      const buyPrice = playerBuyPriceOf(row);
       if (!isCommanderBuyOffer(sup, buyPrice)) continue;
       const source =
         st.commoditySources.get(comm) ?? st.commoditySources.get(spanshLabelKey(comm)) ?? "spansh";

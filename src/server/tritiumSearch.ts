@@ -9,6 +9,7 @@
  */
 import { TtlCache } from "../shared/colonize/ttlCache.js";
 import { fetchJson, spanshGate } from "./colonize/httpGate.js";
+import { playerBuyPriceOf } from "../shared/colonize/marketPrice.js";
 
 const BODIES_SEARCH = "https://spansh.co.uk/api/bodies/search";
 const STATIONS_SEARCH = "https://spansh.co.uk/api/stations/search";
@@ -116,7 +117,7 @@ export function tritiumSellersFrom(payload: unknown, limit = LIMIT): TritiumSell
       distanceLy: num(s.distance) ?? 0,
       distanceLs: num(s.distance_to_arrival),
       supply,
-      price: num(row.buy_price) ?? 0,
+      price: playerBuyPriceOf(row) ?? 0,
       updatedAt: str(s.market_updated_at) || null,
       x: num(s.system_x),
       y: num(s.system_y),

@@ -11,6 +11,7 @@ import { dssHintsMissingCandidateGenera } from "../src/server/footScannedCatalog
 import { lookupPriceStrict } from "../src/server/priceList.js";
 import { computeExoDataAlertsForBody } from "../src/server/exoDataConsistencyAlerts.js";
 import type { BodyExoState, GenusHint, OrganicGenusLock, PlanetScan, SpeciesDatabase, SpeciesMatch } from "../src/shared/types.js";
+import { ownDssEvidence } from "../src/shared/genusEvidence.js";
 
 const db = loadSpeciesDatabase() as unknown as SpeciesDatabase;
 const thargoid = (id: string) => id.startsWith("thargoid_");
@@ -30,7 +31,7 @@ const body: PlanetScan = {
   Landable: true,
 };
 const run = (hints: GenusHint[] | null, locks: OrganicGenusLock[] | null = null) =>
-  matchDatabaseToScan(db, body, hints, locks, { includeBacterium: true }).matches.map((m) => m.entry.id);
+  matchDatabaseToScan(db, body, ownDssEvidence(hints), locks, { includeBacterium: true }).matches.map((m) => m.entry.id);
 
 describe("the Thargoid entries", () => {
   it("are in the database, DSS-only, each with its Vista price", () => {
@@ -71,7 +72,7 @@ describe("the Thargoid entries", () => {
 
   it("a genus the DSS named and the app listed is not also called missing", () => {
     const hints = [{ Genus: "$Codex_Ent_Barnacles_Name;", Genus_Localised: "Barnacles" }];
-    const r = matchDatabaseToScan(db, body, hints, null, { includeBacterium: true });
+    const r = matchDatabaseToScan(db, body, ownDssEvidence(hints), null, { includeBacterium: true });
     expect(dssHintsMissingCandidateGenera(hints, r.matches as SpeciesMatch[])).toEqual([]);
   });
 

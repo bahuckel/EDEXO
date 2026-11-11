@@ -27,6 +27,7 @@ import type {
   SpeciesDatabase,
   SpeciesMatchContext,
 } from "../../src/shared/types.js";
+import { ownDssEvidence } from "../../src/shared/genusEvidence.js";
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const feederDir = process.env.EXOMASTERY_FEEDER_DIR?.trim() || path.resolve(root, "..", "exomastery-feeder");
@@ -302,7 +303,7 @@ const spatial = loadSpatialCatalogue(root);
 export type RunMatch = ReturnType<typeof matchDatabaseToScan>["matches"][number];
 
 export function runMatcher(db: SpeciesDatabase, p: Prepared, withHints: boolean): RunMatch[] {
-  return matchDatabaseToScan(db, p.scan, withHints ? p.hints : null, null, {
+  return matchDatabaseToScan(db, p.scan, withHints ? ownDssEvidence(p.hints) : null, null, {
     includeBacterium: true,
     matchContext: p.ctx,
     spatialCatalogue: spatial,

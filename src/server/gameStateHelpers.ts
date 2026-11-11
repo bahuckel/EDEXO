@@ -349,7 +349,7 @@ export function buildSiblingPlanetScan(
     atmosphereComposition: Array.isArray(siblingRec?.atmosphereComposition)
       ? (siblingRec!.atmosphereComposition as PlanetScan["atmosphereComposition"])
       : source.atmosphereComposition,
-    composition: (siblingRec?.composition as PlanetScan["composition"]) ?? source.composition,
+    composition: siblingRec?.composition ?? source.composition,
     radius: siblingRec?.radius ?? source.radius,
   };
 }

@@ -9,6 +9,7 @@ import { gameTemperatureCeilingK } from "../shared/gameLimits.js";
 import { observedNearTemperature } from "./speciesTemperatureObservations.js";
 import type { ExclusionValues } from "./measuredExclusions.js";
 import { hostStarClassKey } from "../shared/hostStarClass.js";
+import { ATM_TO_PA, EARTH_G_MS2, LIGHT_SECOND_METERS } from "../shared/journalPhysics.js";
 
 const OPEN_LO = -1e15;
 const OPEN_HI = 1e15;
@@ -185,15 +186,15 @@ export function exclusionValues(scan: PlanetScan, ctx: SpeciesMatchContext | und
     temp: num(scan.SurfaceTemperature),
     mass: num(scan.MassEM),
     parent: ctx?.parentKind,
-    sma_ls: num(scan.SemiMajorAxis, 1 / 299_792_458),
+    sma_ls: num(scan.SemiMajorAxis, 1 / LIGHT_SECOND_METERS),
     orb_d: typeof scan.OrbitalPeriod === "number" ? num(Math.abs(scan.OrbitalPeriod), 1 / 86_400) : undefined,
     dist_ls: num(scan.distanceFromArrivalLs) ?? num(ctx?.distanceFromArrivalLs),
-    grav_g: num(scan.SurfaceGravity, 1 / 9.80665),
+    grav_g: num(scan.SurfaceGravity, 1 / EARTH_G_MS2),
     c_metal: num(metal),
     host: hostStarClassKey(ctx?.parentStarType) ?? undefined,
     main: ctx?.systemMainStarClass,
     region: ctx?.regionName,
-    press_atm: num(scan.SurfacePressure, 1 / 101_325),
+    press_atm: num(scan.SurfacePressure, 1 / ATM_TO_PA),
     radius_km: num(scan.radius, 1 / 1000),
     ecc: num(scan.Eccentricity),
     rot_d: typeof scan.RotationPeriod === "number" ? num(Math.abs(scan.RotationPeriod), 1 / 86_400) : undefined,

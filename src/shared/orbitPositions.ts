@@ -8,6 +8,7 @@
  * time for it) sits at a fixed angle by its id, at the right distance from its parent.
  */
 import type { ExplorationScanRecord } from "./dto/scan.js";
+import { LIGHT_SECOND_METERS } from "./journalPhysics.js";
 
 export interface Vec3 {
   x: number;
@@ -15,7 +16,7 @@ export interface Vec3 {
   z: number;
 }
 
-export const METRES_PER_LS = 299_792_458;
+export const METRES_PER_LS = LIGHT_SECOND_METERS;
 const DEG = Math.PI / 180;
 /** The golden angle: bodies without a phase spread round their parent instead of in a line. */
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));

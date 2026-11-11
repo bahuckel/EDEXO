@@ -5,6 +5,7 @@ import { estimatedTemperatureRangeForScan } from "../src/server/planetTemperatur
 import { matchDatabaseToScan, speciesMatchesExcludingTempPressure } from "../src/server/matchSpecies.js";
 import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
 import type { GenusHint, PlanetScan, SpeciesDatabase } from "../src/shared/types.js";
+import { ownDssEvidence } from "../src/shared/genusEvidence.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -290,7 +291,7 @@ describe("matchDatabaseToScan", () => {
     const r = matchDatabaseToScan(
       db,
       HMC_THIN_CO2,
-      [hint("Stratum", "$Codex_Ent_Stratum_Genus_Name;")],
+      ownDssEvidence([hint("Stratum", "$Codex_Ent_Stratum_Genus_Name;")]),
       null,
       { includeBacterium: true },
     );
@@ -407,7 +408,7 @@ describe("matchDatabaseToScan", () => {
     const hints = [hint("Stratum", "$Codex_Ent_Stratum_Genus_Name;")];
     const chilly = { ...HMC_THIN_CO2, SurfaceTemperature: 152 } as unknown as PlanetScan;
 
-    const r = matchDatabaseToScan(db, chilly, hints, null, { includeBacterium: true });
+    const r = matchDatabaseToScan(db, chilly, ownDssEvidence(hints), null, { includeBacterium: true });
     // 152 K is 7.9% under Stratum tectonicas' 165 K floor — past the 2% tolerance, so it is a wall,
     // and no Stratum species has room for this body. The list is empty, and that is the honest
     // answer: the DSS says the genus is here and our bands say it cannot be, which is a defect in

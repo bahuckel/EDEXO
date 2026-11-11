@@ -119,6 +119,7 @@ const exportBasenameCache = new Map<string, string | null>();
 export function clearExomasteryProfileCache(): void {
   profileCache.clear();
   exportBasenameCache.clear();
+  profileIndexCache.clear();
 }
 
 export function speciesSlug(label: string): string {
@@ -240,34 +241,67 @@ function normalizeLoadedProfile(j: Record<string, unknown>): ExomasteryProfileV1
   return prof;
 }
 
+/** One usable profile file of a genus folder: its path, `speciesLabel` and file stem. */
+type ProfileIndexRow = { path: string; label: string | undefined; stem: string };
+/**
+ * Each genus folder's profile files, parsed once for their labels (review 2026-11-07 §3.4): matching a species used to
+ * parse every file of its folder until one matched, Tussock's 15 files up to 15 times. Sorted by name, as before.
+ */
+const profileIndexCache = new Map<string, { mtimeMs: number; rows: ProfileIndexRow[] }>();
+
+/** The folder's files, read again when the folder changed (a profile written or removed since: its mtime moves). */
+function profileIndex(sub: string): ProfileIndexRow[] {
+  let mtimeMs = -1;
+  try {
+    const st = statSync(sub);
+    if (st.isDirectory()) mtimeMs = st.mtimeMs;
+  } catch {
+    /* no exomastery folder */
+  }
+  const hit = profileIndexCache.get(sub);
+  if (hit && hit.mtimeMs === mtimeMs) return hit.rows;
+  let rows: ProfileIndexRow[] = [];
+  if (mtimeMs >= 0) {
+    let files: string[] = [];
+    try {
+      files = readdirSync(sub);
+    } catch {
+      files = [];
+    }
+    const jsonFiles = files.filter((f) => f.toLowerCase().endsWith(".json")).sort((a, b) => a.localeCompare(b));
+    rows = [];
+    for (const f of jsonFiles) {
+      const p = join(sub, f);
+      try {
+        const j = JSON.parse(readFileSync(p, "utf8")) as Record<string, unknown>;
+        if (!profileLooksUsable(j)) continue;
+        rows.push({ path: p, label: typeof j.speciesLabel === "string" ? j.speciesLabel : undefined, stem: f.replace(/\.json$/i, "") });
+      } catch {
+        continue;
+      }
+    }
+  }
+  profileIndexCache.set(sub, { mtimeMs, rows });
+  return rows;
+}
+
+/** The profile file of `entry` in its genus folder's `exomastery/`, by `speciesLabel` (or file stem). */
+function profileFileInGenusSubdir(base: string, entry: SpeciesEntry): string | null {
+  const row = profileIndex(join(base, "exomastery")).find((r) => profileSpeciesLabelMatchesEntry(r.label, entry, r.stem));
+  return row ? row.path : null;
+}
+
 /**
  * Feeder exports under `data/species/<genusDir>/exomastery/*.json`, matched by `speciesLabel` (or filename slug).
  */
 function tryLoadExomasteryFromGenusSubdir(base: string, entry: SpeciesEntry): ExomasteryProfileV1 | null {
-  const sub = join(base, "exomastery");
-  if (!existsSync(sub) || !statSync(sub).isDirectory()) return null;
-  let files: string[];
+  const p = profileFileInGenusSubdir(base, entry);
+  if (!p) return null;
   try {
-    files = readdirSync(sub);
+    return normalizeLoadedProfile(JSON.parse(readFileSync(p, "utf8")) as Record<string, unknown>);
   } catch {
     return null;
   }
-  const jsonFiles = files.filter((f) => f.toLowerCase().endsWith(".json")).sort((a, b) => a.localeCompare(b));
-  for (const f of jsonFiles) {
-    const p = join(sub, f);
-    try {
-      const raw = readFileSync(p, "utf8");
-      const j = JSON.parse(raw) as Record<string, unknown>;
-      if (!profileLooksUsable(j)) continue;
-      const label = typeof j.speciesLabel === "string" ? j.speciesLabel : undefined;
-      const stem = f.replace(/\.json$/i, "");
-      if (!profileSpeciesLabelMatchesEntry(label, entry, stem)) continue;
-      return normalizeLoadedProfile(j);
-    } catch {
-      continue;
-    }
-  }
-  return null;
 }
 
 /**
@@ -275,32 +309,8 @@ function tryLoadExomasteryFromGenusSubdir(base: string, entry: SpeciesEntry): Ex
  */
 export function resolveExomasteryProfileJsonPath(projectRoot: string, entry: SpeciesEntry): string | null {
   const base = join(getSpeciesDataDir(projectRoot), entry.genusDataDir);
-  const sub = join(base, "exomastery");
-  if (existsSync(sub) && statSync(sub).isDirectory()) {
-    let files: string[];
-    try {
-      files = readdirSync(sub);
-    } catch {
-      files = [];
-    }
-    const jsonFiles = files
-      .filter((f) => f.toLowerCase().endsWith(".json"))
-      .sort((a, b) => a.localeCompare(b));
-    for (const f of jsonFiles) {
-      const p = join(sub, f);
-      try {
-        const raw = readFileSync(p, "utf8");
-        const j = JSON.parse(raw) as Record<string, unknown>;
-        if (!profileLooksUsable(j)) continue;
-        const label = typeof j.speciesLabel === "string" ? j.speciesLabel : undefined;
-        const stem = f.replace(/\.json$/i, "");
-        if (!profileSpeciesLabelMatchesEntry(label, entry, stem)) continue;
-        return p;
-      } catch {
-        continue;
-      }
-    }
-  }
+  const inSub = profileFileInGenusSubdir(base, entry);
+  if (inSub) return inSub;
   for (const name of exomasteryProfileCandidateFilenames(entry)) {
     const p = join(base, name);
     if (existsSync(p)) return p;

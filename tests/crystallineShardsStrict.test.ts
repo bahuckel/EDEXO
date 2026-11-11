@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { matchDatabaseToScan } from "../src/server/matchSpecies.js";
 import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
 import type { GenusHint, PlanetScan, SpeciesMatchContext } from "../src/shared/types.js";
+import { ownDssEvidence } from "../src/shared/genusEvidence.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const db = loadSpeciesDatabaseFromTree(root);
@@ -39,7 +40,7 @@ const base: SpeciesMatchContext = {
 } as SpeciesMatchContext;
 
 const shards = (ctx: Partial<SpeciesMatchContext>, hints: GenusHint[] | null = null) =>
-  matchDatabaseToScan(db, scan, hints, null, { matchContext: { ...base, ...ctx }, biologicalSignals: 1 }).matches.find(
+  matchDatabaseToScan(db, scan, ownDssEvidence(hints), null, { matchContext: { ...base, ...ctx }, biologicalSignals: 1 }).matches.find(
     (m) => m.entry.id === SHARDS,
   );
 

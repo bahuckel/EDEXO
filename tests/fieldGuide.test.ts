@@ -11,6 +11,7 @@ import { buildFieldGuide } from "../src/server/fieldGuide.js";
 import { buildEncyclopediaPayload, getCachedSpeciesDatabase } from "../src/server/snapshot.js";
 import { getProjectRoot } from "../src/server/paths.js";
 import type { PlanetScan } from "../src/shared/types.js";
+import { compositionFromJournal } from "../src/shared/journalPhysics.js";
 
 describe("field guide", () => {
   it("covers every species the app knows, with charts for the measured ones", () => {
@@ -101,7 +102,7 @@ describe("field guide", () => {
       SemiMajorAxis: 2.7e8,
       OrbitalPeriod: 558_000,
       AxialTilt: Math.PI / 4,
-      composition: { Rock: 0.9, Metal: 0.1 },
+      composition: compositionFromJournal({ Rock: 0.9, Metal: 0.1 })!,
       atmosphereComposition: [{ Name: "Water", Percent: 100 }],
       materials: [{ Name: "iron", Percent: 19.5 }],
       distanceFromArrivalLs: 2404,

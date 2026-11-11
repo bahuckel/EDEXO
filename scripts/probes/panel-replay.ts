@@ -23,6 +23,7 @@ import { rankSpeciesOnBody, REGION_PRIOR_WEIGHT } from "../../src/server/species
 import { demoteBelowPresenceFloor } from "../../src/server/snapshot.js";
 import { genusShares } from "../../src/shared/systemTriage.js";
 import type { BodyExoState, SpeciesMatchContext } from "../../src/shared/types.js";
+import { ownGenusEvidence } from "../../src/shared/genusEvidence.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const argv = process.argv.slice(2);
@@ -61,7 +62,7 @@ for (const b of recent) {
   const rec = scansBySystem.get(b.systemAddress)?.get(b.bodyId) ?? null;
   const host = ctx ? journalHostObservationFromSpeciesContext(ctx) : null;
 
-  const matches = matchDatabaseToScan(db, b.scan!, b.genusHints ?? null, null, {
+  const matches = matchDatabaseToScan(db, b.scan!, ownGenusEvidence(b), null, {
     includeBacterium: true,
     matchContext: ctx,
     biologicalSignals: b.biologicalSignals,

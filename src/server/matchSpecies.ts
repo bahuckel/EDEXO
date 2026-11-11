@@ -4,7 +4,7 @@ import type {
   SpeciesEntry,
   SpeciesMatch,
   SpeciesMatchContext,
-  GenusHint,
+  GenusEvidence,
   MatchReason,
   EstimatedSurfaceTempBand,
   OrganicGenusLock,
@@ -49,6 +49,8 @@ import {
 } from "../shared/scanAtmosphereMatch.js";
 import { atmosphereBucketForEstimator, estimatedTemperatureRangeForScan } from "./planetTemperature.js";
 import { dssHintsIncludeBacterium } from "../shared/genusHints.js";
+import { filteringGenera } from "../shared/genusEvidence.js";
+import { GENUS_DATA_DIR_REQUIRING_VOLCANISM } from "../shared/speciesSpawnConditionCards.js";
 import { filterByGenusHints } from "./genusMatchUtils.js";
 import {
   applyOrganicGenusLocks,
@@ -138,8 +140,6 @@ function injectOrganicLockConfirmedSpecies(
   return { matches: [...matches, ...extra], injected };
 }
 
-/** Genera that require active volcanism in-game; enforced even if JSON omits `volcanismIncludes`. */
-const GENUS_DATA_DIR_REQUIRING_VOLCANISM = new Set<string>(["brain-tree"]);
 
 /**
  * How much of a gas has to be in the mix before a plant can be said to live in it.
@@ -1469,7 +1469,8 @@ export interface MatchDatabaseRun {
 export function matchDatabaseToScan(
   db: SpeciesDatabase,
   scan: PlanetScan,
-  genusHints: GenusHint[] | null,
+  /** Who named which genera (shared/genusEvidence.ts): only a body's own DSS, Spansh's, or a sample filters. */
+  genusEvidence: GenusEvidence | null,
   organicGenusLocks: OrganicGenusLock[] | null | undefined,
   options?: {
     includeBacterium?: boolean;
@@ -1489,6 +1490,7 @@ export function matchDatabaseToScan(
     signalCountAssumed?: boolean;
   },
 ): MatchDatabaseRun {
+  const genusHints = filteringGenera(genusEvidence);
   const includeBacterium = options?.includeBacterium === true;
   const matchContext = options?.matchContext ?? null;
   const species = includeBacterium ? db.species : db.species.filter((e) => !isBacteriumSpeciesEntry(e));

@@ -30,8 +30,9 @@ import {
   isBarycentreSyntheticBodyId,
   parseJournalParentEntry,
 } from "./orbitUtils.js";
+import { LIGHT_SECOND_METERS } from "../shared/journalPhysics.js";
 
-const LIGHT_SECOND_M = 299_792_458;
+const LIGHT_SECOND_M = LIGHT_SECOND_METERS;
 
 /** Parent of every orbit in the system, from the `Parents` chains (a barycentre has no scan of its own that names one). */
 function parentMap(recs: ExplorationScanRecord[]): Map<number, number> {

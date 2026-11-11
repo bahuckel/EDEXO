@@ -8,6 +8,7 @@ import { mapEdsmBodyToExplorationRecord, solidCompositionAsFractions } from "../
 import { planetScanFromExplorationRecord } from "../src/server/footScannedCatalog.js";
 import { exclusionValues } from "../src/server/matchSpeciesBands.js";
 import type { PlanetScan } from "../src/shared/types.js";
+import { compositionFromJournal } from "../src/shared/journalPhysics.js";
 
 describe("a looked-up body's solid composition", () => {
   it("is stored as the journal's fractions", () => {
@@ -45,7 +46,7 @@ describe("a looked-up body's solid composition", () => {
       "Test",
     )!;
     const hydrated = planetScanFromExplorationRecord(rec)!;
-    const journal: PlanetScan = { ...hydrated, composition: { Ice: 0.06, Rock: 0.627, Metal: 0.313 } };
+    const journal: PlanetScan = { ...hydrated, composition: compositionFromJournal({ Ice: 0.06, Rock: 0.627, Metal: 0.313 })! };
     const pick = (s: PlanetScan) => {
       const v = exclusionValues(s, undefined) as unknown as Record<string, number | null>;
       return { c_ice: v.c_ice, c_rock: v.c_rock, c_metal: v.c_metal };

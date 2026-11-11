@@ -6,6 +6,7 @@ import { normSystemName } from "./stationFilter";
 import { isConstructionDepotStation } from "./constructionDepot";
 import type { DepotSnapshot } from "./types";
 import type { ShopHistoryCachedOffer, ShopHistoryEntry, ShopHistoryPurchase } from "./shopHistory";
+import { playerBuyPriceOf } from "./marketPrice";
 
 export type JournalShopRecord = {
   marketId: string;
@@ -51,7 +52,7 @@ function marketJsonToOffers(j: Record<string, unknown>): ShopHistoryCachedOffer[
     const nl = typeof r.Name_Localised === "string" ? r.Name_Localised : name;
     const stock = typeof r.Stock === "number" ? r.Stock : 0;
     // BuyPrice is what the commander pays (it goes with Stock); SellPrice is what the market pays him (with Demand).
-    const buyPrice = typeof r.BuyPrice === "number" && r.BuyPrice > 0 ? r.BuyPrice : null;
+    const buyPrice = playerBuyPriceOf(r);
     if (stock <= 0 || buyPrice == null) continue;
     const id = commodityMergeBucket(name) || commodityMergeBucket(nl);
     if (!id) continue;
@@ -212,7 +213,7 @@ export function applyJournalMarketBuyLine(
   const marketId = marketIdFromJournal(j);
   const type = typeof j.Type === "string" ? j.Type : "";
   const count = typeof j.Count === "number" ? j.Count : 0;
-  const buyPrice = typeof j.BuyPrice === "number" ? j.BuyPrice : null;
+  const buyPrice = playerBuyPriceOf(j);
   const boughtAt = typeof j.timestamp === "string" ? j.timestamp : new Date().toISOString();
   if (!marketId || !type || count <= 0) return;
 

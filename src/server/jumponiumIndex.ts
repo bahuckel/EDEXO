@@ -41,6 +41,7 @@ import {
   type JumpElement,
   type LabKind,
 } from "../shared/jumponium.js";
+import { EARTH_G_MS2 } from "../shared/journalPhysics.js";
 
 const MAGIC = "EDEXOLAB";
 const CELL_B = 14;
@@ -355,7 +356,7 @@ export function ownJumpBodies(
       body: s.bodyName,
       ...p,
       type: s.planetClass ? (JOURNAL_TYPE[s.planetClass] ?? s.planetClass) : null,
-      gravityG: typeof s.surfaceGravity === "number" ? s.surfaceGravity / 9.80665 : null,
+      gravityG: typeof s.surfaceGravity === "number" ? s.surfaceGravity / EARTH_G_MS2 : null,
       distLs: typeof s.distanceFromArrivalLs === "number" ? s.distanceFromArrivalLs : null,
       pct,
       own: true,

@@ -12,6 +12,7 @@ import { matchDatabaseToScan, speciesMatchesExcludingTempPressure } from "../src
 import { hostStarVerdict } from "../src/server/speciesHostStarObservations.js";
 import { loadSpeciesDatabase } from "../src/server/snapshot.js";
 import type { PlanetScan, SpeciesDatabase, SpeciesEntry } from "../src/shared/types.js";
+import { ownDssEvidence } from "../src/shared/genusEvidence.js";
 
 const db = loadSpeciesDatabase() as unknown as SpeciesDatabase & { species: SpeciesEntry[] };
 const species = (id: string) => db.species.find((e) => e.id === id)!;
@@ -91,7 +92,7 @@ describe("restoring a named genus — the atmosphere weighs most", () => {
     const { matches } = matchDatabaseToScan(
       db,
       neon,
-      [{ Genus: "$Codex_Ent_Fonticulus_Genus_Name;", Genus_Localised: "Fonticulua" }],
+      ownDssEvidence([{ Genus: "$Codex_Ent_Fonticulus_Genus_Name;", Genus_Localised: "Fonticulua" }]),
       null,
       { matchContext: { parentStarType: "L", hostStarClasses: ["L"], systemMainStarClass: "L" } },
     );
@@ -104,7 +105,7 @@ describe("restoring a named genus — the atmosphere weighs most", () => {
     const { matches } = matchDatabaseToScan(
       db,
       scan,
-      [{ Genus: "$Codex_Ent_Conchas_Genus_Name;", Genus_Localised: "Concha" }],
+      ownDssEvidence([{ Genus: "$Codex_Ent_Conchas_Genus_Name;", Genus_Localised: "Concha" }]),
       null,
       { matchContext: { parentStarType: "M", hostStarClasses: ["M"], systemMainStarClass: "K" } },
     );

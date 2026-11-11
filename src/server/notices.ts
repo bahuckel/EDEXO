@@ -48,6 +48,7 @@ import {
   type RecordSubject,
 } from "../shared/notices.js";
 import { setAsideUnreadable, writeFileAtomic } from "./atomicWrite.js";
+import { EARTH_G_MS2 } from "../shared/journalPhysics.js";
 
 type Line = Record<string, unknown>;
 
@@ -544,7 +545,7 @@ export function createNoticesService(opts: {
             : `${kinds.has("afm") ? "AFM refill" : "Jumponium"} (${served.map((i) => i.name).join(", ")})`;
         const g = num(line.SurfaceGravity);
         const ls = num(line.DistanceFromArrivalLS);
-        const facts = [g != null ? `${(g / 9.80665).toFixed(2)} g` : "", ls != null ? `${Math.round(ls).toLocaleString("en-US")} ls` : ""]
+        const facts = [g != null ? `${(g / EARTH_G_MS2).toFixed(2)} g` : "", ls != null ? `${Math.round(ls).toLocaleString("en-US")} ls` : ""]
           .filter(Boolean)
           .join(", ");
         const have = stock ? ` · aboard ${rich.map((h) => `${jumpElement(h.key).symbol} ${stock[h.key] ?? 0}`).join(", ")}` : "";

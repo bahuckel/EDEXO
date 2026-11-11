@@ -4,7 +4,7 @@ import { journalStarTypeFromSubType } from "../shared/spanshStarType.js";
 import type { ExplorationScanRecord } from "../shared/types.js";
 import { APP_USER_AGENT } from "./appVersion.js";
 import { barycentreSyntheticBodyId, planetRingCount } from "./orbitUtils.js";
-import { ATM_TO_PA, AU_METERS, SOLAR_RADIUS_METERS } from "../shared/journalPhysics.js";
+import { ATM_TO_PA, AU_METERS, compositionFromPercent, EARTH_G_MS2, SOLAR_RADIUS_METERS } from "../shared/journalPhysics.js";
 
 const EDSM_BODIES_URL = "https://www.edsm.net/api-system-v1/bodies";
 const EDSM_SYSTEMS_URL = "https://www.edsm.net/api-v1/systems";
@@ -57,7 +57,7 @@ function pickStr(v: unknown): string | undefined {
 /** EDSM `gravity` is ~Earth gees; journal `SurfaceGravity` is m/s². */
 function edsmGravityToSurfaceMs2(g: number | undefined): number | undefined {
   if (g === undefined || !Number.isFinite(g)) return undefined;
-  return g * 9.80665;
+  return g * EARTH_G_MS2;
 }
 
 /** EDSM planet radius often in km; journal uses metres. */
@@ -179,14 +179,7 @@ export function mapBarycentreBodyToExplorationRecord(
 }
 
 /** `{"Ice": 6, "Rock": 62.7}` (per cent, EDSM / Spansh) → `{Ice: 0.06, Rock: 0.627}` (the journal's fractions). */
-export function solidCompositionAsFractions(raw: unknown): Record<string, number> | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const out: Record<string, number> = {};
-  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof v === "number" && Number.isFinite(v)) out[k] = v / 100;
-  }
-  return Object.keys(out).length ? out : null;
-}
+export const solidCompositionAsFractions = compositionFromPercent;
 
 export function mapEdsmBodyToExplorationRecord(
   body: Record<string, unknown>,

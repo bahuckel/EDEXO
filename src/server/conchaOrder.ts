@@ -12,13 +12,14 @@
  * hidden or added: a list of labiata + renibus stays exactly that list.
  */
 import type { PlanetScan, SpeciesMatch } from "../shared/types.js";
+import { EARTH_G_MS2 } from "../shared/journalPhysics.js";
 
 /** Below this surface gravity (in g) labiata leads; at or above it, renibus. */
 export const CONCHA_LABIATA_BELOW_G = 0.124;
 
 const LABIATA = "concha_concha_labiata";
 const RENIBUS = "concha_concha_renibus";
-const G = 9.80665;
+const G = EARTH_G_MS2;
 
 export function orderConchaPair(matches: SpeciesMatch[], scan: PlanetScan | null): void {
   const ms2 = scan?.SurfaceGravity;

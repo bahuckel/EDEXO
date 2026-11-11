@@ -2,6 +2,7 @@ import { readMarketJson } from "./marketJson";
 import { parseMarketId } from "../../shared/colonize/marketId";
 import type { SupplyMarketRow } from "../../shared/colonize/types";
 import { buildStationEconomyPhrase } from "../../shared/colonize/journalEconomy";
+import { playerBuyPriceOf, stationBuyPriceOf } from "../../shared/colonize/marketPrice";
 
 export type MarketSupplyBriefOk = {
   ok: true;
@@ -66,8 +67,9 @@ export async function readMarketSupplyBrief(journalDir: string): Promise<MarketS
             : typeof r.Demand_rating === "string"
               ? r.Demand_rating
               : null;
-      const buyPrice = typeof r.BuyPrice === "number" ? r.BuyPrice : null;
-      const sellPrice = typeof r.SellPrice === "number" ? r.SellPrice : null;
+      // A price of 0 is no price: the market lists 0 on the side it does not trade.
+      const buyPrice = playerBuyPriceOf(r);
+      const sellPrice = stationBuyPriceOf(r);
       if (!name && !nl) continue;
       rows.push({
         name: name || nl,

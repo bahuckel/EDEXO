@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { matchDatabaseToScan } from "../src/server/matchSpecies.js";
 import { loadSpeciesDatabase } from "../src/server/snapshot.js";
 import type { PlanetScan, SpeciesDatabase } from "../src/shared/types.js";
+import { ownDssEvidence } from "../src/shared/genusEvidence.js";
 
 describe("restoring a named genus", () => {
   const db = loadSpeciesDatabase() as unknown as SpeciesDatabase;
@@ -30,7 +31,7 @@ describe("restoring a named genus", () => {
   } as PlanetScan;
 
   it("puts back the species the codex allows, not one whose atmosphere is wrong", () => {
-    const { matches } = matchDatabaseToScan(db, oxygenWorld, [{ Genus: "$Codex_Ent_Bacterial_Genus_Name;", Genus_Localised: "Bacterium" }], null, {
+    const { matches } = matchDatabaseToScan(db, oxygenWorld, ownDssEvidence([{ Genus: "$Codex_Ent_Bacterial_Genus_Name;", Genus_Localised: "Bacterium" }]), null, {
       includeBacterium: true,
     });
     const shown = matches.filter((m) => m.entry.genusDataDir === "bacterium" && !m.unlikely).map((m) => m.entry.id);

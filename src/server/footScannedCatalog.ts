@@ -44,6 +44,7 @@ import { isBacteriumSpeciesEntry } from "../shared/speciesBacterium.js";
 import { lookupPrice } from "./priceList.js";
 import { REL_TOLERANCE, withinRelative, buildFootScanMatchPayload } from "./footScanCompare.js";
 import { setAsideUnreadable, writeFileAtomic } from "./atomicWrite.js";
+import { sampleGenusEvidence } from "../shared/genusEvidence.js";
 export { buildFootScanMatchPayload } from "./footScanCompare.js";
 
 /** Where the catalog used to live, relative to the project root. See {@link catalogPath}. */
@@ -132,10 +133,7 @@ export function planetScanFromExplorationRecord(r: ExplorationScanRecord): Plane
     Array.isArray(r.atmosphereComposition) && r.atmosphereComposition.length > 0
       ? (r.atmosphereComposition as PlanetScan["atmosphereComposition"])
       : undefined;
-  const composition =
-    r.composition && typeof r.composition === "object"
-      ? (r.composition as PlanetScan["composition"])
-      : undefined;
+  const composition = r.composition;
   return {
     BodyName: r.bodyName,
     BodyID: r.bodyId,
@@ -201,7 +199,7 @@ export function mergeScanForExomastery(
       : nonemptyAtmo(rec.atmosphereComposition as PlanetScan["atmosphereComposition"])
         ? (rec.atmosphereComposition as PlanetScan["atmosphereComposition"])
         : base.atmosphereComposition,
-    composition: base.composition ?? (rec.composition as PlanetScan["composition"]),
+    composition: base.composition ?? rec.composition,
     radius: base.radius ?? rec.radius,
     SemiMajorAxis: base.SemiMajorAxis ?? rec.semiMajorAxis,
     SurfacePressure: base.SurfacePressure ?? rec.surfacePressure,
@@ -617,7 +615,7 @@ export function recordFootScanned(
   };
   if (!genusHint.Genus_Localised.trim()) return;
 
-  const probableRun = matchDatabaseToScan(db, scan, [genusHint], null, {
+  const probableRun = matchDatabaseToScan(db, scan, sampleGenusEvidence(genusHint), null, {
     includeBacterium: meta.includeBacterium,
   });
   const probable = shownSpeciesMatches(probableRun.matches);

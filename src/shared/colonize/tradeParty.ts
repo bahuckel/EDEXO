@@ -11,6 +11,7 @@ import { parseMarketId } from "./marketId";
 import { toLy, type Ly } from "./systemDistanceLy";
 import { storageGet, storageSet } from "./storage";
 import { KEY_TRADE_PARTY } from "./uiStateKeys";
+import { playerBuyPriceOf, stationBuyPriceOf } from "./marketPrice";
 
 /** A carrier callsign: three letters or digits, a dash, three more — "K7Q-N2T". */
 const CALLSIGN_RE = /^[A-Z0-9]{3}-[A-Z0-9]{3}$/;
@@ -92,8 +93,9 @@ function orders(market: unknown, side: "selling" | "buying"): PartyOrder[] {
     const label = str(m.commodity);
     const commodityId = resourceNeedId({ name: label });
     if (!commodityId) continue;
-    const price = num(side === "selling" ? m.buy_price : m.sell_price);
-    out.push({ commodityId, label, tons, price: price && price > 0 ? price : null });
+    // A carrier selling: the commander pays its buy price; buying: it pays him its sell price.
+    const price = side === "selling" ? playerBuyPriceOf(m) : stationBuyPriceOf(m);
+    out.push({ commodityId, label, tons, price });
   }
   return out.sort((a, b) => b.tons - a.tons || a.label.localeCompare(b.label));
 }

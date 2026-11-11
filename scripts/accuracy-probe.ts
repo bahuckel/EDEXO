@@ -55,6 +55,7 @@ import type {
   SpeciesEntry,
   SpeciesMatchContext,
 } from "../src/shared/types.js";
+import { ownGenusEvidence } from "../src/shared/genusEvidence.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const db = loadSpeciesDatabaseFromTree(root);
@@ -366,7 +367,7 @@ function runScenario(name: string, useHints: boolean): ScenarioResult {
     if (!truth.length || !b.scan?.PlanetClass?.trim()) continue;
     r.truthBodies++;
 
-    const hints = useHints ? (b.genusHints ?? null) : null;
+    const hints = useHints ? ownGenusEvidence(b) : null;
     const all = matchDatabaseToScan(db, b.scan, hints, null, {
       includeBacterium: true,
       matchContext: matchContextFor(b),

@@ -3,6 +3,7 @@ import { parseMarketId } from "../../shared/colonize/marketId";
 import { commodityMergeBucket, itemLabel } from "../../shared/colonize/commodityKey";
 import { isConstructionDepotStation } from "../../shared/colonize/constructionDepot";
 import type { BasketCheckoutItem, CheckoutFilters, BasketCheckoutResult } from "../../shared/colonize/types";
+import { playerBuyPriceOf } from "../../shared/colonize/marketPrice";
 
 type MarketJsonRow = {
   Name?: string;
@@ -26,7 +27,7 @@ export function marketStockMap(items: unknown): Map<string, { stock: number; buy
     const bucket = commodityMergeBucket(nl) || commodityMergeBucket(n);
     if (!bucket) continue;
     // BuyPrice is what the commander pays (with Stock); SellPrice is what the market pays (with Demand).
-    const buyPrice = typeof r.BuyPrice === "number" && r.BuyPrice > 0 ? r.BuyPrice : null;
+    const buyPrice = playerBuyPriceOf(r);
     if (buyPrice == null) continue;
     const prev = m.get(bucket);
     if (!prev || stock > prev.stock) m.set(bucket, { stock, buyPrice });

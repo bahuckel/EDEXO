@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
 import { matchDatabaseToScan, shownSpeciesMatches } from "../src/server/matchSpecies.js";
 import type { GenusHint, PlanetScan } from "../src/shared/types.js";
+import { ownDssEvidence } from "../src/shared/genusEvidence.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const db = loadSpeciesDatabaseFromTree(root);
@@ -43,7 +44,7 @@ const shownGenera = (scan: PlanetScan, genera: string[], signals: number | null)
   const run = matchDatabaseToScan(
     db,
     scan,
-    genera.map((g) => ({ Genus_Localised: g }) as unknown as GenusHint),
+    ownDssEvidence(genera.map((g) => ({ Genus_Localised: g }) as unknown as GenusHint)),
     null,
     { includeBacterium: true, biologicalSignals: signals },
   );
@@ -75,7 +76,7 @@ describe("every genus the scan named", () => {
       say most of them are a poor fit for a 193 K body — promoting all five would trade a hidden
       genus for a list that argues with itself.
     */
-    const run = matchDatabaseToScan(db, BODY, hints, null, {
+    const run = matchDatabaseToScan(db, BODY, ownDssEvidence(hints), null, {
       includeBacterium: true,
       biologicalSignals: 7,
     });

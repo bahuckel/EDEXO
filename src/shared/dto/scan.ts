@@ -1,3 +1,5 @@
+import type { SolidComposition } from "../journalPhysics.js";
+
 /** Elite journal line (subset) */
 export interface JournalLine {
   timestamp?: string;
@@ -30,8 +32,8 @@ export interface PlanetScan {
   materials?: { Name?: string; name?: string; Percent?: number; percent?: number }[];
   /** Journal `AtmosphereComposition` on detailed scan. */
   atmosphereComposition?: { Name?: string; name?: string; Percent?: number; percent?: number }[];
-  /** Journal `Composition` (ice / rock / metal fractions). */
-  composition?: Record<string, number>;
+  /** Journal `Composition` (ice / rock / metal fractions); only from the converters in journalPhysics.ts. */
+  composition?: SolidComposition;
   /** Journal body radius in metres (`Radius`). */
   radius?: number;
   /** Detailed scan: Earth masses (`MassEM`). */
@@ -54,6 +56,20 @@ export interface GenusHint {
   Genus_Localised: string;
   Genus: string;
 }
+
+/**
+ * Genera a body is said to carry, and who said so (review 2026-11-10 Phase 3, after the A1-A3 misses). A list of
+ * genera alone could not tell this body's DSS from a twin moon's, and used as the body's own a twin's list made a
+ * genus the twin lacked unreachable. The matcher takes this union and switches on `source` (shared/genusEvidence.ts):
+ * - `own-dss`: this body's SAASignalsFound, the game's word; filters the candidates to its genera.
+ * - `spansh`: a remote body's genera from Spansh, its own DSS as someone else uploaded it; filters the same way.
+ * - `sample`: a genus a sample or codex entry named on this body; filters to that genus.
+ * - `sibling-dss`: a similar twin moon's DSS; a hint for the floors and the genus prior, never a filter.
+ */
+export type GenusEvidence = {
+  source: "own-dss" | "spansh" | "sample" | "sibling-dss";
+  genera: GenusHint[];
+};
 
 /** One confirmed on-foot organic sample on a body (ScanOrganic) — locks that genus to one species. */
 export interface OrganicGenusLock {
@@ -171,7 +187,8 @@ export interface ExplorationScanRecord {
   parents?: unknown;
   atmosphereComposition?: unknown;
   materials?: unknown;
-  composition?: unknown;
+  /** Fractions, whatever the source said (journalPhysics.ts compositionFromJournal / compositionFromPercent). */
+  composition?: SolidComposition;
   /**
    * Journal `Scan.WasDiscovered`. When present, `false` means this commander is the first discoverer
    * (exploration bonus). When `true`, the body was already discovered.

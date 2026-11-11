@@ -10,6 +10,7 @@
  * km, ls, days, degrees); the journal's (m/s², Pa, m, s) are converted here.
  */
 import type { ExplorationScanRecord } from "./dto/scan.js";
+import { ATM_TO_PA, EARTH_G_MS2 } from "./journalPhysics.js";
 
 export type RuleField =
   | "planetClass"
@@ -128,8 +129,8 @@ export type RuleRecord = Partial<
   >
 >;
 
-const G0 = 9.80665;
-const ATM_PA = 101_325;
+const G0 = EARTH_G_MS2;
+const ATM_PA = ATM_TO_PA;
 
 /** The field's value in the app's units: number, text (lower case; "" for none) or flag; undefined when unknown. */
 function valueOf(r: RuleRecord, f: RuleField): number | string | boolean | undefined {

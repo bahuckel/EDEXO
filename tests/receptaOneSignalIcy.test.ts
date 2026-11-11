@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { loadSpeciesDatabaseFromTree } from "../src/server/speciesTreeLoader.js";
 import { matchDatabaseToScan, shownSpeciesMatches } from "../src/server/matchSpecies.js";
 import type { GenusHint, PlanetScan } from "../src/shared/types.js";
+import { ownDssEvidence } from "../src/shared/genusEvidence.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const db = loadSpeciesDatabaseFromTree(root);
@@ -35,7 +36,7 @@ const scan = (planetClass: string) =>
 const recepta = [{ Genus_Localised: "Recepta" } as unknown as GenusHint];
 
 function receptaRows(planetClass: string, signals: number, signalCountAssumed = false) {
-  const run = matchDatabaseToScan(db, scan(planetClass), recepta, null, {
+  const run = matchDatabaseToScan(db, scan(planetClass), ownDssEvidence(recepta), null, {
     includeBacterium: true,
     biologicalSignals: signals,
     signalCountAssumed,

@@ -23,6 +23,7 @@ import {
   spanshBodyName,
   stationSellsNeed,
 } from "./checkoutStationMap";
+import { playerBuyPriceOf } from "../../shared/colonize/marketPrice";
 
 const MATERIAL_LISTING_MAX = 40;
 
@@ -97,7 +98,7 @@ export function hitsFromBuyPayload(
       const sup = typeof row.supply === "number" ? row.supply : 0;
       if (sup <= 0) continue;
       spanshCommodity = comm;
-      buyPrice = typeof row.buy_price === "number" ? row.buy_price : null;
+      buyPrice = playerBuyPriceOf(row);
       supply = sup;
       break;
     }

@@ -137,13 +137,9 @@ function features(p: Prepared): { num: Map<string, number>; cat: Map<string, str
     put("galactic y", p.ctx.systemCoords.y);
     put("galactic z", p.ctx.systemCoords.z);
   }
-  // Rock/metal/ice: the journal writes fractions, Spansh writes percent. One unit — percent.
+  // Rock/metal/ice: fractions whatever the source (journalPhysics.ts converts Spansh's per cent on the way in).
   const comp = s.composition;
-  if (comp && typeof comp === "object") {
-    const vals = Object.values(comp).filter((v): v is number => typeof v === "number");
-    const scale = vals.reduce((a, b) => a + b, 0) <= 1.5 ? 100 : 1;
-    for (const [k, v] of Object.entries(comp)) if (typeof v === "number") num.set(`${k.toLowerCase()} %`, v * scale);
-  }
+  if (comp) for (const [k, v] of Object.entries(comp)) num.set(`${k.toLowerCase()} %`, v * 100);
   // Crust materials: a full list, so an absent element is a real zero. Only when the list exists.
   if (Array.isArray(s.materials) && s.materials.length) {
     for (const m of s.materials) {

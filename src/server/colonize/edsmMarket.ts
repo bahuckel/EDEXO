@@ -6,6 +6,7 @@ import type { CheckoutFilters } from "../../shared/colonize/types";
 import { isSurfaceStationLabel, isSurfaceStationType } from "../../shared/colonize/stationFilter";
 import { fetchEdsmJson } from "./galaxySystemCoords";
 import { isTransientFetchError } from "./httpGate";
+import { playerBuyPriceOf } from "../../shared/colonize/marketPrice";
 
 const EDSM_MARKET = "https://www.edsm.net/api-system-v1/stations/market";
 const EDSM_STATIONS = "https://www.edsm.net/api-system-v1/stations";
@@ -101,8 +102,7 @@ function parseMarketPayload(payload: unknown): EdsmCommodityRow[] | null {
     const stock = typeof r.stock === "number" ? r.stock : 0;
     if (!id || stock <= 0) continue;
     // What the commander pays is EDSM's `buyPrice` (with stock), not `sellPrice` (with demand): review 2026-11-10 B1.
-    const buyPrice =
-      typeof r.buyPrice === "number" ? r.buyPrice : typeof r.buy_price === "number" ? r.buy_price : 0;
+    const buyPrice = playerBuyPriceOf(r) ?? 0;
     out.push({ id, name, buyPrice, stock });
   }
   return out;

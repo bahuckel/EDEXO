@@ -25,6 +25,7 @@ import type { ExplorationScanRecord, PlanetScan, SpeciesMatch } from "../shared/
 import { atmosphereTypeKeyOf } from "../shared/scanAtmosphereMatch.js";
 import type { SpatialCatalogue } from "../shared/spatialGates.js";
 import { regionForSystem } from "./regionMapData.js";
+import { ATM_TO_PA, EARTH_G_MS2, LIGHT_SECOND_METERS } from "../shared/journalPhysics.js";
 
 interface SpeciesTable {
   b?: number;
@@ -170,12 +171,12 @@ export function splitFacts(i: SplitInputs): { cat: Record<string, string>; num: 
   cat.volclvl = volcLevel(sc.Volcanism);
   n.temp = orNaN(sc.SurfaceTemperature);
   const g = num(sc.SurfaceGravity);
-  n.grav_g = g ? g / 9.80665 : NaN;
+  n.grav_g = g ? g / EARTH_G_MS2 : NaN;
   const p = num(sc.SurfacePressure);
-  n.press_atm = Number.isFinite(p) ? p / 101325 : NaN;
+  n.press_atm = Number.isFinite(p) ? p / ATM_TO_PA : NaN;
   n.mass = orNaN(sc.MassEM ?? rec?.massEM);
   n.radius_km = orNaN(num(sc.Radius ?? sc.radius ?? rec?.radius) / 1000);
-  n.sma_ls = orNaN(num(sc.SemiMajorAxis ?? rec?.semiMajorAxis) / 299792458);
+  n.sma_ls = orNaN(num(sc.SemiMajorAxis ?? rec?.semiMajorAxis) / LIGHT_SECOND_METERS);
   n.dist_ls = orNaN(sc.DistanceFromArrivalLS ?? rec?.distanceFromArrivalLs);
   n.ecc = num(sc.Eccentricity) || 0;
   n.orb_d = orNaN(Math.abs(num(sc.OrbitalPeriod)) / 86400);

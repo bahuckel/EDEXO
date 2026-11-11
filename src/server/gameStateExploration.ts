@@ -16,6 +16,7 @@ import {
 } from "./gameStateHelpers.js";
 import type { GameStateStore } from "./gameState.js";
 import { intern, internNamedPercents, internParents } from "./intern.js";
+import { compositionFromJournal } from "../shared/journalPhysics.js";
 
 /**
  * Journal `ScanBaryCentre`: the orbit of the `{ Null: BodyID }` node in `Scan.Parents`.
@@ -266,7 +267,7 @@ export function mergeExplorationScan(store: GameStateStore, line: JournalLine, t
     if (ik === 0 && pk > 0) {
       /* Same pattern as materials: do not replace rich composition with an empty object. */
     } else {
-      rec.composition = line.Composition;
+      rec.composition = compositionFromJournal(line.Composition) ?? undefined;
     }
   }
 

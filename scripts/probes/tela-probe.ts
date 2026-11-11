@@ -42,6 +42,7 @@ import { rankSpeciesOnBody, REGION_PRIOR_WEIGHT } from "../../src/server/species
 import { demoteBelowPresenceFloor, PRESENCE_FLOOR_PCT } from "../../src/server/snapshot.js";
 import { genusShares } from "../../src/shared/systemTriage.js";
 import type { BodyExoState, SpeciesEntry, SpeciesMatchContext } from "../../src/shared/types.js";
+import { ownGenusEvidence } from "../../src/shared/genusEvidence.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const argv = process.argv.slice(2);
@@ -224,7 +225,7 @@ for (const b of bodies) {
       answers on record are the species he actually confirmed. Their share is read off the same
       hinted list the panel would floor.
     */
-    const hintedMatches = matchDatabaseToScan(db, b.scan, b.genusHints, null, {
+    const hintedMatches = matchDatabaseToScan(db, b.scan, ownGenusEvidence(b), null, {
       includeBacterium: true,
       matchContext: ctx,
       biologicalSignals: b.biologicalSignals,
@@ -258,7 +259,7 @@ for (const b of bodies) {
   let hinted: typeof matches = [];
   let hintedAfterFloor: typeof matches = [];
   if (b.genusHints?.length) {
-    hinted = matchDatabaseToScan(db, b.scan, b.genusHints, null, {
+    hinted = matchDatabaseToScan(db, b.scan, ownGenusEvidence(b), null, {
       includeBacterium: true,
       matchContext: ctx,
       biologicalSignals: b.biologicalSignals,

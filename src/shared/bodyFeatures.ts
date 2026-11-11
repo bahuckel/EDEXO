@@ -13,6 +13,7 @@
  * in m/s², pressure in pascals, ring mass in megatonnes, star age in millions of years.
  */
 import type { ExplorationScanRecord, ScanRing } from "./dto/scan.js";
+import { ATM_TO_PA, EARTH_G_MS2, LIGHT_SECOND_METERS } from "./journalPhysics.js";
 
 export type BodyFeatureGroup = "orbit" | "landable" | "gas" | "rings" | "travel";
 
@@ -99,9 +100,9 @@ export interface BodyFeatureHit {
 const G = 6.674e-11;
 const EARTH_KG = 5.972e24;
 const SUN_KG = 1.989e30;
-const G0 = 9.80665;
-const ATM_PA = 101_325;
-const LS_M = 299_792_458;
+const G0 = EARTH_G_MS2;
+const ATM_PA = ATM_TO_PA;
+const LS_M = LIGHT_SECOND_METERS;
 
 const RARE: Record<string, string> = {
   "Earthlike body": "Earth-like world",

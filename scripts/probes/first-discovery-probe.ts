@@ -25,6 +25,7 @@ import { computeExoPayoutRangeFromMatches, resolveOrganicSlotCount } from "../..
 import { loadPriceList } from "../../src/server/priceList.js";
 import { loadJournalMergeCacheForTool, probeMatchContexts } from "../probeCache.js";
 import type { BodyExoState, SpeciesMatchContext } from "../../src/shared/types.js";
+import { ownGenusEvidence } from "../../src/shared/genusEvidence.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const limitArg = process.argv.indexOf("--limit");
@@ -90,7 +91,7 @@ for (const b of bodies) {
     continue;
   }
 
-  const run = matchDatabaseToScan(db, b.scan, b.genusHints, b.organicGenusLocks, {
+  const run = matchDatabaseToScan(db, b.scan, ownGenusEvidence(b), b.organicGenusLocks, {
     includeBacterium: true,
     matchContext: matchContextFor(b) ?? null,
     biologicalSignals: b.biologicalSignals,

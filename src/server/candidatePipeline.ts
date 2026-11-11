@@ -36,6 +36,7 @@ import { applyMeasuredOdds } from "./measuredOdds.js";
 import { orderConchaPair } from "./conchaOrder.js";
 import { recalibrateFssChances } from "./chanceRecalibration.js";
 import { collectResolvedOrganicLockSpeciesIds } from "./organicLocks.js";
+import { ownGenusEvidence } from "../shared/genusEvidence.js";
 
 /** What the matcher and the passes after it read about the body. */
 export interface CandidateInputs {
@@ -73,7 +74,7 @@ export function matchCandidates(
   root: string,
   opts: CandidateOptions,
 ): MatchDatabaseRun {
-  return matchDatabaseToScan(db, inputs.scan, b.genusHints, b.organicGenusLocks, {
+  return matchDatabaseToScan(db, inputs.scan, ownGenusEvidence(b), b.organicGenusLocks, {
     includeBacterium: opts.includeBacterium,
     matchContext: inputs.ctx,
     spatialCatalogue: opts.spatialCatalogue === undefined ? loadSpatialCatalogue(root) : opts.spatialCatalogue,

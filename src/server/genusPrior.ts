@@ -31,6 +31,7 @@ import { gateForSpeciesId } from "../shared/spatialGates.js";
 import { atmosphereKey, bodyFacts, volcanismKind } from "./genusBodySplit.js";
 import { measuredPastPrior } from "./measuredOdds.js";
 import { twinGenusRows } from "./presenceFloors.js";
+import { ATM_TO_PA, EARTH_G_MS2 } from "../shared/journalPhysics.js";
 
 /** How hard the dump's genus frequencies pull against the ranking model (0 = model only, 1 = prior only). */
 export const GENUS_PRIOR_WEIGHT = 0.75;
@@ -110,8 +111,8 @@ export function genusPriorCells(
   const fine =
     !coarse && pa != null && Number.isFinite(pa) && ms2 != null && Number.isFinite(ms2) && temp !== "?"
       ? (() => {
-          const pb = band(pa / 101_325, GENUS_PRIOR_PRESSURE_BANDS_ATM);
-          const gb = band(ms2 / 9.80665, GENUS_PRIOR_GRAVITY_BANDS_G);
+          const pb = band(pa / ATM_TO_PA, GENUS_PRIOR_PRESSURE_BANDS_ATM);
+          const gb = band(ms2 / EARTH_G_MS2, GENUS_PRIOR_GRAVITY_BANDS_G);
           return [
             ["P0", type, n, atmo, temp, pb, gb, star, volc],
             ["P1", type, n, atmo, temp, pb, gb],
