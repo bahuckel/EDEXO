@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 /**
  * Installing a downloaded update on restart (owner, 2026-10-02: "instead of the user having to
@@ -27,7 +28,7 @@ const EXE_NAME = "EDExoCompare.exe";
  * Copies before 1.3.0 know only EDExoCompare.exe: a release that renames the exe must still carry that file for them.
  */
 const EXE_NAMES = [EXE_NAME, "EDEXO.exe"];
-const isAppExe = (file) => EXE_NAMES.some((n) => n.toLowerCase() === path.basename(file).toLowerCase());
+const isAppExe = (/** @type {string} */ file) => EXE_NAMES.some((n) => n.toLowerCase() === path.basename(file).toLowerCase());
 
 /**
  * "portable" | "zip" | "appimage" | null for this copy.
@@ -46,7 +47,10 @@ function selfUpdateForm(o) {
   return null;
 }
 
-/** What the swap replaces: the user's exe, the program folder, or the AppImage. */
+/**
+ * What the swap replaces: the user's exe, the program folder, or the AppImage.
+ * @param {string | null} form
+ */
 function updateTarget(form, env = process.env, execPath = process.execPath) {
   if (form === "portable") return env.PORTABLE_EXECUTABLE_FILE || null;
   if (form === "zip") return path.dirname(execPath);
@@ -65,6 +69,7 @@ const MOVED_MARK = ".edexo-moved-aside";
  * The copy the last update moved aside, removed at the next start: a program folder only when the update marked it
  * (MOVED_MARK), never a guess at someone else's folder. The mark left in the running folder by a swap that failed
  * and put it back goes too.
+ * @param {string | null} form
  */
 function removeOldCopy(form, env = process.env, execPath = process.execPath) {
   const target = updateTarget(form, env, execPath);
@@ -88,8 +93,9 @@ function removeOldCopy(form, env = process.env, execPath = process.execPath) {
  * Start the swap on the way out. Call from will-quit with the staged update (`ready.json`).
  * Returns how the app comes back: "helper" (the PowerShell starts it), "relaunch" (Electron should
  * relaunch the given path), or "none" (nothing to install: relaunch as usual).
- * @param {{ form: string, file: string, version: string }} staged
- * @param {{ form: string, scriptPath: string, logPath: string, pids: number[], env?: NodeJS.ProcessEnv, execPath?: string, start?: boolean }} o
+ * @param {{ form: string, file: string, version: string, sha256?: string }} staged
+ * @param {{ form: string | null, scriptPath: string, logPath: string, pids: number[], env?: NodeJS.ProcessEnv, execPath?: string, start?: boolean }} o
+ * @returns {{ how: "helper" | "relaunch" | "none", execPath?: string, refused?: string }}
  */
 function installOnQuit(staged, o) {
   const env = o.env || process.env;
@@ -100,9 +106,10 @@ function installOnQuit(staged, o) {
     be a later run; a file damaged or swapped since went in over the good copy. A folder at a drive root ("D:\") is
     refused: its trailing backslash swallows the closing quote of the helper's argument.
   */
+  /** @param {string} why */
   const refuse = (why) => {
     logFailure(o.logPath, why);
-    return { how: "none", refused: why };
+    return { how: /** @type {const} */ ("none"), refused: why };
   };
   if (/[\\/]$/.test(target)) return refuse("a program folder at a drive root");
   if (typeof staged.sha256 !== "string" || sha256File(staged.file) !== staged.sha256.toLowerCase())
@@ -116,7 +123,7 @@ function installOnQuit(staged, o) {
       fs.renameSync(next, target);
     } catch (e) {
       fs.rmSync(next, { force: true });
-      logFailure(o.logPath, e && e.message);
+      logFailure(o.logPath, e instanceof Error ? e.message : String(e));
       throw e;
     }
     return { how: "relaunch", execPath: target };
@@ -178,6 +185,8 @@ function installOnQuit(staged, o) {
 /**
  * A failure in the swap's log, as update-apply.ps1 writes one, so the next start says why (appUpdater
  * lastInstallFailure; 5.1 §7: a failed Linux install wrote nothing).
+ * @param {string} logPath
+ * @param {string} why
  */
 function logFailure(logPath, why) {
   try {
@@ -187,7 +196,10 @@ function logFailure(logPath, why) {
   }
 }
 
-/** SHA-256 of a file, read in pieces (the zip is a few hundred MB). */
+/**
+ * SHA-256 of a file, read in pieces (the zip is a few hundred MB).
+ * @param {string} file
+ */
 function sha256File(file) {
   const h = createHash("sha256");
   const buf = Buffer.allocUnsafe(1 << 20);
@@ -201,7 +213,11 @@ function sha256File(file) {
   return h.digest("hex");
 }
 
-/** A folder at `p` that `ours` does not claim is renamed `<p>-kept-<time>`, never removed. */
+/**
+ * A folder at `p` that `ours` does not claim is renamed `<p>-kept-<time>`, never removed.
+ * @param {string} p
+ * @param {(p: string) => boolean} ours
+ */
 function keepAsideUnlessOurs(p, ours) {
   if (!fs.existsSync(p) || ours(p)) return;
   fs.renameSync(p, `${p}-kept-${Date.now()}`);

@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -14,13 +15,28 @@ const path = require("path");
 const gpuSafe = require("./gpuSafeMode.cjs");
 const updater = require("./updater.cjs");
 
+/**
+ * A staged update (`ready.json`, plus the folder it sits in).
+ * @typedef {{ form: string, file: string, version: string, sha256?: string, dir: string }} StagedUpdate
+ */
+
+/**
+ * @param {{
+ *   app: import("electron").App,
+ *   dialog: import("electron").Dialog,
+ *   getRuntime: () => { backupRunning?: () => boolean, whenBackupDone: () => Promise<unknown> } | null,
+ *   getMainWindow: () => import("electron").BrowserWindow | null,
+ * }} o
+ */
 function createQuitFlow({ app, dialog, getRuntime, getMainWindow }) {
   let exitAllowed = false;
   /** "Restart now" asked for a relaunch; done in will-quit, once the quit is really going ahead. */
   let relaunchOnQuit = false;
   /** "Download & Install" asked for this staged update to go in; installed in will-quit. */
+  /** @type {StagedUpdate | null} */
   let installUpdateOnQuit = null;
   /** This copy's self-update form (updater.cjs), or null where it cannot replace itself. */
+  /** @type {string | null} */
   let selfUpdateFormValue = null;
 
   /*
@@ -28,6 +44,7 @@ function createQuitFlow({ app, dialog, getRuntime, getMainWindow }) {
     goes with this process), or Electron's default. `extra` arguments are added (the GPU retry); the GPU retry of an
     earlier start is not carried on, or a later crash after "Hardware acceleration" is ticked again could not switch.
   */
+  /** @param {string[]} [extra] */
   function relaunchAsUsual(extra = []) {
     const args = process.argv
       .slice(1)
@@ -71,6 +88,7 @@ function createQuitFlow({ app, dialog, getRuntime, getMainWindow }) {
   let exitAsking = false;
   let exitWhenBackupDone = false;
 
+  /** @param {{ preventDefault: () => void }} e */
   function holdExitForBackup(e) {
     const runtime = getRuntime();
     if (exitAllowed || !runtime || typeof runtime.backupRunning !== "function" || !runtime.backupRunning()) return false;
@@ -83,6 +101,7 @@ function createQuitFlow({ app, dialog, getRuntime, getMainWindow }) {
       if (parent.isMinimized()) parent.restore();
       parent.show();
     }
+    /** @type {import("electron").MessageBoxOptions} */
     const opts = {
       type: "error",
       title: "Backup in progress",
@@ -111,7 +130,7 @@ function createQuitFlow({ app, dialog, getRuntime, getMainWindow }) {
           exitAllowed = true;
           app.quit();
         };
-        void runtime.whenBackupDone().then(close, close);
+        void runtime?.whenBackupDone().then(close, close);
       }
     });
     return true;
@@ -128,12 +147,16 @@ function createQuitFlow({ app, dialog, getRuntime, getMainWindow }) {
     armRelaunch() {
       relaunchOnQuit = true;
     },
-    /** "Download & Install": this staged update goes in on the way out, and the new copy starts. */
+    /**
+     * "Download & Install": this staged update goes in on the way out, and the new copy starts.
+     * @param {StagedUpdate} staged
+     */
     armInstall(staged) {
       installUpdateOnQuit = staged;
       relaunchOnQuit = false;
     },
     selfUpdateForm: () => selfUpdateFormValue,
+    /** @param {string | null} form */
     setSelfUpdateForm(form) {
       selfUpdateFormValue = form;
     },

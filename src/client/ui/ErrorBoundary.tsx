@@ -7,17 +7,17 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from "react";
 
 export class ErrorBoundary extends Component<{ label: string; children: ReactNode }, { error: Error | null; tries: number }> {
-  state = { error: null as Error | null, tries: 0 };
+  override state = { error: null as Error | null, tries: 0 };
 
   static getDerivedStateFromError(error: Error) {
     return { error };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo): void {
+  override componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error(`[edexo-compare] ${this.props.label} failed to draw:`, error, info.componentStack);
   }
 
-  render() {
+  override render() {
     // Keyed, so "Draw it again" mounts it afresh rather than reusing the state that threw.
     if (!this.state.error) return <Fragment key={this.state.tries}>{this.props.children}</Fragment>;
     return (

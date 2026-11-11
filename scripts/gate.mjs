@@ -2,7 +2,7 @@
  * `npm run gate` (plan 2.4, review 2026-11-10 §2.3): the checks a build or a release needs first, in one command,
  * in a throwaway profile. CI is off by the owner's choice, so this is the check.
  *
- *   typecheck → lint → full suite → spawn suite (not in the full run)
+ *   typecheck → lint → full suite with the coverage floors → spawn suite (not in the full run)
  *
  * EDEXO_USER_DATA_DIR is set to a fresh temporary folder for every step, whatever the shell had: a test or probe
  * without it writes into the commander's live profile (2026-10-09). Workers: GATE_WORKERS (default 3; the owner's PC
@@ -24,7 +24,8 @@ const before = treeState();
 const steps = [
   ["typecheck", "npm", ["run", "typecheck"]],
   ["lint", "npm", ["run", "lint"]],
-  ["tests", "npx", ["vitest", "run", `--maxWorkers=${workers}`]],
+  // With coverage (about 20 s more): the per-folder floors in vitest.config.ts fail the gate (plan 2.5).
+  ["tests", "npx", ["vitest", "run", "--coverage", `--maxWorkers=${workers}`]],
   ["spawn suite", "npx", ["vitest", "run", "tests/speciesSpawnBodies.test.ts"]],
 ];
 

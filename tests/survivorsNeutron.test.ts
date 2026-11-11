@@ -37,6 +37,16 @@ describe("the neutron planner's fuel", () => {
     expect(far.refuels).toBe(0);
   });
 
+  it("counted by the drive's law, flags a leg that lands with under 1 % of the tank", async () => {
+    // 100 t tank, a 5 t jump to B: 5.5 t aboard lands with 0.5 t (the 0.1 t arrival the spare is for), 6.5 t with 1.5 t.
+    const law = { tankT: 100, perJumpT: 5, fuelT: () => 5, rangeLy: () => 50 };
+    const ship = (fuelNowT: number) => ({ rangeLy: 50, jumpsPerTank: 10, jumpsNow: 1, boost: 4, law, fuelNowT });
+    const B = { name: "B", x: 40, y: 0, z: 0 };
+    const none = { within: () => [], nameOf: (i: number) => `N${i}` };
+    expect((await planNeutronRoute(none, [A, B], ship(5.5))).unsafeLegs).toEqual([1]);
+    expect((await planNeutronRoute(none, [A, B], ship(6.5))).unsafeLegs).toEqual([]);
+  });
+
   it("burns a jump of fuel for each jump after a hop's supercharge", async () => {
     // A supercharge reaches 196 ly at range 50: stars 296 ly apart take a supercharge and two jumps, three in all.
     const idx = line(50, 50 + 296 * 3, 296);

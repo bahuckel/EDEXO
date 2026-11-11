@@ -14,6 +14,7 @@ import {
   parseCookieHeader,
   readLanKeyFromRequest,
   requestIsAuthorized,
+  tightenKeyFile,
 } from "../src/server/lanAuth.js";
 
 function req(over: {
@@ -150,6 +151,25 @@ describe("loadOrCreateLanKey", () => {
     chmodSync(file, 0o644);
     loadOrCreateLanKey(file);
     expect(statSync(file).mode & 0o777).toBe(0o600);
+  });
+
+  // The same mode logic on every platform, through tightenKeyFile's seam (plan 2.8: the test above skips on Windows).
+  it("narrows a group- or world-readable key file to its owner, leaves 0600 and Windows alone", () => {
+    const run = (platform: NodeJS.Platform, mode: number) => {
+      const calls: [string, number][] = [];
+      tightenKeyFile("k.txt", { platform, modeOf: () => 0o100000 | mode, chmod: (f, m) => calls.push([f, m]) });
+      return calls;
+    };
+    expect(run("linux", 0o644)).toEqual([["k.txt", 0o600]]);
+    expect(run("linux", 0o640)).toEqual([["k.txt", 0o600]]);
+    expect(run("linux", 0o604)).toEqual([["k.txt", 0o600]]);
+    expect(run("linux", 0o600)).toEqual([]);
+    expect(run("linux", 0o700)).toEqual([]);
+    expect(run("win32", 0o644)).toEqual([]);
+    // A stat that throws is best-effort: no chmod, no throw.
+    expect(() =>
+      tightenKeyFile("k.txt", { platform: "linux", modeOf: () => { throw new Error("gone"); }, chmod: () => { throw new Error("no"); } }),
+    ).not.toThrow();
   });
 
   it("replaces a stored value too short to be a key", () => {

@@ -129,11 +129,19 @@ export function lanUrlWithKey(baseUrl: string, lanKey: string | null): string {
 */
 const KEY_FILE_MODE = 0o600;
 
+/** The file calls tightenKeyFile makes, swappable so its mode logic is tested on Windows too (plan 2.8). */
+type KeyFileOps = { platform: NodeJS.Platform; modeOf: (file: string) => number; chmod: (file: string, mode: number) => void };
+const realKeyFileOps: KeyFileOps = {
+  platform: process.platform,
+  modeOf: (file) => statSync(file).mode,
+  chmod: (file, mode) => chmodSync(file, mode),
+};
+
 /** A key file from before is narrowed to the owner too; best-effort. */
-function tightenKeyFile(file: string): void {
-  if (process.platform === "win32") return;
+export function tightenKeyFile(file: string, ops: KeyFileOps = realKeyFileOps): void {
+  if (ops.platform === "win32") return;
   try {
-    if ((statSync(file).mode & 0o077) !== 0) chmodSync(file, KEY_FILE_MODE);
+    if ((ops.modeOf(file) & 0o077) !== 0) ops.chmod(file, KEY_FILE_MODE);
   } catch {
     /* the key still works */
   }

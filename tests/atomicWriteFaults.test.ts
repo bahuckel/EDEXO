@@ -64,6 +64,41 @@ for (const [name, write] of [
       expect(readdirSync(dir)).toEqual(["a.json"]);
     });
 
+    // A power cut between rename and the disk's own flush leaves an empty file under the real name (plan 2.1).
+    it("flushes the temporary file to disk before the rename", () => {
+      const f = join(dir, "a.json");
+      const order: string[] = [];
+      const realFsync = fs.fsyncSync;
+      fs.fsyncSync = ((fd: number) => {
+        order.push("fsync");
+        return realFsync(fd);
+      }) as typeof fs.fsyncSync;
+      fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+        order.push("rename");
+        return realRename(from, to);
+      }) as typeof fs.renameSync;
+      syncBuiltinESMExports();
+      try {
+        write(f, "new");
+      } finally {
+        fs.fsyncSync = realFsync;
+        syncBuiltinESMExports();
+      }
+      expect(order).toEqual(["fsync", "rename"]);
+    });
+
+    it("takes EBUSY and EACCES for Windows holding the file too, and gives up after five tries", () => {
+      for (const code of ["EBUSY", "EACCES"]) {
+        const f = join(dir, `${code}.json`);
+        const calls = failRenames(1, code);
+        write(f, "new");
+        expect(calls(), code).toBe(2);
+      }
+      const calls = failRenames(99, "EPERM");
+      expect(() => write(join(dir, "never.json"), "new")).toThrow();
+      expect(calls()).toBe(5);
+    });
+
     it("does not retry an error that is not Windows holding the file", () => {
       const f = join(dir, "a.json");
       const calls = failRenames(99, "ENOSPC");
@@ -73,6 +108,22 @@ for (const [name, write] of [
     });
   });
 }
+
+// The LAN key file is written owner-only through the options' mode (lanAuth.ts). Read-only is the bit Windows keeps.
+describe("writeFileAtomic's mode", () => {
+  it("gives the new file the mode in the options", () => {
+    const f = join(dir, "ro.txt");
+    writeFileAtomic(f, "x", { encoding: "utf8", mode: 0o444 });
+    try {
+      expect(fs.statSync(f).mode & 0o200).toBe(0);
+    } finally {
+      fs.chmodSync(f, 0o666);
+    }
+    const g = join(dir, "rw.txt");
+    writeFileAtomic(g, "x", "utf8");
+    expect(fs.statSync(g).mode & 0o200).not.toBe(0);
+  });
+});
 
 describe("a file that no longer reads", () => {
   it("is moved aside with the time in its name", () => {

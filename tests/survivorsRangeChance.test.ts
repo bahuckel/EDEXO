@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { NUMERIC_GATE_TOLERANCE, rangeFit, tempBandsOverlapWithinTolerance } from "../src/server/matchSpeciesBands.js";
 import { clearChanceRecalibrationCache, recalibratedChance } from "../src/server/chanceRecalibration.js";
 import { calibrationLine, clearChanceCalibrationCache } from "../src/server/chanceCalibration.js";
+import { fixedPresencePercent } from "../src/server/presenceFloors.js";
 
 describe("the 2 % range rule (matchSpeciesBands.ts)", () => {
   it("counts both edges as in", () => {
@@ -62,6 +63,17 @@ describe("the chance maps on a fixture root", () => {
     });
     expect(calibrationLine(root, "Stratum", 10, false)).toMatch(/^rows said 10-20 % came true 15 %/);
     expect(calibrationLine(root, "Stratum", 9.9, false)).toMatch(/^rows said 0-10 % came true 5 %/);
+  });
+});
+
+describe("the measured Crystalline Shards presence (presenceFloors.ts)", () => {
+  // Counted in the galaxy query database 2026-10-10: 48.6 % of bodies meeting its rules with one signal, 6 % with more.
+  it("is 48.6 % on a one-signal body (or one with no count), 6 % on more, none for other species", () => {
+    const id = "crystalline_shards_crystalline_shards";
+    expect(fixedPresencePercent(id, 1)).toBe(48.6);
+    expect(fixedPresencePercent(id, null)).toBe(48.6);
+    expect(fixedPresencePercent(id, 2)).toBe(6);
+    expect(fixedPresencePercent("stratum_stratum_tectonicas", 1)).toBeNull();
   });
 });
 

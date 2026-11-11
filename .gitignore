@@ -116,3 +116,7 @@ photo-contributions.txt
 data/species/*/*_photos/_large/
 # Rust build output (native/, 1.3.1)
 /native/target/
+
+# Stryker (npm run mutation): setup files the vitest runner writes beside the config while it runs.
+stryker-setup-*.js
+.stryker-tmp/

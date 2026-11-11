@@ -161,6 +161,28 @@ describe("HUD pitch reader", () => {
   });
 
   /*
+    Review 2026-11-10 E6 / T16 (Phase 6, not fixed): the heading reader has no cross-check, so a white star (the HUD is
+    drawn additively: yellow over white is white) on the leading "1" of 180 leaves a valid "80". Remove `.fails` with
+    the fix.
+  */
+  const at = { ox: 0, oy: 0, screen: { w: W, h: H } };
+  const x180 = 1000 - Math.round((3 * 7 * S) / 2);
+  it("reads a clean 180 heading box", () => {
+    const f = frame();
+    draw(f, "180", x180, 243);
+    expect(readHudHeading(f, W, H, GLYPHS, at)?.boxDeg).toBe(180);
+  });
+  it.fails("does not read 180 as 80 with a star over its 1", () => {
+    const f = frame();
+    draw(f, "180", x180, 243);
+    const cx = x180 + 2 * S + 1;
+    const cy = Math.round(243 - (7 * S) / 2) + 10;
+    for (let y = cy - 5; y <= cy + 5; y++)
+      for (let x = cx - 5; x <= cx + 5; x++) if ((x - cx) ** 2 + (y - cy) ** 2 <= 25) f.set([255, 255, 255, 255], (y * W + x) * 4);
+    expect(readHudHeading(f, W, H, GLYPHS, at)?.boxDeg ?? null).not.toBe(80);
+  });
+
+  /*
     A recoloured HUD (owner's EDHM shots, 2026-11-07): grey digits in a green outline, the ladder's labels the same grey
     but free-standing. Dark ground, as on his planet.
   */
@@ -243,6 +265,31 @@ describe("HUD pitch reader", () => {
     expect(readHudPitchAnyColour(f, W, H, GLYPHS, noOne, { w: W, h: H }, null, true, hint)).toBeNull();
     const stale = { text: [120, 30, 200] as Rgb, frame: [255, 165, 0] as Rgb };
     expect(readHudPitchAnyColour(f, W, H, GLYPHS, noOne, { w: W, h: H }, null, true, stale)?.reading).toMatchObject({ boxDeg: -20, style: "yellow" });
+  });
+
+  /*
+    Review 2026-11-10 E2 / T16 (Phase 6, not fixed): pitchCapture.ts searches colours only every fourth frame of a run
+    of misses; the frames between take the early return, which reads the unframed pair the discovering frame refused.
+    On the scene above the loop gives null, -20, null, -20. Remove `.fails` with the fix.
+  */
+  it.fails("in pitchCapture's loop, with no learned colours, never takes the pair a discovering frame refused", () => {
+    const f = dark();
+    boxed(f, "-10", 840, 480);
+    boxed(f, "-10", 1120, 480);
+    draw(f, "-20", 870, 400);
+    draw(f, "-20", 1100, 400);
+    const noOne = Object.fromEntries(Object.entries(ANY).filter(([d]) => d !== "1"));
+    const hint = { text: [243, 243, 243] as Rgb, frame: [0, 213, 0] as Rgb };
+    let colours: ReturnType<typeof readHudPitchAnyColour> extends infer R ? (R extends { colours: infer C } ? C : never) | null : never = null;
+    let misses = 0;
+    const read: (number | null)[] = [];
+    for (let i = 0; i < 8; i++) {
+      const found = readHudPitchAnyColour(f, W, H, GLYPHS, noOne, { w: W, h: H }, colours, misses % 4 === 0, hint);
+      if (found) colours = found.colours;
+      misses = found ? 0 : misses + 1;
+      read.push(found?.reading.boxDeg ?? null);
+    }
+    expect(read).not.toContain(-20);
   });
 
   it("says not sure for a digit it has no glyph for", () => {

@@ -167,6 +167,30 @@ describe("the target's distance off the HUD", () => {
     for (let y = 0; y < 600; y++) crop.set(f.subarray(y * W * 4, (y * W + 600) * 4), y * 600 * 4);
     expect(readTargetDistance(crop, 600, 600, GLYPHS, H)?.distLs).toBe(357);
   });
+
+  /*
+    Review 2026-11-10 E1 / T16 (Phase 6, not fixed): a bright body's limb behind the leading figure drops it, and the
+    rest is a valid number: 1,957 reads 957, 927 reads 27, 8.59 reads 59. Remove `.fails` with the fix (a power-of-ten
+    drop needs a third frame, or the game's own figure rules).
+  */
+  const limbOver = (text: string, cells: number) => {
+    const f = frame();
+    const right = 300 + cells * 6 * S - S;
+    const r = 120;
+    const cx = right - r;
+    const cy = 400 - 7;
+    for (let y = cy - r; y <= cy + r; y++)
+      for (let x = cx - r; x <= right; x++)
+        if (x >= 0 && y >= 0 && y < H && (x - cx) ** 2 + (y - cy) ** 2 <= r * r) f.set([255, 255, 255, 255], (y * W + x) * 4);
+    label(f, text, 300, 400);
+    return f;
+  };
+  it.fails("does not take a number whose leading figure a bright body hides", () => {
+    for (const [text, cells] of [["1,957Ls", 2], ["927Ls", 1], ["8.59Ls", 2]] as const) {
+      const r = readTargetDistance(limbOver(text, cells), W, H, GLYPHS);
+      expect(r === null || r.text === text, `${text} read ${r?.text}`).toBe(true);
+    }
+  });
 });
 
 /*

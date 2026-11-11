@@ -1,0 +1,17 @@
+{
+  // Electron's CommonJS files, type-checked from their JSDoc (review 2026-11-10 E6, plan 2.6). Only files that start
+  // with `// @ts-check` are checked; one file a session is moved over (updater, quitFlow and atomicWrite first).
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "checkJs": false,
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["electron/**/*.cjs"]
+}

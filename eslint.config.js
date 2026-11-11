@@ -57,6 +57,23 @@ export default tseslint.config(
     rules: { "@typescript-eslint/no-require-imports": "off" },
   },
   {
+    /*
+      Type-aware rules on the server (review 2026-11-10 E6, plan 2.6): a promise nobody awaits or catches is an
+      unhandled rejection, and in the server it can stop a request answering. All at zero when added (2026-11-11).
+      Async route handlers are allowed where Express wants a void function: httpServer.ts's catchAsyncRejections
+      catches their rejections for every route.
+    */
+    files: ["src/server/**/*.ts"],
+    languageOptions: {
+      parserOptions: { project: "./tsconfig.server.json", tsconfigRootDir: import.meta.dirname },
+    },
+    rules: {
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { arguments: false, returns: false } }],
+      "@typescript-eslint/await-thenable": "error",
+    },
+  },
+  {
     // Electron main/preload and build helpers are plain CommonJS Node scripts.
     files: ["**/*.cjs"],
     languageOptions: {

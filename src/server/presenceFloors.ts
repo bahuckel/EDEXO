@@ -54,6 +54,13 @@ const FIXED_PRESENCE_PCT: Record<string, { oneSignal: number; more: number }> = 
   crystalline_shards_crystalline_shards: { oneSignal: 48.6, more: 6 },
 };
 
+/** The measured presence for a species that has one (above), by the body's signal count; null for the rest. */
+export function fixedPresencePercent(speciesId: string, biologicalSignals: number | null | undefined): number | null {
+  const fixed = FIXED_PRESENCE_PCT[speciesId];
+  if (!fixed) return null;
+  return (biologicalSignals ?? 1) > 1 ? fixed.more : fixed.oneSignal;
+}
+
 /**
  * The ranking model's answer, written onto the matches.
  *
@@ -109,9 +116,8 @@ export function attachPresenceProbability(
       holds 28 bodies, so the ranking put it at 0 % on every body that met its rules (owner,
       2026-10-09: "Crystalline Shards are getting shown at 0% all the time").
     */
-    const fixed = FIXED_PRESENCE_PCT[r.match.entry.id];
-    if (fixed)
-      r.match.presenceProbabilityPercent = (b.biologicalSignals ?? 1) > 1 ? fixed.more : fixed.oneSignal;
+    const fixed = fixedPresencePercent(r.match.entry.id, b.biologicalSignals);
+    if (fixed != null) r.match.presenceProbabilityPercent = fixed;
   }
 
   /**

@@ -70,6 +70,46 @@ describe("app-channel pushes", () => {
     expect((frame.payload as Record<string, unknown>).journalSystems).toHaveLength(400);
   });
 
+  it("are whole after a push skipped for a socket still sending earlier frames", async () => {
+    const t = await start({ journalSystems: big("A"), liveShipFuelRange: { ly: 10 } });
+    const app = await client(t.port);
+    await app.next(1);
+    // One push first: the connect-time whole frame is spent.
+    t.set({ journalSystems: big("A"), liveShipFuelRange: { ly: 9 } });
+    await app.next(2);
+    // The server's side of the socket reports a backlog for one push (a slow phone): that push is skipped.
+    const real = Object.getOwnPropertyDescriptor(WebSocket.prototype, "bufferedAmount")!;
+    let slow = true;
+    Object.defineProperty(WebSocket.prototype, "bufferedAmount", {
+      configurable: true,
+      get(this: WebSocket & { _isServer?: boolean }) {
+        return slow && this._isServer ? 64 * 1024 * 1024 : real.get!.call(this);
+      },
+    });
+    try {
+      t.set({ journalSystems: big("B"), liveShipFuelRange: { ly: 10 } });
+      slow = false;
+      // The next push changes only the fuel: a delta against the skipped push would leave the page on "A".
+      t.set({ journalSystems: big("B"), liveShipFuelRange: { ly: 11 } });
+      const frame = (await app.next(3))!;
+      expect(frame.unchanged).toBeUndefined();
+      const systems = (frame.payload as { journalSystems: { starSystem: string }[] }).journalSystems;
+      expect(systems[0]!.starSystem).toBe("B 0");
+    } finally {
+      Object.defineProperty(WebSocket.prototype, "bufferedAmount", real);
+    }
+  });
+
+  // A client only ever sends a hello (wsHub maxPayload 64 KiB): a bigger frame closes the socket, 1009.
+  it("close a socket that sends a frame over 64 KiB", async () => {
+    const t = await start({ journalSystems: big("A") });
+    const app = await client(t.port);
+    await app.next(1);
+    const closed = new Promise<number>((r) => app.ws.once("close", (code) => r(code)));
+    app.ws.send("x".repeat(65 * 1024));
+    expect(await closed).toBe(1009);
+  });
+
   it("go out when a field leaves the snapshot", async () => {
     const t = await start({ journalSystems: big("A"), liveShipFuelRange: { ly: 10 } });
     const app = await client(t.port);

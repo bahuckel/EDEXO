@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /**
@@ -12,18 +13,28 @@ const fs = require("fs");
 
 const BUSY = new Set(["EPERM", "EBUSY", "EACCES"]);
 
+/**
+ * @param {string} from
+ * @param {string} to
+ * @param {number} [tries]
+ */
 function renameWithRetry(from, to, tries = 5) {
   for (let i = 1; ; i++) {
     try {
       fs.renameSync(from, to);
       return;
     } catch (e) {
-      if (i >= tries || !BUSY.has(e && e.code)) throw e;
+      if (i >= tries || !BUSY.has(/** @type {NodeJS.ErrnoException} */ (e)?.code ?? "")) throw e;
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 40 * i);
     }
   }
 }
 
+/**
+ * @param {string} file
+ * @param {string | NodeJS.ArrayBufferView} data
+ * @param {import("fs").WriteFileOptions} [options]
+ */
 function writeFileAtomic(file, data, options = "utf8") {
   const tmp = `${file}.tmp-${process.pid}`;
   try {

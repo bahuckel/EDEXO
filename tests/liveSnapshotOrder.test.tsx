@@ -201,3 +201,21 @@ describe("live snapshot ordering", () => {
     expect(FakeSocket.all.length).toBe(before + 1);
   });
 });
+
+describe("a push naming fields as unchanged (review 2026-11-10 §4.9)", () => {
+  it("keeps those fields from the snapshot already held", () => {
+    const ws = FakeSocket.all[0]!;
+    act(() => {
+      ws.open();
+      ws.onmessage?.({ data: JSON.stringify({ type: "state", rev: 1, payload: { tag: "a", speciesIndex: ["kept"] } }) });
+    });
+    act(() => {
+      ws.onmessage?.({
+        data: JSON.stringify({ type: "state", rev: 2, payload: { tag: "b" }, unchanged: ["speciesIndex"] }),
+      });
+    });
+    const last = seen.at(-1) as unknown as { tag: string; speciesIndex?: string[] };
+    expect(last.tag).toBe("b");
+    expect(last.speciesIndex).toEqual(["kept"]);
+  });
+});
