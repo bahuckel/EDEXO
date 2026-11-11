@@ -5,7 +5,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ColonizeUiState } from "../../../src/server/colonize/uiState";
 import { MAX_UI_STATE_VALUE_CHARS, cleanUiStateSet } from "../../../src/shared/colonize/uiStateKeys";
 
@@ -58,6 +58,7 @@ describe("the file", () => {
   });
 
   it("batches writes, and a flush with nothing pending writes nothing", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const file = fileIn();
     const s = new ColonizeUiState(file);
     s.flush();
@@ -65,7 +66,8 @@ describe("the file", () => {
     s.apply({ [TRIPS]: "a" });
     s.apply({ [TRIPS]: "b" });
     expect(existsSync(file)).toBe(false);
-    await new Promise((r) => setTimeout(r, 450));
+    await vi.advanceTimersByTimeAsync(450);
+    vi.useRealTimers();
     expect(new ColonizeUiState(file).all()).toEqual({ [TRIPS]: "b" });
   });
 

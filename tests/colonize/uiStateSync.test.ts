@@ -5,7 +5,7 @@
  * its browser, later ones take the server's copy (clearing what it cleared), listed keys save through batched, caches
  * stay local, and another window's saves land in storage while this window's own echo is ignored.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const TRIPS = "edexo-colonize-trip-plan-snapshot-v3";
 const BANS = "edexo-colonize-banned-stations-v1";
@@ -44,9 +44,13 @@ async function fresh() {
   return { sync, storage };
 }
 
-beforeEach(() => {
-  localStorage.clear();
+// The save debounce on a fake clock (plan 2.8): four waits of 400 ms each were real time.
+afterEach(() => {
   vi.useRealTimers();
+});
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  localStorage.clear();
 });
 
 describe("loading the server's copy", () => {
@@ -94,7 +98,7 @@ describe("read-only (a paired phone)", () => {
     expect(localStorage.getItem(TRIPS)).toBe("pc ticks");
     expect(localStorage.getItem(BANS)).toBeNull();
     storage.storageSet(TRIPS, "changed here");
-    await new Promise((r) => setTimeout(r, 400));
+    await vi.advanceTimersByTimeAsync(400);
     expect(calls.filter((c) => c.method === "PUT")).toHaveLength(0);
   });
 });
@@ -110,13 +114,13 @@ describe("saving", () => {
     storage.storageRemove(PARTY);
     storage.storageSet(CACHE, "{}");
     storage.storageRemove("edexo-colonize-banned-stations-v1"); // not there: nothing to say
-    await new Promise((r) => setTimeout(r, 400));
+    await vi.advanceTimersByTimeAsync(400);
     const puts = calls.filter((c) => c.method === "PUT");
     expect(puts).toHaveLength(1);
     expect(puts[0]!.body).toEqual({ set: { [TRIPS]: "2", [PARTY]: null }, from: sync.COLONIZE_WINDOW_ID });
     calls = [];
     storage.storageSet(TRIPS, "2");
-    await new Promise((r) => setTimeout(r, 400));
+    await vi.advanceTimersByTimeAsync(400);
     expect(calls).toHaveLength(0);
   });
 });
@@ -134,7 +138,7 @@ describe("another window's saves", () => {
     expect(localStorage.getItem(TRIPS)).toBe("theirs");
     expect(heard).toEqual([[TRIPS, BANS]]);
     // Applying their change does not send it back.
-    await new Promise((r) => setTimeout(r, 400));
+    await vi.advanceTimersByTimeAsync(400);
     expect(calls.filter((c) => c.method === "PUT")).toHaveLength(0);
   });
 });

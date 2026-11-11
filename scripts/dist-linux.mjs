@@ -44,6 +44,7 @@ copyDataTree(join(outDir, "data"));
 mergeDataOverlays(join(outDir, "data"));
 cpSync("LICENSE", join(outDir, "LICENSE"));
 cpSync("NOTICE.md", join(outDir, "NOTICE.md"));
+cpSync(join("build", "THIRD-PARTY-LICENSES.txt"), join(outDir, "THIRD-PARTY-LICENSES.txt"));
 cpSync("data/LICENSE-DATA.txt", join(outDir, "LICENSE-DATA.txt"));
 
 /*

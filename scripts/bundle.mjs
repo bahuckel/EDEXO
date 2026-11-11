@@ -1,9 +1,10 @@
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
+import { thirdPartyLicencesText } from "./thirdPartyLicences.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const expressViewStub = path.resolve(__dirname, "express-view-stub.cjs");
@@ -136,5 +137,9 @@ async function smokeBoot() {
   }
   console.info(`Booted build/app.cjs on port ${port} and shut it down again.`);
 }
+
+// The bundled libraries' licences, for every build to ship beside LICENSE and NOTICE.md (plan 2.7).
+mkdirSync(path.resolve(__dirname, "..", "build"), { recursive: true });
+writeFileSync(path.resolve(__dirname, "..", "build", "THIRD-PARTY-LICENSES.txt"), thirdPartyLicencesText(), "utf8");
 
 if (!process.argv.includes("--no-smoke")) await smokeBoot();

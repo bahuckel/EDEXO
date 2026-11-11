@@ -56,5 +56,10 @@ ${LICENCE_TXT}
 ${DATA_LICENCE_TXT}
 `;
 writeFileSync(join(outDir, "README.txt"), readme, "utf8");
+// The licences its README names (review 2026-11-10 E4: the pack carried neither).
+cpSync("LICENSE", join(outDir, "LICENSE"));
+cpSync("NOTICE.md", join(outDir, "NOTICE.md"));
+cpSync(join("data", "LICENSE-DATA.txt"), join(outDir, "LICENSE-DATA.txt"));
+cpSync(join("build", "THIRD-PARTY-LICENSES.txt"), join(outDir, "THIRD-PARTY-LICENSES.txt"));
 
 console.info("\nCLI pack output:", outDir);

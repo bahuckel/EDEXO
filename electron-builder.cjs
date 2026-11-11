@@ -153,6 +153,16 @@ module.exports = {
     // sql.js's WebAssembly for the feeder database (in-app dump import); feederDb.ts `wasmPath`.
     { from: "node_modules/sql.js/dist/sql-wasm.wasm", to: "sql-wasm/sql-wasm.wasm" },
   ],
+  /*
+    Beside the exe (review 2026-11-10 E4): the licence, the notices, the data licence and the bundled libraries' own
+    licences (build/THIRD-PARTY-LICENSES.txt, written by scripts/bundle.mjs). The build carried none of them.
+  */
+  extraFiles: [
+    { from: "LICENSE", to: "LICENSE.txt" },
+    { from: "NOTICE.md", to: "NOTICE.md" },
+    { from: "data/LICENSE-DATA.txt", to: "LICENSE-DATA.txt" },
+    { from: "build/THIRD-PARTY-LICENSES.txt", to: "THIRD-PARTY-LICENSES.txt" },
+  ],
   win,
   /*
     Chromium's own menu and dialog texts in English only (owner, 2026-10-06): the app is English, and
