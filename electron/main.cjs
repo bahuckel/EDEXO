@@ -385,27 +385,55 @@ function wireRuntime() {
   stopped (it writes what it holds) and started again for this one, on the same address. The app's own windows load
   again, so nothing on screen is the other commander's; browser tabs wait for the new commander and reload themselves.
 */
+function reloadOwnWindows() {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (w.isDestroyed()) continue;
+    let url = "";
+    try {
+      url = w.webContents.getURL();
+    } catch {
+      continue;
+    }
+    if (isOwnUrl(url, ownBase)) w.webContents.reload();
+  }
+}
+
 async function restartServerFor(fid) {
+  const before = process.env.EDEXO_COMMANDER;
+  let stopped = false;
   try {
     process.env.EDEXO_COMMANDER = fid;
     huds.log(`switching commander (${fid})`);
     await runtime.shutdown();
+    stopped = true;
     runtime = await startServerChild(serverOptions);
     wireRuntime();
-    for (const w of BrowserWindow.getAllWindows()) {
-      if (w.isDestroyed()) continue;
-      let url = "";
-      try {
-        url = w.webContents.getURL();
-      } catch {
-        continue;
-      }
-      if (isOwnUrl(url, ownBase)) w.webContents.reload();
-    }
+    reloadOwnWindows();
   } catch (e) {
     console.error("[edexo-compare] could not start the server for the other commander:", e);
+    /*
+      The server for the commander before, again: a failed switch left the app open with no server at all (review
+      2026-11-10 D2). Only when that fails too is the app without one.
+    */
+    let back = !stopped;
+    if (stopped) {
+      if (before === undefined) delete process.env.EDEXO_COMMANDER;
+      else process.env.EDEXO_COMMANDER = before;
+      try {
+        runtime = await startServerChild(serverOptions);
+        wireRuntime();
+        reloadOwnWindows();
+        back = true;
+      } catch (e2) {
+        console.error("[edexo-compare] could not start the server again for the commander before:", e2);
+      }
+    }
     try {
-      dialog.showErrorBox("EDEXO — switching commander failed", String(e && e.message ? e.message : e));
+      const why = String(e && e.message ? e.message : e);
+      dialog.showErrorBox(
+        "EDEXO — switching commander failed",
+        back ? `${why}\n\nStill showing the commander before.` : `${why}\n\nThe server could not start again: restart EDEXO.`,
+      );
     } catch {
       /* ignore */
     }
@@ -723,7 +751,10 @@ async function start() {
     const watcherExe = nativeWatcherPath(process.resourcesPath);
     huds.log(`foreground watcher: ${watcherExe ? "native" : "PowerShell (native helper not built)"}`);
     foreground = watchForegroundOffMain(utilityProcess, path.join(__dirname, "foregroundHost.cjs"), (name, at) => {
-      huds.log(`foreground ${name || "(unreadable)"}${at ? ` at ${at.x},${at.y}` : ""}`);
+      // The game, this app, or "another program": which other program is in front is the commander's business, not
+      // the log's (review 2026-11-10 D7: every program brought to the front was recorded by name).
+      const shown = !name ? "(unreadable)" : isGameOrOwn(name, own) ? name : "another program";
+      huds.log(`foreground ${shown}${at ? ` at ${at.x},${at.y}` : ""}`);
       // The body tabs and Clear the notices take their keys only while Elite or this app (the app
       // window, the launcher; owner, 2026-10-07) is in front (keybinds.cjs); every other program keeps
       // them. "Idle" (no window for a moment between two) and an unreadable name change nothing.

@@ -73,6 +73,7 @@ export function serializeJournalMergePayload(store: GameStateStore): JournalMerg
     systemStarClass: [...store.systemStarClass.entries()],
     targetedSystems: [...store.targetedSystems.entries()].map(([a, t]) => [a, t.name, t.starClass]),
     lastEventIso: store.lastEventIso,
+    aboard: store.aboard,
     footJournalContextBuffer: store.footJournalContextBuffer.slice(),
     commanderPos: store.commanderPos,
     fsdTarget: store.fsdTarget,
@@ -147,6 +148,7 @@ export function hydrateJournalMergePayload(store: GameStateStore, data: JournalM
   store.currentSystemAddress = data.currentSystemAddress;
   store.viewingSystemAddress = data.viewingSystemAddress;
   store.lastEventIso = data.lastEventIso;
+  store.aboard = data.aboard ?? null;
   store.systemVisitedAt.clear();
   for (const [a, t] of data.systemVisitedAt ?? []) if (typeof a === "number" && typeof t === "string") store.systemVisitedAt.set(a, t);
   store.systemStarClass.clear();

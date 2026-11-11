@@ -133,8 +133,10 @@ export type SoldTally = { credits: number; items: number; sales: number; lastAt:
       (A9).
   44: a twin moon no longer inherits `dssComplete` from its sibling (owner 2026-11-11): cached twins read "DSS ✓"
       unmapped.
+  45: `aboard` (ship, SRV, on foot, another's): a death keeps the cartographic data unless the ship went (owner
+      2026-11-11).
 */
-export const JOURNAL_MERGE_CACHE_FORMAT = 44;
+export const JOURNAL_MERGE_CACHE_FORMAT = 45;
 
 /** Serializable journal-derived slice of {@link GameStateStore} (not user prefs). */
 export type JournalMergeCachePayload = {
@@ -168,6 +170,7 @@ export type JournalMergeCachePayload = {
   dssMappingEfficientByBodyKey: [string, boolean][];
   orbitParentPlanetByBody: [string, number][];
   lastEventIso: string | null;
+  aboard?: "ship" | "srv" | "foot" | "other" | null;
   footJournalContextBuffer: JournalLine[];
   organicAnalyseByKey: [string, OrganicAnalyseProgress][];
   bodyDetailedFootfallState: [string, boolean][];

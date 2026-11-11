@@ -115,11 +115,10 @@ describe("the neutron planner over random star fields", () => {
   });
 
   /*
-    Review 2026-11-10 B6 (Phase 6, not fixed): a stop with more legs after it may be reached with no fuel, unflagged,
-    and the next leg then falls to the plain plot. Fails today; it passes once the planner treats a leg's end like a
-    star (a jump's fuel or a scoop on the way). Remove `.fails` with that fix.
+    Review 2026-11-10 B6: a stop with more legs after it was reached with no fuel, unflagged, and the next leg then fell
+    to the plain plot. A leg's end with legs after it now keeps a jump's fuel or scoops on the way.
   */
-  it.fails("reaches a waypoint with more legs after it with a jump of fuel left", async () => {
+  it("reaches a waypoint with more legs after it with a jump of fuel left", async () => {
     const none = { within: () => [], nameOf: (i: number) => `N${i}` };
     const ship = { rangeLy: 50, jumpsPerTank: 5, jumpsNow: 5 };
     const plan = await planNeutronRoute(

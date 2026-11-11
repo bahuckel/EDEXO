@@ -152,12 +152,18 @@ export async function loadUiMirror(): Promise<number> {
 /** In the streamer view: follow the settings; `onChange` redraws the app. */
 export function watchUiMirror(fromRev: number, onChange: () => void): void {
   let rev = fromRev;
+  /*
+    Only the answer to the latest ask (review 2026-11-10 F6: two notices close together, the older answer landing last
+    was applied over the newer). Not by revision: a restarted server counts from 0 again.
+  */
+  let asked = 0;
   // Read when the streamer changes a setting (R2, 2026-10-24: was asked every second).
   onServerChange("ui-mirror", () => {
+    const mine = ++asked;
     fetch("/api/ui/mirror", { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<Mirror>) : null))
       .then((m) => {
-        if (!m || m.rev === rev) return;
+        if (!m || mine !== asked || m.rev === rev) return;
         rev = m.rev;
         const redraw = touchesWhatWasRead(changedKeys(m));
         apply(m);

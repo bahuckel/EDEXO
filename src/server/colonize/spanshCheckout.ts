@@ -595,7 +595,7 @@ export async function runBasketCheckout(args: {
     );
 
   if (journalDir && !cacheOnly && !indexCoversBasket) {
-    const local = await tryCheckoutFromMarketJson(journalDir, uniqueItems, filters);
+    const local = await tryCheckoutFromMarketJson(journalDir, uniqueItems, filters, ref);
     if (local) return { ...local, routingMode, depotLabel: args.depotLabel ?? null };
   }
 

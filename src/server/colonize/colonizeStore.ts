@@ -80,6 +80,8 @@ type StateFileV3 = {
   historyScannedDir?: string;
   /** Which version of that read it was: a newer build that reads more events reads the history once more. */
   historyScannedVersion?: number;
+  /** Where the last 7-day read began (ms): the journals from there up to the next window are read at the next start. */
+  windowReadFromMs?: number;
   /** His own carriers, confirmed and with what the journal saw them carry (they outlive the 7-day window). */
   carriers?: Record<string, CarrierStock>;
   confirmedCarrierIds?: string[];
@@ -124,6 +126,7 @@ export class ColonizeStore {
   private lastError: string | null = null;
   private historyScannedDir: string | null = null;
   private historyScannedVersion = 0;
+  private windowReadFromMs: number | null = null;
   private notify: (() => void) | null = null;
   /**
    * Following EDEXO's journal reading (journalTap.ts) instead of a tail of its own. `reached`: per file, the byte
@@ -391,6 +394,8 @@ export class ColonizeStore {
       this.historyScannedDir = typeof scanned === "string" ? scanned : null;
       const version = (raw as { historyScannedVersion?: unknown }).historyScannedVersion;
       this.historyScannedVersion = typeof version === "number" ? version : this.historyScannedDir ? 1 : 0;
+      const from = (raw as { windowReadFromMs?: unknown }).windowReadFromMs;
+      this.windowReadFromMs = typeof from === "number" && Number.isFinite(from) ? from : null;
       this.loadCarriersFromState(raw as StateFileV3);
     } else {
       /**
@@ -710,9 +715,9 @@ export class ColonizeStore {
    * window, whose reset then clears what the old docking left behind (where the ship is docked, the system).
    * True when it ran to the end; the folder is remembered only after the window read succeeds too.
    */
-  private async scanJournalHistory(dir: string, minMs: number): Promise<boolean> {
+  private async scanJournalHistory(dir: string, minMs: number, fromMs: number | null = null): Promise<boolean> {
     try {
-      const all = await listJournalFilesChronological(dir, null);
+      const all = await listJournalFilesChronological(dir, fromMs);
       const inWindow = new Set(await listJournalFilesChronological(dir, minMs));
       for (const file of all) {
         if (inWindow.has(file)) continue;
@@ -733,6 +738,13 @@ export class ColonizeStore {
     // The old docking would otherwise say which carrier the ship is on; the window reset below clears the rest.
     const dockedCarrier = this.journal.dockedCarrierId;
     const historyRead = scanHistory && (await this.scanJournalHistory(historyDir, journalWindowCutoffUtcMs()));
+    /*
+      History read before: the journals since the last week's read began, now older than this week (review 2026-11-10
+      B7: written while the app was closed, more than 7 days ago, they were never read). Read again where the last
+      window already had them: the appenders skip what is recorded.
+    */
+    if (!scanHistory && this.windowReadFromMs != null)
+      await this.scanJournalHistory(historyDir, journalWindowCutoffUtcMs(), this.windowReadFromMs);
     this.journal.dockedCarrierId = dockedCarrier;
     this.journal.shipCargoByName.clear();
     this.journal.shipCargoTimestamp = null;
@@ -786,6 +798,7 @@ export class ColonizeStore {
       this.historyScannedDir = historyDir;
       this.historyScannedVersion = HISTORY_VERSION;
     }
+    if (!this.lastError) this.windowReadFromMs = minMs;
     this.bump();
   }
 
@@ -941,6 +954,7 @@ export class ColonizeStore {
         depots: this.journal.depots,
         journalShops,
         ...(this.historyScannedDir ? { historyScannedDir: this.historyScannedDir, historyScannedVersion: this.historyScannedVersion } : {}),
+        ...(this.windowReadFromMs != null ? { windowReadFromMs: this.windowReadFromMs } : {}),
         carriers: this.journal.carriers,
         confirmedCarrierIds: [...this.journal.confirmedCarrierIds],
         carrierTransferKeys: [...this.journal.carrierTransferKeys].slice(-CARRIER_TRANSFER_KEYS_MAX),

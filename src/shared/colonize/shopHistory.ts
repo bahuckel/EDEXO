@@ -121,14 +121,17 @@ export function recordShopVisit(
   return next;
 }
 
+/** The same system, by name. */
 function systemsMatch(a: string, b: string): boolean {
   const x = norm(a);
-  const y = norm(b);
-  if (!x || !y) return false;
-  return x === y || x.includes(y) || y.includes(x);
+  return !!x && x === norm(b);
 }
 
-/** Fuzzy match — journal dock name vs Spansh station name (system + station, then station-only). */
+/**
+ * A dock in the history for a station: the same system, and the journal's station name the same as Spansh's or one
+ * holding the other (a construction site's prefix). Not by station name alone, nor a system name inside another
+ * (review 2026-11-10 B9: "Ray Gateway" in one system was the dock history of every "Ray Gateway").
+ */
 export function findShopHistoryEntry(
   history: ShopHistoryEntry[],
   systemName: string,
@@ -137,10 +140,6 @@ export function findShopHistoryEntry(
   for (let i = 0; i < history.length; i++) {
     const e = history[i]!;
     if (!systemsMatch(e.systemName, systemName)) continue;
-    if (stationsMatch(e.stationName, stationName)) return { entry: e, index: i };
-  }
-  for (let i = 0; i < history.length; i++) {
-    const e = history[i]!;
     if (stationsMatch(e.stationName, stationName)) return { entry: e, index: i };
   }
   return null;

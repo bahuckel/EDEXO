@@ -73,6 +73,7 @@ import { CLOUD_SPRITE_STRIDE } from "@shared/galaxyClouds";
 import { regionOutlines, type RegionOutlines } from "@shared/regionBorders.js";
 import { regionIndexForCoords, regionJoinKey, type RegionMapData } from "@shared/regionMap.js";
 import type { GalaxyFindDTO, GalaxyMineDTO, GalaxyNextDTO, GalaxyRouteDTO } from "@shared/types";
+import { copyText } from "./copyText";
 import type {
   CodexMapKind,
   CodexMapRegionDTO,
@@ -1117,7 +1118,7 @@ export function GalaxyMap3D() {
       }
       if (t) {
         try {
-          await navigator.clipboard.writeText(t.name);
+          await copyText(t.name);
           setCopied(true);
         } catch {
           setCopied(false);

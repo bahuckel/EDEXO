@@ -9,6 +9,7 @@ import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import type { SessionLogDTO } from "@shared/types";
 import { useState } from "react";
+import { copyText } from "./copyText";
 
 /* ---------------------------------------------------------------- the session log (NEXT-TASKS 11) */
 function sessionLogMarkdown(log: SessionLogDTO): string {
@@ -60,7 +61,7 @@ export function SessionLogModal({ log, onClose }: { log: SessionLogDTO | null; o
   const copy = async () => {
     if (!log) return;
     try {
-      await navigator.clipboard.writeText(sessionLogMarkdown(log));
+      await copyText(sessionLogMarkdown(log));
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {

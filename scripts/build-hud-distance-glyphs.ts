@@ -9,7 +9,8 @@
  * Dangerous) or any .png / .jpg / .webp sharp reads. In each, the line read as the
  * target's (hudTargetDistance.ts: a distance with the time line under it) gives one sample per character when it
  * holds the text's number of figures. Every sample is kept up to MAX_PER_GLYPH a glyph, spread over the images.
- * --check: before writing, each half of the images is read with glyphs from the other half, and the misses listed.
+ * --check: before writing, each half of the images is read with glyphs from the other half, and the misses listed
+ * (`--list-unsure`: the images it could not read too).
  * The images are not kept; only the numbers go in the table.
  */
 import { readFileSync, writeFileSync } from "node:fs";
@@ -117,7 +118,10 @@ if (check) {
       if (i % 2 !== half) continue;
       const img = await rgba(p.file);
       const r = readTargetDistanceAnyColour(img.data, img.w, img.h, glyphs)?.reading ?? null;
-      if (!r) unsure++;
+      if (!r) {
+        unsure++;
+        if (process.argv.includes("--list-unsure")) console.log(`  not sure ${p.file.split(/[\\/]/).pop()} (${p.text})`);
+      }
       else if (r.text === p.text) right++;
       else wrong.push(`${p.file.split(/[\\/]/).pop()}: ${r.text} (is ${p.text})`);
     }

@@ -113,6 +113,21 @@ describe("Host and Origin", () => {
     expect(requestOriginIsAllowed(req("203.0.113.5", "my.ddns.example:7111", "https://evil.example"), lan, o)).toBe(false);
     expect(requestOriginIsAllowed(req("192.0.2.20", "192.0.2.10:7111", "null"), lan, o)).toBe(false);
   });
+
+  // Review 2026-11-10 C9: any page on localhost had this PC's trust, whatever its port or scheme.
+  it("takes a page of this PC as its own only on the app's port", () => {
+    const req = (host: string, origin: string, localPort = 7111) =>
+      ({ socket: { remoteAddress: "127.0.0.1", localPort }, headers: { host, origin } }) as unknown as http.IncomingMessage;
+    const none = () => false;
+    const o = { checkOrigin: true };
+    expect(requestOriginIsAllowed(req("127.0.0.1:7111", "http://127.0.0.1:7111"), none, o)).toBe(true);
+    expect(requestOriginIsAllowed(req("127.0.0.1:7111", "http://localhost:7111"), none, o)).toBe(true);
+    expect(requestOriginIsAllowed(req("127.0.0.1:7111", "http://localhost:3000"), none, o)).toBe(false);
+    expect(requestOriginIsAllowed(req("127.0.0.1:7111", "https://localhost:7111"), none, o)).toBe(true);
+    expect(requestOriginIsAllowed(req("127.0.0.1:7111", "https://localhost"), none, o)).toBe(false);
+    // The dev server proxies with its own Host: same-origin.
+    expect(requestOriginIsAllowed(req("localhost:5173", "http://localhost:5173"), none, o)).toBe(true);
+  });
 });
 
 describe("localOnly", () => {

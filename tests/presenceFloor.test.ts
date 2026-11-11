@@ -67,9 +67,26 @@ describe("the chance floor", () => {
       match("fonticulua_upupam", 0.7),
       match("fungoida_bullarum", 0.3),
     ];
-    demoteBelowPresenceFloor(ms, body(), db);
+    demoteBelowPresenceFloor(ms, body({ biologicalSignals: 1 }), db);
     expect(shownIds(ms)).toEqual(["fonticulua_campestris"]);
     expect(ms[1]!.unlikelyReasons?.[0]?.detail).toContain("0.7 %");
+  });
+
+  // Owner 2026-11-11 (review 2026-11-10 A7): one signal is one genus. Two signals, two candidate genera: both stay.
+  it("never shows fewer genera than the body has signals: the best row of each emptied genus comes back", () => {
+    const ms = [
+      match("fonticulua_campestris", 100),
+      match("fonticulua_upupam", 0.7),
+      match("fungoida_bullarum", 0.3),
+      match("fungoida_setisis", 0.6),
+    ];
+    demoteBelowPresenceFloor(ms, body({ biologicalSignals: 2 }), db);
+    expect(shownIds(ms)).toEqual(["fonticulua_campestris", "fungoida_setisis"]);
+    // Brain Trees: several species on one body, a signal each.
+    const trees = [match("stratum_x", 90), match("brain-tree_a", 0.5), match("brain-tree_b", 0.4), match("brain-tree_c", 0.1)];
+    for (const t of trees.slice(1)) (t.entry as { genusDataDir: string }).genusDataDir = "brain-tree";
+    demoteBelowPresenceFloor(trees, body({ biologicalSignals: 3 }), db);
+    expect(shownIds(trees)).toEqual(["stratum_x", "brain-tree_a", "brain-tree_b"]);
   });
 
   // Review 2026-11-10 A3: a twin moon's DSS genera are a hint here, not this body's list. The likeliest row of each
@@ -91,9 +108,12 @@ describe("the chance floor", () => {
 
   it("keeps the best row rather than emptying the panel", () => {
     const ms = [match("a", 0.8), match("b", 0.6), match("c", 0.2)];
-    demoteBelowPresenceFloor(ms, body(), db);
-    // One row, and the right one — not two, however many signals the game reported.
+    demoteBelowPresenceFloor(ms, body({ biologicalSignals: 1 }), db);
+    // One row for one signal, and the right one; one per signal since 2026-11-11 (A7).
     expect(shownIds(ms)).toEqual(["a"]);
+    const two = [match("a", 0.8), match("b", 0.6), match("c", 0.2)];
+    demoteBelowPresenceFloor(two, body(), db);
+    expect(shownIds(two)).toEqual(["a", "b"]);
   });
 
   it("leaves an unmeasured row alone", () => {
@@ -267,11 +287,11 @@ describe("the per-species presence floor", () => {
       match("concha_concha_labiata", 0.5),
       match("concha_concha_renibus", 0.5),
     ];
-    demoteBelowPresenceFloor(ms, body(), db);
+    demoteBelowPresenceFloor(ms, body({ biologicalSignals: 1 }), db);
     expect(ms.find((m) => m.entry.id === "concha_concha_labiata")!.unlikely).toBeFalsy();
     expect(ms.find((m) => m.entry.id === "concha_concha_renibus")!.unlikely).toBe(true);
     const low = [match("bacterium_x", 90), match("concha_concha_labiata", 0.2)];
-    demoteBelowPresenceFloor(low, body(), db);
+    demoteBelowPresenceFloor(low, body({ biologicalSignals: 1 }), db);
     expect(low[1]!.unlikely).toBe(true);
     expect(low[1]!.unlikelyReasons?.[0]?.detail).toMatch(/under the 0\.3 %/);
   });

@@ -49,6 +49,7 @@ import { BoxelSideActions } from "./boxel/BoxelSideActions";
 import { BoxelFlyingStrip } from "./boxel/BoxelFlyingStrip";
 import { RollingNumber } from "./ui/RollingNumber";
 import { usePresence } from "./ui/usePresence";
+import { copyText as writeClipboard } from "./copyText";
 
 /*
   The labels and helpers and the table's columns live in boxel/ since the audit of 2026-10-22; the
@@ -87,7 +88,7 @@ export function BoxelScreen({
     return () => clearTimeout(t);
   }, [copied]);
   const copyText = (text: string) =>
-    void navigator.clipboard?.writeText(text).then(
+    void writeClipboard(text).then(
       () => setCopied(text),
       () => setCopied(null),
     );

@@ -254,6 +254,8 @@ export async function checkNavRouteSystemsOnEdsm(addresses: number[], fetchImpl:
       for (let attempt = 0; attempt < 3; attempt++) {
         r = await fetchImpl(`${EDSM_SYSTEMS_URL}?${qs}&showId=1`, {
           headers: { Accept: "application/json", "User-Agent": EDSM_USER_AGENT },
+          // 20 s (review 2026-11-10 C9: none, so the check said "running" for five minutes on a dead connection).
+          signal: AbortSignal.timeout(20_000),
         });
         if (r.status !== 429) break;
         checking = { ...checking, note: "EDSM rate limit — waiting a minute" };

@@ -204,7 +204,11 @@ export async function fetchSpanshRoute(text: string, fetchImpl: typeof fetch = f
   if (!job) return { state: "error", error: "No Spansh route in that: paste the link of a Spansh results page, or its job id." };
   let res: Response;
   try {
-    res = await fetchImpl(`${RESULTS_URL}${job}`, { headers: { "User-Agent": APP_USER_AGENT, Accept: "application/json" } });
+    // 20 s, as the other Spansh calls (review 2026-11-10 B13: none, so a hung answer held the paste open).
+    res = await fetchImpl(`${RESULTS_URL}${job}`, {
+      headers: { "User-Agent": APP_USER_AGENT, Accept: "application/json" },
+      signal: AbortSignal.timeout(20_000),
+    });
   } catch (e) {
     return { state: "error", error: `Spansh did not answer (${e instanceof Error ? e.message : String(e)}).` };
   }

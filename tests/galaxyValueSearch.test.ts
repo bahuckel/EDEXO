@@ -162,6 +162,12 @@ describe("ordering", () => {
     for (const h of r.hits) expect(h.distanceLy).toBeNull();
   });
 
+  // Review 2026-11-10 B12: without a position the first N in index order were taken, then sorted.
+  it("without a position, trims the richest, not the index's first", async () => {
+    const r = await search(ROWS, { minCr: 1_000_000, from: null, limit: 1 });
+    expect(r.hits[0]!.starSystem).not.toBe("Cheap Only");
+  });
+
   it("trims to the limit but still reports the true total", async () => {
     const r = await search(ROWS, { minCr: 1_000_000, from: { x: 0, y: 0, z: 0 }, limit: 1 });
     expect(r.hits).toHaveLength(1);

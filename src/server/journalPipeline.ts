@@ -18,7 +18,11 @@ import {
 } from "./journalWatcher.js";
 import { emitJournalReread } from "./journalTap.js";
 import { getCachedSpeciesDatabase } from "./snapshot.js";
-import { loadOrganicSampleSessionFromDisk } from "./organicSampleSessionFile.js";
+import {
+  holdSampleSessionFileForReplay,
+  loadOrganicSampleSessionFromDisk,
+  releaseSampleSessionFileAfterReplay,
+} from "./organicSampleSessionFile.js";
 import {
   buildJournalFileManifest,
   removeJournalMergeCache,
@@ -168,6 +172,16 @@ export function createJournalPipeline({
 
   async function resyncAllJournalFilesInner(): Promise<void> {
     bootStart();
+    holdSampleSessionFileForReplay(() => store.lastEventIso);
+    try {
+      await resyncAllJournalFilesHeld();
+    } finally {
+      // Released by finishReplay on success; an empty folder or a failed start lets go here.
+      releaseSampleSessionFileAfterReplay(projectRoot);
+    }
+  }
+
+  async function resyncAllJournalFilesHeld(): Promise<void> {
     store.resetAll();
     notices.invalidate();
     journalBootProgress = {
@@ -228,6 +242,7 @@ export function createJournalPipeline({
       settleManifest();
       journalPath = files[files.length - 1]!;
       store.resetFootTravelRuntime();
+      releaseSampleSessionFileAfterReplay(projectRoot);
       loadOrganicSampleSessionFromDisk(projectRoot, store, getCachedSpeciesDatabase());
       journalBootProgress = null;
       refreshLiveHudFromJournalDir();

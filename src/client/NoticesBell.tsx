@@ -11,6 +11,7 @@ import type { NoticeDTO } from "@shared/notices";
 import { Popover } from "./ui/Popover";
 import { useToast } from "./ui/feedback";
 import { useRecordChime } from "./noticesClient";
+import { copyText } from "./copyText";
 
 function ago(iso: string): string {
   const ms = Date.now() - Date.parse(iso);
@@ -124,7 +125,7 @@ export const NoticesBell = memoOnSnapSlice(BELL_FIELDS, function NoticesBell({
             type="button"
             className="exo-data-alert__btn"
             title={`Copy ${n.system} to paste into the galaxy map`}
-            onClick={() => void navigator.clipboard?.writeText(n.system).catch(() => {})}
+            onClick={() => void copyText(n.system).catch(() => {})}
           >
             Copy system
           </button>

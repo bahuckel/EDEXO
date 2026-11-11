@@ -8,16 +8,17 @@
 
 const { httpUrl } = require("./browserPrefs.cjs");
 
-/** Hosts plain HTTP is never upgraded for: this machine and the home network. */
+/**
+ * Hosts plain HTTP is never upgraded for: this machine and the home network. The private ranges as addresses only
+ * (review 2026-11-10 D7: "10.example.com" and "192.168.evil.com" are public names, and were sent plain).
+ */
 function isLocalHost(host) {
+  const ipv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
   return (
     host === "localhost" ||
     host.endsWith(".localhost") ||
     host.endsWith(".local") ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    (ipv4 && (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host))) ||
     host === "[::1]"
   );
 }

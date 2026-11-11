@@ -172,6 +172,10 @@ function watchForeground(onName, exe = null) {
  * @param {string | null} [exe]  the native watcher, handed to the host (it has no resourcesPath of its own)
  * @returns {{ stop: () => void }}
  */
+/** How often a dead foreground host is started again within HOST_RESTART_WINDOW_MS before the fallback takes over. */
+const HOST_RESTARTS = 3;
+const HOST_RESTART_WINDOW_MS = 10 * 60_000;
+
 function watchForegroundOffMain(utilityProcess, hostPath, onName, exe = null) {
   if (process.platform !== "win32") return { stop() {} };
   let stopped = false;
@@ -181,25 +185,43 @@ function watchForegroundOffMain(utilityProcess, hostPath, onName, exe = null) {
   const useFallback = () => {
     if (!stopped && !fallback) fallback = watchForeground(onName, exe);
   };
-  try {
-    host = utilityProcess.fork(hostPath, exe ? [exe] : [], { serviceName: "EDEXO foreground watch", stdio: "ignore" });
-  } catch {
-    useFallback();
-    return { stop: () => ((stopped = true), fallback?.stop()) };
-  }
-  host.on("message", (m) => {
-    if (!m || typeof m.name !== "string") return;
-    heard = true;
+  /*
+    A host that dies after it worked is started again (review 2026-11-10 D7: nothing replaced it, and the overlays
+    stopped following the game for the rest of the session); a few times within a while, then the in-process watcher.
+  */
+  let restarts = 0;
+  let firstRestartAt = 0;
+  const start = () => {
     try {
-      onName(m.name, m.at && Number.isFinite(m.at.x) && Number.isFinite(m.at.y) ? { x: m.at.x, y: m.at.y } : null);
+      host = utilityProcess.fork(hostPath, exe ? [exe] : [], { serviceName: "EDEXO foreground watch", stdio: "ignore" });
     } catch {
-      /* the listener's failure is its own */
+      useFallback();
+      return false;
     }
-  });
-  host.on("exit", () => {
-    host = null;
-    if (!heard) useFallback();
-  });
+    host.on("message", (m) => {
+      if (!m || typeof m.name !== "string") return;
+      heard = true;
+      try {
+        onName(m.name, m.at && Number.isFinite(m.at.x) && Number.isFinite(m.at.y) ? { x: m.at.x, y: m.at.y } : null);
+      } catch {
+        /* the listener's failure is its own */
+      }
+    });
+    host.on("exit", () => {
+      host = null;
+      if (stopped) return;
+      if (!heard) return useFallback();
+      const now = Date.now();
+      if (now - firstRestartAt > HOST_RESTART_WINDOW_MS) {
+        firstRestartAt = now;
+        restarts = 0;
+      }
+      if (++restarts > HOST_RESTARTS) return useFallback();
+      start();
+    });
+    return true;
+  };
+  if (!start()) return { stop: () => ((stopped = true), fallback?.stop()) };
   return {
     stop() {
       stopped = true;

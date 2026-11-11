@@ -816,8 +816,13 @@ export function readHudPitchAnyColour(
     const reading = known ? null : readHudPitch(rgba, w, h, glyphs, screen, framings, seen);
     return reading ? { reading, colours: null } : null;
   };
-  // A frame without the search (the capture looks for colours once a second): the game's look only.
-  if (!known && !discover) return defaultLook();
+  /*
+    A frame without the search (the capture looks for colours once a second): the game's look only, and not at all with
+    a hint. With one, the searching frame takes the game's look only when the hinted colours are not on the frame,
+    which this frame cannot tell; it read the unframed pair the searching frame had refused, a ladder label (review
+    2026-11-10 E2: null, -20, null, -20 on the test scene).
+  */
+  if (!known && !discover) return hint ? null : defaultLook();
   /*
     Without a hint the game's framed boxes first, its unframed pairs only after the recoloured path: on an orange or
     gold EDHM theme those were the ladder's labels (theme bench, colour-unknown frames: 1203 "79" read 75 on Orokin
@@ -907,6 +912,29 @@ export function readHudHeading(rgba: Rgba, w: number, h: number, glyphs: HudGlyp
   return null;
 }
 
+/**
+ * A white blob within a character of the box's figures, on either side: a star over a figure (the HUD is drawn
+ * additively, yellow over white is white), whose loss leaves a valid number: 180 read 80 (review 2026-11-10 E6). The
+ * yellow and orange text this reads is never near white. 15 % of a character's square: a star of the test's
+ * size covers 18 %, the sky's own stars a few pixels.
+ */
+function whiteBeside(rgba: Rgba, w: number, run: readonly Rect[], top: number, bottom: number, cell: number): boolean {
+  const x0 = Math.min(...run.map((c) => c.x0));
+  const x1 = Math.max(...run.map((c) => c.x1));
+  const h = rgba.length / 4 / w;
+  const count = (from: number, to: number) => {
+    let n = 0;
+    for (let y = Math.max(0, top); y <= Math.min(h - 1, bottom); y++)
+      for (let x = Math.max(0, from); x <= Math.min(w - 1, to); x++) {
+        const i = (y * w + x) * 4;
+        if (Math.min(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!) >= 200) n++;
+      }
+    return n;
+  };
+  const enough = cell * (bottom - top + 1) * 0.15;
+  return count(x0 - cell, x0 - 1) >= enough || count(x1 + 1, x1 + cell) >= enough;
+}
+
 function readHeadingIn(
   rgba: Rgba,
   w: number,
@@ -959,6 +987,7 @@ function readHeadingIn(
   const boxDeg = Number(text);
   if (!(boxDeg >= 0 && boxDeg < 360)) return null;
   const dh = bottom - top + 1;
+  if (whiteBeside(rgba, w, run, top, bottom, dh)) return null;
 
   // The ticks: orange columns just under the box.
   const ty0 = Math.min(h, bottom + Math.round(dh * 0.3));

@@ -113,6 +113,16 @@ describe("parsePoiJson", () => {
     expect(new Set(keys).size).toBe(4);
   });
 
+  // Review 2026-11-10 F6: the link becomes an <a href>; only a web address is kept.
+  it("keeps a link only when it is an http(s) address", () => {
+    const rows = parsePoiJson(JSON.stringify([
+      { ...GEC_ORGANIC, id: 1, poiUrl: "file:///C:/Windows/System32/calc.exe" },
+      { ...GEC_ORGANIC, id: 2, poiUrl: "smb://host/share" },
+      { ...GEC_ORGANIC, id: 3, poiUrl: "https://edastro.com/gec/view/3" },
+    ]));
+    expect(rows.map((r) => r.url)).toEqual(["", "", "https://edastro.com/gec/view/3"]);
+  });
+
   it("reads the thin GMP shape without inventing values", () => {
     const gmp = parsePoiJson(FEED).find((r) => r.key === "GMP:254")!;
     expect(gmp.rating).toBeNull();

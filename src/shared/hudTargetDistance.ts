@@ -272,9 +272,42 @@ export function readDistanceLine(
   return { distLs, text: `${text}${unit}`, unit, x: line.x0, y: line.base };
 }
 
+/** The lines under `line`, starting where it starts: the target's time to arrive. */
+function linesUnder(lines: readonly TextLine[], line: TextLine): TextLine[] {
+  return lines.filter((o) => o !== line && o.top > line.base && o.top - line.base <= line.dh * 1.3 && Math.abs(o.x0 - line.x0) <= line.dh * 1.2);
+}
+
 /** A line under `line`, starting where it starts: the target's time to arrive. */
 export function lineUnder(lines: readonly TextLine[], line: TextLine): boolean {
-  return lines.some((o) => o !== line && o.top > line.base && o.top - line.base <= line.dh * 1.3 && Math.abs(o.x0 - line.x0) <= line.dh * 1.2);
+  return linesUnder(lines, line).length > 0;
+}
+
+/**
+ * The figure at the front is hidden: the two lines are left-aligned, and this one starts most of a character right of
+ * the time line under it (review 2026-11-10 E1). A bright body's limb behind the leading figure dropped it, and the
+ * rest was a valid number (1,957 read 957, 8.59 read 59), which held the ship's mark wrong for the leg.
+ */
+function frontHidden(rgba: Rgba, w: number, lines: readonly TextLine[], line: TextLine): boolean {
+  const mid = line.pieces.map((c) => (c.x0 + c.x1) / 2);
+  const cell = Math.min(...mid.slice(1).map((m, i) => m - mid[i]!));
+  if (!Number.isFinite(cell) || cell <= 0) return false;
+  if (linesUnder(lines, line).every((o) => line.x0 - o.x0 >= cell * 0.7)) return true;
+  /*
+    Or the body covers the time line's start as well, and the cell before the first figure is a bright block (the body,
+    the hidden figure drawn over it): no glyph alone fills its cell. 85 %: on his F10s a body beside a whole number
+    lights 66-68 % of that cell (Screenshot_0439, 0456-0458), a hidden figure on a lit body over 90 %.
+  */
+  const x0 = Math.max(0, Math.round(line.x0 - cell));
+  const x1 = Math.round(line.x0) - 2;
+  let n = 0;
+  let bright = 0;
+  for (let y = line.top; y <= line.base; y++)
+    for (let x = x0; x <= x1; x++) {
+      const i = (y * w + x) * 4;
+      n++;
+      if (Math.max(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!) >= 180) bright++;
+    }
+  return n > 0 && bright >= n * 0.85;
 }
 
 /**
@@ -293,7 +326,7 @@ export function readTargetDistance(
   const lines = findTextLines(rgba, w, h, screenH, look);
   const found: TargetDistance[] = [];
   for (const l of lines) {
-    if (!lineUnder(lines, l)) continue;
+    if (!lineUnder(lines, l) || frontHidden(rgba, w, lines, l)) continue;
     const r = readDistanceLine(rgba, w, l, glyphs, look, minMatch);
     if (r) found.push(r);
   }

@@ -4,7 +4,10 @@
  * switching Compare's tabs redrew it with nothing changed — the tab list and the opened screen's filters).
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { changedKeys, startUiMirrorSource, touchesWhatWasRead } from "../src/client/uiMirror.js";
+// The settings-change notices, driven by the test (watchUiMirror below).
+const notices: (() => void)[] = [];
+vi.mock("../src/client/serverChanges", () => ({ onServerChange: (_k: string, cb: () => void) => notices.push(cb) }));
+import { changedKeys, startUiMirrorSource, touchesWhatWasRead, watchUiMirror } from "../src/client/uiMirror.js";
 
 describe("the app's mirror source (review 2026-11-07 §4.2, D14)", () => {
   afterEach(() => {
@@ -60,5 +63,25 @@ describe("streamer view mirror", () => {
     const read = new Set(["edexo.filters.edexo.candidateView", "edexo.units"]);
     expect(touchesWhatWasRead(["edexo.tabs", "edexo.filters.boxel.lookOpen"], read)).toBe(false);
     expect(touchesWhatWasRead(["edexo.tabs", "edexo.filters.edexo.candidateView"], read)).toBe(true);
+  });
+});
+
+// Review 2026-11-10 F6: two notices close together; the older answer landing last was applied over the newer.
+describe("following the streamer's settings", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("applies only the answer to the latest ask", async () => {
+    const answers: ((m: unknown) => void)[] = [];
+    vi.stubGlobal("fetch", () => new Promise((res) => answers.push((m) => res(new Response(JSON.stringify(m))))));
+    localStorage.clear();
+    notices.length = 0;
+    watchUiMirror(0, () => {});
+    notices[0]!();
+    notices[0]!();
+    answers[1]!({ rev: 2, values: { "edexo.units": "imperial" } });
+    await new Promise((r) => setTimeout(r, 10));
+    answers[0]!({ rev: 1, values: { "edexo.units": "metric" } });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(localStorage.getItem("edexo.units")).toBe("imperial");
   });
 });

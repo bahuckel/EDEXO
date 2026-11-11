@@ -12,6 +12,7 @@ import type { Selection } from "./GalaxyEngine";
 import { formatCount, formatValue } from "./clusters";
 import { G3D_HELP, MenuHead, MenuRow, MenuToggle } from "./G3dMenu";
 import { crShort, PLAN_SIZES, WORTH_STEPS_M, type MineRow } from "./mapConstants";
+import { copyText } from "../copyText";
 
 type Point = { x: number; y: number; z: number };
 
@@ -281,8 +282,7 @@ export function TargetsMenu({
                     type="button"
                     className="g3d-btn"
                     onClick={() => {
-                      void navigator.clipboard
-                        .writeText(plan.stops.map((s) => s.name).join("\n"))
+                      void copyText(plan.stops.map((s) => s.name).join("\n"))
                         .then(() => setPlanCopied(true))
                         .catch(() => setPlanCopied(false));
                     }}

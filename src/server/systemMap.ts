@@ -90,8 +90,15 @@ export function roleForStarType(starType: string | undefined, cfg: StarRolesConf
   if (cfg.blackHoleExact.some((x) => x.toUpperCase() === u)) return "useless";
   const wd = cfg.whiteDwarfPrefix.trim().toUpperCase().charAt(0);
   if (wd && u.charAt(0) === wd) return "wd_boost";
+  /*
+    The class letter alone, with a subclass, a giant's tail (`M_RedGiant`) or EDSM's long name (`K (Yellow-Orange)
+    Star`) after it. A first-letter test called Herbig Ae/Be (`AeBe`) and MS-type stars scoopable (review 2026-11-10
+    B5): neither is.
+  */
   const c0 = u.charAt(0);
-  if (cfg.fuelPrefixes.some((p) => p.trim().toUpperCase().charAt(0) === c0)) return "fuel";
+  const next = u.charAt(1);
+  const classLetterOnly = next === "" || next === "_" || next === " " || (next >= "0" && next <= "9");
+  if (classLetterOnly && cfg.fuelPrefixes.some((p) => p.trim().toUpperCase().charAt(0) === c0)) return "fuel";
   return "useless";
 }
 

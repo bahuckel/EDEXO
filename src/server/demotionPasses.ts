@@ -189,13 +189,18 @@ export function restoreDemotionsBelowSignalCount(
     behind a Region objection alone and 25 behind Never found here, on bodies short of their signal count with the
     genus not shown.
   */
-  const byRegion = unlikely.map((m, i) => ({ m, i })).filter(({ m }) => solely(m, "Region"));
-  const byExclusion = unlikely.map((m, i) => ({ m, i })).filter(({ m }) => solely(m, "Never found here"));
-  const eligible = [...byTemperature, ...byStar, ...byRegion, ...byExclusion];
+  const byRegion = unlikely.map((m, i) => ({ m, i, newGenus: true })).filter(({ m }) => solely(m, "Region"));
+  const byExclusion = unlikely.map((m, i) => ({ m, i, newGenus: true })).filter(({ m }) => solely(m, "Never found here"));
+  const eligible: { m: PendingMatch; i: number; newGenus?: boolean }[] = [...byTemperature, ...byStar, ...byRegion, ...byExclusion];
 
   const restored = new Set<number>();
-  for (const { m, i } of eligible) {
+  for (const { m, i, newGenus } of eligible) {
     if (generaOf(strict).size >= signalCount) break;
+    /*
+      Those two only for a genus not shown yet: a row of a shown genus adds no genus, only a rival. On the EDDN year a
+      Region-only Tussock cultro came back beside every Tussock divisa and took first on 2,457 bodies (2026-11-11).
+    */
+    if (newGenus && generaOf(strict).has(m.entry.genusDataDir)) continue;
     strict.push({ entry: m.entry, reasons: m.reasons, restoredForSignalCount: true, ...factorOf(m) });
     restored.add(i);
   }

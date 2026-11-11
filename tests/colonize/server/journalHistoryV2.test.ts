@@ -37,6 +37,19 @@ describe("journal lines", () => {
     expect(ownedCarrierStocks(s)[0]!.callsign).toBe("K7Q-1HT");
   });
 
+  // Review 2026-11-10 B8: a session that loads docked writes `Location` with `Docked: true`, and no `Docked`.
+  it("a session that loads docked at his carrier counts its transfers; one that loads in space is docked nowhere", () => {
+    const s = createJournalState();
+    apply(s, { timestamp: iso(1), event: "CarrierLocation", CarrierType: "FleetCarrier", CarrierID: CARRIER, StarSystem: "Here", SystemAddress: 2 });
+    apply(s, { timestamp: iso(1, 1), event: "Location", Docked: true, StationName: "K7Q-1HT", StationType: "FleetCarrier", MarketID: CARRIER, StarSystem: "Here", SystemAddress: 2 });
+    apply(s, { timestamp: iso(1, 2), event: "CargoTransfer", Transfers: [{ Type: "steel", Count: 20, Direction: "tocarrier" }] });
+    expect(ownedCarrierStocks(s)[0]!.tonsByCommodity.steel).toBe(20);
+    expect(s.liveDocked?.marketId).toBe(String(CARRIER));
+    apply(s, { timestamp: iso(0), event: "Location", Docked: false, StarSystem: "Here", SystemAddress: 2 });
+    expect(s.dockedCarrierId).toBeNull();
+    expect(s.liveDocked).toBeNull();
+  });
+
   it("counts a transfer once however often it is read, and an older CarrierStats never wins", () => {
     const s = createJournalState();
     apply(s, { timestamp: iso(2), event: "CarrierLocation", CarrierType: "FleetCarrier", CarrierID: CARRIER, StarSystem: "Here", SystemAddress: 2 });
@@ -150,6 +163,29 @@ describe("the store across restarts", () => {
     await store.shutdown();
     store = await start();
     check(store);
+  });
+
+  // Review 2026-11-10 B7: a journal written while the app was closed, already older than the week at the next start.
+  it("reads the journals between the last start's week and this one", async () => {
+    store = await start();
+    await store.shutdown();
+    store = null;
+    // The last start was 20 days ago; the commander played 12 days ago, with the app closed.
+    const statePath = path.join(dataDir, "edexo-colonize-state.json");
+    const state = JSON.parse(readFileSync(statePath, "utf8")) as { windowReadFromMs?: number };
+    expect(typeof state.windowReadFromMs).toBe("number");
+    writeFileSync(statePath, JSON.stringify({ ...state, windowReadFromMs: NOW - 27 * 86_400_000 }));
+    writeFileSync(
+      path.join(journalDir, journalName(12)),
+      lines(
+        { timestamp: iso(12), event: "Market", MarketID: 200, StationName: "Gap Port", StarSystem: "Laso", StationType: "Coriolis" },
+        { timestamp: iso(12, 1), event: "MarketBuy", MarketID: 200, Type: "steel", Count: 40, BuyPrice: 300, TotalCost: 12000 },
+      ),
+    );
+    store = await start();
+    expect(store.getJournalShopRecords().find((r) => r.marketId === "200")?.purchases).toHaveLength(1);
+    // And nothing from before counted twice.
+    expect(store.getJournalShopRecords().find((r) => r.marketId === "128")?.purchases).toHaveLength(1);
   });
 
   it("reads the history once more for a folder read by an older version (v1)", async () => {

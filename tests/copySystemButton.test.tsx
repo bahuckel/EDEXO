@@ -17,6 +17,8 @@ const writeText = vi.fn(async () => {});
 beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  // The app on this PC is a secure context (copyText.ts uses the Clipboard API only there).
+  Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
   writeText.mockClear();
   host = document.createElement("div");
   document.body.appendChild(host);

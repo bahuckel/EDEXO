@@ -20,6 +20,7 @@ import {
 } from "./exoAlertsStore";
 import { readLsBool } from "./lsPrefs";
 import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
+import { copyText } from "./copyText";
 
 const ALERT_FIELDS = ["bodies", "exoOverlayFocusBody", "sharedExomastery", "journalBoot"] as const;
 
@@ -125,7 +126,7 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
       const fallbackClipboard = async () => {
         const text = (a.fixClipboard ?? `${a.title}\n${a.detail}`).trim();
         try {
-          await navigator.clipboard.writeText(text);
+          await copyText(text);
         } catch {
           window.prompt("Copy fix hints (clipboard unavailable):", text);
         }

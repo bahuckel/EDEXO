@@ -402,10 +402,16 @@ export function replayOnLaw(nodes: Node[], ship: NeutronShip): number {
 }
 
 /** One leg, from a point (a neutron star or not) to a point, with `fuel` jumps in the tank. Null when no safe way. */
+/**
+ * Where a leg ends. A waypoint with legs after it is reached with a jump of fuel (`arriveWith`, units) unless the next
+ * leg can scoop there: a leg reaching it dry, unflagged, made the next one "unsafe" (review 2026-11-10 B6).
+ */
+type LegEnd = Pt & { arriveWith?: number };
+
 export async function planLeg(
   index: Pick<NeutronIndex, "within"> & Partial<Pick<NeutronIndex, "eachToward">>,
   from: { pos: Pt; star: NeutronStar | null },
-  to: Pt,
+  to: LegEnd,
   ship: NeutronShip,
   fuel: number,
   budgetMs = REFINE_MS,
@@ -480,7 +486,8 @@ const YIELD_MS = 15;
 async function searchLeg(
   index: Pick<NeutronIndex, "within"> & Partial<Pick<NeutronIndex, "eachToward">>,
   from: { pos: Pt; star: NeutronStar | null },
-  to: Pt,
+  /** `arriveWith`: the fuel (units) the leg must reach its end with (a waypoint with legs after it, LegEnd). */
+  to: LegEnd,
   ship: NeutronShip,
   fuel: number,
   weight: number,
@@ -740,16 +747,20 @@ async function searchLeg(
       possible scooping on the way (the game's plot passes ordinary K G B F O A M stars, a third of all systems),
       and leave the tank about full. A hop that is all supercharge must fit the fuel aboard.
     */
-    const afterHop = (j: { jumps: number; boosted: number }, d: number): { fuel: number; onWay: boolean } | null => {
+    const afterHop = (
+      j: { jumps: number; boosted: number },
+      d: number,
+      need = keep,
+    ): { fuel: number; onWay: boolean } | null => {
       const used = burn(j, d, u.fuel, r);
-      if (used + keep <= u.fuel + 1e-9) return { fuel: Math.max(0, u.fuel - used), onWay: false };
+      if (used + need <= u.fuel + 1e-9) return { fuel: Math.max(0, u.fuel - used), onWay: false };
       // Reaching a scoopable star on the way takes a jump of fuel itself, on top of the supercharge (review 1.2.16).
       if (j.jumps - j.boosted >= 2 && u.fuel >= (j.boosted ? boostBurn(d, u.fuel, r) : 0) + perU)
         return { fuel: tank - 1, onWay: true };
       return null;
     };
     const toEnd = jumpsFrom(isNeutron, left, r, boost);
-    const endFuel = afterHop(toEnd, left);
+    const endFuel = afterHop(toEnd, left, Math.max(keep, to.arriveWith ?? 0));
     const endG = endFuel ? u.g + toEnd.jumps + (endFuel.onWay ? ON_WAY_COST : 0) : Infinity;
     if (endFuel && endG < bound - 1e-9) {
       const g = endG;
@@ -870,7 +881,12 @@ export async function planNeutronRoute(
   for (let w = 1; w < waypoints.length; w++) {
     const to = waypoints[w]!;
     plainJumps += Math.ceil(dist(from.pos, to) / r - 1e-9);
-    let leg = await planLeg(index, from, to, ship, fuel, refineMs / (waypoints.length - 1));
+    const scoopThere = neutronAt(to)?.scoopLs;
+    const goesOn = w < waypoints.length - 1 && !(scoopThere != null && scoopThere <= MAX_SCOOP_LS);
+    const end: LegEnd = goesOn ? { ...to, arriveWith: fuelModel.perU } : to;
+    let leg = await planLeg(index, from, end, ship, fuel, refineMs / (waypoints.length - 1));
+    // No way leaves a jump of fuel there: reached as before (the next leg says how it goes on).
+    if (!leg && goesOn) leg = await planLeg(index, from, to, ship, fuel, refineMs / (waypoints.length - 1));
     // No way keeps the reserve (the tank already under it, no scoopable neutron star in reach): without it, said.
     if (!leg && ship.reserve) {
       leg = await planLeg(index, from, to, { ...ship, reserve: 0 }, fuel, refineMs / (waypoints.length - 1));

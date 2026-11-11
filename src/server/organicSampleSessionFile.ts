@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { SpeciesDatabase } from "../shared/types.js";
 import { normOrganicToken } from "./organicTracking.js";
@@ -63,6 +63,31 @@ function legacyOrganicSampleSessionPath(projectRoot: string): string {
   return join(projectRoot, "data", "organic_sample_session.json");
 }
 
+/**
+ * While the journals replay at a start, the run's file is not deleted (review 2026-11-10 A11): a replayed `Died` or
+ * disembark from long ago deleted the run in progress before the start loaded it. The replay only notes the journal
+ * time of the latest event that would have ended it; {@link releaseSampleSessionFileAfterReplay} deletes the file when
+ * that event came after the file was last written (a run ended while the app was closed).
+ */
+let replayHold: { eventIso: () => string | null; endedAtMs: number } | null = null;
+
+export function holdSampleSessionFileForReplay(eventIso: () => string | null): void {
+  replayHold = { eventIso, endedAtMs: -Infinity };
+}
+
+export function releaseSampleSessionFileAfterReplay(projectRoot: string): void {
+  const hold = replayHold;
+  replayHold = null;
+  if (!hold || hold.endedAtMs === -Infinity) return;
+  let writtenMs: number;
+  try {
+    writtenMs = statSync(organicSampleSessionPath(projectRoot)).mtimeMs;
+  } catch {
+    return;
+  }
+  if (hold.endedAtMs >= writtenMs) clearPersistedOrganicSampleSession(projectRoot);
+}
+
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 let persistPending: { host: OrganicSampleSessionHost; projectRoot: string } | null = null;
 
@@ -91,6 +116,8 @@ export function flushPendingOrganicSampleSession(): void {
 }
 
 function flushPersistOrganicSampleSession(host: OrganicSampleSessionHost, projectRoot: string): void {
+  // Not while the journals replay: the replayed run would overwrite the one in progress (see replayHold).
+  if (replayHold) return;
   const t = host.exoOrganicTracker;
   if (!t) {
     clearPersistedOrganicSampleSession(projectRoot);
@@ -134,6 +161,13 @@ function flushPersistOrganicSampleSession(host: OrganicSampleSessionHost, projec
 }
 
 export function clearPersistedOrganicSampleSession(projectRoot: string): void {
+  if (replayHold) {
+    const iso = replayHold.eventIso();
+    const at = iso ? Date.parse(iso) : NaN;
+    // An event without a time ends the run whatever the file says.
+    replayHold.endedAtMs = Math.max(replayHold.endedAtMs, Number.isFinite(at) ? at : Infinity);
+    return;
+  }
   try {
     unlinkSync(organicSampleSessionPath(projectRoot));
     // The old location too, or an upgraded app would keep rediscovering a run it has finished.

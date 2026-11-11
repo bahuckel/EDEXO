@@ -136,10 +136,21 @@ export function parsePoiJson(text: string): PoiRecord[] {
       z: z!,
       summary: String(p.summary ?? "").trim(),
       rating: Number.isFinite(ratingRaw) && ratingRaw > 0 ? ratingRaw : null,
-      url: String(p.poiUrl ?? p.galMapUrl ?? "").trim(),
+      url: webUrl(String(p.poiUrl ?? p.galMapUrl ?? "")),
     });
   }
   return out;
+}
+
+/** A link from EDAstro's list, kept only as an http(s) address: it becomes a link target (review 2026-11-10 F6). */
+function webUrl(raw: string): string {
+  const t = raw.trim();
+  try {
+    const u = new URL(t);
+    return u.protocol === "https:" || u.protocol === "http:" ? u.href : "";
+  } catch {
+    return "";
+  }
 }
 
 let memo: { mtimeMs: number; rows: PoiRecord[] } | null = null;

@@ -256,9 +256,13 @@ export function createNeutronLive(opts: {
     start(hops, here, plan, follow) {
       opts.onStart?.();
       done = null;
-      // Where the ship is on the route: the last stop it is in (a re-plan from mid-route), else the start.
+      /*
+        Where the ship is on the route: the first stop it is in (a re-plan from mid-route), else the start. The first:
+        a route that comes back through its start later began at the last one and skipped every stop before it (review
+        2026-11-10 B12).
+      */
       let at = 0;
-      for (let i = hops.length - 2; i >= 0; i--)
+      for (let i = 0; i <= hops.length - 2; i++)
         if (sameSystem(hops[i]!, here)) {
           at = i;
           break;

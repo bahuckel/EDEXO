@@ -447,7 +447,14 @@ export function startJournalWatcher(
       return;
     }
 
-    if (lastListIdentity !== null && identity !== lastListIdentity) {
+    /*
+      Only old files aged out of a "last N days" window (the list is the old one's tail): no replay. The store forgets
+      them at the next rotation or start; a replay here reset the store and read every journal uncached each time one
+      file aged out, mid-session (review 2026-11-10 A10).
+    */
+    if (lastListIdentity !== null && identity !== lastListIdentity && lastListIdentity.endsWith(`|${identity}`)) {
+      lastListIdentity = identity;
+    } else if (lastListIdentity !== null && identity !== lastListIdentity) {
       await resyncTo(latest, identity, "window change");
       return;
     }

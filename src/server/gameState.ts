@@ -242,6 +242,11 @@ export class GameStateStore {
    */
   readonly orbitParentPlanetByBody = new Map<string, number>();
   lastEventIso: string | null = null;
+  /**
+   * Where the commander is, from the journal (journalEvents.noteAboard): a `Died` loses the cartographic data only with
+   * the ship (owner 2026-11-11). Null when not known yet (a start from the cache): treated as the ship, as before.
+   */
+  aboard: "ship" | "srv" | "foot" | "other" | null = null;
 
   /**
    * Sliding window of merged journal JSON lines in **time order** (oldest → newest).
@@ -1420,6 +1425,7 @@ export class GameStateStore {
     this.targetedSystems.clear();
     this.visitedSystemNames = null;
     this.lastEventIso = null;
+    this.aboard = null;
     this.greenCodexMatcher.clear();
     this.nspSeen.clear();
     this.landingMinutesSamples.length = 0;
@@ -1597,6 +1603,7 @@ export class GameStateStore {
     const event = line.event;
     const ts = (line.timestamp as string) ?? new Date().toISOString();
     this.lastEventIso = ts;
+    if (event) journalEvents.noteAboard(this, event, line);
 
     try {
       // The ship's SRVs, fighters and the Nomad (1.3.1): launched, docked, lost, rebuilt, taken over. First, because

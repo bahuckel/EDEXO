@@ -220,13 +220,25 @@ export function vetoUnseenGenera(
     (g) => !protectedGenera.has(g) && ((prior.p[g] ?? 0) < (limits[g] ?? 0) || fineSays(g)),
   );
   if (vetoed.length === 0) return;
-  // Never empty the list: if every genus would go, the one the dump sees most stays.
-  if (vetoed.length === genera.size)
-    vetoed.splice(
-      vetoed.indexOf(vetoed.reduce((a, g) => ((prior.p[g] ?? 0) > (prior.p[a] ?? 0) ? g : a))),
-      1,
-    );
-  const out = new Set(vetoed);
+  /*
+    Never fewer genera than the signals (owner 2026-11-11, review 2026-11-10 A7; before, only never none): four
+    candidate genera for four signals are all four there. The genera the dump sees least go first. Brain Trees count
+    one slot per shown row (several species of them can grow on one body).
+  */
+  const slotsOf = (g: string) => (g === genusPriorKey("Brain Tree") ? Math.max(1, shown.filter((m) => genusPriorKey(m.entry.genus) === g).length) : 1);
+  const slots = [...genera].reduce((n, g) => n + slotsOf(g), 0);
+  // Least seen first; on a tie the later in the list goes first, so the earlier stays (as the list was kept before).
+  const order = [...genera];
+  vetoed.sort((x, y) => (prior.p[x] ?? 0) - (prior.p[y] ?? 0) || order.indexOf(y) - order.indexOf(x));
+  let room = slots - Math.min(signals, slots);
+  const going: string[] = [];
+  for (const g of vetoed) {
+    if (slotsOf(g) > room) continue;
+    room -= slotsOf(g);
+    going.push(g);
+  }
+  if (going.length === 0) return;
+  const out = new Set(going);
   for (const m of shown) {
     const k = genusPriorKey(m.entry.genus);
     if (!out.has(k)) continue;

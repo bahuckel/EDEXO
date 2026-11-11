@@ -46,10 +46,34 @@ describe.runIf(process.platform === "win32")("watchForegroundOffMain", () => {
       ["EliteDangerous64", { x: 1720, y: 700 }],
       ["explorer", null],
     ]);
-    // It reported, so its ending does not start a second watcher here; stop ends the host.
-    host.emit("exit", 0);
     w.stop();
-    expect(host.killed).toBe(false); // already gone: nothing to kill
+    expect(host.killed).toBe(true);
+  });
+
+  // Review 2026-11-10 D7: a host that died after it worked was never replaced.
+  it("starts a host that dies after it reported again", () => {
+    const hosts: FakeHost[] = [];
+    const w = fg.watchForegroundOffMain(
+      {
+        fork: () => {
+          const h = new FakeHost();
+          hosts.push(h);
+          return h;
+        },
+      },
+      "/x/h.cjs",
+      () => {},
+    );
+    hosts[0]!.emit("message", { name: "EliteDangerous64" });
+    hosts[0]!.emit("exit", 1);
+    expect(hosts).toHaveLength(2);
+    hosts[1]!.emit("exit", 1);
+    hosts[2]!.emit("exit", 1);
+    // Three restarts within the window (a fourth death hands over to the in-process watcher, not run here: it starts
+    // PowerShell).
+    expect(hosts).toHaveLength(4);
+    w.stop();
+    expect(hosts[3]!.killed).toBe(true);
   });
 
   it("stop ends a running host", () => {

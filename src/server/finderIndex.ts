@@ -31,6 +31,7 @@ import { promisify } from "node:util";
 import { gunzip as gunzipCb } from "node:zlib";
 import { GALAXY_INDEX_BASE_URL } from "./galaxyIndexFiles.js";
 import { getProjectRoot, resolveUserSettingsJsonPath } from "./paths.js";
+import { stallGuard } from "./stallGuard.js";
 
 const gunzip = promisify(gunzipCb);
 const MAGIC = "EDXFND01";
@@ -388,15 +389,17 @@ export async function downloadFinder(onDone: () => void, fetchImpl: typeof fetch
   try {
     mkdirSync(dir, { recursive: true });
     downloading = { done: 0, total: null };
-    const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${FINDER_FILE}`, { redirect: "follow" });
+    const guard = stallGuard(FINDER_FILE);
+    const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${FINDER_FILE}`, { redirect: "follow", signal: guard.signal });
     if (!r.ok || !r.body) throw new Error(`${FINDER_FILE}: HTTP ${r.status}`);
     const total = Number(r.headers.get("content-length"));
     downloading = { done: 0, total: Number.isFinite(total) && total > 0 ? total : null };
     const body = Readable.fromWeb(r.body as import("node:stream/web").ReadableStream<Uint8Array>);
     body.on("data", (chunk: Buffer) => {
+      guard.touch();
       if (downloading) downloading = { ...downloading, done: downloading.done + chunk.length };
     });
-    await pipeline(body, createWriteStream(part));
+    await pipeline(body, createWriteStream(part), { signal: guard.signal }).finally(guard.done);
     const check = FinderIndex.open(part);
     const last = check.blocks[check.blocks.length - 1];
     if (last && last.offset + last.bytes > statSync(part).size) throw new Error(`${FINDER_FILE} is truncated`);

@@ -933,11 +933,32 @@ export function onDisembarkEtc(store: GameStateStore, line: JournalLine): void {
   return;
 }
 
+/**
+ * Where the commander is, for {@link onDied}: the SRV, on foot, the ship, or another's (a taxi, multicrew). Read on
+ * every line, before apply()'s early returns.
+ */
+export function noteAboard(store: GameStateStore, event: string, line: JournalLine): void {
+  const l = line as Record<string, unknown>;
+  if (event === "LaunchSRV") {
+    if (l.PlayerControlled !== false) store.aboard = "srv";
+  } else if (event === "DockSRV") store.aboard = "ship";
+  else if (event === "Disembark") store.aboard = "foot";
+  else if (event === "Embark") store.aboard = l.SRV === true ? "srv" : l.Taxi === true || l.Multicrew === true ? "other" : "ship";
+  else if (event === "Location")
+    store.aboard = l.OnFoot === true ? "foot" : l.InSRV === true ? "srv" : l.Taxi === true || l.Multicrew === true ? "other" : "ship";
+}
+
 /** `Died` — one of apply()'s event handlers. */
 export function onDied(store: GameStateStore): void {
-  // Unsold cartographic data is lost with the ship. The physics stays in the archive, and the
-  // bodies are not marked sold: scanning them again earns the data back.
-  explorationSales.clearExplorationDataForSystems(store, new Set([...store.explorationScans.values()].map((r) => r.systemAddress)), false);
+  /*
+    Unsold cartographic data is kept in the ship and lost only with it: a death in the SRV or on foot keeps it (owner,
+    2026-11-11; review 2026-11-10 A13). The physics stays in the archive either way, and the bodies are not marked
+    sold: scanning them again earns the data back. Exobiology is lost in every death (below).
+  */
+  const shipLost = store.aboard === "ship" || store.aboard === null;
+  store.aboard = null;
+  if (shipLost)
+    explorationSales.clearExplorationDataForSystems(store, new Set([...store.explorationScans.values()].map((r) => r.systemAddress)), false);
   store.organicAnalyseByKey.clear();
   store.pendingOrganicSales = [];
   store.exoOrganicLastFix = null;

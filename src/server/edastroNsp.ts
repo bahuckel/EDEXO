@@ -38,6 +38,7 @@ import { splitCsvLine } from "./edastroCarriers.js";
 import { APP_USER_AGENT } from "./appVersion.js";
 import { regionJoinKey } from "../shared/regionMap.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { stallGuard } from "./stallGuard.js";
 
 export const NSP_URL = "https://edastro.com/mapcharts/files/codex-data.csv";
 /** What the button says; the real figure comes from the server's Content-Length once it starts. */
@@ -387,7 +388,8 @@ async function downloadNsp(fetchImpl: typeof fetch): Promise<void> {
   const prev = loadFile()?.file ?? null;
   const headers: Record<string, string> = { "User-Agent": APP_USER_AGENT };
   if (prev?.etag && prev.filterVersion === NSP_FILTER_VERSION) headers["If-None-Match"] = prev.etag;
-  const res = await fetchImpl(NSP_URL, { headers });
+  const guard = stallGuard("codex-data.csv");
+  const res = await fetchImpl(NSP_URL, { headers, signal: guard.signal });
   if (res.status === 304 && prev) {
     // Unchanged: keep the rows (read back from the file), restart the clock.
     const onDisk = JSON.parse(readFileSync(resolveNspCachePath(), "utf8")) as NspFile;
@@ -425,12 +427,14 @@ async function downloadNsp(fetchImpl: typeof fetch): Promise<void> {
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
+    guard.touch();
     job.bytesDone += value.byteLength;
     const text = rest + decoder.decode(value, { stream: true });
     const lines = text.split("\n");
     rest = lines.pop() ?? "";
     for (const l of lines) take(l.replace(/\r$/, ""));
   }
+  guard.done();
   rest += decoder.decode();
   if (rest.trim()) take(rest.replace(/\r$/, ""));
   if (!col) throw new Error("codex-data.csv was empty");

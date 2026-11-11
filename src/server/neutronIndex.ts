@@ -31,6 +31,7 @@ import { GALAXY_INDEX_BASE_URL } from "./galaxyIndexFiles.js";
 import { loadSectorNames } from "./expedition.js";
 import { proceduralSystemName } from "../shared/id64.js";
 import { SECTOR_ORIGIN, SECTOR_SIZE_LY } from "../shared/sectorName.js";
+import { stallGuard } from "./stallGuard.js";
 
 const MAGIC = "EDEXONEU";
 const CELL_B = 14;
@@ -332,9 +333,17 @@ export function loadNeutronIndex(root = getProjectRoot()): NeutronIndex | null {
   return cached.index;
 }
 
+/**
+ * A plan holds the index it began with. Closing its file at once (a finished download, the galaxy's idle release) closed
+ * it under a running plan (review 2026-11-10 B13), so the old one is closed a while later: a plan takes seconds, and
+ * the open file does not stop the new one being renamed into place.
+ */
+const CLOSE_AFTER_MS = 10 * 60_000;
+
 export function clearNeutronIndex(): void {
-  cached?.index.close();
+  const old = cached?.index;
   cached = null;
+  if (old) setTimeout(() => old.close(), CLOSE_AFTER_MS).unref();
 }
 
 export interface NeutronsStatus {
@@ -393,15 +402,17 @@ export async function downloadNeutrons(onDone: () => void, fetchImpl: typeof fet
   try {
     mkdirSync(dir, { recursive: true });
     downloading = { done: 0, total: null };
-    const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${NEUTRONS_REMOTE}`, { redirect: "follow" });
+    const guard = stallGuard(NEUTRONS_REMOTE);
+    const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${NEUTRONS_REMOTE}`, { redirect: "follow", signal: guard.signal });
     if (!r.ok || !r.body) throw new Error(`${NEUTRONS_REMOTE}: HTTP ${r.status}`);
     const total = Number(r.headers.get("content-length"));
     downloading = { done: 0, total: Number.isFinite(total) && total > 0 ? total : null };
     const body = Readable.fromWeb(r.body as import("node:stream/web").ReadableStream<Uint8Array>);
     body.on("data", (chunk: Buffer) => {
+      guard.touch();
       if (downloading) downloading = { ...downloading, done: downloading.done + chunk.length };
     });
-    await pipeline(body, createGunzip(), createWriteStream(part));
+    await pipeline(body, createGunzip(), createWriteStream(part), { signal: guard.signal }).finally(guard.done);
     const head = Buffer.alloc(8);
     const pfd = openSync(part, "r");
     readSync(pfd, head, 0, 8, 0);

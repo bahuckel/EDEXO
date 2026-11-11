@@ -499,14 +499,21 @@ export function NeutronDrawer({
   }, [useJump, halfTank]);
   // The reserve changed with a route on screen: planned again once the typing stops.
   const reserveSeen = useRef(reservePct);
+  /*
+    The latest render's plan, stops and route: the timer below fires 600 ms on, and the ones of the render that moved the
+    reserve brought back a stop removed in between (review 2026-11-10 F6).
+  */
+  const latest = useRef({ plan, route, waypoints });
+  latest.current = { plan, route, waypoints };
   useEffect(() => {
     if (reserveSeen.current === reservePct) return;
     const t = setTimeout(() => {
       reserveSeen.current = reservePct;
-      if (route && waypoints.length >= 2) void plan();
+      const now = latest.current;
+      if (now.route && now.waypoints.length >= 2) void now.plan();
     }, 600);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the reserve replans
+    // Only the reserve replans; the rest is read from `latest`.
   }, [reservePct]);
   /*
     Fly: from where the ship is now. A plan made somewhere else is made again from here first; the destinations go

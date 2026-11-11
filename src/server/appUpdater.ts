@@ -33,6 +33,7 @@ import { APP_USER_AGENT, APP_VERSION } from "./appVersion.js";
 import { resolveUserSettingsJsonPath } from "./paths.js";
 import { compareVersions, type ReleaseAsset, type ReleaseForm } from "./updateCheck.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { stallGuard } from "./stallGuard.js";
 
 /** What `ready.json` holds: the checked file Electron puts in place on the next restart. */
 export interface StagedUpdate {
@@ -169,7 +170,8 @@ export function createAppUpdater(o: AppUpdaterOptions) {
     mkdirSync(dir, { recursive: true });
     const part = join(dir, asset.name + ".part");
     const final = join(dir, asset.name);
-    const res = await fetchImpl(asset.url, { headers: { "User-Agent": APP_USER_AGENT }, redirect: "follow" });
+    const guard = stallGuard(asset.name);
+    const res = await fetchImpl(asset.url, { headers: { "User-Agent": APP_USER_AGENT }, redirect: "follow", signal: guard.signal });
     if (!res.ok || !res.body) throw new Error(`Download answered HTTP ${res.status}`);
     total = asset.size ?? (Number(res.headers.get("content-length")) || null);
     const hash = createHash("sha256");
@@ -182,6 +184,7 @@ export function createAppUpdater(o: AppUpdaterOptions) {
         Readable.fromWeb(res.body as unknown as WebReadableStream<Uint8Array>),
         async function* (source: AsyncIterable<Buffer>) {
           for await (const buf of source) {
+            guard.touch();
             hash.update(buf);
             received += buf.length;
             yield buf;
@@ -198,6 +201,7 @@ export function createAppUpdater(o: AppUpdaterOptions) {
       }
       throw e;
     }
+    guard.done();
     // The file is renamed below: on Windows the handle has to be closed first.
     await closed(out);
     const got = hash.digest("hex");

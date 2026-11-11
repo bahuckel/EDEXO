@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyJournalMarketLine, mergeJournalAndLocalShopHistory } from "../../src/shared/colonize/journalShopHistory";
 import type { JournalShopRecord } from "../../src/shared/colonize/journalShopHistory";
-import type { ShopHistoryEntry } from "../../src/shared/colonize/shopHistory";
+import { findShopHistoryEntry, type ShopHistoryEntry } from "../../src/shared/colonize/shopHistory";
 import { galaxyDistancePairKey, lookupGalaxyDistanceLy } from "../../src/shared/colonize/systemDistanceLy";
 import { mergeMaterialListings } from "../../src/shared/colonize/mergeCheckoutPlans";
 import type { MaterialBuyListing, MaterialBuyStationHit } from "../../src/shared/colonize/materialBuyIndexTypes";
@@ -107,5 +107,27 @@ describe("mergeMaterialListings", () => {
   it("still takes a genuinely nearer station", () => {
     const merged = mergeMaterialListings([listing([hit(30)]), listing([hit(12)])]);
     expect(merged[0]!.stations[0]!.distanceLy).toBe(12);
+  });
+});
+
+// Review 2026-11-10 B9: the dock history was matched by station name alone, and by substring across systems.
+describe("findShopHistoryEntry", () => {
+  const dock = (systemName: string, stationName: string): ShopHistoryEntry => ({
+    systemName,
+    stationName,
+    marketId: `${systemName}/${stationName}`,
+    visitedAt: "2026-11-01T10:00:00Z",
+    commodityIds: ["steel"],
+  });
+  const history = [dock("Laso", "Ray Gateway"), dock("Col 285 Sector AB-C d1", "Planetary Construction Site: Ayre Vision")];
+
+  it("finds the dock in the same system, a construction site by its name inside the journal's", () => {
+    expect(findShopHistoryEntry(history, "Laso", "Ray Gateway")?.index).toBe(0);
+    expect(findShopHistoryEntry(history, "Col 285 Sector AB-C d1", "Ayre Vision")?.index).toBe(1);
+  });
+
+  it("not a station of the same name in another system, nor a system named inside another", () => {
+    expect(findShopHistoryEntry(history, "Sol", "Ray Gateway")).toBeNull();
+    expect(findShopHistoryEntry(history, "Col 285 Sector AB-C d12", "Ayre Vision")).toBeNull();
   });
 });

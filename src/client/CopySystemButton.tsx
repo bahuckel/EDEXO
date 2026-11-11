@@ -15,6 +15,7 @@
  */
 import { memo, useEffect, useState } from "react";
 import { IconCheck, IconCopy } from "./ui/icons";
+import { copyText } from "./copyText";
 
 /** Memo: it sits in rows that re-render with every push, and its props are a name and a class. */
 export const CopySystemButton = memo(function CopySystemButton({
@@ -45,7 +46,7 @@ export const CopySystemButton = memo(function CopySystemButton({
       // Stops propagation so copying never doubles as picking the row or the marker underneath.
       onClick={(ev) => {
         ev.stopPropagation();
-        void navigator.clipboard?.writeText(name).then(
+        void copyText(name).then(
           () => setDone(true),
           // A refused clipboard shows no tick: silence is recoverable, a false confirmation is not.
           () => setDone(false),

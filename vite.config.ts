@@ -22,13 +22,14 @@ export default defineConfig({
   server: {
     port: DEV_PORT,
     strictPort: true,
+    // The Host header stays the dev server's: the API takes a page as its own only from its own host and port.
     proxy: {
-      "/api": { target: `http://${API}`, changeOrigin: true },
-      "/photos": { target: `http://${API}`, changeOrigin: true },
+      "/api": { target: `http://${API}`, changeOrigin: false },
+      "/photos": { target: `http://${API}`, changeOrigin: false },
       // The species images the panel actually asks for. Without this the dev server answers with
       // its SPA fallback — HTTP 200, an HTML body, and every card showing "Image failed to load".
-      "/species-photos": { target: `http://${API}`, changeOrigin: true },
-      "/ws": { target: `ws://${API}`, ws: true, changeOrigin: true },
+      "/species-photos": { target: `http://${API}`, changeOrigin: false },
+      "/ws": { target: `ws://${API}`, ws: true, changeOrigin: false },
     },
   },
   // Module workers, split into chunks: the HUD readers' worker loads only its own glyph tables (review 2026-11-10 E7).

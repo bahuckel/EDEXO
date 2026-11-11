@@ -161,9 +161,8 @@ describe("HUD pitch reader", () => {
   });
 
   /*
-    Review 2026-11-10 E6 / T16 (Phase 6, not fixed): the heading reader has no cross-check, so a white star (the HUD is
-    drawn additively: yellow over white is white) on the leading "1" of 180 leaves a valid "80". Remove `.fails` with
-    the fix.
+    Review 2026-11-10 E6 / T16: a white star (the HUD is drawn additively: yellow over white is white) on the leading
+    "1" of 180 left a valid "80". A white blob beside the figures now makes the reading not sure.
   */
   const at = { ox: 0, oy: 0, screen: { w: W, h: H } };
   const x180 = 1000 - Math.round((3 * 7 * S) / 2);
@@ -172,7 +171,7 @@ describe("HUD pitch reader", () => {
     draw(f, "180", x180, 243);
     expect(readHudHeading(f, W, H, GLYPHS, at)?.boxDeg).toBe(180);
   });
-  it.fails("does not read 180 as 80 with a star over its 1", () => {
+  it("does not read 180 as 80 with a star over its 1", () => {
     const f = frame();
     draw(f, "180", x180, 243);
     const cx = x180 + 2 * S + 1;
@@ -268,11 +267,11 @@ describe("HUD pitch reader", () => {
   });
 
   /*
-    Review 2026-11-10 E2 / T16 (Phase 6, not fixed): pitchCapture.ts searches colours only every fourth frame of a run
-    of misses; the frames between take the early return, which reads the unframed pair the discovering frame refused.
-    On the scene above the loop gives null, -20, null, -20. Remove `.fails` with the fix.
+    Review 2026-11-10 E2 / T16: pitchCapture.ts searches colours only every fourth frame of a run of misses; the frames
+    between took the early return, which read the unframed pair the discovering frame refused (null, -20, null, -20 on
+    the scene above). With a hint those frames now read nothing.
   */
-  it.fails("in pitchCapture's loop, with no learned colours, never takes the pair a discovering frame refused", () => {
+  it("in pitchCapture's loop, with no learned colours, never takes the pair a discovering frame refused", () => {
     const f = dark();
     boxed(f, "-10", 840, 480);
     boxed(f, "-10", 1120, 480);

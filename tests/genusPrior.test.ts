@@ -132,9 +132,14 @@ describe("hiding a genus such bodies almost never carry, before a DSS (owner, 20
       match("fonticulua_x", "Fonticulua", 10),
       match("osseus_f", "Osseus", 11),
     ];
-    vetoUnseenGenera(quiet, body, c6(), { parentStarType: "M" }, root, new Set(["osseus_f"]));
+    // Two signals for three genera: one may go (owner 2026-11-11: never fewer genera than signals).
+    vetoUnseenGenera(quiet, { ...body, biologicalSignals: 2 }, c6(), { parentStarType: "M" }, root, new Set(["osseus_f"]));
     expect(quiet.find((m) => m.entry.genus === "Fonticulua")!.unlikely).toBe(true);
     expect(quiet.find((m) => m.entry.genus === "Osseus")!.unlikely).toBeFalsy();
+    // Three signals for the three: none may go.
+    const all = [match("stratum_t", "Stratum", 100), match("fonticulua_x", "Fonticulua", 10), match("osseus_f", "Osseus", 11)];
+    vetoUnseenGenera(all, { ...body, biologicalSignals: 3 }, c6(), { parentStarType: "M" }, root, new Set(["osseus_f"]));
+    expect(all.some((m) => m.unlikely)).toBe(false);
     // On an icy body with water volcanism it grows, and it stays however small its chance.
     const icy = (o: Partial<PlanetScan> = {}) =>
       ({

@@ -116,6 +116,29 @@ describe("unsold exploration value", () => {
     expect(both(s).pill).toBeGreaterThan(0);
   });
 
+  // Owner, 2026-11-11 (review 2026-11-10 A13): the data is in the ship; a death in the SRV or on foot keeps it.
+  it("keeps the data through a death on foot or in the SRV, and loses it with the ship", () => {
+    const at = (t: string) => `2026-09-25T${t}:00Z`;
+    const onFoot = new GameStateStore();
+    onFoot.apply(planet(at("10:00")));
+    onFoot.apply(j({ timestamp: at("10:10"), event: "Disembark", SRV: false, OnPlanet: true }));
+    onFoot.apply(j({ timestamp: at("10:30"), event: "Died" }));
+    expect(both(onFoot).pill).toBeGreaterThan(0);
+
+    const inSrv = new GameStateStore();
+    inSrv.apply(planet(at("10:00")));
+    inSrv.apply(j({ timestamp: at("10:10"), event: "LaunchSRV", PlayerControlled: true }));
+    inSrv.apply(j({ timestamp: at("10:30"), event: "Died" }));
+    expect(both(inSrv).pill).toBeGreaterThan(0);
+
+    const back = new GameStateStore();
+    back.apply(planet(at("10:00")));
+    back.apply(j({ timestamp: at("10:10"), event: "Disembark", SRV: false, OnPlanet: true }));
+    back.apply(j({ timestamp: at("10:20"), event: "Embark", SRV: false, Taxi: false, Multicrew: false }));
+    back.apply(j({ timestamp: at("10:30"), event: "Died" }));
+    expect(both(back).pill).toBe(0);
+  });
+
   it("keeps the sold marks through the merge cache", () => {
     const s = new GameStateStore();
     s.apply(star("2026-09-25T10:00:00Z"));

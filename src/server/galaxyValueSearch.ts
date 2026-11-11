@@ -210,6 +210,19 @@ export function galaxyValueSearch(query: GalaxyValueQuery): GalaxyValueSearchDTO
       if (b.d == null) return -1;
       return a.d - b.d;
     });
+  } else {
+    // No position: the dearest plant first, before the cut (review 2026-11-10 B12: the first N in index order were
+    // taken, then sorted, so the list was the index's first systems and not the richest).
+    const best = (sys: BioIndexSystem) => {
+      let top = 0;
+      for (const id of sys.species) {
+        const p = priced.get(id);
+        if (p && (!explicitSpecies || wanted.has(id)) && p.price > top) top = p.price;
+      }
+      return top;
+    };
+    const bestOf = new Map(scored.map(({ s: sys }) => [sys, best(sys)] as const));
+    scored.sort((a, b) => bestOf.get(b.s)! - bestOf.get(a.s)!);
   }
 
   const toHit = (s: BioIndexSystem, d: number | null): GalaxyValueHitDTO | null => {
@@ -259,7 +272,6 @@ export function galaxyValueSearch(query: GalaxyValueQuery): GalaxyValueSearchDTO
 
   const { spread, spreadCells } = spreadSample(systems, query, toHit);
 
-  if (!query.from) hits.sort((a, b) => b.bestCr - a.bestCr);
 
   return {
     available: true,

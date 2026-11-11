@@ -92,8 +92,13 @@ export function keysMatch(a: string | null | undefined, b: string | null | undef
 
 /** Query string first (the pairing link), then the header (scripts), then the cookie (paired). */
 export function readLanKeyFromRequest(req: IncomingMessage): { key: string | null; fromQuery: boolean } {
-  const url = new URL(req.url ?? "/", "http://127.0.0.1");
-  const q = url.searchParams.get(LAN_KEY_QUERY);
+  // A request-target URL cannot read (`//[`) carries no key: it threw, a 500 with a stack instead of the 401 (C9).
+  let q: string | null = null;
+  try {
+    q = new URL(req.url ?? "/", "http://127.0.0.1").searchParams.get(LAN_KEY_QUERY);
+  } catch {
+    q = null;
+  }
   if (q) return { key: q, fromQuery: true };
   const header = req.headers[LAN_KEY_HEADER];
   const headerValue = Array.isArray(header) ? header[0] : header;
@@ -230,7 +235,26 @@ export function requestOriginIsAllowed(
   if (origin === undefined) return true;
   if (origin === "null") return false;
   const originHost = hostNameOf(origin);
-  return (originHost !== null && originHost === host) || ours(originHost);
+  /*
+    The port and the scheme count (review 2026-11-10 C9): any page on `localhost:<any port>` had this PC's full trust
+    for body-less POSTs. Same-origin is the request's own host and port over http; one of our names, on the port the
+    request came in on. The dev server keeps its own Host when it proxies (vite.config.ts), so its pages are
+    same-origin.
+  */
+  const o = urlOf(origin);
+  const originPort = o ? o.port || (o.protocol === "https:" ? "443" : "80") : null;
+  const hostPort = req.headers.host ? (urlOf(`http://${req.headers.host}`)?.port || "80") : null;
+  const ownPort = typeof req.socket?.localPort === "number" ? String(req.socket.localPort) : hostPort;
+  const sameOrigin = originHost !== null && originHost === host && o?.protocol === "http:" && originPort === hostPort;
+  return sameOrigin || (ours(originHost) && originPort !== null && (originPort === ownPort || originPort === hostPort));
+}
+
+function urlOf(value: string): URL | null {
+  try {
+    return new URL(value.trim());
+  } catch {
+    return null;
+  }
 }
 
 export function createOriginGuard(allowedHost: (hostName: string) => boolean): RequestHandler {

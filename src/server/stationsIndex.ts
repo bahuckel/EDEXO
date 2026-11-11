@@ -31,6 +31,7 @@ import { pipeline } from "node:stream/promises";
 import { createGunzip } from "node:zlib";
 import { getProjectRoot, resolveUserSettingsJsonPath } from "./paths.js";
 import { GALAXY_INDEX_BASE_URL } from "./galaxyIndexFiles.js";
+import { stallGuard } from "./stallGuard.js";
 
 const MAGIC = "EDEXOSTA";
 const SYS = 22;
@@ -670,15 +671,17 @@ export async function downloadStations(onDone: () => void, fetchImpl: typeof fet
   try {
     mkdirSync(dir, { recursive: true });
     downloading = { done: 0, total: null };
-    const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${STATIONS_REMOTE}`, { redirect: "follow" });
+    const guard = stallGuard(STATIONS_REMOTE);
+    const r = await fetchImpl(`${GALAXY_INDEX_BASE_URL}/${STATIONS_REMOTE}`, { redirect: "follow", signal: guard.signal });
     if (!r.ok || !r.body) throw new Error(`${STATIONS_REMOTE}: HTTP ${r.status}`);
     const total = Number(r.headers.get("content-length"));
     downloading = { done: 0, total: Number.isFinite(total) && total > 0 ? total : null };
     const body = Readable.fromWeb(r.body as import("node:stream/web").ReadableStream<Uint8Array>);
     body.on("data", (chunk: Buffer) => {
+      guard.touch();
       if (downloading) downloading = { ...downloading, done: downloading.done + chunk.length };
     });
-    await pipeline(body, createGunzip(), createWriteStream(part));
+    await pipeline(body, createGunzip(), createWriteStream(part), { signal: guard.signal }).finally(guard.done);
     new StationsIndex(readFileSync(part)); // refuse a file that is not one before it replaces the old
     clearStationsIndex();
     renameSync(part, path.join(dir, STATIONS_FILE));

@@ -40,6 +40,7 @@ import { GenusMatchGroup } from "./GenusMatchGroup";
 import { VolcanismFact } from "./VolcanismFact";
 import { JumponiumFact } from "./JumponiumFact";
 import type { JumponiumDTO } from "@shared/jumponium";
+import { copyText } from "./copyText";
 export { GlanceGenera } from "./BodyGlance";
 
 /** One empty list for a body with no on-foot locks, so the rows' context value keeps its identity. */
@@ -151,7 +152,7 @@ export const BodyPane = memo(function BodyPane({
   const copyBodySummary = useCallback(() => {
     void (async () => {
       try {
-        await navigator.clipboard.writeText(bodySummaryOneLine);
+        await copyText(bodySummaryOneLine);
         setBodySummaryCopied(true);
         window.setTimeout(() => setBodySummaryCopied(false), 1500);
       } catch {

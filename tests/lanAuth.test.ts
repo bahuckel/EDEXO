@@ -91,6 +91,14 @@ describe("readLanKeyFromRequest", () => {
     });
     expect(readLanKeyFromRequest(req({})).key).toBeNull();
   });
+
+  // Review 2026-11-10 C9: it threw on a request-target URL cannot read (a 500 with a stack, not the 401).
+  it("reads no key from a request-target that is not a URL, and does not throw", () => {
+    expect(readLanKeyFromRequest(req({ url: "//[", headers: { cookie: `${LAN_KEY_COOKIE}=c` } }))).toEqual({
+      key: "c",
+      fromQuery: false,
+    });
+  });
 });
 
 describe("requestIsAuthorized", () => {

@@ -71,5 +71,11 @@ describe("restoring a demoted row", () => {
     const unlikely2: Row[] = [only("n_n", "n", "Never found here"), only("x_x", "x", "AtmosphereType")];
     restoreDemotionsBelowSignalCount(strict2, unlikely2, 3, null);
     expect(strict2.map((m) => m.entry.id)).toEqual(["a_a", "n_n"]);
+
+    // Not a rival in a genus already shown (the EDDN year: Tussock cultro beside every Tussock divisa).
+    const strict3: Row[] = [row("a_a", "a")];
+    const unlikely3: Row[] = [only("a_b", "a", "Region"), only("r_r", "r", "Region")];
+    restoreDemotionsBelowSignalCount(strict3, unlikely3, 3, null);
+    expect(strict3.map((m) => m.entry.id)).toEqual(["a_a", "r_r"]);
   });
 });

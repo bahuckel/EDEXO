@@ -358,6 +358,9 @@ describe("the address bar", () => {
     expect(isLocalHost("172.20.0.1")).toBe(true);
     expect(isLocalHost("example.com")).toBe(false);
     expect(isLocalHost("172.40.0.1")).toBe(false);
+    // Review 2026-11-10 D7: public names that start like a private address.
+    expect(isLocalHost("10.example.com")).toBe(false);
+    expect(isLocalHost("192.168.evil.com")).toBe(false);
   });
 });
 

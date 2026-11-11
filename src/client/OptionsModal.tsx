@@ -42,6 +42,7 @@ import {
   EdsmUploadPanel,
   FeederCorpusSetting,
 } from "./OptionsPanels";
+import { copyText } from "./copyText";
 export { EddnUploadPanel } from "./OptionsPanels";
 
 /**
@@ -95,7 +96,7 @@ function CopyLanUrlButton({ url, label = "Copy" }: { url: string; label?: string
       type="button"
       className="btn secondary tiny"
       onClick={() => {
-        void navigator.clipboard?.writeText(url).then(
+        void copyText(url).then(
           () => setDone(true),
           () => setDone(false),
         );
@@ -126,7 +127,7 @@ function CopyDiagnostics() {
       const t = await r.text();
       setText(t);
       try {
-        await navigator.clipboard.writeText(t);
+        await copyText(t);
         toast.success("Diagnostics copied — paste them into your message.");
       } catch {
         toast.info("Copy them from the box below.");

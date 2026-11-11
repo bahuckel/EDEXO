@@ -231,7 +231,7 @@ export function presenceFloorFor(speciesId: string): number {
  * less (owner, 2026-10-09). Read once the whole pipeline has run; the chance can still move after the
  * floor (the genus prior), which is one of the answers.
  */
-export type FloorKept = "sampled" | "approximate" | "best" | "passed" | "genusShare" | "genusBest" | "twin";
+export type FloorKept = "sampled" | "approximate" | "best" | "passed" | "genusShare" | "genusBest" | "twin" | "count";
 const floorKept = new WeakMap<SpeciesMatch, { why: FloorKept; pct: number }>();
 export function floorKeptReason(m: SpeciesMatch): { why: FloorKept; pct: number } | null {
   return floorKept.get(m) ?? null;
@@ -246,14 +246,12 @@ export function floorKeptReason(m: SpeciesMatch): { why: FloorKept; pct: number 
  *
  * Three things it will not do:
  *
- *  - **Empty the list.** If nothing at all clears the floor, the single best row stays. A body where
- *    the answer is spread that thin still deserves a best guess, and an empty panel over a body the
- *    game says has life on it reads as a broken app rather than as an honest shrug.
- *
- *    Deliberately *one* row and not one per biological signal. Two signals mean two genera are down
- *    there, so keeping the runner-up looks defensible — but it puts a row the model scored at 4.7 %
- *    on the same list as one it scored at 100 %, which is the thing being complained about. The
- *    second genus is not unknown, it is unnamed, and the ambiguity note already says so.
+ *  - **Show fewer genera than the body has signals.** One signal is one genus with one species of it
+ *    (owner, 2026-11-11; review 2026-11-10 A7), Brain Trees aside, several of which can grow on one body:
+ *    four candidate genera for four signals are all four there, whatever the model makes of one. The best row
+ *    of each genus the floor would empty comes back, likeliest first, until the count is met (signalSlots).
+ *    This replaces the one-row rule of 2026-09 (a 4.7 % row beside a 100 % one was the complaint): with one
+ *    signal the list still keeps one row.
  *  - **Touch an unmeasured row.** `presenceProbabilityPercent` is null when the model has no opinion
  *    — no profile, too few observed bodies. Null is "unmeasured", never "unlikely".
  *  - **Argue with the commander's own boots.** A species he has sampled on this body stays, whatever
@@ -301,6 +299,7 @@ export function demoteBelowPresenceFloor(
 
   const keepAtLeast = 1;
   const twin = twinGenusRows(shown, b);
+  const below: SpeciesMatch[] = [];
   // Highest chance first, so the one row that survives an all-below-floor body is the best of them.
   // An unmeasured row sorts with the survivors rather than the casualties: it is not a weak claim,
   // it is no claim.
@@ -338,15 +337,49 @@ export function demoteBelowPresenceFloor(
       }
       continue;
     }
+    below.push(m);
+  }
+  // The signal count first: the best row of each genus the floor would empty, likeliest first, until it is met.
+  const signals = b.biologicalSignals;
+  if (signals != null && Number.isFinite(signals) && signals > 1) {
+    const left = shown.filter((m) => !below.includes(m));
+    for (const m of [...below]) {
+      if (signalSlots(left) >= signals) break;
+      const g = m.entry.genusDataDir;
+      if (g !== BRAIN_TREE_DIR && left.some((o) => o.entry.genusDataDir === g)) continue;
+      left.push(m);
+      below.splice(below.indexOf(m), 1);
+      floorKept.set(m, { why: "count", pct: m.presenceProbabilityPercent! });
+    }
+  }
+  for (const m of below) {
+    const pct = m.presenceProbabilityPercent!;
     m.unlikely = true;
     m.unlikelyReasons = [
       ...(m.unlikelyReasons ?? []),
       {
         field: "Chance here",
-        detail: `${pct.toFixed(1)} % — under the ${floor} % this panel shows. Listed as a low-probability find rather than excluded.`,
+        detail: `${pct.toFixed(1)} % — under the ${presenceFloorFor(m.entry.id)} % this panel shows. Listed as a low-probability find rather than excluded.`,
       },
     ];
   }
+}
+
+/** Brain Trees' data folder: the one genus of which several species can grow on one body, each a signal. */
+const BRAIN_TREE_DIR = "brain-tree";
+
+/**
+ * How many of a body's biological signals these rows can stand for: one per genus, one per row for Brain Trees (owner,
+ * 2026-11-11: one signal is one genus, one species of it, Brain Trees aside).
+ */
+export function signalSlots(rows: readonly Pick<SpeciesMatch, "entry">[]): number {
+  const genera = new Set<string>();
+  let trees = 0;
+  for (const m of rows) {
+    if (m.entry.genusDataDir === BRAIN_TREE_DIR) trees++;
+    else genera.add(m.entry.genusDataDir);
+  }
+  return genera.size + trees;
 }
 
 /**

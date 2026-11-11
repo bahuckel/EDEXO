@@ -12,6 +12,18 @@ const { GALAXY_MIN } = require("./childWindows.cjs");
 const WINDOW_MIN = { launcher: { w: 380, h: 420 }, app: { w: 640, h: 420 }, colonize: { w: 640, h: 420 }, galaxy: GALAXY_MIN };
 
 /** @param {() => string} stateDir the folder window-state.json lives in */
+/**
+ * Each dragged-out tab window keeps its own entry (`tab:<key>`), one per drag, and none was ever let go (review
+ * 2026-11-10 D7): the last TAB_WINDOWS_KEPT saved stay, the oldest go.
+ */
+const TAB_WINDOWS_KEPT = 24;
+function pruneTabWindows(all) {
+  const tabs = Object.keys(all).filter((k) => k.startsWith("tab:"));
+  if (tabs.length <= TAB_WINDOWS_KEPT) return;
+  tabs.sort((a, b) => (all[b]?.savedAt ?? 0) - (all[a]?.savedAt ?? 0));
+  for (const k of tabs.slice(TAB_WINDOWS_KEPT)) delete all[k];
+}
+
 function createWindowState(stateDir) {
   /*
     Where the windows were (owner, 2026-09-26: "remember their last position… another monitor…
@@ -76,7 +88,8 @@ function createWindowState(stateDir) {
       const maximized = win.isMaximized();
       const b = maximized ? win.getNormalBounds() : win.getBounds();
       const all = readWindowStates();
-      all[name] = { ...b, maximized };
+      all[name] = { ...b, maximized, savedAt: Date.now() };
+      pruneTabWindows(all);
       fs.mkdirSync(path.dirname(windowStatePath()), { recursive: true });
       writeFileAtomic(windowStatePath(), JSON.stringify(all, null, 2), "utf8");
     } catch {
@@ -134,4 +147,4 @@ function enableZoom(win) {
   });
 }
 
-module.exports = { WINDOW_MIN, createWindowState, enableZoom };
+module.exports = { WINDOW_MIN, createWindowState, enableZoom, pruneTabWindows };

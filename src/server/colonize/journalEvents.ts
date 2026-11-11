@@ -483,7 +483,18 @@ export function applyJournalObject(state: JournalState, j: Record<string, unknow
     }
   }
 
-  if (ev === "Docked") {
+  /*
+    A session that loads docked writes `Location` with `Docked: true` and the station's fields, and no `Docked`: read
+    as one (review 2026-11-10 B8: the ship was not seen as docked, and a carrier transfer after it was dropped). One
+    that loads in space is not docked anywhere.
+  */
+  const loadsDocked = ev === "Location" && j.Docked === true;
+  if (ev === "Location" && !loadsDocked && (state.dockedCarrierId != null || state.liveDocked != null)) {
+    state.dockedCarrierId = null;
+    state.liveDocked = null;
+    changed = true;
+  }
+  if (ev === "Docked" || loadsDocked) {
     if (typeof j.StarSystem === "string" && j.StarSystem !== ctx.starSystem) {
       ctx.starSystem = j.StarSystem;
       changed = true;

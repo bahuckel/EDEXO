@@ -167,6 +167,12 @@ function startServerChild(o) {
         });
         resolveStart(runtime);
       } else if (m.type === "failed") {
+        // The failed child goes too (review 2026-11-10 D2: it stayed alive, holding the port and the profile).
+        try {
+          child.kill();
+        } catch {
+          /* already gone */
+        }
         rejectStart(new Error(String(m.message)));
       } else if (m.type === "ready") {
         resolveReady();
