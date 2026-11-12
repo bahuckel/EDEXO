@@ -55,7 +55,7 @@ export function ExoAlertsSetting() {
         <span>Check against Exo-Feeder profiles</span>
       </label>
       <div className="options-oneline" style={{ marginTop: "0.6rem" }}>
-        <button type="button" className="btn-top-neutral" disabled={!journal && !feeder} onClick={() => requestExoAlertRescan()}>
+        <button type="button" className="btn-top-neutral ui-btn ui-btn--secondary ui-btn--sm" disabled={!journal && !feeder} onClick={() => requestExoAlertRescan()}>
           Show dismissed again
         </button>
       </div>

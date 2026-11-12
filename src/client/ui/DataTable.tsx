@@ -192,7 +192,7 @@ function TableInner<T>({
     <div className="disc-export">
       <button
         type="button"
-        className="btn secondary tiny"
+        className="btn secondary tiny ui-btn ui-btn--secondary ui-btn--sm"
         title="Every row of this table, in this order, as a CSV file for a spreadsheet"
         onClick={() => downloadCsv(csvFileName(csvName), toCsv(sorted, columns))}
       >

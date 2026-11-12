@@ -91,7 +91,7 @@ export function TargetsMenu({
               <CopySystemButton system={nearest.row.name} />
               <button
                 type="button"
-                className="g3d-btn"
+                className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm"
                 onClick={() =>
                   go(nearest.row, 400, {
                     kind: "marker",
@@ -137,7 +137,7 @@ export function TargetsMenu({
         />
         <button
           type="button"
-          className="g3d-btn g3d-btn--primary-small"
+          className="g3d-btn g3d-btn--primary-small ui-btn ui-btn--primary ui-btn--sm"
           onClick={() => void nextTarget(skipped)}
           disabled={targetBusy}
           title="The nearest system worth at least that much that you have not mapped or sampled; its name is copied for the game's galaxy map"
@@ -155,12 +155,12 @@ export function TargetsMenu({
                   {copied ? " · name copied" : ""}
                 </span>
                 <CopySystemButton system={target.target.name} />
-                <button type="button" className="g3d-btn" onClick={skipTarget} disabled={targetBusy}>
+                <button type="button" className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={skipTarget} disabled={targetBusy}>
                   Skip
                 </button>
                 <button
                   type="button"
-                  className="g3d-btn"
+                  className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm"
                   onClick={() => {
                     const t = target.target!;
                     go(t, 400, { kind: "index", ordinal: t.ordinal, x: t.x, y: t.y, z: t.z });
@@ -171,7 +171,7 @@ export function TargetsMenu({
                 {!planOn ? (
                   <button
                     type="button"
-                    className="g3d-btn"
+                    className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm"
                     onClick={openPlan}
                     disabled={targetBusy}
                     title="The next few targets, each the nearest to the last, in the shortest order"
@@ -251,7 +251,7 @@ export function TargetsMenu({
                       <CopySystemButton system={s.name} />
                       <button
                         type="button"
-                        className="g3d-btn g3d-plan__skip"
+                        className="g3d-btn g3d-plan__skip ui-btn ui-btn--secondary ui-btn--sm"
                         title="Skip this one; the plan is worked out again without it"
                         aria-label={`Skip ${s.name}`}
                         disabled={targetBusy}
@@ -280,7 +280,7 @@ export function TargetsMenu({
                 <div className="g3d-panel__actions">
                   <button
                     type="button"
-                    className="g3d-btn"
+                    className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm"
                     onClick={() => {
                       void copyText(plan.stops.map((s) => s.name).join("\n"))
                         .then(() => setPlanCopied(true))
@@ -291,7 +291,7 @@ export function TargetsMenu({
                   </button>
                   <button
                     type="button"
-                    className="g3d-btn"
+                    className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm"
                     onClick={() =>
                       fitTo([...(target?.from ? [target.from] : []), ...plan.stops])
                     }

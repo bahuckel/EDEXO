@@ -447,7 +447,7 @@ export function GalaxySearchPanel({
           {busy ? "Searching…" : "Search"}
         </button>
         {result || scan ? (
-          <button type="button" className="g3d-btn" onClick={clear}>
+          <button type="button" className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={clear}>
             Clear
           </button>
         ) : null}

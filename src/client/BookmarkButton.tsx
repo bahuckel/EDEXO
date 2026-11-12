@@ -191,7 +191,7 @@ export function BookmarkEditor({
         </p>
       ) : null}
       <div className="bm-editor__actions">
-        <button type="button" className="fdb-chip fdb-chip--on fdb-chip--primary" disabled={busy} onClick={() => void save()}>
+        <button type="button" className="fdb-chip fdb-chip--on fdb-chip--primary ui-btn ui-btn--primary ui-btn--sm" disabled={busy} onClick={() => void save()}>
           {initial.id ? "Save" : "Bookmark"}
         </button>
         <button type="button" className="fdb-chip" onClick={onCancel}>
@@ -248,7 +248,7 @@ export function BookmarkButton({
               {/* The glyph is drawn by CSS, so the system name's text stays just the name. */}
             </button>
           ) : (
-            <button type="button" className={`g3d-btn bm-btn${existing ? " bm-btn--on" : ""}`} title={title}>
+            <button type="button" className={`g3d-btn bm-btn ui-btn ui-btn--secondary ui-btn--sm${existing ? " bm-btn--on" : ""}`} title={title}>
               <Star size={14} strokeWidth={2} fill={existing ? "currentColor" : "none"} aria-hidden="true" />
               {existing ? "Bookmarked" : "Bookmark"}
             </button>

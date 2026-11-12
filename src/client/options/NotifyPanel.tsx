@@ -501,7 +501,7 @@ export function NotifyPanel() {
       <div className="options-oneline options-notify-test">
         <button
           type="button"
-          className="btn secondary"
+          className="btn secondary ui-btn ui-btn--secondary ui-btn--md"
           disabled={busy}
           onClick={() => {
             setMsg(null);

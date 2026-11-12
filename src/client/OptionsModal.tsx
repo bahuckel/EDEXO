@@ -95,7 +95,7 @@ function CopyLanUrlButton({ url, label = "Copy" }: { url: string; label?: string
   return (
     <button
       type="button"
-      className="btn secondary tiny"
+      className="btn secondary tiny ui-btn ui-btn--secondary ui-btn--sm"
       onClick={() => {
         void copyText(url).then(
           () => setDone(true),
@@ -142,7 +142,7 @@ function CopyDiagnostics() {
   return (
     <div className="options-diagnostics">
       <div className="options-oneline">
-        <button type="button" className="btn secondary" disabled={busy} onClick={() => void copy()}>
+        <button type="button" className="btn secondary ui-btn ui-btn--secondary ui-btn--md" disabled={busy} onClick={() => void copy()}>
           Copy diagnostics
         </button>
         <span className="dim options-diagnostics-hint">

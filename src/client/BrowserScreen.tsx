@@ -728,7 +728,7 @@ export function BrowserScreen() {
             <p className="dim">One browser serves Compare and Colonize; its pages show in one window at a time.</p>
             <button
               type="button"
-              className="btn-confirm-go"
+              className="btn-confirm-go ui-btn ui-btn--primary ui-btn--md"
               onClick={() => bringHereRef.current()}
             >
               Bring it here

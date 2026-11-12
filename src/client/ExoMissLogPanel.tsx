@@ -39,7 +39,7 @@ export function ExoMissLogPanel({ outliers }: { outliers: AppSnapshot["exoOutlie
       <strong className="options-oneline-value">{outliers.total}</strong>
       <button
         type="button"
-        className="btn secondary tiny"
+        className="btn secondary tiny ui-btn ui-btn--secondary ui-btn--sm"
         disabled={opening}
         onClick={() => {
           setOpening(true);

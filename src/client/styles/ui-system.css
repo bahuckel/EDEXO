@@ -153,3 +153,104 @@
     display: none;
   }
 }
+
+/*
+  9. ui/Button (round 6): one button system. The older classes stay on the elements for their layout rules; these
+  win over their looks (:root:root, loaded last). Cut corner as the rest of the cockpit; sentence case.
+*/
+:root:root .ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  box-sizing: border-box;
+  min-height: var(--btn-h-md, 34px);
+  padding: 0 0.95rem;
+  border: 1px solid var(--accent-a35);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: var(--track-1, 0.04em);
+  line-height: 1.2;
+  text-transform: none;
+  text-decoration: none;
+  text-shadow: none;
+  box-shadow: none;
+  filter: none;
+  white-space: nowrap;
+  cursor: pointer;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+:root:root .ui-btn.ui-btn--sm {
+  min-height: var(--btn-h-sm, 28px);
+  padding: 0 0.7rem;
+  font-size: var(--fs-xs);
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+}
+:root:root .ui-btn.ui-btn--secondary:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-a15);
+  color: var(--accent-bright);
+}
+:root:root .ui-btn.ui-btn--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--ink, #07060a);
+}
+:root:root .ui-btn.ui-btn--primary:hover:not(:disabled) {
+  border-color: var(--accent-bright);
+  background: var(--accent-bright);
+  color: var(--ink, #07060a);
+}
+:root:root .ui-btn.ui-btn--ghost {
+  border-color: transparent;
+  color: var(--accent);
+}
+:root:root .ui-btn.ui-btn--ghost:hover:not(:disabled) {
+  background: var(--accent-a10);
+  color: var(--accent-bright);
+}
+:root:root .ui-btn.ui-btn--danger {
+  border-color: rgba(255, 90, 60, 0.7);
+  background: rgba(255, 90, 60, 0.12);
+  color: #ffb3a3;
+}
+:root:root .ui-btn.ui-btn--danger:hover:not(:disabled) {
+  border-color: var(--bad, #ff5a3c);
+  background: var(--bad, #ff5a3c);
+  color: var(--ink, #07060a);
+}
+:root:root .ui-btn:disabled,
+:root:root .ui-btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/*
+  10. The galaxy map's menu rows (owner, 2026-11-12: the Galaxy index download button's text ran over its label): the
+  label keeps its width; a control too wide for the rest of the row goes under it, right-aligned, its text wrapping.
+  Rows that fit are unchanged.
+*/
+:root:root .g3d-row {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+:root:root .g3d-row > .g3d-row__label {
+  flex: 1 0 auto;
+}
+:root:root .g3d-row > .g3d-row__ctl {
+  max-width: 100%;
+  margin-left: auto;
+}
+:root:root .g3d-row > .g3d-row__ctl > .ui-btn {
+  white-space: normal;
+  text-align: left;
+  padding-block: 0.3rem;
+}

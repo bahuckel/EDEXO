@@ -128,7 +128,7 @@ export function BrowserPrivacyPanel({
       {pw.savedCount > 0 ? (
         <button
           type="button"
-          className="btn-top-neutral ebr-privacy__btn"
+          className="btn-top-neutral ebr-privacy__btn ui-btn ui-btn--secondary ui-btn--sm"
           onClick={() => void api.passwordDeleteAll().then(apply)}
         >
           {locked ? "Delete all saved passwords (and the master password)" : "Delete all saved passwords"}

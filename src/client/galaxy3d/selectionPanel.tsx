@@ -203,7 +203,7 @@ export function selectionPanel(selection: Selection | null, ctx: SelectionPanelC
         <p>
           <button
             type="button"
-            className="g3d-btn"
+            className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm"
             title="Open it on the main screen: its bodies are fetched from Spansh"
             onClick={() => {
               void sendJson("/api/ui/view-system", { systemAddress: h.systemAddress, starSystem: h.starSystem });

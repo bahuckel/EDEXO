@@ -1310,7 +1310,7 @@ export function GalaxyMap3D() {
             when the graphics card crashes at start), ticking it again may bring the 3D map back.
           </p>
           {/* In a tab, a window of its own: in place it replaced the whole app window, tabs and all (2026-10-26). */}
-          <a className="g3d-btn g3d-btn--primary" href="?screen=map" {...(inTab ? { target: "_blank", rel: "noreferrer" } : {})}>
+          <a className="g3d-btn g3d-btn--primary ui-btn ui-btn--primary ui-btn--md" href="?screen=map" {...(inTab ? { target: "_blank", rel: "noreferrer" } : {})}>
             Open the Classic map
           </a>
         </div>
@@ -1397,7 +1397,7 @@ export function GalaxyMap3D() {
           <div className="g3d-panel__actions">
             <button
               type="button"
-              className="g3d-btn"
+              className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm"
               onClick={() => engine.current?.flyTo(selection, selection.kind === "sector" ? 9_000 : 250)}
             >
               Centre here

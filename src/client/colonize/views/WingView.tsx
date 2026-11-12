@@ -240,7 +240,7 @@ function MemberCard({
               <span className="cz-dim cz-num">{t(c.tons)}</span>
               <button
                 type="button"
-                className="btn-top-neutral cz-x"
+                className="btn-top-neutral cz-x ui-btn ui-btn--secondary ui-btn--sm"
                 aria-label={`Drop ${c.label}`}
                 onClick={() => setClaims(w.claims.filter((x) => x.commodityId !== c.commodityId))}
               >

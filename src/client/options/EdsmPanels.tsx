@@ -82,7 +82,7 @@ export function EdsmFetchPanel({ state }: { state: AppSnapshot["edsmAutoFetch"] 
       <div className="options-edsm-actions">
         <button
           type="button"
-          className="btn secondary"
+          className="btn secondary ui-btn ui-btn--secondary ui-btn--md"
           disabled={busy || !commanderName.trim() || !apiKey.trim()}
           onClick={() => {
             setBusy(true);
@@ -104,7 +104,7 @@ export function EdsmFetchPanel({ state }: { state: AppSnapshot["edsmAutoFetch"] 
         </button>
         <button
           type="button"
-          className="btn secondary"
+          className="btn secondary ui-btn ui-btn--secondary ui-btn--md"
           disabled={busy || !state.hasKey}
           onClick={() => {
             setBusy(true);
@@ -259,7 +259,7 @@ export function EdsmUploadPanel({ state, hasKey }: { state: AppSnapshot["edsmUpl
         />
         <button
           type="button"
-          className="btn secondary"
+          className="btn secondary ui-btn ui-btn--secondary ui-btn--md"
           disabled={busy || !state.enabled || running}
           onClick={() => {
             setBusy(true);
@@ -276,7 +276,7 @@ export function EdsmUploadPanel({ state, hasKey }: { state: AppSnapshot["edsmUpl
         {running ? (
           <button
             type="button"
-            className="btn secondary"
+            className="btn secondary ui-btn ui-btn--secondary ui-btn--md"
             onClick={() => void postSetting("/api/settings/edsm-catch-up-cancel", {})}
           >
             Stop

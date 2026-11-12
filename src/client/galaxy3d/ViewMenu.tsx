@@ -48,22 +48,22 @@ export function ViewMenu({
       <MenuHead title="View" help={G3D_HELP.view} />
       <div className="g3d-row g3d-row--buttons" role="group" aria-label="Camera">
         <Tooltip text="Look straight down on the galaxy">
-          <button type="button" className="g3d-btn" onClick={() => view("top")}>
+          <button type="button" className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={() => view("top")}>
             Top
           </button>
         </Tooltip>
         <Tooltip text="Look across the disc at an angle">
-          <button type="button" className="g3d-btn" onClick={() => view("tilted")}>
+          <button type="button" className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={() => view("tilted")}>
             Tilt
           </button>
         </Tooltip>
         <Tooltip text="Fly to the galactic core, Sagittarius A*">
-          <button type="button" className="g3d-btn" onClick={() => view("core")}>
+          <button type="button" className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={() => view("core")}>
             Core
           </button>
         </Tooltip>
         <Tooltip text="Fly home to Sol">
-          <button type="button" className="g3d-btn" onClick={() => view("sol")}>
+          <button type="button" className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={() => view("sol")}>
             Sol
           </button>
         </Tooltip>
@@ -74,7 +74,7 @@ export function ViewMenu({
               : "Your ship's position is not known yet"
           }
         >
-          <button type="button" className="g3d-btn" onClick={toShip} disabled={!ship}>
+          <button type="button" className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={toShip} disabled={!ship}>
             Me
           </button>
         </Tooltip>

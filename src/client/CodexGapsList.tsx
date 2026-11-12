@@ -128,7 +128,7 @@ export function CodexGapsList({
             </p>
           ) : null}
           {!all && data.gaps.length > SHOWN ? (
-            <button type="button" className="g3d-btn" onClick={() => setAll(true)}>
+            <button type="button" className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm" onClick={() => setAll(true)}>
               Show all {data.gaps.length}
             </button>
           ) : null}

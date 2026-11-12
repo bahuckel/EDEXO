@@ -9,7 +9,7 @@ import { copyText as writeClipboard } from "../../copyText";
 
 /** Compare's buttons: the framed one, the filled "go", and the small text action (Compare's "Copy"). */
 export const BTN = "btn-top-neutral";
-export const BTN_GO = "btn-confirm-go";
+export const BTN_GO = "btn-confirm-go ui-btn ui-btn--primary ui-btn--md";
 export const BTN_WARN = "btn-top-neutral cz-btn--warn";
 export const BTN_BAD = "btn-top-neutral cz-btn--bad";
 export const BTN_LINK = "cz-link";

@@ -329,7 +329,7 @@ export function CarriersPanel({
       <div className="carriers-fetch">
         <button
           type="button"
-          className="fdb-chip fdb-chip--on fdb-chip--primary"
+          className="fdb-chip fdb-chip--on fdb-chip--primary ui-btn ui-btn--primary ui-btn--sm"
           onClick={() => void fetchFromEdastro()}
           disabled={busy || cooling}
         >

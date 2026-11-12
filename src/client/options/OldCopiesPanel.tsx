@@ -79,7 +79,7 @@ export function OldCopiesPanel() {
           </ul>
           {armed ? (
             <p className="options-oneline">
-              <button type="button" className="btn-top-neutral" disabled={busy} onClick={() => void remove()}>
+              <button type="button" className="btn-top-neutral ui-btn ui-btn--secondary ui-btn--sm" disabled={busy} onClick={() => void remove()}>
                 {busy ? "Removing…" : `Remove all ${list.files.length} (${size(list.bytes)})`}
               </button>
               <button type="button" className="btn-top-toggle" onClick={() => setArmed(false)}>
@@ -88,7 +88,7 @@ export function OldCopiesPanel() {
             </p>
           ) : (
             <p className="options-oneline">
-              <button type="button" className="btn-top-neutral" onClick={() => setArmed(true)}>
+              <button type="button" className="btn-top-neutral ui-btn ui-btn--secondary ui-btn--sm" onClick={() => setArmed(true)}>
                 Remove old copies…
               </button>
             </p>

@@ -108,7 +108,7 @@ export function TritiumPanel({
   return (
     <>
       <div className="carriers-fetch">
-        <button type="button" className="fdb-chip fdb-chip--on fdb-chip--primary" onClick={() => void find()} disabled={busy}>
+        <button type="button" className="fdb-chip fdb-chip--on fdb-chip--primary ui-btn ui-btn--primary ui-btn--sm" onClick={() => void find()} disabled={busy}>
           {busy ? "Searching…" : result ? "Search again" : "Find Tritium"}
         </button>
         <span className="dim">

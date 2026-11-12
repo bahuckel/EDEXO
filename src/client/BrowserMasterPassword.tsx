@@ -66,7 +66,7 @@ export function MasterPasswordSettings({
     <div className="ebr-menu__master">
       {!master.set && mode === "idle" ? (
         <div className="ebr-menu__form">
-          <button type="button" className="btn-top-neutral" onClick={() => setMode("set")}>
+          <button type="button" className="btn-top-neutral ui-btn ui-btn--secondary ui-btn--sm" onClick={() => setMode("set")}>
             Set a master password
           </button>
         </div>
@@ -84,10 +84,10 @@ export function MasterPasswordSettings({
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
           />
-          <button type="submit" className="btn-confirm-go">
+          <button type="submit" className="btn-confirm-go ui-btn ui-btn--primary ui-btn--md">
             Unlock
           </button>
-          <button type="button" className="btn-top-neutral" onClick={() => setMode("remove")}>
+          <button type="button" className="btn-top-neutral ui-btn ui-btn--secondary ui-btn--sm" onClick={() => setMode("remove")}>
             Remove…
           </button>
         </form>
@@ -95,13 +95,13 @@ export function MasterPasswordSettings({
       {master.set && master.unlocked && mode === "idle" ? (
         <div className="ebr-menu__form">
           <span className="ebr-menu__help">Unlocked until the app closes.</span>
-          <button type="button" className="btn-top-neutral" onClick={() => void api.masterLock().then(done)}>
+          <button type="button" className="btn-top-neutral ui-btn ui-btn--secondary ui-btn--sm" onClick={() => void api.masterLock().then(done)}>
             Lock now
           </button>
-          <button type="button" className="btn-top-neutral" onClick={() => setMode("change")}>
+          <button type="button" className="btn-top-neutral ui-btn ui-btn--secondary ui-btn--sm" onClick={() => setMode("change")}>
             Change…
           </button>
-          <button type="button" className="btn-top-neutral" onClick={() => setMode("remove")}>
+          <button type="button" className="btn-top-neutral ui-btn ui-btn--secondary ui-btn--sm" onClick={() => setMode("remove")}>
             Remove…
           </button>
         </div>
@@ -140,12 +140,12 @@ export function MasterPasswordSettings({
           ) : (
             <span className="ebr-menu__help">The saved logins stay, protected by the operating system only.</span>
           )}
-          <button type="submit" className="btn-confirm-go">
+          <button type="submit" className="btn-confirm-go ui-btn ui-btn--primary ui-btn--md">
             {mode === "remove" ? "Remove" : mode === "change" ? "Change" : "Set"}
           </button>
           <button
             type="button"
-            className="btn-top-neutral"
+            className="btn-top-neutral ui-btn ui-btn--secondary ui-btn--sm"
             onClick={() => {
               reset();
               setNote(null);
@@ -202,7 +202,7 @@ export function UnlockLoginsChip({ count, unlock }: { count: number; unlock: (pa
               autoFocus
               onChange={(e) => setValue(e.target.value)}
             />
-            <button type="submit" className="btn-confirm-go">
+            <button type="submit" className="btn-confirm-go ui-btn ui-btn--primary ui-btn--md">
               Unlock
             </button>
           </form>

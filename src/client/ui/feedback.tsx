@@ -170,12 +170,12 @@ function ConfirmDialog({ request, onAnswer }: { request: ConfirmRequest; onAnswe
           {request.message}
         </p>
         <div className="confirm-actions">
-          <button type="button" className="btn-confirm-cancel" onClick={cancel}>
+          <button type="button" className="btn-confirm-cancel ui-btn ui-btn--secondary ui-btn--md" onClick={cancel}>
             {request.cancelLabel ?? "Cancel"}
           </button>
           <button
             type="button"
-            className={request.tone === "danger" ? "btn-confirm-go btn-confirm-go--danger" : "btn-confirm-go"}
+            className={request.tone === "danger" ? "btn-confirm-go btn-confirm-go--danger ui-btn ui-btn--danger ui-btn--md" : "btn-confirm-go ui-btn ui-btn--primary ui-btn--md"}
             onClick={() => onAnswer(true)}
           >
             {request.confirmLabel ?? "Confirm"}

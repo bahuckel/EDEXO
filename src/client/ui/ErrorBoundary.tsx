@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component<{ label: string; children: ReactNod
         <p>
           <strong>{this.props.label} could not be drawn.</strong> {this.state.error.message}
         </p>
-        <button type="button" className="btn secondary tiny" onClick={() => this.setState((s) => ({ error: null, tries: s.tries + 1 }))}>
+        <button type="button" className="btn secondary tiny ui-btn ui-btn--secondary ui-btn--sm" onClick={() => this.setState((s) => ({ error: null, tries: s.tries + 1 }))}>
           Draw it again
         </button>
       </div>

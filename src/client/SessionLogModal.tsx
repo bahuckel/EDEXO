@@ -93,7 +93,7 @@ export function SessionLogModal({ log, onClose }: { log: SessionLogDTO | null; o
           tools={
             <button
               type="button"
-              className="btn-top-neutral session-copy"
+              className="btn-top-neutral session-copy ui-btn ui-btn--secondary ui-btn--sm"
               onClick={() => void copy()}
               disabled={empty}
             >

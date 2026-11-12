@@ -193,7 +193,7 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
             <div className="exo-data-alert__actions">
               <button
                 type="button"
-                className="exo-data-alert__btn"
+                className="exo-data-alert__btn ui-btn ui-btn--primary ui-btn--sm"
                 title="Append a fixes_*.json stub in your user data folder, where an update cannot replace it (never overwrites the original codex or exomastery file)."
                 onClick={() => void fix(a)}
               >
@@ -201,7 +201,7 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
               </button>
               <button
                 type="button"
-                className="exo-data-alert__btn exo-data-alert__btn--secondary"
+                className="exo-data-alert__btn exo-data-alert__btn--secondary ui-btn ui-btn--secondary ui-btn--sm"
                 onClick={() => dismiss(a.id)}
               >
                 Dismiss

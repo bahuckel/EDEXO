@@ -311,7 +311,7 @@ export function GalaxyNavRoutePanel({
             <div className="g3d-navroute__row">
               <button
                 type="button"
-                className="g3d-btn"
+                className="g3d-btn ui-btn ui-btn--secondary ui-btn--sm"
                 disabled={!unchecked.length || !!ck}
                 onClick={() =>
                   void sendJson("/api/navroutes/edsm-check", { addresses: unchecked.map((s) => s.address) }).then(() => loadLog())

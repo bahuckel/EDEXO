@@ -99,7 +99,7 @@ export function GalaxyIndexDownload() {
       ) : (
         <button
           type="button"
-          className="g3d-btn g3d-btn--primary-small"
+          className="g3d-btn g3d-btn--primary-small ui-btn ui-btn--primary ui-btn--sm"
           onClick={() => {
             sessionStorage.setItem("galaxyIndexDownloading", "1");
             void fetch("/api/galaxy/index/download", { method: "POST" }).then(() => load());

@@ -206,7 +206,7 @@ export function StationsPanel({
         {!status?.present || newer ? (
           <button
             type="button"
-            className="fdb-chip fdb-chip--on fdb-chip--primary"
+            className="fdb-chip fdb-chip--on fdb-chip--primary ui-btn ui-btn--primary ui-btn--sm"
             onClick={() => void download()}
             disabled={!!dl}
           >

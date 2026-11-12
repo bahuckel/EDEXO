@@ -114,7 +114,7 @@ export const NoticesBell = memoOnSnapSlice(BELL_FIELDS, function NoticesBell({
         {n.systemAddress != null ? (
           <button
             type="button"
-            className="exo-data-alert__btn"
+            className="exo-data-alert__btn ui-btn ui-btn--primary ui-btn--sm"
             title={`Show ${n.body ? `${n.body} in ` : ""}${n.system}`}
             onClick={() => show(n)}
           >
@@ -124,7 +124,7 @@ export const NoticesBell = memoOnSnapSlice(BELL_FIELDS, function NoticesBell({
         {n.kind === "cg" ? (
           <button
             type="button"
-            className="exo-data-alert__btn"
+            className="exo-data-alert__btn ui-btn ui-btn--primary ui-btn--sm"
             title={`Copy ${n.system} to paste into the galaxy map`}
             onClick={() => void copyText(n.system).catch(() => {})}
           >
@@ -133,7 +133,7 @@ export const NoticesBell = memoOnSnapSlice(BELL_FIELDS, function NoticesBell({
         ) : null}
         <button
           type="button"
-          className="exo-data-alert__btn exo-data-alert__btn--secondary"
+          className="exo-data-alert__btn exo-data-alert__btn--secondary ui-btn ui-btn--secondary ui-btn--sm"
           onClick={() => setRead([n.id], !n.read)}
         >
           {n.read ? "Unread" : "Read"}
@@ -175,7 +175,7 @@ export const NoticesBell = memoOnSnapSlice(BELL_FIELDS, function NoticesBell({
             Notices{unread.length ? ` · ${unread.length} unread` : ""}
           </span>
           {unread.length ? (
-            <button type="button" className="exo-data-alert__btn exo-data-alert__btn--secondary" onClick={() => setRead("all", true)}>
+            <button type="button" className="exo-data-alert__btn exo-data-alert__btn--secondary ui-btn ui-btn--secondary ui-btn--sm" onClick={() => setRead("all", true)}>
               Mark all read
             </button>
           ) : null}
@@ -194,7 +194,7 @@ export const NoticesBell = memoOnSnapSlice(BELL_FIELDS, function NoticesBell({
           <>
             <div className="notices-group__head notices-group__head--read">
               <span className="notices-group__title">Read ({read.length})</span>
-              <button type="button" className="exo-data-alert__btn exo-data-alert__btn--secondary" onClick={clearRead}>
+              <button type="button" className="exo-data-alert__btn exo-data-alert__btn--secondary ui-btn ui-btn--secondary ui-btn--sm" onClick={clearRead}>
                 Clear read
               </button>
             </div>

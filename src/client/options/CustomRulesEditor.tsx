@@ -118,7 +118,7 @@ export function CustomRulesEditor({
               <input type="checkbox" checked={r.on} disabled={busy} onChange={(ev) => setRule(i, { on: ev.target.checked })} />
             </label>
             <DraftText className="options-rule__name" value={r.name} disabled={busy} ariaLabel="Rule name" onCommit={(name) => setRule(i, { name })} />
-            <button type="button" className="btn-small" disabled={busy} onClick={() => onSave(rules.filter((_, k) => k !== i))}>
+            <button type="button" className="btn-small ui-btn ui-btn--secondary ui-btn--sm" disabled={busy} onClick={() => onSave(rules.filter((_, k) => k !== i))}>
               Remove
             </button>
           </div>
@@ -163,7 +163,7 @@ export function CustomRulesEditor({
                 )}
                 <button
                   type="button"
-                  className="btn-small"
+                  className="btn-small ui-btn ui-btn--secondary ui-btn--sm"
                   disabled={busy}
                   aria-label="Remove condition"
                   onClick={() => setRule(i, { conds: r.conds.filter((_, k) => k !== j) })}
@@ -174,7 +174,7 @@ export function CustomRulesEditor({
             );
           })}
           {r.conds.length < MAX_CONDS && (
-            <button type="button" className="btn-small" disabled={busy} onClick={() => setRule(i, { conds: [...r.conds, freshCond("landable")] })}>
+            <button type="button" className="btn-small ui-btn ui-btn--secondary ui-btn--sm" disabled={busy} onClick={() => setRule(i, { conds: [...r.conds, freshCond("landable")] })}>
               + condition
             </button>
           )}
@@ -184,7 +184,7 @@ export function CustomRulesEditor({
       {rules.length < MAX_RULES && (
         <button
           type="button"
-          className="btn-small"
+          className="btn-small ui-btn ui-btn--secondary ui-btn--sm"
           disabled={busy}
           onClick={() => onSave([...rules, { id: newId(rules), name: "My rule", on: true, conds: [freshCond("landable")] }])}
         >

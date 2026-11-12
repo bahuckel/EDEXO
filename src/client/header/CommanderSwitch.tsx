@@ -107,11 +107,11 @@ export function CommanderSwitch({ snap }: { snap: AppSnapshot }) {
             ) : null}
             <div className="cmdr-switch-dialog__actions">
               {canSwitch ? (
-                <button type="button" className="btn-confirm-go" onClick={go}>
+                <button type="button" className="btn-confirm-go ui-btn ui-btn--primary ui-btn--md" onClick={go}>
                   Switch to CMDR {game.name}
                 </button>
               ) : null}
-              <button type="button" className="btn-top-neutral" onClick={keep}>
+              <button type="button" className="btn-top-neutral ui-btn ui-btn--secondary ui-btn--sm" onClick={keep}>
                 Keep CMDR {active.name}
               </button>
             </div>
