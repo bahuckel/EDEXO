@@ -14,7 +14,7 @@ html.tab-view {
 .tab-strip {
   position: sticky;
   top: 0;
-  z-index: 950;
+  z-index: var(--z-tab-strip);
   display: flex;
   align-items: flex-end;
   gap: 2px;
@@ -145,7 +145,7 @@ html.tab-view {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 900;
+  z-index: var(--z-tab-pane);
   overflow: hidden;
   background: var(--bg, #050507);
 }

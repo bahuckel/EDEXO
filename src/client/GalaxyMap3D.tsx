@@ -21,14 +21,12 @@ import { usePlotted } from "./galaxy3d/plottedSystems";
 import { detectGraphics, type Graphics } from "./galaxy3d/capabilities";
 import { SYSTEM_CHANGED_EVENT } from "./useLiveSnapshot";
 import { placeLabels } from "./galaxy3d/labelPlacement";
-import { formatCount } from "./galaxy3d/clusters";
 import type { GalaxySearchApplied } from "./GalaxySearchPanel";
 import { GalaxyIndexDownload } from "./GalaxyIndexDownload";
-import { DUE_CLASS, useGalaxyIndexDue } from "./galaxyIndexDue";
+import { useGalaxyIndexDue } from "./galaxyIndexDue";
 import type { NavRouteSystemDTO } from "./GalaxyNavRoutePanel";
 import {
   EMPTY_GALAXY_FILTER,
-  GalaxyFilterPanel,
   galaxyFilterQuery,
   galaxyFilterTicks,
   isGalaxyFilterState,
@@ -44,15 +42,11 @@ import type { JumpRow } from "./galaxy3d/jumpRow";
 import type { FinderHit, FinderResult } from "@shared/finder";
 import { StationsList } from "./galaxy3d/StationsAt";
 import { STATIONS_CHANGED_EVENT } from "./StationsPanel";
-import { CARRIERS_STATIONS_TITLE, useCarriersStationsTab, type CarriersStationsPick } from "./carriersStationsTab";
+import { useCarriersStationsTab, type CarriersStationsPick } from "./carriersStationsTab";
 import {
-  CarriersStationsBody,
-  CarriersStationsTabs,
   CodexMenu,
   DrawerLoading,
   FinderDrawer,
-  GalaxyNavRoutePanel,
-  GalaxySearchPanel,
   JumponiumDrawer,
   NeutronDrawer,
   SpanshRouteDrawer,
@@ -89,8 +83,7 @@ import {
 } from "@shared/galaxyLayers.js";
 import { isBool, usePersistedState } from "./usePersistedState";
 import { keptValue, useKeptState } from "./useKeptState";
-import { Tooltip } from "./ui/Tooltip";
-import { G3D_HELP, G3D_TABS, G3dIcon, MenuHead } from "./galaxy3d/G3dMenu";
+import { MapTabs } from "./galaxy3d/G3dMenu";
 import {
   codexColour,
   dist,
@@ -118,6 +111,8 @@ import { ViewMenu } from "./galaxy3d/ViewMenu";
 import { TargetsMenu } from "./galaxy3d/TargetsMenu";
 import { LayersMenu } from "./galaxy3d/LayersMenu";
 import { StatusBar } from "./galaxy3d/StatusBar";
+import { FindBox, type FindLayerHit } from "./galaxy3d/FindBox";
+import { FilterDrawer, NavRouteDrawer, SearchDrawer, StationsDrawer } from "./galaxy3d/InlineDrawers";
 import { onServerChange } from "./serverChanges";
 import { jsonOrNull } from "./http";
 
@@ -1267,16 +1262,7 @@ export function GalaxyMap3D() {
   const findLayerHits = useMemo(() => {
     const q = findText.trim().toLowerCase();
     if (q.length < 2) return [];
-    const hits: {
-      kind: GalaxyLayerKind;
-      id: string;
-      label: string;
-      system: string;
-      what: string;
-      x: number;
-      y: number;
-      z: number;
-    }[] = [];
+    const hits: FindLayerHit[] = [];
     for (const l of GALAXY_LAYERS) {
       const d = extraData[l.kind];
       if (!d) continue;
@@ -1374,19 +1360,6 @@ export function GalaxyMap3D() {
   });
 
   const ship = route?.position;
-  // Spansh hits the map already shows (as a system or a layer point) are not offered twice.
-  const shownNames = new Set([
-    ...(find?.systems ?? []).map((s) => s.name.toLowerCase()),
-    ...findLayerHits.map((h) => h.system.toLowerCase()),
-  ]);
-  const spanshShown = spanshFind.hits.filter((h) => !shownNames.has(h.starSystem.toLowerCase())).slice(0, 6);
-  const hasFind =
-    findOpen &&
-    (findRegions.length > 0 ||
-      findLayerHits.length > 0 ||
-      spanshShown.length > 0 ||
-      spanshFind.busy ||
-      (find && (find.sectors.length || find.systems.length || (find.stations?.length ?? 0) > 0)));
 
   return (
     <div className="g3d-screen" ref={screenRef}>
@@ -1523,30 +1496,20 @@ export function GalaxyMap3D() {
       ) : null}
 
       {drawer === "stations" ? (
-        <aside
-          className="g3d-drawer g3d-menu g3d-plan g3d-stations-drawer"
-          aria-label={CARRIERS_STATIONS_TITLE}
-          data-testid="g3d-stations"
-        >
-          <MenuHead title={CARRIERS_STATIONS_TITLE} help={G3D_HELP.stations} />
-          <div className="g3d-menu__section g3d-menu__section--first">
-            <CarriersStationsTabs tab={csTab} setTab={setCsTab} />
-            <CarriersStationsBody
-              tab={csTab}
-              compact
-              from={csFrom}
-              onPick={(p: CarriersStationsPick) => {
-                const at = p.at;
-                csOwnPick.current = `${at.x.toFixed(1)},${at.y.toFixed(1)},${at.z.toFixed(1)}`;
-                if (p.kind === "carrier") extraSet.carriers(true);
-                if (p.kind === "station") extraSet.stations(true);
-                engine.current?.flyTo(at, 400);
-                if (p.kind === "station" && p.stationSys != null)
-                  engine.current?.select({ kind: "marker", layer: "x-stations", id: String(p.stationSys), ...at });
-              }}
-            />
-          </div>
-        </aside>
+        <StationsDrawer
+          tab={csTab}
+          setTab={setCsTab}
+          from={csFrom}
+          onPick={(p: CarriersStationsPick) => {
+            const at = p.at;
+            csOwnPick.current = `${at.x.toFixed(1)},${at.y.toFixed(1)},${at.z.toFixed(1)}`;
+            if (p.kind === "carrier") extraSet.carriers(true);
+            if (p.kind === "station") extraSet.stations(true);
+            engine.current?.flyTo(at, 400);
+            if (p.kind === "station" && p.stationSys != null)
+              engine.current?.select({ kind: "marker", layer: "x-stations", id: String(p.stationSys), ...at });
+          }}
+        />
       ) : null}
 
       {drawer === "jumponium" ? (
@@ -1595,36 +1558,20 @@ export function GalaxyMap3D() {
       ) : null}
 
       {drawer === "navroute" ? (
-        <aside className="g3d-drawer g3d-drawer--filter" aria-label="NavRoute" data-testid="g3d-navroute">
-          <MenuHead title="NavRoute" help={G3D_HELP.navroute} />
-          <GalaxyNavRoutePanel
-            next={route?.navRoute ?? []}
-            readRoute={readRoute}
-            onShown={setNavShown}
-            onFly={(s) => engine.current?.flyTo({ x: s.pos[0], y: s.pos[1], z: s.pos[2] }, 250)}
-          />
-        </aside>
+        <NavRouteDrawer
+          next={route?.navRoute ?? []}
+          readRoute={readRoute}
+          onShown={setNavShown}
+          onFly={(s) => engine.current?.flyTo({ x: s.pos[0], y: s.pos[1], z: s.pos[2] }, 250)}
+        />
       ) : null}
 
       {drawer === "filter" ? (
-        <aside className="g3d-drawer g3d-drawer--filter" aria-label="Filter" data-testid="g3d-filter">
-          <MenuHead title="Filter" help={G3D_HELP.filter} />
-          <GalaxyFilterPanel value={filter} onChange={setFilter} matched={filterMatched} busy={filterBusy} />
-        </aside>
+        <FilterDrawer value={filter} onChange={setFilter} matched={filterMatched} busy={filterBusy} />
       ) : null}
 
       {drawer === "search" ? (
-        <aside className="g3d-drawer g3d-drawer--search" aria-label="Search" data-testid="g3d-search">
-          <MenuHead title="Species search" help={G3D_HELP.search} />
-          <GalaxySearchPanel variant="menu" onApply={onApply} commanderRegionId={commanderRegionId} />
-          {search ? (
-            <p className="g3d-panel__note">
-              {search.label}: {search.matchedSystems.toLocaleString()} systems in{" "}
-              {search.spreadCells.toLocaleString()} sectors; the map shows one per sector (
-              {search.hits.length.toLocaleString()}).
-            </p>
-          ) : null}
-        </aside>
+        <SearchDrawer onApply={onApply} commanderRegionId={commanderRegionId} search={search} />
       ) : null}
 
       {codexOn ? (
@@ -1643,146 +1590,20 @@ export function GalaxyMap3D() {
       </Suspense>
 
       <header className="g3d-bar" ref={barRef}>
-        <nav className="g3d-tabs" aria-label="Galaxy map menus">
-          {G3D_TABS.map((t) => {
-            const on = drawer === t.key;
-            const label = t.key === "filter" && filterTicks ? `Filter (${filterTicks})` : t.label;
-            return (
-              <Tooltip key={t.key} text={t.hint}>
-                <button
-                  type="button"
-                  className={`${on ? "g3d-tab g3d-tab--on" : "g3d-tab"}${t.key === "view" && indexDue && !on ? ` ${DUE_CLASS}` : ""}`}
-                  aria-pressed={on}
-                  aria-label={label}
-                  onClick={() => openDrawer(t.key)}
-                >
-                  <G3dIcon name={t.key} />
-                  {t.key === "filter" && filterTicks ? (
-                    <span className="g3d-tab__badge">{filterTicks}</span>
-                  ) : null}
-                </button>
-              </Tooltip>
-            );
-          })}
-        </nav>
-        <div className="g3d-find g3d-find--centre">
-          <input
-            type="search"
-            className="g3d-find__input"
-            placeholder="Find a system, sector or region"
-            aria-label="Find"
-            value={findText}
-            onChange={(ev) => {
-              setFindText(ev.target.value);
-              setFindOpen(true);
-            }}
-            onFocus={() => setFindOpen(true)}
-            onKeyDown={(ev) => ev.key === "Escape" && setFindOpen(false)}
-          />
-          {hasFind ? (
-            <ul className="g3d-find__list" role="listbox" data-testid="g3d-find">
-              {findRegions.map((a) => (
-                <li key={`r${a.index}`}>
-                  <button type="button" onClick={() => go({ x: a.x, y: 0, z: a.z }, 40_000)}>
-                    <span>{a.name}</span>
-                    <em>region</em>
-                  </button>
-                </li>
-              ))}
-              {find?.sectors.map((s) => (
-                <li key={`s${s.name}`}>
-                  <button type="button" onClick={() => go(s, 12_000)}>
-                    <span>{s.name}</span>
-                    <em>sector · {formatCount(s.systems)}</em>
-                  </button>
-                </li>
-              ))}
-              {find?.systems.map((s) => (
-                <li key={`y${s.addr ?? s.ordinal}`}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      go(
-                        s,
-                        400,
-                        s.mine
-                          ? { kind: "marker", layer: "you", id: s.addr!, x: s.x, y: s.y, z: s.z }
-                          : s.plotted
-                            ? { kind: "marker", layer: "plotted", id: s.addr!, x: s.x, y: s.y, z: s.z }
-                            : { kind: "index", ordinal: s.ordinal!, x: s.x, y: s.y, z: s.z },
-                      )
-                    }
-                  >
-                    <span>{s.name}</span>
-                    <em title={s.plotted}>{s.mine ? "yours" : s.plotted ? "plotted" : "system"}</em>
-                  </button>
-                </li>
-              ))}
-              {find?.stations?.map((h) => (
-                <li key={`st${h.layerId}-${h.label}`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      extraSet.stations(true);
-                      go(h, 400, {
-                        kind: "marker",
-                        layer: "x-stations",
-                        id: String(h.layerId),
-                        x: h.x,
-                        y: h.y,
-                        z: h.z,
-                      });
-                    }}
-                  >
-                    <span className={h.own ? "stations-own" : undefined}>{h.label}</span>
-                    <em>
-                      {h.own ? "your station" : "station"}
-                      {h.pad ? ` · ${h.pad} pad` : ""}
-                      {h.label === h.name ? ` · ${h.system}` : ""}
-                    </em>
-                  </button>
-                </li>
-              ))}
-              {findLayerHits.map((h) => (
-                <li key={`l${h.kind}${h.id}`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      extraSet[h.kind](true);
-                      go(h, 400, { kind: "marker", layer: `x-${h.kind}`, id: h.id, x: h.x, y: h.y, z: h.z });
-                    }}
-                  >
-                    <span>{h.label}</span>
-                    <em>{h.what}</em>
-                  </button>
-                </li>
-              ))}
-              {spanshShown.map((h) => (
-                <li key={`s${h.systemAddress}`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSpanshPicked((m) => new Map(m).set(String(h.systemAddress), h));
-                      go({ x: h.x!, y: h.y!, z: h.z! }, 400, {
-                        kind: "marker",
-                        layer: "spansh",
-                        id: String(h.systemAddress),
-                        x: h.x!,
-                        y: h.y!,
-                        z: h.z!,
-                      });
-                    }}
-                  >
-                    <span>{h.starSystem}</span>
-                    <em>Spansh</em>
-                  </button>
-                </li>
-              ))}
-              {spanshFind.busy ? <li className="g3d-find__more">Asking Spansh…</li> : null}
-              {find?.partial ? <li className="g3d-find__more">Type more of the name for the rest</li> : null}
-            </ul>
-          ) : null}
-        </div>
+        <MapTabs drawer={drawer} filterTicks={filterTicks} indexDue={indexDue} onOpen={openDrawer} />
+        <FindBox
+          findText={findText}
+          setFindText={setFindText}
+          findOpen={findOpen}
+          setFindOpen={setFindOpen}
+          find={find}
+          findRegions={findRegions}
+          findLayerHits={findLayerHits}
+          spanshFind={spanshFind}
+          setSpanshPicked={setSpanshPicked}
+          extraSet={extraSet}
+          go={go}
+        />
         <span className="g3d-title">Galaxy map</span>
       </header>
 

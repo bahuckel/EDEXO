@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -13,6 +14,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { writeFileAtomic } = require("./atomicWrite.cjs");
 
+/** @type {Record<string, { label: string; url: string }>} */
 const SEARCH_ENGINES = {
   duckduckgo: { label: "DuckDuckGo", url: "https://duckduckgo.com/?q=%s" },
   startpage: { label: "Startpage", url: "https://www.startpage.com/do/search?q=%s" },
@@ -36,13 +38,23 @@ const MAX_LINKS = 40;
 const MAX_SITES = 2000;
 const MAX_NEVER = 2000;
 
-/** An exact https origin ("https://host[:port]"), or null. */
+/**
+ * An exact https origin ("https://host[:port]"), or null.
+ *
+ * @param {unknown} raw
+ * @returns {string | null}
+ */
 function httpsOrigin(raw) {
   const u = httpUrl(raw);
-  return u && u.protocol === "https:" && u.origin === raw ? raw : null;
+  return u && u.protocol === "https:" && u.origin === raw ? u.origin : null;
 }
 
-/** An http(s) URL, or null. */
+/**
+ * An http(s) URL, or null.
+ *
+ * @param {unknown} raw
+ * @returns {URL | null}
+ */
 function httpUrl(raw) {
   if (typeof raw !== "string" || raw.length > 2048) return null;
   try {
@@ -54,10 +66,25 @@ function httpUrl(raw) {
 }
 
 /**
+ * @typedef {{ remember: boolean; blocking: boolean; origins: string[] }} SitePrefs
+ * @typedef {{ name: string; url: string }} Link
+ * @typedef {{
+ *   sites: Record<string, SitePrefs>;
+ *   links: Link[];
+ *   engine: string;
+ *   customSearch: string | null;
+ *   keepCache: boolean;
+ *   rememberPasswords: boolean;
+ *   passwordNever: string[];
+ * }} BrowserPrefsData
+ */
+
+/**
  * @param {{ dir: string }} o
  */
 function createBrowserPrefs(o) {
   const file = path.join(o.dir, "edexo-browser.json");
+  /** @type {BrowserPrefsData} */
   let data = {
     sites: {},
     links: [],
@@ -77,16 +104,16 @@ function createBrowserPrefs(o) {
             remember: s.remember === true,
             blocking: s.blocking !== false,
             origins: Array.isArray(s.origins)
-              ? s.origins.filter((x) => typeof x === "string" && httpUrl(x)).slice(0, 50)
+              ? s.origins.filter((/** @type {unknown} */ x) => typeof x === "string" && httpUrl(x)).slice(0, 50)
               : [],
           };
         }
       }
       if (Array.isArray(raw.links))
         data.links = raw.links
-          .filter((l) => l && typeof l.name === "string" && httpUrl(l.url))
+          .filter((/** @type {any} */ l) => l && typeof l.name === "string" && httpUrl(l.url))
           .slice(0, MAX_LINKS)
-          .map((l) => ({ name: l.name.slice(0, 60), url: httpUrl(l.url).href }));
+          .map((/** @type {Link} */ l) => ({ name: l.name.slice(0, 60), url: /** @type {URL} */ (httpUrl(l.url)).href }));
       if (typeof raw.engine === "string" && (raw.engine in SEARCH_ENGINES || raw.engine === "custom"))
         data.engine = raw.engine;
       if (
@@ -98,7 +125,7 @@ function createBrowserPrefs(o) {
       data.keepCache = raw.keepCache === true;
       data.rememberPasswords = raw.rememberPasswords === true;
       if (Array.isArray(raw.passwordNever))
-        data.passwordNever = [...new Set(raw.passwordNever.filter((x) => httpsOrigin(x)))].slice(
+        data.passwordNever = [...new Set(raw.passwordNever.filter((/** @type {unknown} */ x) => httpsOrigin(x)))].slice(
           0,
           MAX_NEVER,
         );
@@ -116,7 +143,9 @@ function createBrowserPrefs(o) {
     }
   };
 
+  /** @param {string} domain @returns {SitePrefs} */
   const site = (domain) => data.sites[domain] ?? { remember: false, blocking: true, origins: [] };
+  /** @param {string} domain @param {Partial<SitePrefs>} patch */
   const setSite = (domain, patch) => {
     if (!/^[a-z0-9.-]{1,253}$/.test(domain)) return;
     const next = { ...site(domain), ...patch };
@@ -129,22 +158,29 @@ function createBrowserPrefs(o) {
   return {
     site,
     /** Remember this site (keep its cookies and storage), or not. */
-    setRemember: (domain, on) =>
+    setRemember: (/** @type {string} */ domain, /** @type {unknown} */ on) =>
       setSite(domain, { remember: on === true, origins: on ? site(domain).origins : [] }),
-    setBlocking: (domain, on) => setSite(domain, { blocking: on !== false }),
-    /** An origin of a remembered site seen in a tab: its storage is kept with the site's. */
+    setBlocking: (/** @type {string} */ domain, /** @type {unknown} */ on) => setSite(domain, { blocking: on !== false }),
+    /**
+     * An origin of a remembered site seen in a tab: its storage is kept with the site's.
+     *
+     * @param {string} domain
+     * @param {string} origin
+     */
     noteOrigin(domain, origin) {
       const s = data.sites[domain];
       if (!s || !s.remember || s.origins.includes(origin) || s.origins.length >= 50) return;
       s.origins.push(origin);
       save();
     },
+    /** @param {string} domain */
     forget(domain) {
       delete data.sites[domain];
       save();
     },
     /** Every origin whose storage is kept. */
     keptOrigins() {
+      /** @type {string[]} */
       const out = [];
       for (const [d, s] of Object.entries(data.sites)) if (s.remember) out.push(...originsOf(d, s.origins));
       return [...new Set(out)];
@@ -154,6 +190,7 @@ function createBrowserPrefs(o) {
       ...DEFAULT_LINKS.map((l) => ({ ...l, builtIn: true })),
       ...data.links.map((l) => ({ ...l, builtIn: false })),
     ],
+    /** @param {unknown} name @param {unknown} url */
     addLink(name, url) {
       const u = httpUrl(url);
       const n = typeof name === "string" ? name.trim().slice(0, 60) : "";
@@ -165,6 +202,7 @@ function createBrowserPrefs(o) {
       save();
       return true;
     },
+    /** @param {unknown} url */
     removeLink(url) {
       const before = data.links.length;
       data.links = data.links.filter((l) => l.url !== url);
@@ -174,6 +212,7 @@ function createBrowserPrefs(o) {
     engines: () => Object.entries(SEARCH_ENGINES).map(([key, e]) => ({ key, label: e.label })),
     engine: () => data.engine,
     customSearch: () => data.customSearch,
+    /** @param {string} key @param {unknown} [custom] */
     setEngine(key, custom) {
       if (key === "custom") {
         if (typeof custom !== "string" || !custom.includes("%s") || !httpUrl(custom.replace("%s", "x")))
@@ -186,36 +225,45 @@ function createBrowserPrefs(o) {
     },
     /** Keep the HTTP cache when the rest of what sites stored is cleared (pages load faster on a revisit). */
     keepCache: () => data.keepCache,
+    /** @param {unknown} on */
     setKeepCache(on) {
       data.keepCache = on === true;
       save();
     },
     /** Offer to save logins, and fill saved ones from the key button. Off leaves the saved ones in place. */
     rememberPasswords: () => data.rememberPasswords,
+    /** @param {unknown} on */
     setRememberPasswords(on) {
       data.rememberPasswords = on === true;
       save();
     },
     /** Origins never to offer a password save for ("Never for this site"). */
     passwordNever: () => [...data.passwordNever],
+    /** @param {unknown} origin */
     addPasswordNever(origin) {
+      const ok = httpsOrigin(origin);
       if (
-        !httpsOrigin(origin) ||
-        data.passwordNever.includes(origin) ||
+        !ok ||
+        data.passwordNever.includes(ok) ||
         data.passwordNever.length >= MAX_NEVER
       )
         return false;
-      data.passwordNever.push(origin);
+      data.passwordNever.push(ok);
       save();
       return true;
     },
+    /** @param {unknown} origin */
     removePasswordNever(origin) {
       const before = data.passwordNever.length;
       data.passwordNever = data.passwordNever.filter((x) => x !== origin);
       if (data.passwordNever.length !== before) save();
       return data.passwordNever.length !== before;
     },
-    /** The search URL for typed text. */
+    /**
+     * The search URL for typed text.
+     *
+     * @param {string} text
+     */
     searchUrl(text) {
       const tpl =
         data.engine === "custom" && data.customSearch

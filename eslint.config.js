@@ -166,7 +166,7 @@ export default tseslint.config(
   },
   ...Object.entries({
     "src/client/galaxy3d/GalaxyEngine.ts": 1900,
-    "src/client/GalaxyMap3D.tsx": 1600,
+    "src/client/GalaxyMap3D.tsx": 1500,
   }).map(([file, max]) => ({
     files: [file],
     rules: { "max-lines": ["warn", { max, skipBlankLines: true, skipComments: true }] },
