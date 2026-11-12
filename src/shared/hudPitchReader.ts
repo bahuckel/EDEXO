@@ -420,17 +420,25 @@ function framedBy(rgba: Rgba, w: number, h: number, box: PitchBox): Rgb | null {
   };
   const MIN = 18;
   type Pt = { x0: number; y0: number; x1: number; y1: number };
+  /*
+    Every row that could be the line at the digits' middle column, the strongest first, until one traces along the box: a
+    star just above a box outshone its thin outline, the strongest row traced 5 px and the box counted as unframed
+    (2026-11-13: his 0716 "59", and most of the 35 EDHM shots that found no framed pair were on star fields).
+  */
   const trace = (ya: number, yb: number): Pt[] | null => {
-    let y0 = -1;
-    let best = MIN - 1;
+    const rows: { y: number; c: number }[] = [];
     for (let y = ya; y <= yb; y++) {
       const c = line(cx, y);
-      if (c > best) {
-        best = c;
-        y0 = y;
-      }
+      if (c >= MIN) rows.push({ y, c });
     }
-    if (y0 < 0) return null;
+    rows.sort((a, b) => b.c - a.c);
+    for (const { y } of rows) {
+      const pts = traceFrom(y);
+      if (pts) return pts;
+    }
+    return null;
+  };
+  const traceFrom = (y0: number): Pt[] | null => {
     let x0 = cx;
     let x1 = cx;
     const pts: Pt[] = [{ x0: cx, y0, x1: cx, y1: y0 }];
@@ -460,9 +468,12 @@ function framedBy(rgba: Rgba, w: number, h: number, box: PitchBox): Rgb | null {
     }
     return x0 <= left && x1 >= right && x1 - x0 + 1 >= dh * 2 ? pts : null;
   };
-  // Clear of the digits' own soft edge.
-  const above = trace(Math.round(top - dh), Math.round(top - dh * 0.2));
-  const below = above && trace(Math.round(bottom + dh * 0.2), Math.round(bottom + dh));
+  /*
+    Clear of the digits' own soft edge: a tenth of a digit (was a fifth; his 0371 theme draws the box tight, its top line
+    0.19 of a digit above the digits). Their glow does not pass for a line: it is not brighter than the digit 3 rows on.
+  */
+  const above = trace(Math.round(top - dh), Math.round(top - dh * 0.1));
+  const below = above && trace(Math.round(bottom + dh * 0.1), Math.round(bottom + dh));
   return above && below ? strokeColour(rgba, w, [...above, ...below]) : null;
 }
 
@@ -1037,3 +1048,4 @@ function readHeadingIn(
   const mean = near.reduce((t, f) => t + f, 0) / near.length;
   return { headingDeg: Math.round(((mean % 360) + 360) % 360 * 10) / 10, boxDeg, pxPerDeg };
 }
+
