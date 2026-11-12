@@ -39,6 +39,9 @@ export const NOT_SHIPPED = Object.freeze([
   */
   "galaxy/bio-index.bin",
   "galaxy/system-traits.bin.gz",
+  // The old 1212x864 galaxy picture and the large one before its colours: the maps use milkyway-4096.jpg (2026-11-12).
+  "galaxy/milkyway-game-normalized.jpg",
+  "galaxy/milkyway-4096-raw.jpg",
   // Imported at build time (src/shared/boxelRates.ts, boxelBioRates.ts, boxelPositionGolden.ts): already inside the
   // bundles, nothing reads the files (review 2026-11-07).
   "boxel/boxel-rates.json",

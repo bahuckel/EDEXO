@@ -82,19 +82,18 @@ const SAG_A_X_LY = 25.21;
 const SAG_A_Z_LY = 25899.97;
 
 /**
- * Where Sagittarius A* falls inside the picture, in its own pixels (1212x864).
+ * How wide the galaxy picture is on the region grid, in grid pixels: its own width at any resolution, because the
+ * picture is made square with Sagittarius A* in its middle (docs/perf/galaxy-picture-4096.py, from the owner's
+ * 6434 px docs/galaxy.jpg, 2026-11-12: 6400 source px across, turned upright by 3.936°), in the old copy's colours
+ * ring by ring round the core (docs/perf/galaxy-picture-colours.py; owner: "the accuracy of the galaxy from the new
+ * picture, but the colors of the old one").
  *
- * Fitted on 2026-11-12 against EDAstro's region map, which lays the same picture under the same region borders
- * (owner: one of our arms ran through Tenebrae, which is dark on EDAstro's). Two fits, composed: the region grid onto
- * EDAstro's orange borders (scale and shift, mean distance 3.4 px), then the picture onto EDAstro's picture (scale,
- * rotation and shift, correlation 0.98; the old placement scored 0.91). The rotation came out at -0.015°, so none is
- * applied. The first measurement (brightest half-percent at 587.7, 433.7, and the scale from matching the region
- * map's footprint to the luminous disc) put the picture 15 % too large: the regions reach past the visible disc.
+ * The chain behind it: the old 1212x864 copy was fitted on 2026-11-12 against EDAstro's region map, which lays the
+ * same picture under the same region borders (region grid onto EDAstro's borders, mean distance 3.4 px; picture onto
+ * its picture, correlation 0.98), then the large picture onto that copy (correlation 0.955: 0.287293 grid px per
+ * source px, Sagittarius A* at source px 3251.4, 3293.9). Before the EDAstro fit the picture sat 15 % too large.
  */
-const GALAXY_IMAGE_CORE_PX = { x: 600.6, y: 444.0 };
-
-/** Region-grid pixels per picture pixel, from the same fit. */
-const GALAXY_IMAGE_SCALE = 2.2902;
+const GALAXY_GRID_SPAN = 1838.68;
 
 /**
  * How much of the region colouring survives over the photograph.
@@ -139,11 +138,13 @@ export function galaxyImageRect(
   width: number;
   height: number;
 } {
+  // square, Sagittarius A* in the middle (GALAXY_GRID_SPAN): the same place whatever the resolution
+  const scale = GALAXY_GRID_SPAN / imageWidth;
   return {
-    x: regionPxForX(SAG_A_X_LY) - GALAXY_IMAGE_CORE_PX.x * GALAXY_IMAGE_SCALE,
-    y: canvasYForZ(SAG_A_Z_LY) - GALAXY_IMAGE_CORE_PX.y * GALAXY_IMAGE_SCALE,
-    width: imageWidth * GALAXY_IMAGE_SCALE,
-    height: imageHeight * GALAXY_IMAGE_SCALE,
+    x: regionPxForX(SAG_A_X_LY) - (imageWidth / 2) * scale,
+    y: canvasYForZ(SAG_A_Z_LY) - (imageHeight / 2) * scale,
+    width: imageWidth * scale,
+    height: imageHeight * scale,
   };
 }
 
@@ -154,32 +155,39 @@ export interface GalaxyImage {
   height: number;
 }
 
-/** Where the game's picture of the galaxy is served (data/galaxy/milkyway-game-normalized.jpg). */
+/** Where the galaxy picture is served (data/galaxy/milkyway-4096.jpg). */
 export const GALAXY_IMAGE_URL = "/api/galaxy-image";
 
-/** The picture's frame for galaxySprites: its size, Sagittarius A*'s pixel and light years per pixel. */
+/** The picture's frame for galaxySprites: its size, Sagittarius A*'s pixel (the middle) and light years per pixel. */
 export function galaxyPictureFrame(width: number, height: number) {
   return {
     width,
     height,
-    coreX: GALAXY_IMAGE_CORE_PX.x,
-    coreY: GALAXY_IMAGE_CORE_PX.y,
-    lyPerPx: GALAXY_IMAGE_SCALE * (4096 / 83),
+    coreX: width / 2,
+    coreY: height / 2,
+    lyPerPx: (GALAXY_GRID_SPAN / width) * (4096 / 83),
   };
 }
 
-let sprites: Promise<{ sprites: Float32Array; image: GalaxyImage } | null> | null = null;
+/**
+ * The clouds are worked out on a copy this wide, not the full picture: the sprite weights are a float per pixel, and
+ * 4096 squared of them is hundreds of MB in the worker for no visible gain (the clouds are soft, the sharp picture lies
+ * on the plane under them).
+ */
+const CLOUD_FRAME_PX = 1024;
+
+let sprites: Promise<{ sprites: Float32Array; image: GalaxyImage; frame: ReturnType<typeof galaxyPictureFrame> } | null> | null = null;
 
 /**
- * The galaxy map's Milky Way as clouds in 3D, made from the game's picture (owner, 2026-11-12: "simulate 3D clouds
- * based on brightness (brighter = more clouds)"): sprites in the picture's frame (galaxyCloudSprites), and the
- * picture itself for the faint copy laid on the plane under them. Made once a session in the worker; null where
- * this machine has no picture (a clone without data/galaxy/), and the map then shows the regions on black.
+ * The galaxy map's Milky Way as clouds in 3D, made from the picture (owner, 2026-11-12: "simulate 3D clouds based on
+ * brightness (brighter = more clouds)"): sprites in a 1024 px copy's frame (galaxyCloudSprites), and the full picture
+ * for the copy laid on the plane under them. Made once a session in the worker; null where this machine has no
+ * picture (a clone without data/galaxy/), and the map then shows the regions on black.
  */
 export function galaxyPictureSprites(counts: {
   emission: number;
   dust: number;
-}): Promise<{ sprites: Float32Array; image: GalaxyImage } | null> {
+}): Promise<{ sprites: Float32Array; image: GalaxyImage; frame: ReturnType<typeof galaxyPictureFrame> } | null> {
   if (sprites) return sprites;
   sprites = (async () => {
     if (typeof Worker === "undefined" || typeof document === "undefined") return null;
@@ -188,15 +196,18 @@ export function galaxyPictureSprites(counts: {
     const el = new Image();
     el.src = image.url;
     await el.decode();
+    const w = Math.min(CLOUD_FRAME_PX, image.width);
+    const h = Math.round((image.height * w) / image.width);
     const canvas = document.createElement("canvas");
-    canvas.width = image.width;
-    canvas.height = image.height;
+    canvas.width = w;
+    canvas.height = h;
     const g = canvas.getContext("2d");
     if (!g) return null;
-    g.drawImage(el, 0, 0);
-    const rgba = g.getImageData(0, 0, image.width, image.height).data;
-    const frame = galaxyPictureFrame(image.width, image.height);
-    return new Promise<{ sprites: Float32Array; image: GalaxyImage } | null>((resolve) => {
+    g.imageSmoothingQuality = "high";
+    g.drawImage(el, 0, 0, w, h);
+    const rgba = g.getImageData(0, 0, w, h).data;
+    const frame = galaxyPictureFrame(w, h);
+    return new Promise<{ sprites: Float32Array; image: GalaxyImage; frame: ReturnType<typeof galaxyPictureFrame> } | null>((resolve) => {
       const worker = new Worker(new URL("./galaxyClouds.worker.ts", import.meta.url), { type: "module" });
       worker.onerror = () => {
         worker.terminate();
@@ -204,7 +215,7 @@ export function galaxyPictureSprites(counts: {
       };
       worker.onmessage = (ev: MessageEvent<ArrayBuffer>) => {
         worker.terminate();
-        resolve({ sprites: new Float32Array(ev.data), image });
+        resolve({ sprites: new Float32Array(ev.data), image, frame });
       };
       worker.postMessage({ frame, rgba: rgba.buffer, sprites: counts }, [rgba.buffer]);
     });

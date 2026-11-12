@@ -88,25 +88,32 @@ describe("placing the photograph against the grid", () => {
    * the grid. Getting this wrong moves the whole galaxy without moving anything a reader can point
    * at, which is why it is pinned rather than eyeballed.
    */
-  it("puts the image's core pixel on Sagittarius A*", () => {
-    const rect = galaxyImageRect(1212, 864);
-    const scale = rect.width / 1212;
-    const coreX = rect.x + 600.6 * scale;
-    const coreY = rect.y + 444.0 * scale;
+  it("puts the image's middle on Sagittarius A*", () => {
+    const rect = galaxyImageRect(4096, 4096);
+    const coreX = rect.x + rect.width / 2;
+    const coreY = rect.y + rect.height / 2;
     // (25.21, 25899.97) through the same offsets the grid is built with.
     expect(xForRegionPx(coreX)).toBeCloseTo(25.21, 0);
     expect(zForRegionPz(REGION_MAP_SIZE - 1 - coreY)).toBeCloseTo(25899.97, 0);
   });
 
-  it("scales both axes by the same factor, so the galaxy is not stretched", () => {
-    const rect = galaxyImageRect(1212, 864);
-    expect(rect.width / 1212).toBeCloseTo(rect.height / 864, 10);
+  it("places the picture the same at any resolution (the 4096 px picture, the 1024 px cloud copy)", () => {
+    expect(galaxyImageRect(1024, 1024)).toEqual(galaxyImageRect(4096, 4096));
   });
 
-  it("overhangs the grid sideways, because the picture carries black around the disc", () => {
-    const rect = galaxyImageRect(1212, 864);
-    expect(rect.x).toBeLessThan(0);
-    expect(rect.x + rect.width).toBeGreaterThan(REGION_MAP_SIZE);
+  it("scales both axes by the same factor, so the galaxy is not stretched", () => {
+    const rect = galaxyImageRect(4096, 4096);
+    expect(rect.width).toBeCloseTo(rect.height, 10);
+  });
+
+  it("spans the galaxy: from the core out past Sol and most of the region grid", () => {
+    const rect = galaxyImageRect(4096, 4096);
+    // Sol, at (0, 0): inside, with room to spare
+    const solY = REGION_MAP_SIZE - 1 - (0 + 24105) / (4096 / 83);
+    expect(rect.y + rect.height).toBeGreaterThan(solY + 100);
+    // the fitted width (GALAXY_GRID_SPAN): about nine tenths of the grid
+    expect(rect.width / REGION_MAP_SIZE).toBeGreaterThan(0.85);
+    expect(rect.width / REGION_MAP_SIZE).toBeLessThan(0.95);
   });
 });
 

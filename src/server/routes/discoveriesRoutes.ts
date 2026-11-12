@@ -149,12 +149,13 @@ export function registerDiscoveriesRoutes(
 
   /**
    * The picture of the galaxy the maps draw behind the regions (owner, 2026-11-12: back, after the drawn one from
-   * 1.2.12): zannyuk's galaxy map made of in-game screenshots, shared for anyone to use (NOTICE.md). From
-   * `data/galaxy/`, gitignored; 404 where this machine has none, and the maps show the regions on black.
+   * 1.2.12): zannyuk's galaxy map made of in-game screenshots, shared for anyone to use (NOTICE.md), 4096 px
+   * (docs/perf/galaxy-picture-4096.py). From `data/galaxy/`, gitignored; 404 where this machine has none, and the
+   * maps show the regions on black.
    */
   app.get("/api/galaxy-image", (_req, res) => {
     perfCount("http.galaxyImage");
-    const file = path.join(getProjectRoot(), "data", "galaxy", "milkyway-game-normalized.jpg");
+    const file = path.join(getProjectRoot(), "data", "galaxy", "milkyway-4096.jpg");
     if (!existsSync(file)) {
       res.status(404).json({ error: "no galaxy image on this machine" });
       return;

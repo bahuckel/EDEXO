@@ -56,7 +56,6 @@ import { clearStationsAtCache } from "./galaxy3d/StationsAt";
 import { keptNeutronMarks, neutronMarkers, NEUTRON_LINE_COLOUR, type NeutronMark } from "./galaxy3d/neutronMarks";
 import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
 import {
-  galaxyPictureFrame,
   galaxyPictureSprites,
   galaxyImageRect,
   REGION_MAP_SIZE,
@@ -468,8 +467,9 @@ export function GalaxyMap3D() {
       .catch(() => null)
       .then((got) => {
         if (engine.current !== e || !got) return;
-        const f = galaxyPictureFrame(got.image.width, got.image.height);
-        const r = galaxyImageRect(f.width, f.height);
+        // the rect from the picture itself; the clouds' frame is the smaller copy they were worked out on
+        const f = got.frame;
+        const r = galaxyImageRect(got.image.width, got.image.height);
         const rect = {
           x0: xForRegionPx(r.x),
           x1: xForRegionPx(r.x + r.width),
