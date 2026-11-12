@@ -38,10 +38,10 @@ function refreshSharedLine() {
       var parts = ["Shared: " + used + " file" + (used === 1 ? "" : "s")];
       if (j.finds > 0) {
         parts.push(
-          j.finds.toLocaleString() + " finds from " + j.commanders + " commander" + (j.commanders === 1 ? "" : "s"),
+          j.finds.toLocaleString("en-US") + " finds from " + j.commanders + " commander" + (j.commanders === 1 ? "" : "s"),
         );
       }
-      if (j.ownBackupFinds > 0) parts.push("your backup: " + j.ownBackupFinds.toLocaleString());
+      if (j.ownBackupFinds > 0) parts.push("your backup: " + j.ownBackupFinds.toLocaleString("en-US"));
       if (skipped > 0) parts.push(skipped + " skipped");
       if (j.alerts > 0) parts.push(j.alerts + " gate notice" + (j.alerts === 1 ? "" : "s") + " (mail icon)");
       exomasterySub.textContent = parts.join(" · ");

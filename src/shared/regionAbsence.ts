@@ -218,7 +218,7 @@ export function regionDepletionDetail(regionName: string, count: number, expecte
 export function regionSiblingDepletionDetail(regionName: string, name: string, favourite: string, ratio: number): string {
   const times = ratio > 0 ? Math.round(1 / ratio) : Infinity;
   return (
-    `Out of place in ${regionName}: relative to ${favourite}, ${name} is ${Number.isFinite(times) ? `${times.toLocaleString()}×` : "far"} ` +
+    `Out of place in ${regionName}: relative to ${favourite}, ${name} is ${Number.isFinite(times) ? `${times.toLocaleString("en-US")}×` : "far"} ` +
     `rarer here than it is across the galaxy. Listed as a low-probability find rather than excluded.`
   );
 }
@@ -235,8 +235,8 @@ export function judgeRegionalGenusShare(count: number, genusRecords: number): Re
 export function regionGenusShareDetail(regionName: string, genusName: string, v: RegionGenusShareVerdict): string {
   const pct = (v.share * 100).toFixed(v.share < 0.001 ? 3 : 2);
   return (
-    `The rare one of its genus in ${regionName}: ${v.count.toLocaleString()} of ` +
-    `${v.genusRecords.toLocaleString()} ${genusName} records there (${pct} %). ` +
+    `The rare one of its genus in ${regionName}: ${v.count.toLocaleString("en-US")} of ` +
+    `${v.genusRecords.toLocaleString("en-US")} ${genusName} records there (${pct} %). ` +
     `Listed as a low-probability find rather than excluded.`
   );
 }
@@ -251,8 +251,8 @@ export function regionPresenceDetail(
   if (verdict.presence === "absent") {
     const tail = demoted ? " Listed as a low-probability find rather than excluded." : "";
     return verdict.count === 0
-      ? `Never recorded in ${regionName} — 0 of ${verdict.bioSystems.toLocaleString()} systems there with known biology.${tail}`
-      : `Barely recorded in ${regionName} — ${verdict.count.toLocaleString()} of ${verdict.bioSystems.toLocaleString()} systems there with known biology (${pct} %).${tail}`;
+      ? `Never recorded in ${regionName} — 0 of ${verdict.bioSystems.toLocaleString("en-US")} systems there with known biology.${tail}`
+      : `Barely recorded in ${regionName} — ${verdict.count.toLocaleString("en-US")} of ${verdict.bioSystems.toLocaleString("en-US")} systems there with known biology (${pct} %).${tail}`;
   }
-  return `${regionName}: ${verdict.count.toLocaleString()} of ${verdict.bioSystems.toLocaleString()} systems with known biology carry it (${pct} %).`;
+  return `${regionName}: ${verdict.count.toLocaleString("en-US")} of ${verdict.bioSystems.toLocaleString("en-US")} systems with known biology carry it (${pct} %).`;
 }

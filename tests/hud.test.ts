@@ -188,10 +188,10 @@ describe("HUD candidates", () => {
       });
       return document.querySelector(".hud-list li .cr")?.textContent;
     };
-    expect(priceOf("unwalked")).toBe((5_000_000).toLocaleString() + " CR ×5");
-    expect(priceOf("walked")).toBe((1_000_000).toLocaleString() + " CR ×1");
-    expect(priceOf("unknown")).toBe((1_000_000).toLocaleString() + " CR ×1 ?");
-    expect(priceOf(undefined)).toBe((1_000_000).toLocaleString() + " CR ×1 ?");
+    expect(priceOf("unwalked")).toBe("5,000,000 CR ×5");
+    expect(priceOf("walked")).toBe("1,000,000 CR ×1");
+    expect(priceOf("unknown")).toBe("1,000,000 CR ×1 ?");
+    expect(priceOf(undefined)).toBe("1,000,000 CR ×1 ?");
   });
 
   it("prefers the targeted body from Status.json and tags it", () => {
@@ -270,13 +270,13 @@ describe("HUD tracker", () => {
       return document.querySelector('[data-f="pay"]')?.textContent ?? "";
     };
     expect(run(0)).toBe("—");
-    expect(run(1)).toMatch(/1\s?000\s?000/);
+    expect(run(1)).toMatch(/1,000,000/);
     expect(document.querySelector(".trk")?.textContent).toContain("from first sample before second");
     // The 5× is the first footfall's only, never a new codex entry's (owner 2026-11-06, a commander's 5,000,000 "new
     // codex 5×" where the app said 1.00 M, the footfall another commander's).
-    expect(run(2)).toMatch(/1\s?000\s?000/);
+    expect(run(2)).toMatch(/1,000,000/);
     expect(run(2)).not.toContain("5×");
-    expect(run(2, 5)).toMatch(/5\s?000\s?000/);
+    expect(run(2, 5)).toMatch(/5,000,000/);
     expect(run(2, 5)).toContain("first footfall 5×");
   });
 
@@ -297,7 +297,7 @@ describe("HUD tracker", () => {
         },
       });
       const pay = document.querySelector('[data-f="pay"]')?.textContent ?? "";
-      expect(pay).toMatch(/1\s?000\s?000/);
+      expect(pay).toMatch(/1,000,000/);
       expect(pay).not.toContain("codex");
     }
   });

@@ -188,7 +188,7 @@ export function tierRegionDetail(regionName: string, v: TierRegionVerdict, demot
 function tierRegionDetailText(regionName: string, v: TierRegionVerdict, demoted: boolean): string {
   const label = rarityTierInfo(v.tier).label;
   if (!demoted) {
-    return `${label}; logged in ${v.count.toLocaleString()} system${v.count === 1 ? "" : "s"} in ${regionName} (EDSM codex).`;
+    return `${label}; logged in ${v.count.toLocaleString("en-US")} system${v.count === 1 ? "" : "s"} in ${regionName} (EDSM codex).`;
   }
   const seen = v.count === 0 ? "never logged" : `logged in only ${v.count} system${v.count === 1 ? "" : "s"}`;
   return (

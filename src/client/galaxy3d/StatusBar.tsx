@@ -53,11 +53,11 @@ export function StatusBar({
         <span>Loading 5.4 million systems…</span>
       ) : (
         <span>
-          {stats.overviewPoints.toLocaleString()} systems
+          {stats.overviewPoints.toLocaleString("en-US")} systems
           {stats.tilesLoaded
-            ? ` · close-up: ${stats.tilesLoaded} sectors, ${stats.tilePoints.toLocaleString()} systems`
+            ? ` · close-up: ${stats.tilesLoaded} sectors, ${stats.tilePoints.toLocaleString("en-US")} systems`
             : ""}
-          {stats.level ? ` · groups of ${stats.level.toLocaleString()} ly` : ""}
+          {stats.level ? ` · groups of ${stats.level.toLocaleString("en-US")} ly` : ""}
           {" · "}
           {fmtLy(stats.distanceLy)} away · tilt {stats.tiltDeg}°
         </span>

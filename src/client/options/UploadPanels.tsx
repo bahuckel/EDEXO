@@ -75,8 +75,8 @@ export function CanonnUploadPanel({ state }: { state: AppSnapshot["canonnUpload"
 
       {state.enabled && state.sent + state.failed > 0 ? (
         <p className="dim options-canonn-tally">
-          This session: {state.sent.toLocaleString()} sent
-          {state.failed > 0 ? `, ${state.failed.toLocaleString()} not accepted` : ""}.
+          This session: {state.sent.toLocaleString("en-US")} sent
+          {state.failed > 0 ? `, ${state.failed.toLocaleString("en-US")} not accepted` : ""}.
         </p>
       ) : null}
 
@@ -153,8 +153,8 @@ export function EddnUploadPanel({ state }: { state: AppSnapshot["eddnUpload"] })
 
       {state.enabled && state.sent + state.failed > 0 ? (
         <p className="dim options-canonn-tally">
-          This session: {state.sent.toLocaleString()} sent
-          {state.failed > 0 ? `, ${state.failed.toLocaleString()} not accepted` : ""}.
+          This session: {state.sent.toLocaleString("en-US")} sent
+          {state.failed > 0 ? `, ${state.failed.toLocaleString("en-US")} not accepted` : ""}.
         </p>
       ) : null}
 

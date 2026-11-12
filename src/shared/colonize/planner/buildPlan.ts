@@ -511,7 +511,7 @@ export function buildLogisticsPlan(args: {
 
   if (capped) {
     warnings.push(
-      `Plan stopped at ${MAX_TRIPS} trips with ${Math.round(totalNeedTons(needs)).toLocaleString()} t still outstanding — raise cargo capacity or narrow the active sites.`,
+      `Plan stopped at ${MAX_TRIPS} trips with ${Math.round(totalNeedTons(needs)).toLocaleString("en-US")} t still outstanding — raise cargo capacity or narrow the active sites.`,
     );
   }
 

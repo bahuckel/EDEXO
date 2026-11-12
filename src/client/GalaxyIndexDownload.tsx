@@ -27,7 +27,7 @@ interface IndexStatus {
   extraBytes?: number;
 }
 
-const mb = (n: number) => `${Math.round(n / 1e6).toLocaleString()} MB`;
+const mb = (n: number) => `${Math.round(n / 1e6).toLocaleString("en-US")} MB`;
 
 /** 5.3 million, 10.3k, 870. */
 export function fmtSystems(n: number): string {

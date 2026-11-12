@@ -123,8 +123,8 @@ export function formatCounters(c: ConsumerCounters): string {
   const secs = Math.max(1, Math.round((Date.now() - c.startedAt) / 1000));
   const rate = (c.frames / secs).toFixed(1);
   return (
-    `${secs}s · ${c.frames.toLocaleString()} frames (${rate}/s) · ` +
-    `${c.relevant.toLocaleString()} about biology · ` +
-    `${c.created.toLocaleString()} new bodies, ${c.updated.toLocaleString()} updated, ${c.ignored.toLocaleString()} ignored`
+    `${secs}s · ${c.frames.toLocaleString("en-US")} frames (${rate}/s) · ` +
+    `${c.relevant.toLocaleString("en-US")} about biology · ` +
+    `${c.created.toLocaleString("en-US")} new bodies, ${c.updated.toLocaleString("en-US")} updated, ${c.ignored.toLocaleString("en-US")} ignored`
   );
 }

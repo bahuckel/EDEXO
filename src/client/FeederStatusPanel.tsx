@@ -106,9 +106,9 @@ export function FeederStatusPanel({ status }: { status: FeederStatusDTO | null }
           <>
             <dt>Corpus</dt>
             <dd>
-              {snapshot.uniqueSystems.toLocaleString()} systems · {snapshot.uniquePlanets.toLocaleString()}{" "}
-              planets · {snapshot.uniqueSightings.toLocaleString()} sightings
-              <span className="dim"> · {snapshot.cumulativeCsvRows.toLocaleString()} CSV lines</span>
+              {snapshot.uniqueSystems.toLocaleString("en-US")} systems · {snapshot.uniquePlanets.toLocaleString("en-US")}{" "}
+              planets · {snapshot.uniqueSightings.toLocaleString("en-US")} sightings
+              <span className="dim"> · {snapshot.cumulativeCsvRows.toLocaleString("en-US")} CSV lines</span>
             </dd>
           </>
         ) : null}
@@ -118,7 +118,7 @@ export function FeederStatusPanel({ status }: { status: FeederStatusDTO | null }
         <div className="options-feeder-behind">
           <p className="warn tiny" style={{ marginBottom: "0.35rem" }}>
             {status.behindCount} profile{status.behindCount === 1 ? " is" : "s are"} behind the corpus —{" "}
-            {status.behindOccurrences.toLocaleString()} observed bodies are not in the data the app ranks
+            {status.behindOccurrences.toLocaleString("en-US")} observed bodies are not in the data the app ranks
             with.
           </p>
           <p className="dim tiny" style={{ marginBottom: "0.4rem" }}>
@@ -169,7 +169,7 @@ export function FeederStatusPanel({ status }: { status: FeederStatusDTO | null }
       {snapshot ? (
         <p className="dim tiny" style={{ marginTop: "0.5rem" }}>
           Corpus figures from the last <code>feeder {snapshot.lastCommand}</code> ·{" "}
-          {new Date(snapshot.writtenAtIso).toLocaleString()}. Profile figures are read live.
+          {new Date(snapshot.writtenAtIso).toLocaleString(undefined)}. Profile figures are read live.
         </p>
       ) : (
         <p className="dim tiny" style={{ marginTop: "0.5rem" }}>

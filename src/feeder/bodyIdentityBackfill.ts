@@ -254,24 +254,24 @@ const pct = (n: number, d: number) => (d === 0 ? "0.0" : ((n / d) * 100).toFixed
 export function formatBackfillReport(r: BackfillReport, applied: boolean): string {
   const out: string[] = [];
   out.push(
-    `Archives read      ${r.archivesRead}  (${r.recordsRead.toLocaleString()} records, ${r.elapsedMs} ms)`,
+    `Archives read      ${r.archivesRead}  (${r.recordsRead.toLocaleString("en-US")} records, ${r.elapsedMs} ms)`,
   );
-  out.push(`Distinct bodies    ${r.archiveBodies.toLocaleString()} named in the archives`);
+  out.push(`Distinct bodies    ${r.archiveBodies.toLocaleString("en-US")} named in the archives`);
   out.push(
-    `Records w/o BodyID ${r.recordsWithoutBodyId.toLocaleString()} (${pct(r.recordsWithoutBodyId, r.recordsRead)} %)`,
+    `Records w/o BodyID ${r.recordsWithoutBodyId.toLocaleString("en-US")} (${pct(r.recordsWithoutBodyId, r.recordsRead)} %)`,
   );
   out.push("");
   out.push(
-    `Planet rows        ${r.planetRows.toLocaleString()}  matched ${r.planetsMatched.toLocaleString()} ` +
-      `(${pct(r.planetsMatched, r.planetRows)} %)  unmatched ${r.planetsUnmatched.toLocaleString()}`,
+    `Planet rows        ${r.planetRows.toLocaleString("en-US")}  matched ${r.planetsMatched.toLocaleString("en-US")} ` +
+      `(${pct(r.planetsMatched, r.planetRows)} %)  unmatched ${r.planetsUnmatched.toLocaleString("en-US")}`,
   );
   out.push(
-    `Coverage now       ${r.coverage.planetsWithBodyId.toLocaleString()}/${r.coverage.planets.toLocaleString()} planets ` +
-      `have body_id, ${r.coverage.systemsWithEdsmId.toLocaleString()}/${r.coverage.systems.toLocaleString()} systems have edsm_id`,
+    `Coverage now       ${r.coverage.planetsWithBodyId.toLocaleString("en-US")}/${r.coverage.planets.toLocaleString("en-US")} planets ` +
+      `have body_id, ${r.coverage.systemsWithEdsmId.toLocaleString("en-US")}/${r.coverage.systems.toLocaleString("en-US")} systems have edsm_id`,
   );
   if (applied) {
     out.push(
-      `Written            ${r.planetsWritten.toLocaleString()} planet rows, ${r.systemsWritten.toLocaleString()} system rows`,
+      `Written            ${r.planetsWritten.toLocaleString("en-US")} planet rows, ${r.systemsWritten.toLocaleString("en-US")} system rows`,
     );
   } else {
     out.push(`Written            nothing — dry run. Re-run with --apply to write.`);
@@ -282,7 +282,7 @@ export function formatBackfillReport(r: BackfillReport, applied: boolean): strin
   // float64 steps in 128s, so about 1 value in 128 happens to land exactly. None of them can be
   // *trusted*, which is what makes Phase 2 necessary — but they are not all provably wrong.
   out.push(
-    `id64 on disk       ${r.id64Damaged.toLocaleString()}/${r.id64Seen.toLocaleString()} beyond 2^53 ` +
+    `id64 on disk       ${r.id64Damaged.toLocaleString("en-US")}/${r.id64Seen.toLocaleString("en-US")} beyond 2^53 ` +
       `(${pct(r.id64Damaged, r.id64Seen)} %) — none can be trusted, Phase 2 re-collects them`,
   );
 

@@ -30,7 +30,7 @@ export function listRowLimit(rows: number): number {
 
 export function fmtCr(n: number | null | undefined): string {
   if (n == null || !isFinite(n)) return "—";
-  return Number(n).toLocaleString() + " CR";
+  return Number(n).toLocaleString("en-US") + " CR";
 }
 export function fmtM(n: number | null | undefined): string {
   if (n == null || !isFinite(n)) return "—";

@@ -122,7 +122,7 @@ function TickRow({
   );
 }
 
-const fmt = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} M` : n >= 1e4 ? `${Math.round(n / 1e3)} k` : n.toLocaleString());
+const fmt = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} M` : n >= 1e4 ? `${Math.round(n / 1e3)} k` : n.toLocaleString("en-US"));
 
 export function GalaxyFilterPanel({
   value,
@@ -251,7 +251,7 @@ export function GalaxyFilterPanel({
           <>
             <div className="g3d-row">
               <span className="g3d-row__label g3d-filter__matched">
-                {busy ? "Finding…" : matched != null ? `${matched.toLocaleString()} systems match` : ""}
+                {busy ? "Finding…" : matched != null ? `${matched.toLocaleString("en-US")} systems match` : ""}
               </span>
               <button
                 type="button"

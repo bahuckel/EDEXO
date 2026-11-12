@@ -19,7 +19,7 @@ export function rarityTitle(r: SpeciesRarity): string {
     typeof r.share === "number"
       ? `on ${pct(r.share)} of the bio bodies of its planet types`
       : "by system count";
-  return `${t.label} galaxy-wide — ${onBodies}; logged in ${r.systems.toLocaleString()} systems (all colours).`;
+  return `${t.label} galaxy-wide — ${onBodies}; logged in ${r.systems.toLocaleString("en-US")} systems (all colours).`;
 }
 
 /** Two strands of a helix, one and a half turns, and the rungs between them — built once. */
@@ -55,11 +55,11 @@ function regionalTitle(g: SpeciesRarity, r: RegionalRarity): string {
     );
   }
   if (!r.tier)
-    return `Found in ${r.region} (${r.count.toLocaleString()} systems); no body data there. ${galaxy}`;
+    return `Found in ${r.region} (${r.count.toLocaleString("en-US")} systems); no body data there. ${galaxy}`;
   const here =
     typeof r.share === "number" && typeof r.of === "number"
-      ? `on ${pct(r.share)} of the ${r.of.toLocaleString()} bio bodies of its planet types there`
-      : `logged in ${r.count.toLocaleString()} systems there`;
+      ? `on ${pct(r.share)} of the ${r.of.toLocaleString("en-US")} bio bodies of its planet types there`
+      : `logged in ${r.count.toLocaleString("en-US")} systems there`;
   return `${rarityTierInfo(r.tier).label} in ${r.region} — ${here}. ${galaxy}`;
 }
 

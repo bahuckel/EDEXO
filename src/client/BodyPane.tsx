@@ -303,7 +303,7 @@ export const BodyPane = memo(function BodyPane({
             <GlanceGenera rows={genusRows} />
             {arrivalLs != null ? (
               <span className="glance-item">
-                {arrivalLs === 0 ? "0" : arrivalLs.toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
+                {arrivalLs === 0 ? "0" : arrivalLs.toLocaleString("en-US", { maximumFractionDigits: 0 })}{" "}
                 {/* The game's spelling, Ls, as in the cards (review V5); the glance bar's capitals skip it. */}
                 <small className="glance-unit-ls">Ls</small>
               </span>

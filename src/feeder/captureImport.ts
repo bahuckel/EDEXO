@@ -302,16 +302,16 @@ export async function importCapture(
 
 export function formatCaptureReport(r: CaptureImportReport, apply: boolean): string {
   const lines = [
-    `bodies in export        ${r.bodies.toLocaleString()}`,
-    `species sightings       ${r.sightings.toLocaleString()} (Log/Sample and organic codex entries)`,
-    `already in the corpus   ${r.alreadyKnown.toLocaleString()}`,
-    `new to the corpus       ${[...r.newBySpecies.values()].reduce((a, b) => a + b, 0).toLocaleString()} across ${r.newBySpecies.size} species`,
+    `bodies in export        ${r.bodies.toLocaleString("en-US")}`,
+    `species sightings       ${r.sightings.toLocaleString("en-US")} (Log/Sample and organic codex entries)`,
+    `already in the corpus   ${r.alreadyKnown.toLocaleString("en-US")}`,
+    `new to the corpus       ${[...r.newBySpecies.values()].reduce((a, b) => a + b, 0).toLocaleString("en-US")} across ${r.newBySpecies.size} species`,
   ];
   if (r.unmatchedNames.size) {
     lines.push(`not in the corpus index ${[...r.unmatchedNames].map(([n, c]) => `${n} ×${c}`).join(", ")}`);
   }
   if (apply) {
-    lines.push(`packs written           ${r.packsWritten.toLocaleString()} · system files ${r.systemFilesWritten.toLocaleString()}`);
+    lines.push(`packs written           ${r.packsWritten.toLocaleString("en-US")} · system files ${r.systemFilesWritten.toLocaleString("en-US")}`);
     if (r.backup) lines.push(`store backed up to      ${r.backup}`);
   }
   lines.push("", "by species:");

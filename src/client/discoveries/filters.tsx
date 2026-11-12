@@ -65,7 +65,7 @@ export function ChipRow({
           onClick={() => onToggle(o.key)}
         >
           {o.label}
-          {o.n != null ? <span className="dim tiny"> {o.n.toLocaleString()}</span> : null}
+          {o.n != null ? <span className="dim tiny"> {o.n.toLocaleString("en-US")}</span> : null}
         </button>
       ))}
     </div>
@@ -147,7 +147,7 @@ export function Search({
         onChange={(e) => setQuery(e.target.value)}
       />
       <span className="my-exo-search-count dim tiny">
-        {n === of ? `${of.toLocaleString()} ${what}` : `${n.toLocaleString()} of ${of.toLocaleString()}`}
+        {n === of ? `${of.toLocaleString("en-US")} ${what}` : `${n.toLocaleString("en-US")} of ${of.toLocaleString("en-US")}`}
       </span>
     </div>
   );

@@ -193,7 +193,7 @@ function TableInner<T>({
         title="Every row of this table, in this order, as a CSV file for a spreadsheet"
         onClick={() => downloadCsv(csvFileName(csvName), toCsv(sorted, columns))}
       >
-        Export CSV ({sorted.length.toLocaleString()})
+        Export CSV ({sorted.length.toLocaleString("en-US")})
       </button>
     </div>
   ) : null;
@@ -201,7 +201,7 @@ function TableInner<T>({
   const more =
     sorted.length > PAGE ? (
       <p className="dim tiny disc-more">
-        Showing the first {PAGE.toLocaleString()} of {sorted.length.toLocaleString()} — narrow the search or
+        Showing the first {PAGE.toLocaleString("en-US")} of {sorted.length.toLocaleString("en-US")} — narrow the search or
         sort to bring the rest into view.
       </p>
     ) : null;

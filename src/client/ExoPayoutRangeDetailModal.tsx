@@ -139,9 +139,9 @@ export function ExoPayoutRangeDetailModal({
                 {pr.minTotalSpecies.map((row) => (
                   <tr key={`min-${row.id}`}>
                     <td>{row.displayName}</td>
-                    <td className={`exo-payout-detail-num${listCls}`}>{row.listCredits.toLocaleString()}</td>
+                    <td className={`exo-payout-detail-num${listCls}`}>{row.listCredits.toLocaleString("en-US")}</td>
                     <td className={`exo-payout-detail-num exo-payout-detail-footfall-col${ffCls}`}>
-                      {(row.listCredits * 5).toLocaleString()}
+                      {(row.listCredits * 5).toLocaleString("en-US")}
                     </td>
                   </tr>
                 ))}
@@ -150,10 +150,10 @@ export function ExoPayoutRangeDetailModal({
                     <strong>Total</strong>
                   </td>
                   <td className={`exo-payout-detail-num${listCls}`}>
-                    <strong>{minListTot.toLocaleString()}</strong>
+                    <strong>{minListTot.toLocaleString("en-US")}</strong>
                   </td>
                   <td className={`exo-payout-detail-num exo-payout-detail-footfall-col${ffCls}`}>
-                    <strong>{minFfTot.toLocaleString()}</strong>
+                    <strong>{minFfTot.toLocaleString("en-US")}</strong>
                   </td>
                 </tr>
               </tbody>
@@ -184,9 +184,9 @@ export function ExoPayoutRangeDetailModal({
                 {pr.maxTotalSpecies.map((row) => (
                   <tr key={`max-${row.id}`}>
                     <td>{row.displayName}</td>
-                    <td className={`exo-payout-detail-num${listCls}`}>{row.listCredits.toLocaleString()}</td>
+                    <td className={`exo-payout-detail-num${listCls}`}>{row.listCredits.toLocaleString("en-US")}</td>
                     <td className={`exo-payout-detail-num exo-payout-detail-footfall-col${ffCls}`}>
-                      {(row.listCredits * 5).toLocaleString()}
+                      {(row.listCredits * 5).toLocaleString("en-US")}
                     </td>
                   </tr>
                 ))}
@@ -195,10 +195,10 @@ export function ExoPayoutRangeDetailModal({
                     <strong>Total</strong>
                   </td>
                   <td className={`exo-payout-detail-num${listCls}`}>
-                    <strong>{maxListTot.toLocaleString()}</strong>
+                    <strong>{maxListTot.toLocaleString("en-US")}</strong>
                   </td>
                   <td className={`exo-payout-detail-num exo-payout-detail-footfall-col${ffCls}`}>
-                    <strong>{maxFfTot.toLocaleString()}</strong>
+                    <strong>{maxFfTot.toLocaleString("en-US")}</strong>
                   </td>
                 </tr>
               </tbody>

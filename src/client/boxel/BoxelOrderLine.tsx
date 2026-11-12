@@ -33,11 +33,11 @@ export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
               {suffix}
               {o.n}
             </strong>
-            {o.ly != null ? <span className="dim"> {o.ly.toLocaleString()} ly</span> : null}
+            {o.ly != null ? <span className="dim"> {o.ly.toLocaleString("en-US")} ly</span> : null}
           </span>
         </Fragment>
       ))}
-      {placed > SHOWN ? <span className="dim"> › {(placed - SHOWN).toLocaleString()} more</span> : null}
+      {placed > SHOWN ? <span className="dim"> › {(placed - SHOWN).toLocaleString("en-US")} more</span> : null}
       {unplaced ? (
         <span className="dim">
           {" "}
@@ -48,13 +48,13 @@ export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
       <br />
       {placed > 1 && b.orderLy != null && b.numericLy != null ? (
         <span>
-          <strong>{b.orderLy.toLocaleString()} ly</strong> for the {placed} with a position;{" "}
-          <span className="dim">by number {b.numericLy.toLocaleString()} ly.</span>{" "}
+          <strong>{b.orderLy.toLocaleString("en-US")} ly</strong> for the {placed} with a position;{" "}
+          <span className="dim">by number {b.numericLy.toLocaleString("en-US")} ly.</span>{" "}
         </span>
       ) : null}
       {unplaced ? (
         <span className="dim">
-          {unplaced.toLocaleString()} without a position follow by number: Plot route to them in the galaxy map (Set
+          {unplaced.toLocaleString("en-US")} without a position follow by number: Plot route to them in the galaxy map (Set
           target alone gives no position), or Look up the boxel on Spansh.
         </span>
       ) : null}

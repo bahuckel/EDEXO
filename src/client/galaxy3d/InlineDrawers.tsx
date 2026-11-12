@@ -62,9 +62,9 @@ export function SearchDrawer({
       <GalaxySearchPanel variant="menu" onApply={onApply} commanderRegionId={commanderRegionId} />
       {search ? (
         <p className="g3d-panel__note">
-          {search.label}: {search.matchedSystems.toLocaleString()} systems in{" "}
-          {search.spreadCells.toLocaleString()} sectors; the map shows one per sector (
-          {search.hits.length.toLocaleString()}).
+          {search.label}: {search.matchedSystems.toLocaleString("en-US")} systems in{" "}
+          {search.spreadCells.toLocaleString("en-US")} sectors; the map shows one per sector (
+          {search.hits.length.toLocaleString("en-US")}).
         </p>
       ) : null}
     </aside>

@@ -1165,7 +1165,7 @@ export function speciesMatchesCriteria(
         card: "soft-orbit",
         soft: true,
         detail:
-          `Orbits its parent at ${ls >= 100 ? Math.round(ls).toLocaleString() : ls.toFixed(1)} ls; this species is rarely ` +
+          `Orbits its parent at ${ls >= 100 ? Math.round(ls).toLocaleString("en-US") : ls.toFixed(1)} ls; this species is rarely ` +
           `recorded beyond ${smaMax} ls — it grows on close moons. ${DEMOTED_NOTE}`,
       });
     }

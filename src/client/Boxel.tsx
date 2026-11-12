@@ -478,7 +478,7 @@ export function BoxelScreen({
       flown: n((r) => r.flown),
       skipped: n((r) => !r.flown && !!r.skipped),
       elsewhere: n((r) => !r.flown && (r.from === "index" || r.from === "lookup" || r.from === "route" || !!r.onRoute || !!r.gap)),
-      split: parts.filter(([k]) => k > 0).map(([k, what]) => `${k.toLocaleString()} ${what}`).join("\n") || "Nothing known beyond your own journals",
+      split: parts.filter(([k]) => k > 0).map(([k, what]) => `${k.toLocaleString("en-US")} ${what}`).join("\n") || "Nothing known beyond your own journals",
     };
   }, [allRows]);
   /*
@@ -597,7 +597,7 @@ export function BoxelScreen({
                   onClick={() => setSideTab(k)}
                 >
                   {label}
-                  {n != null ? <span className="dim tiny"> {n.toLocaleString()}</span> : null}
+                  {n != null ? <span className="dim tiny"> {n.toLocaleString("en-US")}</span> : null}
                 </button>
               ))}
             </div>
@@ -767,7 +767,7 @@ export function BoxelScreen({
                     <div ref={prevMore} className="boxel-loading" role="status">
                       <span className="boxel-loading__spin" aria-hidden="true" /> Loading
                       {prevTotal != null && previous
-                        ? ` · ${previous.length.toLocaleString()} of ${prevTotal.toLocaleString()}`
+                        ? ` · ${previous.length.toLocaleString("en-US")} of ${prevTotal.toLocaleString("en-US")}`
                         : ""}
                     </div>
                   ) : null}
@@ -797,10 +797,10 @@ export function BoxelScreen({
                 </span>
                 <span title={sources.split}>
                   <strong>
-                    <RollingNumber text={sources.flown.toLocaleString()} />
-                  </strong> / {allRows.length.toLocaleString()} flown
-                  {sources.skipped ? ` · ${sources.skipped.toLocaleString()} skipped` : ""}
-                  {sources.elsewhere ? ` · ${sources.elsewhere.toLocaleString()} known elsewhere` : ""}
+                    <RollingNumber text={sources.flown.toLocaleString("en-US")} />
+                  </strong> / {allRows.length.toLocaleString("en-US")} flown
+                  {sources.skipped ? ` · ${sources.skipped.toLocaleString("en-US")} skipped` : ""}
+                  {sources.elsewhere ? ` · ${sources.elsewhere.toLocaleString("en-US")} known elsewhere` : ""}
                 </span>
               </div>
             ) : null}
@@ -822,7 +822,7 @@ export function BoxelScreen({
               <p className="boxel-lookup-status" role="status">
                 {lookup.running ? (
                   <>
-                    Looking up <strong>{lookup.boxel}</strong> on Spansh: {lookup.systems.toLocaleString()}{" "}
+                    Looking up <strong>{lookup.boxel}</strong> on Spansh: {lookup.systems.toLocaleString("en-US")}{" "}
                     systems in {lookup.pages} page{lookup.pages === 1 ? "" : "s"}…{" "}
                     <button
                       type="button"
@@ -866,7 +866,7 @@ export function BoxelScreen({
                         <strong>
                           {b.boxel} -{n}
                         </strong>
-                        {after > 0 ? ` and the ${after.toLocaleString()} after it` : ""}? The boxel will end
+                        {after > 0 ? ` and the ${after.toLocaleString("en-US")} after it` : ""}? The boxel will end
                         at -{n - 1}.
                       </span>
                       <span className="boxel-cut__actions">
@@ -923,8 +923,8 @@ export function BoxelScreen({
                 </button>
                 <span className="dim tiny">
                   {rows.length === allRows.length
-                    ? `${allRows.length.toLocaleString()} systems`
-                    : `${rows.length.toLocaleString()} of ${allRows.length.toLocaleString()}`}
+                    ? `${allRows.length.toLocaleString("en-US")} systems`
+                    : `${rows.length.toLocaleString("en-US")} of ${allRows.length.toLocaleString("en-US")}`}
                 </span>
               </div>
             ) : null}

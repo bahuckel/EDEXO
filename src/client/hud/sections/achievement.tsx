@@ -62,7 +62,7 @@ function Achievement({ d }: { d: HudSnapshot }) {
                   {t.label + (t.hint ? " " : "")}
                   {t.hint ? <small>{t.hint}</small> : null}
                 </span>
-                <span className="v">{t.distanceLy != null ? Number(t.distanceLy).toLocaleString() + " ly" : ""}</span>
+                <span className="v">{t.distanceLy != null ? Number(t.distanceLy).toLocaleString("en-US") + " ly" : ""}</span>
               </div>
             ))
           ) : (

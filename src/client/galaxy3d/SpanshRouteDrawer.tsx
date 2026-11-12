@@ -404,7 +404,7 @@ export function SpanshRouteDrawer({
                     type="button"
                     className="g3d-linkbtn"
                     disabled={busy}
-                    title={`Read ${new Date(s.readAt).toLocaleString()}`}
+                    title={`Read ${new Date(s.readAt).toLocaleString(undefined)}`}
                     onClick={() => {
                       setText(s.job);
                       void read(s.job);

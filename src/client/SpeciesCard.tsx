@@ -233,7 +233,7 @@ export const SpeciesCard = memo(function SpeciesCard({
     const notesPart = (e.notes ?? "").trim();
     const descPart = (e.description ?? "").trim();
     const minD = e.genusMinSampleDistanceM;
-    const distPrefix = minD != null && minD > 0 ? `Distance between scans: ${minD.toLocaleString()} m` : "";
+    const distPrefix = minD != null && minD > 0 ? `Distance between scans: ${minD.toLocaleString("en-US")} m` : "";
     const descBlock = distPrefix && descPart ? `${distPrefix} — ${descPart}` : distPrefix || descPart;
     return [notesPart, descBlock].filter(Boolean).join("\n\n");
   }, [e.notes, e.description, e.genusMinSampleDistanceM]);

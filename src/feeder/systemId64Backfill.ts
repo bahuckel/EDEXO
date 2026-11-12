@@ -190,19 +190,19 @@ const pct = (n: number, d: number) => (d === 0 ? "0.0" : ((n / d) * 100).toFixed
 export function formatSystemId64Report(r: SystemId64Report, applied: boolean): string {
   const out: string[] = [];
   out.push(
-    `Cache files        ${r.filesRead.toLocaleString()} read, ${r.filesUnparsed} unreadable (${r.elapsedMs} ms)`,
+    `Cache files        ${r.filesRead.toLocaleString("en-US")} read, ${r.filesUnparsed} unreadable (${r.elapsedMs} ms)`,
   );
   out.push(
-    `From cache         ${r.fromCache.toLocaleString()} of ${r.coverage.systems.toLocaleString()} systems ` +
+    `From cache         ${r.fromCache.toLocaleString("en-US")} of ${r.coverage.systems.toLocaleString("en-US")} systems ` +
       `(${pct(r.fromCache, r.coverage.systems)} %) — no network`,
   );
-  out.push(`Cache-only         ${r.cacheOnly.toLocaleString()} cached systems the store does not hold`);
+  out.push(`Cache-only         ${r.cacheOnly.toLocaleString("en-US")} cached systems the store does not hold`);
   out.push(
-    `Coverage now       ${r.coverage.systemsWithId64.toLocaleString()}/${r.coverage.systems.toLocaleString()} systems have id64`,
+    `Coverage now       ${r.coverage.systemsWithId64.toLocaleString("en-US")}/${r.coverage.systems.toLocaleString("en-US")} systems have id64`,
   );
   out.push(
     applied
-      ? `Written            ${r.written.toLocaleString()} system rows`
+      ? `Written            ${r.written.toLocaleString("en-US")} system rows`
       : `Written            nothing — dry run. Re-run with --apply to write.`,
   );
   out.push("");
@@ -211,7 +211,7 @@ export function formatSystemId64Report(r: SystemId64Report, applied: boolean): s
       `(2^53 = 9,007,199,254,740,991)`,
   );
   out.push(
-    `Still missing      ${r.stillMissing.toLocaleString()} systems have no cache file — ` +
+    `Still missing      ${r.stillMissing.toLocaleString("en-US")} systems have no cache file — ` +
       `${Math.ceil(r.stillMissing / 50)} batched request${Math.ceil(r.stillMissing / 50) === 1 ? "" : "s"} with --fetch-missing`,
   );
   for (const n of r.missingNames.slice(0, 15)) out.push(`   ${n}`);

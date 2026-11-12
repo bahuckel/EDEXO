@@ -303,9 +303,9 @@ function Candidates({ d }: { d: HudSnapshot }) {
             </span>
             <span
               className="cr"
-              title={r.cr >= 0 && foot === "unknown" ? (r.cr * 5).toLocaleString() + " CR if you take first footfall here" : undefined}
+              title={r.cr >= 0 && foot === "unknown" ? (r.cr * 5).toLocaleString("en-US") + " CR if you take first footfall here" : undefined}
             >
-              {r.cr >= 0 ? r.cr.toLocaleString() + " CR " + multTag : "— CR"}
+              {r.cr >= 0 ? r.cr.toLocaleString("en-US") + " CR " + multTag : "— CR"}
             </span>
           </li>
         );

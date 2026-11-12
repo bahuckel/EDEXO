@@ -31,8 +31,8 @@ function renderImportNewer(st) {
     exoArrow.title = show ? "A newer Spansh export is on disk — Import Spansh export" : "";
   }
   if (show && importNewerText) {
-    var when = st.fileMtimeIso ? new Date(st.fileMtimeIso).toLocaleString() : "";
-    importNewerText.textContent = "Newer export on disk" + (when ? " (" + when + ")" : "") + " — last imported " + (st.lastImport && st.lastImport.finishedAt ? new Date(st.lastImport.finishedAt).toLocaleString() : "before") + ".";
+    var when = st.fileMtimeIso ? new Date(st.fileMtimeIso).toLocaleString(undefined) : "";
+    importNewerText.textContent = "Newer export on disk" + (when ? " (" + when + ")" : "") + " — last imported " + (st.lastImport && st.lastImport.finishedAt ? new Date(st.lastImport.finishedAt).toLocaleString(undefined) : "before") + ".";
   }
 }
 function startImport(file, apply) {
@@ -99,14 +99,14 @@ function visitedSay(text, kind) {
   visitedStatus.textContent = text || "";
 }
 function visitedDate(iso) {
-  return iso ? new Date(iso).toLocaleString() : "";
+  return iso ? new Date(iso).toLocaleString(undefined) : "";
 }
 function visitedRender(j) {
   var imp = j && j.imported;
   visitedImported.hidden = !imp;
   visitedImported.className = "import-status ok";
   visitedImported.textContent = imp
-    ? "Imported: " + imp.systems.toLocaleString() + " systems from account " + imp.account + " (the game's list of " +
+    ? "Imported: " + imp.systems.toLocaleString("en-US") + " systems from account " + imp.account + " (the game's list of " +
       visitedDate(imp.fileModifiedAt) + "), on " + visitedDate(imp.importedAt) + "."
     : "";
   visitedRemove.hidden = !imp;
@@ -120,8 +120,8 @@ function visitedRender(j) {
   files.forEach(function (f) {
     var li = document.createElement("li");
     var text = document.createElement("span");
-    text.textContent = "Account " + f.account + ": " + f.systems.toLocaleString() + " systems in the game's list, " +
-      f.notInJournals.toLocaleString() + " not in your journals (list of " + visitedDate(f.modifiedAt) + ")";
+    text.textContent = "Account " + f.account + ": " + f.systems.toLocaleString("en-US") + " systems in the game's list, " +
+      f.notInJournals.toLocaleString("en-US") + " not in your journals (list of " + visitedDate(f.modifiedAt) + ")";
     var go = document.createElement("button");
     go.type = "button";
     go.className = "btn-mini";
@@ -151,7 +151,7 @@ function visitedImport(account) {
     .then(function (j) {
       if (!j || !j.ok) throw new Error((j && j.error) || "import failed");
       return visitedLoad().then(function () {
-        visitedSay("Imported " + j.systems.toLocaleString() + " systems; " + j.notInJournals.toLocaleString() +
+        visitedSay("Imported " + j.systems.toLocaleString("en-US") + " systems; " + j.notInJournals.toLocaleString("en-US") +
           " of them are new to the galaxy map and the planner.", "ok");
       });
     })

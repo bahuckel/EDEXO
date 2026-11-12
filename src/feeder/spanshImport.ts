@@ -330,7 +330,7 @@ export function formatImportReport(r: ImportReport, applied: boolean): string {
     `Manifest           schema ${m?.schemaVersion ?? "?"}, source ${m?.source ?? "?"}, exported ${m?.exported ?? "?"}`,
   );
   out.push(
-    `Read               ${r.linesRead.toLocaleString()} lines — ${r.systemRows.toLocaleString()} systems, ${r.bodyRows.toLocaleString()} bodies (${r.elapsedMs} ms)`,
+    `Read               ${r.linesRead.toLocaleString("en-US")} lines — ${r.systemRows.toLocaleString("en-US")} systems, ${r.bodyRows.toLocaleString("en-US")} bodies (${r.elapsedMs} ms)`,
   );
 
   if (r.failures.length > 0) {
@@ -351,23 +351,23 @@ export function formatImportReport(r: ImportReport, applied: boolean): string {
   }
   out.push("");
   out.push(
-    `Joined by identity ${r.matched.toLocaleString()} of ${r.bodyRows.toLocaleString()} dump bodies matched a corpus row ` +
+    `Joined by identity ${r.matched.toLocaleString("en-US")} of ${r.bodyRows.toLocaleString("en-US")} dump bodies matched a corpus row ` +
       `(no string comparison in the path)`,
   );
-  out.push(`   new information ${r.changed.toLocaleString()}   (the rest the corpus already had)`);
-  out.push(`   mapped          ${r.mappedTrue.toLocaleString()}   (a genus list proves a DSS)`);
+  out.push(`   new information ${r.changed.toLocaleString("en-US")}   (the rest the corpus already had)`);
+  out.push(`   mapped          ${r.mappedTrue.toLocaleString("en-US")}   (a genus list proves a DSS)`);
   out.push(
-    `   no evidence     ${r.mappedFalse.toLocaleString()}   (signal count only — not proof of unmapped)`,
+    `   no evidence     ${r.mappedFalse.toLocaleString("en-US")}   (signal count only — not proof of unmapped)`,
   );
   out.push(
     applied
-      ? `Written            ${r.planetsWritten.toLocaleString()} planet rows, ${r.systemsWithCoords.toLocaleString()} system coordinate rows`
+      ? `Written            ${r.planetsWritten.toLocaleString("en-US")} planet rows, ${r.systemsWithCoords.toLocaleString("en-US")} system coordinate rows`
       : `Written            nothing — dry run. Re-run with --apply.`,
   );
   out.push("");
   out.push(
-    `Corpus coverage    ${r.coverage.mapped.toLocaleString()} mapped, ${r.coverage.unmapped.toLocaleString()} unmapped, ` +
-      `${(r.coverage.planets - r.coverage.mapped - r.coverage.unmapped).toLocaleString()} unknown of ${r.coverage.planets.toLocaleString()} bodies`,
+    `Corpus coverage    ${r.coverage.mapped.toLocaleString("en-US")} mapped, ${r.coverage.unmapped.toLocaleString("en-US")} unmapped, ` +
+      `${(r.coverage.planets - r.coverage.mapped - r.coverage.unmapped).toLocaleString("en-US")} unknown of ${r.coverage.planets.toLocaleString("en-US")} bodies`,
   );
   return out.join("\n");
 }

@@ -155,6 +155,24 @@ export default tseslint.config(
   },
   {
     /*
+      One number format (owner 2026-11-12, plan Q14: "5,000,000 format only"): a number's toLocaleString() follows the
+      Windows locale (his groups with a space), so a bare call is refused; numbers pass "en-US" (or use shared/format.ts).
+      A date that should follow the Windows locale says so with an explicit `undefined`.
+    */
+    files: ["src/**/*.{ts,tsx,js}"],
+    ignores: ["**/*.gen.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "CallExpression[callee.property.name='toLocaleString'][arguments.length=0]",
+          message: 'Pass "en-US" for a number (5,000,000 everywhere), or `undefined` for a date in the Windows locale.',
+        },
+      ],
+    },
+  },
+  {
+    /*
       File size cap (item 27, after the 1.3.1 splits): 1,200 code lines, blank lines and comments not counted. A warning,
       so it fails `npm run lint`. The files still over it have their own cap, their size when the cap came in rounded up
       to the next hundred: they may not grow past it, and a split brings the line down (lower it when one lands). Tests

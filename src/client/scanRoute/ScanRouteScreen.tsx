@@ -59,7 +59,7 @@ function readScale(): ScanScale {
 }
 
 /** The grid's square in the corner: "100 ls", "10,000 ls". */
-const fmtSquare = (ls: number) => `${ls.toLocaleString()} ls`;
+const fmtSquare = (ls: number) => `${ls.toLocaleString("en-US")} ls`;
 const DEFAULT_MIN = 500_000;
 /** How often the route and the current system's scans are looked at (ms). */
 const POLL_MS = 4000;
@@ -97,7 +97,7 @@ const NETLOG_NOTE: Record<ScanRouteShipDTO["netlog"]["state"], string> = {
 };
 
 const fmtLs = (ls: number) =>
-  ls >= 10_000 ? `${Math.round(ls).toLocaleString()} ls` : ls < 1 ? `${ls.toFixed(2)} ls` : `${ls.toFixed(ls < 10 ? 1 : 0)} ls`;
+  ls >= 10_000 ? `${Math.round(ls).toLocaleString("en-US")} ls` : ls < 1 ? `${ls.toFixed(2)} ls` : `${ls.toFixed(ls < 10 ? 1 : 0)} ls`;
 
 type Stop = { addr: number | null; name: string };
 type Hit = { addr: number; name: string; note: string };

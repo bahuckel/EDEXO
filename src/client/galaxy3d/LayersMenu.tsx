@@ -81,7 +81,7 @@ export function LayersMenu({
                 {extraOn[l.kind] && d ? (
                   <span className="dim">
                     {" "}
-                    {missing ? `— ${l.needs.toLowerCase()}` : `(${d.points.length.toLocaleString()})`}
+                    {missing ? `— ${l.needs.toLowerCase()}` : `(${d.points.length.toLocaleString("en-US")})`}
                   </span>
                 ) : null}
               </span>
@@ -97,7 +97,7 @@ export function LayersMenu({
         set={setNavUnvisitedOn}
       />
       <MenuToggle
-        label={`Plotted systems – not visited${plottedCount ? ` (${plottedCount.toLocaleString()})` : ""}`}
+        label={`Plotted systems – not visited${plottedCount ? ` (${plottedCount.toLocaleString("en-US")})` : ""}`}
         hint="Every system on a route you plotted in the game and have not been to, kept from each plot: green where EDSM does not know it"
         on={plottedOn}
         set={setPlottedOn}

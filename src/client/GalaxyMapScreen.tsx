@@ -220,7 +220,7 @@ export function GalaxyMapScreen() {
         </a>
         {load.state === "ready" ? (
           <p className="galaxy-screen__meta">
-            {load.file.cells.length} sectors · built {new Date(load.file.generatedAt).toLocaleString()}
+            {load.file.cells.length} sectors · built {new Date(load.file.generatedAt).toLocaleString(undefined)}
             {commander?.system ? (
               <>
                 {" "}

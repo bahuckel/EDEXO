@@ -53,7 +53,7 @@ export function formatPressurePill(rawJournal: number | null | undefined, displa
   if (rawJournal == null || Number.isNaN(rawJournal)) return "—";
   const atm = journalPressureToAtm(rawJournal);
   if (display === "atm") return `${atm.toFixed(3)} atm`;
-  return `${Math.round(rawJournal).toLocaleString()} Pa`;
+  return `${Math.round(rawJournal).toLocaleString("en-US")} Pa`;
 }
 
 export function gravHeatStyle(gEarth: number): CSSProperties {

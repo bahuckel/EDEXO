@@ -176,7 +176,7 @@ function RecordsSection() {
             {data.rows.map((r) => (
               <tr key={r.key}>
                 <td>{r.label}</td>
-                <td className="stats-rec__n">{r.count.toLocaleString()}</td>
+                <td className="stats-rec__n">{r.count.toLocaleString("en-US")}</td>
                 {cell(r.largest, r.subject, true)}
                 {g.haveData ? cell(r.galactic?.largest, r.subject) : null}
                 {cell(r.smallest, r.subject, true)}

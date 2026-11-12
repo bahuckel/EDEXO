@@ -16,7 +16,7 @@ export function RegionMark({ region, r }: { region: string; r: RegionalRarity | 
     <span
       className="ency-region-mark"
       style={t ? { color: t.colour } : undefined}
-      title={`Recorded in ${r.count.toLocaleString()} system${r.count === 1 ? "" : "s"} of ${region}`}
+      title={`Recorded in ${r.count.toLocaleString("en-US")} system${r.count === 1 ? "" : "s"} of ${region}`}
     >
       In {region}
       {t ? ` · ${t.label}` : ""}

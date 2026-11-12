@@ -417,7 +417,7 @@ export function NotifyPanel() {
           <p>
             After each jump, points of interest and carriers within that many of your average jumps (your last
             twenty, or the ship&apos;s range until you have flown a few). Each point of interest is announced once.
-            Carriers only count out in the black, over {CARRIER_NOTICE_MIN_FROM_SOL_LY.toLocaleString()} ly from Sol,
+            Carriers only count out in the black, over {CARRIER_NOTICE_MIN_FROM_SOL_LY.toLocaleString("en-US")} ly from Sol,
             and their position is only as fresh as EDAstro&apos;s last sighting — the notice says how old it is. Both
             use the lists you downloaded in the Points of interest and Carriers panels.
           </p>
@@ -434,7 +434,7 @@ export function NotifyPanel() {
               onCommit={(jumps) => save({ nearby: { jumps } })}
             />{" "}
             <span className="dim">
-              jumps{radiusLy != null ? ` ≈ ${radiusLy.toLocaleString()} ly` : " (range known after your first jump)"}
+              jumps{radiusLy != null ? ` ≈ ${radiusLy.toLocaleString("en-US")} ly` : " (range known after your first jump)"}
             </span>
           </span>
         </div>
@@ -455,7 +455,7 @@ export function NotifyPanel() {
           ))}
         </div>
         <p className="dim tiny options-notify-sub">
-          Carriers, beyond {CARRIER_NOTICE_MIN_FROM_SOL_LY.toLocaleString()} ly from Sol
+          Carriers, beyond {CARRIER_NOTICE_MIN_FROM_SOL_LY.toLocaleString("en-US")} ly from Sol
           {st.carrierDataReady ? "" : " — download the list in Carriers & Stations first"}
         </p>
         <div className="options-focus-grid">
@@ -566,7 +566,7 @@ function NspDownload({ on, busy, onToggle }: { on: boolean; busy: boolean; onTog
       .catch(() => {});
   };
   if (!st) return null;
-  const mb = (b: number) => `${Math.round(b / 1_000_000).toLocaleString()} MB`;
+  const mb = (b: number) => `${Math.round(b / 1_000_000).toLocaleString("en-US")} MB`;
   return (
     <div className="options-nsp">
       <label className="options-toggle">
@@ -574,7 +574,7 @@ function NspDownload({ on, busy, onToggle }: { on: boolean; busy: boolean; onTog
         <span>
           Phenomena nearby
           {st.haveData
-            ? ` — ${st.systemCount.toLocaleString()} systems known`
+            ? ` — ${st.systemCount.toLocaleString("en-US")} systems known`
             : " — download the list first"}
         </span>
       </label>

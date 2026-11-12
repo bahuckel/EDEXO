@@ -286,11 +286,11 @@ export function EdsmUploadPanel({ state, hasKey }: { state: AppSnapshot["edsmUpl
 
       {running && progress ? (
         <p className="options-edsm-stored dim">
-          {progress.filesDone} / {progress.filesTotal} journals · {progress.eventsSent.toLocaleString()} sent
+          {progress.filesDone} / {progress.filesTotal} journals · {progress.eventsSent.toLocaleString("en-US")} sent
         </p>
       ) : state.ledger.eventsAccepted > 0 ? (
         <p className="options-edsm-stored dim">
-          {state.ledger.eventsAccepted.toLocaleString()} events sent
+          {state.ledger.eventsAccepted.toLocaleString("en-US")} events sent
           {state.ledger.lastRunAt ? `, last ${new Date(state.ledger.lastRunAt).toLocaleDateString()}` : ""}
         </p>
       ) : null}

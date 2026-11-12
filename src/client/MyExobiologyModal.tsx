@@ -452,7 +452,7 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
                   </ul>
                   {shown.length > PAGE ? (
                     <p className="dim tiny disc-more">
-                      Showing the newest {PAGE.toLocaleString()} of {shown.length.toLocaleString()} — narrow
+                      Showing the newest {PAGE.toLocaleString("en-US")} of {shown.length.toLocaleString("en-US")} — narrow
                       the search to bring the rest into view.
                     </p>
                   ) : null}

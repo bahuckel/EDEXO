@@ -25,7 +25,7 @@ export function renderLiveStrip(data) {
   var cr = l.organicDataValueCredits;
   setCell(
     "lsUnsold",
-    cr == null ? "" : Number(cr).toLocaleString() + " CR" + (l.organicPendingSampleCount > 0 ? " · " + l.organicPendingSampleCount + " pending" : ""),
+    cr == null ? "" : Number(cr).toLocaleString("en-US") + " CR" + (l.organicPendingSampleCount > 0 ? " · " + l.organicPendingSampleCount + " pending" : ""),
   );
   var jt = l.jumpTarget;
   if (!jt) setCell("lsJump", "");
