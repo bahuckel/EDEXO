@@ -29,9 +29,11 @@ export function DScanBodiesBadge({
         <span className="tray-tile__value">
           {d.found} / {d.total}
           <span className="tray-tile__meta">
-            bodies ·{" "}
+            bodies
+            {/* the separator goes with the honk, so a phone that hides the honk (it is on the System card) hides both */}
             <span className={`d-scan-card__honk${honked ? "" : " d-scan-card__honk--no"}`} title={honkTitle}>
-              Honk: {honked ? "Yes" : "No"}
+              {" "}
+              · Honk: {honked ? "Yes" : "No"}
             </span>
           </span>
         </span>

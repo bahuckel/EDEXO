@@ -134,3 +134,22 @@
 .ui-empty--error .ui-empty__icon {
   color: var(--bad, #ff5a3c);
 }
+
+/* 8. A shorter header on a phone (round 5, owner approved 2026-11-12): 391 px before the body, now about 70 less */
+@media (max-width: 699px) {
+  /* the ⊕, DATA VALUE and D-SCAN on one row; NEXT BOXEL and the route tiles keep a full row each */
+  :root:root .top > .header-tray {
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    --tray-tile-h: 2.9rem;
+  }
+  :root:root .top > .header-tray .header-dscan-cluster {
+    display: contents;
+  }
+  :root:root .top > .header-tray .header-dscan-cluster > :not(.header-dscan-pill) {
+    grid-column: 1 / -1;
+  }
+  /* "Honk: yes" is on the System card's chips just above */
+  :root:root .top > .header-tray .d-scan-card__honk {
+    display: none;
+  }
+}
