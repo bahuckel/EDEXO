@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CodexGapsDTO, CodexNearestDTO } from "@shared/types";
 import { CopySystemButton } from "./CopySystemButton";
 import { jsonOrNull } from "./http";
+import { Disclosure } from "./ui/glyphs";
 
 const SHOWN = 12;
 
@@ -80,7 +81,7 @@ export function CodexGapsList({
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        <span className="g3d-row__label">{open ? "▾" : "▸"} Not in your codex here</span>
+        <span className="g3d-row__label"><Disclosure open={open} /> Not in your codex here</span>
         <span className="g3d-row__val g3d-num">{data ? data.gaps.length : "…"}</span>
       </button>
       {open && data ? (

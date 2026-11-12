@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { withTransition } from "../motion";
+import { Done, Caret } from "./glyphs";
 
 /**
  * The app's one dropdown (owner, 2026-09-25: "same style for the whole app").
@@ -236,7 +237,7 @@ export function Select<V extends string = string>({
       >
         <span className="ui-select__value">{current?.label ?? "—"}</span>
         <span className="ui-select__chev" aria-hidden>
-          ▾
+          <Caret />
         </span>
       </button>
       {open && pos
@@ -269,7 +270,7 @@ export function Select<V extends string = string>({
                   onClick={() => choose(i)}
                 >
                   <span className="ui-select__tick" aria-hidden>
-                    {o.value === value ? "✓" : ""}
+                    {o.value === value ? <Done /> : ""}
                   </span>
                   <span className="ui-select__label">{o.label}</span>
                 </li>

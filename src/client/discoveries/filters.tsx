@@ -5,6 +5,7 @@
 import { BODY_FEATURES, type BodyFeatureKey } from "../../shared/bodyFeatures.js";
 import { useState } from "react";
 import { isBool, usePersistedState } from "../usePersistedState";
+import { Disclosure } from "../ui/glyphs";
 
 /**
  * One remembered answer per call site, kept while every input is the same object (review 2026-11-07 §4.2, D12).
@@ -54,7 +55,7 @@ export function ChipRow({
         onClick={() => setOpen(!open)}
         title={open ? "Hide these filters" : "Show these filters"}
       >
-        {open ? "▾" : "▸"} {label}
+        <Disclosure open={open} /> {label}
         {!open ? <span className="tiny"> ({options.length})</span> : null}
       </button>
       {shown.map((o) => (

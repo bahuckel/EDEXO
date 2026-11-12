@@ -7,6 +7,7 @@
 import { useState } from "react";
 import type { SavedBoxelDTO } from "@shared/boxel";
 import { Popover } from "../ui/Popover";
+import { Disclosure } from "../ui/glyphs";
 
 export function BoxelSideActions({
   b,
@@ -93,7 +94,7 @@ export function BoxelSideActions({
       */}
       {b.probe ? (
         <div className="boxel-side__menu-group" role="group" aria-label="Check the end">
-          <span className="dim tiny">Check the end ▸</span>
+          <span className="dim tiny">Check the end <Disclosure open={false} /></span>
           <button
             type="button"
             className={`fdb-chip${copied === b.probe ? " fdb-chip--on" : ""}`}

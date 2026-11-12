@@ -22,6 +22,7 @@ import { primaryStarRoleTooltip } from "./speciesMatchHelpers";
 import { Tooltip } from "./ui/Tooltip";
 import { RecordMedal, recordMarksByBodyId, recordMarksTitle } from "./noticesClient";
 import { NspCard } from "./NspCard";
+import { Disclosure } from "./ui/glyphs";
 
 const KIND_LABEL: Record<SystemKind, string> = {
   bubble: "Bubble",
@@ -104,7 +105,7 @@ export const SystemCardRow = memoOnSnapSlice(SYSTEM_CARD_FIELDS, function System
               onClick={onOpenSystemMap}
               title="Open the system map"
             >
-              Map ▸
+              Map <Disclosure open={false} />
             </button>
           </div>
           <div className="sys-card__chips">

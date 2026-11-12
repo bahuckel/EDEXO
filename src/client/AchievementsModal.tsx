@@ -16,6 +16,7 @@ import type { AchievementDetailDTO, AchievementDTO, AchievementsDTO } from "@sha
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RollingNumber } from "./ui/RollingNumber";
 import { sendJson } from "./http";
+import { Disclosure, Done } from "./ui/glyphs";
 
 const STEP = ["", "Bronze", "Silver", "Gold"] as const;
 const KIND_LABEL: Record<AchievementDTO["kind"], string> = {
@@ -129,7 +130,7 @@ function Detail({ id, kind }: { id: string; kind: AchievementDTO["kind"] }) {
             <ul className="ach-entries">
               {done.map((e) => (
                 <li key={e.key} className="ach-entry ach-entry--done">
-                  ✓ {e.name}
+                  <Done /> {e.name}
                   {e.hint ? <span className="dim"> — {e.hint}</span> : null}
                   <span className="dim">
                     {" "}
@@ -170,7 +171,7 @@ function Row({
           title={`id: ${a.id}`}
         >
           <span className="ach-row__caret" aria-hidden="true">
-            {open ? "▾" : "▸"}
+            <Disclosure open={open} />
           </span>
           {a.name}
           <span className="ach-row__kind">{KIND_LABEL[a.kind]}</span>

@@ -7,6 +7,7 @@ import type { GalaxySearchApplied } from "../GalaxySearchPanel";
 import type { Graphics } from "./capabilities";
 import type { EngineStats } from "./engineTypes";
 import type { Colour } from "./mapConstants";
+import { Disclosure } from "../ui/glyphs";
 
 export function StatusBar({
   graphics,
@@ -69,7 +70,7 @@ export function StatusBar({
         onClick={() => setLegendOn(!legendOn)}
         title={legendOn ? "Hide the legend" : "Show what the colours mean"}
       >
-        {legendOn ? "▾" : "▸"} Legend
+        <Disclosure open={legendOn} /> Legend
       </button>
       {!legendOn ? null : codexOn ? (
         <span className="g3d-legend">

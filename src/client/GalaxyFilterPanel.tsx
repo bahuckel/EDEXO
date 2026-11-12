@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { GalaxySpeciesCatalogueDTO } from "@shared/types";
 import { MenuToggle } from "./galaxy3d/G3dMenu";
 import { jsonOrNull } from "./http";
+import { Disclosure, Done } from "./ui/glyphs";
 
 export interface GalaxyFilterState {
   tab: "exobio" | "bodies";
@@ -110,13 +111,13 @@ function TickRow({
             expand.onClick();
           }}
         >
-          {expand.open ? "▾" : "▸"}
+          <Disclosure open={expand.open} />
         </button>
       ) : null}
       <span className="g3d-row__label">{label}</span>
       <span className="g3d-row__count">{count}</span>
       <span className={on ? "g3d-tick g3d-tick--on" : "g3d-tick"} aria-hidden="true">
-        {on ? "✓" : ""}
+        {on ? <Done /> : ""}
       </span>
     </label>
   );

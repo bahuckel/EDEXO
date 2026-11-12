@@ -56,6 +56,7 @@ import {
   SpeciesStarColourSoftBadge,
   SpeciesExomasterySimilarityContent,
 } from "./SpeciesCardParts";
+import { Disclosure, Done } from "./ui/glyphs";
 export { ExoMissLogPanel } from "./ExoMissLogPanel";
 
 export const SpeciesCard = memo(function SpeciesCard({
@@ -310,7 +311,7 @@ export const SpeciesCard = memo(function SpeciesCard({
           className="species-compact-payout-done"
           title="Journal shows a completed exobiology line for this species on this body."
         >
-          ✓ Analysed
+          <Done /> Analysed
         </span>
       ) : null}
       {/* Named by the composition scanner, never sampled on foot — so the value here is unclaimed. */}
@@ -599,7 +600,7 @@ export const SpeciesCard = memo(function SpeciesCard({
           onClick={() => setWhyOpen((v) => !v)}
           title="Where this species has been found for temperature, gravity and pressure, and where this body sits"
         >
-          {whyOpen ? "▾" : "▸"} Why this chance
+          <Disclosure open={whyOpen} /> Why this chance
         </button>
       ) : null}
       {/* The facts behind the number first (plan 1.7), then where the species has been found. */}

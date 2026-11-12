@@ -5,6 +5,7 @@
  */
 import { formatTons as tons } from "../../../shared/colonize/formatPrice";
 import type { SiteMaterial } from "../../../shared/colonize/siteMaterials";
+import { Done } from "../../ui/glyphs";
 
 const pct = (n: number, of: number) => (of > 0 ? Math.max(0, Math.min(100, (n / of) * 100)) : 0);
 
@@ -34,7 +35,7 @@ export function MaterialRows({ rows, showOf = false, flipPrefix }: { rows: SiteM
           </span>
           {m.done ? (
             <span className="cz-mat__v">
-              ✓ delivered <small>{tons(m.required)}</small>
+              <Done /> delivered <small>{tons(m.required)}</small>
             </span>
           ) : (
             <span className="cz-mat__v">
@@ -65,7 +66,7 @@ export function MaterialTiles({ rows, flipPrefix }: { rows: SiteMaterial[]; flip
             <span className="fact-k" title={m.label}>
               {m.label}
             </span>
-            <span className="fact-v">{m.done ? "✓ delivered" : tons(m.left)}</span>
+            <span className="fact-v">{m.done ? <><Done /> delivered</> : tons(m.left)}</span>
             <span className="cz-mtile__sub">
               {m.done ? tons(m.required) : m.aboard > 0 ? `${m.aboard.toLocaleString("en-US")} t aboard` : `of ${tons(m.required)}`}
             </span>

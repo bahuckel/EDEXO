@@ -16,6 +16,7 @@ import {
 } from "./planetDisplayUtils";
 import { TemperatureLabel } from "./TemperatureLabel";
 import { fmtCrExact } from "@shared/format";
+import { Done } from "./ui/glyphs";
 
 function roleLabel(role: SystemMapBodyDetailDTO["starRole"]): string {
   if (role === "fuel") return "Fuel-scoopable star";
@@ -490,7 +491,7 @@ function ScanMapValues({ detail }: { detail: SystemMapBodyDetailDTO }) {
               {mapped ? "" : "~"}
               {fmtCrExact(map)}
             </span>
-            <span className="body-value-note">{mapped ? "✓ mapped" : "not mapped yet"}</span>
+            <span className="body-value-note">{mapped ? <><Done /> mapped</> : "not mapped yet"}</span>
           </dd>
         </div>
       ) : null}

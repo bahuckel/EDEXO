@@ -29,6 +29,7 @@ import { IconSave } from "./ui/icons";
 import { CopySystemButton } from "./CopySystemButton";
 import { oneOf, usePersistedState } from "./usePersistedState";
 import { closingAttr } from "./ui/usePresence";
+import { Disclosure } from "./ui/glyphs";
 
 /** A share for a table cell: `42 %`, `7.3 %`, and under 1 % as `1/158` (rare things read better that way). */
 const pct = (v: number) =>
@@ -371,7 +372,7 @@ export function BoxelLookingFor({
           title={open ? "Fold Looking for away" : "Where to fly for a star, a world, a genus or a species"}
           onClick={() => setOpen(!open)}
         >
-          {open ? "▾" : "▸"} Looking for
+          <Disclosure open={open} /> Looking for
         </button>
         {open ? (
           <>

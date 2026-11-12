@@ -31,6 +31,7 @@ import { SearchView } from "./views/SearchView";
 import { SourcesView } from "./views/SourcesView";
 import { WingView } from "./views/WingView";
 import { BTN, BTN_GO, BTN_LINK } from "./views/ui";
+import { Done } from "../ui/glyphs";
 
 type Tab = "plan" | "search" | "sources" | "wing";
 const TABS: { key: Tab; label: string }[] = [
@@ -259,7 +260,7 @@ function ColonizeShell({ m, children }: { m: ColonizeModel; children: ReactNode 
                 title={on ? "Its stock counts as yours in the plan" : "Click to count its stock in the plan"}
                 onClick={() => m.toggleCarrier(c.carrierId)}
               >
-                <span className="cz-chip__k">{on ? "✓ Carrier" : "Carrier"}</span>
+                <span className="cz-chip__k">{on ? <><Done /> Carrier</> : "Carrier"}</span>
                 <b className="cz-chip__v">{c.callsign || c.name}</b>
                 <span className="cz-chip__s">{formatTons(tons)}</span>
               </button>

@@ -9,6 +9,7 @@ import { Tooltip } from "../ui/Tooltip";
 import type { Column } from "../ui/DataTable";
 import { NOTABLE_SHORT } from "../boxelFilter";
 import { fromIndex, NOTABLE_LABEL, OTHER_STARS_SHOWN } from "./boxelLabels";
+import { Done } from "../ui/glyphs";
 
 export function boxelColumns({
   byId,
@@ -56,7 +57,7 @@ export function boxelColumns({
             className="fdb-dss"
             title={r.visitedAt ? `Last there ${r.visitedAt.slice(0, 16).replace("T", " ")}` : undefined}
           >
-            ✓ {r.visitedAt ? r.visitedAt.slice(0, 10) : "flown"}
+            <Done /> {r.visitedAt ? r.visitedAt.slice(0, 10) : "flown"}
           </span>
         ) : r.skipped ? (
           <span className="boxel-skipped">skipped</span>

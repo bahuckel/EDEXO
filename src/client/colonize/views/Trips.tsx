@@ -13,6 +13,7 @@ import { siteTotals } from "../../../shared/colonize/siteMaterials";
 import type { DepotSnapshot } from "../../../shared/colonize/types";
 import { tripBuyLineId, tripDeliverLineId } from "../../../shared/colonize/tripPlanProgress";
 import { BTN, BTN_GO, BTN_LINK, Panel, copyText } from "./ui";
+import { Done } from "../../ui/glyphs";
 
 type TripProps = {
   trips: HaulTrip[];
@@ -120,7 +121,7 @@ export function NextTripCard({ trips, completed, onBan, sites = [], readOnly = f
                 <div key={s.stopIndex} className="cz-stepwrap">
                   <article className={`cz-card cz-step${done ? " cz-step--done" : ""}`} aria-label={`Stop ${n}: buy at ${s.stationName}`}>
                     <div className="cz-step__head">
-                      <span className="cz-step__n">{done ? "✓" : n}</span>
+                      <span className="cz-step__n">{done ? <Done /> : n}</span>
                       <span className="cz-step__kind">Buy</span>
                       {readOnly ? null : (
                         <span className="cz-step__acts">
@@ -140,7 +141,7 @@ export function NextTripCard({ trips, completed, onBan, sites = [], readOnly = f
                         return (
                           <li key={id} className={got ? "is-done" : undefined}>
                             <span className="min0">
-                              {got ? <span className="ck">✓</span> : null}
+                              {got ? <span className="ck"><Done /></span> : null}
                               {b.label}
                               {b.forDepots.length ? <small>for {b.forDepots.join(", ")}</small> : null}
                             </span>
@@ -180,7 +181,7 @@ export function NextTripCard({ trips, completed, onBan, sites = [], readOnly = f
                     aria-label={`Stop ${n}: deliver to ${d.depotLabel}`}
                   >
                     <div className="cz-step__head">
-                      <span className="cz-step__n">{done ? "✓" : n}</span>
+                      <span className="cz-step__n">{done ? <Done /> : n}</span>
                       <span className="cz-step__kind">Deliver</span>
                       {readOnly ? null : (
                         <span className="cz-step__acts">
@@ -269,7 +270,7 @@ export function TripList({ trips, completed }: TripProps) {
               <div className="cz-tripcard__head">
                 <span className="cz-badge">#{tr.tripNumber}</span>
                 <b className="ell">
-                  {done ? <span className="cz-live">✓ </span> : null}
+                  {done ? <span className="cz-live"><Done />{" "}</span> : null}
                   {buy?.stationName ?? "—"}
                 </b>
                 <span className="cz-small cz-dim">{buy ? formatHopLy(buy.distanceLy) : ""}</span>

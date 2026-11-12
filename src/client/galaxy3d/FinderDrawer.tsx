@@ -27,6 +27,7 @@ import { CopySystemButton } from "../CopySystemButton";
 import { LoadingNote } from "../ui/Loading";
 import { G3D_HELP, MenuHead } from "./G3dMenu";
 import { pickRow } from "../ui/pickRow";
+import { Disclosure, Done } from "../ui/glyphs";
 
 interface FinderStatusDTO {
   present: boolean;
@@ -103,7 +104,7 @@ function GroupHead({ name, on, isOpen, onToggle }: { name: string; on: number; i
       <span>{name}</span>
       {on ? <span className="finder-group__count">{on}</span> : null}
       <span className="finder-group__chev" aria-hidden="true">
-        {isOpen ? "▾" : "▸"}
+        <Disclosure open={isOpen} />
       </span>
     </button>
   );
@@ -528,7 +529,7 @@ export function FinderDrawer({
                         {h.bodyCount != null && h.bodyCount !== h.listed ? (
                           <span className="dim">/{h.bodyCount}</span>
                         ) : null}
-                        {h.fullyScanned ? <span className="dim tiny" title="Every body listed"> ✓</span> : null}
+                        {h.fullyScanned ? <span className="dim tiny" title="Every body listed"> <Done /></span> : null}
                       </td>
                       <td className="finder-counts">{countsLine(h)}</td>
                     </tr>

@@ -9,6 +9,7 @@ import { formatTons } from "../../../shared/colonize/formatPrice";
 import { inaraCommoditySearchUrl } from "../../../shared/colonize/inaraLinks";
 import { openInEdexoBrowser } from "../inaraBrowser";
 import { BTN_WARN, Panel } from "./ui";
+import { Caret } from "../../ui/glyphs";
 
 export type MissingItem = { id: string; label: string; quantityTons: number; why: "none" | "filtered" };
 
@@ -29,7 +30,7 @@ function FindMore({ item, near, busy, onSaved }: { item: MissingItem; near: stri
       align="end"
       trigger={
         <button type="button" className={`${BTN_WARN} cz-btn--sm`} aria-label={`More ways to find ${item.label}`}>
-          More ▾
+          More <Caret />
         </button>
       }
     >

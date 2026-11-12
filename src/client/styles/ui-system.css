@@ -95,3 +95,9 @@
   justify-content: center;
   gap: 0.35em;
 }
+
+/* 6. ui/glyphs (round 3): the chevrons and check marks that were ▾ ▸ ✓ characters, on the text's middle */
+.ui-glyph {
+  flex: none;
+  vertical-align: -0.125em;
+}

@@ -41,6 +41,7 @@ import { VolcanismFact } from "./VolcanismFact";
 import { JumponiumFact } from "./JumponiumFact";
 import type { JumponiumDTO } from "@shared/jumponium";
 import { copyText } from "./copyText";
+import { Disclosure, Done, NotDone } from "./ui/glyphs";
 export { GlanceGenera } from "./BodyGlance";
 
 /** One empty list for a body with no on-foot locks, so the rows' context value keeps its identity. */
@@ -298,7 +299,7 @@ export const BodyPane = memo(function BodyPane({
               className="glance-item"
               title={body.state.dssComplete ? "Mapped with the DSS" : "Not mapped with the DSS yet"}
             >
-              <small>DSS</small> {body.state.dssComplete ? "✓" : "✗"}
+              <small>DSS</small> {body.state.dssComplete ? <Done /> : <NotDone />}
             </span>
             <GlanceGenera rows={genusRows} />
             {arrivalLs != null ? (
@@ -558,7 +559,7 @@ export const BodyPane = memo(function BodyPane({
                         if (canOpenJournalScanModal) setJournalScanModalOpen(true);
                       }}
                     >
-                      DSS {s.dssComplete ? "✓" : "✗"}
+                      DSS {s.dssComplete ? <Done /> : <NotDone />}
                     </button>
                   }
                 >
@@ -774,7 +775,7 @@ export const BodyPane = memo(function BodyPane({
                         onClick={() => setShowUnlikely((v) => !v)}
                         title="One criterion off — unlikely, not impossible."
                       >
-                        {showUnlikely ? "▾" : "▸"} {showUnlikely ? "Hide" : "Show"} unlikely (
+                        <Disclosure open={showUnlikely} /> {showUnlikely ? "Hide" : "Show"} unlikely (
                         {unlikelyMatches.length})
                       </button>
                       {showUnlikely ? (

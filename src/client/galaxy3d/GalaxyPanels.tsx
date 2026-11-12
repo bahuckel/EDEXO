@@ -12,6 +12,7 @@ import { SystemBookmarkButton } from "../BookmarkButton";
 import { SystemValues } from "./SystemValues";
 import { jsonOrThrow } from "../http";
 import { pickRow } from "../ui/pickRow";
+import { Done } from "../ui/glyphs";
 
 const cr = fmtCrExact;
 
@@ -169,7 +170,7 @@ export function MySystemRecord({ addr }: { addr: string }) {
                 <ul>
                   {b.species.map((s) => (
                     <li key={s.name} className={s.analysed ? "g3d-done" : "g3d-partial"}>
-                      {s.analysed ? "✓" : "…"} {s.name}
+                      {s.analysed ? <Done /> : "…"} {s.name}
                     </li>
                   ))}
                 </ul>
@@ -207,7 +208,7 @@ export function CodexRecord({ system, region }: { system: CodexMapSystemDTO; reg
       <ul className="g3d-entries">
         {system.entries.map((e) => (
           <li key={e.key} className={e.logged ? "g3d-done" : "g3d-todo"}>
-            {e.logged ? "✓" : "○"} {e.name}
+            {e.logged ? <Done /> : "○"} {e.name}
           </li>
         ))}
       </ul>

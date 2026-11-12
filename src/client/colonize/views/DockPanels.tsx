@@ -16,6 +16,7 @@ import type { DepotSnapshot } from "../../../shared/colonize/types";
 import type { ColonizeModel } from "../useColonize";
 import { MaterialTiles } from "./MaterialList";
 import { Panel } from "./ui";
+import { Done } from "../../ui/glyphs";
 
 const pct = (n: number, of: number) => (of > 0 ? Math.max(0, Math.min(100, (n / of) * 100)) : 0);
 
@@ -55,7 +56,7 @@ export function BuyHerePanel({ m, plan }: { m: ColonizeModel; plan: LogisticsPla
             {lines.map((b) => (
               <div key={b.commodityId} data-flip-key={b.commodityId} className={`fact cz-mtile${b.done ? " fact--tone-yours" : ""}`}>
                 <span className="fact-k" title={b.label}>
-                  {b.done ? "✓ " : ""}
+                  {b.done ? <><Done />{" "}</> : ""}
                   {b.label}
                 </span>
                 <span className={`fact-v${b.done ? "" : " cz-hi"}`}>

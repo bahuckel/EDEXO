@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Caret } from "./glyphs";
 
 /**
  * A scrolling box that says when it is hiding something (owner, 2026-09-25: My discoveries is a
@@ -72,7 +73,7 @@ export function ScrollArea({
       {more.right ? <span className="scroll-area__fade-right" aria-hidden /> : null}
       {more.down ? (
         <span className="scroll-area__more" aria-hidden title="More below — scroll">
-          ▾ more
+          <Caret /> more
         </span>
       ) : null}
     </div>

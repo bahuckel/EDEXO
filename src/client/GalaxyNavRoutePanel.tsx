@@ -19,6 +19,7 @@ import { isNum, oneOf, usePersistedState } from "./usePersistedState";
 import { routeTotals, routeValueLine, useRouteValues } from "./routeValues";
 import { fmtCrShort } from "@shared/format";
 import { sendJson, jsonOrNull } from "./http";
+import { Done } from "./ui/glyphs";
 
 /** A system as the map marks it. */
 export interface NavRouteSystemDTO {
@@ -353,7 +354,7 @@ export function GalaxyNavRoutePanel({
                       s.edsm === true ? "EDSM knows this system" : s.edsm === false ? "Not in EDSM: nobody has reported it there" : "Not checked yet"
                     }
                   >
-                    {s.edsm === true ? "EDSM ✓" : s.edsm === false ? "not in EDSM" : "—"}
+                    {s.edsm === true ? <>EDSM <Done /></> : s.edsm === false ? "not in EDSM" : "—"}
                   </span>
                 ) : null}
                 <CopySystemButton system={s.name} />
