@@ -101,3 +101,36 @@
   flex: none;
   vertical-align: -0.125em;
 }
+
+/* 7. ui/EmptyState (round 4): nothing to show (muted icon, dashed edge) and could-not-read (warning icon, red edge) */
+.ui-empty {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin: 0.6rem 0;
+  padding: 0.85rem 0.8rem;
+  border: 1px dashed var(--accent-a20);
+  background: var(--accent-a06);
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.ui-empty__icon {
+  flex: none;
+  margin-top: 0.1em;
+  color: var(--muted);
+}
+.ui-empty__text {
+  margin: 0;
+}
+.ui-empty__action {
+  margin-top: 0.5rem;
+}
+.ui-empty--error {
+  border-style: solid;
+  border-color: rgba(255, 90, 60, 0.45);
+  background: rgba(255, 90, 60, 0.06);
+  color: var(--text);
+}
+.ui-empty--error .ui-empty__icon {
+  color: var(--bad, #ff5a3c);
+}

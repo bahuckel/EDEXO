@@ -24,6 +24,7 @@ import { LoadingNote } from "./ui/Loading";
 import type { DiscoveriesDTO, FootScannedEntry } from "@shared/types";
 import { readableAtmosphereType } from "@shared/atmosphereLabel";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { EmptyState } from "./ui/EmptyState";
 
 /**
  * Everything the commander has actually confirmed on foot.
@@ -304,7 +305,7 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
         <div className="modal-body modal-body--my-exo">
           {view !== "species" ? (
             discoveriesError ? (
-              <p className="dim disc-empty">{discoveriesError}</p>
+              <EmptyState tone="error">{discoveriesError}</EmptyState>
             ) : !discoveries ? (
               <LoadingNote className="disc-empty" label="Reading your journals…" detail="Every system and body you have scanned." />
             ) : (

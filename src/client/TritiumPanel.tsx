@@ -8,6 +8,7 @@ import { CopySystemButton } from "./CopySystemButton";
 import { LoadingNote } from "./ui/Loading";
 import { fmtLyAway } from "@shared/format";
 import { pickRow } from "./ui/pickRow";
+import { EmptyState } from "./ui/EmptyState";
 
 type Point = { x: number; y: number; z: number };
 
@@ -118,11 +119,11 @@ export function TritiumPanel({
               }. Two searches at Spansh; markets seen in the last 30 days.`}
         </span>
       </div>
-      {error ? <p className="fdb-empty">{error}</p> : null}
+      {error ? <EmptyState tone="error">{error}</EmptyState> : null}
       {busy && !result ? <LoadingNote className="fdb-empty" label="Asking Spansh…" /> : null}
       {result ? (
         <div className="fdb-scroll tritium-lists">
-          {result.errors.length ? <p className="fdb-empty">{result.errors.join(" · ")}</p> : null}
+          {result.errors.length ? <EmptyState tone="error">{result.errors.join(" · ")}</EmptyState> : null}
           <h3 className="tritium-lists__head">Rings with hotspots</h3>
           {result.rings.length ? (
             <table className="fdb-table carriers-table">
@@ -154,7 +155,7 @@ export function TritiumPanel({
               </tbody>
             </table>
           ) : (
-            <p className="fdb-empty">No ring with a Tritium hotspot is known near there.</p>
+            <EmptyState>No ring with a Tritium hotspot is known near there.</EmptyState>
           )}
           <h3 className="tritium-lists__head">Stations and carriers selling it</h3>
           {result.sellers.length ? (
@@ -200,7 +201,7 @@ export function TritiumPanel({
               </tbody>
             </table>
           ) : (
-            <p className="fdb-empty">Nobody near there has sold Tritium in the last 30 days.</p>
+            <EmptyState>Nobody near there has sold Tritium in the last 30 days.</EmptyState>
           )}
         </div>
       ) : null}

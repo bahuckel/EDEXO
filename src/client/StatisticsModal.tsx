@@ -34,6 +34,7 @@ import type { RankEstimateDTO } from "@shared/rankProgress";
 import { RollingNumber } from "./ui/RollingNumber";
 import { sendJson, jsonOrNull } from "./http";
 import { X } from "lucide-react";
+import { EmptyState } from "./ui/EmptyState";
 
 /*
   A rank with about how many credits to the next one (shared/rankProgress.ts). The bar is the game's
@@ -507,7 +508,7 @@ export function StatisticsModal({ onClose }: { onClose: () => void }) {
           </Tooltip>
         </div>
 
-        {error ? <p className="fdb-empty">{error}</p> : null}
+        {error ? <EmptyState tone="error">{error}</EmptyState> : null}
         {busy && !data ? (
           <LoadingNote
             className="fdb-empty"

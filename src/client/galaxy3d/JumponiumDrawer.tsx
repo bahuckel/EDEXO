@@ -26,6 +26,7 @@ import { LabCrafting } from "./LabCrafting";
 import { GuardianLab } from "./GuardianLab";
 import { sendJson } from "../http";
 import { pickRow } from "../ui/pickRow";
+import { EmptyState } from "../ui/EmptyState";
 
 
 interface NearReply {
@@ -246,7 +247,7 @@ export function JumponiumDrawer({
           ) : reply == null && busy ? (
             <LoadingNote className="fdb-empty" label="Reading what you hold…" />
           ) : (
-            <p className="fdb-empty">What you hold shows after your next login: the game writes the list then.</p>
+            <EmptyState>What you hold shows after your next login: the game writes the list then.</EmptyState>
           )
         ) : (
           <>
@@ -289,9 +290,9 @@ export function JumponiumDrawer({
               ) : null}
             </>
           ) : (
-            <p className="fdb-empty">
+            <EmptyState>
               What you hold shows after your next login: the game writes the list then.
-            </p>
+            </EmptyState>
           )}
 
           <div className="stations-filters">
@@ -381,7 +382,7 @@ export function JumponiumDrawer({
             </div>
           </div>
 
-          {downloadError ? <p className="fdb-empty">{downloadError}</p> : null}
+          {downloadError ? <EmptyState tone="error">{downloadError}</EmptyState> : null}
           {reply && !reply.galaxyFile && !reply.error ? (
             <div className="carriers-fetch">
               <button
@@ -399,10 +400,10 @@ export function JumponiumDrawer({
               </span>
             </div>
           ) : null}
-          {reply?.error ? <p className="fdb-empty">{reply.error}</p> : null}
+          {reply?.error ? <EmptyState tone="error">{reply.error}</EmptyState> : null}
           {reply == null && busy ? <LoadingNote className="fdb-empty" label="Searching…" /> : null}
           {reply && rows.length === 0 ? (
-            <p className="fdb-empty">No body within {range.toLocaleString("en-US")} ly has that.</p>
+            <EmptyState>No body within {range.toLocaleString("en-US")} ly has that.</EmptyState>
           ) : null}
           {rows.length ? (
             <div className="fdb-scroll">

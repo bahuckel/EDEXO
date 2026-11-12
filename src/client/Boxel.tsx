@@ -51,6 +51,7 @@ import { RollingNumber } from "./ui/RollingNumber";
 import { usePresence } from "./ui/usePresence";
 import { copyText as writeClipboard } from "./copyText";
 import { X } from "lucide-react";
+import { EmptyState } from "./ui/EmptyState";
 
 /*
   The labels and helpers and the table's columns live in boxel/ since the audit of 2026-10-22; the
@@ -788,7 +789,7 @@ export function BoxelScreen({
           </button>
 
           <main className="boxel-main">
-            {error ? <p className="fdb-empty">{error}</p> : null}
+            {error ? <EmptyState tone="error">{error}</EmptyState> : null}
             {ticked.length ? (
               // Review P7 (owner, 2026-11-05): nine pieces were one line; the sources' split is in the tooltip.
               <div className="fdb-summary">
@@ -944,7 +945,7 @@ export function BoxelScreen({
                 </div>
               </>
             ) : saved?.length ? (
-              <p className="dim disc-empty">Tick a boxel in the side menu to list its systems.</p>
+              <EmptyState>Tick a boxel in the side menu to list its systems.</EmptyState>
             ) : null}
           </main>
         </div>

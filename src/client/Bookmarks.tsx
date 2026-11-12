@@ -15,6 +15,7 @@ import { fmtLyAway } from "@shared/format";
 import { usePullToRefresh } from "./ui/usePullToRefresh";
 import { sendJson } from "./http";
 import { X } from "lucide-react";
+import { EmptyState } from "./ui/EmptyState";
 
 const ly = fmtLyAway;
 
@@ -210,13 +211,13 @@ export function BookmarksModal({
           </table>
         </div>
         {!data && failed ? (
-          <p className="fdb-empty">Your bookmarks could not be read.</p>
+          <EmptyState tone="error">Your bookmarks could not be read.</EmptyState>
         ) : !data ? (
           <LoadingNote className="fdb-empty" label="Reading your bookmarks…" />
         ) : data && !data.items.length ? (
-          <p className="fdb-empty">No bookmarks yet. Press the ☆ beside a system&apos;s name to add one.</p>
+          <EmptyState>No bookmarks yet. Press the ☆ beside a system&apos;s name to add one.</EmptyState>
         ) : data && !rows.length ? (
-          <p className="fdb-empty">Nothing matches.</p>
+          <EmptyState>Nothing matches.</EmptyState>
         ) : null}
       </div>
     </div>

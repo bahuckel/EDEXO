@@ -11,6 +11,7 @@ import { ScrollArea } from "./ScrollArea";
 import { Select } from "./Select";
 import { csvFileName, downloadCsv, toCsv } from "../csv";
 import { PAGE } from "./tablePage";
+import { EmptyState } from "./EmptyState";
 
 /** List (a table, the default) or cards — owner, 2026-09-25; every tab offers both. */
 export type DiscoveriesLayout = "list" | "cards";
@@ -185,7 +186,7 @@ function TableInner<T>({
       setMeasured((n) => n + 1);
     }
   }, [from, to, sorted, columns, view.top]);
-  if (rows.length === 0) return <p className="dim disc-empty">{empty}</p>;
+  if (rows.length === 0) return <EmptyState>{empty}</EmptyState>;
 
   const exportCsv = csvName ? (
     <div className="disc-export">

@@ -32,6 +32,7 @@ import { Tooltip } from "./ui/Tooltip";
 import { LoadingNote } from "./ui/Loading";
 import { usePullToRefresh } from "./ui/usePullToRefresh";
 import { X } from "lucide-react";
+import { EmptyState } from "./ui/EmptyState";
 
 const crFmt = new Intl.NumberFormat("en-US");
 const cr = (n: number) => `${crFmt.format(Math.round(n))} CR`;
@@ -192,7 +193,7 @@ export function FirstDiscoveryBacklogModal({
           </button>
         </header>
 
-        {error ? <p className="fdb-empty">{error}</p> : null}
+        {error ? <EmptyState tone="error">{error}</EmptyState> : null}
 
         {!data && !error ? (
           /*
@@ -401,9 +402,9 @@ export function FirstDiscoveryBacklogModal({
                 </p>
               ) : null}
               {rows.length === 0 ? (
-                <p className="fdb-empty">
+                <EmptyState>
                   Nothing at this threshold. Lower it, or you have genuinely finished them.
-                </p>
+                </EmptyState>
               ) : null}
             </div>
           </>

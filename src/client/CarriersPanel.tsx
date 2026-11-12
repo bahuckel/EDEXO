@@ -35,6 +35,7 @@ import { fmtLyAway } from "@shared/format";
 import { AutoRefreshPick } from "./AutoRefreshPick";
 import { sendJson } from "./http";
 import { pickRow } from "./ui/pickRow";
+import { EmptyState } from "./ui/EmptyState";
 
 const ly = fmtLyAway;
 
@@ -352,14 +353,14 @@ export function CarriersPanel({
         ) : null}
       </div>
 
-      {error ? <p className="fdb-empty">{error}</p> : null}
+      {error ? <EmptyState tone="error">{error}</EmptyState> : null}
 
       {!data && querying ? (
         <LoadingNote className="fdb-empty" label="Searching the carrier list…" />
       ) : !haveData && !busy ? (
-        <p className="fdb-empty">
+        <EmptyState>
           No data. Click <strong>Fetch from EDAstro</strong> above to download the carrier list.
-        </p>
+        </EmptyState>
       ) : null}
 
       {haveData ? (
@@ -595,7 +596,7 @@ export function CarriersPanel({
           </div>
 
           {rows.length === 0 ? (
-            <p className="fdb-empty">
+            <EmptyState>
               Nothing matches{search.trim() ? <> “{search.trim()}”</> : " those filters"}. Out in the
               black the sighting ages are long — try <strong>Any age</strong>
               {dssaOnly ? (
@@ -605,7 +606,7 @@ export function CarriersPanel({
                 </>
               ) : null}
               .
-            </p>
+            </EmptyState>
           ) : null}
         </>
       ) : null}

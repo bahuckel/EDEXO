@@ -58,6 +58,8 @@ import { GalaxyHitsModal, GalaxyPossibleModal } from "./GalaxySearchModals";
 import { fmtPct } from "@shared/format";
 import { Tooltip } from "./ui/Tooltip";
 import { jsonOrNull } from "./http";
+import { EmptyState } from "./ui/EmptyState";
+import { LoadingNote } from "./ui/Loading";
 export { MAX_CR, STEP_CR, sliderLabel } from "./galaxySearchShared";
 export type { GalaxySearchMark, GalaxySearchApplied } from "./galaxySearchShared";
 
@@ -530,8 +532,8 @@ export function GalaxySearchPanel({
         </div>
       ) : null}
 
-      {error ? <p className="fdb-empty">{error}</p> : null}
-      {!cat && !error ? <p className="fdb-empty">Reading the index…</p> : null}
+      {error ? <EmptyState tone="error">{error}</EmptyState> : null}
+      {!cat && !error ? <LoadingNote className="fdb-empty" label="Reading the index…" /> : null}
 
       {cat?.available ? (
         <>
@@ -701,13 +703,13 @@ export function GalaxySearchPanel({
           )}
 
           {possible && !canScan && !busy ? (
-            <p className="fdb-empty">
+            <EmptyState>
               {regionId === 0
                 ? "Choose a region to search."
                 : !wantFss && !wantDss
                   ? "Tick at least one kind of body to include."
                   : "Choose a genus or a species — searching every plant in a region answers nothing."}
-            </p>
+            </EmptyState>
           ) : null}
 
           {possible && scan ? (
@@ -855,25 +857,25 @@ export function GalaxySearchPanel({
             </GalaxyHitsModal>
           ) : null}
           {possible && scan && scanBodies === 0 ? (
-            <p className="fdb-empty">
+            <EmptyState>
               Nothing in {scan.regionName ?? "that region"} suits it. Try another region, or include bodies
               somebody has already probed.
-            </p>
+            </EmptyState>
           ) : null}
           {!possible && result && hits.length === 0 ? (
-            <p className="fdb-empty">Nothing recorded matches that. Widen the genus, or lower the price.</p>
+            <EmptyState>Nothing recorded matches that. Widen the genus, or lower the price.</EmptyState>
           ) : null}
           {!result && !scan ? (
-            <p className="fdb-empty">Choose what you are looking for, then search. The map follows.</p>
+            <EmptyState>Choose what you are looking for, then search. The map follows.</EmptyState>
           ) : null}
         </>
       ) : null}
 
       {cat && !cat.available ? (
-        <p className="fdb-empty">
+        <EmptyState>
           This build has no galaxy index. Build one with <code>npm run feeder</code>&apos;s index script to
           search beyond your own journals.
-        </p>
+        </EmptyState>
       ) : null}
     </section>
   );

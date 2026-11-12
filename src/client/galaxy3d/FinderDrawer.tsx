@@ -28,6 +28,7 @@ import { LoadingNote } from "../ui/Loading";
 import { G3D_HELP, MenuHead } from "./G3dMenu";
 import { pickRow } from "../ui/pickRow";
 import { Disclosure, Done } from "../ui/glyphs";
+import { EmptyState } from "../ui/EmptyState";
 
 interface FinderStatusDTO {
   present: boolean;
@@ -255,10 +256,10 @@ export function FinderDrawer({
       <MenuHead title="Colonisation candidate search" help={G3D_HELP.finder} />
       {status && !status.present ? (
         <div className="g3d-menu__section g3d-menu__section--first">
-          <p className="fdb-empty">
+          <EmptyState>
             This search needs its own data: the systems within 150 ly of inhabited space, with what their bodies are
             and whether someone colonised them, from Spansh&apos;s dump.
-          </p>
+          </EmptyState>
           <div className="carriers-fetch">
             <DataButton
               verb="Downloading"
@@ -268,7 +269,7 @@ export function FinderDrawer({
               onClick={() => void download()}
             />
           </div>
-          {error ? <p className="fdb-empty">{error}</p> : null}
+          {error ? <EmptyState tone="error">{error}</EmptyState> : null}
         </div>
       ) : null}
 
@@ -486,8 +487,8 @@ export function FinderDrawer({
             </div>
           </div>
 
-          {error ? <p className="fdb-empty">{error}</p> : null}
-          {result?.problem ? <p className="fdb-empty">{result.problem}</p> : null}
+          {error ? <EmptyState tone="error">{error}</EmptyState> : null}
+          {result?.problem ? <EmptyState tone="error">{result.problem}</EmptyState> : null}
           {/* Every search shows it is running, not only the first: a new search over an old list only dimmed the
               list, and "All colonised" reads the whole file (owner, 2026-10-19: "it needs some loading indicator"). */}
           {busy ? (

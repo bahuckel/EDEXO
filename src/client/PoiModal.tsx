@@ -30,6 +30,7 @@ import { fmtLyAway } from "@shared/format";
 import { usePullToRefresh } from "./ui/usePullToRefresh";
 import { sendJson } from "./http";
 import { X } from "lucide-react";
+import { EmptyState } from "./ui/EmptyState";
 
 const ly = fmtLyAway;
 
@@ -172,14 +173,14 @@ export function PoiModal({ onClose }: { onClose: () => void }) {
           ) : null}
         </div>
 
-        {error ? <p className="fdb-empty">{error}</p> : null}
+        {error ? <EmptyState tone="error">{error}</EmptyState> : null}
 
         {!data && querying ? (
           <LoadingNote className="fdb-empty" label="Searching the points of interest…" />
         ) : !haveData && !busy ? (
-          <p className="fdb-empty">
+          <EmptyState>
             No data. Click <strong>Fetch from EDAstro</strong> above to download the catalogue.
-          </p>
+          </EmptyState>
         ) : null}
 
         {haveData ? (
@@ -293,10 +294,10 @@ export function PoiModal({ onClose }: { onClose: () => void }) {
             </div>
 
             {rows.length === 0 ? (
-              <p className="fdb-empty">
+              <EmptyState>
                 Nothing matches{search.trim() ? <> “{search.trim()}”</> : " those filters"}. The catalogue is
                 2,766 points across the whole galaxy, so the nearest can be a long way out.
-              </p>
+              </EmptyState>
             ) : null}
           </>
         ) : null}
