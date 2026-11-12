@@ -29,6 +29,7 @@ import { G3D_HELP, MenuHead, MenuRow } from "./G3dMenu";
 import { keepNeutronMarks, type NeutronMark } from "./neutronMarks";
 import { handToNeutron } from "../NeutronDrawer";
 import { LiveRouteBanner, useLiveRoute } from "./LiveRouteBanner";
+import { sendJson, jsonOrNull } from "../http";
 
 const KIND_NAME: Record<SpanshRouteDTO["kind"], string> = {
   exobiology: "Exobiology",
@@ -150,7 +151,7 @@ export function SpanshRouteDrawer({
    */
   const drawUnlessFlying = async (marks: NeutronMark[]): Promise<boolean> => {
     const live = await fetch("/api/neutron/live")
-      .then((r) => (r.ok ? (r.json() as Promise<{ active?: boolean }>) : null))
+      .then(jsonOrNull<{ active?: boolean }>)
       .catch(() => null);
     if (live?.active) {
       setNote(NOT_DRAWN);
@@ -192,11 +193,7 @@ export function SpanshRouteDrawer({
   const importFile = async (f: File) => {
     const content = await f.text();
     await answer(() =>
-      fetch("/api/spansh-route/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: f.name, text: content }),
-      }),
+      sendJson("/api/spansh-route/import", { name: f.name, text: content }),
     );
   };
 
@@ -253,17 +250,13 @@ export function SpanshRouteDrawer({
     try {
       const a = route.stops[0]!;
       const b = route.stops[route.stops.length - 1]!;
-      const r = await fetch("/api/neutron/plan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          waypoints: [
-            { name: a.name, x: a.x, y: a.y, z: a.z },
-            { name: b.name, x: b.x, y: b.y, z: b.z },
-          ],
-          // Without a range the planner takes the ship's.
-          rangeLy: rangeFrom === "spansh" ? (route.rangeLy ?? undefined) : undefined,
-        }),
+      const r = await sendJson("/api/neutron/plan", {
+        waypoints: [
+          { name: a.name, x: a.x, y: a.y, z: a.z },
+          { name: b.name, x: b.x, y: b.y, z: b.z },
+        ],
+        // Without a range the planner takes the ship's.
+        rangeLy: rangeFrom === "spansh" ? (route.rangeLy ?? undefined) : undefined,
       });
       const j = (await r.json()) as {
         jumps?: number;
@@ -336,7 +329,7 @@ export function SpanshRouteDrawer({
   };
 
   const stopFlying = async () => {
-    const r = await fetch("/api/neutron/live", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stop: true }) }).catch(() => null);
+    const r = await sendJson("/api/neutron/live", { stop: true }).catch(() => null);
     // Said only when it did (review 2026-11-05: "Stopped." showed after a failed request too).
     if (!r?.ok) return setError("Could not stop the route: is EDEXO's server running?");
     refreshLive();

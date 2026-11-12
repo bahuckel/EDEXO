@@ -5,6 +5,7 @@
 import type express from "express";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { localOnly, requestIsFromThisPc } from "../lanAuth.js";
+import { fail } from "../errorText.js";
 
 export function registerAppInfoRoutes(
   app: express.Express,
@@ -56,7 +57,7 @@ export function registerAppInfoRoutes(
       opts.markWhatsNewSeen();
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 

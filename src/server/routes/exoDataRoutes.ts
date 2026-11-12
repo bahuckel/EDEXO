@@ -6,6 +6,7 @@ import type express from "express";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { localOnly } from "../lanAuth.js";
 import type { ExoDataAlertDTO } from "../../shared/types.js";
+import { fail } from "../errorText.js";
 
 export function registerExoDataRoutes(
   app: express.Express,
@@ -40,7 +41,7 @@ export function registerExoDataRoutes(
       if (out.ok && lines && opts.showFixStubNativeDialog?.(lines)) notifyTarget = "native";
       res.json({ ...out, notifyTarget });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 

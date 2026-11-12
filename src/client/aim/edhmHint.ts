@@ -3,6 +3,7 @@
  * (pitchCapture.ts, distanceCapture.ts): a hint where to look for the text, null without EDHM.
  */
 import type { Rgb } from "@shared/hudTextLook";
+import { jsonOrNull } from "../http";
 
 export interface EdhmHint {
   pitchText: Rgb;
@@ -18,7 +19,7 @@ const EDHM_EVERY_MS = 5000;
 export function watchEdhmHint(onHint: (h: EdhmHint | null) => void): () => void {
   const ask = () =>
     void fetch("/api/hud-colours/edhm")
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<{ edhm?: EdhmHint | null }>)
       .then((j: { edhm?: EdhmHint | null } | null) => onHint(j?.edhm ? { ...j.edhm, targetText: j.edhm.targetText ?? null } : null))
       .catch(() => {});
   ask();

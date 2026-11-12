@@ -19,6 +19,7 @@ import { G3D_HELP, MenuHead, MenuRow } from "./galaxy3d/G3dMenu";
 import { PickList, type PickOption } from "./galaxy3d/PickList";
 import { CopySystemButton } from "./CopySystemButton";
 import { crShort } from "./expeditionFocus";
+import { jsonOrNull } from "./http";
 
 /*
   The map focus and crShort live in expeditionFocus.ts (audit 2026-10-22), so the header's "Next boxel" does not load
@@ -189,7 +190,7 @@ export function ExpeditionDrawer({
 
   useEffect(() => {
     void fetch("/api/species-encyclopedia")
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<{ species?: { entry: { id: string; displayName: string; genus?: string } }[] }>)
       .then((j: { species?: { entry: { id: string; displayName: string; genus?: string } }[] } | null) =>
         setSpeciesList(
           (j?.species ?? [])
@@ -202,7 +203,7 @@ export function ExpeditionDrawer({
 
   useEffect(() => {
     void fetch("/api/expedition/targets")
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<TargetsDTO>)
       .then((j: TargetsDTO | null) => j && setTargets(j))
       .catch(() => undefined);
   }, []);
@@ -213,7 +214,7 @@ export function ExpeditionDrawer({
     const ac = new AbortController();
     const at = (d: number) =>
       fetch(`/api/expedition/ends?distance=${d}&x=${ship.x}&y=${ship.y}&z=${ship.z}`, { signal: ac.signal })
-        .then((r) => (r.ok ? r.json() : null))
+        .then(jsonOrNull<{ ends?: (EndPoint & { direction: string; distanceLy: number })[] }>)
         .then((j: { ends?: (EndPoint & { direction: string; distanceLy: number })[] } | null) =>
           (j?.ends ?? []).map((e) => ({ name: e.name, x: e.x, y: e.y, z: e.z, note: `${e.direction} · ${fmtLy(e.distanceLy)}` })),
         );
@@ -236,7 +237,7 @@ export function ExpeditionDrawer({
     const ac = new AbortController();
     const t = window.setTimeout(() => {
       void fetch(`/api/galaxy/find?q=${encodeURIComponent(q)}`, { signal: ac.signal })
-        .then((r) => (r.ok ? r.json() : null))
+        .then(jsonOrNull<GalaxyFindDTO>)
         .then((j: GalaxyFindDTO | null) => {
           if (ac.signal.aborted) return;
           setFound(
@@ -310,7 +311,7 @@ export function ExpeditionDrawer({
     const ac = new AbortController();
     const q = new URLSearchParams({ stops: planKeys.join(";"), x: String(ship.x), y: String(ship.y), z: String(ship.z) });
     void fetch(`/api/expedition/plan?${q}`, { signal: ac.signal })
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<ExpeditionPlanDTO>)
       .then((j: ExpeditionPlanDTO | null) => {
         if (!ac.signal.aborted) setPlan(j);
       })
@@ -558,7 +559,7 @@ export function ExpeditionBoxelCard({
     const q = new URLSearchParams({ key: b.key, ...(ship ? { x: String(ship.x), y: String(ship.y), z: String(ship.z) } : {}) });
     const ac = new AbortController();
     void fetch(`/api/expedition/boxel?${q}`, { signal: ac.signal })
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<ExpeditionCandidatesDTO>)
       .then((j: ExpeditionCandidatesDTO | null) => {
         if (!ac.signal.aborted) setC(j);
       })

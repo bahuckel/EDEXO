@@ -15,6 +15,7 @@ import {
   writeLanAccess,
   writeLauncherOpenMode,
 } from "../launcherPrefs.js";
+import { fail } from "../errorText.js";
 
 export function registerLauncherRoutes(
   app: express.Express,
@@ -41,7 +42,7 @@ export function registerLauncherRoutes(
       else writeLauncherOpenMode(mode);
       res.json({ ok: true, mode });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 
@@ -60,7 +61,7 @@ export function registerLauncherRoutes(
       writeLanAccess(enabled);
       res.json({ ok: true, lanAccess: opts.getStatus().lanAccess });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 
@@ -97,7 +98,7 @@ export function registerLauncherRoutes(
       const r = await bridge.switchCommander({ fid: target.fid });
       res.status(r.ok ? 200 : 500).json({ ...r, commander: { fid: target.fid, name: target.name } });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 }

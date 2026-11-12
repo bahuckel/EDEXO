@@ -19,6 +19,7 @@ import { findInFinderOffThread, searchFinderOffThread } from "../finderWorkerCli
 import { normaliseFinderQuery, type FinderQuery, type FinderResult } from "../../shared/finder.js";
 import { id64Boxel } from "../../shared/id64.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
+import { errorText } from "../errorText.js";
 
 export function registerFinderRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
   registerGalaxyCache("finder", () => void clearFinderIndex());
@@ -80,7 +81,7 @@ export function registerFinderRoutes(app: express.Express, opts: HttpServerOptio
     try {
       index = loadFinderIndex();
     } catch (e) {
-      return void res.json(empty(`The search data could not be read: ${e instanceof Error ? e.message : String(e)}`));
+      return void res.json(empty(`The search data could not be read: ${errorText(e)}`));
     }
     if (!index) return void res.json(empty("no-data"));
     const dates = { dump: index.meta.dump ?? null, builtAt: index.meta.builtAt ?? null };
@@ -112,7 +113,7 @@ export function registerFinderRoutes(app: express.Express, opts: HttpServerOptio
         knownClaimedNames: mine.map((c) => c.name.toLowerCase()),
       });
     } catch (e) {
-      return void res.json(empty(`The search failed: ${e instanceof Error ? e.message : String(e)}`, dates));
+      return void res.json(empty(`The search failed: ${errorText(e)}`, dates));
     }
     if (q.reference === "picked" && result.matched === 0 && refs) {
       const r2 = q.radiusLy * q.radiusLy;

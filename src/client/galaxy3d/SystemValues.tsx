@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import type { RouteSystemValuesDTO } from "@shared/dto/routeSystem.js";
 import { fmtCrExact, fmtCrShort } from "@shared/format";
+import { jsonOrThrow } from "../http";
 
 /** Bodies listed; the rest are counted. */
 const SHOWN = 8;
@@ -20,7 +21,7 @@ export function SystemValues({ addr, name }: { addr: string; name: string }) {
     let live = true;
     setD("loading");
     fetch(`/api/route/system-values?addr=${encodeURIComponent(addr)}&name=${encodeURIComponent(name)}`)
-      .then((r) => (r.ok ? (r.json() as Promise<RouteSystemValuesDTO>) : Promise.reject(new Error(String(r.status)))))
+      .then(jsonOrThrow<RouteSystemValuesDTO>)
       .then((v) => live && setD(v))
       .catch(() => live && setD("error"));
     return () => {

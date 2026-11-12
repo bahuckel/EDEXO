@@ -1,5 +1,6 @@
 import { commodityMergeBucket } from "../../shared/colonize/commodityKey";
 import { fetchEdsmJson } from "./galaxySystemCoords";
+import { errorText } from "../errorText";
 
 const EDSM_MATERIALS = "https://www.edsm.net/api-commander-v1/get-materials";
 
@@ -29,7 +30,7 @@ export async function fetchEdsmCommanderCargo(
   try {
     payload = await fetchEdsmJson(`${EDSM_MATERIALS}?${params.toString()}`);
   } catch (e) {
-    return { ok: false, err: e instanceof Error ? e.message : String(e) };
+    return { ok: false, err: errorText(e) };
   }
 
   if (!payload || typeof payload !== "object") {

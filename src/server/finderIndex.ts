@@ -32,6 +32,7 @@ import { gunzip as gunzipCb } from "node:zlib";
 import { GALAXY_INDEX_BASE_URL } from "./galaxyIndexFiles.js";
 import { getProjectRoot, resolveUserSettingsJsonPath } from "./paths.js";
 import { stallGuard } from "./stallGuard.js";
+import { errorText } from "./errorText.js";
 
 const gunzip = promisify(gunzipCb);
 const MAGIC = "EDXFND01";
@@ -410,7 +411,7 @@ export async function downloadFinder(onDone: () => void, fetchImpl: typeof fetch
     onDone();
   } catch (e) {
     downloading = null;
-    lastError = e instanceof Error ? e.message : String(e);
+    lastError = errorText(e);
     rmSync(part, { force: true });
   }
 }

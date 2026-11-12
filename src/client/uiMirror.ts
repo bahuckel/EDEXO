@@ -11,6 +11,7 @@
  * Only settings: what the viewers see still follows the game (the body, the scans) as before.
  */
 import { onServerChange } from "./serverChanges";
+import { sendJson, jsonOrNull } from "./http";
 
 const PREFIX = "edexo.";
 /** Not a setting of the picture: diagnostics switches. */
@@ -55,11 +56,7 @@ export function startUiMirrorSource(): void {
     const s = JSON.stringify(values);
     if (s === last) return;
     last = s;
-    void fetch("/api/ui/mirror", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ values }),
-    }).catch(() => {
+    void sendJson("/api/ui/mirror", { values }).catch(() => {
       last = ""; // try again shortly
       schedule();
     });
@@ -161,7 +158,7 @@ export function watchUiMirror(fromRev: number, onChange: () => void): void {
   onServerChange("ui-mirror", () => {
     const mine = ++asked;
     fetch("/api/ui/mirror", { cache: "no-store" })
-      .then((r) => (r.ok ? (r.json() as Promise<Mirror>) : null))
+      .then(jsonOrNull<Mirror>)
       .then((m) => {
         if (!m || mine !== asked || m.rev === rev) return;
         rev = m.rev;

@@ -18,6 +18,7 @@ import { CopySystemButton } from "./CopySystemButton";
 import { isNum, oneOf, usePersistedState } from "./usePersistedState";
 import { routeTotals, routeValueLine, useRouteValues } from "./routeValues";
 import { fmtCrShort } from "@shared/format";
+import { sendJson, jsonOrNull } from "./http";
 
 /** A system as the map marks it. */
 export interface NavRouteSystemDTO {
@@ -111,7 +112,7 @@ export function GalaxyNavRoutePanel({
     setVisited(null);
     setVisitedFailed(false);
     fetch(`/api/galaxy/visited?days=${days}`)
-      .then((r) => (r.ok ? (r.json() as Promise<GalaxyVisitedDTO>) : null))
+      .then(jsonOrNull<GalaxyVisitedDTO>)
       .then((d) => {
         if (!live) return;
         if (d) setVisited(d);
@@ -312,11 +313,7 @@ export function GalaxyNavRoutePanel({
                 className="g3d-btn"
                 disabled={!unchecked.length || !!ck}
                 onClick={() =>
-                  void fetch("/api/navroutes/edsm-check", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ addresses: unchecked.map((s) => s.address) }),
-                  }).then(() => loadLog())
+                  void sendJson("/api/navroutes/edsm-check", { addresses: unchecked.map((s) => s.address) }).then(() => loadLog())
                 }
                 title="Ask EDSM about the systems listed that have not been checked: forty a request, five seconds apart"
               >

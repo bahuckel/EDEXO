@@ -146,13 +146,8 @@ function createBrowserPrefs(o) {
     /** Every origin whose storage is kept. */
     keptOrigins() {
       const out = [];
-      for (const [d, s] of Object.entries(data.sites)) {
-        if (!s.remember) continue;
-        // No "www." before an address (192.168.1.20): an origin Chromium rejects fails every clear (review 1.2.16).
-        const ip = /^\d{1,3}(\.\d{1,3}){3}$/.test(d) || d.includes(":");
-        out.push(`https://${d}`, ...(ip ? [] : [`https://www.${d}`]), ...s.origins);
-      }
-      return [...new Set(out)].filter((o) => httpUrl(o) != null);
+      for (const [d, s] of Object.entries(data.sites)) if (s.remember) out.push(...originsOf(d, s.origins));
+      return [...new Set(out)];
     },
     rememberedDomains: () => Object.keys(data.sites).filter((d) => data.sites[d].remember),
     links: () => [
@@ -231,4 +226,19 @@ function createBrowserPrefs(o) {
   };
 }
 
-module.exports = { createBrowserPrefs, httpUrl, DEFAULT_LINKS, SEARCH_ENGINES };
+/**
+ * A site's origins for a storage clear: its own and its www. name, and the ones noted while it was remembered. No
+ * "www." before an address (192.168.1.20): an origin Chromium rejects fails the whole clear (review 1.2.16; the two
+ * clears in browserTabs.cjs still sent one, review 2026-11-10 D7).
+ *
+ * @param {string} domain
+ * @param {readonly string[]} [noted]
+ * @returns {string[]}
+ */
+function originsOf(domain, noted = []) {
+  const ip = /^\d{1,3}(\.\d{1,3}){3}$/.test(domain) || domain.includes(":");
+  const out = [`https://${domain}`, ...(ip ? [] : [`https://www.${domain}`]), ...noted];
+  return [...new Set(out)].filter((o) => httpUrl(o) != null);
+}
+
+module.exports = { createBrowserPrefs, httpUrl, originsOf, DEFAULT_LINKS, SEARCH_ENGINES };

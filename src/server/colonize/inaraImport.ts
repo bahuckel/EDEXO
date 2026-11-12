@@ -10,6 +10,7 @@ import { isGroundStyleType } from "../../shared/colonize/inaraStationIcon";
 import { marketTimeIso } from "../../shared/colonize/marketAge";
 import type { MaterialBuyIndex } from "./materialBuyIndex";
 import { writeJsonAtomic } from "./jsonFs";
+import { errorText } from "../errorText";
 
 const SETTINGS_FILE = "inara-import-settings.json";
 
@@ -195,7 +196,7 @@ export async function importInaraJsonFile(
   try {
     text = await fs.readFile(filePath, "utf8");
   } catch (e) {
-    return { ok: false, fileName, err: e instanceof Error ? e.message : String(e) };
+    return { ok: false, fileName, err: errorText(e) };
   }
   return importInaraJsonText(index, fileName, text);
 }
@@ -210,7 +211,7 @@ export async function importInaraJsonText(
   try {
     raw = JSON.parse(text);
   } catch (e) {
-    return { ok: false, fileName, err: e instanceof Error ? e.message : String(e) };
+    return { ok: false, fileName, err: errorText(e) };
   }
   const doc = parseInaraImportFile(raw);
   if (!doc) return { ok: false, fileName, err: "Not a valid Edexo Inara scrape file." };
@@ -241,7 +242,7 @@ async function importPendingInaraDirectory(
     return {
       ok: false,
       fileName: dir,
-      err: e instanceof Error ? e.message : String(e),
+      err: errorText(e),
     };
   }
   const files = names.filter((n) => n.toLowerCase().endsWith(".json")).sort();
@@ -262,7 +263,7 @@ async function importPendingInaraDirectory(
     try {
       raw = JSON.parse(await fs.readFile(full, "utf8"));
     } catch (e) {
-      errors.push(`${name}: ${e instanceof Error ? e.message : String(e)}`);
+      errors.push(`${name}: ${errorText(e)}`);
       continue;
     }
     const doc = parseInaraImportFile(raw);
@@ -358,7 +359,7 @@ export async function startInaraImportWatch(args: {
       args.onResult({
         ok: false,
         fileName: dir,
-        err: e instanceof Error ? e.message : String(e),
+        err: errorText(e),
       });
     }
   }
@@ -388,7 +389,7 @@ export async function startInaraImportWatch(args: {
       args.onResult({
         ok: false,
         fileName: path.basename(full),
-        err: e instanceof Error ? e.message : String(e),
+        err: errorText(e),
       });
     } finally {
       pending.delete(full);
@@ -409,7 +410,7 @@ export async function startInaraImportWatch(args: {
       args.onResult({
         ok: false,
         fileName: dir,
-        err: `Could not watch Inara import folder: ${e instanceof Error ? e.message : String(e)}`,
+        err: `Could not watch Inara import folder: ${errorText(e)}`,
       });
     }
   }

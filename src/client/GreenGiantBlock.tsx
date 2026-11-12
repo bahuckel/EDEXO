@@ -7,14 +7,11 @@
 import { useState } from "react";
 import type { SystemMapBodyDetailDTO } from "@shared/types";
 import { EDGGG_URL, greenGiantIsNewFind, greenGiantLabel, isGggClass, type GreenGiantMark } from "@shared/greenGasGiant";
+import { sendJson } from "./http";
 
 async function postMark(systemAddress: number, bodyId: number, mark: GreenGiantMark | null): Promise<boolean> {
   try {
-    const r = await fetch("/api/ggg/mark", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ systemAddress, bodyId, mark }),
-    });
+    const r = await sendJson("/api/ggg/mark", { systemAddress, bodyId, mark });
     return r.ok;
   } catch {
     return false;

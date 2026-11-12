@@ -16,16 +16,20 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "GET /api/exomastery-feeder-json/:genusDir/:basename": "lan",
   // routes/galaxyRoutes.ts
   "GET /api/galaxy/layers": "lan",
+  // routes/galaxyDataRoutes.ts
   "GET /api/galaxy/points": "lan",
   "GET /api/galaxy/traits": "lan",
   "GET /api/galaxy/filter": "lan",
+  // routes/galaxyIndexRoutes.ts
   "GET /api/galaxy/index": "lan",
   "POST /api/galaxy/index/download": "pc",
+  // routes/navRouteRoutes.ts
   "GET /api/navroutes": "lan",
   "GET /api/navroutes/plotted": "lan",
   "GET /api/navroutes/system": "lan",
   "POST /api/navroutes/edsm-check": "lan",
   "DELETE /api/navroutes": "pc",
+  // routes/galaxyMapRoutes.ts
   "GET /api/galaxy/cells": "lan",
   "GET /api/galaxy/sector-names": "lan",
   "GET /api/galaxy/names": "lan",
@@ -34,12 +38,14 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "GET /api/galaxy/find": "lan",
   "GET /api/galaxy/sector": "lan",
   "GET /api/galaxy/tile": "lan",
+  // routes/galaxyMineRoutes.ts
   "GET /api/galaxy/own": "lan",
   "GET /api/galaxy/mine": "lan",
   "GET /api/galaxy/mine/system": "lan",
   "GET /api/galaxy/visited": "lan",
   "GET /api/galaxy/route": "lan",
   "GET /api/galaxy/my-sectors": "lan",
+  // routes/galaxySearchRoutes.ts
   "GET /api/galaxy/species": "lan",
   "GET /api/galaxy/regions": "lan",
   "GET /api/galaxy/possible": "lan",
@@ -167,20 +173,10 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "POST /api/feeder/import-dump": "pc",
   "GET /api/feeder/import-dump/status": "pc",
   // routes/settingsRoutes.ts
-  "POST /api/settings/journal-directory": "pc",
-  "POST /api/feeder/import": "pc",
-  "POST /api/settings/feeder-data-directory": "pc",
-  "POST /api/settings/journal-history": "lan",
   "POST /api/settings/hud-prefs": "lan",
   "POST /api/settings/poll-rates": "lan",
   "GET /api/settings/collection-focus": "lan",
   "POST /api/settings/collection-focus": "lan",
-  "GET /api/settings/notify": "lan",
-  "POST /api/settings/notify": "lan",
-  "POST /api/notices/read": "lan",
-  "POST /api/notices/unread": "lan",
-  "POST /api/notices/test": "lan",
-  "POST /api/notices/clear-read": "pc",
   "POST /api/settings/radar-radius": "lan",
   "POST /api/settings/include-bacterium": "lan",
   "POST /api/settings/include-exploration-scan-data": "lan",
@@ -190,6 +186,20 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "POST /api/settings/fleet-carrier-own": "lan",
   "POST /api/settings/photo-stamp": "lan",
   "POST /api/settings/foot-travel-odometer": "lan",
+  "POST /api/settings/exo-map-tiers": "lan",
+  // routes/journalSettingsRoutes.ts
+  "POST /api/settings/journal-directory": "pc",
+  "POST /api/feeder/import": "pc",
+  "POST /api/settings/feeder-data-directory": "pc",
+  "POST /api/settings/journal-history": "lan",
+  // routes/noticesRoutes.ts
+  "GET /api/settings/notify": "lan",
+  "POST /api/settings/notify": "lan",
+  "POST /api/notices/read": "lan",
+  "POST /api/notices/unread": "lan",
+  "POST /api/notices/test": "lan",
+  "POST /api/notices/clear-read": "pc",
+  // routes/communityRoutes.ts
   "GET /api/system/spansh-search": "lan",
   "POST /api/system/hydrate-from-spansh": "lan",
   "GET /api/system/edsm-search": "lan",
@@ -204,9 +214,9 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "POST /api/settings/canonn-upload": "pc",
   "POST /api/settings/eddn-upload": "pc",
   "POST /api/system/hydrate-from-edsm": "lan",
+  // routes/uiRoutes.ts
   "POST /api/ui/view-system": "lan",
   "POST /api/ui/selected-body": "lan",
-  "POST /api/settings/exo-map-tiers": "lan",
   "GET /api/ui/mirror": "lan",
   "POST /api/ui/mirror": "pc",
   "POST /api/ui/open-external": "pc",

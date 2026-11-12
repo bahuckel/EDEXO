@@ -8,6 +8,7 @@ import { IDLE_MATERIAL_BUY_SCAN_STATUS, type MaterialBuyScanQueueSlice } from ".
 import { patchMaterialBuyScanStatus } from "./materialBuyScanHub";
 import { scanAndPersistMaterialHits } from "./spanshCheckout";
 import { refreshMarketsById } from "./spanshStationMarket";
+import { errorText } from "../errorText";
 
 const SCAN_CONCURRENCY = 1;
 const PASSIVE_DEBOUNCE_MS = 8000;
@@ -99,7 +100,7 @@ async function runMaterialBuyScan(job: ScanJob): Promise<void> {
       });
       if (found > 0) patchMaterialBuyScanStatus({ lastStationsFound: found });
     } catch (e) {
-      patchMaterialBuyScanStatus({ lastError: e instanceof Error ? e.message : String(e) });
+      patchMaterialBuyScanStatus({ lastError: errorText(e) });
     }
   }
 
@@ -170,7 +171,7 @@ async function runMaterialBuyScan(job: ScanJob): Promise<void> {
         lastStationsFound: typeof found === "number" && found > 0 ? found : null,
       });
     } catch (e) {
-      lastItemError = e instanceof Error ? e.message : String(e);
+      lastItemError = errorText(e);
       patchMaterialBuyScanStatus({ lastError: lastItemError });
     }
     done += 1;
@@ -244,7 +245,7 @@ async function drainScanQueues(): Promise<void> {
         await runMaterialBuyScan(job);
       } catch (e) {
         /** One failing job used to abort the loop and strand every job still queued behind it. */
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = errorText(e);
         console.error("[edexo-colonize] material buy scan failed:", e);
         patchMaterialBuyScanStatus({ lastError: msg });
       }

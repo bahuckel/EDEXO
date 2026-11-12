@@ -8,6 +8,7 @@
 import { useEffect, useRef } from "react";
 import type { TargetDistance } from "@shared/hudTargetDistance";
 import { startDistanceCapture, type DistanceCapture } from "./distanceCapture";
+import { sendJson } from "../http";
 
 /** How long the capture outlives its trigger (a push between two states, a tab switched for a moment). */
 const LINGER_MS = 2000;
@@ -36,7 +37,7 @@ export function useDistanceReader(wanted: boolean): void {
       last = { distLs: r.distLs, atMs: now };
       if (!ok) return;
       const body = { distLs: r.distLs, text: r.text };
-      void fetch("/api/hud-target-distance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
+      void sendJson("/api/hud-target-distance", body).catch(() => {});
     };
     if (wanted) {
       if (!cap.current && !starting.current) {

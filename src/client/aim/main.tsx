@@ -18,6 +18,7 @@ import { setHudRecolour } from "./gameScreen";
 import { invertHudMatrix, type HudColourMatrix, type HudColourSupport } from "@shared/hudColourMatrix";
 import "./aim.css";
 import { setGameInFront } from "./readerThread";
+import { sendJson, jsonOrNull } from "../http";
 
 /* The game in front or not (aimWindow.cjs): the readers read only while it is (review 2026-11-10 E3). */
 (window as unknown as { edexoElectron?: { onAimGameFront?: (cb: (on: unknown) => void) => () => void } }).edexoElectron?.onAimGameFront?.(
@@ -163,7 +164,7 @@ function usePitchReader(wanted: boolean): ReaderState {
       setState({ kind: "read", pitchDeg: accepted?.pitchDeg ?? null, headingDeg: accepted?.headingDeg ?? null, last: accepted, heldMs });
       if (r) {
         const body = { pitchDeg: r.pitchDeg, rollDeg: r.rollDeg };
-        void fetch("/api/hud-pitch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
+        void sendJson("/api/hud-pitch", body).catch(() => {});
       }
     };
     if (wanted) {
@@ -235,7 +236,7 @@ function useView(): { view: View; matrix: HudColourMatrix | null; colour: HudCol
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   useEffect(() => {
     void fetch("/api/elite-view")
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<{ verticalFovDeg?: number | null; hudMatrix?: HudColourMatrix | null; hudColour?: HudColourSupport }>)
       .then((v: { verticalFovDeg?: number | null; hudMatrix?: HudColourMatrix | null; hudColour?: HudColourSupport } | null) => {
         setFov(v?.verticalFovDeg ?? null);
         setMatrix(v?.hudMatrix ?? null);

@@ -30,6 +30,7 @@ import { systemPrefixOf } from "../expedition.js";
 import { expeditionCandidates, expeditionField, expeditionPlan, parseCodes, type ExpeditionDeps } from "../expeditionService.js";
 import { BODY_KINDS, circleSuggestions, loadFeatureTable, parseTarget, starTypes } from "../expeditionTargets.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
+import { errorText } from "../errorText.js";
 
 type Xyz = { x: number; y: number; z: number };
 
@@ -50,7 +51,7 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
     (h: (req: express.Request, res: express.Response) => Promise<void>) =>
     (req: express.Request, res: express.Response): void => {
       h(req, res).catch((e: unknown) => {
-        if (!res.headersSent) res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+        if (!res.headersSent) res.status(500).json({ error: errorText(e) });
       });
     };
   const ship = (): { from: Xyz | null; jumpRangeLy: number | null } => {
@@ -110,7 +111,7 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
         ),
       );
     } catch (e) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      res.status(500).json({ error: errorText(e) });
     }
   });
 
@@ -119,7 +120,7 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
       const t = loadFeatureTable(getProjectRoot());
       res.json({ bodies: BODY_KINDS, stars: starTypes(t), valueEdgesM: t.valueEdgesM, builtAt: t.builtAt });
     } catch (e) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      res.status(500).json({ error: errorText(e) });
     }
   });
 

@@ -18,6 +18,7 @@ import { isBool, usePersistedState } from "./usePersistedState";
 import { onServerChange } from "./serverChanges";
 import { routeTotals, routeValueLine, useRouteValues } from "./routeValues";
 import { fmtCrShort } from "@shared/format";
+import { sendJson, jsonOrNull } from "./http";
 
 const isBoost = (v: unknown): v is number | null => v === null || v === 4 || v === 6;
 /** The fuel reserve, in per cent of the tank (plan 1.3.4 S-7). */
@@ -156,6 +157,8 @@ const kept = {
   liveVersion: -1,
   /** The newest plan asked for, by any opening of the drawer: an older answer is stale. */
   planSeq: 0,
+  /** The newest plan's request: a newer plan cancels it, so the server stops searching for it (review 2026-11-10 B13). */
+  planAbort: null as AbortController | null,
   /** A plan still on its way, for a drawer opened while it runs. */
   inFlight: null as Promise<RouteDTO | null> | null,
   /** The first stop handed over (handToNeutron), until the ship's system is known: dropped when the ship is there. */
@@ -252,7 +255,7 @@ export function NeutronDrawer({
   */
   const readLive = useCallback(() => {
     void fetch("/api/neutron/live")
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<LiveDTO>)
       .then((j: LiveDTO | null) => {
         if (!j) return;
         setLive(j);
@@ -282,11 +285,7 @@ export function NeutronDrawer({
   const setFlying = async (body: object, ownPlan = false) => {
     setError(null);
     try {
-      const r = await fetch("/api/neutron/live", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const r = await sendJson("/api/neutron/live", body);
       const j = (await r.json()) as LiveDTO & { error?: string };
       if (!r.ok) throw new Error(j.error ?? `Failed (${r.status})`);
       kept.liveVersion = j.version;
@@ -379,7 +378,7 @@ export function NeutronDrawer({
     type Hit = { systemAddress: number; starSystem: string; x?: number; y?: number; z?: number };
     const named = (url: string): Promise<Hit[]> =>
       fetch(url, { signal: ac.signal })
-        .then((r) => (r.ok ? (r.json() as Promise<{ systems?: Hit[] }>) : null))
+        .then(jsonOrNull<{ systems?: Hit[] }>)
         .then((j) => j?.systems ?? [])
         .catch(() => []);
     // The name typed in full first: Spansh's and EDSM's completion list near names in their own order.
@@ -394,7 +393,7 @@ export function NeutronDrawer({
           ? null
           : { spansh: named(`/api/system/spansh-search?q=${encodeURIComponent(q)}`), edsm: named(`/api/system/edsm-search?q=${encodeURIComponent(q)}`) };
       void fetch(`/api/galaxy/find?q=${encodeURIComponent(q)}`, { signal: ac.signal })
-        .then((r) => (r.ok ? r.json() : null))
+        .then(jsonOrNull<GalaxyFindDTO>)
         .then((j: GalaxyFindDTO | null) => {
           add(
             (j?.systems ?? [])
@@ -453,23 +452,21 @@ export function NeutronDrawer({
   };
   const planNow = async (): Promise<RouteDTO | null> => {
     const seq = ++kept.planSeq;
+    kept.planAbort?.abort();
+    const ac = (kept.planAbort = new AbortController());
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch("/api/neutron/plan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          waypoints,
-          rangeLy: Number(range) || undefined,
-          jumpsPerTank: Number(tank) || undefined,
-          boost: boost ?? undefined,
-          optimise,
-          useJumponium: useJump,
-          halfTank,
-          reservePct,
-        }),
-      });
+      const r = await sendJson("/api/neutron/plan", {
+        waypoints,
+        rangeLy: Number(range) || undefined,
+        jumpsPerTank: Number(tank) || undefined,
+        boost: boost ?? undefined,
+        optimise,
+        useJumponium: useJump,
+        halfTank,
+        reservePct,
+      }, { signal: ac.signal });
       const j = (await r.json()) as RouteDTO & { error?: string };
       // A newer plan was asked for meanwhile (Use Jumponium flipped twice): this answer is stale (review 1.2.16).
       if (seq !== kept.planSeq) return null;

@@ -13,6 +13,7 @@ import {
 import { openLocalFile } from "../../openUrl.js";
 import type { ColonizeHandlers, IpcContext } from "./handlerTypes";
 import { asRecord, trimmedString } from "./payload";
+import { errorText } from "../../errorText.js";
 
 export type InaraWatchControl = {
   restart: () => Promise<void>;
@@ -70,7 +71,7 @@ export function inaraHandlers({ buyIndex, userDataDir }: IpcContext, inara: Inar
         await inara.restart();
         return dirResponse(dir);
       } catch (e) {
-        return { ok: false as const, err: e instanceof Error ? e.message : String(e) };
+        return { ok: false as const, err: errorText(e) };
       }
     },
 

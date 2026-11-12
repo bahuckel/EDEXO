@@ -5,6 +5,7 @@
  */
 import type express from "express";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
+import { errorText } from "../errorText.js";
 
 export function registerRecordsRoutes(
   app: express.Express,
@@ -27,7 +28,7 @@ export function registerRecordsRoutes(
     try {
       res.json({ ok: true, ...(await opts.fetchGalacticRecords(req.body?.force === true)) });
     } catch (e) {
-      res.status(502).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      res.status(502).json({ ok: false, error: errorText(e) });
     }
   });
 }

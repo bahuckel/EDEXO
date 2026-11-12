@@ -12,6 +12,7 @@ import { tabListKeyDown } from "./ui/Tabs";
 import { useEffect, useMemo, useState } from "react";
 import type { GalaxySpeciesCatalogueDTO } from "@shared/types";
 import { MenuToggle } from "./galaxy3d/G3dMenu";
+import { jsonOrNull } from "./http";
 
 export interface GalaxyFilterState {
   tab: "exobio" | "bodies";
@@ -143,11 +144,11 @@ export function GalaxyFilterPanel({
   useEffect(() => {
     let live = true;
     void fetch("/api/galaxy/species")
-      .then((r) => (r.ok ? (r.json() as Promise<GalaxySpeciesCatalogueDTO>) : null))
+      .then(jsonOrNull<GalaxySpeciesCatalogueDTO>)
       .then((c) => live && setCatalogue(c))
       .catch(() => live && setCatalogue(null));
     void fetch("/api/galaxy/traits")
-      .then((r) => (r.ok ? (r.json() as Promise<TraitsDTO>) : null))
+      .then(jsonOrNull<TraitsDTO>)
       .then((t) => live && setTraits(t))
       .catch(() => live && setTraits(null));
     return () => {

@@ -559,7 +559,6 @@
 }
 .sys-copy:hover,
 .sys-copy:focus-visible {
-  outline: none;
   color: var(--accent-bright);
 }
 .sys-copy.is-done {
@@ -589,7 +588,6 @@
 }
 .snapshot-btn:hover,
 .snapshot-btn:focus-visible {
-  outline: none;
   color: var(--accent-bright);
 }
 .snapshot-btn:disabled {

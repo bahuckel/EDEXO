@@ -20,7 +20,7 @@ const RAW: Record<string, string> = {
   "src/server/devEntry.ts": "the crash log, written as the process dies",
   "src/server/startupChecks.ts": "a log line",
   "src/server/statisticsScan.ts": "emptying a stale cache file (the empty file is read as no cache)",
-  "src/server/routes/settingsRoutes.ts": "the feeder inbox: a temporary name there would be picked up as a route",
+  "src/server/routes/journalSettingsRoutes.ts": "the feeder inbox: a temporary name there would be picked up as a route",
   "src/server/exoOutlierLog.ts": "appends to a log",
   "src/server/exobioUnknown.ts": "appends to a log",
   "src/server/gggResearch.ts": "appends to a log",

@@ -10,6 +10,7 @@ import {
 } from "../shared/volcanismMatch.js";
 import { spectralKeysFromJournalStarType } from "../shared/starSpectralKeys.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { errorText } from "./errorText.js";
 
 const FIX_SCHEMA = "edexo.fix_stub.v1" as const;
 
@@ -336,7 +337,7 @@ export function writeExoDataAlertFixFiles(
         return {
           ok: false,
           written,
-          error: `Could not write the fix: ${e instanceof Error ? e.message : String(e)}`,
+          error: `Could not write the fix: ${errorText(e)}`,
         };
       }
     }

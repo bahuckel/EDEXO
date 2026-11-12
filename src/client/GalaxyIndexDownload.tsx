@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fmtPct } from "@shared/format";
 import { MenuRow } from "./galaxy3d/G3dMenu";
 import { DUE_CLASS } from "./galaxyIndexDue";
+import { sendJson } from "./http";
 
 interface IndexStatus {
   present: boolean;
@@ -176,11 +177,7 @@ export function GalaxyIndexRow() {
             (st.downloadBytes ? ` (a ${mb(st.downloadBytes)} download)` : "")
           }
           onClick={() =>
-            void fetch("/api/galaxy/index/download", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ extrasOnly }),
-            }).then(() => load())
+            void sendJson("/api/galaxy/index/download", { extrasOnly }).then(() => load())
           }
         >
           {update

@@ -25,6 +25,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { getProjectRoot, resolveUserSettingsJsonPath } from "./paths.js";
 import { APP_USER_AGENT } from "./appVersion.js";
+import { errorText } from "./errorText.js";
 
 export const GALAXY_INDEX_FILES = ["bio-index.bin", "system-traits.bin.gz"] as const;
 export type GalaxyIndexFile = (typeof GALAXY_INDEX_FILES)[number];
@@ -282,7 +283,7 @@ export async function downloadGalaxyIndex(
     onDone();
   } catch (e) {
     downloading = null;
-    lastError = e instanceof Error ? e.message : String(e);
+    lastError = errorText(e);
     for (const name of GALAXY_INDEX_FILES) rmSync(path.join(dir, `${name}.part`), { force: true });
   }
 }

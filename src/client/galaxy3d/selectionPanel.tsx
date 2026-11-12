@@ -19,6 +19,7 @@ import { dist } from "./mapConstants";
 import { neutronStopLine } from "./neutronMarks";
 import { extraPoint, navPoint, type MapLookups } from "./pointLookup";
 import { whyLit, type WhyLitContext } from "./whyLit";
+import { sendJson } from "../http";
 
 export interface SelectionPanelContext extends MapLookups, WhyLitContext {
   go: (g: { x: number; y: number; z: number }, distance: number, sel?: Selection) => void;
@@ -205,11 +206,7 @@ export function selectionPanel(selection: Selection | null, ctx: SelectionPanelC
             className="g3d-btn"
             title="Open it on the main screen: its bodies are fetched from Spansh"
             onClick={() => {
-              void fetch("/api/ui/view-system", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ systemAddress: h.systemAddress, starSystem: h.starSystem }),
-              });
+              void sendJson("/api/ui/view-system", { systemAddress: h.systemAddress, starSystem: h.starSystem });
               showPickedSystem();
             }}
           >

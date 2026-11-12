@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CodexGapsDTO, CodexNearestDTO } from "@shared/types";
 import { CopySystemButton } from "./CopySystemButton";
+import { jsonOrNull } from "./http";
 
 const SHOWN = 12;
 
@@ -41,7 +42,7 @@ export function CodexGapsList({
     setAll(false);
     setPicked(null);
     fetch(`/api/codex/gaps?region=${encodeURIComponent(region)}`)
-      .then((r) => (r.ok ? (r.json() as Promise<CodexGapsDTO>) : null))
+      .then(jsonOrNull<CodexGapsDTO>)
       .then((d) => {
         if (!live) return;
         if (d) setData(d);
@@ -58,7 +59,7 @@ export function CodexGapsList({
     const q = `region=${encodeURIComponent(region)}&key=${encodeURIComponent(key)}&x=${at.x}&y=${at.y}&z=${at.z}`;
     const mine = ++ask.current;
     void fetch(`/api/codex/nearest?${q}`)
-      .then((r) => (r.ok ? (r.json() as Promise<CodexNearestDTO>) : null))
+      .then(jsonOrNull<CodexNearestDTO>)
       .then((site) => {
         if (mine !== ask.current) return;
         setPicked({ key, name, regionSystems, site });

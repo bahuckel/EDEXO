@@ -300,6 +300,26 @@ describe("the channel in the address", () => {
   });
 });
 
+describe("identical frames on the other channels (review 2026-11-10 C9)", () => {
+  it("an app push that changes nothing the launcher reads sends the launcher nothing", async () => {
+    const t = await start({ port: 7111, journalDir: "J", liveShipFuelRange: { ly: 10 } });
+    await t.next(1);
+    const launcher: Record<string, unknown>[] = [];
+    const ws = new WebSocket(`ws://127.0.0.1:${t.port}/ws?channel=launcher`);
+    closersPush(() => ws.close());
+    ws.on("message", (d) => launcher.push(JSON.parse(String(d))));
+    await new Promise((r) => ws.once("open", r));
+    for (let i = 0; i < 100 && launcher.length < 1; i++) await new Promise((r) => setTimeout(r, 10));
+    // Three app pushes, the fuel only: the app gets each, the launcher's frame is the same every time.
+    for (const ly of [11, 12, 13]) t.set({ port: 7111, journalDir: "J", liveShipFuelRange: { ly } });
+    await t.next(4);
+    await new Promise((r) => setTimeout(r, 50));
+    // The connect frame and the first push's (nothing to compare it with yet); none after.
+    expect(launcher.length).toBe(2);
+    expect(launcher.every((m) => typeof m.rev === "number")).toBe(true);
+  });
+});
+
 function closersPush(fn: () => void) {
   closers.unshift(async () => fn());
 }

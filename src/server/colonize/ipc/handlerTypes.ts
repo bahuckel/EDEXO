@@ -1,6 +1,7 @@
 import type { ColonizeEvents, ColonizeInvoke } from "../../../shared/colonize/ipc/contract";
 import type { ColonizeStore } from "../colonizeStore";
 import type { MaterialBuyIndex } from "../materialBuyIndex";
+import { errorText } from "../../errorText";
 
 /** Push an event to every open Colonize window (EDEXO's WebSocket, colonizeService.ts). */
 export type ColonizePush = <K extends keyof ColonizeEvents>(event: K, payload: ColonizeEvents[K]) => void;
@@ -28,5 +29,5 @@ export type ColonizeHandlers = {
 };
 
 export function errMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
+  return errorText(e);
 }

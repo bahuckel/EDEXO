@@ -12,6 +12,7 @@ import { Popover } from "./ui/Popover";
 import { useToast } from "./ui/feedback";
 import { useRecordChime } from "./noticesClient";
 import { copyText } from "./copyText";
+import { sendJson } from "./http";
 
 function ago(iso: string): string {
   const ms = Date.now() - Date.parse(iso);
@@ -26,7 +27,7 @@ function ago(iso: string): string {
 
 async function post(path: string, body: unknown): Promise<boolean> {
   try {
-    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await sendJson(path, body);
     return r.ok;
   } catch {
     return false;

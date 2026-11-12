@@ -42,6 +42,7 @@ import {
   readSpeciesColourRules,
   collectGenusColorVariantRich,
 } from "./genusColourMeta.js";
+import { errorText } from "./errorText.js";
 export { buildCriterionFromRecord } from "./speciesCriterionParser.js";
 
 function isDir(p: string): boolean {
@@ -324,7 +325,7 @@ function parseGenusFile(jsonPath: string, folderBaseName: string, projectRoot: s
     parsed = JSON.parse(readFileSync(jsonPath, "utf8"));
   } catch (e) {
     // Said, not swallowed (review 2026-11-10 A12): a genus missing from the matcher is a miss on every body it grows on.
-    speciesDataWarnings.push(`${rel} could not be read, so its genus is not matched: ${e instanceof Error ? e.message : String(e)}`);
+    speciesDataWarnings.push(`${rel} could not be read, so its genus is not matched: ${errorText(e)}`);
     return [];
   }
 

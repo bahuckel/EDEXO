@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import { CopySystemButton } from "../CopySystemButton";
+import { jsonOrNull } from "../http";
 
 export interface StationAtRow {
   name: string;
@@ -35,7 +36,7 @@ function useStationsAt(p: { x: number; y: number; z: number }): StationAtRow[] |
     // A short wait: sweeping the mouse over many dots asks only for the one it stops on.
     const t = window.setTimeout(() => {
       void fetch(`/api/stations/at?x=${p.x}&y=${p.y}&z=${p.z}`, { signal: ac.signal })
-        .then((r) => (r.ok ? r.json() : null))
+        .then(jsonOrNull<{ stations?: StationAtRow[] }>)
         .then((j: { stations?: StationAtRow[] } | null) => {
           const list = j?.stations ?? [];
           // Only an answer is kept: "no data yet" (404) or an error is asked again next time (review 1.2.16).

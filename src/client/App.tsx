@@ -31,6 +31,7 @@ import { setSnapshotStamp } from "./panelSnapshot";
 import { ModalLoading } from "./SharedModals";
 import { AppLegalFooter } from "./AppLegalFooter";
 import { STREAMER_MODE } from "./streamerMode";
+import { sendJson } from "./http";
 
 /*
  * React first, above the `lazy()` calls below.
@@ -321,11 +322,7 @@ export function App() {
     if (STREAMER_MODE) return;
     const key = selectedBodyKey;
     const t = window.setTimeout(() => {
-      void fetch("/api/ui/selected-body", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bodyKey: key }),
-      }).catch(() => {});
+      void sendJson("/api/ui/selected-body", { bodyKey: key }).catch(() => {});
     }, 160);
     return () => window.clearTimeout(t);
   }, [selectedBodyKey]);
@@ -406,11 +403,7 @@ export function App() {
     const bacteriumOn = bacteriumOnNow;
     void (async () => {
       try {
-        const r = await fetch("/api/settings/include-bacterium", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ value: !bacteriumOn }),
-        });
+        const r = await sendJson("/api/settings/include-bacterium", { value: !bacteriumOn });
         const j = (await r.json().catch(() => null)) as {
           error?: string;
         } | null;
@@ -445,11 +438,7 @@ export function App() {
     (e: FootScannedEntry) => {
       void (async () => {
         try {
-          const r = await fetch("/api/ui/view-system", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ systemAddress: e.systemAddress }),
-          });
+          const r = await sendJson("/api/ui/view-system", { systemAddress: e.systemAddress });
           const j = (await r.json().catch(() => null)) as { error?: string } | null;
           if (!r.ok) throw new Error(j?.error || r.statusText);
         } catch (err) {
@@ -472,11 +461,7 @@ export function App() {
     (systemAddress: number, bodyKey?: string) => {
       void (async () => {
         try {
-          const r = await fetch("/api/ui/view-system", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ systemAddress }),
-          });
+          const r = await sendJson("/api/ui/view-system", { systemAddress });
           const j = (await r.json().catch(() => null)) as { error?: string } | null;
           if (!r.ok) throw new Error(j?.error || r.statusText);
         } catch (err) {

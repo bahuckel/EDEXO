@@ -9,6 +9,7 @@ import type { JournalSystemInfo } from "@shared/types";
 import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Tooltip } from "./ui/Tooltip";
+import { sendJson } from "./http";
 
 /**
  * The header's system search: the journals first, Spansh as you type (owner, 2026-09-25).
@@ -147,11 +148,7 @@ export const JournalSystemSearch = memoOnSnapSlice(SEARCH_FIELDS, function Journ
         ) {
           payload.starSystem = meta.starSystem.trim();
         }
-        const r = await fetch("/api/ui/view-system", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        const r = await sendJson("/api/ui/view-system", payload);
         const j = (await r.json().catch(() => null)) as {
           error?: string;
         } | null;

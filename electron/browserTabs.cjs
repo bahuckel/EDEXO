@@ -21,7 +21,7 @@
 
 const path = require("node:path");
 const { randomBytes } = require("node:crypto");
-const { httpUrl } = require("./browserPrefs.cjs");
+const { httpUrl, originsOf } = require("./browserPrefs.cjs");
 const { createTabPasswords } = require("./browserTabPasswords.cjs");
 // The page-side scripts and the address helpers (audit 2026-10-22: moved out, re-exported below).
 const {
@@ -1000,7 +1000,7 @@ function createBrowserTabs(o) {
         if (on) o.prefs.noteOrigin(dom, new URL(t.url).origin);
         else
           await getSession()
-            .clearData({ origins: [`https://${dom}`, `https://www.${dom}`, ...before] })
+            .clearData({ origins: originsOf(dom, [...before, new URL(t.url).origin]) })
             .catch(() => {});
         changed();
         return { ok: true };
@@ -1011,7 +1011,7 @@ function createBrowserTabs(o) {
         const before = o.prefs.site(dom).origins;
         o.prefs.forget(dom);
         await getSession()
-          .clearData({ origins: [`https://${dom}`, `https://www.${dom}`, ...before] })
+          .clearData({ origins: originsOf(dom, [...before, new URL(t.url).origin]) })
           .catch(() => {});
         t.view?.webContents.reloadIgnoringCache();
         changed();

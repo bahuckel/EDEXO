@@ -36,6 +36,7 @@ import { onJournalReread, onLiveJournalLine } from "../journalTap.js";
 import type { JournalLine } from "../../shared/types.js";
 import { backupUnreadableJson, readJsonKeepingCorrupt, writeJsonAtomic } from "./jsonFs";
 import { parseMarketId } from "../../shared/colonize/marketId";
+import { errorText } from "../errorText.js";
 
 /**
  * Optional prefix + player-chosen site name. When the commander renames the facility, the journal may keep
@@ -767,7 +768,7 @@ export class ColonizeStore {
     try {
       files = await listJournalFilesChronological(dir, minMs);
     } catch (e) {
-      this.lastError = e instanceof Error ? e.message : String(e);
+      this.lastError = errorText(e);
       this.bump();
       return;
     }
@@ -792,7 +793,7 @@ export class ColonizeStore {
         await new Promise<void>((resolve) => setImmediate(resolve));
       }
     } catch (e) {
-      this.lastError = e instanceof Error ? e.message : String(e);
+      this.lastError = errorText(e);
     }
     if (historyRead && !this.lastError) {
       this.historyScannedDir = historyDir;
@@ -928,7 +929,7 @@ export class ColonizeStore {
         this.liveJournalPath = file;
       }
     } catch (e) {
-      this.lastError = e instanceof Error ? e.message : String(e);
+      this.lastError = errorText(e);
     } finally {
       this.releaseHeld();
     }

@@ -21,6 +21,7 @@ import {
 import { readLsBool } from "./lsPrefs";
 import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
 import { copyText } from "./copyText";
+import { sendJson } from "./http";
 
 const ALERT_FIELDS = ["bodies", "exoOverlayFocusBody", "sharedExomastery", "journalBoot"] as const;
 
@@ -91,11 +92,7 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
       setDismissed(readExoAlertDismissals());
       setAckEpoch((e) => e + 1);
       if (detectFeeder) {
-        const r = await fetch("/api/exomastery/reload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
+        const r = await sendJson("/api/exomastery/reload", {});
         const j = (await r.json().catch(() => null)) as {
           error?: string;
         } | null;
@@ -133,11 +130,7 @@ export const ExoDataAlertsHeaderHub = memoOnSnapSlice(ALERT_FIELDS, function Exo
       };
       if (a.speciesEntryId && a.genusDataDir) {
         try {
-          const r = await fetch("/api/exo-data-alerts/fix", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ alert: a }),
-          });
+          const r = await sendJson("/api/exo-data-alerts/fix", { alert: a });
           const j = (await r.json().catch(() => null)) as {
             ok?: boolean;
             written?: { root: string; relativePath: string }[];

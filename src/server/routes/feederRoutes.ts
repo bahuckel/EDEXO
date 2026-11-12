@@ -5,6 +5,7 @@
 import type express from "express";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { localOnly } from "../lanAuth.js";
+import { errorText } from "../errorText.js";
 
 export function registerFeederRoutes(
   app: express.Express,
@@ -23,7 +24,7 @@ export function registerFeederRoutes(
     try {
       res.json(await opts.getFeederStatus());
     } catch (e) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      res.status(500).json({ error: errorText(e) });
     }
   });
 

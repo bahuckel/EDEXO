@@ -119,6 +119,7 @@ import { TargetsMenu } from "./galaxy3d/TargetsMenu";
 import { LayersMenu } from "./galaxy3d/LayersMenu";
 import { StatusBar } from "./galaxy3d/StatusBar";
 import { onServerChange } from "./serverChanges";
+import { jsonOrNull } from "./http";
 
 /** The base layers (View menu); a stored copy missing a key, or with a non-boolean, is not used. */
 const BASE_LAYERS = { photo: true, borders: true, labels: true, groups: true, you: true };
@@ -457,7 +458,7 @@ export function GalaxyMap3D() {
     void track(
       "regions",
       fetch("/api/region-map")
-        .then((r) => (r.ok ? (r.json() as Promise<RegionMapData>) : null))
+        .then(jsonOrNull<RegionMapData>)
         .catch(() => null),
     ).then((regions) => {
       if (engine.current !== e) return;
@@ -489,7 +490,7 @@ export function GalaxyMap3D() {
     // The commander's own systems (again whenever the route poll says they changed).
     loadMine.current = () =>
       fetch("/api/galaxy/mine")
-        .then((r) => (r.ok ? (r.json() as Promise<GalaxyMineDTO>) : null))
+        .then(jsonOrNull<GalaxyMineDTO>)
         .then((d) => {
           if (d && engine.current === e) setMine(new Map(d.systems.map((s) => [String(s.addr), s])));
         })
@@ -499,7 +500,13 @@ export function GalaxyMap3D() {
 
     const onResize = () => e.resize();
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape") e.select(null);
+      /*
+        Only while the map is in front, and not an Escape that closes something else first (a menu, a dialog, the Find
+        list): it dropped the selection from behind other tabs too (review 2026-11-10 F6).
+      */
+      if (ev.key !== "Escape" || ev.defaultPrevented || el.clientWidth === 0) return;
+      if (ev.target instanceof Element && ev.target.closest("input, textarea, select, [role='dialog'], [role='menu']")) return;
+      e.select(null);
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("keydown", onKey);
@@ -529,7 +536,7 @@ export function GalaxyMap3D() {
     const tick = () => {
       if (document.hidden) return;
       fetch("/api/galaxy/route")
-        .then((r) => (r.ok ? (r.json() as Promise<GalaxyRouteDTO>) : null))
+        .then(jsonOrNull<GalaxyRouteDTO>)
         .then((d) => {
           if (!live || !d) return;
           setRoute(d);
@@ -601,7 +608,7 @@ export function GalaxyMap3D() {
       void track(
         l.label,
         fetch(`/api/galaxy/layers?kind=${l.kind}`)
-          .then((r) => (r.ok ? r.json() : null))
+          .then(jsonOrNull<GalaxyLayerDTO>)
           .then((d: GalaxyLayerDTO | null) => {
             if (d) setExtraData((prev) => ({ ...prev, [l.kind]: d }));
           })
@@ -645,7 +652,7 @@ export function GalaxyMap3D() {
     type Own = { name: string; x: number; y: number; z: number };
     const read = () =>
       void fetch("/api/galaxy/own")
-        .then((r) => (r.ok ? r.json() : null))
+        .then(jsonOrNull<{ carrier: Own | null; colonies: Own[] }>)
         .then((j: { carrier: Own | null; colonies: Own[] } | null) => {
           if (!j || engine.current !== e) return;
           const by = new Map<string, Own & { carrier: boolean; colony: boolean }>();
@@ -822,7 +829,7 @@ export function GalaxyMap3D() {
     }
     let alive = true;
     void fetch(`/api/galaxy/system?i=${selection.ordinal}`)
-      .then((r) => (r.ok ? (r.json() as Promise<{ name?: string }>) : null))
+      .then(jsonOrNull<{ name?: string }>)
       .then((d) => {
         if (alive) setFinderAround({ name: d?.name || "Selected system", ...at });
       })
@@ -1030,7 +1037,7 @@ export function GalaxyMap3D() {
         if (live) retry = setTimeout(() => setCodexAsk((n) => n + 1), 2000);
       };
       fetch("/api/codex/regions")
-        .then((r) => (r.ok ? (r.json() as Promise<CodexMapRegionsDTO>) : null))
+        .then(jsonOrNull<CodexMapRegionsDTO>)
         .then((d) => (d ? live && setCodexRegions(d) : later()))
         .catch(later);
       return () => {
@@ -1179,7 +1186,7 @@ export function GalaxyMap3D() {
     let live = true;
     const t = setTimeout(() => {
       fetch(`/api/galaxy/find?q=${encodeURIComponent(q)}`)
-        .then((r) => (r.ok ? (r.json() as Promise<GalaxyFindDTO>) : null))
+        .then(jsonOrNull<GalaxyFindDTO>)
         .then((d) => live && setFind(d))
         .catch(() => {});
     }, 250);
@@ -1204,7 +1211,7 @@ export function GalaxyMap3D() {
     for (const kind of ["ggg", "helium", "bookmarks", "guardian", "thargoid"] as const) {
       if (extraData[kind]) continue;
       void fetch(`/api/galaxy/layers?kind=${kind}`)
-        .then((r) => (r.ok ? r.json() : null))
+        .then(jsonOrNull<GalaxyLayerDTO>)
         .then((d: GalaxyLayerDTO | null) => {
           if (d) setExtraData((prev) => (prev[kind] ? prev : { ...prev, [kind]: d }));
         })
@@ -1232,7 +1239,7 @@ export function GalaxyMap3D() {
     setSpanshFind({ q, hits: [], busy: true });
     const t = setTimeout(() => {
       fetch(`/api/system/spansh-search?q=${encodeURIComponent(q)}`)
-        .then((r) => (r.ok ? (r.json() as Promise<{ systems?: SpanshFindHit[] }>) : null))
+        .then(jsonOrNull<{ systems?: SpanshFindHit[] }>)
         .then((d) => {
           if (live) setSpanshFind({ q, hits: (d?.systems ?? []).filter((h) => h.x != null), busy: false });
         })

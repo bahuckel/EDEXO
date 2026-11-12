@@ -12,6 +12,7 @@ import { Tooltip } from "./ui/Tooltip";
 // Not from ExpeditionDrawer: that would put the drawer and the map's menus into every window's first load.
 import { crShort, requestExpeditionFocus } from "./expeditionFocus";
 import { useNextBoxelInHeader } from "./nextBoxelSetting";
+import { jsonOrNull } from "./http";
 
 export const NEXT_BOXEL_RADIUS_LY = 500;
 
@@ -23,7 +24,7 @@ export function NextBoxelCard({ systemAddress }: { systemAddress: number | null 
     if (systemAddress == null || !on) return;
     const ac = new AbortController();
     void fetch(`/api/expedition/field?radius=${NEXT_BOXEL_RADIUS_LY}&limit=1&light=1`, { signal: ac.signal })
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<ExpeditionFieldDTO>)
       .then((j: ExpeditionFieldDTO | null) => {
         if (!ac.signal.aborted) setB(j?.boxels[0] ?? null);
       })

@@ -16,6 +16,7 @@ import { isMainThread, parentPort } from "node:worker_threads";
 import type { FinderQuery, FinderResult } from "../shared/finder.js";
 import { FinderIndex } from "./finderIndex.js";
 import { colonisedRefs, findInFinder, searchFinder, type FinderRef } from "./finderSearch.js";
+import { errorText } from "./errorText.js";
 
 export type FinderWorkerRequest =
   | {
@@ -72,7 +73,7 @@ if (!isMainThread && parentPort) {
   port.on("message", (m: { id: number; req: FinderWorkerRequest }) => {
     handleFinderRequest(m.req).then(
       (result) => port.postMessage({ id: m.id, ok: true, result }),
-      (e: unknown) => port.postMessage({ id: m.id, ok: false, error: e instanceof Error ? e.message : String(e) }),
+      (e: unknown) => port.postMessage({ id: m.id, ok: false, error: errorText(e) }),
     );
   });
 }

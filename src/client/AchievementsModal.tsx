@@ -15,6 +15,7 @@ import { LoadingNote } from "./ui/Loading";
 import type { AchievementDetailDTO, AchievementDTO, AchievementsDTO } from "@shared/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RollingNumber } from "./ui/RollingNumber";
+import { sendJson } from "./http";
 
 const STEP = ["", "Bronze", "Silver", "Gold"] as const;
 const KIND_LABEL: Record<AchievementDTO["kind"], string> = {
@@ -341,11 +342,7 @@ export function AchievementsModal({ onClose }: { onClose: () => void }) {
 
   const track = async (id: string | null) => {
     try {
-      const r = await fetch("/api/achievements/track", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
+      const r = await sendJson("/api/achievements/track", { id });
       if (!r.ok) throw new Error(String(r.status));
       setData((d) => (d ? { ...d, trackedId: id } : d));
     } catch {

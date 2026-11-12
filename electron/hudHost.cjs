@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /**
@@ -25,10 +26,16 @@ const OPEN_TIMEOUT_MS = 3000;
  * @param {() => void} [o.onGone]  the host's process went away: every panel window with it
  */
 function createHudHost(o) {
+  /** @type {import("electron").BrowserWindow | null} */
   let host = null;
+  /** @type {Promise<void> | null} */
   let ready = null;
   let seq = 0;
-  /** name → { resolve, options } for the window.open calls in flight */
+  /**
+   * name → { resolve, options } for the window.open calls in flight
+   *
+   * @type {Map<string, { resolve: (win: import("electron").BrowserWindow | null) => void; options: object }>}
+   */
   const pending = new Map();
 
   function ensureHost() {
@@ -36,8 +43,12 @@ function createHudHost(o) {
     const base = o.baseUrl();
     if (!base) return Promise.reject(new Error("Server not ready yet."));
     const opts = o.windowOptions(404, 330);
-    host = new o.BrowserWindow({ ...opts, show: false, x: -32000, y: -32000, width: 1, height: 1 });
-    const wc = host.webContents;
+    // A host whose load failed is gone before the next is made: each attempt left a hidden window behind (review
+    // 2026-11-10 D7).
+    if (host && !host.isDestroyed()) host.destroy();
+    const win = new o.BrowserWindow({ ...opts, show: false, x: -32000, y: -32000, width: 1, height: 1 });
+    host = win;
+    const wc = win.webContents;
     wc.setWindowOpenHandler((details) => {
       const p = pending.get(details.frameName);
       if (!p || details.url !== "about:blank") return { action: "deny" };
@@ -68,20 +79,29 @@ function createHudHost(o) {
     });
     wc.on("render-process-gone", (_e, d) => {
       o.log?.(`hud host process gone (${d && d.reason})`);
-      const gone = host;
-      host = null;
-      ready = null;
       try {
-        if (gone && !gone.isDestroyed()) gone.destroy();
+        if (!win.isDestroyed()) win.destroy();
       } catch {
         /* going */
       }
+      // An old host's process says nothing about the current one and its panels.
+      if (host !== win) return;
+      host = null;
+      ready = null;
       o.onGone?.();
     });
     ready = wc.loadURL(`${base}/hud-host.html`).then(
       () => undefined,
       (e) => {
-        ready = null;
+        if (host === win) {
+          host = null;
+          ready = null;
+        }
+        try {
+          if (!win.isDestroyed()) win.destroy();
+        } catch {
+          /* going */
+        }
         throw e;
       },
     );
@@ -92,6 +112,9 @@ function createHudHost(o) {
    * A HUD window in the host's process, its page about:blank (the caller loads the panel's page into it), or null
    * when the host could not make one (the caller then makes a window of its own).
    *
+   * @param {number} width
+   * @param {number} height
+   * @param {unknown} [icon]
    * @returns {Promise<import("electron").BrowserWindow | null>}
    */
   async function open(width, height, icon) {
@@ -102,6 +125,8 @@ function createHudHost(o) {
       return null;
     }
     const name = `edexo-hud-${++seq}`;
+    // ensureHost() made it, or threw above.
+    const page = /** @type {import("electron").BrowserWindow} */ (host);
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
         pending.delete(name);
@@ -115,7 +140,7 @@ function createHudHost(o) {
           resolve(win);
         },
       });
-      host.webContents.executeJavaScript(`void window.open("about:blank", ${JSON.stringify(name)}, ""); 0`).catch((e) => {
+      page.webContents.executeJavaScript(`void window.open("about:blank", ${JSON.stringify(name)}, ""); 0`).catch((e) => {
         clearTimeout(timer);
         pending.delete(name);
         o.log?.(`hud host: window.open failed (${e instanceof Error ? e.message : String(e)})`);

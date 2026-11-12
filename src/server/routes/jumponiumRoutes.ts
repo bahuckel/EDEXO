@@ -22,6 +22,7 @@ import {
   type JumponiumDTO,
 } from "../../shared/jumponium.js";
 import { ALIEN_SITES, type AlienSiteKind } from "../../shared/alienSites.js";
+import { errorText } from "../errorText.js";
 
 /** The Guardian site kinds the tab can ask for. */
 const GUARDIAN_SITE_KINDS: readonly AlienSiteKind[] = ["ruins", "structure", "sentinel", "beacon"];
@@ -130,7 +131,7 @@ export function registerJumponiumRoutes(app: express.Express, opts: HttpServerOp
         }
       }
     } catch (e) {
-      return void res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      return void res.status(500).json({ error: errorText(e) });
     }
     out.sort((a, b) => a.distLy - b.distLy);
     const body: JumponiumNearDTO = {

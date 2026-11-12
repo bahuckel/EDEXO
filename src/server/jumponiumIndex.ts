@@ -43,6 +43,7 @@ import {
 } from "../shared/jumponium.js";
 import { EARTH_G_MS2 } from "../shared/journalPhysics.js";
 import { stallGuard } from "./stallGuard.js";
+import { errorText } from "./errorText.js";
 
 const MAGIC = "EDEXOLAB";
 const CELL_B = 14;
@@ -479,7 +480,7 @@ export async function downloadJumponium(onDone: () => void, fetchImpl: typeof fe
     onDone();
   } catch (e) {
     downloading = null;
-    lastError = e instanceof Error ? e.message : String(e);
+    lastError = errorText(e);
     rmSync(part, { force: true });
   }
 }

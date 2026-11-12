@@ -9,6 +9,7 @@ import { feederDataDirExists } from "../feeder/paths.js";
 import { resolveImportDumpLedgerPath } from "./paths.js";
 import { writeFileAtomic } from "./atomicWrite.js";
 import { isNetworkOrDevicePath } from "./networkPath.js";
+import { errorText } from "./errorText.js";
 
 /*
   "Import Spansh export" from the launcher. Same importer and gates as `feeder -- import-dump`;
@@ -102,7 +103,7 @@ export function createImportDumpJob(): {
           ...importDump,
           running: false,
           finishedAt: new Date().toISOString(),
-          error: e instanceof Error ? e.message : String(e),
+          error: errorText(e),
         };
       }
     })();

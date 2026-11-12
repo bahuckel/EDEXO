@@ -28,6 +28,7 @@ import type { PoiQueryResultDTO } from "@shared/types";
 import { CopySystemButton } from "./CopySystemButton";
 import { fmtLyAway } from "@shared/format";
 import { usePullToRefresh } from "./ui/usePullToRefresh";
+import { sendJson } from "./http";
 
 const ly = fmtLyAway;
 
@@ -96,11 +97,7 @@ export function PoiModal({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/poi/fetch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
+      const res = await sendJson("/api/poi/fetch", {});
       const body = (await res.json()) as { ok?: boolean; error?: string };
       if (!body.ok) setError(body.error ?? "EDAstro fetch failed.");
       await load();

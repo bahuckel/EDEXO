@@ -24,6 +24,7 @@ import { CopySystemButton } from "../CopySystemButton";
 import { LoadingNote } from "../ui/Loading";
 import type { JumpRow } from "./jumpRow";
 import { CraftGraph, type CraftCard, type CraftMat } from "./LabCrafting";
+import { pickRow } from "../ui/pickRow";
 
 interface SiteRow {
   system: string;
@@ -277,7 +278,7 @@ export function GuardianLab({
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={r.id} className="is-pickable" onClick={() => onPick(r)} title="Click to show it on the map">
+                <tr key={r.id} {...pickRow(() => onPick(r))} title="Click to show it on the map">
                   <td>
                     {r.system} <CopySystemButton system={r.system} />
                   </td>

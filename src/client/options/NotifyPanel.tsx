@@ -24,6 +24,7 @@ import { fmtPct } from "@shared/format";
 import { DraftNumber } from "./DraftNumber";
 import { CustomRulesEditor } from "./CustomRulesEditor";
 import { postSetting } from "./postSetting";
+import { sendJson } from "../http";
 
 /*
   One fold per kind of notice (owner, 2026-10-13: "a bit text heavy … make everything collapsable per title"): each says
@@ -557,11 +558,7 @@ function NspDownload({ on, busy, onToggle }: { on: boolean; busy: boolean; onTog
     return () => window.clearInterval(t);
   }, [st?.running, load]);
   const start = (force: boolean) => {
-    void fetch("/api/nsp/fetch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ force }),
-    })
+    void sendJson("/api/nsp/fetch", { force })
       .then((r) => r.json())
       .then((j) => {
         if (j?.status) setSt(j.status as NspStatus);

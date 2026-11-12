@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import { FoldPanel } from "../ui/Fold";
+import { sendJson, jsonOrNull } from "../http";
 
 interface OldCopy {
   path: string;
@@ -24,7 +25,7 @@ export function OldCopiesPanel() {
   useEffect(() => {
     const ac = new AbortController();
     void fetch("/api/old-copies", { signal: ac.signal })
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<{ files: OldCopy[]; bytes: number }>)
       .then((j: { files: OldCopy[]; bytes: number } | null) => j && setList(j))
       .catch(() => undefined);
     return () => ac.abort();
@@ -34,11 +35,7 @@ export function OldCopiesPanel() {
     if (!list) return;
     setBusy(true);
     try {
-      const r = await fetch("/api/old-copies/remove", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paths: list.files.map((f) => f.path) }),
-      });
+      const r = await sendJson("/api/old-copies/remove", { paths: list.files.map((f) => f.path) });
       const j = (await r.json().catch(() => null)) as
         | { removed?: string[]; skipped: string[]; files: OldCopy[]; bytes: number; error?: string }
         | null;

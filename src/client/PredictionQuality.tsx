@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import type { CalibrationBandDTO, PredictionHitsDTO, PredictionQualityDTO } from "@shared/dto/predictions";
 import { LoadingNote } from "./ui/Loading";
+import { jsonOrNull } from "./http";
 
 const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)} %` : "—");
 
@@ -215,7 +216,7 @@ export function PredictionQualitySection() {
   const [q, setQ] = useState<PredictionQualityDTO | null | undefined>(undefined);
   useEffect(() => {
     void fetch("/api/predictions/quality", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<PredictionQualityDTO>)
       .then((j: PredictionQualityDTO | null) => setQ(j && j.scoredBodies > 0 ? j : null))
       .catch(() => setQ(null));
   }, []);

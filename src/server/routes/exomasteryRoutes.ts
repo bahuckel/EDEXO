@@ -15,6 +15,7 @@ import {
   loadVisitedImport,
   removeVisitedImport,
 } from "../visitedCache.js";
+import { errorText, fail } from "../errorText.js";
 
 export function registerExomasteryRoutes(
   app: express.Express,
@@ -64,7 +65,7 @@ export function registerExomasteryRoutes(
       });
       opts.scheduleBroadcast?.();
     } catch (e) {
-      res.status(400).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      res.status(400).json({ ok: false, error: errorText(e) });
     }
   });
   app.post("/api/visited-cache/remove", localOnly, (req, res) => {
@@ -134,7 +135,7 @@ export function registerExomasteryRoutes(
         projectRoot: root,
       });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 

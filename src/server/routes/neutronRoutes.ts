@@ -13,6 +13,7 @@ import { parseLiveHops, parseLivePlan } from "../neutronLive.js";
 import { localStopLookup, remoteStopLookup, withStopAddresses } from "../neutronStops.js";
 import { tileIndexAsync } from "../galaxyTiles.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
+import { errorText } from "../errorText.js";
 
 type Waypoint = { name: string; x: number; y: number; z: number; address?: number };
 
@@ -111,7 +112,7 @@ export function registerNeutronRoutes(
     try {
       index = loadNeutronIndex();
     } catch (e) {
-      return void res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      return void res.status(500).json({ error: errorText(e) });
     }
     if (!index) return void res.status(404).json({ error: "No neutron star data yet: download it first." });
     // Any system a stop (S-4): one with a name and a place only gets its address, for its worth in the drawer.
@@ -121,6 +122,14 @@ export function registerNeutronRoutes(
     });
     const ordered = body.optimise === true ? optimiseOrder(addressed) : addressed;
     const t0 = Date.now();
+    /*
+      A page that goes away (closed, or a new plan asked for) takes its search with it: the first passes have no clock,
+      so a long plan ran on for nobody and the next one ran beside it (review 2026-11-10 B13).
+    */
+    const gone = new AbortController();
+    res.on("close", () => {
+      if (!res.writableFinished) gone.abort();
+    });
     try {
       const route = await planNeutronRoute(index, ordered, {
         rangeLy,
@@ -137,7 +146,7 @@ export function registerNeutronRoutes(
         // The drive's own law for this ship's range (neutronShip.ts): each supercharge's fuel at the mass aboard.
         law: lawFor(opts.getJournalStore?.() ?? null, rangeLy),
         fuelNowT: finite(body.jumpsNow) == null ? (s?.fuelNowT ?? null) : null,
-      });
+      }, undefined, gone.signal);
       // "Use Jumponium" (owner, 2026-10-13: a toggle): the route flown with FSD injections where one saves a jump.
       const store = opts.getJournalStore?.() ?? null;
       const jp = store?.jumponium ?? null;
@@ -165,7 +174,8 @@ export function registerNeutronRoutes(
         ms: Date.now() - t0,
       });
     } catch (e) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      if (gone.signal.aborted) return;
+      res.status(500).json({ error: errorText(e) });
     }
   });
 }

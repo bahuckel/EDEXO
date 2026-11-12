@@ -13,6 +13,7 @@ import { fmtCrExact, fmtCrShort } from "@shared/format";
 import { createScanRouteScene, type ScanNames, type ScanRouteScene, type ScanScale } from "./scanRouteScene";
 import "../styles/scan-route.css";
 import { RollingNumber } from "../ui/RollingNumber";
+import { sendJson, jsonOrNull, jsonOrThrow } from "../http";
 
 const MIN_KEY = "edexo.scanRoute.minDssCr";
 /** A bio body's expected value for a stop (0: every one), and CODEX bodies under it (owner, 2026-10-31). */
@@ -116,10 +117,10 @@ async function findSystems(q: string, signal: AbortSignal): Promise<Hit[]> {
   };
   const [own, spansh] = await Promise.all([
     fetch(`/api/galaxy/find?q=${encodeURIComponent(q)}`, { signal })
-      .then((r) => (r.ok ? (r.json() as Promise<GalaxyFindDTO>) : null))
+      .then(jsonOrNull<GalaxyFindDTO>)
       .catch(() => null),
     fetch(`/api/system/spansh-search?q=${encodeURIComponent(q)}`, { signal })
-      .then((r) => (r.ok ? (r.json() as Promise<{ systems?: { systemAddress: number; starSystem: string }[] }>) : null))
+      .then(jsonOrNull<{ systems?: { systemAddress: number; starSystem: string }[] }>)
       .catch(() => null),
   ]);
   for (const s of own?.systems ?? []) if (s.addr) add(Number(s.addr), s.name, s.mine ? "yours" : s.plotted ? "plotted" : "");
@@ -199,7 +200,7 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
     let live = true;
     const load = () =>
       fetch("/api/galaxy/route")
-        .then((r) => (r.ok ? (r.json() as Promise<GalaxyRouteDTO>) : null))
+        .then(jsonOrNull<GalaxyRouteDTO>)
         .then((d) => live && d && setRoute(d))
         .catch(() => undefined);
     void load();
@@ -286,7 +287,7 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
       };
       if (!shows()) return next();
       fetch("/api/scan-route/ship?view=1")
-        .then((r) => (r.ok ? (r.json() as Promise<ScanRouteShipDTO>) : null))
+        .then(jsonOrNull<ScanRouteShipDTO>)
         .then((s) => {
           if (!live || !s) return;
           fast = s.flight === "supercruise" && s.targetId != null;
@@ -302,8 +303,8 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
     };
   }, []);
   const setNetlog = (on: boolean) =>
-    void fetch("/api/scan-route/netlog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on }) })
-      .then((r) => (r.ok ? (r.json() as Promise<ScanRouteShipDTO["netlog"]>) : null))
+    void sendJson("/api/scan-route/netlog", { on })
+      .then(jsonOrNull<ScanRouteShipDTO["netlog"]>)
       .then((n) => n && setShip((s) => (s ? { ...s, netlog: n } : s)))
       .catch(() => undefined);
 
@@ -325,7 +326,7 @@ export function ScanRouteScreen({ onClose }: { onClose?: () => void }) {
       q.set("name", stop.name);
     }
     fetch(`/api/scan-route?${q}`)
-      .then((r) => (r.ok ? (r.json() as Promise<ScanRouteDTO>) : Promise.reject(new Error(String(r.status)))))
+      .then(jsonOrThrow<ScanRouteDTO>)
       .then((d) => live && setView(d))
       .catch(() => live && setView("error"));
     return () => {

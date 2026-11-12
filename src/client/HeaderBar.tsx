@@ -33,6 +33,7 @@ import { CompareTray } from "./header/CompareTray";
 import { HeaderScreens } from "./header/HeaderScreens";
 import { CommanderSwitch } from "./header/CommanderSwitch";
 import { closingAttr, usePresence } from "./ui/usePresence";
+import { sendJson } from "./http";
 
 /** A notable body's quick facts, asked for from outside the header (the body strip's notable tabs). */
 export const NOTABLE_QUICK_EVENT = "edexo-notable-quick";
@@ -250,11 +251,7 @@ export const HeaderBar = memo(function HeaderBar({
   const toggleExplorationScanData = () => {
     void (async () => {
       try {
-        const r = await fetch("/api/settings/include-exploration-scan-data", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ value: !scanDataOn }),
-        });
+        const r = await sendJson("/api/settings/include-exploration-scan-data", { value: !scanDataOn });
         const j = (await r.json().catch(() => null)) as {
           error?: string;
         } | null;
@@ -269,11 +266,7 @@ export const HeaderBar = memo(function HeaderBar({
   const togglePranavAntal = (on: boolean) => {
     void (async () => {
       try {
-        const r = await fetch("/api/settings/pranav-antal-bonus", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ value: on }),
-        });
+        const r = await sendJson("/api/settings/pranav-antal-bonus", { value: on });
         const j = (await r.json().catch(() => null)) as { error?: string } | null;
         if (!r.ok) throw new Error(j?.error || r.statusText);
       } catch (e) {
@@ -288,11 +281,7 @@ export const HeaderBar = memo(function HeaderBar({
   const postCarrierSetting = (route: string, on: boolean) => {
     void (async () => {
       try {
-        const r = await fetch(route, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ value: on }),
-        });
+        const r = await sendJson(route, { value: on });
         const j = (await r.json().catch(() => null)) as { error?: string } | null;
         if (!r.ok) throw new Error(j?.error || r.statusText);
       } catch (e) {
@@ -315,11 +304,7 @@ export const HeaderBar = memo(function HeaderBar({
       });
       if (!ok) return;
       try {
-        const r = await fetch("/api/exobiology/reset", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ confirm: true }),
-        });
+        const r = await sendJson("/api/exobiology/reset", { confirm: true });
         const j = (await r.json().catch(() => null)) as {
           error?: string;
         } | null;

@@ -32,6 +32,7 @@ import { useModal } from "./ui/useModal";
 import { formatWeeks } from "@shared/carrierUpkeep";
 import type { RankEstimateDTO } from "@shared/rankProgress";
 import { RollingNumber } from "./ui/RollingNumber";
+import { sendJson, jsonOrNull } from "./http";
 
 /*
   A rank with about how many credits to the next one (shared/rankProgress.ts). The bar is the game's
@@ -107,18 +108,14 @@ function RecordsSection() {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     void fetch("/api/records")
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<RecordsResponse>)
       .then((j: RecordsResponse | null) => setData(j?.rows ? j : null))
       .catch(() => setData(null));
   }, []);
   const download = () => {
     setBusy(true);
     setError(null);
-    void fetch("/api/records/fetch-galactic", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ force: true }),
-    })
+    void sendJson("/api/records/fetch-galactic", { force: true })
       .then((r) => r.json())
       .then((j: RecordsResponse & { ok?: boolean; error?: string }) => {
         if (j.ok) setData(j);

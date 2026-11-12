@@ -13,6 +13,7 @@ import { isStr, isStrArr, usePersistedState } from "./usePersistedState";
 import { BookmarkEditor, removeBookmark } from "./BookmarkButton";
 import { fmtLyAway } from "@shared/format";
 import { usePullToRefresh } from "./ui/usePullToRefresh";
+import { sendJson } from "./http";
 
 const ly = fmtLyAway;
 
@@ -67,19 +68,11 @@ export function BookmarksModal({
 
   const show = (b: BookmarkRowDTO) => {
     void (async () => {
-      await fetch("/api/ui/view-system", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemAddress: b.systemAddress === currentSystemAddress ? null : b.systemAddress,
-        }),
+      await sendJson("/api/ui/view-system", {
+        systemAddress: b.systemAddress === currentSystemAddress ? null : b.systemAddress,
       });
       if (b.bodyKey) {
-        await fetch("/api/ui/selected-body", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bodyKey: b.bodyKey, focus: true }),
-        });
+        await sendJson("/api/ui/selected-body", { bodyKey: b.bodyKey, focus: true });
       }
     })();
     // Main to the front, the bookmarks staying in their tab (a pop-up closes).

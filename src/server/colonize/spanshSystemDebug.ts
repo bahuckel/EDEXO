@@ -11,6 +11,7 @@ import type {
 import { resolveSpanshReferenceSystem } from "./galaxySystemCoords";
 import { JSON_HEADERS, spanshGate } from "./httpGate";
 import { playerBuyPriceOf, stationBuyPriceOf } from "../../shared/colonize/marketPrice";
+import { errorText } from "../errorText";
 
 const SPANSH_BASE = "https://spansh.co.uk/api";
 
@@ -101,7 +102,7 @@ async function capture(
 
     return body;
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = errorText(e);
 
     captures.push({
       url,

@@ -57,6 +57,7 @@ import type { GalaxySearchApplied } from "./galaxySearchShared";
 import { GalaxyHitsModal, GalaxyPossibleModal } from "./GalaxySearchModals";
 import { fmtPct } from "@shared/format";
 import { Tooltip } from "./ui/Tooltip";
+import { jsonOrNull } from "./http";
 export { MAX_CR, STEP_CR, sliderLabel } from "./galaxySearchShared";
 export type { GalaxySearchMark, GalaxySearchApplied } from "./galaxySearchShared";
 
@@ -140,7 +141,7 @@ export function GalaxySearchPanel({
   useEffect(() => {
     let cancelled = false;
     fetch("/api/galaxy/regions")
-      .then((r) => (r.ok ? (r.json() as Promise<GalaxyRegionsDTO>) : null))
+      .then(jsonOrNull<GalaxyRegionsDTO>)
       .then((j) => {
         if (!cancelled && j) setRegions(j);
       })

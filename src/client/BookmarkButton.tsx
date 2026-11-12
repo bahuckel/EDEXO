@@ -14,6 +14,7 @@ import {
   type BookmarksListDTO,
 } from "@shared/bookmarks";
 import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
+import { sendJson } from "./http";
 
 /*
   Both answer null / false when the server cannot be reached (a restart, a phone off the LAN) instead of throwing
@@ -21,11 +22,7 @@ import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
 */
 async function saveBookmark(b: Partial<BookmarkDTO> & { system: string }): Promise<BookmarkDTO | null> {
   try {
-    const r = await fetch("/api/bookmarks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(b),
-    });
+    const r = await sendJson("/api/bookmarks", b);
     const j = (await r.json().catch(() => null)) as { ok?: boolean; bookmark?: BookmarkDTO } | null;
     if (j?.ok) window.dispatchEvent(new Event(BOOKMARKS_CHANGED));
     return j?.ok && j.bookmark ? j.bookmark : null;

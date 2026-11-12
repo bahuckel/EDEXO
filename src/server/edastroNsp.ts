@@ -39,6 +39,7 @@ import { APP_USER_AGENT } from "./appVersion.js";
 import { regionJoinKey } from "../shared/regionMap.js";
 import { writeFileAtomic } from "./atomicWrite.js";
 import { stallGuard } from "./stallGuard.js";
+import { errorText } from "./errorText.js";
 
 export const NSP_URL = "https://edastro.com/mapcharts/files/codex-data.csv";
 /** What the button says; the real figure comes from the server's Content-Length once it starts. */
@@ -376,7 +377,7 @@ export function startNspDownload(opts: { force?: boolean; fetchImpl?: typeof fet
   job.error = null;
   void downloadNsp(opts.fetchImpl ?? fetch)
     .catch((e) => {
-      job.error = e instanceof Error ? e.message : String(e);
+      job.error = errorText(e);
     })
     .finally(() => {
       job.running = false;

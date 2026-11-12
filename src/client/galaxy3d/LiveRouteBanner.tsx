@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { RouteProgressDTO } from "@shared/dto/neutron";
 import { liveProgressText } from "@shared/routeProgress";
 import { onServerChange } from "../serverChanges";
+import { jsonOrNull } from "../http";
 
 export interface LiveRouteView {
   at: number;
@@ -66,7 +67,7 @@ export function useLiveRoute(): { view: LiveRouteView | null; refresh: () => voi
   const [view, setView] = useState<LiveRouteView | null>(null);
   const refresh = useCallback(() => {
     void fetch("/api/neutron/live")
-      .then((r) => (r.ok ? (r.json() as Promise<{ active?: boolean; view?: LiveRouteView | null }>) : null))
+      .then(jsonOrNull<{ active?: boolean; view?: LiveRouteView | null }>)
       .then((j) => j && setView(j.active && j.view ? j.view : null))
       .catch(() => undefined);
   }, []);

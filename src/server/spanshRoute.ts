@@ -18,6 +18,7 @@
 import type { LiveHop } from "./neutronLive.js";
 import type { SpanshRouteAnswer, SpanshRouteBodyDTO, SpanshRouteDTO, SpanshRouteKind, SpanshRouteStopDTO } from "../shared/dto/spanshRoute.js";
 import { APP_USER_AGENT } from "./appVersion.js";
+import { errorText } from "./errorText.js";
 
 export type { SpanshRouteAnswer, SpanshRouteDTO };
 
@@ -210,7 +211,7 @@ export async function fetchSpanshRoute(text: string, fetchImpl: typeof fetch = f
       signal: AbortSignal.timeout(20_000),
     });
   } catch (e) {
-    return { state: "error", error: `Spansh did not answer (${e instanceof Error ? e.message : String(e)}).` };
+    return { state: "error", error: `Spansh did not answer (${errorText(e)}).` };
   }
   if (res.status === 404) return { state: "error", error: "Spansh does not have that route any more (it keeps results for a few hours only). Routes read before are under Kept routes." };
   if (!res.ok) return { state: "error", error: `Spansh answered ${res.status}.` };

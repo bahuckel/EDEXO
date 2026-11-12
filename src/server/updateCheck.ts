@@ -13,6 +13,7 @@
  */
 import type { UpdateInfoDTO } from "../shared/types.js";
 import { APP_USER_AGENT, APP_VERSION } from "./appVersion.js";
+import { errorText } from "./errorText.js";
 
 export const RELEASES_API = "https://api.github.com/repos/bahuckel/EDEXO/releases?per_page=20";
 const RELEASE_PAGE = "https://github.com/bahuckel/EDEXO/releases/tag/";
@@ -274,7 +275,7 @@ export function createUpdateChecker(o: UpdateCheckerOptions = {}) {
       lastList = list;
       error = null;
     } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
+      error = errorText(e);
     }
     checkedAt = now();
     return answer();

@@ -24,6 +24,8 @@ import { tabListKeyDown } from "../ui/Tabs";
 import { G3D_HELP, MenuHead } from "./G3dMenu";
 import { LabCrafting } from "./LabCrafting";
 import { GuardianLab } from "./GuardianLab";
+import { sendJson } from "../http";
+import { pickRow } from "../ui/pickRow";
 
 
 interface NearReply {
@@ -160,11 +162,7 @@ export function JumponiumDrawer({
     setDownloading(true);
     setDownloadError(null);
     try {
-      const r = await fetch("/api/galaxy/index/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ extrasOnly: true }),
-      });
+      const r = await sendJson("/api/galaxy/index/download", { extrasOnly: true });
       if (!r.ok) throw new Error(`Download failed (${r.status})`);
       // The combined download runs on the server (stations and neutron stars first when they are due): follow it
       // while it is busy, and stop on its error or when the tab closes (review 1.2.16).
@@ -420,12 +418,7 @@ export function JumponiumDrawer({
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="is-pickable"
-                      onClick={() => onPick(r)}
-                      title="Click to show it on the map"
-                    >
+                    <tr key={r.id} {...pickRow(() => onPick(r))} title="Click to show it on the map">
                       <td
                         className={r.own ? "stations-own" : undefined}
                         title={r.own ? "You scanned it" : undefined}

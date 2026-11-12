@@ -292,7 +292,7 @@ describe("Refresh exomastery's list", () => {
 describe("every cache of a refreshed data file", () => {
   const NOT_DATA: Record<string, string> = {
     "paths.ts": "the install's folders, not a data file",
-    "routes/galaxyRoutes.ts": "a WeakMap keyed by the species database: a reload makes a new key",
+    "routes/galaxyDataRoutes.ts": "a WeakMap keyed by the species database: a reload makes a new key",
   };
 
   it("is cleared by Refresh exomastery", async () => {

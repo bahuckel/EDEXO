@@ -11,6 +11,7 @@ import type { FinderResult } from "../shared/finder.js";
 import { onFinderIndexClear } from "./finderIndex.js";
 import type { FinderRef } from "./finderSearch.js";
 import { closeFinderWorkerIndex, handleFinderRequest, type FinderWorkerRequest } from "./finderWorker.js";
+import { errorText } from "./errorText.js";
 
 /** Where this code runs from: build/app.cjs's folder in the app, src/server under tsx. */
 function ownDir(): string {
@@ -72,7 +73,7 @@ function startWorker(): Worker | null {
   w.on("error", (e) => {
     unavailable = true;
     if (worker === w) worker = null;
-    failAll(w, new WorkerGone(e instanceof Error ? e.message : String(e)));
+    failAll(w, new WorkerGone(errorText(e)));
   });
   w.on("exit", () => {
     if (worker === w) worker = null;

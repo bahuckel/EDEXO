@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import { Select } from "./ui/Select";
+import { sendJson, jsonOrNull } from "./http";
 
 type Which = "carriersHours" | "stationsHours";
 const HOURS = ["0", "6", "12", "24", "48"] as const;
@@ -15,7 +16,7 @@ export function AutoRefreshPick({ which }: { which: Which }) {
   useEffect(() => {
     const ac = new AbortController();
     void fetch("/api/data-refresh", { signal: ac.signal })
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<Record<Which, number>>)
       .then((j: Record<Which, number> | null) => {
         if (j && typeof j[which] === "number") setHours(String(j[which]));
       })
@@ -25,12 +26,8 @@ export function AutoRefreshPick({ which }: { which: Which }) {
   if (hours == null) return null;
   const change = (v: string) => {
     setHours(v);
-    void fetch("/api/data-refresh", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [which]: Number(v) }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
+    void sendJson("/api/data-refresh", { [which]: Number(v) })
+      .then(jsonOrNull<Record<Which, number>>)
       .then((j: Record<Which, number> | null) => {
         if (j && typeof j[which] === "number") setHours(String(j[which]));
       })

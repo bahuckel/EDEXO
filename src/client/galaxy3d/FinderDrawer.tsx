@@ -26,6 +26,7 @@ import { isBool, isNum, isStrArr, oneOf, usePersistedState } from "../usePersist
 import { CopySystemButton } from "../CopySystemButton";
 import { LoadingNote } from "../ui/Loading";
 import { G3D_HELP, MenuHead } from "./G3dMenu";
+import { pickRow } from "../ui/pickRow";
 
 interface FinderStatusDTO {
   present: boolean;
@@ -516,7 +517,7 @@ export function FinderDrawer({
                 </thead>
                 <tbody>
                   {hits.map((h) => (
-                    <tr key={h.id64} className="is-pickable" onClick={() => onPick(h)} title="Click to show it on the map">
+                    <tr key={h.id64} {...pickRow(() => onPick(h))} title="Click to show it on the map">
                       <td>
                         {h.name} <CopySystemButton system={h.name} />
                         {h.mainStar ? <span className="dim tiny"> {h.mainStar}</span> : null}

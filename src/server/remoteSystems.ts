@@ -26,6 +26,7 @@ import { planetScanFromExplorationRecord } from "./footScannedCatalog.js";
 import { genusNameForCodexToken } from "../shared/codexGenusNames.js";
 import { bodyKey } from "../shared/bodyKey.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { errorText } from "./errorText.js";
 
 const DUMP_URL = "https://spansh.co.uk/api/dump";
 const SYSTEM_URL = "https://spansh.co.uk/api/system";
@@ -126,7 +127,7 @@ async function getJson(
     if (!res.ok) return { ok: false, status: res.status, error: `Spansh answered HTTP ${res.status}` };
     return { ok: true, data: await res.json() };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return { ok: false, error: errorText(e) };
   }
 }
 

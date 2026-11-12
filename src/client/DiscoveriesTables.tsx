@@ -29,6 +29,7 @@ import type { DiscoveriesTab, DiscoveriesTabContext } from "./discoveries/tabCon
 import { renderSystemsTab } from "./discoveries/systemsTab";
 import { renderBodiesTab } from "./discoveries/bodiesTab";
 import { renderStarsTab } from "./discoveries/starsTab";
+import { sendJson } from "./http";
 
 // The table and its page size live in ui/ since the audit of 2026-10-22; re-exported for
 // MyExobiologyModal and the tests, which import them from here.
@@ -66,11 +67,7 @@ export function DiscoveriesTables({
   );
   const markGreen = useCallback((r: DiscoveryBodyRow, mark: GreenGiantMark | null) => {
     const bodyId = Number(r.key.slice(r.key.indexOf(":") + 1));
-    void fetch("/api/ggg/mark", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ systemAddress: r.systemAddress, bodyId, mark }),
-    })
+    void sendJson("/api/ggg/mark", { systemAddress: r.systemAddress, bodyId, mark })
       .then((res) => (res.ok ? (res.json() as Promise<{ verdict: GreenGiantVerdict | null }>) : null))
       .then((j) => {
         if (!j) return;

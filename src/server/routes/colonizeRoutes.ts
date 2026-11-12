@@ -21,6 +21,7 @@ import type { ColonizeHandlers } from "../colonize/ipc/handlerTypes";
 import { colonizeUiState } from "../colonize/uiState";
 import { refreshColonizeHud } from "../colonize/hudSummary";
 import { localGalaxyFrom } from "../colonize/localGalaxy";
+import { fail } from "../errorText.js";
 
 /** What a paired phone or tablet may call: reads of what the server already holds, nothing else. */
 export const COLONIZE_LAN_READ: ReadonlySet<keyof ColonizeHandlers> = new Set<keyof ColonizeHandlers>([
@@ -102,7 +103,7 @@ export function registerColonizeRoutes(app: express.Express, opts: HttpServerOpt
         res.json({ ok: true, result: (await handler(...args)) ?? null });
       } catch (e) {
         console.error(`[colonize] ${method} failed:`, e);
-        res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+        fail(res, e);
       }
     },
   );

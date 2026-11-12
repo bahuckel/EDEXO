@@ -43,6 +43,7 @@ import {
   FeederCorpusSetting,
 } from "./OptionsPanels";
 import { copyText } from "./copyText";
+import { sendJson } from "./http";
 export { EddnUploadPanel } from "./OptionsPanels";
 
 /**
@@ -192,11 +193,7 @@ export function MapOptionsModal({
     (p: number, pp: number) => {
       void (async () => {
         try {
-          const r = await fetch("/api/settings/exo-map-tiers", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ plusMinCr: p, plusPlusMinCr: pp }),
-          });
+          const r = await sendJson("/api/settings/exo-map-tiers", { plusMinCr: p, plusPlusMinCr: pp });
           const j = (await r.json().catch(() => null)) as {
             error?: string;
           } | null;
@@ -236,11 +233,7 @@ export function MapOptionsModal({
   const persistJournalHistory = useCallback(
     async (preset: JournalHistoryPreset) => {
       try {
-        const r = await fetch("/api/settings/journal-history", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ preset }),
-        });
+        const r = await sendJson("/api/settings/journal-history", { preset });
         const j = (await r.json().catch(() => null)) as { error?: string } | null;
         if (!r.ok) throw new Error(j?.error || r.statusText);
       } catch (e) {
@@ -528,11 +521,7 @@ export function MapOptionsModal({
                 type="checkbox"
                 checked={snap.feederEnabled === true}
                 onChange={(e) => {
-                  void fetch("/api/settings/feeder", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ value: e.target.checked }),
-                  }).catch(() => {});
+                  void sendJson("/api/settings/feeder", { value: e.target.checked }).catch(() => {});
                 }}
               />{" "}
               Data feeder

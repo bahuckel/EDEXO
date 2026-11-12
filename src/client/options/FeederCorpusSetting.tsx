@@ -4,6 +4,7 @@
 import { useFeederStatus } from "../FeederStatusPanel";
 import { useToast } from "../ui/feedback";
 import { useCallback, useEffect, useState } from "react";
+import { sendJson } from "../http";
 
 /**
  * Where the feeder corpus lives — the only setting that has to exist while the feeder is *hidden*.
@@ -29,11 +30,7 @@ export function FeederCorpusSetting() {
     async (value: string | null) => {
       setBusy(true);
       try {
-        const r = await fetch("/api/settings/feeder-data-directory", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ feederDataDir: value }),
-        });
+        const r = await sendJson("/api/settings/feeder-data-directory", { feederDataDir: value });
         const j = (await r.json().catch(() => null)) as { error?: string } | null;
         if (!r.ok) throw new Error(j?.error || r.statusText);
         toast.success(value ? "Corpus folder saved — reopen the app to load it." : "Corpus folder cleared.");

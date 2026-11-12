@@ -11,6 +11,7 @@ import {
   type EncyclopediaSpawnTier,
 } from "@shared/speciesSpawnConditionCards";
 import type { EncyclopediaSpawnCompare } from "./types";
+import { jsonOrNull } from "../http";
 
 function spawnTierCssSuffix(tier: EncyclopediaSpawnTier): string {
   switch (tier) {
@@ -47,7 +48,7 @@ export function useCardVerdicts(spawnCompare: EncyclopediaSpawnCompare | null): 
       body,
       signal: ac.signal,
     })
-      .then((r) => (r.ok ? r.json() : null))
+      .then(jsonOrNull<{ verdicts?: CardVerdicts }>)
       .then((j: { verdicts?: CardVerdicts } | null) => {
         if (!ac.signal.aborted) setV(j?.verdicts ?? null);
       })

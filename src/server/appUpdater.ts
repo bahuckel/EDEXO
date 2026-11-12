@@ -34,6 +34,7 @@ import { resolveUserSettingsJsonPath } from "./paths.js";
 import { compareVersions, type ReleaseAsset, type ReleaseForm } from "./updateCheck.js";
 import { writeFileAtomic } from "./atomicWrite.js";
 import { stallGuard } from "./stallGuard.js";
+import { errorText } from "./errorText.js";
 
 /** What `ready.json` holds: the checked file Electron puts in place on the next restart. */
 export interface StagedUpdate {
@@ -245,7 +246,7 @@ export function createAppUpdater(o: AppUpdaterOptions) {
           })
           .catch((e) => {
             state = "error";
-            error = e instanceof Error ? e.message : String(e);
+            error = errorText(e);
           })
           .finally(() => {
             running = null;

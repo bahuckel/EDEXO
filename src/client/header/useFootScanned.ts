@@ -5,6 +5,7 @@
 */
 import { useEffect, useState } from "react";
 import type { AppSnapshot, FootScannedEntry } from "@shared/types";
+import { jsonOrNull } from "../http";
 
 const NONE: FootScannedEntry[] = [];
 
@@ -15,7 +16,7 @@ export function useFootScanned(snap: Pick<AppSnapshot, "footScannedEntries">, op
     if (fromState !== undefined || !open) return;
     let live = true;
     void fetch("/api/foot-scanned", { cache: "no-store" })
-      .then((r) => (r.ok ? (r.json() as Promise<{ entries?: FootScannedEntry[] }>) : null))
+      .then(jsonOrNull<{ entries?: FootScannedEntry[] }>)
       .then((j) => {
         if (live && j && Array.isArray(j.entries)) setFetched(j.entries);
       })

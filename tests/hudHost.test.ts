@@ -12,6 +12,8 @@ const { createHudHost } = require("../electron/hudHost.cjs") as {
 
 type Handler = (details: { url: string; frameName: string }) => { action: string; overrideBrowserWindowOptions?: object };
 let mode: "ok" | "silent" = "ok";
+/** The next host page load fails (the server not answering yet). */
+let failLoads = 0;
 class FakeWin {
   static all: FakeWin[] = [];
   destroyed = false;
@@ -23,6 +25,10 @@ class FakeWin {
     on: (ev: string, fn: (...a: unknown[]) => void) => (this.listeners[ev] ??= []).push(fn),
     loadURL: (u: string) => {
       this.url = u;
+      if (failLoads > 0) {
+        failLoads--;
+        return Promise.reject(new Error("ERR_CONNECTION_REFUSED"));
+      }
       return Promise.resolve();
     },
     executeJavaScript: (code: string) => {
@@ -61,6 +67,7 @@ const make = (extra: object = {}) =>
 afterEach(() => {
   FakeWin.all = [];
   mode = "ok";
+  failLoads = 0;
   vi.useRealTimers();
 });
 
@@ -105,5 +112,21 @@ describe("the HUD host", () => {
     expect(host.hostWindow()).not.toBe(first);
     host.dispose();
     expect(host.hostWindow()).toBeNull();
+  });
+
+  it("leaves no hidden page behind when its load fails, and an old page's crash leaves the new one alone (review 2026-11-10 D7)", async () => {
+    let gone = 0;
+    const host = make({ onGone: () => gone++ });
+    failLoads = 2;
+    expect(await host.open(404, 200)).toBeNull();
+    expect(await host.open(404, 200)).toBeNull();
+    expect(await host.open(404, 200)).not.toBeNull();
+    const pages = FakeWin.all.filter((w) => w.url.endsWith("/hud-host.html"));
+    expect(pages).toHaveLength(3);
+    expect(pages.filter((w) => !w.destroyed)).toEqual([host.hostWindow()]);
+    // A failed page's renderer going away later is not the live host's.
+    pages[0]!.emit("render-process-gone", {}, { reason: "crashed" });
+    expect(gone).toBe(0);
+    expect(host.hostWindow()!.destroyed).toBe(false);
   });
 });

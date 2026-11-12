@@ -34,6 +34,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileCrc32, listZip, readZipEntry, verifyZipEntry, ZipWriter, type ZipEntry } from "./backupZip.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { errorText } from "./errorText.js";
 
 export const BACKUP_SETTINGS_FILE = "edexo-backup-settings.json";
 export const RESTORE_PENDING_DIR = "restore-pending";
@@ -149,7 +150,7 @@ interface FileStat {
   mtimeMs: number;
 }
 
-const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const errText = (e: unknown) => (errorText(e));
 const vanished = (e: unknown) => (e as NodeJS.ErrnoException)?.code === "ENOENT";
 
 /**
@@ -372,7 +373,7 @@ export async function runBackup(src: BackupSources, settings: BackupSettings, no
         await add(`journals/${j.name}`, j);
       } catch (e) {
         if (zip.failed) throw zip.failed; // the archive itself, not this file: nothing more can go in
-        errors.push(`journal ${j.name}: ${e instanceof Error ? e.message : String(e)}`);
+        errors.push(`journal ${j.name}: ${errorText(e)}`);
       }
     }
     for (const f of appFiles) {
@@ -380,7 +381,7 @@ export async function runBackup(src: BackupSources, settings: BackupSettings, no
         await add(`app-data/${f.rel}`, f);
       } catch (e) {
         if (zip.failed) throw zip.failed; // the archive itself, not this file: nothing more can go in
-        errors.push(`app data ${f.rel}: ${e instanceof Error ? e.message : String(e)}`);
+        errors.push(`app data ${f.rel}: ${errorText(e)}`);
       }
     }
     try {
@@ -390,7 +391,7 @@ export async function runBackup(src: BackupSources, settings: BackupSettings, no
       }
     } catch (e) {
       if (zip.failed) throw zip.failed;
-      errors.push(`exports: ${e instanceof Error ? e.message : String(e)}`);
+      errors.push(`exports: ${errorText(e)}`);
     }
     const manifest: BackupManifest = {
       format: "edexo-backup/1",

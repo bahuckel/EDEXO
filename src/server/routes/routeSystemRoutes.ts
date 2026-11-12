@@ -10,6 +10,7 @@ import type { HttpServerOptions } from "../httpServerTypes.js";
 import { markScanRouteViewed, scanRouteShip } from "../shipInSystem.js";
 import { createNetlogPosition } from "../netlogPosition.js";
 import type { RouteSystemValuesDTO } from "../../shared/dto/routeSystem.js";
+import { errorText } from "../errorText.js";
 
 /** Bodies with biology in a system's values: a signal count or a value for its species. */
 const bioBodies = (v: RouteSystemValuesDTO): number => v.bodies.filter((b) => (b.bioSignals ?? 0) > 0 || (b.bioCr ?? 0) > 0).length;
@@ -58,7 +59,7 @@ export function registerRouteSystemRoutes(app: express.Express, opts: HttpServer
       }
       res.json(await values.values(addr, name));
     } catch (e) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      res.status(500).json({ error: errorText(e) });
     }
   });
 
@@ -98,7 +99,7 @@ export function registerRouteSystemRoutes(app: express.Express, opts: HttpServer
       }
       res.json(spanshScanRoute(store, sys, settings, now, hereId));
     } catch (e) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      res.status(500).json({ error: errorText(e) });
     }
   });
 }

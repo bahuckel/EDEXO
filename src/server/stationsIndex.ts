@@ -32,6 +32,7 @@ import { createGunzip } from "node:zlib";
 import { getProjectRoot, resolveUserSettingsJsonPath } from "./paths.js";
 import { GALAXY_INDEX_BASE_URL } from "./galaxyIndexFiles.js";
 import { stallGuard } from "./stallGuard.js";
+import { errorText } from "./errorText.js";
 
 const MAGIC = "EDEXOSTA";
 const SYS = 22;
@@ -689,7 +690,7 @@ export async function downloadStations(onDone: () => void, fetchImpl: typeof fet
     onDone();
   } catch (e) {
     downloading = null;
-    lastError = e instanceof Error ? e.message : String(e);
+    lastError = errorText(e);
     rmSync(part, { force: true });
   }
 }

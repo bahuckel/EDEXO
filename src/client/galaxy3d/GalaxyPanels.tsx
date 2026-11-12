@@ -10,6 +10,8 @@ import type { CodexMapSystemDTO } from "@shared/dto/codexMap.js";
 import { CopySystemButton } from "../CopySystemButton";
 import { SystemBookmarkButton } from "../BookmarkButton";
 import { SystemValues } from "./SystemValues";
+import { jsonOrThrow } from "../http";
+import { pickRow } from "../ui/pickRow";
 
 const cr = fmtCrExact;
 
@@ -24,7 +26,7 @@ function useJson<T>(url: string | null): T | "loading" | "error" | null {
     let live = true;
     setV("loading");
     fetch(url)
-      .then((r) => (r.ok ? (r.json() as Promise<T>) : Promise.reject(new Error(String(r.status)))))
+      .then(jsonOrThrow<T>)
       .then((d) => live && setV(d))
       .catch(() => live && setV("error"));
     return () => {
@@ -235,7 +237,7 @@ export function SectorRecord({
       <table className="g3d-species g3d-species--pick">
         <tbody>
           {d.top.map((s) => (
-            <tr key={s.ordinal} onClick={() => onPick(s)} title="Fly there">
+            <tr key={s.ordinal} {...pickRow(() => onPick(s))} title="Fly there">
               <td>{s.name}</td>
               <td className="g3d-num">{s.species} sp.</td>
               <td className="g3d-num">{formatValue(s.valueCr / 100_000)}</td>

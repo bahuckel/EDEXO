@@ -165,8 +165,15 @@ export function createWsHub(deps: {
 
   /** Counts pushes that went out on the app channel. */
   let pushRev = 0;
-  const stateMessage = (snap: AppSnapshot, channel: WsChannel): string =>
-    JSON.stringify({ type: "state", channel, rev: pushRev, payload: slimSnapshotForChannel(snap, channel) });
+  /*
+    `rev` is `__REV__` for a broadcast draft, filled in after the identical-frame check: baked in, every app push changed
+    the launcher's and HUD's frames too, and they were sent again unchanged (review 2026-11-10 C9). Spelled out as
+    JSON.stringify would write the same object.
+  */
+  const stateMessage = (snap: AppSnapshot, channel: WsChannel, rev: number | "__REV__" = pushRev): string =>
+    `{"type":"state","channel":${JSON.stringify(channel)},"rev":${rev},"payload":${JSON.stringify(
+      slimSnapshotForChannel(snap, channel),
+    )}}`;
 
   /*
     Pushes carry only what changed (UI review P1, owner 2026-09-29). A snapshot is ~0.8 MB and, in a
@@ -205,7 +212,7 @@ export function createWsHub(deps: {
   const SAME_OBJECT_SAME_JSON = new Set(["journalSystems", "footScannedEntries"]);
   let lastFieldObject = new Map<string, { value: unknown; digest: string; length: number }>();
   const pushMessage = (snap: AppSnapshot, channel: WsChannel): string => {
-    if (channel !== "app") return stateMessage(snap, channel);
+    if (channel !== "app") return stateMessage(snap, channel, "__REV__");
     const prev = lastFieldDigest.get(channel);
     const next = new Map<string, string>();
     const nextObjects = new Map<string, { value: unknown; digest: string; length: number }>();

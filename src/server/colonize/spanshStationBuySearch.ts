@@ -6,6 +6,7 @@ import { isFdevSymbolSlug, spanshLabelKey } from "../../shared/colonize/spanshCo
 import type { SpanshStationSearchCommodityFilter } from "../../shared/colonize/spanshCommodity";
 import { rememberSystemFromSpansh, resolveSpanshReferenceSystem } from "./galaxySystemCoords";
 import { fetchJson, HttpStatusError, spanshGate } from "./httpGate";
+import { errorText } from "../errorText";
 
 const SPANSH_SEARCH = "https://spansh.co.uk/api/stations/search";
 const FETCH_TIMEOUT_MS = 18_000;
@@ -220,7 +221,7 @@ export async function searchSpanshBuyStations(args: {
       }
       lastSpanshSearchError = {
         message:
-          e instanceof HttpStatusError ? `Spansh answered ${e.status}.` : `Spansh could not be reached (${e instanceof Error ? e.message : String(e)}).`,
+          e instanceof HttpStatusError ? `Spansh answered ${e.status}.` : `Spansh could not be reached (${errorText(e)}).`,
         at: Date.now(),
       };
       break;

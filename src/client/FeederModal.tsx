@@ -9,6 +9,7 @@ import { ModalHead } from "./ui/ModalHead";
 import { useModal } from "./ui/useModal";
 import type { FeederStatusDTO } from "@shared/types";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { sendJson } from "./http";
 
 /**
  * Feed a Spansh exobiology route export.
@@ -38,11 +39,7 @@ function FeederRouteImport() {
       setBusy(true);
       try {
         const text = await file.text();
-        const r = await fetch("/api/feeder/import", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, filename: file.name }),
-        });
+        const r = await sendJson("/api/feeder/import", { text, filename: file.name });
         const j = (await r.json().catch(() => null)) as {
           error?: string;
           queuedAs?: string;

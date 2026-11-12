@@ -10,6 +10,8 @@ import { CopySystemButton } from "./CopySystemButton";
 import { LoadingNote } from "./ui/Loading";
 import { AutoRefreshPick } from "./AutoRefreshPick";
 import { fmtLyAway } from "@shared/format";
+import { jsonOrNull } from "./http";
+import { pickRow } from "./ui/pickRow";
 
 interface StationRow {
   name: string;
@@ -108,7 +110,7 @@ export function StationsPanel({
     const ac = new AbortController();
     const t = window.setTimeout(() => {
       void fetch(`/api/stations/search?q=${encodeURIComponent(q)}${fromParams}`, { signal: ac.signal })
-        .then((r) => (r.ok ? r.json() : null))
+        .then(jsonOrNull<{ stations?: StationRow[] }>)
         .then((j: { stations?: StationRow[] } | null) => {
           if (!ac.signal.aborted) setNamed(j?.stations ?? []);
         })
@@ -347,8 +349,7 @@ export function StationsPanel({
                     <tr
                       key={`${r.system}|${r.name}`}
                       title={`${r.services.join(" · ")}${onPick ? "\n\nClick to show it on the map" : ""}`}
-                      className={onPick ? "is-pickable" : undefined}
-                      onClick={onPick ? () => onPick(r) : undefined}
+                      {...(onPick ? pickRow(() => onPick(r)) : {})}
                     >
                       <td
                         className={r.own ? "stations-own" : undefined}

@@ -28,6 +28,7 @@ import { classifyGreenGiant } from "../shared/greenGasGiant.js";
 import { APP_USER_AGENT } from "./appVersion.js";
 import { BOXEL_MAX_ROWS } from "./boxel.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { errorText } from "./errorText.js";
 
 const SEARCH_URL = "https://spansh.co.uk/api/systems/search";
 /** Check EDSM's spacing (navRouteLog.ts): one request every five seconds. */
@@ -239,7 +240,7 @@ export function createBoxelLookups(opts: {
       state = {
         ...state!,
         running: false,
-        note: `Spansh could not be read: ${e instanceof Error ? e.message : String(e)}`,
+        note: `Spansh could not be read: ${errorText(e)}`,
       };
     }
   }

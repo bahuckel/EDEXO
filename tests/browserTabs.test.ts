@@ -788,6 +788,16 @@ describe("review 1.2.16", () => {
     expect(FakeView.made[0]!.visible).toBe(true);
   });
 
+  it("forgets a site addressed by IP with origins Chromium accepts, the page's own among them (review 2026-11-10 D7)", async () => {
+    const t = setup();
+    await t.call({ op: "start" });
+    const { id } = (await t.call({ op: "open", text: "http://192.168.1.20:8080/" })) as { id: number };
+    t.ses.cleared.length = 0;
+    expect(await t.call({ op: "forgetSite", id })).toEqual({ ok: true });
+    expect(t.ses.cleared).toEqual([{ origins: ["https://192.168.1.20", "http://192.168.1.20:8080"] }]);
+    for (const o of (t.ses.cleared[0] as { origins: string[] }).origins) expect(() => new URL(o)).not.toThrow();
+  });
+
   it("keeps the remembered sites' origins valid, an address site too", () => {
     const p = createBrowserPrefs({ dir });
     p.setRemember("192.168.1.20", true);

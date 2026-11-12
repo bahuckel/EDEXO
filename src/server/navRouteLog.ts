@@ -16,6 +16,7 @@ import { EDSM_USER_AGENT } from "./edsmSystemHydration.js";
 import type { NavRouteWaypointDTO } from "./navRouteFuel.js";
 import { resolveCommanderDataDir } from "./paths.js";
 import { writeFileAtomic } from "./atomicWrite.js";
+import { errorText } from "./errorText.js";
 
 export interface NavRouteSystem {
   address: number;
@@ -280,7 +281,7 @@ export async function checkNavRouteSystemsOnEdsm(addresses: number[], fetchImpl:
     }
     checking = null;
   } catch (e) {
-    checking = { ...(checking ?? { done: 0, total: 0 }), note: e instanceof Error ? e.message : String(e) };
+    checking = { ...(checking ?? { done: 0, total: 0 }), note: errorText(e) };
     // Leave the note up a moment for the panel, then clear so the next check can start.
     setTimeout(() => {
       checking = null;

@@ -32,6 +32,7 @@ import { getProjectRoot, getWebRoot, resolveHudLayoutPath, reapplySpeciesDataDir
 import { CONTENT_SECURITY_POLICY } from "./csp.js";
 import { startEdexoFromElectronMode, type EdexoRuntime } from "./edexoBootstrap.js";
 import { linuxProbes } from "./linuxProbes.js";
+import { errorText } from "./errorText.js";
 
 type Msg = Record<string, unknown> & { type: string };
 
@@ -126,7 +127,6 @@ const CALLS = new Set([
   "openMainAppInBrowser",
 ]);
 
-const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function runServerChild(): void {
   const port = parentPort();

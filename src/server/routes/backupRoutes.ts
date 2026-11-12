@@ -9,6 +9,7 @@ import { mkdirSync } from "node:fs";
 import { localOnly, requestIsFromThisPc } from "../lanAuth.js";
 import { openLocalFile } from "../openUrl.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
+import { errorText } from "../errorText.js";
 
 export function registerBackupRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
   const service = opts.backup;
@@ -24,7 +25,7 @@ export function registerBackupRoutes(app: express.Express, opts: HttpServerOptio
     return true;
   };
   const fail = (res: express.Response, e: unknown, status = 400) =>
-    res.status(status).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    res.status(status).json({ ok: false, error: errorText(e) });
 
   app.get("/api/backup/status", async (req, res) => {
     if (!guard(req, res)) return;

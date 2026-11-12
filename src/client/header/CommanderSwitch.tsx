@@ -9,6 +9,7 @@
 import { useState } from "react";
 import type { AppSnapshot, CommanderRefDTO } from "@shared/types";
 import { Dialog } from "../ui/Dialog";
+import { sendJson } from "../http";
 
 const KEEP_KEY = "edexo.commanderKeep";
 /** The server's journal boot can take a while on a full folder; the page reloads as soon as it answers. */
@@ -29,11 +30,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Ask the app to show `target`, then wait for the server to answer as them and load the page again. */
 export async function switchToCommander(target: CommanderRefDTO): Promise<string | null> {
-  const r = await fetch("/api/commanders/switch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fid: target.fid }),
-  }).catch(() => null);
+  const r = await sendJson("/api/commanders/switch", { fid: target.fid }).catch(() => null);
   const j = (await r?.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
   if (!r || !r.ok || !j?.ok) return j?.error ?? "The app could not switch commander.";
   const t0 = Date.now();

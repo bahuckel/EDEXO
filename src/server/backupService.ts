@@ -40,6 +40,7 @@ import {
   type JournalRestoreResult,
 } from "./backup.js";
 import { assessBackupFolder, type DiskProbe, type FolderRisk } from "./backupFolderRisk.js";
+import { errorText } from "./errorText.js";
 
 /** After `Shutdown`, before the backup starts. */
 export const AFTER_SHUTDOWN_MS = 60_000;
@@ -194,7 +195,7 @@ export function createBackupService(o: BackupServiceOptions): BackupService {
         );
       },
       (e: unknown) => {
-        const message = e instanceof Error ? e.message : String(e);
+        const message = errorText(e);
         lastError = { at: new Date(now()).toISOString(), message };
         log(`backup (${why}) failed: ${message}`);
       },

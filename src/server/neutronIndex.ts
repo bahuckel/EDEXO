@@ -32,6 +32,7 @@ import { loadSectorNames } from "./expedition.js";
 import { proceduralSystemName } from "../shared/id64.js";
 import { SECTOR_ORIGIN, SECTOR_SIZE_LY } from "../shared/sectorName.js";
 import { stallGuard } from "./stallGuard.js";
+import { errorText } from "./errorText.js";
 
 const MAGIC = "EDEXONEU";
 const CELL_B = 14;
@@ -424,7 +425,7 @@ export async function downloadNeutrons(onDone: () => void, fetchImpl: typeof fet
     onDone();
   } catch (e) {
     downloading = null;
-    lastError = e instanceof Error ? e.message : String(e);
+    lastError = errorText(e);
     rmSync(part, { force: true });
   }
 }

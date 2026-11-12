@@ -4,6 +4,7 @@ import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { perfBytes } from "../perf.js";
 import type { EstimatedSurfaceTempBand, PlanetScan, SpeciesMatchContext } from "../../shared/types.js";
 import { sendJson } from "./httpHelpers.js";
+import { errorText } from "../errorText.js";
 
 export function registerEncyclopediaRoutes(
   app: express.Express,
@@ -57,7 +58,7 @@ export function registerEncyclopediaRoutes(
         ),
       });
     } catch (e) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      res.status(500).json({ error: errorText(e) });
     }
   });
 

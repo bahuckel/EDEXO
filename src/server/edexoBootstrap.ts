@@ -1,12 +1,10 @@
 import { flushNavRouteLog, navRouteLog } from "./navRouteLog.js";
-import { enablePredictionAudit, flushPredictionAudit, predictionRecords } from "./predictionAuditLog.js";
-import { predictionQuality } from "./predictionQuality.js";
-import { cardVerdictsFor } from "./cardVerdicts.js";
+import { enablePredictionAudit, flushPredictionAudit } from "./predictionAuditLog.js";
 import { flushSurfaceMarks } from "./surfaceMarksFile.js";
 import { startEddnLedgerWatch } from "./eddnLedger.js";
 import path from "node:path";
 import { achievementDetail, achievementExists, achievementsList } from "./achievements.js";
-import { achievementNoticeText, createAchievementWatch } from "./achievementNotices.js";
+import { createAchievementWatch } from "./achievementNotices.js";
 import {
   buildCodexExport,
   buildExomasteryExport,
@@ -16,26 +14,16 @@ import {
   ownCodexBackupKeys,
 } from "./sharedExomastery.js";
 import { ownFootEntriesWithBackups } from "./footScannedCatalog.js";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import type { AppSnapshot, ExoLiveDTO, JournalLine, UiCommand } from "../shared/types.js";
 import { journalHistoryCutoffUtcMs } from "../shared/journalHistoryPreset.js";
-import { applyLiveFix, journalLineFix } from "./liveFix.js";
-import { mergeCollectionFocus } from "../shared/collectionFocus.js";
-import {
-  clearCollectionFocusCache,
-  loadCollectionFocusConfig,
-  saveCollectionFocusConfig,
-  type CollectionFocusConfig,
-} from "./collectionFocus.js";
 import { openUrlInBrowser, openLauncherShell, openLocalFile } from "./openUrl.js";
 import { GameStateStore } from "./gameState.js";
 import {
   readJournalFull,
   listJournalFilesChronological,
-  type JournalLineAt,
   type JournalListFilterOpts,
 } from "./journalWatcher.js";
-import { emitLiveJournalLine } from "./journalTap.js";
 import { stopColonizeService } from "./colonize/colonizeService";
 import { onColonizeHudChange } from "./colonize/hudSummary";
 import { scanJournalsForStatistics } from "./statisticsScan.js";
@@ -47,31 +35,19 @@ import { isLoopbackHostName, lanUrlWithKey, loadOrCreateLanKey } from "./lanAuth
 import { applyPendingRestore } from "./backup.js";
 import { createBackupService } from "./backupService.js";
 import { APP_USER_AGENT, APP_VERSION } from "./appVersion.js";
-import os from "node:os";
-import {
-  edsmCredentialsStatus,
-  forgetEdsmCredentials,
-  readEdsmCredentials,
-  saveEdsmCredentials,
-} from "./edsmCredentials.js";
-import { buildEncyclopediaExomasteryPlanetsPayload } from "./exomasteryEdsmEncyclopedia.js";
 import {
   buildEncyclopediaPayload,
   buildSnapshot,
-  findSpeciesEntryForEncyclopedia,
   getCachedSpeciesDatabase,
   setCodexFirstLowChanceKept,
   loadSpeciesDatabase,
   getCachedPrices,
 } from "./snapshot.js";
 import { writeExoDataAlertFixFiles } from "./exoDataAlertFix.js";
-import { buildFeederStatus } from "./feederStatus.js";
-import { regionalRarity } from "./speciesRarityData.js";
 import { createGamePresence } from "./gamePresence.js";
 import { buildFieldGuide } from "./fieldGuide.js";
 import { buildDiscoveries } from "./discoveries.js";
 import { flushFootScannedCatalog } from "./footScannedCatalog.js";
-import { parseStatusJson, statusDestination, statusFootFix, statusFuel } from "./footTravelStatus.js";
 import {
   getProjectRoot,
   resolveCommanderDataDir,
@@ -82,46 +58,38 @@ import {
 } from "./paths.js";
 import { guarded } from "./guarded.js";
 import {
-  loadPersistedJournalDir,
   persistJournalDirPreference,
   resolveInitialJournalDir,
 } from "./journalDirPreference.js";
 import {
   buildExoMinimapDto,
   buildExoOrganicOverlayDto,
-  ingestExoOrganicJournalLine,
   pressClearMarksHere,
   restoreOrganicSessionFromJournal,
 } from "./exoOrganicTracker.js";
 import { perfTime, startPerfReporter } from "./perf.js";
 import { flushPendingOrganicSampleSession } from "./organicSampleSessionFile.js";
-import { fetchEdsmBodiesAsExplorationRecords, searchEdsmSystemsByName } from "./edsmSystemHydration.js";
-import { fetchSpanshBodiesAsExplorationRecords, searchSpanshSystemsByName } from "./spanshSystemHydration.js";
+import { searchEdsmSystemsByName } from "./edsmSystemHydration.js";
+import { searchSpanshSystemsByName } from "./spanshSystemHydration.js";
 import { SessionLog } from "./sessionLog.js";
 import {
   backlogMap,
-  firstDiscoveryBacklogNow,
   firstDiscoveryBacklogSliced,
   firstDiscoveryBacklogWithDistance,
 } from "./firstDiscoveryBacklog.js";
 import { galaxySpeciesCatalogue, galaxyValueSearch } from "./galaxyValueSearch.js";
 import { galaxyBodyScan, galaxyRegions } from "./galaxyBodyScan.js";
-import { loadBioIndex, peekBioIndex } from "./bioIndex.js";
-import { importedSystems, loadVisitedImport } from "./visitedCache.js";
-import { mySystemDetail, mySystemsDto, sessionRouteDto, visitedSystemsDto } from "./galaxyMine.js";
 import { commanderSectorsDto } from "./galaxySectorTiers.js";
 import { createUpdateChecker, currentReleaseForm } from "./updateCheck.js";
 import { createAppUpdater, resolveUpdateDir } from "./appUpdater.js";
 import { createWhatsNew } from "./whatsNew.js";
-import { buildDiagnosticsText, installLogRing, loggedLines, serverMemory } from "./diagnostics.js";
-import { galaxyMemoryState } from "./galaxyMemory.js";
+import { installLogRing } from "./diagnostics.js";
 import { createUnknownExobioLog } from "./exobioUnknown.js";
 import { parseHost, parsePort } from "./cliOptions.js";
 import type { CliOptions } from "./cliOptions.js";
 import { showEdexoNativeFixInfo, logFatal, assertResourceLayout } from "./startupChecks.js";
 import { createGggResearch } from "./gggResearch.js";
-import { createNoticesService, type CodexFirstFind, type RareColourFind } from "./notices.js";
-import { isRareColour } from "../shared/rareColour.js";
+import { createNoticesService } from "./notices.js";
 import { communityGoalNoticeText, startCommunityGoalPoller } from "./communityGoals.js";
 import { startDataAutoRefresh } from "./dataAutoRefresh.js";
 import { createBookmarksService } from "./bookmarks.js";
@@ -137,10 +105,6 @@ import { addSnapshotExtras } from "./snapshotExtras.js";
 import { createJournalSideFiles } from "./journalSideFiles.js";
 import { createRemoteSystemView } from "./remoteSystemView.js";
 import { createStatusReader } from "./appStatus.js";
-import type { NotifySettingsDTO } from "../shared/notices.js";
-import { readPoiStatus } from "./edastroPoi.js";
-import { readCarrierStatus } from "./edastroCarriers.js";
-import { fetchGalacticRecords, readGalacticRecordsStatus } from "./galacticRecords.js";
 import { bodyKey } from "../shared/bodyKey.js";
 import {
   applyPersistedUserPrefs as applyUserPrefs,
@@ -155,10 +119,19 @@ import { createJournalPipeline } from "./journalPipeline.js";
 import { createSpeciesDataWatcher } from "./speciesDataWatcher.js";
 import { reloadSpeciesDerivedCaches } from "./speciesCacheReload.js";
 import { pickCommanderForRun } from "./commanderMigration.js";
-import { activeCommander } from "./activeCommander.js";
 import { createCommanderWatch } from "./commanderWatch.js";
 import { carrierHereOf, createCarrierRouteFollow } from "./carrierRouteFollow.js";
-import { isOtherCommandersJournal } from "./journalCommanders.js";
+import { createCodexFirstAnnounce } from "./codexFirstAnnounce.js";
+import { createPushScheduler } from "./pushScheduler.js";
+import { createLiveJournalLine } from "./liveJournalLine.js";
+import { createStatusTick } from "./statusTick.js";
+import { mySystemsOptions } from "./mySystemsOptions.js";
+import { noticesOptions } from "./noticesOptions.js";
+import { uploadSettingsOptions } from "./uploadSettingsOptions.js";
+import { updateDiagnosticsOptions } from "./updateDiagnosticsOptions.js";
+import { prefsOptions } from "./prefsOptions.js";
+import { speciesInfoOptions } from "./speciesInfoOptions.js";
+import { errorText } from "./errorText.js";
 export { backfillCommanderPosition } from "./commanderPositionBackfill.js";
 export { logFatal, assertResourceLayout } from "./startupChecks.js";
 export { parseHost, parsePort, parseCli } from "./cliOptions.js";
@@ -269,13 +242,6 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   // The settings file lives in userPrefsFile.ts; these keep the old names for the wiring below.
   const persistUserPreferences = (): void => writeUserPrefs(store, userSettingsPath);
   const applyPersistedUserPrefs = (j: PersistedUserPrefs): void => applyUserPrefs(store, j);
-  /** A settings setter that writes the settings file after it (audit 2026-10-22: ten copies of the pair). */
-  const persisted =
-    <A extends unknown[]>(fn: (...a: A) => void) =>
-    (...a: A): void => {
-      fn(...a);
-      persistUserPreferences();
-    };
 
   {
     const primary = tryReadUserPrefs(userSettingsPath);
@@ -426,12 +392,6 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     notices,
     greenMarks,
   });
-  const notifySettings = (): NotifySettingsDTO => ({
-    prefs: notices.prefs(),
-    jumpLy: notices.jumpLy(noticesContext),
-    poiDataReady: readPoiStatus().haveData,
-    carrierDataReady: readCarrierStatus().haveData,
-  });
   const getSnapshot = () =>
     perfTime("buildSnapshot", () => {
       const snap = buildSnapshot(
@@ -458,43 +418,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
 
   let broadcast: (s: AppSnapshot) => void = () => {};
 
-  /*
-    The codex-first announcement writes the notices file, so it runs with the push, never on a read:
-    GET /api/state used to write it too (code review 2026-10-10, A6), the same reason the one-shot
-    auto-select moved out of the snapshot.
-  */
-  const announceCodexFirstIn = (snap: ReturnType<typeof getSnapshot>) => {
-    // [CODEX FIRST] candidates (owner, 2026-09-30) and rare colours (1.2.19) in the system he is in go to the bell, once
-    // each, and leave it when the body's candidates no longer hold them (owner, 2026-10-04). One walk for both.
-    const prefs = notices.prefs();
-    if (snap.journalBoot || store.currentSystemAddress == null || (!prefs.codexFirst && !prefs.rareColours)) return;
-    const firsts: CodexFirstFind[] = [];
-    const rare: RareColourFind[] = [];
-    const evaluated = new Set<string>();
-    for (const b of snap.bodies ?? []) {
-      if (b.state.systemAddress !== store.currentSystemAddress) continue;
-      evaluated.add(b.state.key);
-      const where = {
-        bodyKey: b.state.key,
-        systemAddress: b.state.systemAddress,
-        system: b.state.starSystem || store.currentSystem || "",
-        body: b.tabLabel || b.state.bodyName,
-      };
-      for (const m of b.matches ?? []) {
-        if (m.unlikely) continue;
-        const who = { species: m.entry.displayName, speciesId: m.entry.id };
-        if (m.codexFirst && m.codexRegion)
-          firsts.push({ ...where, ...who, colours: m.codexFirstColours ?? [], region: m.codexRegion });
-        for (const r of (m.colourRarity ?? []).filter(isRareColour)) rare.push({ ...r, ...where, ...who });
-      }
-    }
-    const at = new Date().toISOString();
-    const changed = [
-      prefs.codexFirst && notices.announceCodexFirst(firsts, at, evaluated),
-      prefs.rareColours && notices.announceRareColours(rare, at, evaluated),
-    ].some(Boolean);
-    if (changed) snap.notices = notices.snapshot(store.viewingSystemAddress ?? store.currentSystemAddress ?? null);
-  };
+  const announceCodexFirstIn = createCodexFirstAnnounce({ store, notices });
 
   /**
    * Broadcast, then consume the one-shot UI auto-select key.
@@ -511,34 +435,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     store.clearPendingUiAutoSelectBodyKey();
   });
 
-  /**
-   * Coalesce journal-driven pushes: fire at once when idle, then at most one per window while
-   * events stream in. At 100 ms a single FSS sweep produced ten full snapshot builds per second.
-   */
-  const PUSH_WINDOW_MS = 250;
-  let pushTimer: ReturnType<typeof setTimeout> | null = null;
-  let lastPushAt = 0;
-  const pushFlush = () => {
-    if (pushTimer) {
-      clearTimeout(pushTimer);
-      pushTimer = null;
-    }
-    lastPushAt = Date.now();
-    broadcastSnapshot();
-  };
-  const push = () => {
-    if (pushTimer) return;
-    const sinceLast = Date.now() - lastPushAt;
-    if (sinceLast >= PUSH_WINDOW_MS) {
-      pushFlush();
-      return;
-    }
-    pushTimer = setTimeout(() => {
-      pushTimer = null;
-      lastPushAt = Date.now();
-      broadcastSnapshot();
-    }, PUSH_WINDOW_MS - sinceLast);
-  };
+  // Journal-driven pushes coalesced to one a window (pushScheduler.ts).
+  const { push, pushFlush } = createPushScheduler(broadcastSnapshot);
 
   // The HUD's Colonize section follows the Colonize store and its saved plan, not the journal store.
   const offColonizeHud = onColonizeHudChange(push);
@@ -616,64 +514,33 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
   // Carriers & Stations refresh themselves once fetched (dataAutoRefresh.ts): 12 h / 24 h unless changed.
   const dataAutoRefresh = startDataAutoRefresh(() => push());
 
-  function createLiveJournalLine(): (line: JournalLine, at: JournalLineAt) => void {
-    return (line: JournalLine, at: JournalLineAt) => {
-      /*
-        Another commander's session (1.3.1): the lists leave other commanders' files out, but a file the game has just
-        started names nobody until its Commander line, and the tail may be following it then. Nothing from it is
-        this run's, not even for Colonize.
-      */
-      const cmdr = activeCommander();
-      if (cmdr && isOtherCommandersJournal(at.path, cmdr.fid)) return;
-      // Colonize and any other follower first (journalTap.ts): a failure below must not cost them the line.
-      emitLiveJournalLine(line, at);
-      try {
-        // Before the store applies it: a body the store already has is a re-scan, not a find.
-        notices.observe(line, noticesContext);
-        gggResearch.observe(line);
-        // Read before apply() closes the run: the tracker files an Analyse under the run's body too.
-        const ownLine = store.ownBodyForAnalyse(line);
-        achievementWatch.prime();
-        store.applyLive(line);
-        for (const a of achievementWatch.check()) {
-          if (
-            notices.announceAchievement(
-              { id: a.id, step: a.step, ...achievementNoticeText(a) },
-              String(line.timestamp ?? new Date().toISOString()),
-            )
-          )
-            push();
-        }
-        // Live lines only. The historical replay calls store.apply directly, which is what keeps a
-        // first run from asking EDSM about every system the commander has ever visited.
-        maybeAutoFetchOnArrival(line);
-        canonnUploader.offer(line);
-        eddnUploader.offer(line);
-        const side = liveSideFiles();
-        applyNavRoute(side.route);
-        carrierFollow.tick();
-        if (line.event === "FSDJump" && neutronLive.follows() !== "carrier") {
-          // A neutron route being flown owns the clipboard; else the boxel run or the saved boxel's next.
-          const flying = neutronLive.active();
-          const onStop = neutronLive.onJump(shipHere()) != null;
-          if (flying && !onStop && neutronLive.offRoute(shipHere())) void neutronReplanner.replan();
-          if (!flying) boxelRun.onJump();
-          // A run can end on a jump (its last system flown): the HUD line says so.
-          if (store.boxelCopied) store.boxelCopied.run = savedBoxels.runId() != null;
-        }
-        neutronFuelWatch.onLine(line);
-        const footFix = journalLineFix(store, side.status);
-        ingestExoOrganicJournalLine(store, ownLine, footFix, projectRoot, getCachedSpeciesDatabase());
-        sessionLog.record(line, store, getCachedPrices());
-        unknownExobio.offer(line);
-        backupService.onJournalLine(typeof line.event === "string" ? line.event : undefined);
-        gamePresence.onJournalLine(typeof line.event === "string" ? line.event : undefined);
-        push();
-      } catch (e) {
-        console.error("Journal live line failed (skipped line):", e);
-      }
-    };
-  }
+  // What one live line does (liveJournalLine.ts); built when the tail starts, after every service below exists.
+  const liveJournalLine = () =>
+    createLiveJournalLine({
+      store,
+      projectRoot,
+      notices,
+      noticesContext,
+      gggResearch,
+      achievementWatch,
+      maybeAutoFetchOnArrival,
+      canonnUploader,
+      eddnUploader,
+      liveSideFiles,
+      applyNavRoute,
+      carrierFollow,
+      neutronLive,
+      neutronReplanner,
+      neutronFuelWatch,
+      shipHere,
+      boxelRun,
+      savedBoxels,
+      sessionLog,
+      unknownExobio,
+      backupService,
+      gamePresence,
+      push,
+    });
 
   // The journal replay, its cache and the live tail (journalPipeline.ts).
   const journal = createJournalPipeline({
@@ -682,7 +549,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     quietConsole,
     getJournalDir: () => journalDir,
     getJournalListFilterOpts,
-    createLiveJournalLine,
+    createLiveJournalLine: liveJournalLine,
     notices,
     unknownExobio,
     pushFlush,
@@ -815,28 +682,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     getGalaxyRegions: () => galaxyRegions(),
     scanGalaxyBodies: (query, limit) => galaxyBodyScan({ ...query, from: store.commanderPos, limit }),
     getCommanderSectors: () => commanderSectorsDto(store),
-    // The last finished backlog, never a wait: the map asks for these at start (firstDiscoveryBacklog.ts).
-    getMySystems: () =>
-      mySystemsDto(
-        store,
-        backlogMap(store, firstDiscoveryBacklogNow(store)),
-        // The game's own visited list (plan 6.1): placed by the galaxy index only if it is already loaded.
-        importedSystems(
-          loadVisitedImport(),
-          new Set([...store.visitedSystems.keys(), ...store.systemPositions.keys()]),
-          peekBioIndex(),
-        ),
-      ),
-    getImportedSystems: () =>
-      importedSystems(
-        loadVisitedImport(),
-        new Set([...store.visitedSystems.keys(), ...store.systemPositions.keys()]),
-        peekBioIndex(),
-      ),
-    getMySystem: (addr) =>
-      mySystemDetail(store, addr, backlogMap(store, firstDiscoveryBacklogNow(store)), loadBioIndex()),
-    getSessionRoute: () => sessionRouteDto(store, sessionLog.toDto().systems),
-    getVisitedSystems: (days) => visitedSystemsDto(store, days),
+    ...mySystemsOptions({ store, sessionLog }),
     getJournalStore: () => store,
     getCodexMapLogged: () => store.codexMapLogged,
     getAchievements: () => achievementsList(getProjectRoot(), store, getCachedSpeciesDatabase().species),
@@ -854,10 +700,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       return true;
     },
     getCommanderSystem: () => store.currentSystem,
-    setHudPrefs: persisted((raw) => store.setHudPrefs(raw)),
     setPollRates: (statusMs, journalMs) => applyPollRates(statusMs, journalMs),
-    getCollectionFocus: () => loadCollectionFocusConfig(),
-    getNotifySettings: notifySettings,
     bookmarks,
     savedBoxels,
     neutronLive,
@@ -886,57 +729,8 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       greenMarks.set(bodyKey(systemAddress, bodyId), mark, { body: rec.bodyName, system: rec.starSystem });
       return greenGiantForRecord(rec, greenSources());
     },
-    getRecords: () => ({ rows: notices.records(noticesContext), galactic: readGalacticRecordsStatus() }),
-    fetchGalacticRecords: async (force) => {
-      await fetchGalacticRecords({ force });
-      return { rows: notices.records(noticesContext), galactic: readGalacticRecordsStatus() };
-    },
     systemPositionOf: (addr) => store.systemPositions.get(addr) ?? null,
-    setNotifyPrefs: (raw) => {
-      const lowBefore = notices.prefs().codexFirstLowChance;
-      notices.setPrefs(raw);
-      // The switch changes rows of bodies already computed.
-      if (notices.prefs().codexFirstLowChance !== lowBefore)
-        setCodexFirstLowChanceKept(() => notices.prefs().codexFirstLowChance ?? true);
-      push();
-      return notifySettings();
-    },
-    markNoticesRead: (ids) => {
-      const n = notices.markRead(ids);
-      if (n) push();
-      return n;
-    },
-    markNoticesUnread: (ids) => {
-      const n = notices.markUnread(ids);
-      if (n) push();
-      return n;
-    },
-    clearReadNotices: () => {
-      const n = notices.clearRead();
-      if (n) push();
-      return n;
-    },
-    sendTestNotice: () => {
-      notices.sendTest(new Date().toISOString());
-      push();
-    },
-    /*
-      Clamped on the way in and the stored config handed straight back, so a figure the server
-      refused shows up in the panel as the figure that will actually be used.
-
-      The cache is cleared because the marker is memoised for a few seconds and a threshold the
-      commander has just moved should take effect on the next body, not when a timer says so.
-    */
-    setCollectionFocus: (raw) => {
-      const next = mergeCollectionFocus(
-        loadCollectionFocusConfig(),
-        (raw ?? {}) as Partial<CollectionFocusConfig>,
-      );
-      saveCollectionFocusConfig(next);
-      clearCollectionFocusCache();
-      push();
-      return next;
-    },
+    ...noticesOptions({ notices, noticesContext, push }),
     setRadarRadiusM: (raw) => {
       /*
         Pushed as well as persisted. The radar is drawn from a field on its DTO, so a client that is
@@ -951,15 +745,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
       }
       return store.minimapRadiusM;
     },
-    setIncludeBacterium: persisted((v) => store.setIncludeBacteriumInSearch(v)),
-    setIncludeExplorationScanData: persisted((v) => store.setIncludeExplorationScanDataInDataValue(v)),
-    setPranavAntalBonus: persisted((v) => store.setPranavAntalBonus(v)),
-    setSellAtFleetCarrier: persisted((v) => store.setSellAtFleetCarrier(v)),
-    setFeederEnabled: persisted((v) => store.setFeederEnabled(v)),
-    setFleetCarrierIsOwn: persisted((v) => store.setFleetCarrierIsOwn(v)),
-    setFootTravelOdometer: persisted((v) => store.setFootTravelOdometerEnabled(v)),
-    setPhotoStamp: persisted((p) => store.setPhotoStamp(p)),
-    setExoMapTierThresholds: persisted((plus, pp) => store.setExoMapTierThresholds(plus, pp)),
+    ...prefsOptions({ store, persistUserPreferences, push }),
     /*
       The launcher's "open in browser" and "phone view". The path is chosen here from the views'
       own table (appViews.ts) rather than taken from the caller, so the route cannot be used to
@@ -1044,180 +830,22 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     },
     searchEdsmSystems: (query) => searchEdsmSystemsByName(query),
     getStatisticsScan,
-    getCardVerdicts: (scan, est, ctx) => {
-      const out: Record<string, ReturnType<typeof cardVerdictsFor>> = {};
-      for (const e of getCachedSpeciesDatabase().species) out[e.id] = cardVerdictsFor(e, scan, est, ctx);
-      return out;
-    },
-    getPredictionQuality: () => {
-      const byId = new Map(getCachedSpeciesDatabase().species.map((e) => [e.id, e]));
-      return predictionQuality(predictionRecords(), (id) => {
-        const e = byId.get(id);
-        return e ? { name: e.displayName, genus: e.genus ?? "" } : null;
-      });
-    },
     searchSpanshSystems: (query) => searchSpanshSystemsByName(query),
-    hydrateSystemFromEdsm: async (systemAddress, systemName) => {
-      const gate = hydrateGate(systemAddress, "EDSM");
-      if (gate) return gate;
-      const edsm = await fetchEdsmBodiesAsExplorationRecords(
-        systemName,
-        systemAddress,
-        readEdsmCredentials(),
-      );
-      if (!edsm.ok) return { ok: false, error: edsm.error };
-      store.replaceEdsmExplorationForSystem(systemAddress, edsm.records);
-      return { ok: true };
-    },
-    hydrateSystemFromSpansh: async (systemAddress, systemName) => {
-      const gate = hydrateGate(systemAddress, "Spansh");
-      if (gate) return gate;
-      const sp = await fetchSpanshBodiesAsExplorationRecords(systemAddress, systemName);
-      if (!sp.ok) return { ok: false, error: sp.error };
-      store.replaceEdsmExplorationForSystem(systemAddress, sp.records);
-      return { ok: true };
-    },
-    getEdsmCredentialsStatus: () => edsmCredentialsStatus(),
-    setEdsmCredentials: (commanderName, apiKey) => {
-      const r = saveEdsmCredentials(commanderName, apiKey);
-      if (r.ok) persistUserPreferences();
-      return r;
-    },
-    forgetEdsmCredentials: () => {
-      forgetEdsmCredentials();
-      // No key, no consent: the toggle goes down with it rather than sitting on waiting for one.
-      store.setEdsmAutoFetchEnabled(false);
-      persistUserPreferences();
-    },
-    setEdsmAutoFetchEnabled: (enabled) => {
-      if (enabled && !readEdsmCredentials()) {
-        return { ok: false, error: "Store your EDSM commander name and API key first." };
-      }
-      store.setEdsmAutoFetchEnabled(enabled);
-      persistUserPreferences();
-      return { ok: true };
-    },
-    setEdsmUploadEnabled: (enabled) => {
-      if (enabled && !readEdsmCredentials()) {
-        return { ok: false, error: "Store your EDSM commander name and API key first." };
-      }
-      store.setEdsmUploadEnabled(enabled);
-      // Switching the upload off takes the live loop with it, the way deleting the key takes
-      // auto-fetch down. A "keep sending" left on under a switch that says off is a lie waiting to
-      // be believed the next time the upload is turned back on.
-      if (!enabled) store.setEdsmLiveUploadEnabled(false);
-      persistUserPreferences();
-      return { ok: true };
-    },
-    startEdsmCatchUp: (scope) => uploads.startEdsmRun(scope),
-    setEdsmLiveUploadEnabled: (enabled) => {
-      if (enabled && !store.edsmUploadEnabled) {
-        return { ok: false, error: "Turn EDSM upload on first." };
-      }
-      store.setEdsmLiveUploadEnabled(enabled);
-      persistUserPreferences();
-      return { ok: true };
-    },
-    cancelEdsmCatchUp: uploads.cancelEdsmRun,
-    setCanonnUploadEnabled: (enabled) => {
-      store.setCanonnUploadEnabled(enabled);
-      persistUserPreferences();
-      // Asked for the first time it is switched on, not at boot: a commander who never turns this
-      // on should not cost Canonn a request.
-      if (enabled) void canonnUploader.loadWhitelist();
-      return { ok: true };
-    },
-    setEddnUploadEnabled: (enabled) => {
-      store.setEddnUploadEnabled(enabled);
-      persistUserPreferences();
-      return { ok: true };
-    },
+    ...uploadSettingsOptions({ store, persistUserPreferences, uploads, hydrateGate }),
     scheduleBroadcast: push,
-    getEncyclopedia: buildEncyclopediaPayload,
-    getFieldGuide: () => buildFieldGuide(projectRoot, getCachedSpeciesDatabase()),
-    getEncyclopediaRegion: (name) =>
-      Object.fromEntries(
-        getCachedSpeciesDatabase().species.map(
-          (e) => [e.id, regionalRarity(projectRoot, name, e.id)] as const,
-        ),
-      ),
-    getFeederStatus: () => buildFeederStatus(projectRoot, getCachedSpeciesDatabase()),
-    getUpdateInfo: async (force) => ({
-      ...(await updateChecker.check(force)),
-      download: appUpdater.status(),
+    ...speciesInfoOptions({ store, projectRoot }),
+    ...updateDiagnosticsOptions({
+      store,
+      projectRoot,
+      getStatus,
+      journal,
+      gamePresence,
+      updateChecker,
+      appUpdater,
+      whatsNew,
     }),
-    startUpdateDownload: () => {
-      void appUpdater.start();
-      return appUpdater.status();
-    },
-    getWhatsNew: (any) => whatsNew.get(any),
-    getDiagnostics: async () => {
-      const st = getStatus();
-      const upd = await updateChecker.check(false);
-      const dl = appUpdater.status();
-      return buildDiagnosticsText({
-        now: new Date(),
-        version: APP_VERSION,
-        form:
-          process.env.EDEXO_ELECTRON_PACKAGED === "1"
-            ? currentReleaseForm()
-            : "pkg" in process
-              ? "console build"
-              : "source",
-        electron: process.versions.electron ?? null,
-        node: process.versions.node,
-        platform: process.platform,
-        osRelease: os.release(),
-        arch: process.arch,
-        memGb: Math.round(os.totalmem() / 2 ** 30),
-        journalDir: st.journalDir,
-        journalDirOk: st.journalDirConfiguredOk,
-        journalDirChosen: loadPersistedJournalDir(projectRoot) !== null,
-        journalFiles: st.journalFileCount,
-        currentJournal: st.journalPath ? path.basename(st.journalPath) : null,
-        historyPreset: st.journalHistoryPreset ?? "all",
-        lastEventIso: st.lastJournalEventIso,
-        boot: journal.lastBoot(),
-        booting: st.journalBoot ? `${st.journalBoot.phase} ${st.journalBoot.percent} %` : null,
-        mode: st.mode,
-        port: st.port,
-        bindHost: st.bindHost,
-        lanAccess: st.lanAccess,
-        gameRunning: process.env.EDEXO_ELECTRON === "1" ? gamePresence.running() : null,
-        uploads: {
-          edsmFetch: store.edsmAutoFetchEnabled,
-          edsmUpload: store.edsmUploadEnabled,
-          canonn: store.canonnUploadEnabled,
-          eddn: store.eddnUploadEnabled,
-        },
-        update: {
-          latest: upd.latest,
-          checkedAt: upd.checkedAt,
-          error: upd.error,
-          download: dl.supported ? `${dl.state}${dl.error ? ` (${dl.error})` : ""}` : null,
-        },
-        speciesCount: getCachedSpeciesDatabase().species.length,
-        speciesDataWarnings: st.speciesDataWarnings?.length ?? 0,
-        commander: store.commanderName,
-        log: loggedLines(),
-        memory: serverMemory(galaxyMemoryState()),
-      });
-    },
-    markWhatsNewSeen: () => whatsNew.seen(),
-    openUpdatePage: () => {
-      const url = updateChecker.updatePageUrl();
-      if (!url) return { ok: false, error: "No newer version known." };
-      openUrlInBrowser(url);
-      return { ok: true };
-    },
     startImportDump: importDump.start,
     getImportDumpStatus: importDump.statusFor,
-    getEncyclopediaExomastery: (genusDir, speciesEntryId, focusBodyKey) => {
-      const entry = findSpeciesEntryForEncyclopedia(genusDir, speciesEntryId);
-      if (!entry) return null;
-      const fb = focusBodyKey?.trim() || store.uiSelectedBodyKey || null;
-      return buildEncyclopediaExomasteryPlanetsPayload(projectRoot, entry, store, fb);
-    },
   });
   broadcast = broadcastFn;
 
@@ -1271,78 +899,18 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
 
       await journal.restart();
 
-      let lastJumpKey: string | null = null;
-      const jumpChangedNow = (): boolean => {
-        const jt = store.nextJumpTarget();
-        const key = jt ? `${jt.source}|${jt.systemAddress}|${jt.starSystem}|${jt.arrived ? 1 : 0}` : "";
-        if (key === lastJumpKey) return false;
-        lastJumpKey = key;
-        return true;
-      };
-      statusPoller.setTick(() => {
-        // Status.json and NavRoute.json are the game's commander's: while that is another commander, not ours (1.3.1).
-        if (commanderWatch.gameIsAnotherCommander()) return;
-        const navChanged = applyNavRoute(readLiveNavRouteWaypoints());
-        const jumpChanged = jumpChangedNow();
-        const statusPath = path.join(journalDir, "Status.json");
-        let raw: string;
-        try {
-          raw = readFileSync(statusPath, "utf8");
-        } catch (e) {
-          /*
-            A locked or momentarily missing file is not news either — same reasoning as a torn read
-            below. Elite holds the file briefly while rewriting it, and at a 100 ms poll plus a
-            watch on every write we land in that window often. Reporting "no position" each time
-            blanked the radar and re-armed the sample cue.
-          */
-          if ((e as NodeJS.ErrnoException)?.code !== "ENOENT") return;
-          store.exoOrganicLastFix = null;
-          const hadDest = store.statusDestination != null;
-          store.statusDestination = null;
-          store.applyLiveShipFuel(null, null);
-          const footHudEmpty = store.footTravelOdometerEnabled && store.footTravelOdometerTracking;
-          if (footHudEmpty || store.exoOrganicTracker || navChanged || hadDest || jumpChanged) push();
-          return;
-        }
-        /*
-          A read that could not be parsed is skipped outright, not reported as "off the surface".
-
-          Those are two different facts and they used to share one `null`. Elite rewrites this file
-          in place, so reading it mid-write yields a truncated line — constantly, now that the read
-          happens on every write as well as every 100 ms. Each one cleared `exoOrganicLastFix`,
-          which blanked the radar for a frame and, worse, sent `nearestSampleMeetsMin` through
-          `true -> null -> true`: an edge, so the HUD played the "far enough now" cue again. The
-          owner heard it on every radar update instead of once per boundary crossing.
-        */
-        const status = parseStatusJson(raw);
-        if (!status) return;
-        const read = statusFootFix(status);
-        const fix = read.kind === "fix" ? read.fix : null;
-        // The odometer's sample, the nose's pitch from the flight path, and the radar's fix (null: off the surface).
-        applyLiveFix(store, fix);
-        // The targeted body: the HUD's candidate list, and a one-shot jump to its Body tab. Pushed
-        // only when it actually changes — see `applyStatusDestination`.
-        const destChanged = store.applyStatusDestination(statusDestination(status));
-        const fuel = statusFuel(status);
-        const fuelChanged = store.applyLiveShipFuel(
-          fuel != null ? fuel.fuelMain : null,
-          fuel != null ? fuel.fuelReserve : null,
-          fuel?.cargo ?? null,
-        );
-        /*
-          The radar goes out on every tick, at the commander's chosen poll rate, whether or not
-          anything else changed. It is the one thing on the HUD that has to move smoothly, and the
-          coalesced `push()` below cannot carry it: that window exists because a full snapshot is
-          expensive to build, and the radar's two fields are not.
-
-          Identical frames are dropped inside the broadcaster, so standing still costs nothing.
-        */
-        if (store.exoOrganicTracker || store.overlayTouchdownBodyKey) broadcastExoLive(buildExoLive());
-
-        const footHud = store.footTravelOdometerEnabled && store.footTravelOdometerTracking;
-        if (footHud || store.exoOrganicTracker || fuelChanged || navChanged || destChanged || jumpChanged)
-          push();
-      });
+      statusPoller.setTick(
+        createStatusTick({
+          store,
+          getJournalDir: () => journalDir,
+          gameIsAnotherCommander: () => commanderWatch.gameIsAnotherCommander(),
+          applyNavRoute,
+          readLiveNavRouteWaypoints,
+          broadcastExoLive,
+          buildExoLive,
+          push,
+        }),
+      );
       statusPoller.arm(true);
       statusPoller.watch();
 
@@ -1389,7 +957,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
         return;
       }
       if (!listeningSettled) {
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = errorText(e);
         logFatal(["ED Exo Compare — startup failed:", msg]);
       }
     }

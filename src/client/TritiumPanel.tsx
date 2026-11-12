@@ -7,6 +7,7 @@ import { useState } from "react";
 import { CopySystemButton } from "./CopySystemButton";
 import { LoadingNote } from "./ui/Loading";
 import { fmtLyAway } from "@shared/format";
+import { pickRow } from "./ui/pickRow";
 
 type Point = { x: number; y: number; z: number };
 
@@ -96,7 +97,7 @@ export function TritiumPanel({
   const rowProps = (p: { x: number | null; y: number | null; z: number | null }) => {
     const point = onPick ? at(p) : null;
     return point
-      ? { className: "is-pickable", title: "Click to show it on the map", onClick: () => onPick!(point) }
+      ? { ...pickRow(() => onPick!(point)), title: "Click to show it on the map" }
       : {};
   };
   const moved =

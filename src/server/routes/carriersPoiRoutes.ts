@@ -26,6 +26,7 @@ import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { readAutoRefreshSettings, writeAutoRefreshSettings } from "../dataAutoRefresh.js";
 import { findTritium } from "../tritiumSearch.js";
 import { listOldCopies, removeOldCopies } from "../oldCopies.js";
+import { errorText, fail } from "../errorText.js";
 
 /** `?x&y&z` when all three are numbers (a point picked on the galaxy map), else null. */
 function pointFromQuery(q: Record<string, unknown>): { x: number; y: number; z: number } | null {
@@ -100,7 +101,7 @@ export function registerCarriersPoiRoutes(
     try {
       index = loadStationsIndex();
     } catch (e) {
-      return void res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      return void res.status(500).json({ error: errorText(e) });
     }
     if (!index) return void res.status(404).json({ error: "No station data yet: download it first." });
     const q = req.query;
@@ -153,7 +154,7 @@ export function registerCarriersPoiRoutes(
       }
       res.json({ ok: true, unchanged: result.unchanged === true, status: result.status });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 
@@ -183,7 +184,7 @@ export function registerCarriersPoiRoutes(
       const scan = await opts.getStatisticsScan();
       res.json(summariseStatistics(scan, window));
     } catch (e) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      res.status(500).json({ error: errorText(e) });
     }
   });
 
@@ -196,7 +197,7 @@ export function registerCarriersPoiRoutes(
     try {
       res.json(opts.getPredictionQuality());
     } catch (e) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      res.status(500).json({ error: errorText(e) });
     }
   });
 
@@ -226,7 +227,7 @@ export function registerCarriersPoiRoutes(
       }
       res.json({ ok: true, status: result.status });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 
@@ -326,7 +327,7 @@ export function registerCarriersPoiRoutes(
         },
       });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 
@@ -354,7 +355,7 @@ export function registerCarriersPoiRoutes(
     try {
       res.json(await findTritium(from));
     } catch (e) {
-      res.status(502).json({ error: e instanceof Error ? e.message : String(e) });
+      res.status(502).json({ error: errorText(e) });
     }
   });
 

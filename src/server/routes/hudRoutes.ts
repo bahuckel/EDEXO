@@ -5,6 +5,7 @@ import { localOnly } from "../lanAuth.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { setHudPitch } from "../liveFix.js";
 import { setHudDistance } from "../shipInSystem.js";
+import { fail } from "../errorText.js";
 
 export function registerHudRoutes(app: express.Express, opts: HttpServerOptions, _ctx: RouteContext): void {
   /*
@@ -64,7 +65,7 @@ export function registerHudRoutes(app: express.Express, opts: HttpServerOptions,
             : await bridge[name]({ pathname, width: num(body.width), height: num(body.height) });
         res.json({ ok: true, result });
       } catch (e) {
-        res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+        fail(res, e);
       }
     };
   };
@@ -75,7 +76,7 @@ export function registerHudRoutes(app: express.Express, opts: HttpServerOptions,
     try {
       res.json({ ok: true, ...(await bridge.state()) });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 
@@ -90,7 +91,7 @@ export function registerHudRoutes(app: express.Express, opts: HttpServerOptions,
     try {
       res.json({ ok: true, layout: await bridge.getLayout() });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 
@@ -105,7 +106,7 @@ export function registerHudRoutes(app: express.Express, opts: HttpServerOptions,
     try {
       res.json({ ok: true, layout: await bridge.setLayout(body as Record<string, unknown>) });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 
@@ -119,7 +120,7 @@ export function registerHudRoutes(app: express.Express, opts: HttpServerOptions,
         ...(await bridge.toggleVisibility({ hidden: typeof hidden === "boolean" ? hidden : undefined })),
       });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      fail(res, e);
     }
   });
 }
