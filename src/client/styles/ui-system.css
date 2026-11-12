@@ -1,0 +1,88 @@
+/*
+  The UI system's first rules (plan 7.5; owner approved 2026-11-12 from before/after screenshots at 1920, 1280 and
+  390 px). Loaded last, so on equal terms it wins over the per-screen sheets it corrects; `:root:root` gives the rules
+  the weight they had while they were a proposal under <html data-ui-proposal>.
+
+  1. Selected is not action. Filled orange meant both ("This boxel" selected and "Add" looked the same): a
+     selected chip, tab or toggle is an outline with a faint fill; only the action fills, at most one a panel.
+     The body picker's current body stays filled (owner): it is the screen's "you are here".
+  2. One button height ladder: 28 px small (chips, toggles, table actions), 34 px medium (panel actions).
+  3. Chips and buttons in sentence case with light tracking; upper case stays for section heads and field labels.
+  4. Tables: a faint stripe on every other row.
+*/
+
+:root:root {
+  --btn-h-sm: 28px;
+  --btn-h-md: 34px;
+  --sel-fill: var(--accent-a15);
+  --track-1: 0.04em;
+}
+
+/* 1. selected: outline + faint fill + bright text */
+:root:root :is(.fdb-chip--on:not(.fdb-chip--primary), .gsx-tier--codex) {
+  background: var(--sel-fill) !important;
+  color: var(--accent-bright) !important;
+  border-color: var(--accent) !important;
+}
+:root:root .disc-tab--on,
+:root:root .candidate-species-toggles .btn-top-toggle--on {
+  background: var(--sel-fill);
+  color: var(--accent-bright);
+  border-color: var(--accent);
+}
+
+/* an open [?]: a selection too */
+:root:root .fold-help-btn--on {
+  background: var(--sel-fill);
+  color: var(--accent-bright);
+  border-color: var(--accent);
+}
+
+/* 1. action: filled accent with the dark ink (8.57:1), flat */
+:root:root .fdb-chip--primary {
+  background: var(--accent) !important;
+  color: var(--ink, #07060a) !important;
+  border-color: var(--accent) !important;
+}
+:root:root .fdb-chip--primary:hover:not(:disabled) {
+  background: var(--accent-bright) !important;
+}
+
+/* 2. heights */
+:root:root :is(.fdb-chip, .disc-tab, .btn-top-toggle, .sys-card__btn, .genus-notes-pill, .g3d-btn) {
+  min-height: var(--btn-h-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+}
+:root:root .btn:not(.tiny) {
+  min-height: var(--btn-h-md);
+}
+
+/* 3. sentence case for chips, tags and buttons */
+:root:root
+  :is(
+    .sys-chip,
+    .price-tag,
+    .srow-tag,
+    .genus-notes-pill,
+    .sys-card__btn,
+    .facts-dss,
+    .btn-top-toggle,
+    .btn,
+    .fdb-chip,
+    .disc-tab,
+    .candidate-species-unlikely-toggle
+  ) {
+  text-transform: none;
+  letter-spacing: var(--track-1);
+}
+
+/* 4. tables */
+:root:root .disc-table tbody tr:nth-child(even) .disc-td {
+  background: rgba(255, 255, 255, 0.025);
+}
+:root:root .disc-table tbody tr:hover .disc-td {
+  background: var(--accent-a08);
+}

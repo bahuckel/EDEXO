@@ -532,7 +532,7 @@ export function BoxelScreen({
             />
             <button
               type="submit"
-              className="fdb-chip fdb-chip--on"
+              className="fdb-chip fdb-chip--on fdb-chip--primary"
               disabled={!addTarget}
               title={
                 addWhat

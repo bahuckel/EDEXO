@@ -328,7 +328,7 @@ export function CarriersPanel({
       <div className="carriers-fetch">
         <button
           type="button"
-          className="fdb-chip fdb-chip--on"
+          className="fdb-chip fdb-chip--on fdb-chip--primary"
           onClick={() => void fetchFromEdastro()}
           disabled={busy || cooling}
         >

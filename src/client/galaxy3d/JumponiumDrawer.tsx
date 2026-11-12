@@ -386,7 +386,7 @@ export function JumponiumDrawer({
             <div className="carriers-fetch">
               <button
                 type="button"
-                className="fdb-chip fdb-chip--on"
+                className="fdb-chip fdb-chip--on fdb-chip--primary"
                 onClick={() => void download()}
                 disabled={downloading}
               >

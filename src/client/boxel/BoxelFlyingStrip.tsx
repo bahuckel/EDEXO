@@ -82,7 +82,7 @@ export function BoxelFlyingStrip({
         <span className="boxel-flying__run">
           <span className="dim">Run </span>
           <strong>{run.boxel}</strong>
-          <button type="button" className="fdb-chip fdb-chip--on" title="Finish the boxel run (F7 in the game)" onClick={() => onPatch(run.id, { run: false })}>
+          <button type="button" className="fdb-chip fdb-chip--on fdb-chip--primary" title="Finish the boxel run (F7 in the game)" onClick={() => onPatch(run.id, { run: false })}>
             Finish
           </button>
         </span>

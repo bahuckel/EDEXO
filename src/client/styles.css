@@ -66,3 +66,5 @@
 @import "./styles/chamfer.css" layer(app);
 @import "./styles/motion.css" layer(app);
 @import "./styles/tray-tiles.css" layer(app);
+/* The UI system's rules (plan 7.5): selected vs action, button heights, sentence-case chips, table stripes. Last. */
+@import "./styles/ui-system.css" layer(app);

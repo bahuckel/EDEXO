@@ -190,7 +190,7 @@ export function BookmarkEditor({
         </p>
       ) : null}
       <div className="bm-editor__actions">
-        <button type="button" className="fdb-chip fdb-chip--on" disabled={busy} onClick={() => void save()}>
+        <button type="button" className="fdb-chip fdb-chip--on fdb-chip--primary" disabled={busy} onClick={() => void save()}>
           {initial.id ? "Save" : "Bookmark"}
         </button>
         <button type="button" className="fdb-chip" onClick={onCancel}>

@@ -2064,3 +2064,26 @@ input[type="checkbox"] {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- plan 7.5 (owner approved 2026-11-12) ----------------------------------------------------------------------- */
+/* The first-run card: Done is the one action (filled); setting the folder and opening a HUD are secondary (outline). */
+#wizardModal .btn.secondary {
+  min-height: 34px;
+  padding: 8px 14px;
+  color: var(--hud-hi);
+  background: transparent;
+  border: 1px solid var(--hud-dim);
+}
+#wizardModal .btn.secondary:hover {
+  color: var(--ink);
+  background: var(--hud);
+}
+#wizardModal .btn .btn-lines strong {
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+#wizardModal #wzDone {
+  min-height: 34px;
+  padding: 8px 14px;
+  background: var(--hud);
+}

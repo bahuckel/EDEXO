@@ -86,7 +86,7 @@ function DataButton({
   title?: string;
 }) {
   return (
-    <button type="button" className="fdb-chip fdb-chip--on" onClick={onClick} disabled={busy} title={title}>
+    <button type="button" className="fdb-chip fdb-chip--on fdb-chip--primary" onClick={onClick} disabled={busy} title={title}>
       {busy
         ? progress?.total
           ? `${verb}… ${Math.round((100 * progress.done) / progress.total)} %`
