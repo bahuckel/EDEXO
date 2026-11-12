@@ -73,6 +73,7 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "GET /api/codex/gaps": "lan",
   "GET /api/codex/nearest": "lan",
   "GET /api/region-map": "lan",
+  "GET /api/galaxy-image": "lan",
   "GET /api/first-discovery-backlog": "lan",
   "GET /api/sector-map": "lan",
   "GET /api/sector-systems": "lan",

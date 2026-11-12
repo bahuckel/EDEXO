@@ -23,7 +23,8 @@ import type { SectorMapFile } from "@shared/sectorMapFile.js";
 import { GalaxySectorMap, type CommanderPosition } from "./GalaxySectorMap";
 import { GalaxySearchPanel, type GalaxySearchApplied } from "./GalaxySearchPanel";
 import {
-  drawnGalaxyImage,
+  GALAXY_IMAGE_URL,
+  loadGalaxyImage,
   renderRegionBackdrop,
   type GalaxyImage,
   type RegionMapPayload,
@@ -105,7 +106,7 @@ export function GalaxyMapScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    drawnGalaxyImage()
+    loadGalaxyImage(GALAXY_IMAGE_URL)
       .then((img) => {
         if (!cancelled && img) setGalaxyImage(img);
       })

@@ -39,8 +39,6 @@ export const NOT_SHIPPED = Object.freeze([
   */
   "galaxy/bio-index.bin",
   "galaxy/system-traits.bin.gz",
-  // The game's picture of the galaxy (Frontier's): the maps draw their own since 1.2.12 (galaxyClouds.ts).
-  "galaxy/milkyway-game-normalized.jpg",
   // Imported at build time (src/shared/boxelRates.ts, boxelBioRates.ts, boxelPositionGolden.ts): already inside the
   // bundles, nothing reads the files (review 2026-11-07).
   "boxel/boxel-rates.json",

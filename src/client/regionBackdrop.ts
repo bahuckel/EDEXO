@@ -84,10 +84,9 @@ const SAG_A_Z_LY = 25899.97;
 /**
  * Where the core sits inside the photograph, in its own pixels.
  *
- * Measured as the luminance-weighted centroid of the brightest half-percent of the photograph the
- * map used until 1.2.12 (1212x864), which lands within a few pixels of both the single brightest
- * pixel and the centre of the luminous disc. The drawn galaxy (galaxyClouds.ts) keeps its frame, so
- * the rect below places both the same way.
+ * Measured as the luminance-weighted centroid of the brightest half-percent of the game's picture
+ * (1212x864), which lands within a few pixels of both the single brightest
+ * pixel and the centre of the luminous disc.
  */
 const GALAXY_IMAGE_CORE_PX = { x: 587.7, y: 433.7 };
 
@@ -159,6 +158,64 @@ export interface GalaxyImage {
   height: number;
 }
 
+/** Where the game's picture of the galaxy is served (data/galaxy/milkyway-game-normalized.jpg). */
+export const GALAXY_IMAGE_URL = "/api/galaxy-image";
+
+/** The picture's frame for galaxySprites: its size, Sagittarius A*'s pixel and light years per pixel. */
+export function galaxyPictureFrame(width: number, height: number) {
+  return {
+    width,
+    height,
+    coreX: GALAXY_IMAGE_CORE_PX.x,
+    coreY: GALAXY_IMAGE_CORE_PX.y,
+    lyPerPx: GALAXY_IMAGE_SCALE * (4096 / 83),
+  };
+}
+
+let sprites: Promise<{ sprites: Float32Array; image: GalaxyImage } | null> | null = null;
+
+/**
+ * The galaxy map's Milky Way as clouds in 3D, made from the game's picture (owner, 2026-11-12: "simulate 3D clouds
+ * based on brightness (brighter = more clouds)"): sprites in the picture's frame (galaxyCloudSprites), and the
+ * picture itself for the faint copy laid on the plane under them. Made once a session in the worker; null where
+ * this machine has no picture (a clone without data/galaxy/), and the map then shows the regions on black.
+ */
+export function galaxyPictureSprites(counts: {
+  emission: number;
+  dust: number;
+}): Promise<{ sprites: Float32Array; image: GalaxyImage } | null> {
+  if (sprites) return sprites;
+  sprites = (async () => {
+    if (typeof Worker === "undefined" || typeof document === "undefined") return null;
+    const image = await loadGalaxyImage(GALAXY_IMAGE_URL);
+    if (!image) return null;
+    const el = new Image();
+    el.src = image.url;
+    await el.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const g = canvas.getContext("2d");
+    if (!g) return null;
+    g.drawImage(el, 0, 0);
+    const rgba = g.getImageData(0, 0, image.width, image.height).data;
+    const frame = galaxyPictureFrame(image.width, image.height);
+    return new Promise<{ sprites: Float32Array; image: GalaxyImage } | null>((resolve) => {
+      const worker = new Worker(new URL("./galaxyClouds.worker.ts", import.meta.url), { type: "module" });
+      worker.onerror = () => {
+        worker.terminate();
+        resolve(null);
+      };
+      worker.onmessage = (ev: MessageEvent<ArrayBuffer>) => {
+        worker.terminate();
+        resolve({ sprites: new Float32Array(ev.data), image });
+      };
+      worker.postMessage({ frame, rgba: rgba.buffer, sprites: counts }, [rgba.buffer]);
+    });
+  })().catch(() => null);
+  return sprites;
+}
+
 /**
  * Ask for the photograph, and report its size rather than the element.
  *
@@ -166,97 +223,6 @@ export interface GalaxyImage {
  * region canvas — see {@link galaxyImageRect}. All this has to settle is whether there is a
  * photograph at all and how big it is, so the rect can be worked out before the browser draws it.
  */
-/** The size of the drawn galaxy: the photograph's, so {@link galaxyImageRect} places it unchanged. */
-const DRAWN_W = 1212;
-const DRAWN_H = 864;
-let drawn: Promise<GalaxyImage | null> | null = null;
-
-/**
- * The Milky Way behind both maps, drawn rather than photographed (owner, 2026-10-04: the game's own
- * picture of the galaxy is Frontier's, and no longer ships). Rendered once a session in a worker, a
- * few hundred milliseconds, and handed over as a PNG object URL; both maps share it.
- */
-export function drawnGalaxyImage(): Promise<GalaxyImage | null> {
-  if (drawn) return drawn;
-  drawn = new Promise<GalaxyImage | null>((resolve) => {
-    if (typeof document === "undefined" || typeof Worker === "undefined") return resolve(null);
-    const frame = {
-      width: DRAWN_W,
-      height: DRAWN_H,
-      coreX: GALAXY_IMAGE_CORE_PX.x,
-      coreY: GALAXY_IMAGE_CORE_PX.y,
-      lyPerPx: GALAXY_IMAGE_SCALE * (4096 / 83),
-    };
-    const worker = new Worker(new URL("./galaxyClouds.worker.ts", import.meta.url), { type: "module" });
-    worker.onerror = () => {
-      worker.terminate();
-      resolve(null);
-    };
-    worker.onmessage = (ev: MessageEvent<ArrayBuffer>) => {
-      worker.terminate();
-      const canvas = document.createElement("canvas");
-      canvas.width = DRAWN_W;
-      canvas.height = DRAWN_H;
-      const g = canvas.getContext("2d");
-      if (!g) return resolve(null);
-      g.putImageData(new ImageData(new Uint8ClampedArray(ev.data), DRAWN_W, DRAWN_H), 0, 0);
-      canvas.toBlob((b) => resolve(b ? { url: URL.createObjectURL(b), width: DRAWN_W, height: DRAWN_H } : null), "image/png");
-    };
-    worker.postMessage(frame);
-  });
-  return drawn;
-}
-
-/** The drawn galaxy's frame: the old photograph's size, core pixel and scale. */
-export function drawnGalaxyFrame() {
-  return {
-    width: DRAWN_W,
-    height: DRAWN_H,
-    coreX: GALAXY_IMAGE_CORE_PX.x,
-    coreY: GALAXY_IMAGE_CORE_PX.y,
-    lyPerPx: GALAXY_IMAGE_SCALE * (4096 / 83),
-  };
-}
-
-let sprites: Promise<{ sprites: Float32Array; image: GalaxyImage | null } | null> | null = null;
-
-/**
- * The galaxy map's Milky Way as clouds in 3D (owner, 2026-10-04: "make the PNG a 3D cloud"): sprites
- * in the drawing's frame (galaxyCloudSprites), and the drawing they were made from, for the faint
- * copy laid on the plane under them ("make it semi-transparent and place it on the galactic plane").
- * Made once a session in the worker.
- */
-export function drawnGalaxySprites(counts: {
-  emission: number;
-  dust: number;
-}): Promise<{ sprites: Float32Array; image: GalaxyImage | null } | null> {
-  if (sprites) return sprites;
-  sprites = new Promise((resolve) => {
-    if (typeof Worker === "undefined" || typeof document === "undefined") return resolve(null);
-    const worker = new Worker(new URL("./galaxyClouds.worker.ts", import.meta.url), { type: "module" });
-    worker.onerror = () => {
-      worker.terminate();
-      resolve(null);
-    };
-    worker.onmessage = (ev: MessageEvent<{ sprites: ArrayBuffer; image: ArrayBuffer }>) => {
-      worker.terminate();
-      const out = new Float32Array(ev.data.sprites);
-      const canvas = document.createElement("canvas");
-      canvas.width = DRAWN_W;
-      canvas.height = DRAWN_H;
-      const g = canvas.getContext("2d");
-      if (!g) return resolve({ sprites: out, image: null });
-      g.putImageData(new ImageData(new Uint8ClampedArray(ev.data.image), DRAWN_W, DRAWN_H), 0, 0);
-      canvas.toBlob(
-        (b) => resolve({ sprites: out, image: b ? { url: URL.createObjectURL(b), width: DRAWN_W, height: DRAWN_H } : null }),
-        "image/png",
-      );
-    };
-    worker.postMessage({ frame: drawnGalaxyFrame(), sprites: counts });
-  });
-  return sprites;
-}
-
 export async function loadGalaxyImage(url: string): Promise<GalaxyImage | null> {
   if (typeof Image === "undefined") return null;
   try {

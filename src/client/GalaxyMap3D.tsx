@@ -56,14 +56,14 @@ import { clearStationsAtCache } from "./galaxy3d/StationsAt";
 import { keptNeutronMarks, neutronMarkers, NEUTRON_LINE_COLOUR, type NeutronMark } from "./galaxy3d/neutronMarks";
 import type { ExpeditionFieldDTO, ExpeditionPlanDTO } from "@shared/dto/expedition";
 import {
-  drawnGalaxyFrame,
-  drawnGalaxySprites,
+  galaxyPictureFrame,
+  galaxyPictureSprites,
   galaxyImageRect,
   REGION_MAP_SIZE,
   xForRegionPx,
   zForRegionPz,
 } from "./regionBackdrop";
-import { CLOUD_SPRITE_STRIDE } from "@shared/galaxyClouds";
+import { CLOUD_SPRITE_STRIDE } from "@shared/galaxySprites";
 import { regionOutlines, type RegionOutlines } from "@shared/regionBorders.js";
 import { regionIndexForCoords, regionJoinKey, type RegionMapData } from "@shared/regionMap.js";
 import type { GalaxyFindDTO, GalaxyMineDTO, GalaxyNextDTO, GalaxyRouteDTO } from "@shared/types";
@@ -448,8 +448,8 @@ export function GalaxyMap3D() {
     win.__galaxy = debugHandle;
 
     void e.load();
-    // Backdrop: the region outlines, and the drawn Milky Way (placed by the same pin as the 2D map).
-    // Each as soon as it is ready: Find's region names must not wait for the drawing.
+    // Backdrop: the region outlines, and the game's picture of the Milky Way (placed by the same pin as the 2D map).
+    // Each as soon as it is ready: Find's region names must not wait for the picture.
     void track(
       "regions",
       fetch("/api/region-map")
@@ -462,13 +462,13 @@ export function GalaxyMap3D() {
       e.setBackdrop(null, outlines.current);
       setRegionAnchors(outlines.current?.anchors ?? []);
     });
-    // The Milky Way as clouds in 3D (owner, 2026-10-04), fewer on the light tier.
+    // The Milky Way as clouds in 3D, made from the picture (owner, 2026-10-04 / 2026-11-12), fewer on the light tier.
     const light = graphics.tier === "light";
-    void drawnGalaxySprites(light ? { emission: 40_000, dust: 12_000 } : { emission: 140_000, dust: 40_000 })
+    void galaxyPictureSprites(light ? { emission: 40_000, dust: 12_000 } : { emission: 140_000, dust: 40_000 })
       .catch(() => null)
       .then((got) => {
         if (engine.current !== e || !got) return;
-        const f = drawnGalaxyFrame();
+        const f = galaxyPictureFrame(got.image.width, got.image.height);
         const r = galaxyImageRect(f.width, f.height);
         const rect = {
           x0: xForRegionPx(r.x),
@@ -476,9 +476,9 @@ export function GalaxyMap3D() {
           zTop: zForRegionPz(REGION_MAP_SIZE - 1 - r.y),
           zBottom: zForRegionPz(REGION_MAP_SIZE - 1 - (r.y + r.height)),
         };
-        // The drawing, faint on the plane, fills the gaps between the clouds seen from above; edge-on
+        // The picture, faint on the plane, fills the gaps between the clouds seen from above; edge-on
         // the plane is a line and the clouds carry it (owner, 2026-10-04: "less patchiness").
-        if (got.image) e.setBackdrop({ url: got.image.url, ...rect }, null);
+        e.setBackdrop({ url: got.image.url, ...rect }, null);
         e.setClouds(got.sprites, { ...rect, width: f.width, height: f.height }, CLOUD_SPRITE_STRIDE);
       });
 

@@ -2,7 +2,7 @@
  * The 3D galaxy map's engine (G1–G2, docs/galaxy-plan-28092026.md): renderer, camera and controls,
  * the layers, picking, groups, labels, and a frame loop that only runs when something changed.
  *
- * Frame: (1) the backdrop — the drawn Milky Way and region borders — straight to the screen; (2) every
+ * Frame: (1) the backdrop — the Milky Way picture and region borders — straight to the screen; (2) every
  * system summed additively into a half-float buffer; (3) that buffer tone-mapped and added on top;
  * (4) the group rings and the hover / selection markers, crisp, on top of everything.
  *
@@ -523,7 +523,7 @@ export class GalaxyEngine {
 
   /**
    * The Milky Way as clouds (owner, 2026-10-04: "make the PNG a 3D cloud, not just another PNG"):
-   * galaxyCloudSprites' output, in the drawing's pixels, placed by the same rectangle the picture
+   * galaxyCloudSprites' output, in the picture's pixels, placed by the same rectangle the picture
    * used. The light adds up; the dust, drawn after it, dims what is behind.
    */
   setClouds(
@@ -595,7 +595,7 @@ export class GalaxyEngine {
     this.invalidate();
   }
 
-  /** The Milky Way (drawn, galaxyClouds.ts; already placed in ly) and the region outlines. */
+  /** The Milky Way picture (already placed in ly) and the region outlines. */
   setBackdrop(
     photo: { url: string; x0: number; x1: number; zBottom: number; zTop: number } | null,
     outlines: RegionOutlines | null,

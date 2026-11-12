@@ -115,7 +115,7 @@ export const G3D_HELP: Record<G3dTabKey, string[]> = {
   ],
   layers: [
     "What is drawn over the 5.4 million systems. Your systems: amber where signals still wait for you, green where you mapped or sampled, grey where you only passed through.",
-    "Region borders and names, the groups that stand for many systems when zoomed out, and the Milky Way drawn behind them.",
+    "Region borders and names, the groups that stand for many systems when zoomed out, and the game's picture of the Milky Way behind them, lifted into 3D clouds.",
     "Points of interest, notable phenomena, fleet carriers, your bookmarks and green gas giants come from lists already on this PC; a layer that needs a download says so.",
   ],
   filter: [

@@ -147,6 +147,22 @@ export function registerDiscoveriesRoutes(
     res.type("application/json").send(readFileSync(file, "utf8"));
   });
 
+  /**
+   * The game's picture of the galaxy the maps draw behind the regions (owner, 2026-11-12: back, after the drawn one
+   * from 1.2.12). From `data/galaxy/`, gitignored; 404 where this machine has none, and the maps show the regions
+   * on black.
+   */
+  app.get("/api/galaxy-image", (_req, res) => {
+    perfCount("http.galaxyImage");
+    const file = path.join(getProjectRoot(), "data", "galaxy", "milkyway-game-normalized.jpg");
+    if (!existsSync(file)) {
+      res.status(404).json({ error: "no galaxy image on this machine" });
+      return;
+    }
+    res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+    res.type("image/jpeg").send(readFileSync(file));
+  });
+
   app.get("/api/first-discovery-backlog", (_req, res) => {
     perfCount("http.firstDiscoveryBacklog");
     if (!opts.getFirstDiscoveryBacklog) {
