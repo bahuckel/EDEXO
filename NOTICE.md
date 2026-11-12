@@ -237,6 +237,13 @@ the names of the species catalogued here are Frontier's property, used here as f
 Frontier's fan-content terms. This project is not affiliated with, endorsed by, or connected to
 Frontier Developments.
 
+## Galaxy picture
+
+The Milky Way behind the galaxy map and the Classic map (`data/galaxy/milkyway-game-normalized.jpg`, and the 3D
+clouds made from it) is a reduced copy of the galaxy map by **zannyuk**, made entirely of in-game screenshots and
+shared on [r/EliteDangerous](https://www.reddit.com/r/EliteDangerous/comments/4b95yy/65k_resolution_galaxy_map_made_entirely_of_ingame/) for anyone to use ("I'm sharing with all in case others want to do the same, so
+feel free"). It shows Frontier's galaxy; see Elite Dangerous above.
+
 ## Galaxy region data
 
 `data/exomastery/region-map.json` is from

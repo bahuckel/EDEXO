@@ -148,9 +148,9 @@ export function registerDiscoveriesRoutes(
   });
 
   /**
-   * The game's picture of the galaxy the maps draw behind the regions (owner, 2026-11-12: back, after the drawn one
-   * from 1.2.12). From `data/galaxy/`, gitignored; 404 where this machine has none, and the maps show the regions
-   * on black.
+   * The picture of the galaxy the maps draw behind the regions (owner, 2026-11-12: back, after the drawn one from
+   * 1.2.12): zannyuk's galaxy map made of in-game screenshots, shared for anyone to use (NOTICE.md). From
+   * `data/galaxy/`, gitignored; 404 where this machine has none, and the maps show the regions on black.
    */
   app.get("/api/galaxy-image", (_req, res) => {
     perfCount("http.galaxyImage");

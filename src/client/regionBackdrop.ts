@@ -82,23 +82,19 @@ const SAG_A_X_LY = 25.21;
 const SAG_A_Z_LY = 25899.97;
 
 /**
- * Where the core sits inside the photograph, in its own pixels.
+ * Where Sagittarius A* falls inside the picture, in its own pixels (1212x864).
  *
- * Measured as the luminance-weighted centroid of the brightest half-percent of the game's picture
- * (1212x864), which lands within a few pixels of both the single brightest
- * pixel and the centre of the luminous disc.
+ * Fitted on 2026-11-12 against EDAstro's region map, which lays the same picture under the same region borders
+ * (owner: one of our arms ran through Tenebrae, which is dark on EDAstro's). Two fits, composed: the region grid onto
+ * EDAstro's orange borders (scale and shift, mean distance 3.4 px), then the picture onto EDAstro's picture (scale,
+ * rotation and shift, correlation 0.98; the old placement scored 0.91). The rotation came out at -0.015°, so none is
+ * applied. The first measurement (brightest half-percent at 587.7, 433.7, and the scale from matching the region
+ * map's footprint to the luminous disc) put the picture 15 % too large: the regions reach past the visible disc.
  */
-const GALAXY_IMAGE_CORE_PX = { x: 587.7, y: 433.7 };
+const GALAXY_IMAGE_CORE_PX = { x: 600.6, y: 444.0 };
 
-/**
- * Region-grid pixels per photograph pixel.
- *
- * From the two discs: the region map's non-zero footprint spans 1985 x 1938 grid pixels and the
- * photograph's luminous extent spans 760 x 724 of its own, giving 2.612 across and 2.676 up. One
- * uniform figure is used rather than two, because the difference is under two percent and a galaxy
- * stretched to hide it would look wrong in a way a slightly small one does not.
- */
-const GALAXY_IMAGE_SCALE = 2.6443;
+/** Region-grid pixels per picture pixel, from the same fit. */
+const GALAXY_IMAGE_SCALE = 2.2902;
 
 /**
  * How much of the region colouring survives over the photograph.

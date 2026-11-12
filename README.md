@@ -528,6 +528,8 @@ Built on these communities' work, none of them affiliated with this project:
   kept day by day since 2017, for checking against past finds.
 - **[EDAstro](https://edastro.com)** — the codex sightings behind the galaxy map's index and the region
   tables, the nebula and Guardian-site coordinates, carriers, points of interest and galactic records.
+- **zannyuk** — the galaxy map's picture of the Milky Way, a galaxy map made entirely of in-game screenshots
+  and [shared on r/EliteDangerous](https://www.reddit.com/r/EliteDangerous/comments/4b95yy/65k_resolution_galaxy_map_made_entirely_of_ingame/) for anyone to use.
 - **[Canonn Research Group](https://canonn.science)** — the optional upload of your discoveries. Its
   Bioforge figures and codex reference were used later to check one rule (Bacterium tela) and the colour
   variants' names; the project did not start from Canonn, and its rules do not come from there.

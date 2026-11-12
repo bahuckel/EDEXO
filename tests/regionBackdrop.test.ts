@@ -91,8 +91,8 @@ describe("placing the photograph against the grid", () => {
   it("puts the image's core pixel on Sagittarius A*", () => {
     const rect = galaxyImageRect(1212, 864);
     const scale = rect.width / 1212;
-    const coreX = rect.x + 587.7 * scale;
-    const coreY = rect.y + 433.7 * scale;
+    const coreX = rect.x + 600.6 * scale;
+    const coreY = rect.y + 444.0 * scale;
     // (25.21, 25899.97) through the same offsets the grid is built with.
     expect(xForRegionPx(coreX)).toBeCloseTo(25.21, 0);
     expect(zForRegionPz(REGION_MAP_SIZE - 1 - coreY)).toBeCloseTo(25899.97, 0);
@@ -103,11 +103,10 @@ describe("placing the photograph against the grid", () => {
     expect(rect.width / 1212).toBeCloseTo(rect.height / 864, 10);
   });
 
-  it("overhangs the grid, because the photograph carries black around the disc", () => {
+  it("overhangs the grid sideways, because the picture carries black around the disc", () => {
     const rect = galaxyImageRect(1212, 864);
     expect(rect.x).toBeLessThan(0);
-    expect(rect.y).toBeLessThan(0);
-    expect(rect.width).toBeGreaterThan(REGION_MAP_SIZE);
+    expect(rect.x + rect.width).toBeGreaterThan(REGION_MAP_SIZE);
   });
 });
 
