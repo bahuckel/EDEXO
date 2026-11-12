@@ -5,6 +5,7 @@
  */
 import { withTransition } from "./motion";
 import { useModal } from "./ui/useModal";
+import { X } from "lucide-react";
 import {
   CARRIERS_STATIONS_TITLE,
   CarriersStationsBody,
@@ -39,7 +40,7 @@ export function CarriersModal({ onClose }: { onClose: () => void }) {
             </p>
           </div>
           <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
-            ×
+            <X size={18} strokeWidth={2} aria-hidden="true" />
           </button>
         </header>
         <CarriersStationsBody tab={tab} />

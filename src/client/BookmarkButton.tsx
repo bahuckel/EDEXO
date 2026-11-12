@@ -15,6 +15,7 @@ import {
 } from "@shared/bookmarks";
 import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
 import { sendJson } from "./http";
+import { Star } from "lucide-react";
 
 /*
   Both answer null / false when the server cannot be reached (a restart, a phone off the LAN) instead of throwing
@@ -248,7 +249,8 @@ export function BookmarkButton({
             </button>
           ) : (
             <button type="button" className={`g3d-btn bm-btn${existing ? " bm-btn--on" : ""}`} title={title}>
-              {existing ? "★ Bookmarked" : "☆ Bookmark"}
+              <Star size={14} strokeWidth={2} fill={existing ? "currentColor" : "none"} aria-hidden="true" />
+              {existing ? "Bookmarked" : "Bookmark"}
             </button>
           )
         }

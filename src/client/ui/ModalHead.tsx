@@ -8,6 +8,7 @@ import { useId, useState, type ReactNode } from "react";
 import { withTransition } from "../motion";
 import { HelpToggle } from "./Fold";
 import { closingAttr, usePresence } from "./usePresence";
+import { X } from "lucide-react";
 
 export function ModalHead({
   title,
@@ -47,7 +48,7 @@ export function ModalHead({
         <div className="modal-head__tools">
           {tools}
           <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close" title={closeTitle}>
-            ×
+            <X size={18} strokeWidth={2} aria-hidden="true" />
           </button>
           {help ? (
             <HelpToggle

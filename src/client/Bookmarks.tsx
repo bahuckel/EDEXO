@@ -14,6 +14,7 @@ import { BookmarkEditor, removeBookmark } from "./BookmarkButton";
 import { fmtLyAway } from "@shared/format";
 import { usePullToRefresh } from "./ui/usePullToRefresh";
 import { sendJson } from "./http";
+import { X } from "lucide-react";
 
 const ly = fmtLyAway;
 
@@ -98,7 +99,7 @@ export function BookmarksModal({
             </p>
           </div>
           <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
-            ×
+            <X size={18} strokeWidth={2} aria-hidden="true" />
           </button>
         </header>
 

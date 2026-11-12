@@ -31,8 +31,11 @@ export function measurePopoverSide(
   const roomRight = window.innerWidth - anchor.left;
   const roomLeft = anchor.right;
   /*
-    Flip only when the right genuinely does not fit *and* the left does. A window narrower than the
-    panel has no good side, and flipping there would only move which edge it escapes from.
+    The right when it fits, else the left when that fits. When neither does (a phone: the 240 px menu
+    off a button in the middle of a 390 px bar), the side with more room: staying right ran the
+    menu 62 px off the screen there (plan 7.5), while opening left kept all of it in view.
   */
-  return roomRight < width + 8 && roomLeft >= width + 8 ? "right" : "left";
+  if (roomRight >= width + 8) return "left";
+  if (roomLeft >= width + 8) return "right";
+  return roomLeft > roomRight ? "right" : "left";
 }

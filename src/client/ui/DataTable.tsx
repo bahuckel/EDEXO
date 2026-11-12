@@ -41,6 +41,8 @@ function SortHeader<T>({
       scope="col"
       className={`disc-th${col.numeric ? " disc-th--num" : ""}${active ? " disc-th--active" : ""}`}
       title={col.title}
+      // The order for a screen reader too, not only the caret (review 2026-11-07 §9, plan 7.5).
+      aria-sort={active ? (sort.dir === 1 ? "ascending" : "descending") : "none"}
     >
       <button type="button" className="disc-sort" onClick={() => onSort(col.key)}>
         {col.label}

@@ -33,6 +33,7 @@ import { formatWeeks } from "@shared/carrierUpkeep";
 import type { RankEstimateDTO } from "@shared/rankProgress";
 import { RollingNumber } from "./ui/RollingNumber";
 import { sendJson, jsonOrNull } from "./http";
+import { X } from "lucide-react";
 
 /*
   A rank with about how many credits to the next one (shared/rankProgress.ts). The bar is the game's
@@ -466,7 +467,7 @@ export function StatisticsModal({ onClose }: { onClose: () => void }) {
             </p>
           </div>
           <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
-            ×
+            <X size={18} strokeWidth={2} aria-hidden="true" />
           </button>
         </header>
 

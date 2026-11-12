@@ -86,3 +86,12 @@
 :root:root .disc-table tbody tr:hover .disc-td {
   background: var(--accent-a08);
 }
+
+/* 5. icons in place of glyphs (plan 7.5 round 2): the close X and the Bookmark star sit on the text's middle */
+:root:root .modal-close,
+:root:root .bm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+}

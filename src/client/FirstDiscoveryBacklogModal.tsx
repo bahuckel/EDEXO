@@ -31,6 +31,7 @@ import { fmtLyAway } from "@shared/format";
 import { Tooltip } from "./ui/Tooltip";
 import { LoadingNote } from "./ui/Loading";
 import { usePullToRefresh } from "./ui/usePullToRefresh";
+import { X } from "lucide-react";
 
 const crFmt = new Intl.NumberFormat("en-US");
 const cr = (n: number) => `${crFmt.format(Math.round(n))} CR`;
@@ -187,7 +188,7 @@ export function FirstDiscoveryBacklogModal({
             </p>
           </div>
           <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
-            ×
+            <X size={18} strokeWidth={2} aria-hidden="true" />
           </button>
         </header>
 

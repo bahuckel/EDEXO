@@ -14,8 +14,9 @@ export function registerSpeciesFilesRoutes(
   ctx: RouteContext,
 ): void {
   const { root } = ctx;
+  // A species with no photo: what a reader needs, not where a developer would put the file (review 2026-11-07 §9).
   app.get("/photos/__builtin_placeholder.svg", (_req, res) => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="220" viewBox="0 0 360 220"><rect width="100%" height="100%" fill="#12121a"/><rect x="12" y="12" width="336" height="196" fill="none" stroke="#ff6a1a" stroke-opacity="0.45" stroke-width="2"/><text x="180" y="100" fill="#c8c4bf" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13">No species photo on disk</text><text x="180" y="128" fill="#ff6a1a" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12">Add images under data/species/&lt;genus&gt;/*_photos/</text></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="220" viewBox="0 0 360 220"><rect width="100%" height="100%" fill="#12121a"/><rect x="12" y="12" width="336" height="196" fill="none" stroke="#ff6a1a" stroke-opacity="0.45" stroke-width="2"/><text x="180" y="115" fill="#c8c4bf" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13">No photo of this species yet</text></svg>`;
     res.type("image/svg+xml").send(svg);
   });
 

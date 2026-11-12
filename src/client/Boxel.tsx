@@ -50,6 +50,7 @@ import { BoxelFlyingStrip } from "./boxel/BoxelFlyingStrip";
 import { RollingNumber } from "./ui/RollingNumber";
 import { usePresence } from "./ui/usePresence";
 import { copyText as writeClipboard } from "./copyText";
+import { X } from "lucide-react";
 
 /*
   The labels and helpers and the table's columns live in boxel/ since the audit of 2026-10-22; the
@@ -555,7 +556,7 @@ export function BoxelScreen({
             ?
           </button>
           <button type="button" className="modal-close" onClick={() => withTransition(onClose)} aria-label="Close">
-            ×
+            <X size={18} strokeWidth={2} aria-hidden="true" />
           </button>
         </header>
         {massHelp.mounted ? <BoxelMassCodeHelp closing={massHelp.closing} /> : null}
