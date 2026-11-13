@@ -291,6 +291,36 @@ describe("HUD pitch reader", () => {
     expect(read).not.toContain(-20);
   });
 
+  /*
+    His cyan theme (2026-11-13): the glow joined the minus to the digits (0754 "-36", 0762 "-84"), and the digits to the
+    box's own outline (0759 "-73", the 3 against the slanted edge of the box's point), one piece too wide for digits.
+  */
+  it("reads a minus joined to the digits", () => {
+    const f = frame();
+    for (const x of [840, 1120]) {
+      draw(f, "-20", x, 450);
+      // The glow's bridge: the minus's row carried on to the 2.
+      const top = Math.round(450 - (7 * S) / 2);
+      for (const k of [4, 5]) dot(f, x + k * S, top + 3 * S, YELLOW_RGB);
+    }
+    expect(readHudPitch(f, W, H, GLYPHS)?.boxDeg).toBe(-20);
+  });
+
+  it("reads the digits of a recoloured box whose closed outline they are joined to", () => {
+    const f = dark();
+    for (const x of [840, 1120]) {
+      draw(f, "-8", x, 480, GREY);
+      // A closed 2-pixel outline in the digits' own grey, its right side a pixel from the 8 (x + 18 to x + 32), one
+      // bridged.
+      const top = Math.round(480 - (7 * S) / 2);
+      const [lx, rx, ty, by] = [x - 50, x + 34, top - 8, top + 7 * S + 7];
+      for (let px = lx; px <= rx + 1; px++) for (const py of [ty, ty + 1, by - 1, by]) f.set([...GREY, 255], (py * W + px) * 4);
+      for (let py = ty; py <= by; py++) for (const px of [lx, lx + 1, rx, rx + 1]) f.set([...GREY, 255], (py * W + px) * 4);
+      f.set([...GREY, 255], ((top + 3 * S) * W + x + 33) * 4);
+    }
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY)?.reading.boxDeg).toBe(-8);
+  });
+
   it("says not sure for a digit it has no glyph for", () => {
     const f = frame();
     draw(f, "-10", 840, 450);

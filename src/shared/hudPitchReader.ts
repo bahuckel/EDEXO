@@ -174,8 +174,14 @@ const lookOf = (s: HudStyleName | TextLook): TextLook => (typeof s === "string" 
   caller of the same slot. The caller clears the region it reads with fill (a memset): writing every cell 0 or 1 in
   the mask loop was 5 % slower than a fresh array.
 */
-type ScratchSlot = "look" | "heading" | "text" | "seen";
-const scratch: Record<ScratchSlot, Uint8Array> = { look: new Uint8Array(0), heading: new Uint8Array(0), text: new Uint8Array(0), seen: new Uint8Array(0) };
+type ScratchSlot = "look" | "heading" | "text" | "seen" | "inner";
+const scratch: Record<ScratchSlot, Uint8Array> = {
+  look: new Uint8Array(0),
+  heading: new Uint8Array(0),
+  text: new Uint8Array(0),
+  seen: new Uint8Array(0),
+  inner: new Uint8Array(0),
+};
 /** A slot's mask, at least `n` cells; its old contents left in it. */
 export function scratchMask(slot: ScratchSlot, n: number): Uint8Array {
   if (scratch[slot].length < n) scratch[slot] = new Uint8Array(n);
@@ -577,7 +583,7 @@ function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: 
   if (marked > (rx1 - rx0) * (ry1 - ry0) * MAX_TEXT_SHARE) return null;
   const minH = Math.max(5, sh * 0.007);
   const maxH = sh * 0.03;
-  const raw = components(mask, w, rx0, ry0, rx1, ry1);
+  const raw = splitJoined(components(mask, w, rx0, ry0, rx1, ry1), mask, w, minH, maxH);
   const sized = joinStacked(raw, sh).filter((c) => {
     const ch = c.y1 - c.y0 + 1;
     // At full size the box's own straight edges are as bright as its digits: a digit is never that thin, nor that wide.
@@ -612,6 +618,99 @@ function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: 
     return { digits, minus: hasMinus(rgba, w, left, top, bottom, style.ink), x: (left + right) / 2, y: (top + bottom) / 2, dh, frame: null };
   });
   return found;
+}
+
+/**
+ * A piece wider than a digit pair may be an outline its digits are joined to (the cyan theme) or digits with the minus
+ * joined on: its digits take its place. Not when it holds a digit-tall piece already (a plain outline; a minus inside
+ * does not count, it stays apart where the digits met the outline). Size first: a star field is hundreds of specks.
+ */
+function splitJoined(pieces: Rect[], mask: Uint8Array, w: number, minH: number, maxH: number): Rect[] {
+  const holdsDigit = (c: Rect) => pieces.some((o) => o !== c && o.x0 > c.x0 && o.x1 < c.x1 && o.y0 > c.y0 && o.y1 < c.y1 && o.y1 - o.y0 + 1 >= minH);
+  return pieces.flatMap((c) => {
+    const ch = c.y1 - c.y0 + 1;
+    if (ch < minH || c.x1 - c.x0 + 1 <= ch * 1.3 || holdsDigit(c)) return [c];
+    return digitsInOutline(mask, w, c, minH, maxH) ?? peelMinus(mask, w, c, minH, maxH) ?? [c];
+  });
+}
+
+/**
+ * The digits inside a pitch box whose outline they are joined to (2026-11-13: his cyan theme, 0759: the 3 of "-73" met
+ * the slanted edge of the box's point, digits and outline one 65 x 27 piece, dropped as too wide). The outline (its top
+ * and bottom runs, and each row's first and last few pixels: its sides, square or slanted) is left out and the pieces
+ * inside found again. Only for a piece with long runs along its top and bottom rows, and only when a digit-tall piece
+ * is left inside: else null and the piece stays as it was.
+ */
+function digitsInOutline(mask: Uint8Array, w: number, c: Rect, minH: number, maxH: number): Rect[] | null {
+  const cw = c.x1 - c.x0 + 1;
+  const ch = c.y1 - c.y0 + 1;
+  if (ch < minH * 1.2 || ch > maxH * 1.5 || cw <= ch * 2.2 || cw > ch * 6) return null;
+  // An outline runs along its top and bottom rows; a string of digits (a minus joined on, his -84) does not.
+  const longRun = (y: number) => {
+    let run = 0;
+    for (let x = c.x0; x <= c.x1; x++) if ((run = mask[y * w + x] ? run + 1 : 0) >= cw * 0.5) return true;
+    return false;
+  };
+  if (!(longRun(c.y0) || longRun(c.y0 + 1)) || !(longRun(c.y1) || longRun(c.y1 - 1))) return null;
+  const inner = scratchMask("inner", mask.length);
+  for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) inner[y * w + x] = mask[y * w + x]!;
+  // The outline's lines: on each row its first and last few pixels (the box's sides, square or slanted to its point; a
+  // digit that met them keeps the rest of the row), and the rows its top and bottom run along (a run over half its width).
+  const side = Math.max(3, Math.round(ch / 6));
+  for (let y = c.y0; y <= c.y1; y++) {
+    const row = y * w;
+    let a = c.x0;
+    while (a <= c.x1 && !mask[row + a]) a++;
+    if (a > c.x1) continue;
+    let b = c.x1;
+    while (!mask[row + b]) b--;
+    for (let x = a; x <= c.x1; ) {
+      if (!mask[row + x]) { x++; continue; }
+      let e = x;
+      while (e + 1 <= c.x1 && mask[row + e + 1]) e++;
+      if (e - x + 1 >= cw * 0.5) inner.fill(0, row + x, row + e + 1);
+      x = e + 1;
+    }
+    for (let x = a; x < a + side && x <= c.x1 && mask[row + x]; x++) inner[row + x] = 0;
+    for (let x = b; x > b - side && x >= c.x0 && mask[row + x]; x--) inner[row + x] = 0;
+  }
+  // What is left of the outline (its pointed end is slanted, no long run) still reaches the piece's edge; a digit inside never does.
+  // Whole numbers made so (`| 0`): a piece's edges come out of a division, and one call with them turned components()
+  // over to fractions for every later call, 10 ms more each read (measured 2026-11-13, 42 -> 52 ms).
+  const found = components(inner, w, c.x0 | 0, c.y0 | 0, (c.x1 + 1) | 0, (c.y1 + 1) | 0).filter((p) => p.x0 > c.x0 && p.x1 < c.x1 && p.y0 > c.y0 && p.y1 < c.y1);
+  const digitTall = found.filter((p) => p.y1 - p.y0 + 1 >= Math.max(minH, ch * 0.45));
+  return digitTall.length >= 1 ? found : null;
+}
+
+/**
+ * A minus joined to the digits right of it (2026-11-13, his cyan theme, 0754: "-36" one piece through the glow, a pixel
+ * too wide for a digit pair): from the left, columns inked only across the middle rows are the bar; the digits start at
+ * the first column inked in a top or bottom quarter (his -84: one piece narrow enough to pass, the bar split off as a
+ * fourth "digit"). Null unless there is such a bar, wider than any digit's slanted stroke, and digits after it.
+ */
+function peelMinus(mask: Uint8Array, w: number, c: Rect, minH: number, maxH: number): Rect[] | null {
+  const cw = c.x1 - c.x0 + 1;
+  const ch = c.y1 - c.y0 + 1;
+  if (ch < minH || ch > maxH || cw <= ch * 1.3 || cw > ch * 3.6) return null;
+  const q = Math.round(ch / 4);
+  const outer = (x: number) => {
+    for (let y = c.y0; y < c.y0 + q; y++) if (mask[y * w + x]) return true;
+    for (let y = c.y1 - q + 1; y <= c.y1; y++) if (mask[y * w + x]) return true;
+    return false;
+  };
+  let x = c.x0;
+  while (x <= c.x1 && !outer(x)) x++;
+  if (x - c.x0 < ch * 0.4 || c.x1 - x + 1 < ch * 0.5) return null;
+  // The bar as tall as its ink (a minus, too short for a digit), the digits as tall as the piece.
+  let y0 = c.y1;
+  let y1 = c.y0;
+  for (let y = c.y0; y <= c.y1; y++)
+    for (let k = c.x0; k < x; k++)
+      if (mask[y * w + k]) {
+        y0 = Math.min(y0, y);
+        y1 = Math.max(y1, y);
+      }
+  return [{ x0: c.x0, y0, x1: x - 1, y1 }, { ...c, x0: x }];
 }
 
 /** The pair: mirrored about the centre (the boxes stand either side of the nose), the same size. */
