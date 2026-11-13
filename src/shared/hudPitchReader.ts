@@ -174,13 +174,15 @@ const lookOf = (s: HudStyleName | TextLook): TextLook => (typeof s === "string" 
   caller of the same slot. The caller clears the region it reads with fill (a memset): writing every cell 0 or 1 in
   the mask loop was 5 % slower than a fresh array.
 */
-type ScratchSlot = "look" | "heading" | "text" | "seen" | "inner";
+type ScratchSlot = "look" | "heading" | "text" | "seen" | "inner" | "roll" | "turned";
 const scratch: Record<ScratchSlot, Uint8Array> = {
   look: new Uint8Array(0),
   heading: new Uint8Array(0),
   text: new Uint8Array(0),
   seen: new Uint8Array(0),
   inner: new Uint8Array(0),
+  roll: new Uint8Array(0),
+  turned: new Uint8Array(0),
 };
 /** A slot's mask, at least `n` cells; its old contents left in it. */
 export function scratchMask(slot: ScratchSlot, n: number): Uint8Array {
@@ -272,9 +274,17 @@ export function matchGlyph(
   minMatch = MIN_MATCH,
   minMargin = MIN_MARGIN,
 ): string | null {
+  const [best, bestScore, , second] = nearestGlyphs(v, glyphs);
+  if (best == null || bestScore < minMatch || bestScore - second < minMargin) return null;
+  return best;
+}
+
+/** The two glyphs a piece looks most like, with their scores: [best, its score, runner-up, its score]. */
+function nearestGlyphs(v: readonly number[], glyphs: Readonly<Record<string, readonly (readonly number[])[]>>): [string | null, number, string | null, number] {
   // The nearest sample of each digit (the samples differ with the background; an average blurs 0, 6 and 8 together:
   // 116 of 132 held-out digits right against 109, 2026-11-04).
   let best: string | null = null;
+  let runnerUp: string | null = null;
   let bestScore = -1;
   let second = -1;
   for (const [d, samples] of Object.entries(glyphs)) {
@@ -286,12 +296,15 @@ export function matchGlyph(
     }
     if (dot > bestScore) {
       second = bestScore;
+      runnerUp = best;
       bestScore = dot;
       best = d;
-    } else if (dot > second) second = dot;
+    } else if (dot > second) {
+      second = dot;
+      runnerUp = d;
+    }
   }
-  if (best == null || bestScore < minMatch || bestScore - second < minMargin) return null;
-  return best;
+  return [best, bestScore, runnerUp, second];
 }
 
 /** One pitch box as found: its digit pieces (left to right, the string's full height), its minus, where it is. */
@@ -372,7 +385,7 @@ function splitWide(mask: Uint8Array, w: number, c: Rect, dh: number): Rect[] {
 }
 
 /** A minus left of the digits: yellow across the middle rows of the gap, far less in its top and bottom rows. */
-function hasMinus(rgba: Rgba, w: number, left: number, top: number, bottom: number, ink = yellowness): boolean {
+function hasMinus(rgba: Rgba, w: number, left: number, top: number, bottom: number, ink = yellowness, leftBox = false): boolean {
   const dh = bottom - top + 1;
   const mid = (top + bottom) / 2;
   const x0 = Math.round(left - dh * 0.85);
@@ -382,9 +395,14 @@ function hasMinus(rgba: Rgba, w: number, left: number, top: number, bottom: numb
   for (let x = x0; x <= x1; x++) {
     cols++;
     let midY = 0;
+    let peak = 0;
     for (let y = Math.round(mid - dh * 0.22); y <= Math.round(mid + dh * 0.22); y++) {
       const i = (y * w + x) * 4;
-      midY = Math.max(midY, ink(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!));
+      const v = ink(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!);
+      if (v > midY) {
+        midY = v;
+        peak = y;
+      }
     }
     let edge = 0;
     for (const y of [top, top + 1, bottom - 1, bottom]) {
@@ -393,7 +411,30 @@ function hasMinus(rgba: Rgba, w: number, left: number, top: number, bottom: numb
     }
     // Against the bar's own ink, not a fixed edge: bright sand behind a gear-down box inks 0.33-0.44 everywhere
     // (2026-11-06, Screenshot_0325: -19 read as 19).
-    if (midY > 0.45 && midY - edge > 0.3) bar++;
+    // A right box's arrow points left: beside its tip the two slanted edges run both above and below the middle (his
+    // 0775 "11" set upright: the tip read as a minus in the right box only). A minus is dark on at least one side: the
+    // game's own stands a little low, its lower edge where the tip's would be (0007 "-14").
+    const shoulders = [-1, 1].map((s) => {
+      let m = 0;
+      for (let y = Math.round(mid + s * dh * 0.28); y !== Math.round(mid + s * dh * 0.4) + s; y += s) {
+        const i = (y * w + x) * 4;
+        m = Math.max(m, ink(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!));
+      }
+      return m;
+    });
+    /*
+      Or against the rows just off the bar, both darker: a box filled see-through over grey ground inks its digits' top
+      and bottom rows nearly as much as a dim minus (his 1011 "-1", 0.44 against 0.67), with a dark rim round the bar.
+      Only in a left box: a right box points left, and its tip, thinner there than the rows looked at, passed as a minus
+      (0775 "11" set upright). A right box missing the dim minus its left box finds is not sure, never wrong.
+    */
+    const off = Math.max(2, Math.round(dh * 0.2));
+    let rim = 0;
+    for (const y of [peak - off, peak + off]) {
+      const i = (y * w + x) * 4;
+      rim = Math.max(rim, ink(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!));
+    }
+    if (midY > 0.45 && ((midY - edge > 0.3 && midY - Math.min(...shoulders) > 0.3) || (leftBox && midY - rim > 0.3))) bar++;
   }
   return cols > 0 && bar / cols >= 0.4;
 }
@@ -418,8 +459,14 @@ function framedBy(rgba: Rgba, w: number, h: number, box: PitchBox): Rgb | null {
   const line = (x: number, y: number) => {
     if (x < 0 || x >= w || y < 3 || y >= h - 3) return 0;
     const i = (y * w + x) * 4;
-    const up = i - 3 * w * 4;
-    const dn = i + 3 * w * 4;
+    let up = i - 3 * w * 4;
+    let dn = i + 3 * w * 4;
+    // A star three rows off is not the ground the line stands out from: the other side is (his 0777, a star field under
+    // a box's top line).
+    const star = (j: number) => isStarPx(rgba[j]!, rgba[j + 1]!, rgba[j + 2]!);
+    if (star(up)) up = dn;
+    else if (star(dn)) dn = up;
+    if (star(up)) return 0;
     let c = 0;
     for (let k = 0; k < 3; k++) c = Math.max(c, rgba[i + k]! - Math.max(rgba[up + k]!, rgba[dn + k]!));
     return c;
@@ -444,6 +491,8 @@ function framedBy(rgba: Rgba, w: number, h: number, box: PitchBox): Rgb | null {
     }
     return null;
   };
+  // A gap in the line: a star a few rows off it dims the line's contrast for its width (his 0775, 4 px).
+  const maxGap = Math.max(3, Math.round(dh * 0.3));
   const traceFrom = (y0: number): Pt[] | null => {
     let x0 = cx;
     let x1 = cx;
@@ -451,7 +500,7 @@ function framedBy(rgba: Rgba, w: number, h: number, box: PitchBox): Rgb | null {
     for (const dir of [-1, 1]) {
       let y = y0;
       let gap = 0;
-      for (let x = cx + dir; x >= 0 && x < w && gap <= 3; x += dir) {
+      for (let x = cx + dir; x >= 0 && x < w && gap <= maxGap; x += dir) {
         let by = y;
         let bc = MIN - 1;
         for (const yy of [y, y - 1, y + 1]) {
@@ -615,7 +664,7 @@ function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: 
     const right = Math.max(...g.map((c) => c.x1));
     const dh = bottom - top + 1;
     const digits = g.flatMap((p) => splitWide(mask, w, { ...p, y0: top, y1: bottom }, dh));
-    return { digits, minus: hasMinus(rgba, w, left, top, bottom, style.ink), x: (left + right) / 2, y: (top + bottom) / 2, dh, frame: null };
+    return { digits, minus: hasMinus(rgba, w, left, top, bottom, style.ink, right < w / 2), x: (left + right) / 2, y: (top + bottom) / 2, dh, frame: null };
   });
   return found;
 }
@@ -630,7 +679,10 @@ function splitJoined(pieces: Rect[], mask: Uint8Array, w: number, minH: number, 
   return pieces.flatMap((c) => {
     const ch = c.y1 - c.y0 + 1;
     if (ch < minH || c.x1 - c.x0 + 1 <= ch * 1.3 || holdsDigit(c)) return [c];
-    return digitsInOutline(mask, w, c, minH, maxH) ?? peelMinus(mask, w, c, minH, maxH) ?? [c];
+    // The digits inside an outline can have their minus joined on too (his 0938 "-53").
+    const inside = digitsInOutline(mask, w, c, minH, maxH);
+    if (inside) return inside.flatMap((p) => peelMinus(mask, w, p, minH, maxH) ?? [p]);
+    return peelMinus(mask, w, c, minH, maxH) ?? [c];
   });
 }
 
@@ -644,14 +696,23 @@ function splitJoined(pieces: Rect[], mask: Uint8Array, w: number, minH: number, 
 function digitsInOutline(mask: Uint8Array, w: number, c: Rect, minH: number, maxH: number): Rect[] | null {
   const cw = c.x1 - c.x0 + 1;
   const ch = c.y1 - c.y0 + 1;
-  if (ch < minH * 1.2 || ch > maxH * 1.5 || cw <= ch * 2.2 || cw > ch * 6) return null;
-  // An outline runs along its top and bottom rows; a string of digits (a minus joined on, his -84) does not.
+  // Wider than a digit pair, or narrower when taller than any digit (a box round one or two narrow digits: his "11").
+  if (ch < minH * 1.2 || ch > maxH * 1.5 || cw <= ch * (ch >= minH * 2.2 ? 1.5 : 2.2) || cw > ch * 6) return null;
+  // An outline runs along its top and bottom rows (within a fifth of its height: a star can hang on below it, his
+  // 0775); a string of digits (a minus joined on, his -84) does not.
   const longRun = (y: number) => {
     let run = 0;
     for (let x = c.x0; x <= c.x1; x++) if ((run = mask[y * w + x] ? run + 1 : 0) >= cw * 0.5) return true;
     return false;
   };
-  if (!(longRun(c.y0) || longRun(c.y0 + 1)) || !(longRun(c.y1) || longRun(c.y1 - 1))) return null;
+  const edge = Math.max(2, Math.round(ch / 5));
+  let top = false;
+  let bottom = false;
+  for (let k = 0; k < edge && !(top && bottom); k++) {
+    top ||= longRun(c.y0 + k);
+    bottom ||= longRun(c.y1 - k);
+  }
+  if (!top || !bottom) return null;
   const inner = scratchMask("inner", mask.length);
   for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) inner[y * w + x] = mask[y * w + x]!;
   // The outline's lines: on each row its first and last few pixels (the box's sides, square or slanted to its point; a
@@ -674,6 +735,18 @@ function digitsInOutline(mask: Uint8Array, w: number, c: Rect, minH: number, max
     for (let x = a; x < a + side && x <= c.x1 && mask[row + x]; x++) inner[row + x] = 0;
     for (let x = b; x > b - side && x >= c.x0 && mask[row + x]; x--) inner[row + x] = 0;
   }
+  // The same down each column from a top or bottom line, where its run starts at the outline (a star on a digit's top
+  // joined it to the line: his 0775 "11", rolled and set upright).
+  for (let x = c.x0; x <= c.x1; x++) {
+    let a = c.y0;
+    while (a <= c.y1 && !mask[a * w + x]) a++;
+    if (a > c.y0 + edge) continue;
+    for (let y = a; y < a + side && y <= c.y1 && mask[y * w + x]; y++) inner[y * w + x] = 0;
+    let b = c.y1;
+    while (b >= c.y0 && !mask[b * w + x]) b--;
+    if (b < c.y1 - edge) continue;
+    for (let y = b; y > b - side && y >= c.y0 && mask[y * w + x]; y--) inner[y * w + x] = 0;
+  }
   // What is left of the outline (its pointed end is slanted, no long run) still reaches the piece's edge; a digit inside never does.
   // Whole numbers made so (`| 0`): a piece's edges come out of a division, and one call with them turned components()
   // over to fractions for every later call, 10 ms more each read (measured 2026-11-13, 42 -> 52 ms).
@@ -685,21 +758,29 @@ function digitsInOutline(mask: Uint8Array, w: number, c: Rect, minH: number, max
 /**
  * A minus joined to the digits right of it (2026-11-13, his cyan theme, 0754: "-36" one piece through the glow, a pixel
  * too wide for a digit pair): from the left, columns inked only across the middle rows are the bar; the digits start at
- * the first column inked in a top or bottom quarter (his -84: one piece narrow enough to pass, the bar split off as a
+ * the first column whose ink is not a bar's (his -84: one piece narrow enough to pass, the bar split off as a
  * fourth "digit"). Null unless there is such a bar, wider than any digit's slanted stroke, and digits after it.
  */
 function peelMinus(mask: Uint8Array, w: number, c: Rect, minH: number, maxH: number): Rect[] | null {
   const cw = c.x1 - c.x0 + 1;
   const ch = c.y1 - c.y0 + 1;
   if (ch < minH || ch > maxH || cw <= ch * 1.3 || cw > ch * 3.6) return null;
-  const q = Math.round(ch / 4);
-  const outer = (x: number) => {
-    for (let y = c.y0; y < c.y0 + q; y++) if (mask[y * w + x]) return true;
-    for (let y = c.y1 - q + 1; y <= c.y1; y++) if (mask[y * w + x]) return true;
-    return false;
+  // A column of the bar: its ink at most half the piece's height, its middle between 0.3 and 0.75 of it (the game's
+  // minus stands low, and a glowing one is thick: his 1103 "-36", 0938 "-53" 7 rows of 20); an empty one carries on.
+  const notBar = (x: number) => {
+    let top = -1;
+    let bottom = -1;
+    for (let y = c.y0; y <= c.y1; y++)
+      if (mask[y * w + x]) {
+        if (top < 0) top = y;
+        bottom = y;
+      }
+    if (top < 0) return false;
+    const mid = (top + bottom) / 2 - c.y0;
+    return bottom - top + 1 > ch * 0.5 || mid < ch * 0.3 || mid > ch * 0.75;
   };
   let x = c.x0;
-  while (x <= c.x1 && !outer(x)) x++;
+  while (x <= c.x1 && !notBar(x)) x++;
   if (x - c.x0 < ch * 0.4 || c.x1 - x + 1 < ch * 0.5) return null;
   // The bar as tall as its ink (a minus, too short for a digit), the digits as tall as the piece.
   let y0 = c.y1;
@@ -735,6 +816,42 @@ function pitchPair(boxes: PitchBox[], w: number, h: number, screen: FrameScreen)
   return best;
 }
 
+/**
+ * Which of 6, 8 and 9 a digit is by its strokes, for two of them its glyph cannot tell apart (2026-11-13: 49 of 742
+ * labelled shots were not sure only for that; a glow fills a 6's gap or a 9's). Each row's brightest pixel (raw: a
+ * theme's ink saturates in the glow) in the digit's right third and in its left third: a 6's right stroke dips in its
+ * upper part, a 9's left stroke in its lower part, an 8's run full on both sides. Dip below 0.90 of the stroke's own
+ * other part, full above 0.985 (measured on the labelled shots read right); between, or anything else, null. 0 is left
+ * out: this font's 0 is not hollow in its middle either. On the 49: 28 right, 0 wrong, 21 still not sure.
+ */
+function strokeDigit(rgba: Rgba, w: number, c: Rect): "6" | "8" | "9" | null {
+  const cw = c.x1 - c.x0 + 1;
+  const ch = c.y1 - c.y0 + 1;
+  const profile = (fx0: number, fx1: number) => {
+    const out: number[] = [];
+    for (let y = c.y0; y <= c.y1; y++) {
+      let m = 0;
+      for (let x = Math.round(c.x0 + fx0 * cw); x <= Math.round(c.x0 + fx1 * cw); x++) {
+        const i = (y * w + x) * 4;
+        m = Math.max(m, rgba[i]!, rgba[i + 1]!, rgba[i + 2]!);
+      }
+      out.push(m);
+    }
+    return out;
+  };
+  const part = (p: number[], f0: number, f1: number) => p.slice(Math.round(f0 * (ch - 1)), Math.round(f1 * (ch - 1)) + 1);
+  const median = (v: number[]) => [...v].sort((a, b) => a - b)[v.length >> 1]!;
+  const right = profile(0.65, 1);
+  const left = profile(0, 0.35);
+  const state = (v: number) => (v <= 0.9 ? "dip" : v >= 0.985 ? "full" : null);
+  const upperRight = state(Math.min(...part(right, 0.22, 0.45)) / Math.max(1, median(part(right, 0.55, 0.85))));
+  const lowerLeft = state(Math.min(...part(left, 0.55, 0.78)) / Math.max(1, median(part(left, 0.15, 0.45))));
+  if (upperRight === "dip" && lowerLeft === "full") return "6";
+  if (upperRight === "full" && lowerLeft === "dip") return "9";
+  if (upperRight === "full" && lowerLeft === "full") return "8";
+  return null;
+}
+
 /** A box's number, or null when a digit is not sure. */
 export function readBox(
   rgba: Rgba,
@@ -749,7 +866,13 @@ export function readBox(
   const ink = lookOf(look).ink;
   let text = "";
   for (const c of b.digits) {
-    const d = matchGlyph(glyphVector(rgba, w, c, GLYPH_W, GLYPH_H, ink), glyphs, minMatch, minMargin);
+    const [best, score, runnerUp, second] = nearestGlyphs(glyphVector(rgba, w, c, GLYPH_W, GLYPH_H, ink), glyphs);
+    let d = best != null && score >= minMatch && score - second >= minMargin ? best : null;
+    // Two of 6, 8 and 9 about as close: the strokes tell, when they do.
+    if (d == null && best != null && runnerUp != null && score >= minMatch && "689".includes(best) && "689".includes(runnerUp)) {
+      const s = strokeDigit(rgba, w, c);
+      if (s === best || s === runnerUp) d = s;
+    }
     if (d == null) return null;
     text += d;
   }
@@ -887,7 +1010,7 @@ export function discoverPitchColours(
 function minusIn(rgba: Rgba, w: number, b: PitchBox, look: TextLook): PitchBox {
   const top = Math.min(...b.digits.map((c) => c.y0));
   const bottom = Math.max(...b.digits.map((c) => c.y1));
-  return { ...b, minus: hasMinus(rgba, w, Math.min(...b.digits.map((c) => c.x0)), top, bottom, look.ink) };
+  return { ...b, minus: hasMinus(rgba, w, Math.min(...b.digits.map((c) => c.x0)), top, bottom, look.ink, b.x < w / 2) };
 }
 
 /**
@@ -899,13 +1022,168 @@ const ANY_MIN_MATCH = 0.85;
 const ANY_MIN_MARGIN = 0.06;
 
 /**
+ * The pitch in any HUD colour, as `readAnyColourUpright` reads it; a frame it cannot read, when the ship is rolled, set
+ * upright first and read again (2026-11-13: his cyan shots 0775 / 0777, rolled 9 degrees: the boxes' slanted lines ran
+ * through their digits and nothing read). The roll and the HUD's centre come back in the frame's own terms.
+ */
+export function readHudPitchAnyColour(
+  rgba: Rgba,
+  w: number,
+  h: number,
+  glyphs: HudGlyphs,
+  anyGlyphs: PitchGlyphs,
+  screen: FrameScreen = { w, h },
+  known?: PitchColours | null,
+  discover = true,
+  hint?: PitchColours | null,
+): { reading: PitchReading; colours: PitchColours | null } | null {
+  const found = readAnyColourUpright(rgba, w, h, glyphs, anyGlyphs, screen, known, discover, hint);
+  /*
+    Read tilted, a box's minus leaves the middle rows it is looked for in: the roll the boxes give is checked upright
+    (theme bench 2026-11-13: his 1116 "-74", rolled 8 degrees, read 74 in nine themes; upright, -74 in all). Unread,
+    the roll comes from the ladder.
+  */
+  // A tilted read with its minus seen needs no check (and the check can lose a digit: 1043 "-24" in a gold theme read
+  // 4 upright). Unread, only on the frames that search for colours or know them (the capture's others take the game's
+  // look only).
+  const tilted = found && Math.abs(found.reading.rollDeg) >= 3 && found.reading.boxDeg >= 0;
+  const roll = found ? (tilted ? found.reading.rollDeg : null) : discover || known ? ladderRoll(rgba, w, h, screen) : null;
+  if (roll == null) return found;
+  // Turned pixel for pixel first, then blended: each reads shots the other does not (1207 the first, 0775 the second).
+  let again: ReturnType<typeof readAnyColourUpright> = null;
+  for (const blend of [false, true]) {
+    again = readAnyColourUpright(turnedFrame(rgba, w, h, roll, blend), w, h, glyphs, anyGlyphs, screen, known, discover, hint);
+    if (again) break;
+  }
+  // A tilted read without its minus, not read upright, is not sure (his 1116 in a dark purple theme: -74 read 74); read
+  // both ways, they must agree.
+  if (!again || (found && found.reading.boxDeg !== again.reading.boxDeg)) return null;
+  const a = (roll * Math.PI) / 180;
+  const dx = again.reading.centre.x - w / 2;
+  const dy = again.reading.centre.y - h / 2;
+  const centre = { x: w / 2 + dx * Math.cos(a) - dy * Math.sin(a), y: h / 2 + dx * Math.sin(a) + dy * Math.cos(a) };
+  return { ...again, reading: { ...again.reading, rollDeg: again.reading.rollDeg + roll, centre } };
+}
+
+/**
+ * The ship's roll from the pitch ladder, degrees as `PitchReading.rollDeg`; null when the HUD looks level. The ladder
+ * turns with the roll, its short dashes with it: each short straight piece's slant (second moments) is taken, and the
+ * slant most of them share away from level (within 1.5 degrees, at least 12 of them) is the roll. Level pieces are the HUD's parts that do
+ * not turn (the altitude scale's ticks, the reticle). Measured on his 0775 / 0777: -10 and -8 against -9.4 and -8.7
+ * read once upright; an upright read holds within about a degree either way.
+ */
+function ladderRoll(rgba: Rgba, w: number, h: number, screen: FrameScreen): number | null {
+  const look = PITCH_FINDING_LOOKS[1]!;
+  const sh = screen.h;
+  const mask = scratchMask("roll", w * h);
+  const rx0 = Math.max(0, Math.floor(w / 2 - screen.w * 0.2));
+  const rx1 = Math.min(w, Math.ceil(w / 2 + screen.w * 0.2));
+  const ry0 = Math.max(0, Math.floor(h / 2 - sh * 0.2));
+  const ry1 = Math.min(h, Math.ceil(h / 2 + sh * 0.2));
+  for (let y = ry0; y < ry1; y++) mask.fill(0, y * w + rx0, y * w + rx1);
+  for (let y = ry0; y < ry1; y++)
+    for (let x = rx0; x < rx1; x++) {
+      const i = (y * w + x) * 4;
+      const r = rgba[i]!;
+      const g = rgba[i + 1]!;
+      const b = rgba[i + 2]!;
+      if (look.isText(r, g, b) && !isStarPx(r, g, b)) mask[y * w + x] = 1;
+    }
+  const slants: number[] = [];
+  for (const c of components(mask, w, rx0, ry0, rx1, ry1)) {
+    const len = Math.hypot(c.x1 - c.x0 + 1, c.y1 - c.y0 + 1);
+    if (len < sh * 0.006 || len > sh * 0.03) continue;
+    let n = 0;
+    let sx = 0;
+    let sy = 0;
+    let sxx = 0;
+    let syy = 0;
+    let sxy = 0;
+    for (let y = c.y0; y <= c.y1; y++)
+      for (let x = c.x0; x <= c.x1; x++)
+        if (mask[y * w + x]) {
+          n++;
+          sx += x;
+          sy += y;
+          sxx += x * x;
+          syy += y * y;
+          sxy += x * y;
+        }
+    const mx = sx / n;
+    const my = sy / n;
+    const vx = sxx / n - mx * mx;
+    const vy = syy / n - my * my;
+    const cxy = sxy / n - mx * my;
+    const half = Math.sqrt(((vx - vy) / 2) ** 2 + cxy * cxy);
+    const long = (vx + vy) / 2 + half;
+    const short = (vx + vy) / 2 - half;
+    // Straight and long for its width (a dash: 10 x 3 px, about 11 to 1), not a digit or a star's glow.
+    if (short > 0 ? long / short < 5 : long < 4) continue;
+    const slant = (0.5 * Math.atan2(2 * cxy, vx - vy) * 180) / Math.PI;
+    if (Math.abs(slant) <= 30) slants.push(slant);
+  }
+  let best: number[] = [];
+  for (const t of slants) {
+    if (Math.abs(t) < 3) continue;
+    const near = slants.filter((u) => Math.abs(u - t) <= 1.5);
+    if (near.length > best.length) best = near;
+  }
+  // Fewer is the reticle's arcs or a ladder half off the frame (upright shots: 7 to 10; rolled ones: 18 to 30).
+  if (best.length < 12) return null;
+  return best.reduce((s, t) => s + t, 0) / best.length;
+}
+
+/**
+ * The frame turned by `deg` about its middle (outside the frame black), into a kept buffer: each pixel the nearest
+ * one, or blended from the four round it. The blend fills the pixel or two between a box's digits and its outline and
+ * can join them (his 1207 "55", turned 3 degrees, read nothing); the nearest pixel breaks a thin stroke instead (0775).
+ */
+function turnedFrame(rgba: Rgba, w: number, h: number, deg: number, blend: boolean): Uint8Array {
+  const out = scratchMask("turned", w * h * 4);
+  const a = (deg * Math.PI) / 180;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  const cx = w / 2;
+  const cy = h / 2;
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const d = (y * w + x) * 4;
+      out[d + 3] = 255;
+      // Each pixel of the upright frame from where it stands in the rolled one.
+      const sx = cx + (x - cx) * cos - (y - cy) * sin;
+      const sy = cy + (x - cx) * sin + (y - cy) * cos;
+      if (!blend) {
+        const nx = Math.round(sx);
+        const ny = Math.round(sy);
+        const inside = nx >= 0 && ny >= 0 && nx < w && ny < h;
+        const i = (ny * w + nx) * 4;
+        for (let k = 0; k < 3; k++) out[d + k] = inside ? rgba[i + k]! : 0;
+        continue;
+      }
+      const x0 = Math.floor(sx);
+      const y0 = Math.floor(sy);
+      if (x0 < 0 || y0 < 0 || x0 + 1 >= w || y0 + 1 >= h) {
+        out[d] = out[d + 1] = out[d + 2] = 0;
+        continue;
+      }
+      const fx = sx - x0;
+      const fy = sy - y0;
+      const i = (y0 * w + x0) * 4;
+      const j = i + w * 4;
+      for (let k = 0; k < 3; k++)
+        out[d + k] = Math.round((rgba[i + k]! * (1 - fx) + rgba[i + 4 + k]! * fx) * (1 - fy) + (rgba[j + k]! * (1 - fx) + rgba[j + 4 + k]! * fx) * fy);
+    }
+  return out;
+}
+
+/**
  * The pitch in any HUD colour, with the colours it was read in, to keep for the next frames. The game's own yellow and
  * orange first, as they always were read (`glyphs`), unless a recoloured HUD was learned; then `known`, else each colour
  * found on the frame (`discover`: finding them doubles a frame's time, so the capture looks once a second; `hint`: the
  * colours a mod's settings name, EDHM's ini, looked for first), with `anyGlyphs` (hudPitchGlyphsAny.ts): only framed
  * boxes, the ladder in the outline's colour.
  */
-export function readHudPitchAnyColour(
+function readAnyColourUpright(
   rgba: Rgba,
   w: number,
   h: number,

@@ -295,6 +295,32 @@ describe("HUD pitch reader", () => {
     His cyan theme (2026-11-13): the glow joined the minus to the digits (0754 "-36", 0762 "-84"), and the digits to the
     box's own outline (0759 "-73", the 3 against the slanted edge of the box's point), one piece too wide for digits.
   */
+  it("reads a rolled HUD set upright by its ladder's slant, the roll and centre in the frame's own terms", () => {
+    const f = frame();
+    draw(f, "-20", 840, 450);
+    draw(f, "-20", 1120, 450);
+    // The ladder's short dashes, two columns of them, turning with the HUD.
+    for (const x of [930, 1050]) for (let y = 330; y <= 570; y += 24) for (let k = 0; k < 15 * 3; k++) f.set([...YELLOW_RGB, 255], ((y + Math.floor(k / 15)) * W + x + (k % 15)) * 4);
+    // Rolled right 15 degrees: the right box lower.
+    const a = (15 * Math.PI) / 180;
+    const g = new Uint8ClampedArray(W * H * 4);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const sx = Math.round(W / 2 + (x - W / 2) * Math.cos(a) + (y - H / 2) * Math.sin(a));
+        const sy = Math.round(H / 2 - (x - W / 2) * Math.sin(a) + (y - H / 2) * Math.cos(a));
+        const s = sx >= 0 && sx < W && sy >= 0 && sy < H ? (sy * W + sx) * 4 : 0;
+        g.set(f.subarray(s, s + 4), (y * W + x) * 4);
+      }
+    const r = readHudPitchAnyColour(g, W, H, GLYPHS, {})!;
+    expect(r.reading.boxDeg).toBe(-20);
+    expect(r.reading.rollDeg).toBeCloseTo(15, 0);
+    // The centre between the two boxes, turned with them.
+    const mid = { x: (840 + 1120 + 3 * 7 * S) / 2, y: 450 };
+    const cx = W / 2 + (mid.x - W / 2) * Math.cos(a) - (mid.y - H / 2) * Math.sin(a);
+    const cy = H / 2 + (mid.x - W / 2) * Math.sin(a) + (mid.y - H / 2) * Math.cos(a);
+    expect(Math.hypot(r.reading.centre.x - cx, r.reading.centre.y - cy)).toBeLessThan(10);
+  });
+
   it("reads a minus joined to the digits", () => {
     const f = frame();
     for (const x of [840, 1120]) {
@@ -319,6 +345,25 @@ describe("HUD pitch reader", () => {
       f.set([...GREY, 255], ((top + 3 * S) * W + x + 33) * 4);
     }
     expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY)?.reading.boxDeg).toBe(-8);
+  });
+
+  it("tells 8 from 9 by their strokes when their glyphs score the same", () => {
+    // A table where 8 and 9 share one sample: the glyph cannot choose, the left stroke's lower part can.
+    const same = { yellow: { ...YELLOW, "9": YELLOW["8"]! } };
+    for (const [text, want] of [
+      ["-8", -8],
+      ["-9", -9],
+    ] as const) {
+      const f = frame();
+      draw(f, text, 840, 450);
+      draw(f, text, 1120, 450);
+      expect(readHudPitch(f, W, H, same)?.boxDeg).toBe(want);
+    }
+    // And a 0 against an 8 stays not sure: the strokes leave 0 out.
+    const f = frame();
+    draw(f, "-0", 840, 450);
+    draw(f, "-0", 1120, 450);
+    expect(readHudPitch(f, W, H, { yellow: { ...YELLOW, "8": YELLOW["0"]! } })).toBeNull();
   });
 
   it("says not sure for a digit it has no glyph for", () => {

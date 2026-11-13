@@ -5,14 +5,19 @@
  * the reticle boxes, x209 the planetary landing reticle = the boxes' outline), and read as the capture reads it (the
  * middle 40 %), with the theme's colours as the hint (server edhmColours.ts) and without.
  *
- *   npx tsx scripts/hud-theme-bench.ts @<labels> [@<labels> …] [--sources 24] [--themes <dir>]
+ *   npx tsx scripts/hud-theme-bench.ts @<labels> [@<labels> …] [--sources 24] [--themes <dir>] [--save-sources <f>]
+ *     [--load-sources <f>]
+ *
+ * The sources are the first shots (in a fixed shuffle) that read right, so a better reader picks other, harder ones and
+ * its totals are not comparable (2026-11-13: 3,472 then 3,252, both 0 wrong). --save-sources keeps the run's sources
+ * and their colours as JSON; --load-sources benches exactly those, read by whichever reader is checked out.
  *
  * The repaint: a pixel pointing along a source colour (cosine 0.97, at least a quarter of its brightness) is taken as
  * background + a · source and becomes background + a · target, so the glow and the blend with the ground follow. Each
  * source shot must read right as it is (its colours learned on it); the shots and themes are not kept, only the counts.
  * Themes with the same two colours are benched once.
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { HUD_PITCH_GLYPHS } from "../src/shared/hudPitchGlyphs.js";
@@ -28,6 +33,8 @@ const opt = (name: string, dflt: string) => {
 };
 const SOURCES = Number(opt("--sources", "24"));
 const THEMES = opt("--themes", join(homedir(), "EDHM_UI", "ODYSS", "Themes"));
+const SAVE_SOURCES = opt("--save-sources", "");
+const LOAD_SOURCES = opt("--load-sources", "");
 const labels = new Map<string, number>();
 for (const a of args.filter((a) => a.startsWith("@")))
   for (const line of readFileSync(a.slice(1), "utf8").split(/\r?\n/)) {
@@ -118,7 +125,9 @@ for (const d of readdirSync(THEMES)) {
 // Sources: shots that read right as they are, in saturated colours, spread over the label list.
 const names = [...labels.keys()];
 const sources: { name: string; pitch: number; px: Uint8ClampedArray; cw: number; ch: number; w: number; h: number; colours: PitchColours }[] = [];
-for (let k = 0; k < names.length && sources.length < SOURCES; k++) {
+const fixed = LOAD_SOURCES ? (JSON.parse(readFileSync(LOAD_SOURCES, "utf8")) as { name: string; colours: PitchColours }[]) : null;
+for (const f of fixed ?? []) sources.push({ name: f.name, pitch: labels.get(f.name)!, ...crop(f.name), colours: f.colours });
+for (let k = 0; !fixed && k < names.length && sources.length < SOURCES; k++) {
   const name = names[Math.floor((k * 7919) % names.length)]!;
   if (sources.some((s) => s.name === name)) continue;
   const c = crop(name);
@@ -128,6 +137,8 @@ for (let k = 0; k < names.length && sources.length < SOURCES; k++) {
   sources.push({ name, pitch: labels.get(name)!, ...c, colours: r.colours });
 }
 console.log(`${sources.length} source shots, ${themes.size} distinct themes (of ${readdirSync(THEMES).length})`);
+if (SAVE_SOURCES) writeFileSync(SAVE_SOURCES, JSON.stringify(sources.map((s) => ({ name: s.name, colours: s.colours }))));
+console.log(`sources: ${sources.map((s) => s.name.replace(/^Screenshot_|\.bmp$/g, "")).join(" ")}`);
 
 const total = { hint: [0, 0, 0], blind: [0, 0, 0] };
 const rows: string[] = [];

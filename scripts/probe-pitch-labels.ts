@@ -3,7 +3,7 @@
  * right / not sure / wrong, the wrongs listed, and the "not sure" shots whose label holds a digit given (default 8, 9,
  * 6: the glow fills an 8's holes on some themes, 1349). Read-only: nothing is written.
  *
- *   npx tsx scripts/probe-pitch-labels.ts @docs/hud-pitch-labels-edhm-07112026c.txt [@…] [--digits 689]
+ *   npx tsx scripts/probe-pitch-labels.ts @docs/hud-pitch-labels-edhm-07112026c.txt [@…] [--digits 689] [--list] [--why]
  */
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -17,6 +17,10 @@ const SHOTS = join(homedir(), "Pictures", "Frontier Developments", "Elite Danger
 const args = process.argv.slice(2);
 const di = args.indexOf("--digits");
 const digits = di >= 0 ? args[di + 1]! : "689";
+// --list: every shot's read, one line each (READ name=label read), for comparing two versions of the reader.
+const list = args.includes("--list");
+// --why: every not-sure shot with its reason (WHY name=label reason).
+const whyList = args.includes("--why");
 const pairs: [string, number][] = [];
 const source = new Map<string, string>();
 const noPair: string[] = [];
@@ -114,6 +118,106 @@ function tieBreak(a: string, b: string, sp: Record<string, boolean | null>): str
   const fb = fits(b);
   return fa && !fb ? a : fb && !fa ? b : null;
 }
+/*
+  Prototype 2 (2026-11-13): the holes. The digit's ink cut at half way between its own dark and bright (the glow lifts
+  both), the dark parts not reaching its box's edge counted as holes, each by where its middle stands: 8 two holes, 0
+  one tall hole, 6 one low, 9 one high. Decides only when that fits one of the two close digits and not the other.
+*/
+function holes(data: Uint8Array, w: number, c: { x0: number; y0: number; x1: number; y1: number }, ink: InkFn): string | null {
+  const cw = c.x1 - c.x0 + 1;
+  const ch = c.y1 - c.y0 + 1;
+  const v: number[] = [];
+  for (let y = c.y0; y <= c.y1; y++)
+    for (let x = c.x0; x <= c.x1; x++) {
+      const i = (y * w + x) * 4;
+      v.push(ink(data[i]!, data[i + 1]!, data[i + 2]!));
+    }
+  const sorted = [...v].sort((a, b) => a - b);
+  const lo = sorted[Math.floor(sorted.length * 0.1)]!;
+  const hi = sorted[Math.floor(sorted.length * 0.9)]!;
+  if (hi - lo < 0.15) return null;
+  const cut = (lo + hi) / 2;
+  const dark = v.map((x) => x < cut);
+  const seen = new Uint8Array(v.length);
+  const found: { n: number; my: number; top: number; bottom: number }[] = [];
+  for (let s = 0; s < v.length; s++) {
+    if (!dark[s] || seen[s]) continue;
+    const stack = [s];
+    seen[s] = 1;
+    let edge = false;
+    let n = 0;
+    let sy = 0;
+    let top = ch;
+    let bottom = 0;
+    while (stack.length) {
+      const j = stack.pop()!;
+      const x = j % cw;
+      const y = (j - x) / cw;
+      n++;
+      sy += y;
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y);
+      if (x === 0 || y === 0 || x === cw - 1 || y === ch - 1) edge = true;
+      for (const k of [x > 0 ? j - 1 : -1, x < cw - 1 ? j + 1 : -1, y > 0 ? j - cw : -1, y < ch - 1 ? j + cw : -1])
+        if (k >= 0 && dark[k] && !seen[k]) {
+          seen[k] = 1;
+          stack.push(k);
+        }
+    }
+    if (!edge && n >= 2) found.push({ n, my: sy / n / ch, top: top / ch, bottom: bottom / ch });
+  }
+  if (found.length === 2) return "8";
+  if (found.length !== 1) return null;
+  const f = found[0]!;
+  if (f.top < 0.35 && f.bottom > 0.65) return "0";
+  if (f.my > 0.55) return "6";
+  if (f.my < 0.45) return "9";
+  return null;
+}
+/*
+  Prototype 3 (2026-11-13): the strokes' profiles. Each row's brightest pixel (raw brightness: the ink saturates in a
+  glowing theme) in the digit's right third and its left third. A 6's right stroke dips in its upper part (the gap the
+  glow half fills), a 9's left stroke in its lower part; an 8's run full both sides. Measured on the labelled shots read
+  right: dip below 0.90 of the stroke's own lower or upper part, full above 0.985. 0 left out: this font's 0 is not
+  hollow in the middle either.
+*/
+function profileDigit(data: Uint8Array, w: number, c: { x0: number; y0: number; x1: number; y1: number }): string | null {
+  const cw = c.x1 - c.x0 + 1;
+  const ch = c.y1 - c.y0 + 1;
+  const prof = (fx0: number, fx1: number) => {
+    const out: number[] = [];
+    for (let y = c.y0; y <= c.y1; y++) {
+      let m = 0;
+      for (let x = Math.round(c.x0 + fx0 * cw); x <= Math.round(c.x0 + fx1 * cw); x++) {
+        const i = (y * w + x) * 4;
+        m = Math.max(m, data[i]!, data[i + 1]!, data[i + 2]!);
+      }
+      out.push(m);
+    }
+    return out;
+  };
+  const span = (p: number[], f0: number, f1: number) => p.slice(Math.round(f0 * (ch - 1)), Math.round(f1 * (ch - 1)) + 1);
+  const med = (v: number[]) => [...v].sort((a, b) => a - b)[v.length >> 1]!;
+  const right = prof(0.65, 1);
+  const left = prof(0, 0.35);
+  const ur = Math.min(...span(right, 0.22, 0.45)) / Math.max(1, med(span(right, 0.55, 0.85)));
+  const ll = Math.min(...span(left, 0.55, 0.78)) / Math.max(1, med(span(left, 0.15, 0.45)));
+  const state = (v: number) => (v <= 0.9 ? "dip" : v >= 0.985 ? "full" : null);
+  const u = state(ur);
+  const l = state(ll);
+  if (u === "dip" && l === "full") return "6";
+  if (u === "full" && l === "dip") return "9";
+  if (u === "full" && l === "full") return "8";
+  return null;
+}
+let prRight = 0;
+let prWrong = 0;
+let prUndecided = 0;
+const prWrongList: string[] = [];
+let hoRight = 0;
+let hoWrong = 0;
+let hoUndecided = 0;
+const hoWrongList: string[] = [];
 let tbRight = 0;
 let tbWrong = 0;
 let tbUndecided = 0;
@@ -136,6 +240,7 @@ for (const [name, label] of pairs) {
         .toBuffer({ resolveWithObject: true })
         .then(({ data, info }) => ({ data: new Uint8Array(data), w: info.width, h: info.height }));
   const r = readHudPitchAnyColour(img.data, img.w, img.h, HUD_PITCH_GLYPHS, HUD_PITCH_GLYPHS_ANY);
+  if (list) console.log(`READ ${name}=${label} ${r ? r.reading.boxDeg : "-"}`);
   if (!r) {
     unsure++;
     const pairs2 = pitchPairsAnyColour(img.data, img.w, img.h);
@@ -182,9 +287,51 @@ for (const [name, label] of pairs) {
           tbWrong++;
           tbWrongList.push(`${name}=${label} read ${readsOf.join("/")}`);
         }
+        // Prototype 2: the holes, on the same close digits.
+        let hoUnsure = false;
+        const holesOf = [pair.left, pair.right].map((b) =>
+          b.digits
+            .map((c) => {
+              const t = top2(glyphVector(img.data, img.w, c, GLYPH_W, GLYPH_H, look.ink));
+              if (t[0]![1] - t[1]![1] >= ANY_MIN_MARGIN) return t[0]![0];
+              const h = holes(img.data, img.w, c, look.ink);
+              const pick = h === t[0]![0] ? h : h === t[1]![0] ? h : null;
+              if (pick == null) hoUnsure = true;
+              return pick ?? "?";
+            })
+            .join(""),
+        );
+        // Prototype 3: the strokes' profiles, only between 6, 8 and 9.
+        let prUnsure = false;
+        const profOf = [pair.left, pair.right].map((b) =>
+          b.digits
+            .map((c) => {
+              const t = top2(glyphVector(img.data, img.w, c, GLYPH_W, GLYPH_H, look.ink));
+              if (t[0]![1] - t[1]![1] >= ANY_MIN_MARGIN) return t[0]![0];
+              const two = [t[0]![0], t[1]![0]];
+              const p = two.every((d) => "689".includes(d)) ? profileDigit(img.data, img.w, c) : null;
+              const pick = p != null && two.includes(p) ? p : null;
+              if (pick == null) prUnsure = true;
+              return pick ?? "?";
+            })
+            .join(""),
+        );
+        if (prUnsure) prUndecided++;
+        else if (profOf[0] === String(Math.abs(label)) && profOf[1] === profOf[0]) prRight++;
+        else {
+          prWrong++;
+          prWrongList.push(`${name}=${label} read ${profOf.join("/")}`);
+        }
+        if (hoUnsure) hoUndecided++;
+        else if (holesOf[0] === String(Math.abs(label)) && holesOf[1] === holesOf[0]) hoRight++;
+        else {
+          hoWrong++;
+          hoWrongList.push(`${name}=${label} read ${holesOf.join("/")}`);
+        }
       }
     }
     const key = reason.replace(/[0-9.]+/g, "#").replace(/ \(top wrong\)/, "");
+    if (whyList) console.log(`WHY ${name}=${label} ${reason}`);
     why.set(key, (why.get(key) ?? 0) + 1);
     if ([...String(Math.abs(label))].some((c) => digits.includes(c))) unsureDigits.push(`${name}=${label}`);
   } else if (r.reading.boxDeg === label) right++;
@@ -200,4 +347,8 @@ console.log(`no framed pair: ${noPair.length}`);
 for (const line of noPair) console.log(`  NOPAIR ${line}`);
 console.log(`tie-break prototype on those: ${tbRight} right, ${tbWrong} wrong, ${tbUndecided} still not sure`);
 for (const line of tbWrongList) console.log(`  WRONG ${line}`);
+console.log(`holes prototype on those: ${hoRight} right, ${hoWrong} wrong, ${hoUndecided} still not sure`);
+for (const line of hoWrongList) console.log(`  HOLES WRONG ${line}`);
+console.log(`profile prototype on those: ${prRight} right, ${prWrong} wrong, ${prUndecided} still not sure`);
+for (const line of prWrongList) console.log(`  PROFILE WRONG ${line}`);
 console.log(`not sure with a ${digits.split("").join(" / ")} in the label: ${unsureDigits.length}\n  ${unsureDigits.join("\n  ")}`);
