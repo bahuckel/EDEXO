@@ -347,6 +347,41 @@ describe("HUD pitch reader", () => {
     expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY)?.reading.boxDeg).toBe(-8);
   });
 
+  it("reads a recoloured box whose own side, in the digits' colour, stands far taller beside them", () => {
+    const f = dark();
+    boxed(f, "-10", 840, 480);
+    boxed(f, "-10", 1120, 480);
+    // The right box's side drawn in the digits' grey (a star on it, his 0981: 5 x 27 beside 14-high digits), 7 px wide
+    // and 40 high, 6 px after the 0. On a screen of 1800 rows, so a piece that tall is not dropped as too tall for text.
+    const top = Math.round(480 - (7 * S) / 2);
+    for (let y = top - 10; y < top + 30; y++) for (let x = 1120 + 3 * 7 * S + 6; x < 1120 + 3 * 7 * S + 13; x++) f.set([...GREY, 255], (y * W + x) * 4);
+    // The pair in the learned colour, both boxes with their two digits (the colour-blind cut reads these clean digits
+    // anyway; on his 0981 it had broken the 2).
+    const pair = findPitchBoxes(f, W, H, { w: W, h: 1800 }, lookFromColour(GREY), true);
+    expect([pair?.left.digits.length, pair?.right.digits.length]).toEqual([2, 2]);
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY, { w: W, h: 1800 })?.reading.boxDeg).toBe(-10);
+  });
+
+  it("does not take ground near the digits' colour beside a box for a digit lost", () => {
+    const f = dark();
+    boxed(f, "10", 840, 480);
+    boxed(f, "10", 1120, 480);
+    // A grey ground patch left of the left box's digits: not the digits' colour, but near enough to ink.
+    const top = Math.round(480 - (7 * S) / 2);
+    for (let y = top; y < top + 7 * S; y++) for (let x = 840 - 19; x < 840 - 3; x++) f.set([100, 100, 100, 255], (y * W + x) * 4);
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY)?.reading.boxDeg).toBe(10);
+  });
+
+  it("reads a recoloured box with a star on one digit's end", () => {
+    const f = dark();
+    boxed(f, "20", 840, 480);
+    boxed(f, "20", 1120, 480);
+    // A white star under the left box's 2, touching it and reaching 5 rows below the digits.
+    const bottom = Math.round(480 - (7 * S) / 2) + 7 * S - 1;
+    for (let y = bottom + 1; y <= bottom + 5; y++) for (let x = 841; x <= 844; x++) f.set([255, 255, 255, 255], (y * W + x) * 4);
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY)?.reading.boxDeg).toBe(20);
+  });
+
   it("tells 8 from 9 by their strokes when their glyphs score the same", () => {
     // A table where 8 and 9 share one sample: the glyph cannot choose, the left stroke's lower part can.
     const same = { yellow: { ...YELLOW, "9": YELLOW["8"]! } };

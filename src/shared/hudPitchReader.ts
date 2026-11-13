@@ -472,6 +472,11 @@ function framedBy(rgba: Rgba, w: number, h: number, box: PitchBox): Rgb | null {
     return c;
   };
   const MIN = 18;
+  const starAt = (x: number, y: number) => {
+    if (x < 0 || x >= w || y < 0 || y >= h) return false;
+    const i = (y * w + x) * 4;
+    return isStarPx(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!);
+  };
   type Pt = { x0: number; y0: number; x1: number; y1: number };
   /*
     Every row that could be the line at the digits' middle column, the strongest first, until one traces along the box: a
@@ -501,11 +506,20 @@ function framedBy(rgba: Rgba, w: number, h: number, box: PitchBox): Rgb | null {
       let y = y0;
       let gap = 0;
       for (let x = cx + dir; x >= 0 && x < w && gap <= maxGap; x += dir) {
+        /*
+          The row it is on while that holds, a row up or down only when that is a quarter brighter, and never onto a star
+          (unless the line is star-white itself): the brightest of the three let a brighter neighbour pull the trace off
+          the line (his 0371, 1146, 1147 read now). Staying on the row whenever it held lost a box drawn in perspective,
+          its line a row lower every few pixels (his 0955); a half brighter or twice swapped one shot for another.
+        */
+        const here = line(x, y);
+        const held = here >= MIN;
         let by = y;
-        let bc = MIN - 1;
-        for (const yy of [y, y - 1, y + 1]) {
+        let bc = held ? here : MIN - 1;
+        for (const yy of [y - 1, y + 1]) {
+          if (held && starAt(x, yy) && !starAt(x, y)) continue;
           const c = line(x, yy);
-          if (c > bc) {
+          if (held ? c > here * 1.25 && c > bc : c > bc) {
             bc = c;
             by = yy;
           }
@@ -547,14 +561,19 @@ function nothingLeftOut(rgba: Rgba, w: number, box: PitchBox, ink: (r: number, g
   const top = Math.min(...box.digits.map((c) => c.y0));
   const bottom = Math.max(...box.digits.map((c) => c.y1));
   const third = (bottom - top + 1) / 3;
+  // Each third's most ink over its least: the same as its most on a dark ground, but a grey theme's ink is high on grey
+  // ground too (his 0973: the ground left of "82" read as a lost digit), where a digit still shows by its dark rim.
   const thirds = (x: number): [number, number, number] => {
     const most: [number, number, number] = [0, 0, 0];
+    const least: [number, number, number] = [1, 1, 1];
     for (let y = top; y <= bottom; y++) {
       const i = (y * w + x) * 4;
       const k = y < top + third ? 0 : y > bottom - third ? 2 : 1;
-      most[k] = Math.max(most[k], ink(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!));
+      const v = ink(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!);
+      most[k] = Math.max(most[k], v);
+      least[k] = Math.min(least[k], v);
     }
-    return most;
+    return [most[0] - least[0], most[1] - least[1], most[2] - least[2]];
   };
   const run = dh * 0.3;
   // A lost digit or minus stands next to the digits read; the box's own side is further out.
@@ -607,18 +626,20 @@ function framedOnly(rgba: Rgba, w: number, h: number, found: PitchBox[]): PitchB
 
 /**
  * Every number string in a look, as a box without its outline; null when the look marks too much of the frame. The
- * framed and the plain search share them: building them twice was half of an unread frame's time.
+ * framed and the plain search share them: building them twice was half of an unread frame's time. `band`: only there,
+ * and however much of it the look marks (a pair already found; see pitchPairsAnyColour).
  */
-function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: HudStyleName | TextLook): PitchBox[] | null {
+function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: HudStyleName | TextLook, band?: Rect): PitchBox[] | null {
   const style = lookOf(look);
   const sw = screen.w;
   const sh = screen.h;
   const mask = scratchMask("look", w * h);
   // The middle 40 % of the screen, either way (or all of a crop that is no bigger).
-  const rx0 = Math.max(0, Math.floor(w / 2 - sw * 0.2));
-  const rx1 = Math.min(w, Math.ceil(w / 2 + sw * 0.2));
-  const ry0 = Math.max(0, Math.floor(h / 2 - sh * 0.2));
-  const ry1 = Math.min(h, Math.ceil(h / 2 + sh * 0.2));
+  const rx0 = Math.max(0, Math.floor(w / 2 - sw * 0.2), band ? band.x0 : 0);
+  const rx1 = Math.min(w, Math.ceil(w / 2 + sw * 0.2), band ? band.x1 : w);
+  const ry0 = Math.max(0, Math.floor(h / 2 - sh * 0.2), band ? band.y0 : 0);
+  const ry1 = Math.min(h, Math.ceil(h / 2 + sh * 0.2), band ? band.y1 : h);
+  if (rx1 <= rx0 || ry1 <= ry0) return null;
   for (let y = ry0; y < ry1; y++) mask.fill(0, y * w + rx0, y * w + rx1);
   let marked = 0;
   for (let y = ry0; y < ry1; y++)
@@ -629,7 +650,7 @@ function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: 
         marked++;
       }
     }
-  if (marked > (rx1 - rx0) * (ry1 - ry0) * MAX_TEXT_SHARE) return null;
+  if (!band && marked > (rx1 - rx0) * (ry1 - ry0) * MAX_TEXT_SHARE) return null;
   const minH = Math.max(5, sh * 0.007);
   const maxH = sh * 0.03;
   const raw = splitJoined(components(mask, w, rx0, ry0, rx1, ry1), mask, w, minH, maxH);
@@ -655,11 +676,44 @@ function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: 
     else strings.push([c]);
   }
   const found: PitchBox[] = strings.map((all) => {
+    const tallOf = (c: Rect) => c.y1 - c.y0 + 1;
+    /*
+      The box's own side can join the string too, far taller than the digits and thin as a line (his 0981, a dim grey
+      theme: the right box's side with a star on it, 5 x 27 beside a 14-high "26", set the height and the digits were
+      dropped as arrow strokes). A lone piece over 1.5 times the next tallest and under 0.3 of its own height wide is
+      left out (the narrowest labelled 1 is 0.47).
+    */
+    const byHeight = [...all].sort((a, b) => tallOf(b) - tallOf(a));
+    const side =
+      byHeight.length > 1 && tallOf(byHeight[0]!) > 1.5 * tallOf(byHeight[1]!) && byHeight[0]!.x1 - byHeight[0]!.x0 + 1 < 0.3 * tallOf(byHeight[0]!)
+        ? byHeight[0]
+        : null;
     // The box's arrow strokes sit on the digits' row but are shorter than them.
-    const tallest = Math.max(...all.map((c) => c.y1 - c.y0 + 1));
-    const g = all.filter((c) => c.y1 - c.y0 + 1 >= tallest * 0.75);
-    const top = Math.min(...g.map((c) => c.y0));
-    const bottom = Math.max(...g.map((c) => c.y1));
+    const tallest = Math.max(...all.filter((c) => c !== side).map(tallOf));
+    const g = all.filter((c) => c !== side && tallOf(c) >= tallest * 0.75);
+    /*
+      A star on one digit's end (his 0671: below the first 2 of "22", that piece 19 rows to the other's 15) does not set
+      the digits' rows: a lone end two or more rows past every other digit's, each of those rows inked across under
+      0.45 of its piece's width, is left out (cut off by the digits' rows below), when what is left is still a digit's
+      height: else the short one lost rows (a dim theme's 6 of "66", his 0975, kept whole).
+    */
+    const narrow = (c: Rect, ya: number, yb: number) => {
+      for (let y = ya; y <= yb; y++) {
+        let n = 0;
+        for (let x = c.x0; x <= c.x1; x++) if (mask[y * w + x]) n++;
+        if (n > (c.x1 - c.x0 + 1) * 0.45) return false;
+      }
+      return true;
+    };
+    const lows = g.map((c) => c.y1).sort((a, b) => b - a);
+    const highs = g.map((c) => c.y0).sort((a, b) => a - b);
+    const lowOne = g.filter((c) => c.y1 === lows[0]);
+    const highOne = g.filter((c) => c.y0 === highs[0]);
+    const full = (y0: number, y1: number) => y1 - y0 + 1 >= sh * 0.0095;
+    const cutLow = g.length > 1 && lowOne.length === 1 && lows[0]! - lows[1]! >= 2 && full(highs[0]!, lows[1]!) && narrow(lowOne[0]!, lows[1]! + 1, lows[0]!);
+    const bottom = cutLow ? lows[1]! : lows[0]!;
+    const cutHigh = g.length > 1 && highOne.length === 1 && highs[1]! - highs[0]! >= 2 && full(highs[1]!, bottom) && narrow(highOne[0]!, highs[0]!, highs[1]! - 1);
+    const top = cutHigh ? highs[1]! : highs[0]!;
     const left = Math.min(...g.map((c) => c.x0));
     const right = Math.max(...g.map((c) => c.x1));
     const dh = bottom - top + 1;
@@ -1349,11 +1403,30 @@ export function pitchPairsAnyColour(
   const out: { colours: PitchColours; look: TextLook; pair: Pair; hinted: boolean }[] = [];
   for (const { colours, pair: seen, hinted } of known ? [{ colours: known, pair: null, hinted: false }] : discoverPitchPairs(rgba, w, h, screen, hint)) {
     const look = lookFromColour(colours.text);
-    const inColour = findPitchBoxes(rgba, w, h, screen, look, true);
+    const inColour = findPitchBoxes(rgba, w, h, screen, look, true) ?? (seen ? nearPair(rgba, w, h, screen, look, seen) : null);
     if (inColour) out.push({ colours, look, pair: inColour, hinted });
     if (seen) out.push({ colours, look, pair: { left: minusIn(rgba, w, seen.left, look), right: minusIn(rgba, w, seen.right, look) }, hinted });
   }
   return out;
+}
+
+/**
+ * The pair found colour-blind, cut again in its learned colour round where it stands: a dim grey theme over grey
+ * ground marks more of the middle than MAX_TEXT_SHARE (his 0973: 23 %, the search gives up), while the colour-blind
+ * cut broke its digits (a 2 in pieces, dropped: "82" read as 8). The band is the pair's rows and a few digits either
+ * side, small enough to cut however full; framed and paired as ever.
+ */
+function nearPair(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: TextLook, seen: Pair): Pair | null {
+  const { left, right } = seen;
+  const dh = Math.max(left.dh, right.dh);
+  const band: Rect = {
+    x0: Math.floor(Math.min(left.x, right.x) - dh * 4),
+    y0: Math.floor(Math.min(left.y, right.y) - dh * 2),
+    x1: Math.ceil(Math.max(left.x, right.x) + dh * 4),
+    y1: Math.ceil(Math.max(left.y, right.y) + dh * 2),
+  };
+  const found = lookBoxes(rgba, w, h, screen, look, band);
+  return found && pitchPair(framedOnly(rgba, w, h, found), w, h, screen);
 }
 
 /** The heading, read off the HUD's tape (hudPitchReader's sibling; owner 2026-11-04: on-screen data, live). */

@@ -56,6 +56,11 @@ function explain(data: Uint8Array, w: number, h: number, box: PitchBox): string 
     return c;
   };
   const MIN = 18;
+  const starAt = (x: number, y: number) => {
+    if (x < 0 || x >= w || y < 0 || y >= h) return false;
+    const i = (y * w + x) * 4;
+    return data[i]! > 200 && data[i + 1]! > 200 && data[i + 2]! > 200;
+  };
   // as framedBy: every row ≥ MIN at the middle column, strongest first, until one traces along the box
   const traceFrom = (y0: number) => {
     let x0 = cx;
@@ -64,11 +69,14 @@ function explain(data: Uint8Array, w: number, h: number, box: PitchBox): string 
       let y = y0;
       let gap = 0;
       for (let x = cx + dir; x >= 0 && x < w && gap <= 3; x += dir) {
+        const here = line(x, y);
+        const held = here >= MIN;
         let by = y;
-        let bc = MIN - 1;
-        for (const yy of [y, y - 1, y + 1]) {
+        let bc = held ? here : MIN - 1;
+        for (const yy of [y - 1, y + 1]) {
+          if (held && starAt(x, yy) && !starAt(x, y)) continue;
           const c = line(x, yy);
-          if (c > bc) {
+          if (held ? c > here * 1.25 && c > bc : c > bc) {
             bc = c;
             by = yy;
           }

@@ -5,13 +5,16 @@
  * 0754 / 0762). Read-only.
  *
  *   npx tsx scripts/probe-pitch-mask.ts 0759 1455 632 1523 660 [115 60]
+ *   npx tsx scripts/probe-pitch-mask.ts 0981 1455 806 1500 834 rgb 140 141 145
+ *
+ * rgb r g b: the mask of a learned text colour instead (lookFromColour, as the read after finding uses it).
  */
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { findingLook } from "../src/shared/hudTextLook.js";
+import { findingLook, lookFromColour } from "../src/shared/hudTextLook.js";
 
-const [n, x0, y0, x1, y1, a, b] = process.argv.slice(2);
+const [n, x0, y0, x1, y1, a, b, c, d] = process.argv.slice(2);
 const buf = readFileSync(join(homedir(), "Pictures", "Frontier Developments", "Elite Dangerous", `Screenshot_${n}.bmp`));
 const off = buf.readUInt32LE(10);
 const w = buf.readInt32LE(18);
@@ -19,7 +22,7 @@ const h0 = buf.readInt32LE(22);
 const by = buf.readUInt16LE(28) / 8;
 const h = Math.abs(h0);
 const stride = Math.ceil((w * by) / 4) * 4;
-const look = findingLook(Number(a ?? 115), Number(b ?? 60));
+const look = a === "rgb" ? lookFromColour([Number(b), Number(c), Number(d)]) : findingLook(Number(a ?? 115), Number(b ?? 60));
 for (let y = Number(y0); y <= Number(y1); y++) {
   let s = `${String(y).padStart(5)} `;
   for (let x = Number(x0); x <= Number(x1); x++) {
