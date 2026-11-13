@@ -852,6 +852,87 @@ function strokeDigit(rgba: Rgba, w: number, c: Rect): "6" | "8" | "9" | null {
   return null;
 }
 
+/**
+ * 0 or 8 by the stroke across the middle, for the two when their glyphs score about the same (2026-11-13: 10 labelled
+ * shots not sure for that; the glow fills an 8's two holes and this font's 0 is slashed, upper right to lower left).
+ * Read in the box's channel of widest spread (a glowing theme saturates the others), scaled to its own p10..p90:
+ * - slope: each inner column's brightest row in the middle rows, fitted: the slash falls to the left (about -0.7), the
+ *   8's bar runs flat (about 0);
+ * - diag: the slash lights the upper-right and lower-left quarters of the hollow, the holes stay dark in the other two;
+ *   an 8's four quarters alike;
+ * - bar: the middle row near both sides, ink on an 8 (its bar meets the outline), hollow on a 0.
+ * A 0 must show all three, an 8 too; else null. Measured on 433 labelled 0s and 8s: every one on the wrong side of at
+ * least one. A 9 shows an 8's three as well (its middle bar), so readBox takes an 8 only with the strokes' 8 beside it;
+ * no labelled 6 or 9 shows a 0's. Labelled shots 665 -> 675 right, theme bench 3,237 -> 3,305 right, 0 wrong.
+ */
+function slashDigit(rgba: Rgba, w: number, c: Rect): "0" | "8" | null {
+  const cw = c.x1 - c.x0 + 1;
+  const ch = c.y1 - c.y0 + 1;
+  if (cw < 6 || ch < 9) return null;
+  let channel = 0;
+  let lo = 0;
+  let spread = -1;
+  const v = new Array<number>(cw * ch);
+  for (let k = 0; k < 3; k++) {
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) v[y * cw + x] = rgba[((c.y0 + y) * w + c.x0 + x) * 4 + k]!;
+    v.sort((a, b) => a - b);
+    const p10 = v[Math.floor(v.length * 0.1)]!;
+    const p90 = v[Math.floor(v.length * 0.9)]!;
+    if (p90 - p10 > spread) {
+      spread = p90 - p10;
+      channel = k;
+      lo = p10;
+    }
+  }
+  if (spread < 16) return null;
+  const px = (x: number, y: number) => rgba[(y * w + x) * 4 + channel]!;
+  const at = (fx: number, fy: number) => {
+    const x = c.x0 + fx * (cw - 1);
+    const y = c.y0 + fy * (ch - 1);
+    const xi = Math.floor(x);
+    const yi = Math.floor(y);
+    const ax = x - xi;
+    const ay = y - yi;
+    return (
+      (px(xi, yi) * (1 - ax) + px(xi + 1, yi) * ax) * (1 - ay) + (px(xi, yi + 1) * (1 - ax) + px(xi + 1, yi + 1) * ax) * ay
+    );
+  };
+  const spot = (fx: number, fy: number) => {
+    let s = 0;
+    for (const dx of [-0.05, 0, 0.05]) for (const dy of [-0.03, 0, 0.03]) s += at(fx + dx, fy + dy);
+    return (s / 9 - lo) / spread;
+  };
+  const diag = spot(0.62, 0.32) + spot(0.38, 0.68) - spot(0.38, 0.32) - spot(0.62, 0.68);
+  const bar = (spot(0.3, 0.5) + spot(0.7, 0.5)) / 2;
+  let n = 0;
+  let sx = 0;
+  let sy = 0;
+  let sxy = 0;
+  let sxx = 0;
+  for (let x = Math.round(c.x0 + 0.28 * cw); x <= Math.round(c.x0 + 0.72 * cw) - 1; x++) {
+    let best = -1;
+    let row = 0;
+    for (let y = Math.round(c.y0 + 0.22 * ch); y <= Math.round(c.y0 + 0.78 * ch) - 1; y++)
+      if (px(x, y) > best) {
+        best = px(x, y);
+        row = y;
+      }
+    const fx = (x - c.x0) / cw;
+    const fy = (row - c.y0) / ch;
+    n++;
+    sx += fx;
+    sy += fy;
+    sxy += fx * fy;
+    sxx += fx * fx;
+  }
+  const den = n * sxx - sx * sx;
+  if (n < 3 || den <= 0) return null;
+  const slope = (n * sxy - sx * sy) / den;
+  if (slope <= -0.4 && diag >= 0.45 && bar <= 0.92) return "0";
+  if (slope >= -0.25 && diag <= 0.4 && bar >= 0.95) return "8";
+  return null;
+}
+
 /** A box's number, or null when a digit is not sure. */
 export function readBox(
   rgba: Rgba,
@@ -872,6 +953,12 @@ export function readBox(
     if (d == null && best != null && runnerUp != null && score >= minMatch && "689".includes(best) && "689".includes(runnerUp)) {
       const s = strokeDigit(rgba, w, c);
       if (s === best || s === runnerUp) d = s;
+    }
+    // 0 and 8 about as close: the stroke across the middle tells, when it does. A 9 can score as 0 and 8 (its middle
+    // bar is an 8's): an 8 also needs the strokes' 8, whose lower left is closed.
+    if (d == null && best != null && runnerUp != null && score >= minMatch && [best, runnerUp].sort().join("") === "08") {
+      const s = slashDigit(rgba, w, c);
+      if (s === "0" || (s === "8" && strokeDigit(rgba, w, c) === "8")) d = s;
     }
     if (d == null) return null;
     text += d;

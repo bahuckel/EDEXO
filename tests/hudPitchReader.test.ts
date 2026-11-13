@@ -359,11 +359,40 @@ describe("HUD pitch reader", () => {
       draw(f, text, 1120, 450);
       expect(readHudPitch(f, W, H, same)?.boxDeg).toBe(want);
     }
-    // And a 0 against an 8 stays not sure: the strokes leave 0 out.
+    // And a 0 against an 8 stays not sure: the strokes leave 0 out, and this 0 has no slash to tell it by.
     const f = frame();
     draw(f, "-0", 840, 450);
     draw(f, "-0", 1120, 450);
     expect(readHudPitch(f, W, H, { yellow: { ...YELLOW, "8": YELLOW["0"]! } })).toBeNull();
+  });
+
+  it("tells a slashed 0 from an 8 by the stroke across the middle when their glyphs score the same", () => {
+    // The game's 0 is slashed, upper right to lower left; drawn so here for this test only.
+    const plain = FONT["0"]!;
+    FONT["0"] = ["#####", "#...#", "#..##", "#.#.#", "##..#", "#...#", "#####"];
+    try {
+      const sample = (d: string) => {
+        const f = frame();
+        draw(f, d, 860, 450);
+        draw(f, d, 1120, 450);
+        return glyphVector(f, W, findPitchBoxes(f, W, H)!.left.digits[0]!);
+      };
+      // Each of 0 and 8 holds both samples: the glyph cannot choose.
+      const both = [sample("0"), sample("8")];
+      const same = { yellow: { ...YELLOW, "0": both, "8": both } };
+      for (const [text, want] of [
+        ["-80", -80],
+        ["-8", -8],
+        ["-10", -10],
+      ] as const) {
+        const f = frame();
+        draw(f, text, 840, 450);
+        draw(f, text, 1120, 450);
+        expect(readHudPitch(f, W, H, same)?.boxDeg).toBe(want);
+      }
+    } finally {
+      FONT["0"] = plain;
+    }
   });
 
   it("says not sure for a digit it has no glyph for", () => {
