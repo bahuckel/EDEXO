@@ -362,6 +362,20 @@ describe("HUD pitch reader", () => {
     expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY, { w: W, h: 1800 })?.reading.boxDeg).toBe(-10);
   });
 
+  it("does not take a corner of a box's outline, in the digits' colour, for a digit", () => {
+    const f = dark();
+    boxed(f, "-10", 840, 480);
+    boxed(f, "-10", 1120, 480);
+    // His 0332: the right box's top line and right side as one grey piece, 40 x 21, over the 0 and ending above the
+    // digits' bottom (so it does not hold them).
+    const top = Math.round(480 - (7 * S) / 2);
+    for (let x = 1145; x <= 1184; x++) for (const y of [top - 3, top - 2]) f.set([...GREY, 255], (y * W + x) * 4);
+    for (let y = top - 3; y <= top + 17; y++) for (const x of [1183, 1184]) f.set([...GREY, 255], (y * W + x) * 4);
+    const pair = findPitchBoxes(f, W, H, { w: W, h: H }, lookFromColour(GREY), true);
+    expect([pair?.left.digits.length, pair?.right.digits.length]).toEqual([2, 2]);
+    expect(readHudPitchAnyColour(f, W, H, GLYPHS, ANY)?.reading.boxDeg).toBe(-10);
+  });
+
   it("does not take ground near the digits' colour beside a box for a digit lost", () => {
     const f = dark();
     boxed(f, "10", 840, 480);

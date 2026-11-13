@@ -18,6 +18,7 @@
  * learned from them.
  */
 import { findingLook, hueLook, lookFromColour, MAX_TEXT_SHARE, sameColour, strokeColour, type Rgb, type TextLook } from "./hudTextLook.js";
+import { slashDigit, strokeDigit } from "./hudPitchRoundDigits.js";
 
 export interface PitchReading {
   /** Degrees, the fraction from the ladder when its rungs were found (else the box's whole degrees). */
@@ -653,7 +654,9 @@ function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: 
   if (!band && marked > (rx1 - rx0) * (ry1 - ry0) * MAX_TEXT_SHARE) return null;
   const minH = Math.max(5, sh * 0.007);
   const maxH = sh * 0.03;
-  const raw = splitJoined(components(mask, w, rx0, ry0, rx1, ry1), mask, w, minH, maxH);
+  // An outline's corner goes before any piece is split: split, its parts pass for a digit and a minus (his 0332).
+  const pieces = components(mask, w, rx0, ry0, rx1, ry1).filter((c) => !outlineCorner(mask, w, c));
+  const raw = splitJoined(pieces, mask, w, minH, maxH);
   const sized = joinStacked(raw, sh).filter((c) => {
     const ch = c.y1 - c.y0 + 1;
     // At full size the box's own straight edges are as bright as its digits: a digit is never that thin, nor that wide.
@@ -721,6 +724,70 @@ function lookBoxes(rgba: Rgba, w: number, h: number, screen: FrameScreen, look: 
     return { digits, minus: hasMinus(rgba, w, left, top, bottom, style.ink, right < w / 2), x: (left + right) / 2, y: (top + bottom) / 2, dh, frame: null };
   });
   return found;
+}
+
+/**
+ * A corner of a box's outline, not a digit: a run along its top or bottom row, a side down one end, the other edge row
+ * short (his 0332, a faint green theme: the right box's top line and right side, 33 x 16, digit-sized, joined its
+ * "-19" and the box read nothing). A closed outline (both edge rows long) is splitJoined's. Wider than tall, so a 7's
+ * top bar is not one.
+ */
+function outlineCorner(mask: Uint8Array, w: number, c: Rect): boolean {
+  const cw = c.x1 - c.x0 + 1;
+  const ch = c.y1 - c.y0 + 1;
+  if (cw <= ch || ch < 5) return false;
+  const side = Math.max(2, Math.round(cw * 0.15));
+  const inked = (y: number) => {
+    let n = 0;
+    for (let x = c.x0; x <= c.x1; x++) if (mask[y * w + x]) n++;
+    return n;
+  };
+  const sideRows = (xa: number, xb: number) => {
+    let n = 0;
+    for (let y = c.y0; y <= c.y1; y++)
+      for (let x = xa; x <= xb; x++)
+        if (mask[y * w + x]) {
+          n++;
+          break;
+        }
+    return n;
+  };
+  for (const [edge, other] of [
+    [c.y0, c.y1],
+    [c.y1, c.y0],
+  ] as const) {
+    if (inked(edge) < cw * 0.8 || inked(other) >= cw * 0.5) continue;
+    if (sideRows(c.x0, c.x0 + side - 1) < ch * 0.8 && sideRows(c.x1 - side + 1, c.x1) < ch * 0.8) continue;
+    // Its own pixels only (the box's digits stand inside its rectangle): a line along one edge and down one side, not
+    // two digits joined along their bottoms ("22") nor a tilted box with its digits joined on.
+    let seed = -1;
+    for (let x = c.x0; x <= c.x1 && seed < 0; x++) if (mask[edge * w + x]) seed = edge * w + x;
+    const budget = (cw + ch) * 3.5;
+    const seen = new Uint8Array(cw * ch);
+    const stack = [seed];
+    seen[(edge - c.y0) * cw + (seed - edge * w - c.x0)] = 1;
+    let n = 0;
+    while (stack.length && n <= budget) {
+      const j = stack.pop()!;
+      n++;
+      const jx = j % w;
+      const jy = (j - jx) / w;
+      for (const [nx, ny] of [
+        [jx - 1, jy],
+        [jx + 1, jy],
+        [jx, jy - 1],
+        [jx, jy + 1],
+      ] as const) {
+        if (nx < c.x0 || nx > c.x1 || ny < c.y0 || ny > c.y1) continue;
+        const k = (ny - c.y0) * cw + (nx - c.x0);
+        if (seen[k] || !mask[ny * w + nx]) continue;
+        seen[k] = 1;
+        stack.push(ny * w + nx);
+      }
+    }
+    if (n <= budget) return true;
+  }
+  return false;
 }
 
 /**
@@ -868,123 +935,6 @@ function pitchPair(boxes: PitchBox[], w: number, h: number, screen: FrameScreen)
       }
     }
   return best;
-}
-
-/**
- * Which of 6, 8 and 9 a digit is by its strokes, for two of them its glyph cannot tell apart (2026-11-13: 49 of 742
- * labelled shots were not sure only for that; a glow fills a 6's gap or a 9's). Each row's brightest pixel (raw: a
- * theme's ink saturates in the glow) in the digit's right third and in its left third: a 6's right stroke dips in its
- * upper part, a 9's left stroke in its lower part, an 8's run full on both sides. Dip below 0.90 of the stroke's own
- * other part, full above 0.985 (measured on the labelled shots read right); between, or anything else, null. 0 is left
- * out: this font's 0 is not hollow in its middle either. On the 49: 28 right, 0 wrong, 21 still not sure.
- */
-function strokeDigit(rgba: Rgba, w: number, c: Rect): "6" | "8" | "9" | null {
-  const cw = c.x1 - c.x0 + 1;
-  const ch = c.y1 - c.y0 + 1;
-  const profile = (fx0: number, fx1: number) => {
-    const out: number[] = [];
-    for (let y = c.y0; y <= c.y1; y++) {
-      let m = 0;
-      for (let x = Math.round(c.x0 + fx0 * cw); x <= Math.round(c.x0 + fx1 * cw); x++) {
-        const i = (y * w + x) * 4;
-        m = Math.max(m, rgba[i]!, rgba[i + 1]!, rgba[i + 2]!);
-      }
-      out.push(m);
-    }
-    return out;
-  };
-  const part = (p: number[], f0: number, f1: number) => p.slice(Math.round(f0 * (ch - 1)), Math.round(f1 * (ch - 1)) + 1);
-  const median = (v: number[]) => [...v].sort((a, b) => a - b)[v.length >> 1]!;
-  const right = profile(0.65, 1);
-  const left = profile(0, 0.35);
-  const state = (v: number) => (v <= 0.9 ? "dip" : v >= 0.985 ? "full" : null);
-  const upperRight = state(Math.min(...part(right, 0.22, 0.45)) / Math.max(1, median(part(right, 0.55, 0.85))));
-  const lowerLeft = state(Math.min(...part(left, 0.55, 0.78)) / Math.max(1, median(part(left, 0.15, 0.45))));
-  if (upperRight === "dip" && lowerLeft === "full") return "6";
-  if (upperRight === "full" && lowerLeft === "dip") return "9";
-  if (upperRight === "full" && lowerLeft === "full") return "8";
-  return null;
-}
-
-/**
- * 0 or 8 by the stroke across the middle, for the two when their glyphs score about the same (2026-11-13: 10 labelled
- * shots not sure for that; the glow fills an 8's two holes and this font's 0 is slashed, upper right to lower left).
- * Read in the box's channel of widest spread (a glowing theme saturates the others), scaled to its own p10..p90:
- * - slope: each inner column's brightest row in the middle rows, fitted: the slash falls to the left (about -0.7), the
- *   8's bar runs flat (about 0);
- * - diag: the slash lights the upper-right and lower-left quarters of the hollow, the holes stay dark in the other two;
- *   an 8's four quarters alike;
- * - bar: the middle row near both sides, ink on an 8 (its bar meets the outline), hollow on a 0.
- * A 0 must show all three, an 8 too; else null. Measured on 433 labelled 0s and 8s: every one on the wrong side of at
- * least one. A 9 shows an 8's three as well (its middle bar), so readBox takes an 8 only with the strokes' 8 beside it;
- * no labelled 6 or 9 shows a 0's. Labelled shots 665 -> 675 right, theme bench 3,237 -> 3,305 right, 0 wrong.
- */
-function slashDigit(rgba: Rgba, w: number, c: Rect): "0" | "8" | null {
-  const cw = c.x1 - c.x0 + 1;
-  const ch = c.y1 - c.y0 + 1;
-  if (cw < 6 || ch < 9) return null;
-  let channel = 0;
-  let lo = 0;
-  let spread = -1;
-  const v = new Array<number>(cw * ch);
-  for (let k = 0; k < 3; k++) {
-    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) v[y * cw + x] = rgba[((c.y0 + y) * w + c.x0 + x) * 4 + k]!;
-    v.sort((a, b) => a - b);
-    const p10 = v[Math.floor(v.length * 0.1)]!;
-    const p90 = v[Math.floor(v.length * 0.9)]!;
-    if (p90 - p10 > spread) {
-      spread = p90 - p10;
-      channel = k;
-      lo = p10;
-    }
-  }
-  if (spread < 16) return null;
-  const px = (x: number, y: number) => rgba[(y * w + x) * 4 + channel]!;
-  const at = (fx: number, fy: number) => {
-    const x = c.x0 + fx * (cw - 1);
-    const y = c.y0 + fy * (ch - 1);
-    const xi = Math.floor(x);
-    const yi = Math.floor(y);
-    const ax = x - xi;
-    const ay = y - yi;
-    return (
-      (px(xi, yi) * (1 - ax) + px(xi + 1, yi) * ax) * (1 - ay) + (px(xi, yi + 1) * (1 - ax) + px(xi + 1, yi + 1) * ax) * ay
-    );
-  };
-  const spot = (fx: number, fy: number) => {
-    let s = 0;
-    for (const dx of [-0.05, 0, 0.05]) for (const dy of [-0.03, 0, 0.03]) s += at(fx + dx, fy + dy);
-    return (s / 9 - lo) / spread;
-  };
-  const diag = spot(0.62, 0.32) + spot(0.38, 0.68) - spot(0.38, 0.32) - spot(0.62, 0.68);
-  const bar = (spot(0.3, 0.5) + spot(0.7, 0.5)) / 2;
-  let n = 0;
-  let sx = 0;
-  let sy = 0;
-  let sxy = 0;
-  let sxx = 0;
-  for (let x = Math.round(c.x0 + 0.28 * cw); x <= Math.round(c.x0 + 0.72 * cw) - 1; x++) {
-    let best = -1;
-    let row = 0;
-    for (let y = Math.round(c.y0 + 0.22 * ch); y <= Math.round(c.y0 + 0.78 * ch) - 1; y++)
-      if (px(x, y) > best) {
-        best = px(x, y);
-        row = y;
-      }
-    const fx = (x - c.x0) / cw;
-    const fy = (row - c.y0) / ch;
-    n++;
-    sx += fx;
-    sy += fy;
-    sxy += fx * fy;
-    sxx += fx * fx;
-  }
-  const den = n * sxx - sx * sx;
-  if (n < 3 || den <= 0) return null;
-  const slope = (n * sxy - sx * sy) / den;
-  if (slope <= -0.4 && diag >= 0.45 && bar <= 0.92) return "0";
-  if (slope >= -0.25 && diag <= 0.4 && bar >= 0.95) return "8";
-  return null;
 }
 
 /** A box's number, or null when a digit is not sure. */
@@ -1184,10 +1134,11 @@ export function readHudPitchAnyColour(
     (theme bench 2026-11-13: his 1116 "-74", rolled 8 degrees, read 74 in nine themes; upright, -74 in all). Unread,
     the roll comes from the ladder.
   */
-  // A tilted read with its minus seen needs no check (and the check can lose a digit: 1043 "-24" in a gold theme read
-  // 4 upright). Unread, only on the frames that search for colours or know them (the capture's others take the game's
-  // look only).
-  const tilted = found && Math.abs(found.reading.rollDeg) >= 3 && found.reading.boxDeg >= 0;
+  // A tilted read with its minus seen is checked too, but stands when the upright read fails (that can lose a digit:
+  // 1043 "-24" in a gold theme read 4 upright); tilted, a 9's gap fills with glow and reads 8 in both boxes (his 1117
+  // "-69", saved only by its 6 not reading). Unread, only on the frames that search for colours or know them (the
+  // capture's others take the game's look only).
+  const tilted = found && Math.abs(found.reading.rollDeg) >= 3;
   const roll = found ? (tilted ? found.reading.rollDeg : null) : discover || known ? ladderRoll(rgba, w, h, screen) : null;
   if (roll == null) return found;
   // Turned pixel for pixel first, then blended: each reads shots the other does not (1207 the first, 0775 the second).
@@ -1198,6 +1149,7 @@ export function readHudPitchAnyColour(
   }
   // A tilted read without its minus, not read upright, is not sure (his 1116 in a dark purple theme: -74 read 74); read
   // both ways, they must agree.
+  if (!again && found && found.reading.boxDeg < 0) return found;
   if (!again || (found && found.reading.boxDeg !== again.reading.boxDeg)) return null;
   const a = (roll * Math.PI) / 180;
   const dx = again.reading.centre.x - w / 2;
