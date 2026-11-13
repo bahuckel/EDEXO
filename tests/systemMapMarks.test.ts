@@ -117,6 +117,46 @@ describe("system map marks", () => {
     expect(all.find((n) => n.youAreHere)?.bodyId).toBe(17);
   });
 
+  it("gives the exo value mark only to a body with biological signals, never to one predicted from its conditions", () => {
+    // Owner, 2026-11-13: with notable bodies shown, a landable body with no signals came out "Exo +" when opened.
+    const s = store();
+    s.apply(
+      j({
+        event: "Scan",
+        ScanType: "Detailed",
+        BodyName: `${SYS} A 9`,
+        BodyID: 18,
+        Parents: [{ Star: 1 }, { Null: 0 }],
+        StarSystem: SYS,
+        SystemAddress: ADDR,
+        PlanetClass: "Icy body",
+        AtmosphereType: "Argon",
+        Atmosphere: "thin argon atmosphere",
+        SurfaceGravity: 0.9,
+        SurfaceTemperature: 60,
+        SurfacePressure: 300,
+        Landable: true,
+        DistanceFromArrivalLS: 900,
+        WasDiscovered: true,
+        WasMapped: false,
+        WasFootfalled: false,
+      }),
+    );
+    // Any priced candidate earns the mark, so only the signals can tell the two apart.
+    s.exoMapTierPlusMinCr = 1;
+    s.exoMapTierPlusPlusMinCr = 1e15;
+    const map = buildSnapshot(s, null, "", "127.0.0.1", 0, [], 1).systemMap!;
+    const all = nodes(map.tree);
+    expect(map.detailsByBodyId["18"]!.exoMatchSummaries.length).toBeGreaterThan(0);
+    expect(all.find((n) => n.bodyId === 17)?.exoValueTier).toBe(1);
+    expect(map.detailsByBodyId["17"]!.exoValueTier).toBe(1);
+    expect(all.find((n) => n.bodyId === 18)?.exoValueTier).toBe(0);
+    expect(map.detailsByBodyId["18"]!.exoValueTier).toBe(0);
+    // Nor the popup's top single-species credits.
+    expect(map.detailsByBodyId["17"]!.maxExoHeuristicCredits).toBeGreaterThan(0);
+    expect(map.detailsByBodyId["18"]!.maxExoHeuristicCredits).toBe(0);
+  });
+
   it("counts the star's belt clusters and a body's biological signals", () => {
     const all = nodes(buildSnapshot(store(), null, "", "127.0.0.1", 0, [], 1).systemMap!.tree);
     expect(all.find((n) => n.bodyId === 1)?.beltClusters).toBe(1);

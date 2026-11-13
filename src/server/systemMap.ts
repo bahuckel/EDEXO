@@ -511,11 +511,12 @@ export function buildSystemMapSnapshot(
      */
     const matchRun = tabRuns?.get(bk) ?? exoMatchRun(store, db, r, spatialCatalogue);
     const maxExo = maxExoHeuristicPair(store, prices, r, matchRun);
-    const exoTier = exoValueTierFromHeuristic(
-      maxExo.tierValue,
-      store.exoMapTierPlusMinCr,
-      store.exoMapTierPlusPlusMinCr,
-    );
+    // The + / ++ mark and the popup's top-species credits say there is life worth the trip: only on journal evidence,
+    // as the bio mark (a landable body with no signals came out "Exo +" from what its conditions suit; owner,
+    // 2026-11-13).
+    const exoTier = hasExo
+      ? exoValueTierFromHeuristic(maxExo.tierValue, store.exoMapTierPlusMinCr, store.exoMapTierPlusPlusMinCr)
+      : 0;
     const parentResolved = orbitChild.get(r.bodyId);
     const parentBodyId = parentResolved ?? directParentBodyId(r.parents);
     const parentStarIds = allStarParentIds(r.parents);
@@ -590,7 +591,7 @@ export function buildSystemMapSnapshot(
       estimatedSurfaceTempK: est != null ? { minK: est.tMin, maxK: est.tMax, midK: est.tMid } : null,
       surfaceTemperatureRangeK: estimateSurfaceTemperatureRange(r, byId, arrivalStarRecord),
       exoMatchSummaries: exoMatchSummaries(matchRun),
-      maxExoHeuristicCredits: maxExo.displayMax,
+      maxExoHeuristicCredits: hasExo ? maxExo.displayMax : 0,
       exoValueTier: exoTier,
       exoPayoutRange: buildExoPayoutRangeForRecord(store, prices, r, matchRun),
       parentBodyId,
