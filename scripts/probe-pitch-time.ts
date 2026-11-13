@@ -1,6 +1,7 @@
 /**
  * The pitch reader's time a frame, as the capture reads it: the middle 40 % of each shot, the screen's own size given
- * (pitchCapture.ts), colours searched (`discover`). Three passes after a warm-up; prints ms a read and how many read.
+ * (pitchCapture.ts), colours searched (`discover`). Three passes after a warm-up; prints ms a read, how many read and
+ * the slowest frame (its best pass).
  * Compare two versions of the reader on the same shots (git stash the other one). Read-only.
  *
  *   npx tsx scripts/probe-pitch-time.ts 0754 0759 0775 … [--no-discover]
@@ -51,5 +52,15 @@ const read = (f: (typeof frames)[number]) =>
 for (const f of frames.slice(0, 3)) read(f);
 const t = performance.now();
 let ok = 0;
-for (let pass = 0; pass < 3; pass++) for (const f of frames) if (read(f)) ok++;
-console.log(`${((performance.now() - t) / (frames.length * 3)).toFixed(1)} ms a read, ${ok / 3} of ${frames.length} read`);
+// The slowest frame too (the capture reads every 250 ms): each frame's best of the three passes, the worst of those.
+const best = frames.map(() => Infinity);
+for (let pass = 0; pass < 3; pass++)
+  frames.forEach((f, i) => {
+    const t0 = performance.now();
+    if (read(f)) ok++;
+    best[i] = Math.min(best[i]!, performance.now() - t0);
+  });
+const worst = best.indexOf(Math.max(...best));
+console.log(
+  `${((performance.now() - t) / (frames.length * 3)).toFixed(1)} ms a read, ${ok / 3} of ${frames.length} read; slowest ${best[worst]!.toFixed(0)} ms (${args.filter((a) => !a.startsWith("--"))[worst]})`,
+);
