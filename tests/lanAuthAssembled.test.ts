@@ -94,9 +94,12 @@ describe("a request relayed by a proxy on this PC", () => {
     expect((await request(port, "GET", "/api/status")).status).toBe(200);
     for (const h of ["X-Forwarded-For", "CF-Connecting-IP", "Forwarded", "X-Real-IP"]) {
       const via = { [h]: h === "Forwarded" ? "for=203.0.113.9" : "203.0.113.9" };
-      expect([h, (await request(port, "GET", "/api/status", via)).status]).toEqual([h, 401]);
+      // Refused outright, before the key is asked for (owner 2026-11-13: never through a tunnel; was 401).
+      expect([h, (await request(port, "GET", "/api/status", via)).status]).toEqual([h, 403]);
       const keyed = { ...via, [LAN_KEY_HEADER]: KEY, "Content-Type": "application/json" };
       expect([h, (await request(port, "POST", "/api/launcher/lan-access", keyed)).status]).toEqual([h, 403]);
+      // Not even with the key (owner 2026-11-13: never through a tunnel); it was served before.
+      expect([h, (await request(port, "GET", "/api/status", keyed)).status]).toEqual([h, 403]);
     }
   });
 
@@ -112,6 +115,6 @@ describe("a request relayed by a proxy on this PC", () => {
       ws.once("unexpected-response", (_req, res) => resolve(res.statusCode ?? 0));
       ws.on("error", () => resolve(0));
     });
-    expect(relayed).toBe(401);
+    expect(relayed).toBe(403); // refused as relayed, before the key (was 401)
   });
 });

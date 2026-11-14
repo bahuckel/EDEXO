@@ -17,6 +17,21 @@ afterEach(async () => {
   for (const c of closers.splice(0)) await c();
 });
 
+describe("never through a proxy or tunnel", () => {
+  // Owner 2026-11-13: EDEXO is not to be reached through a tunnel (the Cloudflare tunnel service on this PC connects
+  // over loopback and names the real client in a header).
+  it("refuses a request a proxy relayed (the WebSocket handshake goes through the same check) and serves it without the header", async () => {
+    const port = await start();
+    const host = `127.0.0.1:${port}`;
+    for (const h of ["cf-connecting-ip", "x-forwarded-for", "forwarded", "x-real-ip", "true-client-ip"]) {
+      const r = await request(port, "GET", "/api/status", { Host: host, [h]: h === "forwarded" ? "for=203.0.113.9" : "203.0.113.9" });
+      expect(r.status, h).toBe(403);
+    }
+    expect((await request(port, "GET", "/api/status", { Host: host })).status).toBe(200);
+    expect(requestOriginIsAllowed({ headers: { host, "cf-connecting-ip": "203.0.113.9" }, socket: { remoteAddress: "127.0.0.1" } } as never, () => false, { checkOrigin: false })).toBe(false);
+  });
+});
+
 async function start() {
   const { server, listening } = createHttpServer({
     port: 0,

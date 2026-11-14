@@ -61,7 +61,12 @@ export function requestIsFromThisPc(req: {
   headers?: Record<string, string | string[] | undefined>;
 }): boolean {
   if (!isLoopbackAddress(req.socket?.remoteAddress)) return false;
-  return !PROXY_HEADERS.some((h) => req.headers?.[h] !== undefined);
+  return !requestCameThroughProxy(req);
+}
+
+/** A request a proxy or tunnel relayed: it names the real client in a header. */
+export function requestCameThroughProxy(req: { headers?: Record<string, string | string[] | undefined> }): boolean {
+  return PROXY_HEADERS.some((h) => req.headers?.[h] !== undefined);
 }
 
 export function parseCookieHeader(raw: string | undefined | null): Record<string, string> {
@@ -227,6 +232,11 @@ export function requestOriginIsAllowed(
   allowedHost: (hostName: string) => boolean,
   opts: { checkOrigin: boolean },
 ): boolean {
+  /*
+    Never through a proxy or tunnel (owner 2026-11-13: EDEXO is not to be reached that way, the Cloudflare tunnel service
+    on this PC included). Before, such a request only counted as another device's and passed with the access key.
+  */
+  if (requestCameThroughProxy(req)) return false;
   const ours = (name: string | null) => name !== null && (isLoopbackHostName(name) || allowedHost(name));
   const host = req.headers.host ? hostNameOf(req.headers.host) : null;
   if (req.headers.host && requestIsFromThisPc(req) && !ours(host)) return false;
