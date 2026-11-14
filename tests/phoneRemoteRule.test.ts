@@ -2,7 +2,9 @@
  * The phone as a remote (owner 2026-11-07): "everything so alt-tabbing is not required, including opening new tabs,
  * but not browser and nothing that can be considered destructive". A paired phone may drive the app; it may not delete
  * or restore anything, open a browser or a URL on the PC, open Explorer windows, install an update or change LAN
- * access. Those routes carry `localOnly` (lanAuth.ts); this reads the route files so a new one cannot slip by.
+ * access. Narrowed 2026-11-13 (owner): the phone is a window or a HUD; nothing it does reaches the PC itself (the HUD's
+ * windows, the launcher's open mode, a test notification). Those routes carry `localOnly` (lanAuth.ts); this reads the
+ * route files so a new one cannot slip by.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -42,6 +44,15 @@ const PC_ONLY = [
   "/api/hud-target-distance",
   // The game's AppConfigLocal.xml, rewritten or deleted (review 2026-11-10 C3).
   "/api/scan-route/netlog",
+  // The PC's own screen and launcher, and a Windows notification on it (owner 2026-11-13).
+  "/api/hud/overlay/open",
+  "/api/hud/overlay/toggle",
+  "/api/hud/overlay/set",
+  "/api/hud/overlay/close",
+  "/api/hud/layout",
+  "/api/hud/visibility",
+  "/api/launcher/open-mode",
+  "/api/notices/test",
 ];
 
 describe("the phone as a remote", () => {
@@ -58,8 +69,8 @@ describe("the phone as a remote", () => {
     }
   });
 
-  it("still drives the HUD, its overlays and the app's views", () => {
-    for (const p of ["/api/hud/overlay/open", "/api/hud/visibility", "/api/hud/layout", "/api/ui/view-system", "/api/bookmarks"])
+  it("still uses the app's views and starts a route it flies", () => {
+    for (const p of ["/api/ui/view-system", "/api/bookmarks", "/api/spansh-route/fly", "/api/neutron/live"])
       expect(routes.some((r) => r.path === p && r.method === "post" && !r.pcOnly), p).toBe(true);
   });
 });

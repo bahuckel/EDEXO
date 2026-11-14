@@ -75,7 +75,8 @@ function playRecordChime(): void {
   }
 }
 
-function isThisPc(): boolean {
+/** The app opened on the PC it runs on (not a paired phone or tablet). */
+export function isThisPc(): boolean {
   const h = window.location.hostname;
   return h === "127.0.0.1" || h === "localhost" || h === "[::1]" || h === "::1";
 }

@@ -23,6 +23,7 @@ import { AFM_REFILLS, INJECTIONS } from "@shared/jumponium";
 import { fmtPct } from "@shared/format";
 import { DraftNumber } from "./DraftNumber";
 import { CustomRulesEditor } from "./CustomRulesEditor";
+import { isThisPc } from "../noticesClient";
 import { postSetting } from "./postSetting";
 import { sendJson } from "../http";
 
@@ -497,26 +498,29 @@ export function NotifyPanel() {
         ) : null}
       </NotifySection>
 
-      {/* Review F-5.10: see (and hear, with the chime on) what a find looks like, without waiting for one. */}
-      <div className="options-oneline options-notify-test">
-        <button
-          type="button"
-          className="btn secondary ui-btn ui-btn--secondary ui-btn--md"
-          disabled={busy}
-          onClick={() => {
-            setMsg(null);
-            void postSetting("/api/notices/test", {}).then((r) => {
-              setMsg(r.ok ? null : (r.error ?? "Could not send the test notice."));
-              setTestSent(r.ok);
-            });
-          }}
-        >
-          Send a test notice
-        </button>
-        {testSent ? (
-          <span className="dim tiny">Sent: look at the mail icon in the top bar{p.chime ? " (the chime plays)" : ""}.</span>
-        ) : null}
+      {/* Review F-5.10: see (and hear, with the chime on) what a find looks like, without waiting for one. The PC's
+          only (owner 2026-11-13): it can show a Windows notification there. */}
+      {isThisPc() ? (
+        <div className="options-oneline options-notify-test">
+          <button
+            type="button"
+            className="btn secondary ui-btn ui-btn--secondary ui-btn--md"
+            disabled={busy}
+            onClick={() => {
+              setMsg(null);
+              void postSetting("/api/notices/test", {}).then((r) => {
+                setMsg(r.ok ? null : (r.error ?? "Could not send the test notice."));
+                setTestSent(r.ok);
+              });
+            }}
+          >
+            Send a test notice
+          </button>
+          {testSent ? (
+            <span className="dim tiny">Sent: look at the mail icon in the top bar{p.chime ? " (the chime plays)" : ""}.</span>
+          ) : null}
       </div>
+      ) : null}
       {msg ? <p className="options-error">{msg}</p> : null}
     </FoldPanel>
   );

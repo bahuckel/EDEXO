@@ -74,16 +74,29 @@ describe("the phone rule, read off the table", () => {
       expect([k, ROUTE_REACH[k]]).toEqual([k, "pc"]);
   });
 
-  it("lets a paired phone drive the HUD, its overlays, the views and a route", () => {
+  it("lets a paired phone use the app's views and start a route it flies", () => {
     for (const k of [
-      "POST /api/hud/overlay/open",
-      "POST /api/hud/visibility",
-      "POST /api/hud/layout",
       "POST /api/ui/view-system",
       "POST /api/bookmarks",
       "POST /api/spansh-route/fly",
+      "POST /api/neutron/live",
       "PATCH /api/boxels/:id",
     ])
       expect([k, ROUTE_REACH[k]]).toEqual([k, "lan"]);
+  });
+
+  it("keeps the PC's own screen and settings from a phone: the HUD's windows, the launcher's open mode, a test notification", () => {
+    // Owner 2026-11-13: the phone is a window or a HUD, nothing it does reaches the PC itself.
+    for (const k of [
+      "POST /api/hud/overlay/open",
+      "POST /api/hud/overlay/toggle",
+      "POST /api/hud/overlay/set",
+      "POST /api/hud/overlay/close",
+      "POST /api/hud/visibility",
+      "POST /api/hud/layout",
+      "POST /api/launcher/open-mode",
+      "POST /api/notices/test",
+    ])
+      expect([k, ROUTE_REACH[k]]).toEqual([k, "pc"]);
   });
 });

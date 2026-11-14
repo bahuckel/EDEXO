@@ -2,7 +2,9 @@
   Who may call each route (plan 1.1; enforced by routeAccess.ts). `pc`: only the PC running the app (the route gets
   `localOnly`). `lan`: any paired device as well, which the phone rule allows (owner 2026-11-07: the phone drives the
   app, but deletes nothing, restores nothing, opens no browser, URL or folder on the PC, installs no update and changes
-  no LAN access). A route missing here is closed to other devices and fails tests/routeReach.test.ts.
+  no LAN access; narrowed 2026-11-13: the phone is a window or a HUD, nothing it does reaches the PC itself — the HUD's
+  windows, the launcher's open mode and the test notification are the PC's; starting a route it flies stays, though
+  that puts the next system on the PC's clipboard). A route missing here is closed to other devices and fails tests/routeReach.test.ts.
 
   Keys are `METHOD path` as registered. Grouped by the file that registers them.
 */
@@ -158,7 +160,7 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "GET /api/encyclopedia-exomastery/:genusDir/:speciesEntryId": "lan",
   // routes/launcherRoutes.ts
   "GET /api/launcher/open-mode": "lan",
-  "POST /api/launcher/open-mode": "lan",
+  "POST /api/launcher/open-mode": "pc",  // where the PC's launcher opens the app (owner 2026-11-13: phone is a window)
   "POST /api/launcher/lan-access": "pc",
   "GET /api/commanders": "lan",
   "POST /api/commanders/switch": "pc",
@@ -198,7 +200,7 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "POST /api/settings/notify": "lan",
   "POST /api/notices/read": "lan",
   "POST /api/notices/unread": "lan",
-  "POST /api/notices/test": "lan",
+  "POST /api/notices/test": "pc",  // can show a Windows notification on the PC (owner 2026-11-13)
   "POST /api/notices/clear-read": "pc",
   // routes/communityRoutes.ts
   "GET /api/system/spansh-search": "lan",
@@ -229,13 +231,15 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "POST /api/hud-pitch": "pc",
   "POST /api/hud-target-distance": "pc",
   "GET /api/hud/overlay": "lan",
-  "POST /api/hud/overlay/open": "lan",
-  "POST /api/hud/overlay/toggle": "lan",
-  "POST /api/hud/overlay/set": "lan",
-  "POST /api/hud/overlay/close": "lan",
+  // The HUD's windows on the PC's screen: the phone is a window or a HUD, it does not drive the PC (owner 2026-11-13;
+  // was "lan" under the 2026-11-07 rule). The PC's own windows use IPC, not these.
+  "POST /api/hud/overlay/open": "pc",
+  "POST /api/hud/overlay/toggle": "pc",
+  "POST /api/hud/overlay/set": "pc",
+  "POST /api/hud/overlay/close": "pc",
   "GET /api/hud/layout": "lan",
-  "POST /api/hud/layout": "lan",
-  "POST /api/hud/visibility": "lan",
+  "POST /api/hud/layout": "pc",
+  "POST /api/hud/visibility": "pc",
   // routes/backupRoutes.ts
   "GET /api/backup/status": "pc",
   "POST /api/backup/run": "pc",
