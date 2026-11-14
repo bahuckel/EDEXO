@@ -12,7 +12,9 @@ import {
   PRESENCE_FLOOR_PCT,
   demoteBelowPresenceFloor,
 } from "../src/server/snapshot.js";
-import { signalMultipliers, twinGenusRows } from "../src/server/presenceFloors.js";
+import { floorKeptReason, markSampledDespiteUnlikely, signalMultipliers, signalSlots, twinGenusRows } from "../src/server/presenceFloors.js";
+import { collectOwnOrganicLockSpeciesIds } from "../src/server/organicLocks.js";
+import { loadSpeciesDatabase } from "../src/server/snapshot.js";
 import type { BodyExoState, SpeciesDatabase, SpeciesMatch } from "../src/shared/types.js";
 
 const db: SpeciesDatabase = { species: [] };
@@ -146,6 +148,111 @@ describe("the chance floor", () => {
   });
 });
 
+describe("the chance floor, row by row (mutation run 2026-11-14)", () => {
+  // One signal, so the count rule (it keeps a genus per signal) does not hide what the floor itself did.
+  const one = () => body({ biologicalSignals: 1 });
+
+  it("says why each row it left stands there", () => {
+    const ms = [
+      match("a_one", 40),
+      match("a_two", 0.2, { organicAnalysisComplete: true }),
+      match("a_three", 0.2, { approximateMatch: true }),
+      match("a_four", 0.4),
+    ];
+    demoteBelowPresenceFloor(ms, one(), db);
+    expect(shownIds(ms)).toEqual(["a_one", "a_two", "a_three"]);
+    expect(ms.map((m) => floorKeptReason(m)?.why ?? null)).toEqual(["passed", "sampled", "approximate", null]);
+    // Nothing clears: the best of them stays, as "best".
+    const low = [match("a_one", 0.4), match("a_two", 0.6)];
+    demoteBelowPresenceFloor(low, one(), db);
+    expect(shownIds(low)).toEqual(["a_two"]);
+    expect(floorKeptReason(low[1]!)).toEqual({ why: "best", pct: 0.6 });
+  });
+
+  it("keeps a row exactly at the floor on its own merit, not as the one row kept", () => {
+    const ms = [match("a_one", 90), match("a_two", PRESENCE_FLOOR_PCT)];
+    demoteBelowPresenceFloor(ms, one(), db);
+    expect(shownIds(ms)).toEqual(["a_one", "a_two"]);
+    expect(floorKeptReason(ms[1]!)?.why).toBe("passed");
+  });
+
+  it("says what chance the row had and what the floor is", () => {
+    const ms = [match("a_one", 90), match("a_two", 0.4)];
+    demoteBelowPresenceFloor(ms, one(), db);
+    expect(ms[1]!.unlikelyReasons).toEqual([
+      {
+        field: "Chance here",
+        detail: `0.4 % — under the ${PRESENCE_FLOOR_PCT} % this panel shows. Listed as a low-probability find rather than excluded.`,
+      },
+    ]);
+  });
+
+  it("leaves a chance that is not a number alone, and judges only the rows still shown", () => {
+    const odd = [match("a_one", 90), match("a_two", Number.NaN)];
+    demoteBelowPresenceFloor(odd, one(), db);
+    expect(shownIds(odd)).toEqual(["a_one", "a_two"]);
+    expect(floorKeptReason(odd[1]!)).toBeNull();
+    const ms = [match("a_one", 90, { unlikely: true }), match("a_two", 0.4)];
+    demoteBelowPresenceFloor(ms, one(), db);
+    expect(shownIds(ms)).toEqual(["a_two"]);
+  });
+
+  it("keeps a twin moon's genus, its likeliest row, as \"twin\"", () => {
+    const b = body({
+      biologicalSignals: 1,
+      siblingGenusHints: [{ Genus: "$Codex_Ent_Bacterial_Genus_Name;", Genus_Localised: "Bacterium" }],
+    });
+    const ms = [match("fonticulua_campestris", 90), match("bacterium_tela", 0.2), match("bacterium_aurasus", 0.4)];
+    for (const m of ms.slice(1)) m.entry.genusDataDir = "bacterium";
+    ms[1]!.entry.genus = ms[2]!.entry.genus = "Bacterium";
+    demoteBelowPresenceFloor(ms, b, db);
+    expect(shownIds(ms)).toEqual(["fonticulua_campestris", "bacterium_aurasus"]);
+    expect(floorKeptReason(ms[2]!)?.why).toBe("twin");
+  });
+
+  it("brings back one row per genus the signal count still needs, never a second of a genus shown", () => {
+    // Three signals; the list shows two genera, so one more genus comes back (C), not a second Aleoida.
+    const ms = [match("a_one", 90), match("b_one", 50), match("a_two", 0.5), match("c_one", 0.2)];
+    demoteBelowPresenceFloor(ms, body({ biologicalSignals: 3 }), db);
+    expect(shownIds(ms)).toEqual(["a_one", "b_one", "c_one"]);
+    expect(floorKeptReason(ms[3]!)).toEqual({ why: "count", pct: 0.2 });
+    // One signal, or a count that is not a number: no row comes back that way.
+    for (const n of [1, Number.NaN]) {
+      const rows = [match("a_one", 90), match("c_one", 0.2)];
+      demoteBelowPresenceFloor(rows, body({ biologicalSignals: n }), db);
+      expect([n, shownIds(rows)]).toEqual([n, ["a_one"]]);
+    }
+  });
+
+  it("counts every Brain Tree as a signal of its own", () => {
+    expect(signalSlots([match("a_one", 1), match("a_two", 1), match("b_one", 1)])).toBe(2);
+    expect(signalSlots([match("brain-tree_x", 1), match("brain-tree_y", 1), match("a_one", 1)])).toBe(3);
+    const ms = [match("brain-tree_x", 90), match("brain-tree_y", 0.4), match("brain-tree_z", 0.3)];
+    demoteBelowPresenceFloor(ms, body({ biologicalSignals: 3 }), db);
+    expect(shownIds(ms)).toEqual(["brain-tree_x", "brain-tree_y", "brain-tree_z"]);
+  });
+});
+
+describe("a twin moon's genera", () => {
+  const b = { genusHints: null, siblingGenusHints: [{ Genus: "$Codex_Ent_Bacterial_Genus_Name;", Genus_Localised: "Bacterium" }] };
+  const bact = (id: string, pct: number | null) => {
+    const m = match(id, pct);
+    m.entry.genusDataDir = "bacterium";
+    m.entry.genus = "Bacterium";
+    return m;
+  };
+
+  it("keeps the likeliest shown row of each, an unmeasured one first", () => {
+    const ms = [bact("bacterium_tela", 0.2), bact("bacterium_aurasus", 3), bact("bacterium_acies", 1)];
+    expect([...twinGenusRows(ms, b)].map((m) => m.entry.id)).toEqual(["bacterium_aurasus"]);
+    const withNull = [bact("bacterium_tela", 3), bact("bacterium_acies", null)];
+    expect([...twinGenusRows(withNull, b)].map((m) => m.entry.id)).toEqual(["bacterium_acies"]);
+    // Of two equal chances the first stays.
+    const tie = [bact("bacterium_tela", 3), bact("bacterium_acies", 3)];
+    expect([...twinGenusRows(tie, b)].map((m) => m.entry.id)).toEqual(["bacterium_tela"]);
+  });
+});
+
 describe("after a DSS", () => {
   /**
    * Probes name the genera, and the matcher drops every candidate outside them. What is left is no
@@ -241,6 +348,59 @@ describe("after a DSS", () => {
     expect(shownIds(ms)).toEqual(["a_one"]);
   });
 
+  /*
+    Mutation run 2026-11-14 (plan 2.5): the rows above sit at exactly 1 %, which clears the floor anyway, so the
+    exemptions and the reason each kept row carries were never put to the test. These are far under it.
+  */
+  it("keeps the commander's own and the approximate rows far under the floor, and says why each row stayed", () => {
+    const ms = [
+      share("fonticulua_campestris", 97),
+      share("fonticulua_upupam", 0.2, { organicAnalysisComplete: true }),
+      share("fonticulua_fluctus", 0.2, { approximateMatch: true }),
+      share("bacterium_aurasus", 0.6),
+      share("bacterium_tela", 0.4),
+    ];
+    demoteBelowPresenceFloor(ms, withDss(), db);
+    expect(shownIds(ms)).toEqual(["fonticulua_campestris", "fonticulua_upupam", "fonticulua_fluctus", "bacterium_aurasus"]);
+    expect(ms.map((m) => floorKeptReason(m)?.why ?? null)).toEqual(["genusShare", "sampled", "approximate", "genusBest", null]);
+    expect(floorKeptReason(ms[3]!)?.pct).toBe(0.6);
+  });
+
+  it("counts an unmeasured row as its genus's survivor, whatever order the rows came in", () => {
+    // Unmeasured sorts first (no claim is not a weak claim) and is the one row the genus keeps, so both weak rows go.
+    const ms = [share("fonticulua_fluctus", 0.4), share("fonticulua_upupam", 0.6), share("fonticulua_campestris", null)];
+    demoteBelowPresenceFloor(ms, withDss(), db);
+    expect(shownIds(ms)).toEqual(["fonticulua_campestris"]);
+    expect(floorKeptReason(ms[2]!)).toBeNull();
+    // Of two weak rows the better one is kept, from either order.
+    for (const order of [[0.4, 0.6], [0.6, 0.4]]) {
+      const rows = order.map((p, i) => share(`fonticulua_r${i}`, p));
+      demoteBelowPresenceFloor(rows, withDss(), db);
+      expect(rows.filter((m) => !m.unlikely).map((m) => m.genusSharePercent)).toEqual([0.6]);
+    }
+  });
+
+  it("leaves a share that is not a number alone, and judges only the rows still shown", () => {
+    const odd = [share("fonticulua_campestris", 97), share("fonticulua_upupam", Number.NaN)];
+    demoteBelowPresenceFloor(odd, withDss(), db);
+    expect(shownIds(odd)).toEqual(["fonticulua_campestris", "fonticulua_upupam"]);
+    expect(floorKeptReason(odd[1]!)).toBeNull();
+    // A row already behind the fold does not count as the genus's survivor: the weak shown one is still its best.
+    const ms = [share("bacterium_aurasus", 50, { unlikely: true }), share("bacterium_tela", 0.4)];
+    demoteBelowPresenceFloor(ms, withDss("Bacterium"), db);
+    expect(shownIds(ms)).toEqual(["bacterium_tela"]);
+  });
+
+  it("says what share of which genus the row had", () => {
+    const ms = [share("bacterium_aurasus", 99.6), share("bacterium_tela", 0.4)];
+    ms[1]!.entry.genus = "";
+    demoteBelowPresenceFloor(ms, withDss("Bacterium"), db);
+    expect(ms[1]!.unlikelyReasons?.[0]?.detail).toBe(
+      `0.4 % of bacterium here — under the ${GENUS_SHARE_FLOOR_PCT} % this panel shows once the genus is confirmed. ` +
+        "Listed as a low-probability find rather than excluded.",
+    );
+  });
+
   it("still applies the chance floor when the genera are not named", () => {
     const ms = [match("fonticulua_campestris", 97), match("fonticulua_upupam", 0.6)];
     demoteBelowPresenceFloor(ms, body({ genusHints: null }), db);
@@ -313,6 +473,14 @@ describe("signal multipliers", () => {
     expect(0.01 * m.get("anemone")!).toBeCloseTo(1, 6);
   });
 
+  it("shares out only the signals left, never more than the body has", () => {
+    // Two signals: Bacterium fills one, Anemone and Concha share the other in proportion (0.6 and 0.4), not one each.
+    const m = run([row("bacterium_cerbrus", 0.9), row("anemone_prasinum", 0.06), row("concha_renibus", 0.04)], 2);
+    expect(0.9 * m.get("bacterium")!).toBeGreaterThanOrEqual(1);
+    expect(0.06 * m.get("anemone")!).toBeCloseTo(0.6, 6);
+    expect(0.04 * m.get("concha")!).toBeCloseTo(0.4, 6);
+  });
+
   it("leaves the count alone when no genus fills a signal", () => {
     const m = run([row("bacterium_cerbrus", 0.3), row("stratum_paleas", 0.3), row("anemone_prasinum", 0.4)], 2);
     expect([...m.values()]).toEqual([2, 2, 2]);
@@ -335,5 +503,38 @@ describe("signal multipliers", () => {
   it("never lowers a chance below the plain count", () => {
     const m = run([row("bacterium_cerbrus", 1)], 1);
     expect(m.get("bacterium")).toBe(1);
+  });
+});
+
+describe("a species sampled here, behind the unlikely tier", () => {
+  // The function itself (sampledDespiteUnlikely.test.ts covers where the row is then filed); mutation run 2026-11-14.
+  const realDb = loadSpeciesDatabase();
+  const lock = {
+    genusLocalised: "Stratum",
+    genusSymbol: "",
+    speciesLocalised: "Stratum Laminamus",
+    speciesSymbol: "",
+    variantLocalised: "",
+    source: "foot" as const,
+  };
+
+  it("marks a demoted row the commander sampled, and a demoted row the game analysed, but nothing else", () => {
+    const id = collectOwnOrganicLockSpeciesIds([lock], realDb)[0]!;
+    expect(id).toBeTruthy();
+    const ms = [
+      match(id, 0.2, { unlikely: true }),
+      match("stratum_other", 0.2, { unlikely: true }),
+      match("bacterium_x", 50, { unlikely: true, organicAnalysisComplete: true }),
+      match("bacterium_y", 50),
+      match("bacterium_z", 50, { organicAnalysisComplete: true }),
+    ];
+    markSampledDespiteUnlikely(ms, body({ organicGenusLocks: [lock] }), realDb);
+    expect(ms.map((m) => m.sampledHere === true)).toEqual([true, false, true, false, false]);
+  });
+
+  it("marks nothing when nothing was sampled on this body (a twin moon's lock is not this body's)", () => {
+    const ms = [match("bacterium_x", 50, { unlikely: true, organicAnalysisComplete: true })];
+    markSampledDespiteUnlikely(ms, body({ organicGenusLocks: [{ ...lock, fromSibling: true } as never] }), realDb);
+    expect(ms[0]!.sampledHere).toBeUndefined();
   });
 });
