@@ -3,7 +3,7 @@
   "speciesLabel": "Sinuous Tubers Violaceum",
   "genus": "Sinuous Tuber",
   "source": "exomastery_feeder",
-  "generatedAt": "2026-11-15T04:35:55.424Z",
+  "generatedAt": "2026-11-15T20:58:12.040Z",
   "sampleCount": 53,
   "provenance": {
     "inputHash": "747687e39a58aba53c0e925fe4fdfe4a1d4764bf8d7f69337ec082d9716aadf8",
@@ -2455,7 +2455,7 @@
   },
   "parameterImportance": {
     "body.subType": 0.563,
-    "body.isLandable": 0.02,
+    "body.isLandable": 0.021,
     "body.volcanismType": -0.266,
     "body.terraformingState": -0.437,
     "body.rotationalPeriodTidallyLocked": 0.252,

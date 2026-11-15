@@ -17,8 +17,9 @@ of which have endorsed it.
 
 Where this project started. Spansh's Exomastery planning dumps showed that "which species can live on
 this body" is a question data can answer; they were the project's first data and, for its first months,
-its only data. Since 1.4.0 the species profiles are built from every sighting in the EDDN archive (below),
-each with its body's record from Spansh's galaxy dump, and the
+its only data. Since 1.4.0 the species profiles are built from every sighting in the EDDN archive (below)
+and the older Exomastery and EDDN sightings it lacked, each with its body's record from Spansh's galaxy
+dump, and the
 genus chances (`data/exomastery/genus-prior.json`) are counted from the DSS genus lists of the 2.8 million
 bio bodies in Spansh's galaxy dump. (Since October 2026 the predictions are measured against a year of
 EDDN finds, below.) The list of

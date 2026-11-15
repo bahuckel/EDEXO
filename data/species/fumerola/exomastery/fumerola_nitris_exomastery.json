@@ -3,7 +3,7 @@
   "speciesLabel": "Fumerola nitris",
   "genus": "Fumerola",
   "source": "exomastery_feeder",
-  "generatedAt": "2026-11-15T04:34:37.250Z",
+  "generatedAt": "2026-11-15T20:56:55.342Z",
   "sampleCount": 8560,
   "provenance": {
     "inputHash": "915915ab62eba9aa9802b6f3fa7d1a53487da043c6014c1bb92a0fde80e1091c",
@@ -1085,15 +1085,15 @@
   "histograms": {
     "body.distanceToArrival": [
       126,
-      185,
-      595,
+      186,
+      594,
       738,
-      833,
-      883,
-      785,
-      734,
-      593,
-      556,
+      834,
+      882,
+      786,
+      733,
+      595,
+      554,
       465,
       412,
       373,
@@ -1103,9 +1103,9 @@
     ],
     "body.gravity": [
       4564,
-      1423,
+      1421,
       1259,
-      416,
+      418,
       94,
       7,
       0,
@@ -1113,8 +1113,8 @@
       94,
       188,
       199,
-      182,
-      109,
+      181,
+      110,
       14,
       0,
       0
@@ -1122,8 +1122,8 @@
     "body.earthMasses": [
       1271,
       2446,
-      1715,
-      1107,
+      1713,
+      1109,
       639,
       205,
       172,
@@ -1140,13 +1140,13 @@
     "body.radius": [
       47,
       2123,
-      1971,
+      1970,
       1256,
-      836,
+      837,
       368,
       344,
-      294,
-      204,
+      293,
+      205,
       151,
       94,
       75,
@@ -1158,8 +1158,8 @@
     "body.surfaceTemperature": [
       2769,
       1261,
-      2671,
-      1810,
+      2675,
+      1806,
       1,
       4,
       1,
@@ -1175,8 +1175,8 @@
     ],
     "body.surfacePressure": [
       529,
-      777,
-      694,
+      778,
+      693,
       539,
       502,
       471,
@@ -1186,10 +1186,10 @@
       105,
       162,
       154,
-      1093,
-      1148,
-      866,
-      838
+      1094,
+      1147,
+      868,
+      836
     ],
     "body.atmosphereComposition.Argon": [
       0,
@@ -1260,12 +1260,12 @@
       0,
       1,
       81,
-      3770,
-      4699
+      3769,
+      4700
     ],
     "body.materials.Iron": [
-      4893,
-      3582,
+      4894,
+      3581,
       73,
       3,
       0,
@@ -1282,8 +1282,8 @@
       0
     ],
     "body.materials.Nickel": [
-      4893,
-      3582,
+      4894,
+      3581,
       73,
       3,
       0,
@@ -1332,8 +1332,8 @@
       0,
       1,
       81,
-      3770,
-      4699
+      3769,
+      4700
     ],
     "body.materials.Selenium": [
       0,
@@ -1349,9 +1349,9 @@
       0,
       16,
       26,
-      1248,
+      1247,
       1313,
-      1260
+      1261
     ],
     "body.materials.Sulphur": [
       0,
@@ -1368,8 +1368,8 @@
       0,
       1,
       81,
-      3770,
-      4699
+      3769,
+      4700
     ],
     "body.materials.Tin": [
       2013,
@@ -1426,8 +1426,8 @@
       0
     ],
     "body.materials.Zirconium": [
-      935,
-      534,
+      937,
+      532,
       12,
       0,
       0,
@@ -1463,9 +1463,9 @@
     ],
     "body.orbitalPeriod": [
       301,
-      684,
-      6563,
-      1012,
+      683,
+      6559,
+      1017,
       0,
       0,
       0,
@@ -1484,8 +1484,8 @@
       287,
       1805,
       2707,
-      1571,
-      592,
+      1570,
+      593,
       214,
       51,
       3,
@@ -1509,8 +1509,8 @@
       820,
       684,
       651,
-      599,
-      551,
+      598,
+      552,
       352,
       488,
       196
@@ -1566,8 +1566,8 @@
       501,
       544,
       520,
-      550,
-      552
+      549,
+      553
     ],
     "body.atmosphereComposition.Methane": [
       0,
@@ -1589,8 +1589,8 @@
     ],
     "body.materials.Arsenic": [
       98,
-      712,
-      776,
+      713,
+      775,
       11,
       0,
       0,
@@ -1606,8 +1606,8 @@
       0
     ],
     "body.materials.Cadmium": [
-      1965,
-      1562,
+      1966,
+      1561,
       27,
       2,
       0,
@@ -1697,8 +1697,8 @@
     ],
     "body.materials.Germanium": [
       181,
-      1514,
-      1649,
+      1515,
+      1648,
       17,
       0,
       0,
@@ -1714,8 +1714,8 @@
       0
     ],
     "body.materials.Manganese": [
-      2732,
-      1673,
+      2734,
+      1671,
       44,
       1,
       0,
@@ -1768,8 +1768,8 @@
       0
     ],
     "body.materials.Zinc": [
-      2107,
-      1093,
+      2109,
+      1091,
       25,
       0,
       0,
@@ -1786,8 +1786,8 @@
       0
     ],
     "body.materials.Tungsten": [
-      1500,
-      1098,
+      1502,
+      1096,
       20,
       2,
       0,
@@ -1805,8 +1805,8 @@
     ],
     "body.materials.Tellurium": [
       120,
-      721,
-      1135,
+      722,
+      1134,
       38,
       0,
       0,
@@ -2976,20 +2976,20 @@
     "exo.host_star_spectral_primary": 0.327,
     "exo.system_primary_spectral": 0.228,
     "body.distanceToArrival": 0.039,
-    "body.gravity": 0.513,
+    "body.gravity": 0.512,
     "body.earthMasses": 0.302,
     "body.radius": 0.204,
     "body.surfaceTemperature": 0.569,
     "body.surfacePressure": 0.075,
     "body.solidComposition.Metal": 0.946,
-    "body.solidComposition.Rock": 0.923,
-    "body.materials.Carbon": 0.945,
+    "body.solidComposition.Rock": 0.924,
+    "body.materials.Carbon": 0.946,
     "body.materials.Iron": 0.951,
     "body.materials.Nickel": 0.951,
-    "body.materials.Niobium": 0.945,
-    "body.materials.Phosphorus": 0.945,
+    "body.materials.Niobium": 0.946,
+    "body.materials.Phosphorus": 0.946,
     "body.materials.Selenium": 0.68,
-    "body.materials.Sulphur": 0.945,
+    "body.materials.Sulphur": 0.946,
     "body.materials.Tin": 0.955,
     "body.materials.Vanadium": 0.973,
     "body.materials.Yttrium": 0.962,
@@ -3003,8 +3003,8 @@
     "body.meanAnomaly": 0,
     "body.ascendingNode": 0,
     "body.materials.Arsenic": 0.757,
-    "body.materials.Cadmium": 0.941,
-    "body.materials.Chromium": 0.969,
+    "body.materials.Cadmium": 0.942,
+    "body.materials.Chromium": 0.97,
     "body.materials.Molybdenum": 0.953,
     "body.materials.Technetium": 0.955,
     "body.materials.Antimony": 0.791,
@@ -3014,7 +3014,7 @@
     "body.materials.Polonium": 0.949,
     "body.materials.Zinc": 0.971,
     "body.materials.Tungsten": 0.95,
-    "body.materials.Tellurium": 0.798,
+    "body.materials.Tellurium": 0.8,
     "body.materials.Ruthenium": 0.96
   }
 }

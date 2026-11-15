@@ -656,5 +656,3078 @@
     }
    ]
   }
+ },
+ "profileBuild140": {
+  "builtAt": "2026-11-15",
+  "rule": "Owner 2026-11-14 (plan 4.9): in the 1.4.0 profile build one body behind a value (planet class, atmosphere type, volcanism, parent star class, colour) or alone at a numeric range's end (gap to the next body over 10 % of the species' p1-p99 span) is removed from the profile and listed here.",
+  "source": "every confirmed sighting of the EDDN archive (EDGalaxyData) plus the old corpus, with Spansh's body records; docs/perf/outliers_140.py",
+  "species": {
+   "aleoida_aleoida_arcus": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "14199975497179:20",
+      "body": "Preia Phoe WR-I d10-413 C 6 a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.5529e+05 alone (next 6.2073e+05)"
+     },
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "82931877060:51",
+      "body": "HIP 53274 13 f",
+      "kind": "removed from the profile",
+      "field": "colour = Grey (1 of 28,728)"
+     }
+    ]
+   },
+   "aleoida_aleoida_coronamus": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2557619442410:39",
+      "body": "HIP 97950 ABC 2 k",
+      "kind": "removed from the profile",
+      "field": "class = Icy body (1 of 36,854); atmo = Thin Argon-rich (1 of 36,854); surfaceTemperature min 85.761 alone (next 180); gravity max 0.29276 alone (next 0.27114); earthMasses max 0.15504 alone (next 0.022177); radius max 4639.3 alone (next 1899.1)"
+     }
+    ]
+   },
+   "aleoida_aleoida_gravis": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "16434180574907:67",
+      "body": "Graea Hypue HT-P d6-478 11 b",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 196.25 alone (next 195.4)"
+     }
+    ]
+   },
+   "aleoida_aleoida_laminiae": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "10661923483:37",
+      "body": "HR 6265 B 3 c",
+      "kind": "removed from the profile",
+      "field": "colour = Grey (1 of 30,040)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2315180346475:82",
+      "body": "Qeajie HM-D d12-67 B 5 b",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Rocky Magma (1 of 30,040)"
+     }
+    ]
+   },
+   "amphora_amphora_plant": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1385638595483:25",
+      "body": "Pyroifoea CA-X d2-40 C 1",
+      "kind": "removed from the profile",
+      "field": "host = L (1 of 752)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "153184555083:39",
+      "body": "Eocs Aod YF-M d8-4 D 1",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 5.8973e+05 alone (next 5.1773e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1960783188:5",
+      "body": "Chraichoi JR-W e1-0 A 1",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 154.16 alone (next 92.817)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "494634193659:37",
+      "body": "Phrua Flyi WQ-B d14-14 B 1",
+      "kind": "removed from the profile",
+      "field": "atmo = Hot thin Silicate vapour (1 of 752)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "6327077188:4",
+      "body": "Phrae Flyao WT-A e1 A 1",
+      "kind": "removed from the profile",
+      "field": "gravity max 4.4729 alone (next 3.9643)"
+     }
+    ]
+   },
+   "anemone_blatteum_bioluminescent": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "15195435597:1",
+      "body": "34 Persei 1",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 5177.6 alone (next 4636.2)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "24861209157:50",
+      "body": "Sigma Orionis E 3",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 7.4882e+06 alone (next 5.8068e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "57187239396:20",
+      "body": "Syralia SY-S e3-13 13",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Helium (1 of 5,163)"
+     }
+    ]
+   },
+   "anemone_croceum": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "782306372:65",
+      "body": "Pythaipr CA-A e0 B 10 c",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Water (1 of 407)"
+     }
+    ]
+   },
+   "anemone_luteolum": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "14174668036:18",
+      "body": "Bleae Thua ZJ-A e3 B 6 a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 5.8045e+05 alone (next 4.7102e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "215870295060:29",
+      "body": "Bleethue HW-W e1-50 19 a",
+      "kind": "removed from the profile",
+      "field": "gravity max 1.3185 alone (next 1.2735); semiMajorAxis max 0.082828 alone (next 0.057747)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "782306372:65",
+      "body": "Pythaipr CA-A e0 B 10 c",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Water (1 of 1,514)"
+     }
+    ]
+   },
+   "anemone_prasinum_bioluminescent": {
+    "bodies": 6,
+    "systems": 6,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "128800133782:12",
+      "body": "Dryuae Phyloea BA-A g1919 B 2",
+      "kind": "removed from the profile",
+      "field": "gravity max 12.739 alone (next 11.585)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "178618511:73",
+      "body": "S171 43 B 7 e",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Nitrogen (1 of 1,676)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1974041887:29",
+      "body": "Dryoea Prao AA-A h235 B 1",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 148.28 alone (next 117.89); radius max 23073 alone (next 20803)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2653343:26",
+      "body": "HD 99897 B 3",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Neon-rich (1 of 1,676)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "27623583:48",
+      "body": "HD 228911 D 1 i",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Oxygen (1 of 1,676)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "78508646:20",
+      "body": "Byoomoea BA-A g1 B 7",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Argon (1 of 1,676)"
+     }
+    ]
+   },
+   "anemone_puniceum": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "15596238:18",
+      "body": "Hypua Bliae DL-Y g0 C 1 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Oxygen (1 of 45)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2653343:23",
+      "body": "HD 99897 B 1 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Nitrogen (1 of 45)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "363101391:3",
+      "body": "Flyiedgiae AA-A h43 A 1",
+      "kind": "removed from the profile",
+      "field": "host = W (1 of 45)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "69632151:35",
+      "body": "HIP 139 C 1 a",
+      "kind": "removed from the profile",
+      "field": "volc = Carbon Dioxide Geysers (1 of 45)"
+     }
+    ]
+   },
+   "anemone_roseum_bioluminescent": {
+    "bodies": 7,
+    "systems": 7,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "108739299356:25",
+      "body": "Vaimoea RS-U e2-25 B 11",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Argon (1 of 2,899)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1373652244:15",
+      "body": "Phylucs LW-W e1-0 5",
+      "kind": "removed from the profile",
+      "field": "gravity max 9.3543 alone (next 4.7968)"
+     },
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "151519781:14",
+      "body": "Kappa Cassiopeiae BC 6 a",
+      "kind": "removed from the profile",
+      "field": "host = H (1 of 2,899)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "18511529116:1",
+      "body": "Synuefe JM-V e2-4 1",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 5551.7 alone (next 4922.7)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "18957726301:40",
+      "body": "HD 79624 B 1",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Helium (1 of 2,899)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "279936255:9",
+      "body": "Coetl AA-A h33 ABCDE 1",
+      "kind": "removed from the profile",
+      "field": "host = W (1 of 2,899)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "57640217444:4",
+      "body": "Phrooe Blou IH-U e3-13 B 1",
+      "kind": "removed from the profile",
+      "field": "orbitalEccentricity max 0.85573 alone (next 0.83433)"
+     }
+    ]
+   },
+   "anemone_rubeum_bioluminescent": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1474362976852:61",
+      "body": "Skombuia BL-X e1-343 11 c",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Oxygen (1 of 2,875)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "521102363508:6",
+      "body": "Aemonz YK-P e5-121 A 3",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 24.049 alone (next 20.102)"
+     }
+    ]
+   },
+   "bacterium_bacterium_acies": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "3107509506770:9",
+      "body": "Tau Ceti 4",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 138.48 alone (next 60.966); surfacePressure max 0.078705 alone (next 0.0084574)"
+     }
+    ]
+   },
+   "bacterium_bacterium_alcyoneum": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "159004655755649:41",
+      "body": "NGC 2168 MMS 287 C 4",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Carbon Dioxide Geysers (1 of 187,718)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2009071850442:9",
+      "body": "Praea Euq ZG-J c23-7 1 a",
+      "kind": "removed from the profile",
+      "field": "volc = Rocky Magma (1 of 187,718)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2574396722594:10",
+      "body": "Styailn ZY-Q c18-9 1 d a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Metallic Magma (1 of 187,718)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2821293367:16",
+      "body": "Croomae AA-A h336 8 a",
+      "kind": "removed from the profile",
+      "field": "host = H (1 of 187,718)"
+     },
+     {
+      "src": "old corpus",
+      "key": "422240624035:39",
+      "body": "Pru Bre BJ-T d3-12 3 e",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide (1 of 187,718); surfaceTemperature max 185.65 alone (next 176.67); surfacePressure max 0.042596 alone (next 0.014489)"
+     }
+    ]
+   },
+   "bacterium_bacterium_aurasus": {
+    "bodies": 6,
+    "systems": 6,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2105817435163:9",
+      "body": "Lysoosms YS-U d2-61 5 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Carbon Dioxide Geysers (1 of 330,791)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2559230186322:11",
+      "body": "Praea Euq FZ-I c9-9 6",
+      "kind": "removed from the profile",
+      "field": "class = Water world (1 of 330,791); atmo = Thick Ammonia (1 of 330,791); surfaceTemperature max 442.9 alone (next 399.9); surfacePressure max 14.149 alone (next 0.098692)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "42618230674363:3",
+      "body": "Pheia Auscs GR-N d6-1240 2",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 47248 alone (next 28057)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "622098065017:17",
+      "body": "Prae Drye FM-I b14-0 B 3",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Rocky Magma (1 of 330,791)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "78620132540:34",
+      "body": "20 Ophiuchi 6",
+      "kind": "removed from the profile",
+      "field": "class = Class II gas giant (1 of 330,791); atmo = No atmosphere (1 of 330,791)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "84389466338:10",
+      "body": "NGC 2168 MMS 324 B 3",
+      "kind": "removed from the profile",
+      "field": "volc = Major Water Geysers (1 of 330,791)"
+     }
+    ]
+   },
+   "bacterium_bacterium_bullaris": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "183450324427:42",
+      "body": "Preia Phoea CM-L d8-5 B 1 a",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 0.26672 alone (next 0.26024)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "29239197839505:13",
+      "body": "Plaa Aescs CJ-U b16-13 A 2",
+      "kind": "removed from the profile",
+      "field": "volc = Major Rocky Magma (1 of 74,960)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "319731861395:6",
+      "body": "Pheia Ain BG-X d1-9 6",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 25582 alone (next 22881)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "3932143227594:66",
+      "body": "Geras A 7 h a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 1.0552e+06 alone (next 6.7271e+05)"
+     }
+    ]
+   },
+   "bacterium_bacterium_cerbrus": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "22859065889739:18",
+      "body": "Stuemao QN-K d8-665 B 6",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 7.7012e+05 alone (next 6.9189e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5031856247498:1",
+      "body": "Dhang K'an A",
+      "kind": "removed from the profile",
+      "field": "class = K (Yellow-Orange) Star (1 of 187,135); atmo = No atmosphere (1 of 187,135); surfaceTemperature max 4443 alone (next 499.99)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "582639429049:14",
+      "body": "Ploea Eurk KW-H b51-0 A 6",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 0.3322 alone (next 0.31439)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "669609895273:8",
+      "body": "Synuefai EB-E b42-0 3",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Carbon Dioxide Geysers (1 of 187,135)"
+     }
+    ]
+   },
+   "bacterium_bacterium_informem": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "3691423732138:51",
+      "body": "Preou Thua KA-P c19-13 6 c",
+      "kind": "removed from the profile",
+      "field": "volc = Major Silicate Vapour Geysers (1 of 101,170)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "4102171925235:9",
+      "body": "Byooe Aoscs QI-B d13-119 7 a",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 230.14 alone (next 150.42)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5068465120889:4",
+      "body": "Col 359 Sector EL-X b18-2 B 1 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Ammonia Magma (1 of 101,170)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "8082826438290:7",
+      "body": "Hypoi Pri LE-A c17-29 BC 1",
+      "kind": "removed from the profile",
+      "field": "orbitalEccentricity max 0.34893 alone (next 0.19999)"
+     }
+    ]
+   },
+   "bacterium_bacterium_nebulus": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1348339708:25",
+      "body": "Greae Phrae DR-N e6-0 5 a",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 0.71014 alone (next 0.6858)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "13893816755713:3",
+      "body": "Pro Eurl OQ-A b6 2",
+      "kind": "removed from the profile",
+      "field": "class = Rocky Ice world (1 of 4,032); gravity max 0.56161 alone (next 0.54454)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "4756575599266:35",
+      "body": "Auphaibs WQ-W c18-17 A 5",
+      "kind": "removed from the profile",
+      "field": "host = K (1 of 4,032)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5280125306816:5",
+      "body": "Oochost TN-U a112-0 4",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Nitrogen Magma (1 of 4,032)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "8799444035:38",
+      "body": "Synietchoea MM-M d7-0 6 a",
+      "kind": "removed from the profile",
+      "field": "surfacePressure min 0.031133 alone (next 0.036018)"
+     }
+    ]
+   },
+   "bacterium_bacterium_omentum": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "422291065315:11",
+      "body": "Sifi GO-G d11-12 1 a",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 317.8 alone (next 306.8)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "645211160027826:44",
+      "body": "Leamue BD-T c20-2347 5 a",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 0.87692 alone (next 0.79864)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "96736419114:1",
+      "body": "Gria Hypai TJ-R c4-0 1",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 35.819 alone (next 19.021)"
+     }
+    ]
+   },
+   "bacterium_bacterium_scopulum": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "229362393698025:12",
+      "body": "Phua Aub BY-A b27-104 4 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide (1 of 5,556)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2800720686137:12",
+      "body": "Thailoea ZW-X b6-1 4 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide-rich (1 of 5,556)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "4990619642057:22",
+      "body": "Eactaips XG-N b23-2 B 2",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Argon-rich (1 of 5,556)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "647062300665:34",
+      "body": "Prooe Drye AD-B b59-0 7",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 1.3931 alone (next 0.82173); radius max 9744.3 alone (next 8007.4)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "9655405067:13",
+      "body": "Chraufao FP-Z d0 4 a",
+      "kind": "removed from the profile",
+      "field": "host = A (1 of 5,556)"
+     }
+    ]
+   },
+   "bacterium_bacterium_tela": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "147882789259:1",
+      "body": "HIP 87621 1",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 698 alone (next 642)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "21783502791234:37",
+      "body": "Eol Prou VR-M c7-79 4 b",
+      "kind": "removed from the profile",
+      "field": "volc = Silicate Vapour Geysers (1 of 65,113)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2872125236921:10",
+      "body": "Praea Euq XQ-L b21-1 8",
+      "kind": "removed from the profile",
+      "field": "atmo = No atmosphere (1 of 65,113)"
+     }
+    ]
+   },
+   "bacterium_bacterium_verrata": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "144079249592723:17",
+      "body": "Kyloarph UU-X d1-4193 E 7",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.8086e+05 alone (next 6.3527e+05)"
+     }
+    ]
+   },
+   "bacterium_bacterium_vesicula": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "15953788223649:5",
+      "body": "Eoch Flyuae CB-X b18-7 4",
+      "kind": "removed from the profile",
+      "field": "volc = Metallic Magma (1 of 199,860)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2559230186322:31",
+      "body": "Praea Euq FZ-I c9-9 9",
+      "kind": "removed from the profile",
+      "field": "class = Class IV gas giant (1 of 199,860); atmo = No atmosphere (1 of 199,860); surfaceTemperature max 946.29 alone (next 295.78); gravity max 35.276 alone (next 0.55309); earthMasses max 3649.2 alone (next 0.41625); radius max 64841 alone (next 6403.6)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "285422014275:65",
+      "body": "Aisaills SP-N d7-8 11 e",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Metallic Magma (1 of 199,860)"
+     }
+    ]
+   },
+   "bacterium_bacterium_volu": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "11660702463625:6",
+      "body": "Pru Ain XK-X b15-5 5 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Water Geysers (1 of 11,938)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1179530562027:19",
+      "body": "Pro Eur BC-D d12-34 A 3 b",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Water Magma (1 of 11,938)"
+     }
+    ]
+   },
+   "bark_mounds_bark_mounds": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "13870999741977:12",
+      "body": "Coalsack Sector QT-Q b5-6 3",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Water Geysers (1 of 4,969)"
+     }
+    ]
+   },
+   "brain_trees_brain_tree_aureum": {
+    "bodies": 6,
+    "systems": 6,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1178976848251:19",
+      "body": "Col 173 Sector NO-H d10-34 AB 1 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Metallic Magma (1 of 733)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1385034631531:6",
+      "body": "Synuefe KO-F d12-40 5",
+      "kind": "removed from the profile",
+      "field": "gravity max 3.8839 alone (next 3.0813)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "182359951707:20",
+      "body": "HR 3230 3 a a",
+      "kind": "removed from the profile",
+      "field": "host = Y (1 of 733)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1831929366899:13",
+      "body": "Flyua Dryoae HE-E d13-53 2",
+      "kind": "removed from the profile",
+      "field": "radius max 15377 alone (next 13910)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5533860445:32",
+      "body": "HIP 49394 7 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Rocky Magma (1 of 733)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "6710559149747:124",
+      "body": "Graea Hypue QI-R d5-195 C 4",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 5.2618e+05 alone (next 4.0603e+05)"
+     }
+    ]
+   },
+   "brain_trees_brain_tree_gypseeum": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "3380775951682:54",
+      "body": "Graea Hypue DB-N c7-12 B 2 a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 4.9301e+05 alone (next 4.311e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "4958078226067:30",
+      "body": "Graea Hypue YU-X d1-144 3 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Oxygen (1 of 1,501)"
+     }
+    ]
+   },
+   "brain_trees_brain_tree_lindigoticum": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "105645290398458:18",
+      "body": "Eorl Auwsy RY-X c28-384 B 6",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Sulphur dioxide (1 of 79); surfacePressure max 0.0096614 alone (next 0)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1144550017371:12",
+      "body": "Col 173 Sector RU-O d6-33 1 a",
+      "kind": "removed from the profile",
+      "field": "host = Y (1 of 79)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1912701200572:11",
+      "body": "Eorl Auwsy HW-N e6-445 A 4 b a",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 79)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2307370358162:27",
+      "body": "NGC 3199 Sector DG-X c1-8 C 1",
+      "kind": "removed from the profile",
+      "field": "host = L (1 of 79)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "6744818192043:8",
+      "body": "Graea Hypue KS-S d4-196 1 d",
+      "kind": "removed from the profile",
+      "field": "volc = Major Metallic Magma (1 of 79)"
+     }
+    ]
+   },
+   "brain_trees_brain_tree_lividum": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "182359951707:19",
+      "body": "HR 3230 3 a",
+      "kind": "removed from the profile",
+      "field": "volc = No volcanism (1 of 2,731)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "3108448998082:5",
+      "body": "Synuefe XO-P c22-11 A 2 a",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 0.14032 alone (next 0.12988)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "3411906776755:72",
+      "body": "Graea Hypue PT-Q d5-99 8 a",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 0.020479 alone (next 0.010747)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5647639716:27",
+      "body": "HIP 43123 5 a",
+      "kind": "removed from the profile",
+      "field": "host = C (1 of 2,731)"
+     }
+    ]
+   },
+   "brain_trees_brain_tree_ostrinum": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1185779847826:13",
+      "body": "Puppis Dark Region EB-X c1-4 2",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 5.4014 alone (next 4.3775)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "182645098859:79",
+      "body": "Col 173 Sector LC-L d8-5 14 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Oxygen (1 of 2,964)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "457254586731:2",
+      "body": "Synuefe GO-F d12-13 2",
+      "kind": "removed from the profile",
+      "field": "atmo = Hot thin Silicate vapour (1 of 2,964)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "526259308915:1",
+      "body": "Flyua Dryoae HE-E d13-15 1",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 1926.3 alone (next 1782.7)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "7273928467873:12",
+      "body": "Synuefe PR-U b48-3 A 6",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Argon (1 of 2,964)"
+     }
+    ]
+   },
+   "brain_trees_brain_tree_puniceum": {
+    "bodies": 6,
+    "systems": 6,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "198841435996:11",
+      "body": "Nuekau LM-V e2-46 A 5",
+      "kind": "removed from the profile",
+      "field": "gravity max 4.7132 alone (next 3.8724); earthMasses max 22.023 alone (next 15.218)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "22722063060643:39",
+      "body": "Graea Hypue UK-V d3-661 ABC 5 c",
+      "kind": "removed from the profile",
+      "field": "host = Y (1 of 1,238)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "22893895306907:22",
+      "body": "Graea Hypue SE-X d2-666 A 4",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Argon (1 of 1,238)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2655959043771:9",
+      "body": "Graea Hypue JT-P d6-77 A 3",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Argon-rich (1 of 1,238)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5988870409859:56",
+      "body": "Graea Hypue MS-B d174 7",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Neon-rich (1 of 1,238)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "7706756697731:4",
+      "body": "Nuekau SC-C d224 A 2",
+      "kind": "removed from the profile",
+      "field": "host = N (1 of 1,238)"
+     }
+    ]
+   },
+   "brain_trees_brain_tree_roseum": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "101893670520289:44",
+      "body": "Eorl Auwsy ZZ-Z b55-46 E 2",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.0223e+05 alone (next 5.3444e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "182359951707:19",
+      "body": "HR 3230 3 a",
+      "kind": "removed from the profile",
+      "field": "volc = No volcanism (1 of 11,846)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1831929366899:13",
+      "body": "Flyua Dryoae HE-E d13-53 2",
+      "kind": "removed from the profile",
+      "field": "radius max 15377 alone (next 13910)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5647639716:27",
+      "body": "HIP 43123 5 a",
+      "kind": "removed from the profile",
+      "field": "host = C (1 of 11,846)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "86066959146:16",
+      "body": "HD 88423 A 12",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 9.2604 alone (next 8.0048)"
+     }
+    ]
+   },
+   "brain_trees_brain_tree_viride": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "112888786863601:20",
+      "body": "Eorl Auwsy FR-W b57-51 6",
+      "kind": "removed from the profile",
+      "field": "gravity max 0.39753 alone (next 0.29658); radius max 4164.3 alone (next 3321.6)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "3658540257954:21",
+      "body": "NGC 2451A Sector NX-U c2-13 2 a",
+      "kind": "removed from the profile",
+      "field": "host = Y (1 of 366)"
+     }
+    ]
+   },
+   "cactoida_cactoida_cortexum": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "182829664707:102",
+      "body": "Swoiphs HJ-O d7-5 B 10 c",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.8739e+05 alone (next 6.5205e+05)"
+     }
+    ]
+   },
+   "cactoida_cactoida_lapis": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "10661923483:38",
+      "body": "HR 6265 B 3 d",
+      "kind": "removed from the profile",
+      "field": "colour = Indigo (1 of 47,453)"
+     },
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "221116710:20",
+      "body": "HIP 1727 AB 1 h a",
+      "kind": "removed from the profile",
+      "field": "colour = Grey (1 of 47,453)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "3686466112403:5",
+      "body": "Byeia Eurk EB-X d1-107 4",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 12.635 alone (next 11.089)"
+     }
+    ]
+   },
+   "cactoida_cactoida_peperatis": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "14199975497179:18",
+      "body": "Preia Phoe WR-I d10-413 C 5",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.553e+05 alone (next 5.9974e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "15157990923:13",
+      "body": "Spasou HQ-Y d0 B 8",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 11.835 alone (next 10.584)"
+     },
+     {
+      "src": "old corpus",
+      "key": "422240624035:39",
+      "body": "Pru Bre BJ-T d3-12 3 e",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide (1 of 21,350); surfaceTemperature max 185.65 alone (next 176.67); surfacePressure max 0.042596 alone (next 0.013398)"
+     }
+    ]
+   },
+   "cactoida_cactoida_pullulanta": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "418868418403:14",
+      "body": "Sphuqia WK-F d11-12 B 10",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 19929 alone (next 15773)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "45877135547:23",
+      "body": "Oochosy EV-O d6-1 CDE 2",
+      "kind": "removed from the profile",
+      "field": "host = K (1 of 14,945)"
+     }
+    ]
+   },
+   "cactoida_cactoida_vermis": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "157674038:31",
+      "body": "Dryoi Prue ZE-A g2 B 4 a",
+      "kind": "removed from the profile",
+      "field": "host = H (1 of 18,515)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2039806832042:12",
+      "body": "Phrooe Blou JH-R c19-7 1 b",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Rocky Magma (1 of 18,515)"
+     },
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "32581697245531:11",
+      "body": "Eoch Pruae KT-H d10-948 2 d",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Silicate Vapour Geysers (1 of 18,515)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "628549994659:14",
+      "body": "Oochoss UU-V d3-18 A 9",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 9.7987 alone (next 9.5653)"
+     }
+    ]
+   },
+   "clypeus_clypeus_lacrimam": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "361683063922:65",
+      "body": "Blaa Eork PL-G c13-1 C 8 a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 7.3485e+05 alone (next 6.7272e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "8296190827:40",
+      "body": "Byoomue AL-E d12-0 7 g",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 0.36522 alone (next 0.3414)"
+     }
+    ]
+   },
+   "clypeus_clypeus_speculumi": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2174786406740:29",
+      "body": "Wepi NM-W e1-506 BC 1 a",
+      "kind": "removed from the profile",
+      "field": "host = W (1 of 9,773)"
+     }
+    ]
+   },
+   "concha_concha_aureolas": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2574396722594:10",
+      "body": "Styailn ZY-Q c18-9 1 d a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Metallic Magma (1 of 28,440)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "4064272205699:52",
+      "body": "Gludgoea HF-A d118 B 6 d",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.9893e+05 alone (next 5.9668e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "637937985713:45",
+      "body": "Phylur KL-Q b20-0 C 3",
+      "kind": "removed from the profile",
+      "field": "volc = Rocky Magma (1 of 28,440)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "700749717401:21",
+      "body": "NGC 2244 Sector ZH-N b35-0 B 4",
+      "kind": "removed from the profile",
+      "field": "volc = Major Rocky Magma (1 of 28,440)"
+     }
+    ]
+   },
+   "concha_concha_biconcavis": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "740492293501:32",
+      "body": "Chraisue GH-V f2-1379 3 k a",
+      "kind": "removed from the profile",
+      "field": "host = L (1 of 1,437)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "887749356578:45",
+      "body": "Hypua Bliae GN-X c3-3 19 c",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 8.5876e+05 alone (next 4.8553e+05)"
+     }
+    ]
+   },
+   "concha_concha_renibus": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "25362687400898:66",
+      "body": "Prua Phoe VC-N c22-92 6 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Argon (1 of 60,407); earthMasses max 0.027191 alone (next 0.022112); radius max 2152.3 alone (next 1899.1)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "361683063922:65",
+      "body": "Blaa Eork PL-G c13-1 C 8 a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 7.3485e+05 alone (next 6.7272e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "749874015513:20",
+      "body": "Fachao PD-B b33-0 E 6",
+      "kind": "removed from the profile",
+      "field": "volc = Major Rocky Magma (1 of 60,407)"
+     }
+    ]
+   },
+   "crystalline_shards_crystalline_shards": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "251498809475:42",
+      "body": "Oochoxt OM-C d7 C 2",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Oxygen (1 of 4,586)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "675550835834:50",
+      "body": "Blooe Ploe WK-C c14-2 B 1 f",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Ammonia (1 of 4,586)"
+     }
+    ]
+   },
+   "electricae_electricae_pluma": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2625239978803:16",
+      "body": "Hypoi Pri MS-R d5-76 BC 3",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.7621e+05 alone (next 6.1983e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "46464730971:34",
+      "body": "Eafoff RG-J d10-1 C 9",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 53334 alone (next 49370)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "7835343644900:56",
+      "body": "Dryaa Pri FH-U e3-1824 A 4 d",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Water Geysers (1 of 9,103)"
+     }
+    ]
+   },
+   "electricae_electricae_radialem": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1246270213507:45",
+      "body": "Prua Phoe TS-B d36 5 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Water Geysers (1 of 17,862)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "4204479405019:11",
+      "body": "Byua Auwsy EV-G d10-122 10",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 23970 alone (next 22516)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "457086830859:12",
+      "body": "California Sector BQ-Y d13 7",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 16.758 alone (next 15.947)"
+     }
+    ]
+   },
+   "fonticulua_fonticulua_campestris": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2559230186322:31",
+      "body": "Praea Euq FZ-I c9-9 9",
+      "kind": "removed from the profile",
+      "field": "class = Class IV gas giant (1 of 171,342); gravity max 35.276 alone (next 0.27526); earthMasses max 3649.2 alone (next 0.14238); radius max 64841 alone (next 4611.3)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "362689991298:0",
+      "body": "Plio Eurl GP-Y c14-1",
+      "kind": "removed from the profile",
+      "field": "class = K (Yellow-Orange) Star (1 of 171,342)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "678200420977:1",
+      "body": "Drojaea MJ-I b13-0 A",
+      "kind": "removed from the profile",
+      "field": "class = M (Red dwarf) Star (1 of 171,342); semiMajorAxis max 29.914 alone (next 19.799); orbitalEccentricity max 0.26251 alone (next 0.19998)"
+     }
+    ]
+   },
+   "fonticulua_fonticulua_digitos": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2309489213:47",
+      "body": "HD 32653 B 1 c",
+      "kind": "removed from the profile",
+      "field": "colour = Lime (1 of 39,428)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "3932143227594:66",
+      "body": "Geras A 7 h a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 1.0552e+06 alone (next 7.3369e+05)"
+     }
+    ]
+   },
+   "fonticulua_fonticulua_fluctus": {
+    "bodies": 6,
+    "systems": 6,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1007480129963:45",
+      "body": "NGC 3114 Sector OI-T d3-29 7 f",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide-rich (1 of 893)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "15988685289249:15",
+      "body": "Prua Phoe CE-W b33-7 6 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Ammonia Magma (1 of 893)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "530252305171:12",
+      "body": "Hypo Aub NM-W d1-15 9",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 3.0319 alone (next 2.0168); orbitalPeriod max 1846.9 alone (next 1118.6)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "559015249069:21",
+      "body": "Wepaa GG-Y f1041 ABC 3 b",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 893)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "621296230545:9",
+      "body": "Hegua KC-B b17-0 C 1",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 5.8732e+05 alone (next 4.8115e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "6478226180532:15",
+      "body": "Gleeque NO-Q e5-1508 C 1 e",
+      "kind": "removed from the profile",
+      "field": "host = W (1 of 893)"
+     }
+    ]
+   },
+   "fonticulua_fonticulua_lapida": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2653343:23",
+      "body": "HD 99897 B 1 a",
+      "kind": "removed from the profile",
+      "field": "colour = Grey (1 of 40,658)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5071417124329:39",
+      "body": "Col 285 Sector UK-J b24-2 D 4",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Water Magma (1 of 40,658)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "78214860162:16",
+      "body": "Phroi Hypa TV-A c15-0 C 1",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 8.0121e+05 alone (next 6.7268e+05)"
+     }
+    ]
+   },
+   "fonticulua_fonticulua_segmentatus": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "13999848779673:42",
+      "body": "Byua Auwsy VS-O b47-6 5 a",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 0.14239 alone (next 0.13272); radius max 4622 alone (next 4461.3)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "22335211973204:6",
+      "body": "Baukoa HR-W e1-5200 4 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Methane Magma (1 of 3,097)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2878836843729:27",
+      "body": "Wregoe MM-I b24-1 5 c",
+      "kind": "removed from the profile",
+      "field": "gravity min 0.24593 alone (next 0.25166)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5079469992121:13",
+      "body": "Blu Thua CS-L b21-2 C 1 a",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 74.671 alone (next 73.703)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "732424398065:8",
+      "body": "Dryiqaea IE-G b28-0 3 a",
+      "kind": "removed from the profile",
+      "field": "surfacePressure max 0.076947 alone (next 0.061863)"
+     }
+    ]
+   },
+   "fonticulua_fonticulua_upupam": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "147916310915:68",
+      "body": "HIP 89535 10 l",
+      "kind": "removed from the profile",
+      "field": "colour = Indigo (1 of 17,154)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2788371346801:15",
+      "body": "Skaudai FJ-D b43-1 AB 1 b",
+      "kind": "removed from the profile",
+      "field": "volc = Water Magma (1 of 17,154)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "53960258003818:36",
+      "body": "Shrogea WA-E c12-196 3 a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Water Magma (1 of 17,154)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "7288424179353:42",
+      "body": "Prua Dryoae XK-B b18-3 5 c",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Ammonia Magma (1 of 17,154)"
+     }
+    ]
+   },
+   "frutexa_frutexa_acus": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2105817435163:9",
+      "body": "Lysoosms YS-U d2-61 5 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Carbon Dioxide Geysers (1 of 81,655)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "422727076291:0",
+      "body": "Col 359 Sector ST-I d9-12",
+      "kind": "removed from the profile",
+      "field": "class = G (White-Yellow) Star (1 of 81,655); atmo = No atmosphere (1 of 81,655); surfaceTemperature max 5645 alone (next 196.74)"
+     }
+    ]
+   },
+   "frutexa_frutexa_collum": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "113875569851:23",
+      "body": "Pro Aec FD-Q d6-3 3 a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Metallic Magma (1 of 2,776)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "157674038:31",
+      "body": "Dryoi Prue ZE-A g2 B 4 a",
+      "kind": "removed from the profile",
+      "field": "host = H (1 of 2,776)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "65718429516:22",
+      "body": "Graea Hypue YE-Z e15 15 a",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 210.31 alone (next 167.59); earthMasses max 0.079742 alone (next 0.035074); radius max 3509.8 alone (next 2313.4)"
+     }
+    ]
+   },
+   "frutexa_frutexa_fera": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "111026691511403:43",
+      "body": "Phipoea UP-E d12-3231 CD 3 b",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.5233e+05 alone (next 6.1695e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "16435438719179:30",
+      "body": "Mynoaw SN-K d8-478 D 5 a",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 1771.2 alone (next 1410.8)"
+     }
+    ]
+   },
+   "frutexa_frutexa_flabellum": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "311248662930954:15",
+      "body": "Scheau Prao QJ-D c1-1132 1 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Rocky Magma (1 of 57,002)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "31551637820:73",
+      "body": "Athair SU-O e6-7 10 h",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 0.25488 alone (next 0.23856)"
+     }
+    ]
+   },
+   "frutexa_frutexa_flammasis": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "old corpus",
+      "key": "422240624035:39",
+      "body": "Pru Bre BJ-T d3-12 3 e",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide (1 of 26,201); surfaceTemperature max 185.65 alone (next 176.67); surfacePressure max 0.042596 alone (next 0.013398)"
+     }
+    ]
+   },
+   "frutexa_frutexa_metallicum": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "112763158149281:5",
+      "body": "Blua Hypue DE-C b19-51 3",
+      "kind": "removed from the profile",
+      "field": "volc = Major Silicate Vapour Geysers (1 of 63,580)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "700749717401:21",
+      "body": "NGC 2244 Sector ZH-N b35-0 B 4",
+      "kind": "removed from the profile",
+      "field": "volc = Major Rocky Magma (1 of 63,580)"
+     }
+    ]
+   },
+   "frutexa_frutexa_sponsae": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2045807372612:11",
+      "body": "Wepiae EF-A e476 A 1 c",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 0.090734 alone (next 0.076875)"
+     }
+    ]
+   },
+   "fumerola_fumerola_aquatis": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "14064810289689:36",
+      "body": "Byae Aowsy TS-V b2-6 D 1",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.0433e+05 alone (next 5.5982e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "673368973273:13",
+      "body": "Pyult GD-I b55-0 2 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide-rich (1 of 7,611)"
+     }
+    ]
+   },
+   "fumerola_fumerola_carbosis": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2800720686137:12",
+      "body": "Thailoea ZW-X b6-1 4 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide-rich (1 of 6,307)"
+     }
+    ]
+   },
+   "fumerola_fumerola_extremus": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "147882789259:3",
+      "body": "HIP 87621 2 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Hot thin Carbon dioxide (1 of 3,665); surfaceTemperature max 642 alone (next 203.05); orbitalPeriod min -0.42 alone (next 0.15887)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "315093933891498:27",
+      "body": "Byeia Ain HZ-O c19-1146 C 6",
+      "kind": "removed from the profile",
+      "field": "volc = Silicate Vapour Geysers (1 of 3,665)"
+     }
+    ]
+   },
+   "fumerola_fumerola_nitris": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2870784107969:8",
+      "body": "Mel 111 Sector KN-J b9-1 4",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 0.059534 alone (next 0.053548); orbitalPeriod max 10.865 alone (next 10.178)"
+     }
+    ]
+   },
+   "fungoida_fungoida_bullarum": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1633285040932:9",
+      "body": "Iwaitt HH-U e3-380 A 1 a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Silicate Vapour Geysers (1 of 23,904)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "628317333644:19",
+      "body": "Eos Ausms WE-Z e146 3 a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Rocky Magma (1 of 23,904)"
+     },
+     {
+      "src": "old corpus",
+      "key": "835094317411:48",
+      "body": "Tirfing 7 g a",
+      "kind": "removed from the profile",
+      "field": "atmo = No atmosphere (1 of 23,904); surfaceTemperature max 160.63 alone (next 133.48)"
+     }
+    ]
+   },
+   "fungoida_fungoida_setisis": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "113371880131:5",
+      "body": "Graea Flyi ZA-N d7-3 5",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 31887 alone (next 22881)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "147277070782995:8",
+      "body": "Athairk PB-X d1-4286 6 a",
+      "kind": "removed from the profile",
+      "field": "host = C (1 of 130,573)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "159004655755649:41",
+      "body": "NGC 2168 MMS 287 C 4",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Carbon Dioxide Geysers (1 of 130,573)"
+     },
+     {
+      "src": "old corpus",
+      "key": "422240624035:39",
+      "body": "Pru Bre BJ-T d3-12 3 e",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide (1 of 130,573)"
+     }
+    ]
+   },
+   "fungoida_fungoida_stabitis": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "113137092931:11",
+      "body": "Synuefue PE-O d7-3 8",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 10.886 alone (next 9.0464)"
+     }
+    ]
+   },
+   "osseus_osseus_cornibus": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2479553055324:10",
+      "body": "Dryuae Phyloi PS-U e2-577 AB 1 g",
+      "kind": "removed from the profile",
+      "field": "host = N (1 of 14,676)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "40245798146811:29",
+      "body": "Zuni IY-Z d13-1171 4 d",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 197.32 alone (next 195.4)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "46447724675:37",
+      "body": "Praea Theia AA-A d1 B 5",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.3927e+05 alone (next 5.7552e+05)"
+     }
+    ]
+   },
+   "osseus_osseus_discus": {
+    "bodies": 4,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "147882789259:3",
+      "body": "HIP 87621 2 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Hot thin Carbon dioxide (1 of 17,088); surfaceTemperature max 642 alone (next 468)"
+     },
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "147882789259:6",
+      "body": "HIP 87621 2 b a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide (1 of 17,088)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "315093933891498:27",
+      "body": "Byeia Ain HZ-O c19-1146 C 6",
+      "kind": "removed from the profile",
+      "field": "volc = Silicate Vapour Geysers (1 of 17,088)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "930095831346:6",
+      "body": "Prungea VL-S c5-3 1 a",
+      "kind": "removed from the profile",
+      "field": "volc = Water Magma (1 of 17,088)"
+     }
+    ]
+   },
+   "osseus_osseus_fractus": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "6675309908035:30",
+      "body": "Voqooe ZF-N d7-194 BC 5 e",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.5205e+05 alone (next 5.8803e+05)"
+     }
+    ]
+   },
+   "osseus_osseus_pellebantus": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "13346276227:19",
+      "body": "Aidomt LA-A d0 B 9",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 12.63 alone (next 10.357); orbitalPeriod max 12891 alone (next 9856.5)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "38239157061964:21",
+      "body": "Wepaa BA-Z e8903 ABCD 1 e",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 12,909)"
+     }
+    ]
+   },
+   "osseus_osseus_pumice": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "29239197839505:13",
+      "body": "Plaa Aescs CJ-U b16-13 A 2",
+      "kind": "removed from the profile",
+      "field": "volc = Major Rocky Magma (1 of 43,384)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "45726254987:19",
+      "body": "Phrio Phoea JS-A d1-1 B 9",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 53204 alone (next 31052)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "887749356578:43",
+      "body": "Hypua Bliae GN-X c3-3 19 a a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 8.5876e+05 alone (next 7.1701e+05)"
+     }
+    ]
+   },
+   "osseus_osseus_spiralis": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "152877423120435:23",
+      "body": "Eeshorks GH-S d5-4449 AB 1 b",
+      "kind": "removed from the profile",
+      "field": "host = N (1 of 117,979)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "159004655755649:41",
+      "body": "NGC 2168 MMS 287 C 4",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Carbon Dioxide Geysers (1 of 117,979)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "941948405731:24",
+      "body": "Pha Aim WV-E d11-27 ABC 7",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 12.113 alone (next 11.089)"
+     }
+    ]
+   },
+   "recepta_recepta_conditivus": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1007480129963:45",
+      "body": "NGC 3114 Sector OI-T d3-29 7 f",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide-rich (1 of 6,881)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "128035197850211:10",
+      "body": "Athaihn WF-F d11-3726 1 e",
+      "kind": "removed from the profile",
+      "field": "host = S (1 of 6,881)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "37463313404227:29",
+      "body": "Leamao LM-M d7-1090 A 3 d",
+      "kind": "removed from the profile",
+      "field": "host = C (1 of 6,881)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "559847229491:31",
+      "body": "Slegi LN-R d5-16 4 a",
+      "kind": "removed from the profile",
+      "field": "volc = Rocky Magma (1 of 6,881)"
+     }
+    ]
+   },
+   "recepta_recepta_deltahedronix": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "267765495057:10",
+      "body": "Ewrobb JI-V b31-0 4 a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Rocky Magma (1 of 4,346)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "673368973273:13",
+      "body": "Pyult GD-I b55-0 2 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide-rich (1 of 4,346)"
+     }
+    ]
+   },
+   "recepta_recepta_umbrux": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2800720686137:12",
+      "body": "Thailoea ZW-X b6-1 4 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide-rich (1 of 11,760)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "35606176174187:25",
+      "body": "Voqooe DT-F d12-1036 3 c",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Ammonia (1 of 11,760)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "702034269339:10",
+      "body": "Dryaea Chrea KH-V d2-20 A 7",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 11.016 alone (next 9.3721)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "8623925303218:29",
+      "body": "Byeia Eur GQ-N c20-31 C 6",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 7.9277e+05 alone (next 6.7256e+05)"
+     }
+    ]
+   },
+   "sinuous_tuber_sinuous_tubers_albidum": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "181498682545043:6",
+      "body": "Stuemeae MM-W d1-5282 2",
+      "kind": "removed from the profile",
+      "field": "volc = Rocky Magma (1 of 123)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "233733884636:32",
+      "body": "Dryaea Bre SS-U e2-54 7 c a",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 123)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "29558493367875:27",
+      "body": "Blua Hypa VJ-O d7-860 3 a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Metallic Magma (1 of 123)"
+     }
+    ]
+   },
+   "sinuous_tuber_sinuous_tubers_blatteum": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1077525025139:7",
+      "body": "Eorld Prau HP-D d13-31 A 2",
+      "kind": "removed from the profile",
+      "field": "gravity max 2.7856 alone (next 2.0454); earthMasses max 8.1735 alone (next 4.2767); radius max 10920 alone (next 9218.4)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "15955308597619:13",
+      "body": "Eorm Auwsy EN-B d13-464 2 c a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Metallic Magma (1 of 211)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "263530186932:4",
+      "body": "Moihie WE-Q e5-61 2",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 211)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "68937874166107:13",
+      "body": "Eos Auscs ZU-G d10-2006 A 4 a",
+      "kind": "removed from the profile",
+      "field": "volc = No volcanism (1 of 211)"
+     }
+    ]
+   },
+   "sinuous_tuber_sinuous_tubers_caeruleum": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "23272674775931:8",
+      "body": "Myrierph PA-C d14-677 3 b a",
+      "kind": "removed from the profile",
+      "field": "host = C (1 of 1,458)"
+     }
+    ]
+   },
+   "sinuous_tuber_sinuous_tubers_lindigoticum": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "111299790884883:29",
+      "body": "Eoch Flyuae EI-Z d1-3239 AB 3 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Sulphur dioxide (1 of 391)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2810441623748:31",
+      "body": "Dryaa Prao RI-B e654 7 e",
+      "kind": "removed from the profile",
+      "field": "volc = No volcanism (1 of 391)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "31406813688257:17",
+      "body": "Nyeajaae NB-Q b52-14 B 3",
+      "kind": "removed from the profile",
+      "field": "volc = Rocky Magma (1 of 391)"
+     }
+    ]
+   },
+   "sinuous_tuber_sinuous_tubers_prasinum": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1261011279:13",
+      "body": "Baukoa AA-A h150 A 2",
+      "kind": "removed from the profile",
+      "field": "host = H (1 of 2,922)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "14518354774540:33",
+      "body": "Eorl Phyloi JG-Y e3380 A 4 b",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Oxygen (1 of 2,922)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "64089980128875:30",
+      "body": "Blua Hypa IY-F d12-1865 C 1",
+      "kind": "removed from the profile",
+      "field": "volc = Rocky Magma (1 of 2,922)"
+     }
+    ]
+   },
+   "sinuous_tuber_sinuous_tubers_roseum": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "267745494796:13",
+      "body": "Synookua HG-Y e62 A 6 a",
+      "kind": "removed from the profile",
+      "field": "volc = No volcanism (1 of 586)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "30289508223476:7",
+      "body": "Stuemaea RO-Q e5-7052 5 a",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 586)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "80412013761883:9",
+      "body": "Eorm Breae TP-G d10-2340 A 6",
+      "kind": "removed from the profile",
+      "field": "host = S (1 of 586)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "929446123022066:54",
+      "body": "Myrielk SC-Z c27-3381 C 3",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 5.8949e+05 alone (next 5.2843e+05)"
+     }
+    ]
+   },
+   "sinuous_tuber_sinuous_tubers_violaceum": {
+    "bodies": 6,
+    "systems": 6,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1077525025139:7",
+      "body": "Eorld Prau HP-D d13-31 A 2",
+      "kind": "removed from the profile",
+      "field": "gravity max 2.7856 alone (next 2.5126); earthMasses max 8.1735 alone (next 6.6735)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "129616333312443:5",
+      "body": "Shrogaae BL-O d6-3772 4",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 2.5652 alone (next 2.304)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "181044011941673:18",
+      "body": "Byoi Aip RS-N b34-82 B 4",
+      "kind": "removed from the profile",
+      "field": "orbitalEccentricity max 0.19529 alone (next 0.17519)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "31382696907115:3",
+      "body": "Eos Auscs IH-D d12-913 2",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Metallic Magma (1 of 59)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "31406813688257:17",
+      "body": "Nyeajaae NB-Q b52-14 B 3",
+      "kind": "removed from the profile",
+      "field": "volc = Rocky Magma (1 of 59)"
+     },
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "328440041326097:20",
+      "body": "Dryaa Prao IH-I b2-149 B 4",
+      "kind": "removed from the profile",
+      "field": "surfacePressure max 0.012378 alone (next 0.007206)"
+     }
+    ]
+   },
+   "sinuous_tuber_sinuous_tubers_viride": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "19010339067883:25",
+      "body": "Phaa Briae MK-E d12-553 4 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Sulphur dioxide (1 of 150)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "31406813688257:17",
+      "body": "Nyeajaae NB-Q b52-14 B 3",
+      "kind": "removed from the profile",
+      "field": "volc = Rocky Magma (1 of 150)"
+     }
+    ]
+   },
+   "stratum_stratum_araneamus": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "13096603085252:24",
+      "body": "Phraa Pruae NI-B e3049 B 8 a",
+      "kind": "removed from the profile",
+      "field": "host = G (1 of 12,377)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "99948177260:19",
+      "body": "Byoi Aewsy XJ-R e4-23 13 a",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 0.64065 alone (next 0.50768)"
+     }
+    ]
+   },
+   "stratum_stratum_cucumisis": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "108331135646:26",
+      "body": "Scaulou EG-Y g1614 2 f",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 0.29004 alone (next 0.25852)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2131421628468:11",
+      "body": "Eulairg AL-P e5-496 ABCD 1 a",
+      "kind": "removed from the profile",
+      "field": "host = N (1 of 16,939)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "42993857792444:7",
+      "body": "Hypoe Pruae IR-N e6-10010 AB 1 c",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 16,939)"
+     }
+    ]
+   },
+   "stratum_stratum_excutitus": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "10661923483:43",
+      "body": "HR 6265 B 4 b",
+      "kind": "removed from the profile",
+      "field": "colour = Red (1 of 36,858)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2557619442410:39",
+      "body": "HIP 97950 ABC 2 k",
+      "kind": "removed from the profile",
+      "field": "class = Icy body (1 of 36,858); atmo = Thin Argon-rich (1 of 36,858); surfaceTemperature min 85.761 alone (next 165)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2559230186322:11",
+      "body": "Praea Euq FZ-I c9-9 6",
+      "kind": "removed from the profile",
+      "field": "class = Water world (1 of 36,858); atmo = Thick Ammonia (1 of 36,858); surfaceTemperature max 442.9 alone (next 190); surfacePressure max 14.149 alone (next 0.098686); gravity max 1.5229 alone (next 0.51328)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2621330967019:21",
+      "body": "Sifi BH-D d12-76 B 2 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide-rich (1 of 36,858)"
+     }
+    ]
+   },
+   "stratum_stratum_frigus": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "13564380787:43",
+      "body": "Hypi Aewsy MI-B d13-0 AB 3 d",
+      "kind": "removed from the profile",
+      "field": "host = G (1 of 4,156)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "288610076651:10",
+      "body": "Gludguae AH-D d12-8 1 c",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Water Magma (1 of 4,156)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "400570772284:8",
+      "body": "Hypoae Chraei VZ-O e6-93 AB 1 a",
+      "kind": "removed from the profile",
+      "field": "host = N (1 of 4,156)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "421787666259:9",
+      "body": "Hypoae Ain KD-J d9-12 6 a",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 0.2591 alone (next 0.23925)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "911762539877:10",
+      "body": "Dryau Bro AA-A f1698 ABC 1 e",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 4,156)"
+     }
+    ]
+   },
+   "stratum_stratum_laminamus": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "10661923483:38",
+      "body": "HR 6265 B 3 d",
+      "kind": "removed from the profile",
+      "field": "colour = Red (1 of 15,160)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "108672320692:27",
+      "body": "HIP 105666 C 7 a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.5416e+05 alone (next 5.9413e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "24813189933332:22",
+      "body": "Scheau Flyi LR-W e1-5777 AB 5 c",
+      "kind": "removed from the profile",
+      "field": "host = N (1 of 15,160)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "490741654562130:18",
+      "body": "Wepai SB-O c9-1785 1 c",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Silicate Vapour Geysers (1 of 15,160)"
+     }
+    ]
+   },
+   "stratum_stratum_limaxus": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "11086382188708:17",
+      "body": "Eol Prou TI-T e3-2581 AB 1 f",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 14,470)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "421602938171:37",
+      "body": "Skaudai TJ-P d6-12 ABCD 4 d",
+      "kind": "removed from the profile",
+      "field": "host = A (1 of 14,470)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "56118352957515:30",
+      "body": "Eord Flyuae UV-L d8-1633 D 7 a",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 739.27 alone (next 704.7)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "69621327564635:17",
+      "body": "Blue Eaewsy AH-J d10-2026 AB 1 h",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 0.37111 alone (next 0.26137)"
+     },
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "88107286302659:65",
+      "body": "Iowhaik FH-M d7-2564 ABCD 9 e",
+      "kind": "removed from the profile",
+      "field": "host = N (1 of 14,470)"
+     }
+    ]
+   },
+   "stratum_stratum_paleas": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "10661923483:37",
+      "body": "HR 6265 B 3 c",
+      "kind": "removed from the profile",
+      "field": "colour = Red (1 of 138,759)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2574396722594:10",
+      "body": "Styailn ZY-Q c18-9 1 d a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Metallic Magma (1 of 138,759)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5722206934:2",
+      "body": "Phleedgaa AA-A g85 1 a",
+      "kind": "removed from the profile",
+      "field": "earthMasses max 0.29378 alone (next 0.26767)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "82149759803:61",
+      "body": "Blaea Aub OZ-O d6-2 B 1 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Argon-rich (1 of 138,759)"
+     }
+    ]
+   },
+   "stratum_stratum_tectonicas": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "16953349458260:19",
+      "body": "Phroea Flyuae FW-W e1-3947 B 6",
+      "kind": "removed from the profile",
+      "field": "host = H (1 of 275,053)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1865903245675:33",
+      "body": "36 Ophiuchi C 4",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 4.2165e+06 alone (next 7.7754e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "5016656095569:9",
+      "body": "Bleae Thaa KD-E b39-2 B 1",
+      "kind": "removed from the profile",
+      "field": "class = Metal-rich body (1 of 275,053)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "6680855188138:1",
+      "body": "Hyades Sector AL-X c1-24 A",
+      "kind": "removed from the profile",
+      "field": "class = K (Yellow-Orange) Star (1 of 275,053); atmo = No atmosphere (1 of 275,053); surfaceTemperature max 3891 alone (next 450)"
+     }
+    ]
+   },
+   "tubus_tubus_cavas": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "148993161908939:34",
+      "body": "Wepae MC-L d8-4336 4 e",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 0.29313 alone (next 0.27493)"
+     }
+    ]
+   },
+   "tubus_tubus_compagibus": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "78620132540:34",
+      "body": "20 Ophiuchi 6",
+      "kind": "removed from the profile",
+      "field": "class = Class II gas giant (1 of 81,516); atmo = No atmosphere (1 of 81,516); gravity max 2.4802 alone (next 0.15275); earthMasses max 279.91 alone (next 0.006209); radius max 67725 alone (next 1304.5)"
+     }
+    ]
+   },
+   "tubus_tubus_conifer": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "13479679677275:44",
+      "body": "Hypuae Audst XE-H d10-392 7 h",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 0.27531 alone (next 0.26794)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1728699139827:12",
+      "body": "Cyoidai QZ-D d13-50 BCD 1 a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 7.1161e+05 alone (next 6.5346e+05)"
+     }
+    ]
+   },
+   "tubus_tubus_rosarium": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "182628338059:20",
+      "body": "Prua Dryoae JS-A d1-5 C 4 a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 7.2672e+05 alone (next 6.5416e+05)"
+     },
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "221116710:20",
+      "body": "HIP 1727 AB 1 h a",
+      "kind": "removed from the profile",
+      "field": "colour = Green (1 of 27,850)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2574396722594:10",
+      "body": "Styailn ZY-Q c18-9 1 d a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Metallic Magma (1 of 27,850)"
+     },
+     {
+      "src": "old corpus",
+      "key": "766408362347:7",
+      "body": "Agartha 2 c",
+      "kind": "removed from the profile",
+      "field": "gravity max 0.16356 alone (next 0.15281); earthMasses max 0.007599 alone (next 0.006225)"
+     }
+    ]
+   },
+   "tubus_tubus_sororibus": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1216509675564:28",
+      "body": "Oephaif SY-R e4-283 12 a",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 20,252)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "7281982905265:9",
+      "body": "Pheia Aewsy JB-J b50-3 C 2",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Silicate Vapour Geysers (1 of 20,252)"
+     }
+    ]
+   },
+   "tussock_tussock_albata": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2559230186322:11",
+      "body": "Praea Euq FZ-I c9-9 6",
+      "kind": "removed from the profile",
+      "field": "class = Water world (1 of 40,652); atmo = Thick Ammonia (1 of 40,652); volc = Metallic Magma (1 of 40,652); surfaceTemperature max 442.9 alone (next 180); surfacePressure max 14.149 alone (next 0.098664); gravity max 1.5229 alone (next 0.2705); earthMasses max 2.1804 alone (next 0.022121); radius max 7628.2 alone (next 1898)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "356851617786:55",
+      "body": "Gludgaa LR-Y c28-1 C 6",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.6323e+05 alone (next 6.2035e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "4246868742:25",
+      "body": "Cheethe AA-A g63 A 2 f",
+      "kind": "removed from the profile",
+      "field": "host = B (1 of 40,652)"
+     },
+     {
+      "src": "EDDN archive (organic+codex)",
+      "key": "82931877060:51",
+      "body": "HIP 53274 13 f",
+      "kind": "removed from the profile",
+      "field": "colour = Orange (1 of 40,652)"
+     }
+    ]
+   },
+   "tussock_tussock_capillum": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1590740174763:14",
+      "body": "Gludgoi DU-R d4-46 A 10",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 17.167 alone (next 15.863)"
+     },
+     {
+      "src": "old corpus",
+      "key": "835094317411:48",
+      "body": "Tirfing 7 g a",
+      "kind": "removed from the profile",
+      "field": "atmo = No atmosphere (1 of 19,926); surfaceTemperature max 160.63 alone (next 128.99)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "83518141106:9",
+      "body": "Phriefie GV-N c20-0 B 1 a",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Nitrogen (1 of 19,926)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "9427319004265:13",
+      "body": "Hypou Aim VD-D b12-4 C 2",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Water Geysers (1 of 19,926)"
+     }
+    ]
+   },
+   "tussock_tussock_caputus": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "561323972563:9",
+      "body": "Yegnua PJ-I d9-16 AB 5",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 11.6 alone (next 10.684)"
+     }
+    ]
+   },
+   "tussock_tussock_catena": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "old corpus",
+      "key": "422240624035:39",
+      "body": "Pru Bre BJ-T d3-12 3 e",
+      "kind": "removed from the profile",
+      "field": "atmo = Thin Carbon dioxide (1 of 30,770); surfaceTemperature max 185.65 alone (next 176.67); surfacePressure max 0.042596 alone (next 0.013387)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "48359970387:10",
+      "body": "Hypaa Blooe WG-K d9-1 A 6",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 12.951 alone (next 10.584)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "749874015513:20",
+      "body": "Fachao PD-B b33-0 E 6",
+      "kind": "removed from the profile",
+      "field": "volc = Major Rocky Magma (1 of 30,770)"
+     }
+    ]
+   },
+   "tussock_tussock_divisa": {
+    "bodies": 5,
+    "systems": 5,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "159004655755649:41",
+      "body": "NGC 2168 MMS 287 C 4",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Carbon Dioxide Geysers (1 of 34,503)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2574396722594:10",
+      "body": "Styailn ZY-Q c18-9 1 d a",
+      "kind": "removed from the profile",
+      "field": "volc = Major Metallic Magma (1 of 34,503)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2595906215641:21",
+      "body": "Pha Bra CQ-H b25-1 C 2",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Rocky Magma (1 of 34,503)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "33510811247961:19",
+      "body": "Wredgeae BG-C b40-15 C 2",
+      "kind": "removed from the profile",
+      "field": "volc = Major Rocky Magma (1 of 34,503)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "4064272205699:52",
+      "body": "Gludgoea HF-A d118 B 6 d",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.9893e+05 alone (next 6.2529e+05)"
+     }
+    ]
+   },
+   "tussock_tussock_ignis": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "45692504571:3",
+      "body": "Prua Dryou JT-Z d13-1 3",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 15174 alone (next 13270)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "78620132540:34",
+      "body": "20 Ophiuchi 6",
+      "kind": "removed from the profile",
+      "field": "class = Class II gas giant (1 of 70,313); atmo = No atmosphere (1 of 70,313); gravity max 2.4802 alone (next 0.19615); earthMasses max 279.91 alone (next 0.008849); radius max 67725 alone (next 1406.1)"
+     }
+    ]
+   },
+   "tussock_tussock_pennata": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "10661923483:50",
+      "body": "HR 6265 B 5 c",
+      "kind": "removed from the profile",
+      "field": "colour = Orange (1 of 13,374)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "7279566464385:9",
+      "body": "Col 173 Sector PF-E b28-3 B 1",
+      "kind": "removed from the profile",
+      "field": "atmo = No atmosphere (1 of 13,374); volc = Minor Silicate Vapour Geysers (1 of 13,374); surfaceTemperature max 285.96 alone (next 154); surfacePressure min 0 alone (next 0.0028044); earthMasses max 0.006787 alone (next 0.000935); radius max 1243.5 alone (next 670)"
+     }
+    ]
+   },
+   "tussock_tussock_pennatis": {
+    "bodies": 2,
+    "systems": 2,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "1650403684:13",
+      "body": "Phreia Flyuae PD-T e3-0 B 3",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.7624e+05 alone (next 6.3669e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2383681491411:10",
+      "body": "Dryaa Prau UD-J d9-69 A 5",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 27204 alone (next 25041)"
+     }
+    ]
+   },
+   "tussock_tussock_propagito": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "421602938171:37",
+      "body": "Skaudai TJ-P d6-12 ABCD 4 d",
+      "kind": "removed from the profile",
+      "field": "host = A (1 of 76,842)"
+     }
+    ]
+   },
+   "tussock_tussock_serrati": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "388384147811:20",
+      "body": "HIP 112334 ABC 1 c",
+      "kind": "removed from the profile",
+      "field": "host = A (1 of 29,314)"
+     }
+    ]
+   },
+   "tussock_tussock_stigmasis": {
+    "bodies": 4,
+    "systems": 4,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "117281069913595:43",
+      "body": "Lyaisoo MQ-B d14-3413 B 1 e",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 6.3659e+05 alone (next 5.8179e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "146892802603:32",
+      "body": "Aucoths FX-S d4-4 4 b",
+      "kind": "removed from the profile",
+      "field": "surfaceTemperature max 206.64 alone (next 167.92); earthMasses max 0.084339 alone (next 0.037256); radius max 3585 alone (next 2350.8)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "68872700630:13",
+      "body": "Aishaind AA-A g1026 A 5 a",
+      "kind": "removed from the profile",
+      "field": "host = H (1 of 5,649)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "702034269339:10",
+      "body": "Dryaea Chrea KH-V d2-20 A 7",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 11.016 alone (next 8.9675)"
+     }
+    ]
+   },
+   "tussock_tussock_triticum": {
+    "bodies": 3,
+    "systems": 3,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "149292321699:14",
+      "body": "Byua Treia SY-S d3-4 C 9",
+      "kind": "removed from the profile",
+      "field": "orbitalPeriod max 21697 alone (next 15985)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "361683063922:65",
+      "body": "Blaa Eork PL-G c13-1 C 8 a",
+      "kind": "removed from the profile",
+      "field": "distanceToArrival max 7.3485e+05 alone (next 6.7272e+05)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "79985658931:4",
+      "body": "Ploea Aeh LQ-P d5-2 4",
+      "kind": "removed from the profile",
+      "field": "semiMajorAxis max 11.284 alone (next 10.056)"
+     }
+    ]
+   },
+   "tussock_tussock_ventusa": {
+    "bodies": 1,
+    "systems": 1,
+    "status": "lone outlier: never sets a range",
+    "rows": [
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2105817435163:9",
+      "body": "Lysoosms YS-U d2-61 5 a",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Carbon Dioxide Geysers (1 of 23,817)"
+     }
+    ]
+   }
+  }
  }
 }
