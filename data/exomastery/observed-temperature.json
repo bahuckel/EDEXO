@@ -396,10 +396,10 @@
   "fonticulua_fonticulua_campestris": {
    "envelope": [
     50,
-    149.33287
+    150.141312
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.0063,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0054,
    "bodies": 171308,
    "factor": 0.02
   },

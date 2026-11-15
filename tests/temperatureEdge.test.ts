@@ -52,13 +52,14 @@ describe("sightings near a codex edge", () => {
   });
 
   /*
-    Was "finds paleas recorded just under its floor": the old corpus had 33 bodies at 162.6-165 K. The 1.4.0 rebuild
-    on every sighting has 138,989 paleas bodies and the coldest is 165.0 K exactly, so 165 K is the game's floor and
-    the bin holds only the few at 165.0 itself, under the rescue floor.
+    Was "finds paleas recorded just under its floor": the old corpus had 33 bodies at 162.6-165 K. Every sighting
+    (1.4.0) has 138,989 paleas bodies and the coldest is 165.0 K exactly, so 165 K is the game's floor. The bin that
+    straddles it now holds the 40 bodies at 165.0 itself — enough to count, which is why the EDDN-year range check
+    below, not this count, is what keeps the floor shut.
   */
-  it("finds too few paleas under its floor to reopen it", () => {
+  it("counts the paleas sitting exactly on its floor", () => {
     const near = observedNearTemperature(species("stratum_stratum_paleas"), 162.1, { below: 165 });
-    expect(near ?? 0).toBeLessThan(MIN_TEMPERATURE_OBSERVATIONS);
+    expect(near ?? 0).toBeGreaterThanOrEqual(MIN_TEMPERATURE_OBSERVATIONS);
   });
 });
 

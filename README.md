@@ -342,8 +342,8 @@ same way: rules say where a species can grow, and records of where it has grown 
 - **The species profiles** (how often each species is found at each temperature, gravity, pressure and
   so on) are built, since 1.4.0, from every confirmed sighting in a year of EDDN — 2,081,985 bodies, each
   species logged on the exact body by a codex entry, a composition scan or an organic sample, from the
-  EDGalaxyData archive — with up to 5,000 bodies per species chosen to cover its whole range, and every
-  body for species seen fewer than 1,000 times. A lone find never sets a range.
+  EDGalaxyData archive — all of them, 4,205,570 species-on-body sightings in the profiles; only finds
+  without a body record and lone outliers are left out. A lone find never sets a range.
 - **What grows on a body of this kind** (planet class, atmosphere, volcanism, temperature band) is counted
   on 1.79 million of those finds, on bodies where every genus was sampled.
 - **How often each genus is on a body like this one** — by planet type, signal count, atmosphere,

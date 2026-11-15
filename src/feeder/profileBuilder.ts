@@ -114,9 +114,16 @@ function modeFromBucketMeans(arr: number[]): { mode: number; modeCount: number }
 
 function rollupNumbers(arr: number[]): NumericRange {
   if (arr.length === 0) throw new Error("rollupNumbers: empty");
-  const min = Math.min(...arr);
-  const max = Math.max(...arr);
-  const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+  // A loop, not Math.min(...arr): a profile built from every sighting holds 300,000+ values, past the call stack.
+  let min = Infinity;
+  let max = -Infinity;
+  let sum = 0;
+  for (const v of arr) {
+    if (v < min) min = v;
+    if (v > max) max = v;
+    sum += v;
+  }
+  const mean = sum / arr.length;
   const { mode, modeCount } = modeFromBucketMeans(arr);
   return { min, max, mean, count: arr.length, mode, modeCount };
 }

@@ -218,8 +218,13 @@ export interface DisplayHistogram {
 export function displayHistogramOf(values: number[], bins = DISPLAY_BINS): DisplayHistogram | null {
   const clean = values.filter((v) => Number.isFinite(v));
   if (clean.length < MIN_SAMPLES_FOR_HISTOGRAM) return null;
-  const min = Math.min(...clean);
-  const max = Math.max(...clean);
+  // A loop, not Math.min(...clean): a profile built from every sighting passes the call stack's argument limit.
+  let min = Infinity;
+  let max = -Infinity;
+  for (const v of clean) {
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
   // One observation, or many identical ones: there is a value but no distribution to draw.
   if (!(max > min)) return null;
   const counts = new Array<number>(bins).fill(0);

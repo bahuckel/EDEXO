@@ -303,10 +303,10 @@ describe("the gas share that decides two pairs of species", () => {
     expect(upupam.max).toBeLessThan(50);
     expect(upupam.min).toBeGreaterThan(0.1);
     // Every one of its bodies carries argon, which is what the floor encodes. 56 when measured;
-    // 74 after the 2026-09-27 route imports (rt1–rt5), 83 after the 2026-10-01 EDDN export, 6,021 in the 1.4.0
-    // rebuild on every sighting (campestris 50.03-100 %, upupam 0.12-49.998 %, acies 50.007-100 %) — the
-    // ranges above held each time.
-    expect(upupam.count).toBe(6021);
+    // 74 after the 2026-09-27 route imports (rt1–rt5), 83 after the 2026-10-01 EDDN export, 17,150 in the 1.4.0
+    // profiles built from every sighting (campestris 50.03-100 % over 171,305, upupam 0.12-49.998 %, acies
+    // 50.007-100 % over 110,986) — the ranges above held each time.
+    expect(upupam.count).toBe(17150);
 
     const acies = gasRange("Bacterium acies", "Neon")!;
     expect(acies.min).toBeGreaterThan(50);
