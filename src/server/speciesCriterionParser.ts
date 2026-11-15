@@ -75,6 +75,13 @@ export function normalizeAtmosphereToJournal(labels: string[]): string[] {
         mapped = true;
         break;
       }
+      // "Carbon dioxide-rich" is its own type to the game, not the plain gas (1.4.0, 2026-11-14): keep it.
+      const rich = /^(.+?)[\s-]+rich$/.exec(k);
+      if (rich && ATMOSPHERE_PHRASE_TO_JOURNAL[rich[1]!.trim()]) {
+        out.push(`${ATMOSPHERE_PHRASE_TO_JOURNAL[rich[1]!.trim()]!}Rich`);
+        mapped = true;
+        break;
+      }
       const beforeDash =
         k
           .split(/\s*-\s*/)[0]

@@ -347,17 +347,16 @@
         "fonticulua_fonticulua_upupam"
       ],
       "candidates": [
-        "anemone_puniceum",
         "electricae_electricae_pluma",
         "electricae_electricae_radialem",
-        "fonticulua_fonticulua_upupam",
-        "fungoida_fungoida_bullarum"
+        "fonticulua_fonticulua_upupam"
       ],
       "unlikely": [
         "aleoida_aleoida_laminiae",
         "aleoida_aleoida_spica",
         "anemone_blatteum_bioluminescent",
         "anemone_prasinum_bioluminescent",
+        "anemone_puniceum",
         "anemone_roseum_bioluminescent",
         "anemone_rubeum_bioluminescent",
         "bacterium_bacterium_acies",
@@ -387,6 +386,7 @@
         "frutexa_frutexa_flammasis",
         "frutexa_frutexa_metallicum",
         "frutexa_frutexa_sponsae",
+        "fungoida_fungoida_bullarum",
         "fungoida_fungoida_gelata",
         "fungoida_fungoida_setisis",
         "fungoida_fungoida_stabitis",
@@ -437,17 +437,16 @@
         "fonticulua_fonticulua_upupam"
       ],
       "candidates": [
-        "anemone_puniceum",
         "electricae_electricae_pluma",
         "electricae_electricae_radialem",
-        "fonticulua_fonticulua_upupam",
-        "fungoida_fungoida_bullarum"
+        "fonticulua_fonticulua_upupam"
       ],
       "unlikely": [
         "aleoida_aleoida_laminiae",
         "aleoida_aleoida_spica",
         "anemone_blatteum_bioluminescent",
         "anemone_prasinum_bioluminescent",
+        "anemone_puniceum",
         "anemone_roseum_bioluminescent",
         "anemone_rubeum_bioluminescent",
         "bacterium_bacterium_acies",
@@ -477,6 +476,7 @@
         "frutexa_frutexa_flammasis",
         "frutexa_frutexa_metallicum",
         "frutexa_frutexa_sponsae",
+        "fungoida_fungoida_bullarum",
         "fungoida_fungoida_gelata",
         "fungoida_fungoida_setisis",
         "fungoida_fungoida_stabitis",
@@ -530,6 +530,7 @@
       "candidates": [
         "anemone_prasinum_bioluminescent",
         "bacterium_bacterium_aurasus",
+        "cactoida_cactoida_vermis",
         "concha_concha_labiata",
         "frutexa_frutexa_acus",
         "frutexa_frutexa_fera",
@@ -553,7 +554,6 @@
         "bacterium_bacterium_volu",
         "cactoida_cactoida_lapis",
         "cactoida_cactoida_peperatis",
-        "cactoida_cactoida_vermis",
         "concha_concha_aureolas",
         "concha_concha_biconcavis",
         "electricae_electricae_pluma",
@@ -681,17 +681,17 @@
         "stratum_stratum_tectonicas"
       ],
       "candidates": [
-        "anemone_blatteum_bioluminescent",
-        "anemone_prasinum_bioluminescent",
         "anemone_roseum_bioluminescent",
         "anemone_rubeum_bioluminescent",
-        "bacterium_bacterium_aurasus",
         "stratum_stratum_tectonicas"
       ],
       "unlikely": [
+        "anemone_blatteum_bioluminescent",
+        "anemone_prasinum_bioluminescent",
         "anemone_puniceum",
         "bacterium_bacterium_acies",
         "bacterium_bacterium_alcyoneum",
+        "bacterium_bacterium_aurasus",
         "bacterium_bacterium_bullaris",
         "bacterium_bacterium_cerbrus",
         "bacterium_bacterium_informem",
@@ -741,16 +741,16 @@
       ],
       "candidates": [
         "anemone_blatteum_bioluminescent",
-        "anemone_prasinum_bioluminescent",
         "anemone_roseum_bioluminescent",
         "anemone_rubeum_bioluminescent",
-        "bacterium_bacterium_aurasus",
         "stratum_stratum_tectonicas"
       ],
       "unlikely": [
+        "anemone_prasinum_bioluminescent",
         "anemone_puniceum",
         "bacterium_bacterium_acies",
         "bacterium_bacterium_alcyoneum",
+        "bacterium_bacterium_aurasus",
         "bacterium_bacterium_bullaris",
         "bacterium_bacterium_cerbrus",
         "bacterium_bacterium_informem",
@@ -1281,14 +1281,14 @@
         "bacterium_bacterium_informem"
       ],
       "candidates": [
-        "anemone_blatteum_bioluminescent",
         "anemone_prasinum_bioluminescent",
-        "anemone_roseum_bioluminescent",
-        "anemone_rubeum_bioluminescent",
         "bacterium_bacterium_informem"
       ],
       "unlikely": [
+        "anemone_blatteum_bioluminescent",
         "anemone_puniceum",
+        "anemone_roseum_bioluminescent",
+        "anemone_rubeum_bioluminescent",
         "bacterium_bacterium_acies",
         "bacterium_bacterium_alcyoneum",
         "bacterium_bacterium_aurasus",

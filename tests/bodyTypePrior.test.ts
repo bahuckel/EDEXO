@@ -61,6 +61,8 @@ describe("the key, which the builder and the reader share", () => {
     expect(bodyTypePlanetClass("Rocky body")).not.toBe(bodyTypePlanetClass("Rocky ice body"));
     expect(bodyTypePlanetClass("High metal content body")).not.toBe(bodyTypePlanetClass("Metal rich body"));
     expect(bodyTypeAtmosphere("CarbonDioxide")).not.toBe(bodyTypeAtmosphere("SulphurDioxide"));
+    // "-rich" is its own atmosphere to the game (1.4.0 study, 2026-11-14).
+    expect(bodyTypeAtmosphere("CarbonDioxide")).not.toBe(bodyTypeAtmosphere("CarbonDioxideRich"));
     expect(bodyTypeVolcanism("Major Water Magma")).not.toBe(bodyTypeVolcanism("Minor Nitrogen Magma"));
   });
 
@@ -130,7 +132,8 @@ describe("the shipped table", () => {
       SurfaceTemperature: 52,
       Volcanism: "minor nitrogen magma volcanism",
     });
-    const hit = bodyTypeLogPrior(body, "bacterium_bacterium_acies", root, 10_000);
+    // 1e9, not 10,000: the 1.4.0 table counts every confirmed sighting and its cells pass 10,000 bodies.
+    const hit = bodyTypeLogPrior(body, "bacterium_bacterium_acies", root, 1_000_000_000);
     // With an impossible floor nothing is trusted at all, which is the honest end of the ladder.
     expect(hit).toBeNull();
   });
@@ -153,7 +156,8 @@ describe("the settings the sweep chose", () => {
       top-1; 0.4 was the largest value at which the model still agreed with both of the owner's own
       landings — acies on his neon moon, verrata on water magma — his call, 2026-09-21. After the
       2026-10-01 EDDN export the same rule gives 0.48, the only weight that keeps both (his call
-      again). Changing it is a decision about whose evidence wins, not a tuning step.
+      again). In 1.4.0 (table on every sighting) no weight keeps both first; 0.55 was measured and cost first places
+      on the EDDN year, so 0.48 stays (his call, 2026-11-15). Changing it is a decision about whose evidence wins, not a tuning step.
 
       A re-tune is a deliberate edit here as well as there.
     */

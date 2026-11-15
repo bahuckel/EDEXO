@@ -71,7 +71,16 @@ import { BODY_TYPE_T_EDGES, bodyTypeKeyParts } from "../shared/bodyTypeKey.js";
 /**
  * How far to move from the galaxy-wide prior toward the share among bodies of this kind, 0…1.
  *
- * **0.48 since 2026-10-01** (owner's choice), by the same rule as before on a bigger corpus. After the
+ * **0.48, kept in 1.4.0** (owner's choice, 2026-11-15). The table is now counted on every sighting (1.79 M finds on
+ * bodies where every genus was sampled) and no weight keeps both of his landings first any more: acies leads the
+ * nitrogen-magma moon up to 0.55, verrata the water-magma one only from 0.65. The data agrees with both landings but
+ * calls each a near three-way tie (icy neon nitrogen magma: acies 37.8 / omentum 32.1 / tela 29.7 % of 8,458 bodies;
+ * water magma: verrata 36.5 / tela 33.0 / acies 30.4 % of 8,423). 0.55 was measured (plan-1.4.0.md, r9): verrata
+ * second on water magma, but 22 / 27 fewer species first in their genus on the EDDN year, two rows under the 1 %
+ * floor and a worse within-genus calibration — so 0.48 stays, with verrata third there.
+ * docs/perf/landing_weight_sweep_140.mts re-sweeps it.
+ *
+ * Before: **0.48 from 2026-10-01** (owner's choice), by the same rule as before on a bigger corpus. After the
  * EDDN bio-collector export (4,743 more sightings) and a rebuilt table, 0.4 put acies first on the
  * water-magma moon too; re-swept, the only weight that keeps both of his landings is 0.48:
  *

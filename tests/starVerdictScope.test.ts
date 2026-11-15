@@ -46,7 +46,9 @@ describe("the observed-host-star term", () => {
     // (Biconcavis round D was the first example until 1.2.20 rebuilt its profile from the EDDN year: 559 bodies
     // round B to Y hosts, so the host star no longer decides where it grows and "never" is withdrawn.)
     expect(hostStarVerdict(species("stratum_stratum_laminamus"), "B").kind).toBe("never");
-    expect(hostStarVerdict(species("fonticulua_fonticulua_digitos"), "B").kind).toBe("never");
+    // Digitos round B was the second example until the 1.4.0 rebuild on every sighting: round K to Y hosts on
+    // 37,000 bodies, its host-star importance fell under the floor and "never" is withdrawn, as for biconcavis.
+    expect(hostStarVerdict(species("fonticulua_fonticulua_digitos"), "B").kind).toBe("unknown");
     expect(hostStarVerdict(species("fonticulua_fonticulua_digitos"), "Y").kind).toBe("observed");
     expect(hostStarVerdict(species("fonticulua_fonticulua_digitos"), "K").kind).toBe("observed");
   });
@@ -71,7 +73,7 @@ describe("the observed-host-star term", () => {
   });
 
   it("still demotes when neither the host nor the main star has been seen", () => {
-    expect(neverSeen("fonticulua_fonticulua_digitos", "B", "B")).toBe(true);
+    expect(neverSeen("stratum_stratum_laminamus", "B", "B")).toBe(true);
   });
 });
 

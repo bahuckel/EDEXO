@@ -51,7 +51,9 @@
         "atmosphere": [
           "Helium (thin)",
           "Neon (thin)",
-          "Argon (thin)"
+          "Argon (thin)",
+          "Argon-rich",
+          "Neon-rich"
         ],
         "planet_types": [
           "Icy"
@@ -69,7 +71,10 @@
             "Black hole"
           ]
         },
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "-rich types added 2026-11-14 (1.4.0): Argon-rich 372, Neon-rich 70 bodies in the EDDN year (2+ bodies, never one system alone; a lone body is not enough). The list check now keeps \"-rich\" apart from the plain gas."
+        ]
       },
       "color_rules": {
         "type": "material_based",
@@ -91,14 +96,19 @@
         "atmosphere": [
           "Helium (thin)",
           "Neon (thin)",
-          "Argon (thin)"
+          "Argon (thin)",
+          "Argon-rich",
+          "Neon-rich"
         ],
         "planet_types": [
           "Icy"
         ],
         "max_gravity": 0.275,
         "location_requirement": "Near nebulae",
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "-rich types added 2026-11-14 (1.4.0): Argon-rich 509, Neon-rich 76 bodies in the EDDN year (2+ bodies, never one system alone; a lone body is not enough). The list check now keeps \"-rich\" apart from the plain gas."
+        ]
       },
       "color_rules": {
         "type": "material_based",

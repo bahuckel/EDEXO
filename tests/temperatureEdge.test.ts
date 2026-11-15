@@ -51,9 +51,14 @@ describe("sightings near a codex edge", () => {
     expect(near!).toBeLessThan(MIN_TEMPERATURE_OBSERVATIONS);
   });
 
-  it("finds paleas recorded just under its floor, beside the commander's own find", () => {
+  /*
+    Was "finds paleas recorded just under its floor": the old corpus had 33 bodies at 162.6-165 K. The 1.4.0 rebuild
+    on every sighting has 138,989 paleas bodies and the coldest is 165.0 K exactly, so 165 K is the game's floor and
+    the bin holds only the few at 165.0 itself, under the rescue floor.
+  */
+  it("finds too few paleas under its floor to reopen it", () => {
     const near = observedNearTemperature(species("stratum_stratum_paleas"), 162.1, { below: 165 });
-    expect(near!).toBeGreaterThanOrEqual(MIN_TEMPERATURE_OBSERVATIONS);
+    expect(near ?? 0).toBeLessThan(MIN_TEMPERATURE_OBSERVATIONS);
   });
 });
 
@@ -78,11 +83,10 @@ describe("the matcher, on a straddling bin", () => {
     profile bodies at 162.6-165 K still exist (above) — they just no longer reopen the floor.
   */
   it("no longer rescues paleas at 162.1 K: the EDDN year has none of it under 165 K", () => {
+    // Since 1.4.0 no profile observation speaks for it either (above), so the codex band itself demotes it.
     const r = judge("stratum_stratum_paleas", body(162.1, "CarbonDioxide"));
     expect(r.ok).toBe(false);
-    expect(
-      r.reasons.some((x) => x.field === "SurfaceTemperature" && /year of EDDN finds/.test(x.detail)),
-    ).toBe(true);
+    expect(r.reasons.some((x) => x.field === "SurfaceTemperature")).toBe(true);
   });
 
   it("still rescues a bin wholly beyond the band — Fungoida stabitis on water above 424 K", () => {

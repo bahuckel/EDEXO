@@ -257,8 +257,8 @@ describe("volcanism in the posterior", () => {
         w <= 0.4   acies > tela > omentum      w >= 0.5   omentum > acies > tela
 
       `BODY_TYPE_PRIOR_WEIGHT` shipped at 1 for one day, when the app contradicted him here. It is
-      0.4 until 2026-10-01, 0.48 since (the EDDN export moved the water-magma case, below).
-      **Raising it past 0.48 breaks this test, and that is the point** — the failure is the
+      0.4 until 2026-10-01, 0.48 since (the EDDN export moved the water-magma case, below; kept in 1.4.0).
+      **Raising it past 0.55 breaks this test, and that is the point** — the failure is the
       warning, not a stale fixture to be updated.
     */
     const appOrder = CANDIDATES.map((name) => ({
@@ -268,10 +268,10 @@ describe("volcanism in the posterior", () => {
       .filter((x) => x.r)
       .sort((a, b) => b.r!.logScore - a.r!.logScore)
       .map((x) => x.name.replace(/^\S+\s+/, ""));
-    expect(appOrder[0], "raise BODY_TYPE_PRIOR_WEIGHT past 0.48 and the corpus cell takes this").toBe("acies");
+    expect(appOrder[0], "raise BODY_TYPE_PRIOR_WEIGHT past 0.55 and the corpus cell takes this").toBe("acies");
   });
 
-  it("still gets verrata first on water magma, which is the other end of the same dial", () => {
+  it("keeps verrata in the top three on water magma, which is the other end of the same dial", () => {
     /*
       The reason the weight is 0.4 rather than lower. Verrata is 43-48 % of water-magma bodies in the
       corpus and it was losing to a species more common overall — one of the three field misses that
@@ -279,6 +279,11 @@ describe("volcanism in the posterior", () => {
 
       2026-10-01: with the EDDN export in the corpus and the table rebuilt, 0.4 lost this one to acies;
       0.48 is now the only weight that keeps both landings (verrata 0.023 ahead here).
+
+      1.4.0: on the table counted from every sighting no weight keeps both first. The data calls water magma a near
+      three-way tie (verrata 36.5 / tela 33.0 / acies 30.4 % of 8,423 bodies), and at 0.55 verrata is second, behind
+      acies; from 0.65 it is first but omentum takes the nitrogen moon. 0.55 cost first places on the EDDN year (plan
+      r9), so 0.48 stays and verrata is third here, behind acies and tela. Owner's call (2026-11-15): top three.
 
       So the weight is not a midpoint anyone liked the look of. It is the only value measured that satisfies
       both of the owner's landings at once.
@@ -290,7 +295,7 @@ describe("volcanism in the posterior", () => {
       .filter((x) => x.r)
       .sort((a, b) => b.r!.logScore - a.r!.logScore)
       .map((x) => x.name.replace(/^\S+\s+/, ""));
-    expect(appOrder[0], "lower BODY_TYPE_PRIOR_WEIGHT below 0.48 and verrata loses this again").toBe(
+    expect(appOrder.slice(0, 3), "verrata has left the top three on water magma").toContain(
       "verrata",
     );
   });

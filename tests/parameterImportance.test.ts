@@ -25,16 +25,14 @@ describe("bucketCategoricalValue", () => {
     expect(bucketCategoricalValue("exo.host_star_spectral_primary", "?")).toBe("other");
   });
 
-  it("collapses pressure prefixes and -rich variants of the same gas", () => {
+  it("collapses pressure prefixes, and keeps -rich apart", () => {
     // Pressure is measured separately, and far better, as a number.
-    for (const v of [
-      "Thin Carbon dioxide",
-      "Hot thin Carbon dioxide",
-      "Thick Carbon dioxide",
-      "Carbon dioxide-rich",
-    ]) {
+    for (const v of ["Thin Carbon dioxide", "Hot thin Carbon dioxide", "Thick Carbon dioxide"]) {
       expect(bucketCategoricalValue("body.atmosphereType", v), v).toBe("carbondioxide");
     }
+    // "-rich" is its own atmosphere to the game (the spawn follows the label; 1.4.0 study, 2026-11-14).
+    expect(bucketCategoricalValue("body.atmosphereType", "Thin Carbon dioxide-rich")).toBe("carbondioxiderich");
+    expect(bucketCategoricalValue("body.atmosphereType", "CarbonDioxideRich")).toBe("carbondioxiderich");
   });
 
   it("lands the journal's spelling and the corpus's on the same token", () => {
@@ -77,6 +75,8 @@ describe("bucketCategoricalValue", () => {
       ["body.subType", "High metal content body", "Metal rich body"],
       ["body.atmosphereType", "CarbonDioxide", "SulphurDioxide"],
       ["body.atmosphereType", "Neon", "Nitrogen"],
+      ["body.atmosphereType", "Thin Carbon dioxide", "Thin Carbon dioxide-rich"],
+      ["body.atmosphereType", "Argon", "ArgonRich"],
       ["body.volcanismType", "Major Water Magma", "Minor Nitrogen Magma"],
     ];
     for (const [path, a, b] of distinct) {
@@ -171,9 +171,10 @@ describe("poolBackground and buildParameterImportance", () => {
 
   it("pools every species into one distribution, bucketing on the way in", () => {
     const bg = poolBackground(tables);
-    // "Thin Carbon dioxide" and "Carbon dioxide-rich" are the same gas.
+    // "Thin Carbon dioxide" and "Carbon dioxide-rich" are different atmospheres (the spawn follows the label).
     expect(bg["body.atmosphereType"]).toEqual({
-      carbondioxide: 110,
+      carbondioxide: 60,
+      carbondioxiderich: 50,
       ammonia: 40,
       water: 50,
     });

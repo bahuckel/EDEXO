@@ -103,9 +103,11 @@ describe("what gets marked", () => {
   it("marks the thin end of the corpus and leaves the well-fed alone", () => {
     const out = computeCollectionFocus([], db, root, DEFAULT_COLLECTION_FOCUS);
     expect(out.size).toBeGreaterThan(0);
-    // Araneamus rests on a few dozen bodies; aurasus on thousands. (Fluctus was the example until its profile was
-    // rebuilt from the EDDN year in 1.2.20: 21 -> 333 bodies, past the floor.)
-    expect(out.has("stratum_stratum_araneamus")).toBe(true);
+    // Lindigoticum Brain Tree rests on 74 bodies; aurasus on thousands. (Fluctus was the example until its profile was
+    // rebuilt from the EDDN year in 1.2.20: 21 -> 333 bodies, past the floor; then araneamus, until the 1.4.0
+    // rebuild on every sighting gave it 5,000.)
+    expect(out.has("brain_trees_brain_tree_lindigoticum")).toBe(true);
+    expect(out.has("stratum_stratum_araneamus")).toBe(false);
     expect(out.has("bacterium_bacterium_aurasus")).toBe(false);
     for (const r of out.values()) expect(r.corpusBodies).toBeLessThan(DEFAULT_COLLECTION_FOCUS.corpusFloor);
   });
@@ -113,11 +115,11 @@ describe("what gets marked", () => {
   it("drops a species once you have confirmed it enough times", () => {
     const cfg = { ...DEFAULT_COLLECTION_FOCUS, targetScans: 2 };
     const before = computeCollectionFocus([], db, root, cfg);
-    expect(before.has("stratum_stratum_araneamus")).toBe(true);
+    expect(before.has("brain_trees_brain_tree_lindigoticum")).toBe(true);
 
-    const b = () => bodyWith([{ genus: "Stratum", species: "Stratum Araneamus" }]);
+    const b = () => bodyWith([{ genus: "Brain Tree", species: "Lindigoticum Brain Tree" }]);
     const after = computeCollectionFocus([b(), b()], db, root, cfg);
-    expect(after.has("stratum_stratum_araneamus")).toBe(false);
+    expect(after.has("brain_trees_brain_tree_lindigoticum")).toBe(false);
   });
 
   it("honours a species you have told it to stop asking about", () => {

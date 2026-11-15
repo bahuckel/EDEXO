@@ -22,7 +22,7 @@
  * the pressure adjective is a different question from the composition.
  */
 import type { SpeciesEntry } from "../shared/types.js";
-import { atmosphereCompositionKey } from "../shared/scanAtmosphereMatch.js";
+import { atmosphereListKey } from "../shared/scanAtmosphereMatch.js";
 import { loadExomasteryProfile } from "./exomasteryProfile.js";
 import { getProjectRoot } from "./paths.js";
 import { observationFloor } from "./observationFloors.js";
@@ -83,13 +83,14 @@ export const MIN_ATMOSPHERE_OBSERVATIONS = observationFloor("ATMOSPHERE", 10);
 /**
  * Composition key for either vocabulary: `Thin Water` and `Water` both become `water`,
  * `Hot thin Carbon dioxide` and `CarbonDioxide` both become `carbondioxide`, and anything meaning
- * vacuum becomes {@link NO_ATMOSPHERE}.
+ * vacuum becomes {@link NO_ATMOSPHERE}. "-rich" stays apart (`carbondioxiderich`), as the codex list
+ * check keeps it ({@link atmosphereListKey}): bodies seen under plain CO2 say nothing about CO2-rich.
  */
 export function atmosphereObservationKey(value: string | null | undefined): string {
   const t = (value ?? "").trim().toLowerCase().replace(/_/g, " ");
   if (!t || isNoAtmosphereText(t)) return NO_ATMOSPHERE;
   // The corpus prefixes the pressure and the heat onto the composition; both are other questions.
-  return atmosphereCompositionKey(stripAtmosphereDensity(t));
+  return atmosphereListKey(stripAtmosphereDensity(t));
 }
 
 export interface AtmosphereObservation {

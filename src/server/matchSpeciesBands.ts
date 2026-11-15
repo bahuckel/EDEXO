@@ -5,7 +5,7 @@
  * public ones.
  */
 import type { PlanetScan, SpeciesCriterion, SpeciesEntry, SpeciesMatchContext } from "../shared/types.js";
-import { gameTemperatureCeilingK } from "../shared/gameLimits.js";
+import { gameTemperatureCeilingK, type CeilingBody } from "../shared/gameLimits.js";
 import { observedNearTemperature } from "./speciesTemperatureObservations.js";
 import type { ExclusionValues } from "./measuredExclusions.js";
 import { hostStarClassKey } from "../shared/hostStarClass.js";
@@ -74,11 +74,14 @@ export interface PlanetTemperatureBand {
   maxK: number;
 }
 
-export function speciesTempBand(c: SpeciesCriterion): { lo: number; hi: number } | null {
+export function speciesTempBand(
+  c: SpeciesCriterion,
+  body?: CeilingBody | null,
+): { lo: number; hi: number } | null {
   const st = c.surfaceTemperatureK;
   if (!st) return null;
   if (st.min === undefined && st.max === undefined) return null;
-  return { lo: st.min ?? OPEN_LO, hi: gameTemperatureCeilingK(st.max) ?? OPEN_HI };
+  return { lo: st.min ?? OPEN_LO, hi: gameTemperatureCeilingK(st.max, body) ?? OPEN_HI };
 }
 
 /**

@@ -48,4 +48,16 @@ describe("the 195 K ceiling", () => {
     expect(judge("tussock_tussock_triticum", body(195.1, "CarbonDioxide")).ok).toBe(true);
     expect(judge("tussock_tussock_triticum", body(196, "CarbonDioxide")).ok).toBe(false);
   });
+
+  it("does not hold on thin carbon dioxide under 0.047 g (1.4.0)", () => {
+    // Blu Thua RN-S c17-23 7 b: 196.7 K, 0.042 g, eight species of the 195 K community, triticum among them.
+    const light = { ...body(196.7, "CarbonDioxide"), SurfaceGravity: 0.042 * 9.80665 };
+    expect(gameTemperatureCeilingK(195, light)).toBe(200);
+    expect(judge("tussock_tussock_triticum", light).ok).toBe(true);
+    // Not on a heavier body, and not on another gas or on CO2-rich.
+    expect(gameTemperatureCeilingK(195, { ...light, SurfaceGravity: 0.05 * 9.80665 })).toBe(195.5);
+    expect(gameTemperatureCeilingK(195, { ...light, AtmosphereType: "CarbonDioxideRich" })).toBe(195.5);
+    expect(gameTemperatureCeilingK(195, { ...light, AtmosphereType: "Ammonia" })).toBe(195.5);
+    expect(gameTemperatureCeilingK(190, light)).toBe(190);
+  });
 });

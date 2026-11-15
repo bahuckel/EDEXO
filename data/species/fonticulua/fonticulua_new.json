@@ -83,8 +83,7 @@
       "description": "Cluster of cylindrical tube structures emerging from ice.",
       "conditions": {
         "atmosphere": [
-          "Methane",
-          "Methane-rich"
+          "Methane"
         ],
         "max_gravity": 0.28,
         "planet_types": [
@@ -92,7 +91,10 @@
           "Rocky Ice"
         ],
         "temperature_K": null,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "Removed 2026-11-14 (1.4.0): Methane-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
+        ]
       }
     },
     {

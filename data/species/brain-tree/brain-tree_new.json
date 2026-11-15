@@ -74,11 +74,13 @@
           "Carbon Dioxide",
           "Helium",
           "Neon-rich",
-          "Argon-rich"
+          "Argon-rich",
+          "Carbon dioxide-rich"
         ],
         "matchContextNotes": [
           "Measured 2026-09-28 on Spansh dump single-species bodies and Bioforge: airless or thin (sulphur dioxide, carbon dioxide, helium); 20-1,780 K, no temperature rule; a gas giant with water-based life in 50 of 58 whole systems.",
-          "Measured 2026-10-04 (owner: no misses): of 1,022 confirmed single-species bodies, 46 have a thin atmosphere: helium 27, carbon dioxide 13, neon-rich 3, argon-rich 2, silicate vapour 1 (not listed: one body). A genus-wide airless-only gate hid every Brain Tree on such bodies; it is gone and this list says where they grow."
+          "Measured 2026-10-04 (owner: no misses): of 1,022 confirmed single-species bodies, 46 have a thin atmosphere: helium 27, carbon dioxide 13, neon-rich 3, argon-rich 2, silicate vapour 1 (not listed: one body). A genus-wide airless-only gate hid every Brain Tree on such bodies; it is gone and this list says where they grow.",
+          "-rich types added 2026-11-14 (1.4.0): Carbon dioxide-rich 4 bodies in the EDDN year (2+ bodies, never one system alone; a lone body is not enough). The list check now keeps \"-rich\" apart from the plain gas."
         ]
       }
     },
@@ -228,11 +230,13 @@
           "Argon",
           "Oxygen",
           "Water",
-          "Water-rich"
+          "Water-rich",
+          "Carbon dioxide-rich"
         ],
         "matchContextNotes": [
           "Measured 2026-09-28 on Spansh dump single-species bodies and Bioforge: airless or thin (sulphur dioxide, carbon dioxide, helium); 200-500 K; companion rule off (about 30 of 313 whole systems).",
-          "Measured 2026-10-04 (owner: no misses): of 2,558 confirmed single-species bodies, 252 have a thin atmosphere: carbon dioxide 194 (5 of them carbon-dioxide-rich), sulphur dioxide 38, argon-rich 8, oxygen 4, argon 1, water 1, water-rich 1. A genus-wide airless-only gate hid every Brain Tree on such bodies; it is gone and this list says where they grow."
+          "Measured 2026-10-04 (owner: no misses): of 2,558 confirmed single-species bodies, 252 have a thin atmosphere: carbon dioxide 194 (5 of them carbon-dioxide-rich), sulphur dioxide 38, argon-rich 8, oxygen 4, argon 1, water 1, water-rich 1. A genus-wide airless-only gate hid every Brain Tree on such bodies; it is gone and this list says where they grow.",
+          "-rich types added 2026-11-14 (1.4.0): Carbon dioxide-rich 14 bodies in the EDDN year (2+ bodies, never one system alone; a lone body is not enough). The list check now keeps \"-rich\" apart from the plain gas."
         ]
       }
     }

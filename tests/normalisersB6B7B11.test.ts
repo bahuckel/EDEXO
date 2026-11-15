@@ -21,8 +21,9 @@ describe("body-type key", () => {
   it("keeps the gases as before, journal and EDSM spellings alike", () => {
     expect(bodyTypeAtmosphere("CarbonDioxide")).toBe("carbondioxide");
     expect(bodyTypeAtmosphere("Thin Carbon dioxide")).toBe("carbondioxide");
-    expect(bodyTypeAtmosphere("NeonRich")).toBe("neon");
-    expect(bodyTypeAtmosphere("Thin Neon-rich")).toBe("neon");
+    // "-rich" is its own atmosphere to the game (1.4.0 study, 2026-11-14), both spellings one token.
+    expect(bodyTypeAtmosphere("NeonRich")).toBe("neonrich");
+    expect(bodyTypeAtmosphere("Thin Neon-rich")).toBe("neonrich");
   });
 
   it("keeps the gas giants out of the ammonia and water worlds", () => {

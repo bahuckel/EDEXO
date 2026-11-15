@@ -44,6 +44,7 @@ import { observedUnderAtmosphere } from "./speciesAtmosphereObservations.js";
 import {
   normalizeScanAtmosphereForMatch,
   atmosphereCompositionKey,
+  atmosphereListKey,
   atmosphereTypeKeyOf,
   atmosphereAllowlistMeansAnyThinCompositionOnly,
 } from "../shared/scanAtmosphereMatch.js";
@@ -317,6 +318,8 @@ export function speciesMatchesExcludingTempPressure(
         });
       } else {
         const scanKey = atmosphereCompositionKey(atmoNorm);
+        // "-rich" kept apart: a list naming "CarbonDioxide" does not cover "CarbonDioxideRich" (atmosphereListKey).
+        const listKey = atmosphereListKey(atmoNorm);
         const matches =
           (atmoNorm === "" && vacuumAllowed) ||
           (atmoNorm !== "" &&
@@ -324,7 +327,7 @@ export function speciesMatchesExcludingTempPressure(
               if (!a?.trim()) return false;
               if (a === atmoNorm) return true;
               if (a.toLowerCase() === atmoNorm.toLowerCase()) return true;
-              return atmosphereCompositionKey(a) === scanKey;
+              return atmosphereListKey(a) === listKey;
             }));
         // Listed only with volcanism (SpeciesCriterion.volcanicOnlyAtmospheres).
         const volcanicOnly =
@@ -1009,7 +1012,7 @@ export function speciesMatchesCriteria(
   }
 
   if (speciesNeedsTemperatureGate(c)) {
-    const band = speciesTempBand(c)!;
+    const band = speciesTempBand(c, scan)!;
     if (!planetTempBand) {
       failures.push({
         field: "SurfaceTemperature",
@@ -1039,7 +1042,7 @@ export function speciesMatchesCriteria(
             observedHere,
             scan.SurfaceTemperature!,
             c.surfaceTemperatureK?.min,
-            gameTemperatureCeilingK(c.surfaceTemperatureK?.max),
+            gameTemperatureCeilingK(c.surfaceTemperatureK?.max, scan),
           )
         : null;
       // No fine histogram to ask: the display bin answers, as it always did.
@@ -1052,7 +1055,7 @@ export function speciesMatchesCriteria(
             entry.id,
             scan.SurfaceTemperature!,
             c.surfaceTemperatureK?.min,
-            gameTemperatureCeilingK(c.surfaceTemperatureK?.max),
+            gameTemperatureCeilingK(c.surfaceTemperatureK?.max, scan),
           )
         : null;
       if (observedHere && beyond && eddn && !eddn.seen && eddn.range) {
@@ -1186,7 +1189,7 @@ export function speciesMatchesCriteria(
     });
   }
 
-  const linkedMax = gameTemperatureCeilingK(c.whenAtmosphereLinkedMaxTempK);
+  const linkedMax = gameTemperatureCeilingK(c.whenAtmosphereLinkedMaxTempK, scan);
   const linkedMin = c.whenAtmosphereLinkedMinTempK;
   const linkedAtmo = c.whenAtmosphereLinkedAtmosphereAnyOf;
   if (linkedMax !== undefined || linkedMin !== undefined) {

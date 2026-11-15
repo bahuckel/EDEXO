@@ -58,16 +58,19 @@ export function bodyTypePlanetClass(subType: string | null | undefined): string 
 }
 
 /**
- * The gas, without the pressure word or the `rich` suffix.
+ * The gas, without the pressure word.
  *
- * Pressure is measured separately and far better as a number, and `-rich` on one side is `Rich`
- * glued on the other — the same fold `bucketCategoricalValue` makes for the likelihood terms.
+ * Pressure is measured separately and far better as a number. `-rich` on one side is `Rich` glued on
+ * the other; both squash to the same `…rich` token, kept apart from the plain gas as
+ * `bucketCategoricalValue` keeps it: the game treats an "X-rich" atmosphere as its own (1.4.0 study,
+ * 2026-11-14: Bacterium aurasus on 0 of 2,988 CO2-rich bodies; folded, they sat in the CO2 cell where
+ * aurasus is the most common species).
  */
 export function bodyTypeAtmosphere(atmosphereType: string | null | undefined): string {
   // Any run of density words (the dump writes "Hot Water" as well as "Hot thin Water"), and the American
   // spelling folded (plan 1.1 audit, 2026-10-11: docs/perf/atmo-key-audit.mts).
   const raw = foldSpelling(atmosphereType ?? "").toLowerCase().replace(/^((hot|thin|thick)\s+)+/, "");
-  const key = squash(raw.replace(/\s+atmosphere$/, "")).replace(/rich$/, "");
+  const key = squash(raw.replace(/\s+atmosphere$/, ""));
   // One token for an airless body (code review B6, 2026-10-11): the journal writes "None", Spansh and
   // EDSM "No atmosphere", which folded to "no" and split every airless cell of the prior in two.
   return !key || key === "no" || key === "none" ? "none" : key;

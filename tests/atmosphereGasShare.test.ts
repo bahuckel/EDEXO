@@ -203,8 +203,13 @@ describe("the gas share that decides two pairs of species", () => {
       does not copy the field, so none of these bands are exercised there.
     */
     const noComposition = body({ AtmosphereType: "ArgonRich", Atmosphere: "thin argon rich atmosphere" });
-    expect(verdict(find("Fonticulua campestris"), noComposition).ok).toBe(true);
     expect(verdict(find("Fonticulua upupam"), noComposition).ok).toBe(true);
+    // Campestris is demoted here by its codex list ("Argon", not "Argon-rich": 0 of 17,558 Argon-rich bodies in the
+    // 1.4.0 EDDN year), never by a gas band invented from the missing composition.
+    const campestris = verdict(find("Fonticulua campestris"), noComposition);
+    expect(campestris.ok).toBe(false);
+    expect(campestris.softOnly).toBe(true);
+    expect(campestris.reasons.some((r) => r.card === "gas-share")).toBe(false);
   });
 
   it("is opted into by the five rows the corpus can decide, and no others", () => {
@@ -298,9 +303,10 @@ describe("the gas share that decides two pairs of species", () => {
     expect(upupam.max).toBeLessThan(50);
     expect(upupam.min).toBeGreaterThan(0.1);
     // Every one of its bodies carries argon, which is what the floor encodes. 56 when measured;
-    // 74 after the 2026-09-27 route imports (rt1–rt5), 83 after the 2026-10-01 EDDN export — the
+    // 74 after the 2026-09-27 route imports (rt1–rt5), 83 after the 2026-10-01 EDDN export, 6,021 in the 1.4.0
+    // rebuild on every sighting (campestris 50.03-100 %, upupam 0.12-49.998 %, acies 50.007-100 %) — the
     // ranges above held each time.
-    expect(upupam.count).toBe(83);
+    expect(upupam.count).toBe(6021);
 
     const acies = gasRange("Bacterium acies", "Neon")!;
     expect(acies.min).toBeGreaterThan(50);

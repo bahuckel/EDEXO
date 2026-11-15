@@ -169,7 +169,8 @@
           "Sulphur Dioxide",
           "Argon",
           "Argon-rich",
-          "Oxygen"
+          "Oxygen",
+          "Carbon dioxide-rich"
         ],
         "temperature_K": {
           "min": 200,
@@ -177,7 +178,8 @@
         },
         "matchContextNotes": [
           "Measured 2026-09-28 (owner: \"base it on data\"): Bioforge 200-500 K for all eight species; Spansh dump single-species bodies 200-500 K, 99-100 % with volcanism of some kind, rocky and high-metal bodies both, 0-20 % on thin carbon dioxide or sulphur dioxide.",
-          "Measured 2026-10-04 (owner: no misses): of 1,559 confirmed single-species bodies, 5 on thin Argon-rich, 2 on thin Argon and 1 on thin Oxygen, all high-metal-content worlds with rocky magma in Empyrean Straits; each showed only Albidum after a DSS until these were listed."
+          "Measured 2026-10-04 (owner: no misses): of 1,559 confirmed single-species bodies, 5 on thin Argon-rich, 2 on thin Argon and 1 on thin Oxygen, all high-metal-content worlds with rocky magma in Empyrean Straits; each showed only Albidum after a DSS until these were listed.",
+          "-rich types added 2026-11-14 (1.4.0): Carbon dioxide-rich 21 bodies in the EDDN year (2+ bodies, never one system alone; a lone body is not enough). The list check now keeps \"-rich\" apart from the plain gas."
         ]
       }
     },
@@ -198,11 +200,13 @@
           "Carbon Dioxide",
           "Sulphur Dioxide",
           "Argon-rich",
-          "Oxygen"
+          "Oxygen",
+          "Carbon dioxide-rich"
         ],
         "matchContextNotes": [
           "Measured 2026-09-28 (owner: \"base it on data\"): Bioforge 200-500 K for all eight species; Spansh dump single-species bodies 200-500 K, 99-100 % with volcanism of some kind, rocky and high-metal bodies both, 0-20 % on thin carbon dioxide or sulphur dioxide.",
-          "Measured 2026-10-04 (owner: no misses): of 309 confirmed single-species bodies, 2 rocky ice worlds, 1 thin Argon-rich and 1 thin Oxygen atmosphere, all in Galactic Centre with rocky magma; each showed only Albidum after a DSS until these were listed."
+          "Measured 2026-10-04 (owner: no misses): of 309 confirmed single-species bodies, 2 rocky ice worlds, 1 thin Argon-rich and 1 thin Oxygen atmosphere, all in Galactic Centre with rocky magma; each showed only Albidum after a DSS until these were listed.",
+          "-rich types added 2026-11-14 (1.4.0): Carbon dioxide-rich 6 bodies in the EDDN year (2+ bodies, never one system alone; a lone body is not enough). The list check now keeps \"-rich\" apart from the plain gas."
         ],
         "temperature_K": {
           "min": 200,

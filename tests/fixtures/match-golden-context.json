@@ -632,8 +632,7 @@
       },
       "candidates": [
         "electricae_electricae_radialem",
-        "fonticulua_fonticulua_upupam",
-        "fungoida_fungoida_bullarum"
+        "fonticulua_fonticulua_upupam"
       ],
       "unlikely": [
         "aleoida_aleoida_laminiae",
@@ -671,6 +670,7 @@
         "frutexa_frutexa_flammasis",
         "frutexa_frutexa_metallicum",
         "frutexa_frutexa_sponsae",
+        "fungoida_fungoida_bullarum",
         "fungoida_fungoida_gelata",
         "fungoida_fungoida_setisis",
         "fungoida_fungoida_stabitis",
@@ -768,8 +768,7 @@
       },
       "candidates": [
         "electricae_electricae_radialem",
-        "fonticulua_fonticulua_upupam",
-        "fungoida_fungoida_bullarum"
+        "fonticulua_fonticulua_upupam"
       ],
       "unlikely": [
         "aleoida_aleoida_laminiae",
@@ -807,6 +806,7 @@
         "frutexa_frutexa_flammasis",
         "frutexa_frutexa_metallicum",
         "frutexa_frutexa_sponsae",
+        "fungoida_fungoida_bullarum",
         "fungoida_fungoida_gelata",
         "fungoida_fungoida_setisis",
         "fungoida_fungoida_stabitis",
@@ -909,6 +909,7 @@
       },
       "candidates": [
         "bacterium_bacterium_aurasus",
+        "cactoida_cactoida_vermis",
         "concha_concha_labiata",
         "tussock_tussock_propagito"
       ],
@@ -930,7 +931,6 @@
         "bacterium_bacterium_volu",
         "cactoida_cactoida_lapis",
         "cactoida_cactoida_peperatis",
-        "cactoida_cactoida_vermis",
         "concha_concha_aureolas",
         "concha_concha_biconcavis",
         "electricae_electricae_pluma",
@@ -1133,7 +1133,6 @@
         "surfacePressureAtm": 0.008857448378978535
       },
       "candidates": [
-        "bacterium_bacterium_aurasus",
         "stratum_stratum_tectonicas"
       ],
       "unlikely": [
@@ -1144,6 +1143,7 @@
         "anemone_rubeum_bioluminescent",
         "bacterium_bacterium_acies",
         "bacterium_bacterium_alcyoneum",
+        "bacterium_bacterium_aurasus",
         "bacterium_bacterium_bullaris",
         "bacterium_bacterium_cerbrus",
         "bacterium_bacterium_informem",
@@ -1237,7 +1237,6 @@
         "surfacePressureAtm": 0.04536545556377991
       },
       "candidates": [
-        "bacterium_bacterium_aurasus",
         "stratum_stratum_tectonicas"
       ],
       "unlikely": [
@@ -1248,6 +1247,7 @@
         "anemone_rubeum_bioluminescent",
         "bacterium_bacterium_acies",
         "bacterium_bacterium_alcyoneum",
+        "bacterium_bacterium_aurasus",
         "bacterium_bacterium_bullaris",
         "bacterium_bacterium_cerbrus",
         "bacterium_bacterium_informem",

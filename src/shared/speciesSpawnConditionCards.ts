@@ -5,14 +5,14 @@ import type {
   SpeciesEntry,
   SpeciesMatchContext,
 } from "./types.js";
-import { gameGravityLimitG, gameTemperatureCeilingK } from "./gameLimits.js";
+import { gameGravityLimitG, gameTemperatureCeilingK, type CeilingBody } from "./gameLimits.js";
 import {
   journalPressureToAtm,
   journalSurfaceGravityToG,
   LIGHT_SECOND_METERS,
   THIN_ATMOSPHERE_MAX_ATM,
 } from "./journalPhysics.js";
-import { normalizeScanAtmosphereForMatch, atmosphereCompositionKey, atmosphereTypeKeyOf } from "./scanAtmosphereMatch.js";
+import { normalizeScanAtmosphereForMatch, atmosphereListKey, atmosphereTypeKeyOf } from "./scanAtmosphereMatch.js";
 import { spectralKeysFromJournalStarType } from "./starSpectralKeys.js";
 import { isBacteriumSpeciesEntry } from "./speciesBacterium.js";
 import { formatGenusStarColorSoftOneLine } from "./genusStarColorSoft.js";
@@ -55,11 +55,11 @@ export interface EncyclopediaSpawnConditionCard {
   tier: EncyclopediaSpawnTier;
 }
 
-function speciesTempBand(c: SpeciesCriterion): { lo: number; hi: number } | null {
+function speciesTempBand(c: SpeciesCriterion, body?: CeilingBody | null): { lo: number; hi: number } | null {
   const st = c.surfaceTemperatureK;
   if (!st) return null;
   if (st.min === undefined && st.max === undefined) return null;
-  return { lo: st.min ?? OPEN_LO, hi: gameTemperatureCeilingK(st.max) ?? OPEN_HI };
+  return { lo: st.min ?? OPEN_LO, hi: gameTemperatureCeilingK(st.max, body) ?? OPEN_HI };
 }
 
 function speciesPressureBand(c: SpeciesCriterion): { lo: number; hi: number } | null {
@@ -130,7 +130,7 @@ function atmospheresMatchSpeciesList(scan: PlanetScan, allowed: string[]): boole
         if (!a?.trim()) return false;
         if (a === atmoNorm) return true;
         if (a.toLowerCase() === atmoNorm.toLowerCase()) return true;
-        return atmosphereCompositionKey(a) === atmosphereCompositionKey(atmoNorm);
+        return atmosphereListKey(a) === atmosphereListKey(atmoNorm);
       }))
   );
 }
@@ -441,7 +441,7 @@ export function buildEncyclopediaSpawnConditionCards(args: {
 
   /* Species surface temperature overlap */
   if (speciesNeedsTemperatureGate(c)) {
-    const band = speciesTempBand(c)!;
+    const band = speciesTempBand(c, scan)!;
     const lines = [formatSpeciesTempRequirement(band)];
     let tier: EncyclopediaSpawnTier;
     let caption: string;

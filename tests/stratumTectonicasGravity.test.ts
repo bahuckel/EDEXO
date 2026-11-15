@@ -31,7 +31,7 @@ import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { getProjectRoot, getSpeciesDataDir } from "../src/server/paths.js";
 import { loadSpeciesDatabase } from "../src/server/snapshot.js";
-import { speciesMatchesCriteria } from "../src/server/matchSpecies.js";
+import { gameGravityLimitG, speciesMatchesCriteria } from "../src/server/matchSpecies.js";
 import { estimatedTemperatureRangeForScan } from "../src/server/planetTemperature.js";
 import type { PlanetScan, SpeciesEntry } from "../src/shared/types.js";
 
@@ -106,7 +106,9 @@ describe("Stratum tectonicas' gravity ceiling", () => {
     const g = j.numerics?.["body.gravity"];
     expect(g, "tectonicas must have a gravity profile").toBeTruthy();
     expect(g!.count).toBeGreaterThan(3000);
-    expect(g!.max).toBeLessThan(0.61);
+    // Against the game's limit, not the codex's rounding of it: 0.61 g is 6.0 m/s² (0.6118 g). The 1.4.0 rebuild
+    // on every sighting has 275,231 tectonicas bodies, 4 between 0.6100 and 0.6110 g and none past 0.6118.
+    expect(g!.max).toBeLessThan(gameGravityLimitG(0.61)!);
   });
 
   it("leaves the other Stratum ungated, because none of them needed it", () => {

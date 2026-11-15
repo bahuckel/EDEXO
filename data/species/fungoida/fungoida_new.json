@@ -65,7 +65,6 @@
       "conditions": {
         "atmosphere": [
           "Argon",
-          "Argon-rich",
           "Nitrogen"
         ],
         "planet_types": [
@@ -80,7 +79,8 @@
           "Codex: surface structures on high ground — mountains, cliffs, plateau edges (not a hard planet-class gate).",
           "Morph colour is driven by planetary rare materials (genus meta.color_variants), not star class.",
           "Nitrogen added 2026-10-09: 232 of its 8,188 Rocky ice bodies (253 systems, 10 with an organic sample) in a year of EDDN codex entries (EDGalaxyData archive); the codex list left it out, so each was listed as unlikely before a DSS.",
-          "High Metal Content added 2026-10-15 (outlier register, a pattern): 14 of the 22 High metal content bodies with life under thin Argon at 76 K or less in a year of EDDN finds carry it (64 %), one per system, 59-75 K; the codex list left it out, so each was listed as unlikely."
+          "High Metal Content added 2026-10-15 (outlier register, a pattern): 14 of the 22 High metal content bodies with life under thin Argon at 76 K or less in a year of EDDN finds carry it (64 %), one per system, 59-75 K; the codex list left it out, so each was listed as unlikely.",
+          "Removed 2026-11-14 (1.4.0): Argon-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
         ]
       }
     },

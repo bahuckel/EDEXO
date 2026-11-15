@@ -23,8 +23,36 @@ export function gameGravityLimitG(maxG: number | undefined): number | undefined 
  * and 195.5 K (Aleoida gravis 513, Tussock triticum 397, Osseus pellebantus 396 …), a handful beyond.
  * Fungoida gelata and Frutexa acus at 195 K on CO₂ were demoted for it (EDDN ScanOrganic set).
  */
-export function gameTemperatureCeilingK(maxK: number): number;
-export function gameTemperatureCeilingK(maxK: number | undefined): number | undefined;
-export function gameTemperatureCeilingK(maxK: number | undefined): number | undefined {
-  return maxK === 195 ? 195.5 : maxK;
+export function gameTemperatureCeilingK(maxK: number, body?: CeilingBody | null): number;
+export function gameTemperatureCeilingK(maxK: number | undefined, body?: CeilingBody | null): number | undefined;
+export function gameTemperatureCeilingK(maxK: number | undefined, body?: CeilingBody | null): number | undefined {
+  if (maxK !== 195) return maxK;
+  return body && liftsCarbonDioxideCeiling(body) ? LOW_GRAVITY_CO2_CEILING_K : 195.5;
+}
+
+/** What the ceiling needs to know about the body: the journal's own fields. */
+export interface CeilingBody {
+  SurfaceGravity?: number | null;
+  AtmosphereType?: string | null;
+}
+
+/**
+ * Under this gravity the 195.5 K ceiling does not hold on thin carbon dioxide (1.4.0, 2026-11-14; owner's call).
+ *
+ * The bodies above 195.5 K in the EDDN year that carry the whole community capped there — Blu Thua RN-S c17-23 7 b
+ * (196.7 K, 8 species), Blaa Eork GI-F c26-0 1 b, Graea Hypue HT-P d6-478 11 b, Zuni IY-Z d13-1171 4 d … — are all
+ * at 0.042-0.044 g. Across the galaxy dump, thin CO2 between 195.5 and 200 K at 0.08-0.10 atm: 471 bio bodies at
+ * g ≥ 0.1 with 1.14 signals on average and none with 4+, 10 under 0.1 g with 8.5 and all of them 4+. Pressure is
+ * the same on both sides, so it is gravity (or the air column it holds, p / g). No scanned thin-CO2 body lies
+ * between 0.047 and 0.10 g above 195.5 K, so the edge is in that gap.
+ */
+export const LOW_GRAVITY_CO2_CEILING_G = 0.047;
+/** The lifted ceiling: every thin-CO2 body under 0.1 g in the dump sits at or below 199.2 K. */
+export const LOW_GRAVITY_CO2_CEILING_K = 200;
+
+function liftsCarbonDioxideCeiling(body: CeilingBody): boolean {
+  const g = body.SurfaceGravity;
+  if (typeof g !== "number" || !Number.isFinite(g) || g / EARTH_G_MS2 >= LOW_GRAVITY_CO2_CEILING_G) return false;
+  // Plain carbon dioxide only: the study had no "-rich" body to say anything about.
+  return (body.AtmosphereType ?? "").toLowerCase().replace(/[^a-z]/g, "").replace(/^(hot|thin|thick)+/, "") === "carbondioxide";
 }

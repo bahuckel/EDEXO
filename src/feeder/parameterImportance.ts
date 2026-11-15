@@ -129,13 +129,18 @@ export function bucketCategoricalValue(path: string, value: string): string {
   }
 
   if (low.includes("atmosphere") && !low.includes("composition")) {
-    // "Thin Carbon dioxide", "Hot thin Carbon dioxide", "Carbon dioxide-rich" and the journal's
-    // "CarbonDioxide" are one gas to the question being asked here; pressure is measured separately
-    // and far better as a number. `-rich` and the journal's glued `Rich` both come off, as the
-    // corpus spelling's already did.
+    // "Thin Carbon dioxide", "Hot thin Carbon dioxide" and the journal's "CarbonDioxide" are one gas to
+    // the question being asked here; pressure is measured separately and far better as a number.
+    // "-rich" stays (journal `CarbonDioxideRich` and corpus "Thin Carbon dioxide-rich" both squash to
+    // `carbondioxiderich`): it is its own atmosphere to the game. "X-rich" means X is the *second* gas
+    // behind one the label does not name, and the spawn follows the label, not the gases: oxygen-led HMC
+    // bodies at 0.930-0.970 % CO2 are "Thin Oxygen" and carry Bacterium volu, at 0.971 % they turn
+    // "Thin Carbon dioxide-rich" and carry Stratum tectonicas and no volu; Bacterium aurasus is on 0 of
+    // 2,988 CO2-rich bodies (1.4.0 study, 2,061,432 bodies, 2026-11-14). Folding it away gave aurasus
+    // full credit there.
     let t = v.toLowerCase().replace(/^(hot\s+)?(thin|thick)\s+/, "");
     t = t.replace(/\s+atmosphere$/, "");
-    return squash(t).replace(/rich$/, "") || "none";
+    return squash(t) || "none";
   }
 
   return v;

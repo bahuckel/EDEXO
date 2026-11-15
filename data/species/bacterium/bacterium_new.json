@@ -23,8 +23,7 @@
       "description": "Neon-atmosphere bacteria forming bright looping whirls.",
       "conditions": {
         "atmosphere": [
-          "Neon",
-          "Neon-rich"
+          "Neon"
         ],
         "required_atmosphere_type": "Neon",
         "atmosphere_gas_share_pct": {
@@ -33,7 +32,10 @@
           }
         },
         "volcanism": null,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "Removed 2026-11-14 (1.4.0): Neon-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
+        ]
       },
       "_atmosphereNote": "Neon here means neon air, not the word Neon in the label. All 213 observed acies bodies are 85.36-100% neon, and the 'NeonRich' worlds the row also matched average 5.5% neon - nitrogen with a neon trace, which is where Fonticulua segmentatus lives (0.24-0.53% neon on all 16 of its bodies). The floor is 50% because that is where the game itself stops calling a body Neon: across 8,000 journal scans, plain Neon runs 50.29-100% and NeonRich never exceeds 49.74%. A demotion, not a wall. This also closes the 93% helium / 6.7% neon body that passed the 5% required-gas floor. See tests/atmosphereGasShare.test.ts.",
       "color_rules": {
@@ -294,8 +296,7 @@
       "description": "Argon-based bacteria forming tight loop clusters.",
       "conditions": {
         "atmosphere": [
-          "Argon",
-          "Argon-rich"
+          "Argon"
         ],
         "required_atmosphere_type": "Argon",
         "atmosphere_gas_share_pct": {
@@ -304,7 +305,10 @@
           }
         },
         "volcanism": null,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "Removed 2026-11-14 (1.4.0): Argon-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
+        ]
       },
       "color_rules": {
         "type": "material_based",
@@ -326,11 +330,13 @@
       "conditions": {
         "atmosphere": [
           "Carbon Dioxide",
-          "Carbon Dioxide",
-          "Carbon dioxide-rich"
+          "Carbon Dioxide"
         ],
         "volcanism": null,
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "Removed 2026-11-14 (1.4.0): Carbon dioxide-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
+        ]
       },
       "_colourNote": "Aurasus is coloured by its parent star, not by the ground. The material table this row used to carry scored 4 of 15 against the commander's own sightings, and all four were 'Green', which sits in both tables by coincidence; the star table scores 15 of 15, with 11 of those on bodies whose host star resolves to a single class. His own photographs agree - Emerald, Green, Lime and Teal are G, K, F and M, and not one of them appears in the material table. Because the predicted colour also chooses the photograph, the app could almost never show the right picture for the commonest Bacterium in the corpus. Table from https://ed-dsn.net/en/bacterium_en/, same as alcyoneum and cerbrus. See tests/bacteriumColourTables.test.ts.",
       "color_rules": {

@@ -63,8 +63,7 @@
       "description": "Horn-like branching structures adapted to CO2-rich cold environments.",
       "conditions": {
         "atmosphere": [
-          "Carbon Dioxide",
-          "CO2-rich"
+          "Carbon Dioxide"
         ],
         "planet_types": [
           "Rocky",
@@ -79,7 +78,8 @@
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
-          "Morph colour follows host star type (genus meta.color_variants)."
+          "Morph colour follows host star type (genus meta.color_variants).",
+          "Removed 2026-11-14 (1.4.0): CO2-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
         ]
       }
     },
@@ -90,7 +90,6 @@
       "conditions": {
         "atmosphere": [
           "Water",
-          "Water-rich",
           "Argon"
         ],
         "planet_types": [
@@ -107,7 +106,8 @@
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
           "Morph colour follows host star type (genus meta.color_variants).",
           "Argon added 2026-10-09: 24 of 6,852 bodies, all Rocky ice in a year of EDDN codex entries (EDGalaxyData archive) grew on it, one per system; the codex list left it out, so each was listed as unlikely.",
-          "Lowest pressure 0.009 → 0.001 atm (2026-10-14): of the 6,852 bodies of the EDDN year whose codex or on-foot scan names discus, 65 (0.95 %) sit under 0.009 atm, every one on ammonia (51) or argon (14); water bodies never do. The lowest is 0.00102 atm. The 0.009 floor hid 5 known finds on the two September hold-outs (plan 1.2.17 Part 4)."
+          "Lowest pressure 0.009 → 0.001 atm (2026-10-14): of the 6,852 bodies of the EDDN year whose codex or on-foot scan names discus, 65 (0.95 %) sit under 0.009 atm, every one on ammonia (51) or argon (14); water bodies never do. The lowest is 0.00102 atm. The 0.009 floor hid 5 known finds on the two September hold-outs (plan 1.2.17 Part 4).",
+          "Removed 2026-11-14 (1.4.0): Water-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
         ]
       }
     },
@@ -117,8 +117,7 @@
       "description": "Fragmented, broken crystalline formations resembling shattered rock spines.",
       "conditions": {
         "atmosphere": [
-          "Carbon Dioxide",
-          "CO2-rich"
+          "Carbon Dioxide"
         ],
         "planet_types": [
           "Rocky",
@@ -134,7 +133,8 @@
         "matchContextNotes": [
           "High Metal Content added 2026-11-03 (hand list vs data): 795 of 4,691 bodies with it in the EDDN year are High Metal Content (17 %); the row left it out and only the observed-class rescue showed it.",
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
-          "Morph colour follows host star type (genus meta.color_variants)."
+          "Morph colour follows host star type (genus meta.color_variants).",
+          "Removed 2026-11-14 (1.4.0): CO2-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
         ]
       }
     },
@@ -144,8 +144,7 @@
       "description": "Smooth, rounded mineral growths with dense external layering.",
       "conditions": {
         "atmosphere": [
-          "Carbon Dioxide",
-          "CO2-rich"
+          "Carbon Dioxide"
         ],
         "planet_types": [
           "Rocky",
@@ -161,7 +160,8 @@
         "matchContextNotes": [
           "High Metal Content added 2026-11-03 (hand list vs data): 315 of 1,225 bodies with it in the EDDN year are High Metal Content (26 %); the row left it out and only the observed-class rescue showed it.",
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
-          "Morph colour follows host star type (genus meta.color_variants)."
+          "Morph colour follows host star type (genus meta.color_variants).",
+          "Removed 2026-11-14 (1.4.0): CO2-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
         ]
       }
     },
@@ -173,7 +173,8 @@
         "atmosphere": [
           "Methane",
           "Argon",
-          "Nitrogen"
+          "Nitrogen",
+          "Argon-rich"
         ],
         "planet_types": [
           "Rocky",
@@ -184,7 +185,8 @@
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
           "Codex: almost always on rocky outcrops, ridges, and exposed stone — not a hard planet-class filter.",
-          "Morph colour follows host star type (genus meta.color_variants)."
+          "Morph colour follows host star type (genus meta.color_variants).",
+          "-rich types added 2026-11-14 (1.4.0): Argon-rich 423 bodies in the EDDN year (2+ bodies, never one system alone; a lone body is not enough). The list check now keeps \"-rich\" apart from the plain gas."
         ]
       }
     },

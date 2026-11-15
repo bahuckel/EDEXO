@@ -123,18 +123,15 @@ describe("matchDatabaseToScan", () => {
       The four metal-world Anemones pass the matcher here since 2026-10-07 (thin atmospheres allowed:
       10 of 313 known-spawn Anemone bodies had one). The dump has none on bodies like this one, so the
       genus prior hides them on the body tab and the system map (genusPrior.ts vetoUnseenGenera).
+      Since 1.4.0 (profiles from every sighting, observed-temperature envelopes on) three of them step down to the
+      unlikely tier at 163 K: Blatteum, Roseum and Rubeum Bioluminescent are never recorded under 176.0 / 165.7 /
+      164.2 K across 2,867-4,995 bodies each. Prasinum runs down to 20 K and stays.
     */
     expect(
       shown(r)
         .map((m) => m.entry.id)
         .sort(),
-    ).toEqual([
-      "anemone_blatteum_bioluminescent",
-      "anemone_prasinum_bioluminescent",
-      "anemone_roseum_bioluminescent",
-      "anemone_rubeum_bioluminescent",
-      "bacterium_bacterium_aurasus",
-    ]);
+    ).toEqual(["anemone_prasinum_bioluminescent", "bacterium_bacterium_aurasus"]);
     const telaRow = r.matches.find((m) => m.entry.id === "bacterium_bacterium_tela");
     expect(telaRow, "cold and non-volcanic: tela is not on this body at all").toBeUndefined();
     expect(r.approximateMatchingUsed).toBe(false);
@@ -335,14 +332,14 @@ describe("matchDatabaseToScan", () => {
       SurfaceGravity: 2,
     } as unknown as PlanetScan;
     const r = matchDatabaseToScan(db, scorched, null, null, { includeBacterium: true });
-    // One row per Anemone colour since 2026-09-28. With no star to judge, the two colours that grow
-    // on hot rocky bodies stay: Luteolum (measured to 1,096 K) and Prasinum Bioluminescent (no limit).
-    // Croceum and Roseum stop at 450 K.
+    // One row per Anemone colour since 2026-09-28. With no star to judge, Prasinum Bioluminescent (to 10,206 K)
+    // stays. Luteolum was the other until 1.4.0: on every sighting its 1,511 bodies run 200-440 K (the 1,096 K reading
+    // was an outlier), so its envelope demotes it here; Croceum and Roseum stop at 450 K.
     expect(
       shown(r)
         .map((m) => m.entry.id)
         .sort(),
-    ).toEqual(["anemone_luteolum", "anemone_prasinum_bioluminescent"]);
+    ).toEqual(["anemone_prasinum_bioluminescent"]);
     expect(
       db.species.find((e) => e.id === "anemone_blatteum_bioluminescent")!.criteria.surfaceTemperatureK,
     ).toBeUndefined();
@@ -374,13 +371,13 @@ describe("matchDatabaseToScan", () => {
       shown(matchDatabaseToScan(db, scan, null, null, { includeBacterium: true }))
         .map((m) => m.entry.id)
         .sort();
-    // The four glowing Anemones stay: metal-rich is on their class list and none carries a
-    // temperature gate (measured to 3,000-10,000 K). With no star scanned, nothing picks between them.
+    // Three glowing Anemones stay: metal-rich is on their class list, none carries a codex temperature gate, and their
+    // envelopes reach past 4,594 K (Blatteum 4,636, Roseum 4,923, Prasinum 10,206 K). Rubeum's stops at 3,722 K
+    // (1.4.0, every sighting), so it steps down. With no star scanned, nothing picks between the three.
     expect(ids(inferno)).toEqual([
       "anemone_blatteum_bioluminescent",
       "anemone_prasinum_bioluminescent",
       "anemone_roseum_bioluminescent",
-      "anemone_rubeum_bioluminescent",
     ]);
     const amphoraBody = {
       ...inferno,

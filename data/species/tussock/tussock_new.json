@@ -87,7 +87,8 @@
       "conditions": {
         "atmosphere": [
           "Argon",
-          "Methane"
+          "Methane",
+          "Argon-rich"
         ],
         "planet_types": [
           "Rocky",
@@ -96,7 +97,8 @@
         "max_gravity": 0.275,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
-          "Rocky Ice added 2026-11-03 (hand list vs data): 1,556 of 1,724 bodies with it in the EDDN year are Rocky Ice (90 %); the row left it out and only the observed-class rescue showed it."
+          "Rocky Ice added 2026-11-03 (hand list vs data): 1,556 of 1,724 bodies with it in the EDDN year are Rocky Ice (90 %); the row left it out and only the observed-class rescue showed it.",
+          "-rich types added 2026-11-14 (1.4.0): Argon-rich 2 bodies in the EDDN year (2+ bodies, never one system alone; a lone body is not enough). The list check now keeps \"-rich\" apart from the plain gas."
         ]
       }
     },

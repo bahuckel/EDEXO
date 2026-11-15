@@ -70,7 +70,6 @@
         "atmosphere": [
           "Sulphur Dioxide",
           "Carbon Dioxide",
-          "Carbon dioxide-rich",
           "Oxygen"
         ],
         "planet_types": [
@@ -82,7 +81,8 @@
         "max_gravity": 0.275,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
-          "Measured 2026-10-05 (owner: no misses), Spansh dump bodies the EDSM + EDAstro codex confirm: of 4,880 confirmed single-species bodies: icy 3,531, rocky 738, rocky ice 551, high metal content 60 (all hidden before); thin sulphur dioxide 4,708, carbon dioxide 150 (all hidden), oxygen 21 (all hidden), carbon dioxide-rich 1, every one with sulphur dioxide in the air. Nothing in the body separates the three Recepta (docs/perf/recepta_analysis.py); the lists say only where each has grown."
+          "Measured 2026-10-05 (owner: no misses), Spansh dump bodies the EDSM + EDAstro codex confirm: of 4,880 confirmed single-species bodies: icy 3,531, rocky 738, rocky ice 551, high metal content 60 (all hidden before); thin sulphur dioxide 4,708, carbon dioxide 150 (all hidden), oxygen 21 (all hidden), carbon dioxide-rich 1, every one with sulphur dioxide in the air. Nothing in the body separates the three Recepta (docs/perf/recepta_analysis.py); the lists say only where each has grown.",
+          "Removed 2026-11-14 (1.4.0): Carbon dioxide-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
         ]
       }
     },
@@ -94,7 +94,6 @@
         "atmosphere": [
           "Sulphur Dioxide",
           "Carbon Dioxide",
-          "Carbon dioxide-rich",
           "Oxygen"
         ],
         "planet_types": [
@@ -106,7 +105,8 @@
         "max_gravity": 0.275,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
-          "Measured 2026-10-05 (owner: no misses), Spansh dump bodies the EDSM + EDAstro codex confirm: of 3,233 confirmed single-species bodies: rocky 2,641, icy 315, high metal content 212, rocky ice 65 (all hidden before); thin sulphur dioxide 2,372, carbon dioxide 792, oxygen 3, carbon dioxide-rich 1, every one with sulphur dioxide in the air. Nothing in the body separates the three Recepta (docs/perf/recepta_analysis.py); the lists say only where each has grown."
+          "Measured 2026-10-05 (owner: no misses), Spansh dump bodies the EDSM + EDAstro codex confirm: of 3,233 confirmed single-species bodies: rocky 2,641, icy 315, high metal content 212, rocky ice 65 (all hidden before); thin sulphur dioxide 2,372, carbon dioxide 792, oxygen 3, carbon dioxide-rich 1, every one with sulphur dioxide in the air. Nothing in the body separates the three Recepta (docs/perf/recepta_analysis.py); the lists say only where each has grown.",
+          "Removed 2026-11-14 (1.4.0): Carbon dioxide-rich — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
         ]
       }
     },

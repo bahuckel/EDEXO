@@ -59,6 +59,21 @@ export function atmosphereTypeKeyOf(scan: PlanetScan): string {
   return foldSpelling(normalizeScanAtmosphereForMatch(scan)).toLowerCase().replace(/[^a-z]/g, "");
 }
 
+/**
+ * The key a species' atmosphere list is compared on: spelling and density folded like
+ * {@link atmosphereCompositionKey}, but "-rich" kept — "CarbonDioxideRich" and "Thin Carbon dioxide-rich"
+ * give "carbondioxiderich", never "carbondioxide". The game decides spawns on the label, and an "X-rich"
+ * atmosphere is its own type to it (1.4.0 study, 2026-11-14: Bacterium aurasus on 0 of 2,988
+ * CO2-rich bodies of the EDDN year, Stratum tectonicas on 2,429), so a list naming "Carbon Dioxide"
+ * does not cover "CarbonDioxideRich" unless it names that too.
+ */
+export function atmosphereListKey(token: string): string {
+  return foldSpelling(token)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
 export function atmosphereCompositionKey(token: string): string {
   /*
     The game spells it both ways — `sulfur dioxide` in a scan's `Atmosphere` text, `SulphurDioxide`
