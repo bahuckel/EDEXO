@@ -186,7 +186,7 @@
       "conditions": {
         "temperature_K": {
           "min": 100,
-          "max": 220
+          "max": 255
         },
         "requires_system_bodies": true,
         "planet_types": [
@@ -200,7 +200,8 @@
           "Helium"
         ],
         "matchContextNotes": [
-          "Measured 2026-09-28 on Spansh dump single-species bodies and Bioforge: airless or thin (sulphur dioxide, carbon dioxide, helium); 101-219 K."
+          "Measured 2026-09-28 on Spansh dump single-species bodies and Bioforge: airless or thin (sulphur dioxide, carbon dioxide, helium); 101-219 K.",
+          "Temperature ceiling 220 → 255 K (1.4.0, 2026-11-15): 9 of its 366 bodies in the EDDN year lie at 226-254 K, each in its own system (7 airless, 2 thin sulphur dioxide), a thin tail of 2-3 bodies every 5 K from 190 K with no pile-up at 220."
         ]
       }
     },

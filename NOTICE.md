@@ -99,7 +99,9 @@ A day-by-day archive of the messages EDDN relays, kept since 2017 and free to do
 run by CMDR Bravada Cadelanne ([EDCodex entry](https://edcodex.info/?m=tools&entry=491)). No licence or
 terms are stated for it. This project uses it for research: a year of scans, codex entries, FSS body
 signals and organic scans (2025-10 to 2026-10) to check the green gas giant catalogue and the species
-predictions against other commanders' finds, with each body's conditions. The app also ships
+predictions against other commanders' finds, with each body's conditions. Since 1.4.0 the species
+profiles themselves (`data/species/*/exomastery/`), `data/exomastery/body-type-prior.json` and
+`species-prevalence.json` are built from it. The app also ships
 tables measured on it: `data/exomastery/eddn-temperature-range.json` (the temperatures each species really
 reaches), `colour-star-never.json` (colour stars a species is never found under), `measured-exclusions.json`
 (conditions a species is never found in), `outlier-register.json` and the Encyclopedia's bands

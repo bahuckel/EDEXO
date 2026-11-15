@@ -94,11 +94,13 @@ describe("every genus the scan named", () => {
 });
 
 describe("the ceiling this body disproved", () => {
-  it("lets Concha labiata and the three Tubus species reach 195 K", () => {
+  it("lets Concha labiata and four Tubus species reach 195 K", () => {
     /*
       Raised from 190 on the commander's own landing at 192.97 K, backed by the corpus: labiata runs
       to 194.6 over 932 bodies, cavas to 194.7 over 1447. Rosarium (176.4) and sororibus (190.0) were
-      left alone — their ceilings look real.
+      left alone — their ceilings looked real. 1.4.0, every sighting of the EDDN year: sororibus runs on past
+      190 K on 13 bodies in 13 systems to 194.6 K (20,285 bodies) with no pile-up at 190, so it reaches 195 K too;
+      rosarium still tops out at 176.7 K over 27,943 bodies.
     */
     const capOf = (name: string) =>
       db.species.find((e) => e.displayName.toLowerCase() === name.toLowerCase())!.criteria.surfaceTemperatureK
@@ -108,6 +110,6 @@ describe("the ceiling this body disproved", () => {
     expect(capOf("Tubus compagibus")).toBe(195);
     expect(capOf("Tubus conifer")).toBe(195);
     expect(capOf("Tubus rosarium"), "never recorded above 176.4 K").toBe(190);
-    expect(capOf("Tubus sororibus"), "stops exactly at 190.0 K").toBe(190);
+    expect(capOf("Tubus sororibus"), "runs on to 194.6 K in 13 systems").toBe(195);
   });
 });

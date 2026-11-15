@@ -1,42 +1,8 @@
 {
  "formatVersion": 1,
  "builtAt": "2026-11-06",
- "source": "Whole EDDN year (713k bodies, each species logged on the exact body; rules from the app's wrong rows on hold-outs A + B and on the whole year) + hold-out D + the owner's journals: a rule stays while fewer than 2 systems, or under 5 % of its expected count, hold the species inside it (`seen` when any). Values: temp K, mass Earth masses, parent = the journal Parents[0] kind (Star / Null / Planet), sma_ls semi-major axis in light-seconds, orb_d orbital period in days, dist_ls distance from arrival, grav_g g, c_metal metal fraction, host = the parent star's class, main = the system main star's class (hostStarClassKey), region = galactic region, press_atm atm, radius_km, ecc, rot_d days, c_ice / c_rock fractions. Built by docs/perf/build_measured_exclusions.py.",
+ "source": "Whole EDDN year (713k bodies, each species logged on the exact body; rules from the app's wrong rows on hold-outs A + B and on the whole year) + hold-out D + the owner's journals: a rule stays while fewer than 2 systems, or under 5 % of its expected count, hold the species inside it (`seen` when any). Values: temp K, mass Earth masses, parent = the journal Parents[0] kind (Star / Null / Planet), sma_ls semi-major axis in light-seconds, orb_d orbital period in days, dist_ls distance from arrival, grav_g g, c_metal metal fraction, host = the parent star's class, main = the system main star's class (hostStarClassKey), region = galactic region, press_atm atm, radius_km, ecc, rot_d days, c_ice / c_rock fractions. Built by docs/perf/build_measured_exclusions.py. Checked 2026-11-15 (1.4.0) against every confirmed sighting of the EDDN year (2.06 M bodies, codex entries and composition scans counted, docs/perf/validate_rules_140.py): 22 rules contradicted by the same cut were dropped.",
  "species": {
-  "aleoida_aleoida_coronamus": [
-   {
-    "when": [
-     {
-      "value": "grav_g",
-      "op": ">=",
-      "is": 0.226397
-     },
-     {
-      "value": "ecc",
-      "op": ">=",
-      "is": 0.175805
-     }
-    ],
-    "speciesBodies": 12626,
-    "expected": 56.0
-   },
-   {
-    "when": [
-     {
-      "value": "sma_ls",
-      "op": "<=",
-      "is": 0.595702
-     },
-     {
-      "value": "rot_d",
-      "op": "<=",
-      "is": 1.138634
-     }
-    ],
-    "speciesBodies": 12626,
-    "expected": 33.9
-   }
-  ],
   "aleoida_aleoida_laminiae": [
    {
     "when": [
@@ -81,38 +47,6 @@
     ],
     "speciesBodies": 9690,
     "expected": 495.1
-   },
-   {
-    "when": [
-     {
-      "value": "mass",
-      "op": ">=",
-      "is": 0.019661
-     },
-     {
-      "value": "sma_ls",
-      "op": ">=",
-      "is": 2190.137269
-     }
-    ],
-    "speciesBodies": 9690,
-    "expected": 46.4
-   },
-   {
-    "when": [
-     {
-      "value": "sma_ls",
-      "op": "<=",
-      "is": 1.105254
-     },
-     {
-      "value": "rot_d",
-      "op": ">=",
-      "is": 91.633301
-     }
-    ],
-    "speciesBodies": 9690,
-    "expected": 37.0
    }
   ],
   "aleoida_aleoida_spica": [
@@ -179,40 +113,6 @@
     ],
     "speciesBodies": 111465,
     "expected": 219.3
-   },
-   {
-    "when": [
-     {
-      "value": "c_metal",
-      "op": "<=",
-      "is": 0.328702
-     },
-     {
-      "value": "temp",
-      "op": ">=",
-      "is": 398.328064
-     }
-    ],
-    "speciesBodies": 111465,
-    "expected": 36.9
-   }
-  ],
-  "bacterium_bacterium_cerbrus": [
-   {
-    "when": [
-     {
-      "value": "orb_d",
-      "op": "<=",
-      "is": 3.829911
-     },
-     {
-      "value": "c_ice",
-      "op": ">=",
-      "is": 0.384699
-     }
-    ],
-    "speciesBodies": 63868,
-    "expected": 17.0
    }
   ],
   "bacterium_bacterium_tela": [
@@ -226,74 +126,6 @@
     ],
     "speciesBodies": 23464,
     "expected": 22.1
-   }
-  ],
-  "brain_trees_brain_tree_aureum": [
-   {
-    "when": [
-     {
-      "value": "rot_d",
-      "op": "<=",
-      "is": 1.392403
-     },
-     {
-      "value": "orb_d",
-      "op": ">=",
-      "is": 0.989408
-     }
-    ],
-    "speciesBodies": 168,
-    "expected": 41.7
-   },
-   {
-    "when": [
-     {
-      "value": "c_metal",
-      "op": "<=",
-      "is": 0.335788
-     },
-     {
-      "value": "temp",
-      "op": "<=",
-      "is": 322.640411
-     }
-    ],
-    "speciesBodies": 168,
-    "expected": 116.5
-   }
-  ],
-  "brain_trees_brain_tree_gypseeum": [
-   {
-    "when": [
-     {
-      "value": "rot_d",
-      "op": "<=",
-      "is": 0.859186
-     },
-     {
-      "value": "ecc",
-      "op": "<=",
-      "is": 0.178469
-     }
-    ],
-    "speciesBodies": 331,
-    "expected": 134.1
-   },
-   {
-    "when": [
-     {
-      "value": "dist_ls",
-      "op": "<=",
-      "is": 237.945009
-     },
-     {
-      "value": "sma_ls",
-      "op": "<=",
-      "is": 0.086688
-     }
-    ],
-    "speciesBodies": 331,
-    "expected": 13.0
    }
   ],
   "brain_trees_brain_tree_lividum": [
@@ -727,42 +559,9 @@
     "speciesBodies": 10354,
     "expected": 439.3,
     "seen": 1
-   },
-   {
-    "when": [
-     {
-      "value": "host",
-      "op": "=",
-      "is": "B"
-     },
-     {
-      "value": "dist_ls",
-      "op": ">=",
-      "is": 4733.679696
-     }
-    ],
-    "speciesBodies": 10354,
-    "expected": 13.3
    }
   ],
   "clypeus_clypeus_speculumi": [
-   {
-    "when": [
-     {
-      "value": "sma_ls",
-      "op": "<=",
-      "is": 0.832238
-     },
-     {
-      "value": "c_metal",
-      "op": ">=",
-      "is": 0.092398
-     }
-    ],
-    "speciesBodies": 3670,
-    "expected": 189.5,
-    "seen": 7
-   },
    {
     "when": [
      {
@@ -1183,22 +982,6 @@
     ],
     "speciesBodies": 24568,
     "expected": 108.5
-   },
-   {
-    "when": [
-     {
-      "value": "main",
-      "op": "=",
-      "is": "A"
-     },
-     {
-      "value": "sma_ls",
-      "op": ">=",
-      "is": 42.848266
-     }
-    ],
-    "speciesBodies": 24568,
-    "expected": 86.8
    }
   ],
   "frutexa_frutexa_fera": [
@@ -1490,22 +1273,6 @@
     ],
     "speciesBodies": 22397,
     "expected": 4991.1
-   },
-   {
-    "when": [
-     {
-      "value": "host",
-      "op": "=",
-      "is": "T"
-     },
-     {
-      "value": "orb_d",
-      "op": "<=",
-      "is": 4.685995
-     }
-    ],
-    "speciesBodies": 22397,
-    "expected": 33.6
    }
   ],
   "frutexa_frutexa_sponsae": [
@@ -1611,39 +1378,6 @@
    {
     "when": [
      {
-      "value": "press_atm",
-      "op": ">=",
-      "is": 0.056221
-     },
-     {
-      "value": "host",
-      "op": "=",
-      "is": "M"
-     }
-    ],
-    "speciesBodies": 5111,
-    "expected": 159.4,
-    "seen": 2
-   },
-   {
-    "when": [
-     {
-      "value": "host",
-      "op": "=",
-      "is": "L"
-     },
-     {
-      "value": "dist_ls",
-      "op": ">=",
-      "is": 6915.575007
-     }
-    ],
-    "speciesBodies": 5111,
-    "expected": 75.9
-   },
-   {
-    "when": [
-     {
       "value": "main",
       "op": "=",
       "is": "M"
@@ -1656,22 +1390,6 @@
     ],
     "speciesBodies": 5111,
     "expected": 148.5
-   },
-   {
-    "when": [
-     {
-      "value": "host",
-      "op": "=",
-      "is": "L"
-     },
-     {
-      "value": "dist_ls",
-      "op": "<=",
-      "is": 1690.122739
-     }
-    ],
-    "speciesBodies": 5111,
-    "expected": 44.6
    }
   ],
   "osseus_osseus_discus": [
@@ -1916,56 +1634,6 @@
     "speciesBodies": 1767,
     "expected": 399.7,
     "seen": 4
-   },
-   {
-    "when": [
-     {
-      "value": "rot_d",
-      "op": ">=",
-      "is": 18.875062
-     },
-     {
-      "value": "dist_ls",
-      "op": "<=",
-      "is": 86.336313
-     }
-    ],
-    "speciesBodies": 1767,
-    "expected": 24.6
-   },
-   {
-    "when": [
-     {
-      "value": "press_atm",
-      "op": ">=",
-      "is": 0.003745
-     },
-     {
-      "value": "sma_ls",
-      "op": ">=",
-      "is": 112.476556
-     }
-    ],
-    "speciesBodies": 1767,
-    "expected": 38.5
-   }
-  ],
-  "recepta_recepta_umbrux": [
-   {
-    "when": [
-     {
-      "value": "c_rock",
-      "op": ">=",
-      "is": 0.911293
-     },
-     {
-      "value": "temp",
-      "op": ">=",
-      "is": 190.390442
-     }
-    ],
-    "speciesBodies": 4623,
-    "expected": 42.2
    }
   ],
   "stratum_stratum_araneamus": [
@@ -2052,22 +1720,6 @@
      {
       "value": "main",
       "op": "=",
-      "is": "A"
-     },
-     {
-      "value": "ecc",
-      "op": ">=",
-      "is": 0.00597
-     }
-    ],
-    "speciesBodies": 6232,
-    "expected": 82.5
-   },
-   {
-    "when": [
-     {
-      "value": "main",
-      "op": "=",
       "is": "G"
      },
      {
@@ -2118,24 +1770,6 @@
     ],
     "speciesBodies": 10816,
     "expected": 84.0
-   }
-  ],
-  "stratum_stratum_limaxus": [
-   {
-    "when": [
-     {
-      "value": "main",
-      "op": "=",
-      "is": "A"
-     },
-     {
-      "value": "sma_ls",
-      "op": ">=",
-      "is": 36.271146
-     }
-    ],
-    "speciesBodies": 6036,
-    "expected": 35.2
    }
   ],
   "stratum_stratum_paleas": [

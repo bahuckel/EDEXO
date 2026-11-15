@@ -81,9 +81,12 @@
         "max_gravity": 0.15,
         "temperature_K": [
           160,
-          190
+          195
         ],
-        "atmospherePressureCategory": "thin"
+        "atmospherePressureCategory": "thin",
+        "matchContextNotes": [
+          "Temperature ceiling 190 → 195 K (1.4.0, 2026-11-15): 13 bodies in 13 systems of the EDDN year at 190.4-194.6 K, all thin carbon dioxide, the tail running on smoothly past 190 (4, 1, 3, 3, 2 bodies a kelvin) with no pile-up there; 195 K is the carbon dioxide ceiling the rest of the genus keeps."
+        ]
       }
     },
     {

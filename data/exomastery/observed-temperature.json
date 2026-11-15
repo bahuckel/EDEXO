@@ -1,816 +1,1046 @@
 {
  "formatVersion": 1,
- "builtAt": "2026-10-03",
- "source": "Spansh galaxy dump bodies with a species the EDSM + EDAstro codex confirms there, against each species' feeder-profile temperature envelope. Built by docs/perf/build_observed_temperature.py.",
+ "builtAt": "2026-11-15",
+ "source": "Every confirmed sighting of the EDDN year (EDGalaxyData archive, 2.06 M bodies; codex entries and composition scans counted) against each species' 1.4.0 profile temperature envelope. Built by docs/perf/build_observed_temperature_140.py.",
  "species": {
   "aleoida_aleoida_arcus": {
    "envelope": [
     175,
-    179.89035
+    179.999451
    ],
-   "ownOutside": 0.0007,
-   "siblingsOutside": 0.9592,
-   "bodies": 16535,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9524,
+   "bodies": 28719,
    "factor": 0.02
   },
   "aleoida_aleoida_coronamus": {
    "envelope": [
     180,
-    189.993103
+    189.999283
    ],
-   "ownOutside": 0.0005,
-   "siblingsOutside": 0.9535,
-   "bodies": 21473,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9525,
+   "bodies": 36838,
    "factor": 0.02
   },
   "aleoida_aleoida_gravis": {
    "envelope": [
     190,
-    195.373001
+    195.399353
    ],
-   "ownOutside": 0.0006,
-   "siblingsOutside": 0.9909,
-   "bodies": 10518,
+   "ownOutside": 0.0001,
+   "siblingsOutside": 0.991,
+   "bodies": 15894,
    "factor": 0.02
   },
   "aleoida_aleoida_laminiae": {
    "envelope": [
     152,
-    183
+    176.659515
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.3636,
-   "bodies": 19137,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.6799,
+   "bodies": 30034,
    "factor": 0.02
   },
   "aleoida_aleoida_spica": {
    "envelope": [
     170,
-    176.142365
+    176.564758
    ],
    "ownOutside": 0.0,
-   "siblingsOutside": 0.7664,
-   "bodies": 11860,
+   "siblingsOutside": 0.7493,
+   "bodies": 18155,
    "factor": 0.02
   },
   "bacterium_bacterium_acies": {
    "envelope": [
     20,
-    58.684944
+    60.965549
    ],
-   "ownOutside": 0.0118,
-   "siblingsOutside": 0.8959,
-   "bodies": 32678,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.8894,
+   "bodies": 110987,
    "factor": 0.02
   },
   "bacterium_bacterium_alcyoneum": {
    "envelope": [
     152,
-    224
+    176.665741
    ],
-   "ownOutside": 0.0019,
-   "siblingsOutside": 0.6728,
-   "bodies": 61029,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.8096,
+   "bodies": 187639,
    "factor": 0.02
   },
   "bacterium_bacterium_aurasus": {
    "envelope": [
-    146.575684,
-    378
+    145.590698,
+    399.895935
    ],
-   "ownOutside": 0.0026,
-   "siblingsOutside": 0.5739,
-   "bodies": 82860,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.5805,
+   "bodies": 330541,
    "factor": 0.02
   },
   "bacterium_bacterium_bullaris": {
    "envelope": [
-    68.221481,
-    107.441162
+    67.347038,
+    142.366165
    ],
-   "ownOutside": 0.0117,
-   "siblingsOutside": 0.8571,
-   "bodies": 14481,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.8434,
+   "bodies": 74942,
    "factor": 0.02
   },
   "bacterium_bacterium_cerbrus": {
    "envelope": [
     132,
-    496.467224
+    499.993805
    ],
-   "ownOutside": 0.0008,
-   "siblingsOutside": 0.4931,
-   "bodies": 66794,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.4701,
+   "bodies": 187082,
    "factor": 0.02
   },
   "bacterium_bacterium_informem": {
    "envelope": [
-    46.374966,
-    148
+    42.75893,
+    150.419235
    ],
-   "ownOutside": 0.0032,
-   "siblingsOutside": 0.7478,
-   "bodies": 45119,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.7157,
+   "bodies": 101166,
+   "factor": 0.02
+  },
+  "bacterium_bacterium_nebulus": {
+   "envelope": [
+    20,
+    20.792891
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9783,
+   "bodies": 4032,
+   "factor": 0.02
+  },
+  "bacterium_bacterium_omentum": {
+   "envelope": [
+    20,
+    306.804993
+   ],
+   "ownOutside": 0.0001,
+   "siblingsOutside": 0.0584,
+   "bodies": 8089,
+   "factor": 0.02
+  },
+  "bacterium_bacterium_scopulum": {
+   "envelope": [
+    20,
+    284.442017
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0704,
+   "bodies": 5556,
    "factor": 0.02
   },
   "bacterium_bacterium_tela": {
    "envelope": [
     20,
-    698
+    641.999939
    ],
    "ownOutside": 0.0,
    "siblingsOutside": 0.0,
-   "bodies": 26192,
+   "bodies": 65092,
    "factor": 1.0
+  },
+  "bacterium_bacterium_verrata": {
+   "envelope": [
+    20,
+    449.545654
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.001,
+   "bodies": 7873,
+   "factor": 0.02
   },
   "bacterium_bacterium_vesicula": {
    "envelope": [
     50,
-    228.702515
+    295.778961
    ],
-   "ownOutside": 0.0013,
-   "siblingsOutside": 0.2809,
-   "bodies": 59790,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.1931,
+   "bodies": 199828,
    "factor": 0.02
   },
   "bacterium_bacterium_volu": {
    "envelope": [
-    145,
-    237.742767
+    143.796722,
+    245.829269
    ],
-   "ownOutside": 0.0204,
-   "siblingsOutside": 0.5555,
-   "bodies": 5586,
-   "factor": 0.037
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.5084,
+   "bodies": 11938,
+   "factor": 0.02
+  },
+  "brain_trees_brain_tree_aureum": {
+   "envelope": [
+    301.565735,
+    499.758026
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.5139,
+   "bodies": 733,
+   "factor": 0.02
+  },
+  "brain_trees_brain_tree_gypseeum": {
+   "envelope": [
+    200.041382,
+    329.830139
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.6232,
+   "bodies": 1501,
+   "factor": 0.02
+  },
+  "brain_trees_brain_tree_lividum": {
+   "envelope": [
+    300.084015,
+    499.931671
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.5633,
+   "bodies": 2731,
+   "factor": 0.02
+  },
+  "brain_trees_brain_tree_ostrinum": {
+   "envelope": [
+    20.148905,
+    1782.657349
+   ],
+   "ownOutside": 0.0003,
+   "siblingsOutside": 0.0001,
+   "bodies": 2964,
+   "factor": 1.0
+  },
+  "brain_trees_brain_tree_puniceum": {
+   "envelope": [
+    20.118931,
+    1806.318726
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0,
+   "bodies": 1238,
+   "factor": 0.02
+  },
+  "brain_trees_brain_tree_roseum": {
+   "envelope": [
+    200,
+    499.987244
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.3777,
+   "bodies": 11846,
+   "factor": 0.02
+  },
+  "brain_trees_brain_tree_viride": {
+   "envelope": [
+    100.085136,
+    254.210098
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.7443,
+   "bodies": 366,
+   "factor": 0.02
   },
   "cactoida_cactoida_cortexum": {
    "envelope": [
-    158,
-    195.390732
+    180,
+    197.317947
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.183,
-   "bodies": 15857,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.8525,
+   "bodies": 32849,
    "factor": 0.02
   },
   "cactoida_cactoida_lapis": {
    "envelope": [
     160,
-    224
+    176.636032
    ],
    "ownOutside": 0.0,
-   "siblingsOutside": 0.2184,
-   "bodies": 24562,
+   "siblingsOutside": 0.7561,
+   "bodies": 47435,
    "factor": 0.02
   },
   "cactoida_cactoida_peperatis": {
    "envelope": [
     160,
-    185.651566
+    176.665741
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.3473,
-   "bodies": 10958,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.5824,
+   "bodies": 21316,
    "factor": 0.02
   },
   "cactoida_cactoida_pullulanta": {
    "envelope": [
     180,
-    195.179001
+    195.398087
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.741,
-   "bodies": 8242,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.7254,
+   "bodies": 14939,
    "factor": 0.02
   },
   "cactoida_cactoida_vermis": {
    "envelope": [
-    160.207367,
-    449.976349
+    160.041946,
+    449.987579
    ],
    "ownOutside": 0.0,
    "siblingsOutside": 0.0,
-   "bodies": 9878,
+   "bodies": 18489,
    "factor": 1.0
   },
   "clypeus_clypeus_lacrimam": {
    "envelope": [
     190,
-    698
+    467.999969
    ],
    "ownOutside": 0.0,
    "siblingsOutside": 0.0,
-   "bodies": 17639,
+   "bodies": 28853,
    "factor": 1.0
   },
   "clypeus_clypeus_margaritus": {
    "envelope": [
     190,
-    449.577301
+    452.009552
    ],
-   "ownOutside": 0.0008,
-   "siblingsOutside": 0.0014,
-   "bodies": 13091,
-   "factor": 0.601
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0,
+   "bodies": 17961,
+   "factor": 0.02
   },
   "clypeus_clypeus_speculumi": {
    "envelope": [
     190,
-    451.136078
+    452.014801
    ],
-   "ownOutside": 0.0003,
-   "siblingsOutside": 0.0001,
-   "bodies": 5974,
-   "factor": 1.0
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0,
+   "bodies": 9763,
+   "factor": 0.02
   },
   "concha_concha_aureolas": {
    "envelope": [
-    152,
-    176.509796
+    152.156647,
+    176.674271
    ],
-   "ownOutside": 0.0004,
-   "siblingsOutside": 0.5945,
-   "bodies": 16175,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.4933,
+   "bodies": 28424,
+   "factor": 0.02
+  },
+  "concha_concha_biconcavis": {
+   "envelope": [
+    42.75893,
+    52.854637
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 1.0,
+   "bodies": 1434,
    "factor": 0.02
   },
   "concha_concha_labiata": {
    "envelope": [
     150,
-    195.313721
+    198.80246
    ],
-   "ownOutside": 0.0002,
-   "siblingsOutside": 0.2117,
-   "bodies": 30822,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.2354,
+   "bodies": 83955,
    "factor": 0.02
   },
   "concha_concha_renibus": {
    "envelope": [
-    79,
-    467
+    77.358955,
+    467.999969
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.0177,
-   "bodies": 33537,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0126,
+   "bodies": 60338,
    "factor": 0.02
   },
   "electricae_electricae_pluma": {
    "envelope": [
-    52,
-    135
+    20.014168,
+    149.86557
    ],
-   "ownOutside": 0.0407,
-   "siblingsOutside": 0.0406,
-   "bodies": 4692,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0,
+   "bodies": 9103,
    "factor": 1.0
   },
   "electricae_electricae_radialem": {
    "envelope": [
-    50.671501,
-    133.973572
+    20.014179,
+    149.240417
    ],
-   "ownOutside": 0.007,
-   "siblingsOutside": 0.0256,
-   "bodies": 7812,
-   "factor": 0.275
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0002,
+   "bodies": 17847,
+   "factor": 0.02
   },
   "fonticulua_fonticulua_campestris": {
    "envelope": [
     50,
-    148.222565
+    149.33287
    ],
-   "ownOutside": 0.0005,
-   "siblingsOutside": 0.0097,
-   "bodies": 77063,
-   "factor": 0.053
+   "ownOutside": 0.0001,
+   "siblingsOutside": 0.0063,
+   "bodies": 171308,
+   "factor": 0.02
   },
   "fonticulua_fonticulua_digitos": {
    "envelope": [
-    84.285667,
-    107.441162
+    82.70697,
+    108.606316
    ],
-   "ownOutside": 0.0046,
-   "siblingsOutside": 0.7836,
-   "bodies": 16954,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.7736,
+   "bodies": 39423,
+   "factor": 0.02
+  },
+  "fonticulua_fonticulua_fluctus": {
+   "envelope": [
+    143.796722,
+    199.56839
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9994,
+   "bodies": 893,
    "factor": 0.02
   },
   "fonticulua_fonticulua_lapida": {
    "envelope": [
-    50.334171,
-    80.479744
+    50,
+    80.78083
    ],
-   "ownOutside": 0.0004,
-   "siblingsOutside": 0.5101,
-   "bodies": 25662,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.4625,
+   "bodies": 40656,
+   "factor": 0.02
+  },
+  "fonticulua_fonticulua_segmentatus": {
+   "envelope": [
+    50.228764,
+    73.70327
+   ],
+   "ownOutside": 0.0003,
+   "siblingsOutside": 0.5141,
+   "bodies": 3096,
    "factor": 0.02
   },
   "fonticulua_fonticulua_upupam": {
    "envelope": [
-    63.576904,
-    111
+    60.655449,
+    124.74218
    ],
-   "ownOutside": 0.0158,
-   "siblingsOutside": 0.3683,
-   "bodies": 10780,
-   "factor": 0.043
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.3332,
+   "bodies": 17154,
+   "factor": 0.02
   },
   "frutexa_frutexa_acus": {
    "envelope": [
-    146.575684,
-    195.369598
+    145.968887,
+    196.742981
    ],
-   "ownOutside": 0.0004,
-   "siblingsOutside": 0.0607,
-   "bodies": 17260,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0626,
+   "bodies": 81585,
    "factor": 0.02
   },
   "frutexa_frutexa_collum": {
    "envelope": [
     132,
-    167.443466
+    167.586304
    ],
-   "ownOutside": 0.0022,
-   "siblingsOutside": 0.5463,
-   "bodies": 1395,
+   "ownOutside": 0.0004,
+   "siblingsOutside": 0.519,
+   "bodies": 2772,
    "factor": 0.02
   },
   "frutexa_frutexa_fera": {
    "envelope": [
-    148,
-    195.313721
+    146.067215,
+    195.395325
    ],
-   "ownOutside": 0.0019,
-   "siblingsOutside": 0.053,
-   "bodies": 5702,
-   "factor": 0.036
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.047,
+   "bodies": 21553,
+   "factor": 0.02
   },
   "frutexa_frutexa_flabellum": {
    "envelope": [
     152,
-    224
+    176.64325
    ],
-   "ownOutside": 0.0002,
-   "siblingsOutside": 0.0787,
-   "bodies": 23594,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.3013,
+   "bodies": 56991,
    "factor": 0.02
   },
   "frutexa_frutexa_flammasis": {
    "envelope": [
-    152,
-    185.651566
+    152.135925,
+    176.665741
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.1523,
-   "bodies": 11825,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.2622,
+   "bodies": 26151,
    "factor": 0.02
   },
   "frutexa_frutexa_metallicum": {
    "envelope": [
-    150,
-    399
+    101.721146,
+    399.940704
    ],
-   "ownOutside": 0.002,
-   "siblingsOutside": 0.0757,
-   "bodies": 29825,
-   "factor": 0.027
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0435,
+   "bodies": 63568,
+   "factor": 0.02
   },
   "frutexa_frutexa_sponsae": {
    "envelope": [
-    395.025482,
-    451.760651
+    391.269867,
+    452.153503
    ],
-   "ownOutside": 0.003,
-   "siblingsOutside": 0.9996,
-   "bodies": 3288,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9997,
+   "bodies": 8659,
    "factor": 0.02
   },
   "fumerola_fumerola_aquatis": {
    "envelope": [
-    57.958229,
-    440.987274
+    20.014223,
+    451.187286
    ],
-   "ownOutside": 0.0049,
-   "siblingsOutside": 0.2235,
-   "bodies": 5124,
-   "factor": 0.022
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0001,
+   "bodies": 7611,
+   "factor": 0.02
+  },
+  "fumerola_fumerola_carbosis": {
+   "envelope": [
+    20.014273,
+    271.266815
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0069,
+   "bodies": 6306,
+   "factor": 0.02
   },
   "fumerola_fumerola_extremus": {
    "envelope": [
-    77.689804,
-    641
+    50.66568,
+    203.045578
    ],
-   "ownOutside": 0.0039,
-   "siblingsOutside": 0.2691,
-   "bodies": 1795,
+   "ownOutside": 0.0003,
+   "siblingsOutside": 0.022,
+   "bodies": 3659,
+   "factor": 0.02
+  },
+  "fumerola_fumerola_nitris": {
+   "envelope": [
+    20.01416,
+    249.775146
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0107,
+   "bodies": 8561,
    "factor": 0.02
   },
   "fungoida_fungoida_bullarum": {
    "envelope": [
-    50.012131,
-    160.632767
+    50,
+    133.481216
    ],
-   "ownOutside": 0.0009,
-   "siblingsOutside": 0.8356,
-   "bodies": 13431,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9771,
+   "bodies": 23902,
    "factor": 0.02
   },
   "fungoida_fungoida_gelata": {
    "envelope": [
-    81.267609,
-    451.760651
+    66.057014,
+    452.013153
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.0795,
-   "bodies": 24014,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0245,
+   "bodies": 56122,
    "factor": 0.02
   },
   "fungoida_fungoida_setisis": {
    "envelope": [
-    68.221481,
-    224
+    67.179024,
+    176.671616
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.2155,
-   "bodies": 62450,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.8387,
+   "bodies": 130498,
    "factor": 0.02
   },
   "fungoida_fungoida_stabitis": {
    "envelope": [
-    79,
-    467
+    64.66465,
+    467.999969
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.0661,
-   "bodies": 17680,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.02,
+   "bodies": 40114,
    "factor": 0.02
   },
   "osseus_osseus_cornibus": {
    "envelope": [
     180,
-    195.35051
+    195.399765
    ],
-   "ownOutside": 0.0018,
-   "siblingsOutside": 0.7739,
-   "bodies": 6619,
+   "ownOutside": 0.0001,
+   "siblingsOutside": 0.7656,
+   "bodies": 14661,
    "factor": 0.02
   },
   "osseus_osseus_discus": {
    "envelope": [
-    80.781364,
-    641
+    52.957287,
+    451.871002
    ],
-   "ownOutside": 0.0014,
-   "siblingsOutside": 0.1011,
-   "bodies": 7278,
+   "ownOutside": 0.0001,
+   "siblingsOutside": 0.0074,
+   "bodies": 17061,
    "factor": 0.02
   },
   "osseus_osseus_fractus": {
    "envelope": [
-    158,
-    189.942474
+    180,
+    189.999512
    ],
-   "ownOutside": 0.0003,
-   "siblingsOutside": 0.3737,
-   "bodies": 19409,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9426,
+   "bodies": 41699,
    "factor": 0.02
   },
   "osseus_osseus_pellebantus": {
    "envelope": [
     191,
-    195.391571
+    196.742981
    ],
-   "ownOutside": 0.0029,
-   "siblingsOutside": 0.9884,
-   "bodies": 6134,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9879,
+   "bodies": 12899,
    "factor": 0.02
   },
   "osseus_osseus_pumice": {
    "envelope": [
-    45.546459,
-    124.72332
+    42.75893,
+    135.827332
    ],
-   "ownOutside": 0.0046,
-   "siblingsOutside": 0.996,
-   "bodies": 22924,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9937,
+   "bodies": 43374,
    "factor": 0.02
   },
   "osseus_osseus_spiralis": {
    "envelope": [
     160,
-    224
+    176.638855
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.4808,
-   "bodies": 57222,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9974,
+   "bodies": 117914,
    "factor": 0.02
   },
   "recepta_recepta_conditivus": {
    "envelope": [
     132,
-    271
+    272.873779
    ],
-   "ownOutside": 0.001,
-   "siblingsOutside": 0.0008,
-   "bodies": 4879,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0,
+   "bodies": 6881,
    "factor": 1.0
   },
   "recepta_recepta_deltahedronix": {
    "envelope": [
     132,
-    218.785172
+    271.784088
    ],
-   "ownOutside": 0.0235,
-   "siblingsOutside": 0.0971,
-   "bodies": 3233,
-   "factor": 0.242
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0004,
+   "bodies": 4342,
+   "factor": 0.02
   },
   "recepta_recepta_umbrux": {
    "envelope": [
     132,
-    252.588089
+    272.900757
    ],
-   "ownOutside": 0.0195,
-   "siblingsOutside": 0.0163,
-   "bodies": 8475,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0,
+   "bodies": 11758,
    "factor": 1.0
+  },
+  "sinuous_tuber_sinuous_tubers_albidum": {
+   "envelope": [
+    202.947556,
+    492.948853
+   ],
+   "ownOutside": 0.0082,
+   "siblingsOutside": 0.0506,
+   "bodies": 122,
+   "factor": 0.162
+  },
+  "sinuous_tuber_sinuous_tubers_blatteum": {
+   "envelope": [
+    200.685165,
+    498.641998
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0053,
+   "bodies": 211,
+   "factor": 0.02
+  },
+  "sinuous_tuber_sinuous_tubers_caeruleum": {
+   "envelope": [
+    200.03302,
+    499.83725
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0,
+   "bodies": 1458,
+   "factor": 1.0
+  },
+  "sinuous_tuber_sinuous_tubers_lindigoticum": {
+   "envelope": [
+    201.044952,
+    499.379456
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0042,
+   "bodies": 391,
+   "factor": 0.02
   },
   "sinuous_tuber_sinuous_tubers_prasinum": {
    "envelope": [
-    208,
-    496.221588
+    200.180939,
+    499.926544
    ],
-   "ownOutside": 0.0481,
-   "siblingsOutside": 0.0791,
-   "bodies": 1559,
-   "factor": 0.608
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0,
+   "bodies": 2920,
+   "factor": 1.0
+  },
+  "sinuous_tuber_sinuous_tubers_roseum": {
+   "envelope": [
+    200.329956,
+    499.943085
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0,
+   "bodies": 579,
+   "factor": 1.0
+  },
+  "sinuous_tuber_sinuous_tubers_viride": {
+   "envelope": [
+    200.784821,
+    499.046204
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0045,
+   "bodies": 150,
+   "factor": 0.02
   },
   "stratum_stratum_araneamus": {
    "envelope": [
-    165.36412,
-    371
+    165.00943,
+    372.924591
    ],
-   "ownOutside": 0.0022,
-   "siblingsOutside": 0.0299,
-   "bodies": 7589,
-   "factor": 0.075
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0238,
+   "bodies": 12377,
+   "factor": 0.02
   },
   "stratum_stratum_cucumisis": {
    "envelope": [
-    74,
-    370.636444
+    191,
+    372.965179
    ],
-   "ownOutside": 0.0016,
-   "siblingsOutside": 0.0303,
-   "bodies": 9734,
-   "factor": 0.054
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.758,
+   "bodies": 16929,
+   "factor": 0.02
   },
   "stratum_stratum_excutitus": {
    "envelope": [
     165,
-    189.791595
+    189.997803
    ],
-   "ownOutside": 0.0006,
-   "siblingsOutside": 0.3506,
-   "bodies": 12531,
+   "ownOutside": 0.0001,
+   "siblingsOutside": 0.3127,
+   "bodies": 36832,
+   "factor": 0.02
+  },
+  "stratum_stratum_frigus": {
+   "envelope": [
+    191,
+    372.929504
+   ],
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.739,
+   "bodies": 4156,
    "factor": 0.02
   },
   "stratum_stratum_laminamus": {
    "envelope": [
     165,
-    176
+    176.659515
    ],
-   "ownOutside": 0.0025,
-   "siblingsOutside": 0.5752,
-   "bodies": 6871,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.5345,
+   "bodies": 15154,
    "factor": 0.02
   },
   "stratum_stratum_limaxus": {
    "envelope": [
     165,
-    189.880035
+    189.997528
    ],
-   "ownOutside": 0.0004,
-   "siblingsOutside": 0.3385,
-   "bodies": 5209,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.2987,
+   "bodies": 14453,
    "factor": 0.02
   },
   "stratum_stratum_paleas": {
    "envelope": [
-    158,
-    449.976349
+    165,
+    449.986664
    ],
    "ownOutside": 0.0,
    "siblingsOutside": 0.0,
-   "bodies": 55991,
-   "factor": 1.0
+   "bodies": 138652,
+   "factor": 0.02
   },
   "stratum_stratum_tectonicas": {
    "envelope": [
     165,
-    449.577301
+    449.997559
    ],
    "ownOutside": 0.0,
    "siblingsOutside": 0.0,
-   "bodies": 138105,
-   "factor": 1.0
+   "bodies": 274972,
+   "factor": 0.868
   },
   "tubus_tubus_cavas": {
    "envelope": [
     160,
-    194.654785
+    196.254181
    ],
-   "ownOutside": 0.0004,
-   "siblingsOutside": 0.0001,
-   "bodies": 13088,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0,
+   "bodies": 39845,
    "factor": 1.0
   },
   "tubus_tubus_compagibus": {
    "envelope": [
-    150,
-    224
+    160,
+    196.742981
    ],
    "ownOutside": 0.0,
    "siblingsOutside": 0.0,
-   "bodies": 28480,
+   "bodies": 81483,
    "factor": 1.0
   },
   "tubus_tubus_conifer": {
    "envelope": [
     160,
-    194.993546
+    195.397614
    ],
    "ownOutside": 0.0,
    "siblingsOutside": 0.0,
-   "bodies": 10325,
+   "bodies": 28071,
    "factor": 0.02
   },
   "tubus_tubus_rosarium": {
    "envelope": [
     160,
-    176.509796
+    176.674271
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.1277,
-   "bodies": 16319,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0994,
+   "bodies": 27841,
    "factor": 0.02
   },
   "tubus_tubus_sororibus": {
    "envelope": [
     160,
-    190.358948
+    194.607574
    ],
-   "ownOutside": 0.0008,
-   "siblingsOutside": 0.0048,
-   "bodies": 13528,
-   "factor": 0.168
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0002,
+   "bodies": 20251,
+   "factor": 0.02
   },
   "tussock_tussock_albata": {
    "envelope": [
     175,
-    179.994125
+    179.999786
    ],
-   "ownOutside": 0.004,
-   "siblingsOutside": 0.9551,
-   "bodies": 13299,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.954,
+   "bodies": 40643,
    "factor": 0.02
   },
   "tussock_tussock_capillum": {
    "envelope": [
     80,
-    160.632767
+    128.986404
    ],
-   "ownOutside": 0.0007,
-   "siblingsOutside": 0.8562,
-   "bodies": 12255,
+   "ownOutside": 0.0,
+   "siblingsOutside": 1.0,
+   "bodies": 19923,
    "factor": 0.02
   },
   "tussock_tussock_caputus": {
    "envelope": [
-    158,
-    189.993103
+    181,
+    189.998978
    ],
-   "ownOutside": 0.0001,
-   "siblingsOutside": 0.2569,
-   "bodies": 15413,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9483,
+   "bodies": 43084,
    "factor": 0.02
   },
   "tussock_tussock_catena": {
    "envelope": [
-    152.259064,
-    185.651566
+    152,
+    176.674271
    ],
-   "ownOutside": 0.0003,
-   "siblingsOutside": 0.245,
-   "bodies": 12215,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.3411,
+   "bodies": 30727,
    "factor": 0.02
   },
   "tussock_tussock_cultro": {
    "envelope": [
     152,
-    224
+    176.659515
    ],
-   "ownOutside": 0.0002,
-   "siblingsOutside": 0.1634,
-   "bodies": 34966,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.3795,
+   "bodies": 82080,
    "factor": 0.02
   },
   "tussock_tussock_divisa": {
    "envelope": [
-    153.206467,
-    174.585968
+    152.156387,
+    176.639496
    ],
-   "ownOutside": 0.0067,
-   "siblingsOutside": 0.4564,
-   "bodies": 14693,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.3454,
+   "bodies": 34500,
    "factor": 0.02
   },
   "tussock_tussock_ignis": {
    "envelope": [
-    150,
-    224
+    161,
+    169.999695
    ],
-   "ownOutside": 0.0002,
-   "siblingsOutside": 0.1417,
-   "bodies": 19692,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.7511,
+   "bodies": 70301,
    "factor": 0.02
   },
   "tussock_tussock_pennata": {
    "envelope": [
-    146.575684,
-    153.969025
+    145.630569,
+    153.999771
    ],
-   "ownOutside": 0.0041,
-   "siblingsOutside": 0.9883,
-   "bodies": 3377,
+   "ownOutside": 0.0001,
+   "siblingsOutside": 0.9858,
+   "bodies": 13373,
    "factor": 0.02
   },
   "tussock_tussock_pennatis": {
    "envelope": [
-    148,
-    195.35051
+    146.067215,
+    195.399155
    ],
-   "ownOutside": 0.0008,
-   "siblingsOutside": 0.1346,
-   "bodies": 15205,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0858,
+   "bodies": 40681,
    "factor": 0.02
   },
   "tussock_tussock_propagito": {
    "envelope": [
-    147.177292,
-    195.386536
+    145.590698,
+    197.317947
    ],
-   "ownOutside": 0.0003,
-   "siblingsOutside": 0.139,
-   "bodies": 21630,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.0924,
+   "bodies": 76743,
    "factor": 0.02
   },
   "tussock_tussock_serrati": {
    "envelope": [
     171,
-    173.9935
+    173.999954
    ],
-   "ownOutside": 0.0056,
-   "siblingsOutside": 0.8893,
-   "bodies": 8498,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.8998,
+   "bodies": 29311,
    "factor": 0.02
   },
   "tussock_tussock_stigmasis": {
    "envelope": [
     132,
-    167.443466
+    167.919678
    ],
-   "ownOutside": 0.0014,
-   "siblingsOutside": 0.6545,
-   "bodies": 2821,
+   "ownOutside": 0.0002,
+   "siblingsOutside": 0.586,
+   "bodies": 5646,
    "factor": 0.02
   },
   "tussock_tussock_triticum": {
    "envelope": [
     191,
-    195.391571
+    196.742981
    ],
-   "ownOutside": 0.004,
-   "siblingsOutside": 0.9818,
-   "bodies": 6491,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9856,
+   "bodies": 15048,
    "factor": 0.02
   },
   "tussock_tussock_ventusa": {
    "envelope": [
     155,
-    159.9664
+    159.999756
    ],
-   "ownOutside": 0.0054,
-   "siblingsOutside": 0.9455,
-   "bodies": 5522,
+   "ownOutside": 0.0,
+   "siblingsOutside": 0.9394,
+   "bodies": 23816,
    "factor": 0.02
   },
   "tussock_tussock_virgam": {
    "envelope": [
-    392.347778,
-    449.976349
+    390.06723,
+    449.986664
    ],
-   "ownOutside": 0.0027,
+   "ownOutside": 0.0,
    "siblingsOutside": 1.0,
-   "bodies": 9394,
+   "bodies": 18129,
    "factor": 0.02
   }
  }

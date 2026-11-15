@@ -42,7 +42,11 @@ export function rowProgress(m: Match, ctx: RowContextValue): RowProgress {
   return null;
 }
 
-/** Confirmed rows first (live, done, seen), then by chance, then as delivered (3.6). */
+/**
+ * Confirmed rows first (live, done, seen), then by chance, then as delivered (3.6). Two rows the FSS correction put on
+ * the same chance keep the model's own order (its chance before the correction): the per-genus map is flat in places,
+ * and a tie fell to delivery order and moved the first species of a genus (1.4.0, hold-out D: 34 lost, 15 won).
+ */
 export function orderRows(items: readonly Match[], ctx: RowContextValue): Match[] {
   return items
     .map((m, i) => ({ m, i, p: rowProgress(m, ctx) }))
@@ -53,6 +57,9 @@ export function orderRows(items: readonly Match[], ctx: RowContextValue): Match[
       const ca = a.m.presenceProbabilityPercent ?? -1;
       const cb = b.m.presenceProbabilityPercent ?? -1;
       if (ca !== cb) return cb - ca;
+      const ba = a.m.chanceBeforeRecal ?? ca;
+      const bb = b.m.chanceBeforeRecal ?? cb;
+      if (ba !== bb) return bb - ba;
       return a.i - b.i;
     })
     .map((x) => x.m);

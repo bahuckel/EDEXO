@@ -340,14 +340,19 @@ same way: rules say where a species can grow, and records of where it has grown 
   volcanism, star — were written for this app and are corrected by what has actually been found.
   Where a rule and the records disagree on a species seen often enough, **observation wins**.
 - **The species profiles** (how often each species is found at each temperature, gravity, pressure and
-  so on) are built from Spansh's Exomastery exports, hydrated with EDSM's body records.
+  so on) are built, since 1.4.0, from every confirmed sighting in a year of EDDN — 2,081,985 bodies, each
+  species logged on the exact body by a codex entry, a composition scan or an organic sample, from the
+  EDGalaxyData archive — with up to 5,000 bodies per species chosen to cover its whole range, and every
+  body for species seen fewer than 1,000 times. A lone find never sets a range.
+- **What grows on a body of this kind** (planet class, atmosphere, volcanism, temperature band) is counted
+  on 1.79 million of those finds, on bodies where every genus was sampled.
 - **How often each genus is on a body like this one** — by planet type, signal count, atmosphere,
   temperature, pressure, gravity, star and volcanism — comes from the 2.8 million bodies with a DSS genus
   list in Spansh's galaxy dump.
-- **A year of other commanders' finds on EDDN** (342,000 bodies, each species logged on the exact body,
-  from the EDGalaxyData archive) sets the measured limits — the temperatures a species really reaches,
-  the colour stars it never grows under, the places it is never found — and holds back the test sets
-  every change is judged on: no change ships if it hides a species those finds confirm.
+- **The same year of finds** sets the measured limits — the temperatures a species really reaches,
+  the colour stars it never grows under, the places it is never found — and a hold-out set of bodies no
+  part of the model is built from judges every change: no change ships if it hides a species those finds
+  confirm.
 - **Your own journals** are the final check: the app's miss log, and the accuracy probes below.
 
 No number reaches the screen as a percentage unless it has been checked against real finds.
@@ -356,8 +361,8 @@ No number reaches the screen as a percentage unless it has been checked against 
 
 Every candidate carries a **Chance here** figure — how often a species with this profile turns out to
 actually be on a body like this one. It is the one percentage in the app that has been calibrated
-against real outcomes: on 14,560 EDDN bodies where every species is known, the 90-100 % band comes in
-at 98.9 % and the 0-10 % band at 6.0 %.
+against real outcomes: on 372,812 EDDN bodies where every species is known (1.4.0), the 90-100 % band
+comes in at 98.9 % and the 0-10 % band at 3.5 % before a DSS.
 
 Candidates below **1 %** are moved behind _show unlikely_ rather than listed. The rule is no misses
 first: a list of three where one is right beats a list of one that is wrong. The floor was 5 % until
@@ -480,8 +485,9 @@ itself reports signals. It needs no ground truth to prove, and it should stay at
 
 ### The feeder
 
-The species profiles the model reads are built from a local corpus of Spansh exports hydrated
-against EDSM. That corpus is a build input and is not in this repository.
+The feeder builds species profiles from a local corpus of Spansh exports hydrated against EDSM (the
+profiles before 1.4.0; still the tool for your own dumps). That corpus is a build input and is not in this
+repository.
 
 ```
 npm run feeder -- status              # what the corpus holds vs what the app ships
