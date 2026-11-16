@@ -324,9 +324,21 @@ export const HeaderBar = memo(function HeaderBar({
         ? "appbar-dot--ok"
         : "appbar-dot--err";
 
+  /*
+    What the header picture says about the body on show (HeaderArt.tsx): its kind of land, and the genera the app
+    shows for it (not the unlikely ones), likeliest first. Plain strings, so the picture rebuilds only when they change.
+  */
+  const artBody = useMemo(() => {
+    const key = encyclopediaSpawnCompare?.bodyKey ?? null;
+    const body = key ? snap.bodies.find((b) => b.state.key === key) : undefined;
+    const genera: string[] = [];
+    for (const m of body?.matches ?? []) if (!m.unlikely && !genera.includes(m.entry.genusDataDir)) genera.push(m.entry.genusDataDir);
+    return { key, planetClass: encyclopediaSpawnCompare?.scan?.PlanetClass ?? null, genera: genera.join(",") };
+  }, [encyclopediaSpawnCompare, snap.bodies]);
+
   return (
     <header className="top">
-      <HeaderArt />
+      <HeaderArt system={snap.viewingSystemName ?? snap.currentSystem} bodyKey={artBody.key} planetClass={artBody.planetClass} genera={artBody.genera} />
       {/*
         Three zones, not one wrapping row.
 

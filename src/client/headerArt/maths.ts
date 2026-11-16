@@ -12,6 +12,13 @@ export const sstep = (a: number, b: number, x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
+/** A number from a name (FNV-1a), 1..65536: the same system draws the same skyline on every visit. */
+export function seedOf(text: string | null | undefined): number {
+  let h = 0x811c9dc5;
+  for (const ch of text ?? "") h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193);
+  return ((h >>> 0) % 65536) + 1;
+}
+
 /** A repeatable random sequence (mulberry32): the same seed draws the same picture. */
 export function rng(seed: number): () => number {
   let a = seed >>> 0;
@@ -88,6 +95,9 @@ export function fbmP(u: number, v: number, s: number, cx: number, cy: number, oc
   }
   return f / sum;
 }
+
+/** The most the land rises in a header `h` px tall. The sky's subjects are aimed against it, so it depends on nothing else. */
+export const landCap = (h: number): number => clamp(h * 0.44, 26, 118);
 
 export type Rgb = [number, number, number];
 

@@ -4,7 +4,7 @@
  * actually drawn there: the land stays a thin line under the content and climbs where the header is free,
  * and the sky keeps calm behind every block and line of text.
  */
-import { clamp } from "./maths";
+import { clamp, landCap } from "./maths";
 
 /** A box something is drawn in, in the header's own pixels: left, top, right, bottom. */
 export type Rect = [number, number, number, number];
@@ -58,9 +58,10 @@ export function drawnRects(host: HTMLElement, art: Element): Rect[] {
  * How high the land may rise at each column: under the content a thin line, in the free part it climbs.
  * Worn down by more than the smoothing spreads, so the smooth line never rises into a block.
  */
-export function envelope(L: Layout): { env: Float32Array; cap: number } {
+export function envelope(L: Layout, flat = false): { env: Float32Array; cap: number } {
   const W = Math.ceil(L.w) + 1;
-  const cap = clamp(L.h * 0.44, 26, 118);
+  // `flat` (the calm picture): the land is a low line everywhere.
+  const cap = flat ? 5 : landCap(L.h);
   const e = new Float32Array(W).fill(cap);
   for (const [l, , r, b] of L.taken) {
     const lim = clamp(L.h - b - 5, 3, cap);

@@ -165,3 +165,24 @@ describe("the sky's noise and colours", () => {
     expect(Math.max(...silver) - Math.min(...silver)).toBeLessThan(60);
   });
 });
+
+describe("how much of the picture shows (Options › Look › Header picture)", () => {
+  it("is the turning picture until chosen otherwise, keeps the choice, and ignores a broken value", async () => {
+    const { headerArtMode, setHeaderArtMode, HEADER_ART_EVENT, HEADER_ART_MODES } = await import("../src/client/headerArt/mode");
+    localStorage.clear();
+    expect(headerArtMode()).toBe("turning");
+    let told = 0;
+    const onChange = () => told++;
+    window.addEventListener(HEADER_ART_EVENT, onChange);
+    for (const { mode } of HEADER_ART_MODES) {
+      setHeaderArtMode(mode);
+      expect(headerArtMode()).toBe(mode);
+    }
+    window.removeEventListener(HEADER_ART_EVENT, onChange);
+    expect(told).toBe(HEADER_ART_MODES.length);
+    expect(HEADER_ART_MODES.map((m) => m.mode)).toEqual(["turning", "still", "calm", "off"]);
+    localStorage.setItem("edexo.headerArt", "spinning");
+    expect(headerArtMode()).toBe("turning");
+    localStorage.clear();
+  });
+});
