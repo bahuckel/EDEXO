@@ -658,9 +658,9 @@
   }
  },
  "profileBuild140": {
-  "builtAt": "2026-11-15",
+  "builtAt": "2026-11-16",
   "rule": "Owner 2026-11-14 (plan 4.9): in the 1.4.0 profile build one body behind a value (planet class, atmosphere type, volcanism, parent star class, colour) or alone at a numeric range's end (gap to the next body over 10 % of the species' p1-p99 span) is removed from the profile and listed here.",
-  "source": "every confirmed sighting of the EDDN archive (EDGalaxyData) plus the old corpus, with Spansh's body records; docs/perf/outliers_140.py",
+  "source": "every confirmed sighting of the EDDN archive (EDGalaxyData), the old corpus, and Spansh's DSS bodies of the one-species genera (Bark Mounds, Amphora Plant, Crystalline Shards), with Spansh's body records; docs/perf/outliers_140.py",
   "species": {
    "aleoida_aleoida_arcus": {
     "bodies": 2,
@@ -742,7 +742,7 @@
       "key": "1385638595483:25",
       "body": "Pyroifoea CA-X d2-40 C 1",
       "kind": "removed from the profile",
-      "field": "host = L (1 of 752)"
+      "field": "host = L (1 of 968)"
      },
      {
       "src": "EDDN archive (codex)",
@@ -763,7 +763,7 @@
       "key": "494634193659:37",
       "body": "Phrua Flyi WQ-B d14-14 B 1",
       "kind": "removed from the profile",
-      "field": "atmo = Hot thin Silicate vapour (1 of 752)"
+      "field": "atmo = Hot thin Silicate vapour (1 of 968)"
      },
      {
       "src": "EDDN archive (codex)",
@@ -1419,16 +1419,37 @@
     ]
    },
    "bark_mounds_bark_mounds": {
-    "bodies": 1,
-    "systems": 1,
+    "bodies": 4,
+    "systems": 4,
     "status": "lone outlier: never sets a range",
     "rows": [
+     {
+      "src": "Spansh DSS (one-species genus)",
+      "key": "1315325562443:8",
+      "body": "Crookaae ZP-M d8-38 AB 1 a",
+      "kind": "removed from the profile",
+      "field": "host = W (1 of 9,654)"
+     },
      {
       "src": "EDDN archive (codex)",
       "key": "13870999741977:12",
       "body": "Coalsack Sector QT-Q b5-6 3",
       "kind": "removed from the profile",
-      "field": "volc = Minor Water Geysers (1 of 4,969)"
+      "field": "volc = Minor Water Geysers (1 of 9,654)"
+     },
+     {
+      "src": "EDDN archive (codex)",
+      "key": "2860607444707:24",
+      "body": "Phleedgoea TZ-F d11-83 5",
+      "kind": "removed from the profile",
+      "field": "gravity max 3.4616 alone (next 2.582)"
+     },
+     {
+      "src": "Spansh DSS (one-species genus)",
+      "key": "33613110417387:12",
+      "body": "Vegnue XF-E d12-978 3 b",
+      "kind": "removed from the profile",
+      "field": "volc = Minor Nitrogen Magma (1 of 9,654)"
      }
     ]
    },
@@ -1979,8 +2000,8 @@
     ]
    },
    "crystalline_shards_crystalline_shards": {
-    "bodies": 2,
-    "systems": 2,
+    "bodies": 3,
+    "systems": 3,
     "status": "lone outlier: never sets a range",
     "rows": [
      {
@@ -1988,14 +2009,21 @@
       "key": "251498809475:42",
       "body": "Oochoxt OM-C d7 C 2",
       "kind": "removed from the profile",
-      "field": "atmo = Thin Oxygen (1 of 4,586)"
+      "field": "atmo = Thin Oxygen (1 of 7,114)"
      },
      {
-      "src": "EDDN archive (codex)",
-      "key": "675550835834:50",
-      "body": "Blooe Ploe WK-C c14-2 B 1 f",
+      "src": "Spansh DSS (one-species genus)",
+      "key": "315956911275:20",
+      "body": "Pra Bliae QA-U d4-9 15",
       "kind": "removed from the profile",
-      "field": "atmo = Thin Ammonia (1 of 4,586)"
+      "field": "semiMajorAxis max 123.34 alone (next 115.41)"
+     },
+     {
+      "src": "Spansh DSS (one-species genus)",
+      "key": "43377482987:5",
+      "body": "Preia Blou FY-F d12-1 AB 1",
+      "kind": "removed from the profile",
+      "field": "host = N (1 of 7,114)"
      }
     ]
    },

@@ -3,7 +3,7 @@
   "speciesLabel": "Puniceum Anemone",
   "genus": "Anemone",
   "source": "exomastery_feeder",
-  "generatedAt": "2026-11-15T20:51:24.512Z",
+  "generatedAt": "2026-11-15T23:06:09.829Z",
   "sampleCount": 41,
   "provenance": {
     "inputHash": "a8c0870cea8fb27e2df4a8282fdb91645d795a51e18fd83a3ed31adca62a51b2",
@@ -912,8 +912,8 @@
       1,
       0,
       0,
-      1,
       0,
+      1,
       0,
       0,
       39
@@ -2149,11 +2149,11 @@
   },
   "parameterImportance": {
     "body.subType": 0.698,
-    "body.isLandable": 0.021,
+    "body.isLandable": 0.02,
     "body.terraformingState": 0.175,
     "body.rotationalPeriodTidallyLocked": 0.785,
-    "body.atmosphereType": 0.621,
-    "body.volcanismType": 0.104,
+    "body.atmosphereType": 0.623,
+    "body.volcanismType": 0.108,
     "exo.host_star_spectral_primary": 0.383,
     "exo.system_primary_spectral": 0.544,
     "body.distanceToArrival": 0.754,

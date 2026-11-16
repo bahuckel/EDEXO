@@ -1,6 +1,6 @@
 {
  "formatVersion": 1,
- "builtAt": "2026-11-15",
+ "builtAt": "2026-11-16",
  "source": "Every confirmed sighting of the EDDN year (EDGalaxyData archive, 2.06 M bodies; codex entries and composition scans counted) against each species' 1.4.0 profile temperature envelope. Built by docs/perf/build_observed_temperature_140.py.",
  "species": {
   "aleoida_aleoida_arcus": {

@@ -340,10 +340,11 @@ same way: rules say where a species can grow, and records of where it has grown 
   volcanism, star — were written for this app and are corrected by what has actually been found.
   Where a rule and the records disagree on a species seen often enough, **observation wins**.
 - **The species profiles** (how often each species is found at each temperature, gravity, pressure and
-  so on) are built, since 1.4.0, from every confirmed sighting in a year of EDDN — 2,082,548 bodies, each
+  so on) are built, since 1.4.0, from every confirmed sighting in a year of EDDN — 2,089,552 bodies, each
   species logged on the exact body by a codex entry, a composition scan or an organic sample, from the
-  EDGalaxyData archive, plus the older sightings it lacked — all of them, 4,207,647 species-on-body
-  sightings in the profiles; only finds without a body record and lone outliers are left out. A lone
+  EDGalaxyData archive, plus the older sightings it lacked, plus — for Bark Mounds, Amphora Plant and
+  Crystalline Shards, each the only species of its genus — every body Spansh's galaxy dump lists with
+  that genus: 4,215,072 species-on-body sightings in the profiles; only finds without a body record and lone outliers are left out. A lone
   find never sets a range (`data/exomastery/outlier-register.json` lists each one).
 - **What grows on a body of this kind** (planet class, atmosphere, volcanism, temperature band) is counted
   on 1.79 million of those finds, on bodies where every genus was sampled.

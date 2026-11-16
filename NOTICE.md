@@ -19,7 +19,8 @@ Where this project started. Spansh's Exomastery planning dumps showed that "whic
 this body" is a question data can answer; they were the project's first data and, for its first months,
 its only data. Since 1.4.0 the species profiles are built from every sighting in the EDDN archive (below)
 and the older Exomastery and EDDN sightings it lacked, each with its body's record from Spansh's galaxy
-dump, and the
+dump; Bark Mounds, Amphora Plant and Crystalline Shards, each the only species of its genus, also count
+every body whose DSS genus list in Spansh's galaxy dump names that genus (7,449 more sightings), and the
 genus chances (`data/exomastery/genus-prior.json`) are counted from the DSS genus lists of the 2.8 million
 bio bodies in Spansh's galaxy dump. (Since October 2026 the predictions are measured against a year of
 EDDN finds, below.) The list of
