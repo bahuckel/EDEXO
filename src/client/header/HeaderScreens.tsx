@@ -23,6 +23,7 @@ import {
   DataValueBreakdownModal,
   SessionLogModal,
   FeederModal,
+  PlanetQuickFactsPopup,
 } from "../SharedModals";
 import { TabSlot } from "../tabs/TabHost";
 import { useFootScanned } from "./useFootScanned";
@@ -39,9 +40,6 @@ const ScanRouteScreen = lazy(() => import("../scanRoute/ScanRouteScreen").then((
 /** The EDEXO browser's tab (plan 9): its code loads only when the tab opens. */
 const BrowserScreen = lazy(() => import("../BrowserScreen").then((m) => ({ default: m.BrowserScreen })));
 
-const PlanetQuickFactsPopup = lazy(() =>
-  import("../PlanetQuickFactsPopup").then((m) => ({ default: m.PlanetQuickFactsPopup })),
-);
 
 
 type NotableQuick = { notable: NotableBodyInfo; x: number; y: number };

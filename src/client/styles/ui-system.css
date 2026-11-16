@@ -254,3 +254,42 @@
   text-align: left;
   padding-block: 0.3rem;
 }
+
+/*
+  The body tabs on a phone (2026-11-16): beside "BODY" with its order switch (138 px) and the jump button, the strip
+  was left 82 px of a 350 px rail, less than one tab (106 px), so the tab on show was cut at both ends. The heading
+  and the jump button take the first line, the strip with its arrows the whole second.
+*/
+@media (max-width: 520px) {
+  .tabs-body-rail {
+    flex-wrap: wrap;
+    row-gap: var(--s-3);
+  }
+  .tabs-body-rail .tabs-body-head {
+    flex: 1 1 calc(100% - 4.5rem);
+    flex-direction: row;
+    align-items: center;
+    gap: var(--s-5);
+  }
+  .tabs-body-rail .tabs-jump-btn {
+    order: 1;
+  }
+  .tabs-body-rail .tabs-chevron,
+  .tabs-body-rail .tabs-strip {
+    order: 2;
+  }
+  .tabs-body-rail .tabs-strip {
+    flex: 1 1 0;
+  }
+}
+
+/*
+  A species photo fades in when it has loaded (2026-11-16) instead of appearing in one frame; until then its place
+  is the card's dark ground. `data-in` is set by SpeciesCard when the image is in. Instant with Motion off.
+*/
+.species-img:not([data-in]) {
+  opacity: 0;
+}
+.species-img {
+  transition: opacity var(--motion-in) var(--motion-ease-out);
+}

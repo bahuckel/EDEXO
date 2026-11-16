@@ -271,6 +271,14 @@ export const SpeciesCard = memo(function SpeciesCard({
         src={heroSrc}
         alt=""
         className={compact ? "species-img species-img--compact" : "species-img species-img--hero"}
+        decoding="async"
+        // In when loaded (ui-system.css fades it); a cached photo is complete before React attaches onLoad.
+        ref={(el) => {
+          if (el?.complete && el.naturalWidth > 0) el.dataset.in = "1";
+        }}
+        onLoad={(ev) => {
+          (ev.target as HTMLImageElement).dataset.in = "1";
+        }}
         onError={(ev) => {
           const el = ev.target as HTMLImageElement;
           el.style.display = "none";

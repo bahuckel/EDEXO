@@ -77,8 +77,9 @@ export function turningScene(box: HTMLElement, L: Layout, look: SceneLook): Turn
   const shadeContent = (alpha: number) => {
     bx.save();
     bx.shadowColor = bx.fillStyle = `rgba(${look.shade},${alpha})`;
-    bx.shadowBlur = 14 * dpr;
-    for (const [l, t, r, b] of taken) bx.fillRect(l - 3, t - 2, r - l + 6, b - t + 4);
+    // A wide soft edge: with 14 px the shade showed as a box against a bright patch of sky (seen on the phone).
+    bx.shadowBlur = 26 * dpr;
+    for (const [l, t, r, b] of taken) bx.fillRect(l - 6, t - 4, r - l + 12, b - t + 8);
     bx.restore();
   };
   shadeContent(0.94);

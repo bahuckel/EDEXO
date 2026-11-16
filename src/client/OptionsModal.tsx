@@ -5,6 +5,7 @@ import { useToast } from "./ui/feedback";
 import { withTransition } from "./motion";
 import { MotionSetting } from "./options/MotionSetting";
 import { HeaderPictureSetting } from "./options/HeaderPictureSetting";
+import { InterfaceStyleSetting } from "./options/InterfaceStyleSetting";
 import { NextBoxelSetting } from "./options/NextBoxelSetting";
 import { FontSetting } from "./options/FontSetting";
 import { ModalHead } from "./ui/ModalHead";
@@ -301,6 +302,7 @@ export function MapOptionsModal({
           <ColourSchemePanel />
           <MotionSetting />
           <HeaderPictureSetting />
+          <InterfaceStyleSetting />
           <FontSetting />
           <NextBoxelSetting />
           {compare ? (

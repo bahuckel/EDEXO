@@ -70,9 +70,20 @@ export const DataValueBreakdownModal = lazyModal(() =>
 
 export const SessionLogModal = lazyModal(() => import("./SessionLogModal").then((m) => m.SessionLogModal));
 
+/*
+  The system map and the notable-body pop-up were plain lazy() (2026-11-16): their first opening showed the
+  loading skeleton and React then held the window for 300 ms (measured: system map at 322 ms the first time,
+  13-15 ms after). As lazyModal, with their chunks fetched once the page is idle, the first opening is like the rest.
+*/
+export const SystemMapModal = lazyModal(() => import("./SystemMapModal").then((m) => m.SystemMapModal));
+
+export const PlanetQuickFactsPopup = lazyModal(() =>
+  import("./PlanetQuickFactsPopup").then((m) => m.PlanetQuickFactsPopup),
+);
+
 export const FeederModal = lazyModal(() => import("./FeederModal").then((m) => m.FeederModal));
 
-/** Fetch every panel's chunk in the background once the page has settled (~130 kB, all local). */
+/** Fetch every panel's chunk in the background once the page has settled (~190 kB, all local). */
 export function prefetchMenuModals(): void {
   const go = () => {
     for (const m of [
@@ -89,6 +100,8 @@ export function prefetchMenuModals(): void {
       MyExobiologyModal,
       DataValueBreakdownModal,
       SessionLogModal,
+      SystemMapModal,
+      PlanetQuickFactsPopup,
     ]) {
       m.preload();
     }

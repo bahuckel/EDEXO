@@ -8,6 +8,7 @@ import { applyAppTheme, followAppThemeChanges } from "./appTheme";
 import { applyMotion } from "./motion";
 import { installPressFx } from "./ui/pressFx";
 import { applyUiFont } from "./uiFont";
+import { applyUiStyle } from "./uiStyle";
 import { applyStreamerMode, STREAMER_MODE } from "./streamerMode";
 import { loadUiMirror, startUiMirrorSource, watchUiMirror } from "./uiMirror";
 
@@ -17,10 +18,9 @@ const screen = new URLSearchParams(window.location.search).get("screen");
   Compare's App is loaded like the other screens (audit 2026-10-22). Imported statically, it made the Colonize,
   galaxy, map and triage windows fetch, parse and run its whole chunk (BodyPane, SpeciesCard and the rest) for a
   screen they never draw. Asked for here, before the streamer view's await below, so Compare's own window starts the
-  download first thing; the lazy() takes that same request.
+  download first thing.
 */
 const appImport = screen ? null : import("./App");
-const App = lazy(() => (appImport ?? import("./App")).then((m) => ({ default: m.App })));
 
 // The streamer view takes the streamer's own settings first (uiMirror.ts), so even its first paint
 // is what the streamer sees.
@@ -32,8 +32,16 @@ followAppThemeChanges();
 applyMotion();
 installPressFx();
 applyUiFont();
+applyUiStyle();
 // `?view=stream`: the same app, as a picture for a stream (streamerMode.ts).
 applyStreamerMode();
+
+/*
+  Compare's own window waits for its chunk before it draws anything (2026-11-16). As a lazy() under Suspense it drew
+  the backdrop first, and React then held the app back until 300 ms after that first paint (its rule against a flash
+  of fallback). Measured on the built app: every script was in by 90-140 ms, the header came at 450-480 ms.
+*/
+const App = appImport ? (await appImport).App : null;
 
 /**
  * `?screen=triage` gets the second screen (§51) instead of the app.
@@ -67,7 +75,7 @@ function StreamerApp() {
       setGen((g) => g + 1);
     });
   }, []);
-  return <App key={gen} />;
+  return App ? <App key={gen} /> : null;
 }
 // The app on this PC tells the streamer view how it is set up.
 if (!STREAMER_MODE && !screen) startUiMirrorSource();
@@ -92,8 +100,7 @@ createRoot(document.getElementById("root")!).render(
   ) : (
     <UiFeedbackProvider>
       <HexSignals />
-      {/* The chunk was asked for at the top: for the moment it takes, the backdrop alone. */}
-      <Suspense fallback={null}>{STREAMER_MODE ? <StreamerApp /> : <App />}</Suspense>
+      {App ? STREAMER_MODE ? <StreamerApp /> : <App /> : null}
     </UiFeedbackProvider>
   ),
 );

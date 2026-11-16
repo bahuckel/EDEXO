@@ -7,7 +7,7 @@ import { NOTABLE_HOVER_EVENT, NOTABLE_QUICK_EVENT } from "./HeaderBar";
 import { UI_COMMAND_EVENT, useLiveSnapshot } from "./useLiveSnapshot";
 import { useToast } from "./ui/feedback";
 import { arrivalTripRanks, type ArrivalTrip } from "@shared/systemTriage";
-import { useCallback, lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { JournalBootScreen, useBootTick } from "./JournalBootScreen";
 import type { EncyclopediaSpawnCompare } from "./EncyclopediaModal";
 import { EliteTipRotator } from "./EliteTipRotator";
@@ -28,7 +28,7 @@ import { HeaderBar } from "./HeaderBar";
 import { CopySystemButton } from "./CopySystemButton";
 import { LifelessEmblem } from "./LifelessEmblem";
 import { setSnapshotStamp } from "./panelSnapshot";
-import { ModalLoading } from "./SharedModals";
+import { ModalLoading, SystemMapModal } from "./SharedModals";
 import { AppLegalFooter } from "./AppLegalFooter";
 import { STREAMER_MODE } from "./streamerMode";
 import { sendJson } from "./http";
@@ -49,7 +49,6 @@ import { sendJson } from "./http";
  * the system map (plus its 40 KB geometry module, which nothing else imports), the encyclopedia
  * (plus its filter bar and exomastery panels), the habitat match modal, and the quick-facts popup.
  */
-const SystemMapModal = lazy(() => import("./SystemMapModal").then((m) => ({ default: m.SystemMapModal })));
 
 const BRAND_AUTHOR = "FALrenica";
 

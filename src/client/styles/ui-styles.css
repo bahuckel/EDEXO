@@ -1,0 +1,309 @@
+/* ==========================================================================================================
+   Interface styles (2026-11-16; uiStyle.ts, Options › Look › Interface style). The app as it is stays untouched:
+   every rule here is under html[data-ui-style], which Classic never sets.
+
+   Each style changes the whole picture: the page behind the app, how a panel is made, how its title is said, what
+   a tile is (owner, of a first mild round: "I want the themes to be iconic and noticeable, not just button/card
+   outlines"). Both take their colour from the scheme (--accent-rgb), so a style and a colour scheme multiply.
+
+     holo    a cockpit hologram: no boxes, bright corner brackets, light on a cold dark, scan lines
+     nebula  glass over a coloured sky: see-through panels, the scheme's colour and its neighbours behind them
+   ========================================================================================================== */
+
+/* =============================================== BOTH =============================================== */
+/* The page shows through the panels (a glow, a coloured sky), so text can stand on a light ground: a dark edge
+   behind every letter keeps it readable there (owner 2026-11-16). Form controls take no shadow from their parent
+   on their own; :where() keeps this below any rule that gives a control its own. */
+html[data-ui-style] {
+  --ui-text-edge: 0 0 1px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.75);
+}
+html[data-ui-style] body {
+  text-shadow: var(--ui-text-edge);
+}
+:where(html[data-ui-style]) :where(button, input, select, textarea) {
+  text-shadow: inherit;
+}
+/* Three that switch their shadow off in Classic and stand on the picture or on glass here. */
+html[data-ui-style] :is(.appbar-wordmark__app, .payout-cr small, .species-identity-genus) {
+  text-shadow: var(--ui-text-edge);
+}
+/* A species already scanned keeps its green glow (exomastery.css) behind the edge. */
+html[data-ui-style] .species-identity-neon--complete .species-identity-genus {
+  text-shadow:
+    var(--ui-text-edge),
+    0 0 10px rgba(95, 216, 138, 0.55);
+}
+/* The shared button (ui-system.css) switches it off too, at :root:root strength; its light-lettered kinds take the
+   edge, the filled ones (primary, danger under the pointer) keep none. */
+:root:root[data-ui-style] .ui-btn:not(.ui-btn--primary):not(.ui-btn--danger:hover) {
+  text-shadow: var(--ui-text-edge);
+}
+/* Dark letters on a fill (the chosen tab, a primary button, a control under the pointer) take none: a dark edge
+   behind dark letters is a smudge. Every rule in the app that sets a dark text colour is listed here (the shared
+   button's filled kinds are handled above). */
+html[data-ui-style]
+  :is(
+    .tab.on,
+    .btn:hover:not([disabled]),
+    .btn-confirm-go,
+    .btn-confirm-cancel:hover,
+    .btn-top-neutral:hover,
+    .btn-top-toggle:hover,
+    .planetary-info-copy-summary:hover,
+    .tabs-jump-btn:hover,
+    .fold-help-btn:hover,
+    .fold-help-btn--on,
+    .appbar-menu .appbar-icon-btn:hover,
+    .appbar-menu .appbar-icon-btn:focus-visible,
+    .fdb-chip--primary,
+    .ui-select__opt.is-selected.is-active,
+    .species-codex-new,
+    .system-map-legend-badge,
+    .system-map-zoom button,
+    .cz-step__n,
+    .ss-sort--on,
+    .ss-hud-link,
+    .g3d-tab--on,
+    .g3d-tab__badge,
+    .g3d-tick,
+    .g3d-label--plan,
+    .g3d-nr-half--on,
+    .g3d-row:hover .g3d-row__val,
+    .g3d-row:focus-within .g3d-row__val
+  ) {
+  text-shadow: none;
+}
+
+/* =============================================== HOLO =============================================== */
+html[data-ui-style="holo"] body::before,
+html[data-ui-style="holo"] .tab-pane--screen {
+  background-color: #02040a;
+  background-image:
+    radial-gradient(ellipse 95% 60% at 50% 112%, rgba(var(--accent-rgb), 0.26), transparent 70%),
+    radial-gradient(ellipse 120% 80% at 50% -15%, rgba(var(--accent-rgb), 0.1), transparent 55%), var(--hex-grid);
+  background-size:
+    auto,
+    auto,
+    27.7128px 48px;
+}
+/* A menu window opened as a tab page fills the screen: the page shows through it, as through a panel. */
+html[data-ui-style="holo"] .tab-pane--screen :is(.modal-panel, .boxel-screen) {
+  background-color: rgba(2, 4, 10, 0.6);
+}
+/* Scan lines over everything, as on a projected display. */
+html[data-ui-style="holo"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.17) 0 1px, transparent 1px 3px);
+}
+/* Not over a photo opened to be looked at, nor over the 3D galaxy map. */
+html[data-ui-style="holo"]:has(.photo-lightbox-backdrop, .g3d-screen) body::after {
+  display: none;
+}
+/* A panel is light, not a box: four corner brackets, a faint wash, lines of light across it. */
+html[data-ui-style="holo"] .panel,
+html[data-ui-style="holo"] header.top,
+html[data-ui-style="holo"] .modal-panel {
+  --bk: rgb(var(--accent-rgb));
+  --bl: 22px;
+  --bw: 2px;
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: 0 0 34px rgba(var(--accent-rgb), 0.09);
+  background:
+    linear-gradient(var(--bk), var(--bk)) top left / var(--bl) var(--bw) no-repeat,
+    linear-gradient(var(--bk), var(--bk)) top left / var(--bw) var(--bl) no-repeat,
+    linear-gradient(var(--bk), var(--bk)) top right / var(--bl) var(--bw) no-repeat,
+    linear-gradient(var(--bk), var(--bk)) top right / var(--bw) var(--bl) no-repeat,
+    linear-gradient(var(--bk), var(--bk)) bottom left / var(--bl) var(--bw) no-repeat,
+    linear-gradient(var(--bk), var(--bk)) bottom left / var(--bw) var(--bl) no-repeat,
+    linear-gradient(var(--bk), var(--bk)) bottom right / var(--bl) var(--bw) no-repeat,
+    linear-gradient(var(--bk), var(--bk)) bottom right / var(--bw) var(--bl) no-repeat,
+    repeating-linear-gradient(0deg, rgba(var(--accent-rgb), 0.035) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.075), rgba(var(--accent-rgb), 0.02) 40%, rgba(2, 4, 10, 0.55));
+}
+html[data-ui-style="holo"] .modal-panel {
+  clip-path: none;
+  background-color: rgba(2, 4, 10, 0.94);
+}
+/* The header keeps its picture; its ground steps in so the brackets show at the corners. */
+html[data-ui-style="holo"] .top::before {
+  inset: 2px;
+  background-color: transparent;
+  background-image: linear-gradient(180deg, rgba(2, 4, 10, 0.55), rgba(2, 4, 10, 0.75));
+}
+/* The title: a slanted bar of light and glowing letters. */
+html[data-ui-style="holo"] .fold-head {
+  background:
+    linear-gradient(105deg, rgba(var(--accent-rgb), 0.42) 0, rgba(var(--accent-rgb), 0.16) 16%, transparent 34%),
+    linear-gradient(90deg, #fff 0, rgb(var(--accent-rgb)) 12%, transparent 72%) bottom left / 100% 1px no-repeat;
+}
+html[data-ui-style="holo"] .fold-title,
+html[data-ui-style="holo"] .genus-card-title,
+html[data-ui-style="holo"] .tabs-body-heading {
+  color: #fff;
+  letter-spacing: 0.24em;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 2px rgb(var(--accent-rgb)),
+    0 0 12px rgba(var(--accent-rgb), 0.95),
+    0 0 26px rgba(var(--accent-rgb), 0.5);
+}
+/* On a phone the wide spacing pushed a panel's summary off its line. */
+@media (max-width: 520px) {
+  html[data-ui-style="holo"] .fold-title,
+  html[data-ui-style="holo"] .genus-card-title,
+  html[data-ui-style="holo"] .tabs-body-heading {
+    letter-spacing: 0.12em;
+  }
+}
+/* A tile: two lines of its colour with light falling between them. */
+html[data-ui-style="holo"] .fact,
+html[data-ui-style="holo"] .species-quad-cell,
+html[data-ui-style="holo"] .payout-hero {
+  border-width: 1px 0;
+  clip-path: none;
+  background-image: linear-gradient(180deg, transparent 0, rgba(2, 4, 10, 0.82) 100%);
+  text-shadow:
+    var(--ui-text-edge),
+    0 0 9px rgba(var(--accent-rgb), 0.4);
+}
+html[data-ui-style="holo"] .fact::before,
+html[data-ui-style="holo"] .species-quad-cell::before,
+html[data-ui-style="holo"] .payout-hero::before {
+  display: none;
+}
+html[data-ui-style="holo"] .genus-card-shell,
+html[data-ui-style="holo"] .species-card,
+html[data-ui-style="holo"] .species-quad-grid,
+html[data-ui-style="holo"] .tabs-strip-host-card,
+html[data-ui-style="holo"] .tabs-body-rail {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+html[data-ui-style="holo"] .genus-card-header-row {
+  background: linear-gradient(105deg, rgba(var(--accent-rgb), 0.3), transparent 60%);
+  border-bottom-color: rgba(var(--accent-rgb), 0.7);
+}
+/* It sticks to the top while the page scrolls under it, so its ground is solid. */
+html[data-ui-style="holo"] .glance {
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent-rgb), 0.02) 70%), #02040a;
+  box-shadow: inset 0 -1px 0 rgba(var(--accent-rgb), 0.8);
+}
+html[data-ui-style="holo"] .btn-top-toggle,
+html[data-ui-style="holo"] .btn-top-neutral {
+  background: rgba(var(--accent-rgb), 0.06);
+  border-color: rgba(var(--accent-rgb), 0.55);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.16);
+}
+html[data-ui-style="holo"] .tab-strip {
+  background: rgba(2, 4, 10, 0.9);
+}
+
+/* =============================================== NEBULA =============================================== */
+html[data-ui-style="nebula"] body::before,
+html[data-ui-style="nebula"] .tab-pane--screen {
+  background-color: #05040a;
+  background-image:
+    radial-gradient(ellipse 66% 56% at 8% 14%, hsl(from rgb(var(--accent-rgb)) calc(h - 55) 80% 46% / 0.7), transparent 70%),
+    radial-gradient(ellipse 60% 66% at 94% 26%, hsl(from rgb(var(--accent-rgb)) calc(h - 110) 70% 48% / 0.6), transparent 70%),
+    radial-gradient(ellipse 90% 66% at 46% 108%, hsl(from rgb(var(--accent-rgb)) h 90% 50% / 0.7), transparent 70%),
+    radial-gradient(ellipse 44% 40% at 66% 58%, hsl(from rgb(var(--accent-rgb)) calc(h + 170) 70% 55% / 0.3), transparent 70%);
+  background-size: auto;
+}
+html[data-ui-style="nebula"] .hex-signals {
+  display: none;
+}
+/* A panel is a pane of glass: the sky shows through it, light catches its top edge. */
+html[data-ui-style="nebula"] .panel,
+html[data-ui-style="nebula"] header.top,
+html[data-ui-style="nebula"] .modal-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.03) 30%, rgba(255, 255, 255, 0.02)),
+    rgba(9, 8, 16, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 22px 54px rgba(0, 0, 0, 0.4);
+}
+/* A window over the app: nearly solid, or the screen behind it read through its text. */
+html[data-ui-style="nebula"] .modal-panel {
+  background-color: rgba(9, 8, 16, 0.95);
+}
+/* A menu window opened as a tab page fills the screen: without this the sky was gone behind one dark pane. */
+html[data-ui-style="nebula"] .tab-pane--screen :is(.modal-panel, .boxel-screen) {
+  background-color: rgba(9, 8, 16, 0.58);
+}
+html[data-ui-style="nebula"] .top::before {
+  background-color: transparent;
+  background-image: linear-gradient(180deg, rgba(9, 8, 16, 0.25), rgba(9, 8, 16, 0.5));
+}
+/* The title: white letters on a band of light that fades out; no rule. */
+html[data-ui-style="nebula"] .fold-head {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.03) 55%, transparent);
+}
+html[data-ui-style="nebula"] .fold-title,
+html[data-ui-style="nebula"] .genus-card-title {
+  color: #fff;
+  text-shadow:
+    var(--ui-text-edge),
+    0 1px 10px rgba(0, 0, 0, 0.6);
+}
+html[data-ui-style="nebula"] .fold-title::before {
+  content: "";
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin-right: 0.75em;
+  background: rgb(var(--accent-rgb));
+  box-shadow: 0 0 12px rgb(var(--accent-rgb));
+  transform: rotate(45deg);
+}
+/* A tile is tinted glass: its colour as a fill, no outline. */
+html[data-ui-style="nebula"] .fact,
+html[data-ui-style="nebula"] .species-quad-cell,
+html[data-ui-style="nebula"] .payout-hero {
+  border-color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+html[data-ui-style="nebula"] .fact::before,
+html[data-ui-style="nebula"] .species-quad-cell::before,
+html[data-ui-style="nebula"] .payout-hero::before {
+  opacity: 0;
+}
+/* It sticks to the top while the page scrolls under it: solid, or the titles passing below showed through. */
+html[data-ui-style="nebula"] .glance {
+  background: #120e1f;
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+html[data-ui-style="nebula"] .genus-card-shell,
+html[data-ui-style="nebula"] .species-card,
+html[data-ui-style="nebula"] .tabs-body-rail {
+  background: rgba(9, 8, 16, 0.3);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+html[data-ui-style="nebula"] .species-quad-grid,
+html[data-ui-style="nebula"] .tabs-strip-host-card {
+  border-color: transparent;
+  background: transparent;
+}
+html[data-ui-style="nebula"] .genus-card-header-row {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), transparent 70%);
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+html[data-ui-style="nebula"] .btn-top-toggle,
+html[data-ui-style="nebula"] .btn-top-neutral {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+html[data-ui-style="nebula"] .tab-strip {
+  background: rgba(9, 8, 16, 0.55);
+}

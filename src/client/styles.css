@@ -68,3 +68,5 @@
 @import "./styles/tray-tiles.css" layer(app);
 /* The UI system's rules (plan 7.5): selected vs action, button heights, sentence-case chips, table stripes. Last. */
 @import "./styles/ui-system.css" layer(app);
+/* The interface styles on trial (uiStyle.ts): every rule under html[data-ui-style], so Classic is untouched. */
+@import "./styles/ui-styles.css" layer(app);
