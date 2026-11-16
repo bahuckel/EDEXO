@@ -257,8 +257,9 @@ describe("volcanism in the posterior", () => {
         w <= 0.4   acies > tela > omentum      w >= 0.5   omentum > acies > tela
 
       `BODY_TYPE_PRIOR_WEIGHT` shipped at 1 for one day, when the app contradicted him here. It is
-      0.4 until 2026-10-01, 0.48 since (the EDDN export moved the water-magma case, below; kept in 1.4.0).
-      **Raising it past 0.55 breaks this test, and that is the point** — the failure is the
+      0.4 until 2026-10-01, 0.48 until 1.4.0, 0.3 since: with the species profiles counted from every sighting
+      this test failed at 0.48 (omentum first, acies 0.39 behind), and acies now leads here only up to 0.32.
+      **Raising it past 0.32 breaks this test, and that is the point** — the failure is the
       warning, not a stale fixture to be updated.
     */
     const appOrder = CANDIDATES.map((name) => ({
@@ -268,7 +269,7 @@ describe("volcanism in the posterior", () => {
       .filter((x) => x.r)
       .sort((a, b) => b.r!.logScore - a.r!.logScore)
       .map((x) => x.name.replace(/^\S+\s+/, ""));
-    expect(appOrder[0], "raise BODY_TYPE_PRIOR_WEIGHT past 0.55 and the corpus cell takes this").toBe("acies");
+    expect(appOrder[0], "raise BODY_TYPE_PRIOR_WEIGHT past 0.32 and the corpus cell takes this").toBe("acies");
   });
 
   it("keeps verrata in the top three on water magma, which is the other end of the same dial", () => {
@@ -284,6 +285,8 @@ describe("volcanism in the posterior", () => {
       three-way tie (verrata 36.5 / tela 33.0 / acies 30.4 % of 8,423 bodies), and at 0.55 verrata is second, behind
       acies; from 0.65 it is first but omentum takes the nitrogen moon. 0.55 cost first places on the EDDN year (plan
       r9), so 0.48 stays and verrata is third here, behind acies and tela. Owner's call (2026-11-15): top three.
+      2026-11-16: with the profiles from every sighting the nitrogen moon fell to omentum at 0.48; 0.3 keeps acies first
+      there and verrata third here (0.3 against 0.48 on the EDDN year: rows 4 lost, 4 gained; plan-1.4.0.md, w030c).
 
       So the weight is not a midpoint anyone liked the look of. It is the only value measured that satisfies
       both of the owner's landings at once.

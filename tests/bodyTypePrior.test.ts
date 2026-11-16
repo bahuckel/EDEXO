@@ -157,11 +157,13 @@ describe("the settings the sweep chose", () => {
       landings — acies on his neon moon, verrata on water magma — his call, 2026-09-21. After the
       2026-10-01 EDDN export the same rule gives 0.48, the only weight that keeps both (his call
       again). In 1.4.0 (table on every sighting) no weight keeps both first; 0.55 was measured and cost first places
-      on the EDDN year, so 0.48 stays (his call, 2026-11-15). Changing it is a decision about whose evidence wins, not a tuning step.
+      on the EDDN year, so 0.48 stays (his call, 2026-11-15). Once the profiles were counted from every sighting, 0.48
+      lost the nitrogen moon to omentum; by the same rule (acies first there, verrata in the top three) it is 0.3
+      (2026-11-16). Changing it is a decision about whose evidence wins, not a tuning step.
 
       A re-tune is a deliberate edit here as well as there.
     */
-    expect(BODY_TYPE_PRIOR_WEIGHT).toBe(0.48);
+    expect(BODY_TYPE_PRIOR_WEIGHT).toBe(0.3);
     expect(MIN_CELL).toBe(10);
   });
 });

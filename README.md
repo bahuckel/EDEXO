@@ -100,8 +100,8 @@ sampling run per genus.
 It is built from how often a species has actually been recorded at this gravity, temperature,
 pressure, planet class, atmosphere and host star, weighted by how common it is, and normalised
 across the body's candidates, then weighed against how often each genus turns up on bodies like this
-one. Checked on 14,560 bodies other commanders logged on EDDN, where every species on the body is known:
-rows it calls 90–100 % turn up 98.9 % of the time, rows under 10 % 6.0 %.
+one. Checked on 372,812 bodies other commanders logged on EDDN, where every species on the body is known
+(1.4.0, before a DSS): rows it calls 90–100 % turn up 99.1 % of the time, rows under 10 % 3.5 %.
 
 **Which species, once you have mapped it.** After a DSS names the genus, the same posterior
 renormalises inside that genus to say which of its species you are looking at.
@@ -340,7 +340,7 @@ same way: rules say where a species can grow, and records of where it has grown 
   volcanism, star — were written for this app and are corrected by what has actually been found.
   Where a rule and the records disagree on a species seen often enough, **observation wins**.
 - **The species profiles** (how often each species is found at each temperature, gravity, pressure and
-  so on) are built, since 1.4.0, from every confirmed sighting in a year of EDDN — 2,089,552 bodies, each
+  so on) are built, since 1.4.0, from every confirmed sighting in a year of EDDN — 2,065,004 bodies, each
   species logged on the exact body by a codex entry, a composition scan or an organic sample, from the
   EDGalaxyData archive, plus the older sightings it lacked, plus — for Bark Mounds, Amphora Plant and
   Crystalline Shards, each the only species of its genus — every body Spansh's galaxy dump lists with
@@ -364,7 +364,7 @@ No number reaches the screen as a percentage unless it has been checked against 
 Every candidate carries a **Chance here** figure — how often a species with this profile turns out to
 actually be on a body like this one. It is the one percentage in the app that has been calibrated
 against real outcomes: on 372,812 EDDN bodies where every species is known (1.4.0), the 90-100 % band
-comes in at 98.9 % and the 0-10 % band at 3.5 % before a DSS.
+comes in at 99.1 % and the 0-10 % band at 3.5 % before a DSS.
 
 Candidates below **1 %** are moved behind _show unlikely_ rather than listed. The rule is no misses
 first: a list of three where one is right beats a list of one that is wrong. The floor was 5 % until

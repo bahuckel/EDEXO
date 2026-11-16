@@ -115,8 +115,12 @@ export function attachPresenceProbability(
       A measured rate is the answer for its species, not the ranking's: Crystalline Shards' profile
       holds 28 bodies, so the ranking put it at 0 % on every body that met its rules (owner,
       2026-10-09: "Crystalline Shards are getting shown at 0% all the time").
+      The rate answers "are they here" before the genus is known. Once a DSS has named their genus the game has
+      answered that, and the share is the chance: of the EDDN year's 2,020 Shards bodies, 1,905 read 48.6 % after the
+      DSS had named them and 115 with more signals 6 % (2026-11-16).
     */
-    const fixed = fixedPresencePercent(r.match.entry.id, b.biologicalSignals);
+    const named = !!b.genusHints?.length && filterByGenusHints([r.match.entry], b.genusHints).length > 0;
+    const fixed = named ? null : fixedPresencePercent(r.match.entry.id, b.biologicalSignals);
     if (fixed != null) r.match.presenceProbabilityPercent = fixed;
   }
 

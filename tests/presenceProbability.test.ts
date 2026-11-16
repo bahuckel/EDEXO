@@ -125,6 +125,22 @@ describe("each candidate's chance of being on the body", () => {
     expect(shards(3)).toBe(6);
   });
 
+  it("leaves that rate once a DSS has named their genus: the game has answered it (2026-11-16)", () => {
+    const SHARDS_HINT = { Genus: "$Codex_Ent_Ground_Struct_Ice_Name;", Genus_Localised: "Crystalline Shards" };
+    const BACTERIUM_HINT = { Genus: "$Codex_Ent_Bacterial_Genus_Name;", Genus_Localised: "Bacterium" };
+    const shards = () => ({ entry: entry("crystalline_shards_crystalline_shards"), reasons: [] }) as unknown as SpeciesMatch;
+    const alone = [shards()];
+    run(alone, body(1, { genusHints: [SHARDS_HINT] as never }));
+    expect(alone[0]!.presenceProbabilityPercent).toBe(100);
+    const two = [shards(), ...rows()];
+    run(two, body(2, { genusHints: [SHARDS_HINT, BACTERIUM_HINT] as never }));
+    expect(two[0]!.presenceProbabilityPercent).toBe(100);
+    // A DSS that named other genera only leaves the measured rate alone.
+    const other = [shards(), ...rows()];
+    run(other, body(3, { genusHints: [BACTERIUM_HINT] as never }));
+    expect(other[0]!.presenceProbabilityPercent).toBe(6);
+  });
+
   it("touches nothing without a scan, nor any row already behind the unlikely tier", () => {
     const none = rows({ bacterium_bacterium_acies: { presenceProbabilityPercent: 77 } });
     run(none, body(1), null);

@@ -71,7 +71,16 @@ import { BODY_TYPE_T_EDGES, bodyTypeKeyParts } from "../shared/bodyTypeKey.js";
 /**
  * How far to move from the galaxy-wide prior toward the share among bodies of this kind, 0…1.
  *
- * **0.48, kept in 1.4.0** (owner's choice, 2026-11-15). The table is now counted on every sighting (1.79 M finds on
+ * **0.3 in 1.4.0** (2026-11-16), by the rule the weight has always followed: the largest value that keeps both of his
+ * landings. With the species profiles counted from every sighting (dfc4aa80) the neon moon moved: at 0.48 omentum
+ * leads the nitrogen-magma landing where he found acies (acies second, 0.39 behind), while verrata leads water magma.
+ * Re-swept, acies leads the nitrogen moon only up to 0.32 (0.3: acies 0.053 ahead of omentum), and verrata is third on
+ * water magma there, behind acies and tela — the top three settled on 2026-11-15. Against 0.48 on the EDDN year with
+ * each system's companions (plan-1.4.0.md, w030c): 4 FSS rows lost and 4 gained, 27 / 41 more species first in their
+ * genus (FSS / DSS), and the chance correction refitted on it calibrates the same (Brier below 99.5 %: 0.1499 against
+ * 0.1507).
+ *
+ * Before: **0.48, kept in 1.4.0's first build** (owner's choice, 2026-11-15). The table is now counted on every sighting (1.79 M finds on
  * bodies where every genus was sampled) and no weight keeps both of his landings first any more: acies leads the
  * nitrogen-magma moon up to 0.55, verrata the water-magma one only from 0.65. The data agrees with both landings but
  * calls each a near three-way tie (icy neon nitrogen magma: acies 37.8 / omentum 32.1 / tela 29.7 % of 8,458 bodies;
@@ -102,7 +111,7 @@ import { BODY_TYPE_T_EDGES, bodyTypeKeyParts } from "../shared/bodyTypeKey.js";
  * It costs six top-1 and nineteen top-3 against full weight, and it has the best within-genus
  * calibration of any setting measured.
  */
-export const BODY_TYPE_PRIOR_WEIGHT = 0.48;
+export const BODY_TYPE_PRIOR_WEIGHT = 0.3;
 
 /**
  * Bodies a cell needs before its shares are believed rather than backed off.
