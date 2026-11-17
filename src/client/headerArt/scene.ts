@@ -74,12 +74,44 @@ export function turningScene(box: HTMLElement, L: Layout, look: SceneLook): Turn
   box.append(skyCv, backCv, lightCv, frontCv);
 
   // back: the shade behind every block and line of text (the sky stays calm there), then the land behind the plants.
+  const bare = new Set(L.text ?? []);
   const shadeContent = (alpha: number) => {
+    const off = w + 400;
     bx.save();
-    bx.shadowColor = bx.fillStyle = `rgba(${look.shade},${alpha})`;
-    // A wide soft edge: with 14 px the shade showed as a box against a bright patch of sky (seen on the phone).
-    bx.shadowBlur = 26 * dpr;
-    for (const [l, t, r, b] of taken) bx.fillRect(l - 6, t - 4, r - l + 12, b - t + 8);
+    bx.fillStyle = `rgba(${look.shade},${alpha})`;
+    /*
+      Under a card: dark inside its own edge (hidden by it, it keeps the sky calm behind its text), and round it only
+      a soft drop shadow, the blur of the same box drawn off the canvas and a little lower. A dark box larger than the
+      card with a 26 px edge read as a cut-out round every card, the search and the buttons (owner, 2026-11-17: "soft
+      shadows to give them some depth, but nothing that aggressively cut out").
+    */
+    for (const rect of taken) {
+      if (bare.has(rect)) continue;
+      const [l, t, r, b] = rect;
+      bx.fillRect(l + 1, t + 1, r - l - 2, b - t - 2);
+    }
+    bx.shadowColor = `rgba(${look.shade},${alpha * 0.55})`;
+    bx.shadowOffsetX = off * dpr;
+    bx.shadowOffsetY = 4 * dpr;
+    bx.shadowBlur = 20 * dpr;
+    for (const rect of taken) {
+      if (bare.has(rect)) continue;
+      const [l, t, r, b] = rect;
+      bx.fillRect(l - off, t, r - l, b - t);
+    }
+    /*
+      Bare text has no box, so it gets none: only the blur of a thin bar along its middle (owner, 2026-11-17: the
+      logo's words sat in a dark square, "it should just be a shadow").
+    */
+    bx.shadowColor = `rgba(${look.shade},${alpha})`;
+    bx.shadowOffsetY = 0;
+    bx.shadowBlur = 18 * dpr;
+    for (const rect of bare) {
+      const [l, t, r, b] = rect;
+      const mid = (t + b) / 2;
+      const half = Math.max(2, (b - t) * 0.22);
+      bx.fillRect(l + 2 - off, mid - half, Math.max(1, r - l - 4), half * 2);
+    }
     bx.restore();
   };
   shadeContent(0.94);

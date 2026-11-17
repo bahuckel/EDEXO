@@ -14,10 +14,12 @@ export interface Layout {
   h: number;
   /** What is drawn in the header (cards, pills, borders, runs of bare text). */
   taken: Rect[];
+  /** The runs of bare text among them: shaded with a soft shadow, not a box (they have no box of their own). */
+  text?: Rect[];
 }
 
-/** Every box laid out in the header and every run of bare text. */
-export function drawnRects(host: HTMLElement, art: Element): Rect[] {
+/** Every box laid out in the header and every run of bare text; the runs of text also go in `text`, if given. */
+export function drawnRects(host: HTMLElement, art: Element, text?: Rect[]): Rect[] {
   const box = host.getBoundingClientRect();
   const out: Rect[] = [];
   const add = (r: DOMRect) => out.push([r.left - box.left, r.top - box.top, r.right - box.left, r.bottom - box.top]);
@@ -48,7 +50,10 @@ export function drawnRects(host: HTMLElement, art: Element): Rect[] {
       const range = document.createRange();
       range.selectNodeContents(n);
       const t = range.getBoundingClientRect();
-      if (t.width > 0) add(t);
+      if (t.width > 0) {
+        add(t);
+        text?.push(out[out.length - 1]!);
+      }
     }
   }
   return out;

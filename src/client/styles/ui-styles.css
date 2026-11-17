@@ -7,7 +7,7 @@
    outlines"). Both take their colour from the scheme (--accent-rgb), so a style and a colour scheme multiply.
 
      holo    a cockpit hologram: no boxes, bright corner brackets, light on a cold dark, scan lines
-     nebula  glass over a coloured sky: see-through panels, the scheme's colour and its neighbours behind them
+     nebula  frosted glass over a painted sky: the Crab, Helix and Ring nebulae behind blurred panes
    ========================================================================================================== */
 
 /* =============================================== BOTH =============================================== */
@@ -205,43 +205,122 @@ html[data-ui-style="holo"] .tab-strip {
 }
 
 /* =============================================== NEBULA =============================================== */
+/* The sky: the Crab, Helix and Ring nebulae, painted for this screen (nebulaSky/, owner 2026-11-16: "as a real
+   nebula ... crab, helix, ring nebulas in the top left, top right and middle down", in their own colours). Plain
+   dark until the picture is there. A screen tab lines its copy up with the page's (fixed). */
+html[data-ui-style="nebula"] {
+  /* Frosted glass: the sky behind blurred, its colour lifted, tinted in the scheme's colour over the scheme's dark
+     (owner, 2026-11-17: "too gray, make it theme specific"), a fine grain over it, light on the edges. */
+  --glass-blur: 22px;
+  --glass-dark: 0.42;
+  --glass-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .11 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --glass-sheen: linear-gradient(165deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.04) 28%, rgba(255, 255, 255, 0.015) 60%, rgba(255, 255, 255, 0.05));
+}
 html[data-ui-style="nebula"] body::before,
 html[data-ui-style="nebula"] .tab-pane--screen {
-  background-color: #05040a;
-  background-image:
-    radial-gradient(ellipse 66% 56% at 8% 14%, hsl(from rgb(var(--accent-rgb)) calc(h - 55) 80% 46% / 0.7), transparent 70%),
-    radial-gradient(ellipse 60% 66% at 94% 26%, hsl(from rgb(var(--accent-rgb)) calc(h - 110) 70% 48% / 0.6), transparent 70%),
-    radial-gradient(ellipse 90% 66% at 46% 108%, hsl(from rgb(var(--accent-rgb)) h 90% 50% / 0.7), transparent 70%),
-    radial-gradient(ellipse 44% 40% at 66% 58%, hsl(from rgb(var(--accent-rgb)) calc(h + 170) 70% 55% / 0.3), transparent 70%);
-  background-size: auto;
+  background-color: #020206;
+  background-image: none;
+}
+/* The picture on its own layer over that dark, fading in once it is painted (owner 2026-11-16: "background loads,
+   but too suddenly, can we make it fade in?"; nebulaSky/index.ts sets data-nebula-sky). Under the glass layers
+   (z-index -1): the page's dark goes to -3, the sky to -2. */
+html[data-ui-style="nebula"] body::before {
+  z-index: -3;
+}
+html[data-ui-style="nebula"] body::after,
+html[data-ui-style="nebula"] .tab-pane--screen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image: var(--nebula-sky, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1.6s cubic-bezier(0.45, 0, 0.35, 1);
+}
+/* A screen tab is a layer of its own: its sky sits just over its dark, under its windows' glass. */
+html[data-ui-style="nebula"] .tab-pane--screen::before {
+  z-index: -1;
+}
+html[data-ui-style="nebula"][data-nebula-sky] body::after,
+html[data-ui-style="nebula"][data-nebula-sky] .tab-pane--screen::before {
+  opacity: 1;
 }
 html[data-ui-style="nebula"] .hex-signals {
   display: none;
 }
-/* A panel is a pane of glass: the sky shows through it, light catches its top edge. */
+/* A panel is a pane of frosted glass. The blur sits on a layer behind the panel (z-index -1, in the stacking
+   context around it), not on the panel: a blur on the panel would become the frame of every pop-up inside it
+   placed against the window, and a stacking context of its own would trap the windows the header opens. */
 html[data-ui-style="nebula"] .panel,
 html[data-ui-style="nebula"] header.top,
-html[data-ui-style="nebula"] .modal-panel {
+html[data-ui-style="nebula"] .modal-panel,
+html[data-ui-style="nebula"] .boxel-screen {
+  /* The tint is spelt out here, not in a variable on the root: there it would be worked out once, and a window's
+     darker glass (--glass-dark below) would not reach it. */
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.03) 30%, rgba(255, 255, 255, 0.02)),
-    rgba(9, 8, 16, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+    var(--glass-grain),
+    var(--glass-sheen),
+    linear-gradient(165deg, rgba(var(--accent-rgb), 0.17), rgba(var(--accent-rgb), 0.06) 55%, rgba(var(--accent-rgb), 0.11)),
+    rgba(var(--shade-top-rgb), var(--glass-dark));
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  border-top-color: rgba(255, 255, 255, 0.3);
   border-radius: 0;
+  clip-path: none;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 22px 54px rgba(0, 0, 0, 0.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 1px 0 0 rgba(255, 255, 255, 0.05),
+    0 24px 60px rgba(0, 0, 0, 0.45);
 }
-/* A window over the app: nearly solid, or the screen behind it read through its text. */
+:where(html[data-ui-style="nebula"]) :where(.panel, .modal-panel) {
+  position: relative;
+}
+html[data-ui-style="nebula"] :is(.panel, .modal-panel, .boxel-screen)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: auto;
+  height: auto;
+  border: 0;
+  clip-path: none;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.7) brightness(1.08);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.7) brightness(1.08);
+}
+/* A window's cut corner (chamfer.css) draws its edge on ::before and ::after: glass has square corners, the
+   ::before is the blur above. */
+html[data-ui-style="nebula"] .modal-panel::after {
+  display: none;
+}
+/* Glass in glass would blur the blur: a panel inside a panel is tinted only. */
+html[data-ui-style="nebula"] :is(.panel, .modal-panel, .boxel-screen) .panel::before {
+  backdrop-filter: none;
+}
+/* A window over the app: frosted harder and darker, or the screen behind read through its text. */
+html[data-ui-style="nebula"] .modal-backdrop {
+  background: rgba(2, 2, 6, 0.5);
+}
 html[data-ui-style="nebula"] .modal-panel {
-  background-color: rgba(9, 8, 16, 0.95);
+  --glass-blur: 34px;
+  --glass-dark: 0.74;
 }
-/* A menu window opened as a tab page fills the screen: without this the sky was gone behind one dark pane. */
+/* A menu window opened as a tab page fills the screen: the sky through it, as through a panel. */
+html[data-ui-style="nebula"] .tab-pane--screen > .modal-backdrop {
+  background: transparent;
+}
 html[data-ui-style="nebula"] .tab-pane--screen :is(.modal-panel, .boxel-screen) {
-  background-color: rgba(9, 8, 16, 0.58);
+  --glass-dark: 0.5;
 }
+/* The header keeps its picture; under it the ground is the same glass. */
 html[data-ui-style="nebula"] .top::before {
   background-color: transparent;
-  background-image: linear-gradient(180deg, rgba(9, 8, 16, 0.25), rgba(9, 8, 16, 0.5));
+  background-image: linear-gradient(180deg, rgba(var(--shade-top-rgb), 0.2), rgba(var(--shade-top-rgb), 0.45));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.7) brightness(1.08);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.7) brightness(1.08);
 }
 /* The title: white letters on a band of light that fades out; no rule. */
 html[data-ui-style="nebula"] .fold-head {
@@ -278,14 +357,14 @@ html[data-ui-style="nebula"] .payout-hero::before {
 }
 /* It sticks to the top while the page scrolls under it: solid, or the titles passing below showed through. */
 html[data-ui-style="nebula"] .glance {
-  background: #120e1f;
+  background: linear-gradient(rgba(var(--accent-rgb), 0.08), rgba(var(--accent-rgb), 0.08)), rgb(var(--shade-top-rgb));
   border-color: rgba(255, 255, 255, 0.14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 html[data-ui-style="nebula"] .genus-card-shell,
 html[data-ui-style="nebula"] .species-card,
 html[data-ui-style="nebula"] .tabs-body-rail {
-  background: rgba(9, 8, 16, 0.3);
+  background: rgba(var(--shade-top-rgb), 0.3);
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
@@ -305,5 +384,35 @@ html[data-ui-style="nebula"] .btn-top-neutral {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 html[data-ui-style="nebula"] .tab-strip {
-  background: rgba(9, 8, 16, 0.55);
+  background: rgba(var(--shade-top-rgb), 0.55);
+}
+/* Boxes on the glass are see-through, in the scheme's dark: near-black and solid, a card, a search field, a list
+   or a menu button read as a hole cut in the glass (owner, 2026-11-17: "nothing that aggressively cut out", in
+   every window). :where keeps this at a plain class's weight, so each box's hover and chosen states still win. */
+:where(html[data-ui-style="nebula"])
+  :is(
+    .cockpit-card,
+    .tab,
+    .tab-strip__tab--on,
+    .tabs-jump-btn,
+    .appbar-dot,
+    .ui-select,
+    select,
+    .ency-colour-pick select,
+    .journal-system-search-input,
+    .my-exo-search-input,
+    .ency-search,
+    .ach-search,
+    .ach-card,
+    .fg-card,
+    .encyclopedia-filters,
+    .fact,
+    .payout-hero
+  ) {
+  background-color: rgba(var(--shade-top-rgb), 0.5);
+  background-image: linear-gradient(rgba(var(--accent-rgb), 0.06), rgba(var(--accent-rgb), 0.06));
+}
+/* What stays put while a list scrolls under it stays solid (or the rows read through), in the same tint. */
+:where(html[data-ui-style="nebula"]) :is(.disc-th, .ency-genus-head, .fdb-scroll th, .tab-pane--backlog th) {
+  background: linear-gradient(rgba(var(--accent-rgb), 0.08), rgba(var(--accent-rgb), 0.08)), rgb(var(--shade-top-rgb));
 }

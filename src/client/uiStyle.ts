@@ -4,7 +4,7 @@
  * colour from the colour scheme, so the two multiply.
  *   classic  as it was
  *   holo     a cockpit hologram: corner brackets instead of boxes, glowing titles, scan lines, a cold dark
- *   nebula   glass over a coloured sky: see-through panels, the scheme's colour and its neighbours behind
+ *   nebula   frosted glass over a painted sky: the Crab, Helix and Ring nebulae in their own colours (nebulaSky/)
  * Owner 2026-11-16, of five tried: "holo and nebula glass look good, add them" (Blueprint and Terminal dropped; a
  * first round of border / shadow / padding variants before them: "not big enough difference").
  * Kept per PC like the colour scheme; `<html data-ui-style>` carries it and styles/ui-styles.css keys on it.
@@ -16,7 +16,7 @@ export type UiStyle = "classic" | "holo" | "nebula";
 export const UI_STYLES: { style: UiStyle; label: string; note: string }[] = [
   { style: "classic", label: "Classic", note: "flat panels with a thin frame, the look the app has always had" },
   { style: "holo", label: "Holo", note: "a cockpit hologram: corner brackets instead of boxes, glowing titles, scan lines" },
-  { style: "nebula", label: "Nebula", note: "glass over a coloured sky: see-through panels with the scheme's colours behind" },
+  { style: "nebula", label: "Nebula", note: "frosted glass over the Crab, Helix and Ring nebulae" },
 ];
 
 const KEY = "edexo.uiStyle";
@@ -39,6 +39,8 @@ export function applyUiStyle(): void {
     const s = uiStyle();
     if (s === "classic") delete document.documentElement.dataset.uiStyle;
     else document.documentElement.dataset.uiStyle = s;
+    // Nebula's sky is painted, not a gradient: its code loads only when the style is chosen.
+    if (s === "nebula") void import("./nebulaSky").then((m) => m.showNebulaSky());
   };
   set();
   window.addEventListener(UI_STYLE_EVENT, set);

@@ -16,7 +16,7 @@
  * scheme like the rest of the app. `aria-hidden`, under the header's content.
  *
  * The land is built once per layout, scheme or body change; the sky picture, which depends on none of the
- * header's blocks, is painted in a worker and kept between rebuilds. After that a step only moves the sky.
+ * header's blocks, is painted in a worker and kept between rebuilds. After that a frame only moves the sky.
  * How much of it shows is the commander's choice (Options › Look › Header picture); the sky turns only while
  * Motion is Full and the window is on show.
  */
@@ -32,8 +32,12 @@ import { ROTATION_S, paintSky, skyGeometry, type SkyGeometry } from "./headerArt
 import type { SkyDone, SkyJob } from "./headerArt/skyWorker";
 import { MOTION_EVENT, motionLevel } from "./motionCore";
 
-/** The sky moves under 3 px a second on a wide header: 10 steps a second is under a third of a pixel a step. */
-const STEP_MS = 100;
+/**
+ * The sky is redrawn 60 times a second, each time at its exact place (a fraction of a pixel on), so it glides
+ * (owner, 2026-11-17: 10 steps a second looked choppy, a pixel at a time worse; "60 fps with smooth transitions").
+ * Timed on the screen's frames, so a faster screen still draws it 60 times, not 144 or 164.
+ */
+const STEP_MS = 1000 / 60;
 /** One clock for the page, so a rebuilt picture carries on where the last one was. */
 const STARTED = performance.now();
 const turnNow = () => ((performance.now() - STARTED) / 1000 / ROTATION_S) % 1;
@@ -106,7 +110,8 @@ function requestSky(job: Omit<SkyJob, "id">, done: (image: CanvasImageSource) =>
 }
 
 function measure(host: HTMLElement, art: Element): Layout {
-  return { w: host.clientWidth, h: host.clientHeight, taken: drawnRects(host, art) };
+  const text: Layout["taken"] = [];
+  return { w: host.clientWidth, h: host.clientHeight, taken: drawnRects(host, art, text), text };
 }
 
 interface Props {
@@ -191,18 +196,35 @@ export const HeaderArt = memo(function HeaderArt({ system, bodyKey, planetClass,
     mo.observe(host, { childList: true, subtree: true });
     window.addEventListener(APP_THEME_EVENT, schedule);
     // Motion switched: the sky goes back to where the turn starts, or carries on.
-    const onMotion = () => scene?.step(turning() ? turnNow() : 0);
+    const onMotion = () => {
+      scene?.step(turning() ? turnNow() : 0);
+      run();
+    };
     window.addEventListener(MOTION_EVENT, onMotion);
 
-    const clock = window.setInterval(() => {
-      if (document.hidden || !turning()) return;
-      scene?.step(turnNow());
-    }, STEP_MS);
+    // Frames stop by themselves while the window is hidden; the loop stops when the sky stops turning.
+    let frame = 0;
+    let last = 0;
+    const tick = (now: number) => {
+      frame = 0;
+      if (!turning()) return;
+      // A little early still counts, or a 60 Hz screen would skip every other frame; counted from when the last one
+      // was due, so a 164 Hz screen averages 60 too, not 55.
+      if (now - last >= STEP_MS - 2) {
+        last = now - last > 100 ? now : last + STEP_MS;
+        scene?.step(turnNow());
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    const run = () => {
+      if (!frame && turning()) frame = requestAnimationFrame(tick);
+    };
+    run();
 
     return () => {
       alive = false;
       window.clearTimeout(timer);
-      window.clearInterval(clock);
+      cancelAnimationFrame(frame);
       cancelSky?.();
       ro.disconnect();
       mo.disconnect();

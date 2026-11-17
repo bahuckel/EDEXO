@@ -114,6 +114,9 @@ export type {
   Selection,
 } from "./engineTypes";
 
+/** How long the systems and the Milky Way take to fade in once they arrive. */
+const FADE_IN_MS = 900;
+
 export class GalaxyEngine {
   readonly renderer: THREE.WebGLRenderer;
   readonly camera: THREE.PerspectiveCamera;
@@ -200,6 +203,12 @@ export class GalaxyEngine {
     uFull: { value: CLOUDS_OVER_PLANE },
   };
   private borders: THREE.LineSegments | null = null;
+  /**
+   * When the systems and the Milky Way (picture or clouds) arrived, for their fade-in (owner 2026-11-16: the map
+   * "loads too suddenly"); 0 = not yet. See fadeIn().
+   */
+  private pointsFrom = 0;
+  private backdropFrom = 0;
   /** The layer switches, kept so a picture or outline that arrives after them still obeys them. */
   private photoOn = true;
   private bordersOn = true;
@@ -456,6 +465,7 @@ export class GalaxyEngine {
       this.cells = readCells(cells);
       this.mask = makeCellMask(this.cells.bounds);
       this.bindMask();
+      this.pointsFrom = performance.now();
       this.stats.phase = "ready";
       this.updateLod(true);
     } catch (e) {
@@ -592,6 +602,7 @@ export class GalaxyEngine {
     };
     build(0, split, false);
     build(split, n, true);
+    if (!this.backdropFrom) this.backdropFrom = performance.now();
     this.invalidate();
   }
 
@@ -601,7 +612,10 @@ export class GalaxyEngine {
     outlines: RegionOutlines | null,
   ): void {
     if (photo) {
-      const tex = new THREE.TextureLoader().load(photo.url, () => this.invalidate());
+      const tex = new THREE.TextureLoader().load(photo.url, () => {
+        if (!this.backdropFrom) this.backdropFrom = performance.now();
+        this.invalidate();
+      });
       tex.colorSpace = THREE.SRGBColorSpace;
       const plane = new THREE.Mesh(
         new THREE.PlaneGeometry(photo.x1 - photo.x0, photo.zTop - photo.zBottom),
@@ -1881,16 +1895,17 @@ export class GalaxyEngine {
    */
   private autoExpose(): void {
     const d = Math.max(1, this.camera.position.distanceTo(this.controls.target));
-    this.pointUniforms.uIntensity.value = Math.min(
-      0.8,
-      0.035 * Math.pow(110_000 / d, 0.55) * this.floorBoost,
-    );
+    const now = performance.now();
+    const pointsIn = this.fadeIn(this.pointsFrom, now);
+    const backdropIn = this.fadeIn(this.backdropFrom, now);
+    this.pointUniforms.uIntensity.value =
+      Math.min(0.8, 0.035 * Math.pow(110_000 / d, 0.55) * this.floorBoost) * pointsIn;
     this.markerScale.value = d > 30_000 ? 0.45 : d > 8_000 ? 0.7 : 1;
     if (this.photo) {
       const m = this.photo.material as THREE.MeshBasicMaterial;
       // Under the clouds it is a base, not the picture: faint, and gone close in like before.
       m.opacity =
-        (this.clouds.length ? PLANE_UNDER_CLOUDS : 0.5) * Math.min(1, Math.max(0, (d - 4_000) / 30_000));
+        (this.clouds.length ? PLANE_UNDER_CLOUDS : 0.5) * Math.min(1, Math.max(0, (d - 4_000) / 30_000)) * backdropIn;
     }
     if (this.clouds.length) {
       // Pixels per light year at unit distance, so a sprite is as big on screen as it is in space.
@@ -1900,8 +1915,21 @@ export class GalaxyEngine {
       // Close in the clouds thin out to a haze: the systems are what matters there.
       // Half strength under the systems' own light, as the flat picture was.
       this.cloudUniforms.uOpacity.value =
-        CLOUDS_OVER_PLANE * Math.min(1, Math.max(0.08, (d - 4_000) / 30_000));
+        CLOUDS_OVER_PLANE * Math.min(1, Math.max(0.08, (d - 4_000) / 30_000)) * backdropIn;
     }
+    // Still fading: the next frame is wanted too.
+    if (pointsIn < 1 || backdropIn < 1) this.invalidate();
+  }
+
+  /**
+   * 0 → 1 over FADE_IN_MS from `from` (eased), 1 with Options › Look › Motion at Off. Before anything arrived (0)
+   * it is 0, so the first frame with it starts dark.
+   */
+  private fadeIn(from: number, now: number): number {
+    if (!from) return 0;
+    if (typeof document !== "undefined" && document.documentElement.dataset.motion === "off") return 1;
+    const t = Math.min(1, Math.max(0, (now - from) / FADE_IN_MS));
+    return t * t * (3 - 2 * t);
   }
 
   /** One frame, now. Also what the benchmark times. */
