@@ -6,13 +6,13 @@
  * the async read first; the synchronous loader, still called behind them, finds the index held. When it does
  * overtake a read in flight, that read is stopped and its callers get the one index.
  */
-import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import express from "express";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { listenLocal } from "./helpers/listenLocal.js";
 
 const reads = vi.hoisted(() => ({ sync: 0, async: [] as (AbortSignal | undefined)[] }));
 const isIndex = (f: unknown) => String(f).endsWith("bio-index.bin");
@@ -132,9 +132,7 @@ describe("the galaxy routes", () => {
       } as never,
       { watchTopic: () => {}, topicsMayHaveChanged: () => {} } as never,
     );
-    server = app.listen(0, "127.0.0.1");
-    await new Promise<void>((r) => server.once("listening", () => r()));
-    base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    ({ server, base } = await listenLocal(app));
   });
   afterAll(() => new Promise<void>((r) => server.close(() => r())));
 

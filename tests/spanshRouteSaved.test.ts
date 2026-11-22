@@ -5,11 +5,11 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { AddressInfo } from "node:net";
 import express from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAX_SAVED, openSpanshRouteFile } from "../src/server/spanshRouteFile.js";
 import type { SpanshRouteDTO } from "../src/shared/dto/spanshRoute.js";
+import { listenLocal } from "./helpers/listenLocal.js";
 
 const route = (job: string, from = "Sol"): SpanshRouteDTO => ({
   job,
@@ -93,9 +93,7 @@ describe("Spansh routes kept on disk", () => {
     const { registerSpanshRouteRoutes } = await import("../src/server/routes/spanshRouteRoutes.js");
     const app = express();
     registerSpanshRouteRoutes(app, {} as never, openSpanshRouteFile(file));
-    const server = app.listen(0, "127.0.0.1");
-    await new Promise((r) => server.once("listening", r));
-    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const { server, base } = await listenLocal(app);
     const asked = () => spansh.mock.calls.filter(([u]) => String(u).startsWith("https://spansh.co.uk/")).length;
     try {
       const first = (await (await realFetch(`${base}/api/spansh-route?q=${job(7)}`)).json()) as { state: string; saved?: boolean };
@@ -124,9 +122,7 @@ describe("Spansh routes kept on disk", () => {
     const app = express();
     app.use(express.json());
     registerSpanshRouteRoutes(app, { neutronLive: { start }, shipHere: () => null } as never, openSpanshRouteFile(tmpFile()));
-    const server = app.listen(0, "127.0.0.1");
-    await new Promise((r) => server.once("listening", r));
-    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const { server, base } = await listenLocal(app);
     const fly = (body: unknown) =>
       fetch(`${base}/api/spansh-route/fly`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     try {

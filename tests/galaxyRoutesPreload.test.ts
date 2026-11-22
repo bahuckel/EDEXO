@@ -3,12 +3,12 @@
  * to wait for both, so the sector map's search panel asking for its region list loaded ~360 MB it never read and
  * held it for five idle minutes (measured on a copy of the owner's profile: /regions 860 ms → 3 ms, nothing held).
  */
-import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import express from "express";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { listenLocal } from "./helpers/listenLocal.js";
 
 const loads = vi.hoisted(() => ({ tiles: 0, traits: 0 }));
 vi.mock("../src/server/galaxyTiles.js", async (original) => ({
@@ -45,9 +45,7 @@ beforeAll(async () => {
     } as never,
     { watchTopic: () => {}, topicsMayHaveChanged: () => {} } as never,
   );
-  server = app.listen(0, "127.0.0.1");
-  await new Promise<void>((r) => server.once("listening", () => r()));
-  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  ({ server, base } = await listenLocal(app));
 });
 afterAll(() => new Promise<void>((r) => server.close(() => r())));
 beforeEach(() => {

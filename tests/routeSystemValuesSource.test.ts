@@ -3,10 +3,10 @@
  * unless Spansh knows more bodies with biology there. Blatrimpe, passed through with one body scanned, said 35 M where
  * Spansh's seven bodies hold 122 M; a system he scanned whole is answered from his records without asking Spansh.
  */
-import type { AddressInfo } from "node:net";
 import express from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RouteSystemBodyDTO, RouteSystemValuesDTO } from "../src/shared/dto/routeSystem.js";
+import { listenLocal } from "./helpers/listenLocal.js";
 
 const body = (name: string, bioCr: number | null, bioSignals: number | null = bioCr ? 1 : null): RouteSystemBodyDTO => ({
   name, tag: null, fssCr: 0, dssCr: null, bioSignals, bioCr, species: [], codexNew: 0, codexFirst: 0,
@@ -44,11 +44,9 @@ afterEach(() => {
 async function ask(): Promise<RouteSystemValuesDTO> {
   const app = express();
   registerRouteSystemRoutes(app, { getJournalStore: () => ({}) } as never);
-  const server = app.listen(0, "127.0.0.1");
-  await new Promise((r) => server.once("listening", r));
+  const { server, base } = await listenLocal(app);
   try {
-    const port = (server.address() as AddressInfo).port;
-    return (await (await fetch(`http://127.0.0.1:${port}/api/route/system-values?addr=7505623126738&name=Blatrimpe`)).json()) as RouteSystemValuesDTO;
+    return (await (await fetch(`${base}/api/route/system-values?addr=7505623126738&name=Blatrimpe`)).json()) as RouteSystemValuesDTO;
   } finally {
     server.close();
   }

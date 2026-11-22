@@ -4,7 +4,6 @@
  * others, the bio index, overview and tile index were never let go. Requests that read only the
  * journal store (or the download's status) no longer touch it; those that read a registered cache do.
  */
-import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import express from "express";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -13,6 +12,7 @@ import path from "node:path";
 import { registerGalaxyRoutes } from "../src/server/routes/galaxyRoutes.js";
 import { galaxyMemoryState } from "../src/server/galaxyMemory.js";
 import { loadBioIndex } from "../src/server/bioIndex.js";
+import { listenLocal } from "./helpers/listenLocal.js";
 
 let server: Server;
 let base: string;
@@ -36,9 +36,7 @@ beforeAll(async () => {
     } as never,
     { watchTopic: () => {}, topicsMayHaveChanged: () => {} } as never,
   );
-  server = app.listen(0, "127.0.0.1");
-  await new Promise<void>((r) => server.once("listening", () => r()));
-  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  ({ server, base } = await listenLocal(app));
 });
 afterAll(() => new Promise<void>((r) => server.close(() => r())));
 

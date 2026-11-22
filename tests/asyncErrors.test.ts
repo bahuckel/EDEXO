@@ -5,8 +5,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import express from "express";
 import http from "node:http";
-import type { AddressInfo } from "node:net";
 import { answerErrorsAsJson, catchAsyncRejections, redactForOtherDevices } from "../src/server/routes/asyncErrors.js";
+import { listenLocal } from "./helpers/listenLocal.js";
 
 let server: http.Server | null = null;
 
@@ -21,8 +21,7 @@ async function serve(): Promise<string> {
   app.post("/echo", (req, res) => res.json(req.body));
   answerErrorsAsJson(app);
   server = http.createServer(app);
-  await new Promise<void>((r) => server!.listen(0, "127.0.0.1", () => r()));
-  return `http://127.0.0.1:${(server!.address() as AddressInfo).port}`;
+  return (await listenLocal(server)).base;
 }
 
 afterEach(async () => {
@@ -67,8 +66,7 @@ describe("answers to other devices (review 2026-11-07 §7, 2026-11-10 C5)", () =
       app.use(redactForOtherDevices(() => local));
       app.get("/fail", (_req, res) => res.status(500).json({ ok: false, error: message, status: { error: message } }));
       server = http.createServer(app);
-      await new Promise<void>((r) => server!.listen(0, "127.0.0.1", () => r()));
-      const res = await fetch(`http://127.0.0.1:${(server!.address() as AddressInfo).port}/fail`);
+      const res = await fetch(`${(await listenLocal(server)).base}/fail`);
       expect(res.headers.get("content-type")).toMatch(/^application\/json/);
       const body = (await res.json()) as { ok: boolean; error: string; status: { error: string } };
       expect(body.ok).toBe(false);

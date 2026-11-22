@@ -3,13 +3,13 @@
  * tree without it — a packaged build has no originals — falls back to the best image there is.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import express from "express";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { registerSpeciesFilesRoutes } from "../src/server/routes/speciesFilesRoutes.js";
 import type { HttpServerOptions, RouteContext } from "../src/server/httpServer.js";
+import { listenLocal } from "./helpers/listenLocal.js";
 
 let root: string;
 let base: string;
@@ -28,9 +28,8 @@ beforeAll(async () => {
   writeFileSync(path.join(photos, "_cards", "cardonly.webp"), "card");
   const app = express();
   registerSpeciesFilesRoutes(app, {} as HttpServerOptions, { root, webRoot: root } as RouteContext);
-  const server = app.listen(0, "127.0.0.1");
-  await new Promise((r) => server.once("listening", r));
-  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/species-photos/aleoida`;
+  const { server, base: origin } = await listenLocal(app);
+  base = `${origin}/species-photos/aleoida`;
   close = () => server.close();
 });
 afterAll(() => {

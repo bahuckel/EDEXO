@@ -3,7 +3,6 @@
  * bare express app: what a build without the feature answers, and the LAN checks of the PC-only routes.
  */
 import http from "node:http";
-import type { AddressInfo } from "node:net";
 import express from "express";
 import { afterEach, describe, expect, it } from "vitest";
 import type { HttpServerOptions, RouteContext } from "../src/server/httpServerTypes.js";
@@ -14,6 +13,7 @@ import { registerExoDataRoutes } from "../src/server/routes/exoDataRoutes.js";
 import { registerFeederRoutes } from "../src/server/routes/feederRoutes.js";
 import { registerLauncherRoutes } from "../src/server/routes/launcherRoutes.js";
 import { registerSystemInfoRoutes } from "../src/server/routes/systemInfoRoutes.js";
+import { listenLocal } from "./helpers/listenLocal.js";
 
 const ctx: RouteContext = {
   root: ".",
@@ -37,8 +37,7 @@ async function serve(
   register(app, opts as HttpServerOptions, ctx);
   const server = http.createServer(app);
   servers.push(server);
-  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
-  return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  return (await listenLocal(server)).base;
 }
 
 const post = (url: string, body: unknown) =>

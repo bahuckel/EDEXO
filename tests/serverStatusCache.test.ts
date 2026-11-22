@@ -2,10 +2,10 @@
  * The game server status is fetched once and shared for 45 s (UI review P4, 2026-09-29): every open
  * window used to cause its own outbound request every 15 s.
  */
-import type { AddressInfo } from "node:net";
 import express from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { registerServerStatusRoutes } from "../src/server/routes/serverStatusRoutes.js";
+import { listenLocal } from "./helpers/listenLocal.js";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
@@ -22,14 +22,12 @@ describe("game server status", () => {
     });
     const app = express();
     registerServerStatusRoutes(app, {} as never, {} as never);
-    const server = app.listen(0, "127.0.0.1");
-    await new Promise((r) => server.once("listening", r));
-    const port = (server.address() as AddressInfo).port;
+    const { server, base } = await listenLocal(app);
     // The route's own outbound fetch is stubbed; the test talks to the route with the real fetch.
     globalThis.fetch = ((url: string | URL, init?: RequestInit) =>
       String(url).startsWith("http://127.0.0.1") ? realFetch(url, init) : stub(url)) as typeof fetch;
     try {
-      const ask = async () => (await (await fetch(`http://127.0.0.1:${port}/api/elite-server-status/orerve`)).json()) as { healthy: boolean };
+      const ask = async () => (await (await fetch(`${base}/api/elite-server-status/orerve`)).json()) as { healthy: boolean };
       for (let i = 0; i < 5; i++) expect((await ask()).healthy).toBe(true);
       expect(outbound).toBe(1);
       const now = Date.now();
