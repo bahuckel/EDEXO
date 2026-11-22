@@ -133,18 +133,20 @@ function createHudWindows(deps) {
     What the HUD windows did and why, one line each, in hud-events.log beside the layout file (owner,
     2026-10-02: "the HUD still appears-disappears every ~4 sec", which nothing here does on a timer).
     Transitions only — shown, hidden, the away states, idle pages, the window in front — so a quiet
-    session writes nothing. Restarted past 256 KB.
+    session writes nothing. Restarted past 256 KB. The path is kept only once the server has said where the
+    layout lives: a line before that (2026-11-23, the port move) kept the Electron folder for the whole run.
   */
   let hudLogPath = null;
   function hudLog(what) {
     try {
-      if (!hudLogPath) hudLogPath = path.join(path.dirname(hudLayoutPath()), "hud-events.log");
+      const where = hudLogPath ?? path.join(path.dirname(hudLayoutPath()), "hud-events.log");
+      if (resolveHudLayoutPathFromBundle) hudLogPath = where;
       try {
-        if (fs.statSync(hudLogPath).size > 256 * 1024) fs.rmSync(hudLogPath, { force: true });
+        if (fs.statSync(where).size > 256 * 1024) fs.rmSync(where, { force: true });
       } catch {
         /* not there yet */
       }
-      fs.appendFileSync(hudLogPath, `${new Date().toISOString()} ${what}\n`);
+      fs.appendFileSync(where, `${new Date().toISOString()} ${what}\n`);
     } catch {
       /* a log must never be why a HUD misbehaves */
     }
