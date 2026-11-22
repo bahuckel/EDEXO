@@ -15,7 +15,11 @@ function hit(system: string, station: string, commodity: string, supply = 500): 
     supply,
     spanshCommodity: commodity,
     dataSource: "spansh",
-    foundAtIso: "2026-09-23T00:00:00Z",
+    /*
+      Yesterday, not a fixed date: a market older than 60 days is dropped on the way out (marketAge.ts), and the
+      fixed 2026-09-23 aged out on 2026-11-22 and failed both tests.
+    */
+    foundAtIso: new Date(Date.now() - 86_400_000).toISOString(),
   };
 }
 
