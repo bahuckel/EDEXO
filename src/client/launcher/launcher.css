@@ -368,6 +368,16 @@ h1 {
   letter-spacing: 0.04em;
   color: var(--hud-text);
 }
+/* The server moved off a port Windows had reserved (src/server/listenPort.ts): the phone's links changed. */
+.status-port-note {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border-left: 2px solid var(--hud);
+  background: var(--panel-2);
+  color: var(--hud-hi);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
 .status-detail {
   margin-top: 3px;
   font-size: 0.74rem;

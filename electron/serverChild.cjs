@@ -52,6 +52,7 @@ function startServerChild(o) {
   const listeners = { boxelNext: new Set(), gameRunning: new Set() };
   const state = {
     baseUrl: null,
+    portMovedFrom: null,
     layoutPath: null,
     gameRunning: null,
     backupRunning: false,
@@ -98,6 +99,8 @@ function startServerChild(o) {
     ready,
     booted,
     getLocalBaseUrl: () => state.baseUrl,
+    /** The port the server wanted when Windows had reserved it and it moved (src/server/listenPort.ts); else null. */
+    portMovedFrom: () => state.portMovedFrom,
     /** The folder and the CSP the server serves its pages with (electron/staticShell.cjs); null from an older server. */
     webRoot: () => state.webRoot,
     contentSecurityPolicy: () => state.csp,
@@ -158,6 +161,7 @@ function startServerChild(o) {
         started = true;
         Object.assign(state, {
           baseUrl: m.baseUrl,
+          portMovedFrom: typeof m.portMovedFrom === "number" ? m.portMovedFrom : null,
           layoutPath: m.layoutPath,
           gameRunning: m.gameRunning,
           backupRunning: !!m.backupRunning,

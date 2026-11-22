@@ -181,6 +181,11 @@ export interface AppStatusDTO {
    */
   speciesDataWarnings: string[];
   /**
+   * Windows had reserved the port the app wanted, so it listens on another one (server/listenPort.ts): the
+   * launcher says so, since phone links and bookmarks need the new address. Absent or null when it did not move.
+   */
+  portNote?: string | null;
+  /**
    * The two live-file poll intervals and their bounds, so the launcher's inputs can never offer a
    * value the server would clamp. Optional: an older launcher against a newer server, or the
    * reverse, simply hides the row. See `shared/pollRates.ts`.

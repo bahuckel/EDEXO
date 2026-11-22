@@ -30,7 +30,7 @@ import { scanJournalsForStatistics } from "./statisticsScan.js";
 import { createHttpServer, getLanIPv4s } from "./httpServer.js";
 import { appViewUrl } from "./appViews.js";
 import { describeUserDataMigration, migrateLegacyUserData } from "./userDataMigration.js";
-import { resolveLanAccess } from "./launcherPrefs.js";
+import { readListenPort, resolveLanAccess, writeListenPort } from "./launcherPrefs.js";
 import { isLoopbackHostName, lanUrlWithKey, loadOrCreateLanKey } from "./lanAuth.js";
 import { applyPendingRestore } from "./backup.js";
 import { createBackupService } from "./backupService.js";
@@ -87,6 +87,7 @@ import { installLogRing } from "./diagnostics.js";
 import { createUnknownExobioLog } from "./exobioUnknown.js";
 import { parseHost, parsePort } from "./cliOptions.js";
 import type { CliOptions } from "./cliOptions.js";
+import { DEFAULT_PORT, choosePort, portMovedNote } from "./listenPort.js";
 import { showEdexoNativeFixInfo, logFatal, assertResourceLayout } from "./startupChecks.js";
 import { createGggResearch } from "./gggResearch.js";
 import { createNoticesService } from "./notices.js";
@@ -155,6 +156,8 @@ export type EdexoRuntime = {
   onGameRunning: (cb: (running: boolean) => void) => () => void;
   gameRunning: () => boolean | null;
   getLocalBaseUrl: () => string;
+  /** The port wanted when Windows had reserved it and the server moved (listenPort.ts); null when it did not. */
+  portMovedFrom: () => number | null;
   openMainAppInBrowser: () => void;
   /** Write what is buffered, synchronously: Windows logoff/shutdown gives no time for shutdown(). */
   flushNow: () => void;
@@ -256,7 +259,25 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     }
   }
 
-  const { bindHost, port, shouldOpenMainUI, quietConsole, useShellLauncher } = cli;
+  const { bindHost, shouldOpenMainUI, quietConsole, useShellLauncher } = cli;
+  /*
+    7111, or where the app moved when Windows had reserved it (listenPort.ts). Only the default moves: a port from
+    `--port`, or one a test or script passes, is used as given.
+  */
+  const movable = !cli.portExplicit && cli.port === DEFAULT_PORT;
+  const { port, movedFrom: portMovedFrom } = await choosePort({
+    wanted: movable ? (readListenPort() ?? DEFAULT_PORT) : cli.port,
+    explicit: !movable,
+    host: bindHost,
+  });
+  if (portMovedFrom != null) {
+    console.warn(`[edexo-compare] port ${portMovedFrom} is reserved by Windows; listening on ${port}`);
+    try {
+      writeListenPort(port);
+    } catch {
+      /* moved again next start, the same way */
+    }
+  }
 
   /**
    * `0.0.0.0` means every device on the network can reach the mutating endpoints, so a bind that
@@ -568,6 +589,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     lanExposed,
     lanKeyRequired: lanKey != null,
     lanToggle: cli.lanToggle === true,
+    portNote: portMovedNote(portMovedFrom, port),
     lanUrlsWithKey,
   });
 
@@ -998,6 +1020,7 @@ export async function startEdexo(cli: CliOptions): Promise<EdexoRuntime> {
     booted,
     shutdown,
     getLocalBaseUrl: () => `http://127.0.0.1:${port}`,
+    portMovedFrom: () => portMovedFrom,
     openMainAppInBrowser: () => openUrlInBrowser(`http://127.0.0.1:${port}/`),
     backupRunning: () => backupService.isRunning(),
     whenBackupDone: () => backupService.whenIdle(),
@@ -1054,11 +1077,12 @@ export function electronRuntimeOptions(
   argv: readonly string[],
   /** The launcher's "LAN access" switch (launcherPrefs.ts); only server mode listens on the network. */
   lanAccess: boolean,
-): { bindHost: string; port: number } {
+): { bindHost: string; port: number; portExplicit: boolean } {
   const explicitHost = electronHostIsExplicit(argv);
   return {
     bindHost: explicitHost ? parseHost([...argv]) : mode === "server" && lanAccess ? "0.0.0.0" : "127.0.0.1",
     port: parsePort([...argv]),
+    portExplicit: argv.includes("--port"),
   };
 }
 

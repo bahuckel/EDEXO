@@ -122,6 +122,8 @@ module.exports = {
     // The server's own process (2026-10-09): main.cjs starts app.cjs through it.
     "electron/serverChild.cjs",
     "electron/staticShell.cjs",
+    // Settings carried to the new address after a port move (src/server/listenPort.ts).
+    "electron/originCarry.cjs",
     "electron/gpuWarmup.cjs",
     "electron/atomicWrite.cjs",
     // Safe graphics mode (L1, Linux ticket 2026-10-23).

@@ -15,6 +15,7 @@ const {
 } = require("electron");
 const { startServerChild } = require("./serverChild.cjs");
 const { installStaticShell } = require("./staticShell.cjs");
+const { carryOriginStorage } = require("./originCarry.cjs");
 const { startGpuWarmup } = require("./gpuWarmup.cjs");
 const path = require("path");
 const fs = require("fs");
@@ -106,6 +107,8 @@ function detectMode() {
 
 let mainWindow = null;
 let runtime = null;
+/** Settings are being carried to a new port (originCarry.cjs): its hidden window closing is not the app closing. */
+let carryingSettings = false;
 /**
  * The overlay controls the server's HTTP routes reach (src/server/hudBridge.ts), asked for by message
  * from the server's process (serverChild.cjs). Empty until the windows exist; a call before then is
@@ -564,6 +567,27 @@ async function start() {
   };
   runtime = await startServerChild(serverOptions);
   diag?.mark("server started");
+  /*
+    Windows had reserved the port and the server moved (src/server/listenPort.ts): the windows' settings, kept per
+    address, go along once (originCarry.cjs). Before the static shell, which takes the same sessions' handler.
+  */
+  const movedFrom = runtime.portMovedFrom ? runtime.portMovedFrom() : null;
+  if (movedFrom != null) {
+    const { session } = require("electron");
+    carryingSettings = true;
+    try {
+      const n = await carryOriginStorage({
+        electron: require("electron"),
+        sessions: [session.defaultSession, session.fromPartition(APP_WINDOW_PARTITION), session.fromPartition("persist:hud")],
+        fromOrigin: `http://127.0.0.1:${movedFrom}`,
+        toOrigin: runtime.getLocalBaseUrl(),
+        log: (m) => console.warn(`[edexo-compare] ${m}`),
+      });
+      huds.log(`port ${movedFrom} reserved by Windows; now ${runtime.getLocalBaseUrl()}, ${n} saved setting(s) carried`);
+    } finally {
+      carryingSettings = false;
+    }
+  }
   /*
     The pages' files from disk while the server's journal boot holds its thread (staticShell.cjs; owner,
     2026-10-19: the launcher still drew late and an early app window stayed blank). Off again a while after
@@ -1032,10 +1056,12 @@ app.whenReady().then(() => {
         /*
           Name the port that is actually taken. It was hard-coded at 7111, which was true for as
           long as --port was being ignored; now that the flag works, a commander who moved the port
-          and hit a clash would be sent to look at the wrong one.
+          and hit a clash would be sent to look at the wrong one. The error names it (`… 0.0.0.0:17111`):
+          the server may be on a port it moved to (src/server/listenPort.ts).
         */
         const i = process.argv.indexOf("--port");
-        const port = i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : "7111";
+        const named = /:(\d{2,5})\s*$/.exec(msg);
+        const port = named ? named[1] : i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : "7111";
         msg +=
           `\n\nPort ${port} is in use — often EDExoCompare-*-CLI.exe or another copy of this app. ` +
           `Close that copy, or start this one on a different port with --port <number>.`;
@@ -1049,6 +1075,8 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  // The hidden window that carries settings after a port move is the only one for a moment.
+  if (carryingSettings) return;
   app.quit();
 });
 

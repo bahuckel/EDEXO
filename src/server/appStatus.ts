@@ -25,6 +25,8 @@ export interface StatusReaderDeps {
   /** The launcher's LAN access switch is offered (cli.lanToggle). */
   lanToggle: boolean;
   lanUrlsWithKey: () => string[];
+  /** Why the server is not on the port it wanted this start (listenPort.ts), or null. */
+  portNote?: string | null;
 }
 
 export function createStatusReader({
@@ -38,6 +40,7 @@ export function createStatusReader({
   lanKeyRequired,
   lanToggle,
   lanUrlsWithKey,
+  portNote = null,
 }: StatusReaderDeps): () => AppStatusDTO {
   /**
    * Launcher-sized status. Reads store fields directly — no snapshot build, no one-shot state.
@@ -54,6 +57,7 @@ export function createStatusReader({
       mode: lanExposed ? "server" : "client",
       bindHost,
       port,
+      portNote,
       lanUrls: lanExposed ? lanUrlsWithKey() : [],
       lanKeyRequired,
       lanAccess: lanToggle ? { saved: readLanAccess() ?? lanExposed, active: lanExposed } : null,

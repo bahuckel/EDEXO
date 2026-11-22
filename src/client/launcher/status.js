@@ -58,6 +58,7 @@ export const radarRadiusRow = document.getElementById("radarRadiusRow");
 export const radarRadiusM = document.getElementById("radarRadiusM");
 const statusBoot = document.getElementById("statusBoot");
 const statusBootFill = document.getElementById("statusBootFill");
+const statusPortNote = document.getElementById("statusPortNote");
 
 let ws;
 let wsOk = false;
@@ -197,6 +198,12 @@ function applyLauncherSnapshotData(data) {
     statusTitle.textContent = "All systems nominal";
     statusDetail.textContent =
       (data.journalFileCount || 0) + " journal file(s) · " + (data.lastJournalEventIso || "no events yet");
+  }
+
+  if (statusPortNote) {
+    const note = typeof data.portNote === "string" ? data.portNote : "";
+    statusPortNote.hidden = !note;
+    statusPortNote.textContent = note;
   }
 
   renderConnectUrls(data);

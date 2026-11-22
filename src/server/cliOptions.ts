@@ -18,6 +18,8 @@ export function parsePort(argv: string[]): number {
 export type CliOptions = {
   bindHost: string;
   port: number;
+  /** `--port` was given: the server never moves off it (listenPort.ts). */
+  portExplicit?: boolean;
   shouldOpenMainUI: boolean;
   quietConsole: boolean;
   useShellLauncher: boolean;
@@ -32,6 +34,7 @@ export function parseCli(argv: string[]): CliOptions {
   return {
     bindHost: parseHost(argv),
     port: parsePort(argv),
+    portExplicit: argv.includes("--port"),
     shouldOpenMainUI: argv.includes("--open"),
     quietConsole: process.env.EDEXO_ELECTRON === "1" || argv.includes("--quiet") || argv.includes("--gui"),
     useShellLauncher: process.env.EDEXO_USE_SHELL_LAUNCHER === "1" || argv.includes("--shell-launcher"),

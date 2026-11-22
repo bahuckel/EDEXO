@@ -96,6 +96,22 @@ export function writeLanAccess(on: boolean): void {
   writeLauncherPref("lanAccess", on);
 }
 
+/*
+  The port the app moved to when Windows had reserved 7111 (listenPort.ts), kept so the next start listens there
+  too: the phone's links and the windows' settings, which the browser keeps per address, stay where they are.
+*/
+
+/** The remembered port, or null when the app never had to move. */
+export function readListenPort(): number | null {
+  const prefs = readPrefsFile();
+  const v = prefs && prefs !== "unreadable" ? prefs.port : null;
+  return typeof v === "number" && Number.isInteger(v) && v > 0 && v < 65536 ? v : null;
+}
+
+export function writeListenPort(port: number): void {
+  writeLauncherPref("port", port);
+}
+
 /** An install that has run before: its settings file or its journal cache is already there. */
 export function isExistingInstall(): boolean {
   const dir = dirname(resolveUserSettingsJsonPath());

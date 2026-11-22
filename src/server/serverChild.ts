@@ -18,7 +18,7 @@
  *   main -> child   { type: "start", mode, argv }       start the server
  *                   { type: "call", id, method, args }  a runtime method; replied to with "reply"
  *                   { type: "hudReply", id, result | error }
- *   child -> main   { type: "started", baseUrl, layoutPath, gameRunning, backupRunning, linuxTrayHost, webRoot, csp }
+ *   child -> main   { type: "started", baseUrl, portMovedFrom, layoutPath, gameRunning, backupRunning, linuxTrayHost, webRoot, csp }
  *                   { type: "failed", message }         the server could not start
  *                   { type: "ready" }                   the server listens and the journal boot begins (runtime.ready)
  *                   { type: "booted" }                  the journal boot is over (runtime.booted)
@@ -189,6 +189,7 @@ export function runServerChild(): void {
     post({
       type: "started",
       baseUrl: runtime.getLocalBaseUrl(),
+      portMovedFrom: runtime.portMovedFrom(),
       layoutPath: resolveHudLayoutPath(),
       gameRunning: runtime.gameRunning(),
       backupRunning: runtime.backupRunning(),
