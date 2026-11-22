@@ -95,6 +95,7 @@ import {
   NAV_UNVISITED_COLOUR,
   NAVROUTE_COLOUR,
   PLAN_COLOUR,
+  PICTURE_DETAIL_PX,
   PLAN_MARGIN,
   SEARCH_COLOUR,
   WORTH_STEPS_M,
@@ -123,6 +124,10 @@ const isColour = (v: unknown): v is Colour => v === 0 || v === 1 || v === 2;
 /** The Brightness slider's range. */
 const isExposure = (v: unknown): v is number => typeof v === "number" && v >= 0.2 && v <= 4;
 const isWaitMinM = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0;
+/** Layers › Clouds (0 – 3) and Picture (0 – 2): shares of the Milky Way layers' usual strength. */
+const isCloudGain = (v: unknown): v is number => typeof v === "number" && v >= 0 && v <= 3;
+const isPictureGain = (v: unknown): v is number => typeof v === "number" && v >= 0 && v <= 2;
+const isPictureDetail = (v: unknown): v is number => typeof v === "number" && (PICTURE_DETAIL_PX as readonly number[]).includes(v);
 /** Plotted systems marked at most, the most recently plotted (the engine's marker layers take thousands, not 10^5). */
 const PLOTTED_MARKERS = 20_000;
 /*
@@ -230,6 +235,9 @@ export function GalaxyMap3D() {
   const [codexSystems, setCodexSystems] = useState<Map<string, CodexMapSystemDTO>>(new Map());
   const [search, setSearch] = useKeptState<GalaxySearchApplied | null>("galaxy.search", null);
   const [waitMinM, setWaitMinM] = usePersistedState("galaxy.layer.waitMinM", 0, isWaitMinM);
+  const [cloudGain, setCloudGain] = usePersistedState("galaxy.layer.clouds", 1, isCloudGain);
+  const [pictureGain, setPictureGain] = usePersistedState("galaxy.layer.picture", 1, isPictureGain);
+  const [pictureDetail, setPictureDetail] = usePersistedState("galaxy.layer.pictureDetail", 4096, isPictureDetail);
   const [findText, setFindText] = useKeptState("galaxy.findText", "");
   const [find, setFind] = useKeptState<GalaxyFindDTO | null>("galaxy.find", null);
   const [findOpen, setFindOpen] = useState(false);
@@ -923,6 +931,8 @@ export function GalaxyMap3D() {
 
   useEffect(() => engine.current?.setColourMode(colour), [colour]);
   useEffect(() => engine.current?.setExposure(exposure), [exposure]);
+  useEffect(() => engine.current?.setMilkyWay(cloudGain, pictureGain), [cloudGain, pictureGain]);
+  useEffect(() => engine.current?.setPhotoDetail(pictureDetail), [pictureDetail]);
   useEffect(() => {
     const e = engine.current;
     if (!e) return;
@@ -1437,6 +1447,12 @@ export function GalaxyMap3D() {
           plottedCount={plottedLeft.length}
           waitMinM={waitMinM}
           setWaitMinM={setWaitMinM}
+          cloudGain={cloudGain}
+          setCloudGain={setCloudGain}
+          pictureGain={pictureGain}
+          setPictureGain={setPictureGain}
+          pictureDetail={pictureDetail}
+          setPictureDetail={setPictureDetail}
         />
       ) : null}
 

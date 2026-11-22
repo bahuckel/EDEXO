@@ -69,9 +69,11 @@ import {
   CLOUDS_OVER_PLANE,
   CORE,
   makeCellMask,
+  makePicturePlane,
   makeRenderTarget,
   NAMES_MAX,
   NAMES_RETRY_MS,
+  pictureCopy,
   PLANE_UNDER_CLOUDS,
   ringRadius,
   SOL,
@@ -211,6 +213,12 @@ export class GalaxyEngine {
   private backdropFrom = 0;
   /** The layer switches, kept so a picture or outline that arrives after them still obeys them. */
   private photoOn = true;
+  /** setMilkyWay's shares; the picture as loaded and setPhotoDetail's smaller copy of it (null at full size). */
+  private cloudGain = 1;
+  private pictureGain = 1;
+  private photoFull: THREE.Texture | null = null;
+  private photoSmall: THREE.CanvasTexture | null = null;
+  private photoPx = 4096;
   private bordersOn = true;
   private anchors: RegionOutlines["anchors"] = [];
   private readonly tmpSize = new THREE.Vector2();
@@ -612,31 +620,12 @@ export class GalaxyEngine {
     outlines: RegionOutlines | null,
   ): void {
     if (photo) {
-      const tex = new THREE.TextureLoader().load(photo.url, () => {
+      const { plane, tex } = makePicturePlane(photo, () => {
         if (!this.backdropFrom) this.backdropFrom = performance.now();
+        this.applyPhotoDetail();
         this.invalidate();
       });
-      tex.colorSpace = THREE.SRGBColorSpace;
-      const plane = new THREE.Mesh(
-        new THREE.PlaneGeometry(photo.x1 - photo.x0, photo.zTop - photo.zBottom),
-        // Both sides: the Elite controls look at the map from under it too (owner, 2026-10-06).
-        // Added, not blended: the drawing's black margin is darker than the background, and blended it
-        // showed as a darker rectangle with a hard edge (owner, 2026-10-06). Black adds nothing, so the
-        // margin vanishes; the picture itself is brighter by a fraction of the near-black background.
-        new THREE.MeshBasicMaterial({
-          map: tex,
-          transparent: true,
-          blending: THREE.AdditiveBlending,
-          opacity: 0.7,
-          depthWrite: false,
-          depthTest: false,
-          side: THREE.DoubleSide,
-        }),
-      );
-      plane.rotation.x = -Math.PI / 2; // into the plane; the image's top toward the game's +z
-      plane.position.set((photo.x0 + photo.x1) / 2, -1, -(photo.zTop + photo.zBottom) / 2);
-      // Under the clouds.
-      plane.renderOrder = -3;
+      this.photoFull = tex;
       plane.visible = this.photoOn;
       this.backdrop.add(plane);
       this.photo = plane;
@@ -754,6 +743,30 @@ export class GalaxyEngine {
     this.pointUniforms.uMode.value = mode;
     this.settleAt = performance.now(); // colouring by value ranks the rings by value
     this.invalidate();
+  }
+
+  /** Layers › Clouds (0 – 3) and Picture (0 – 2): shares of the Milky Way layers' usual strength (owner, 2026-11-23). */
+  setMilkyWay(clouds: number, picture: number): void {
+    this.cloudGain = clouds;
+    this.pictureGain = picture;
+    this.invalidate();
+  }
+
+  /** Layers › Picture detail: the picture under the clouds, pixels across (pictureCopy). */
+  setPhotoDetail(px: number): void {
+    this.photoPx = px;
+    this.applyPhotoDetail();
+    this.invalidate();
+  }
+
+  /** Puts the copy setPhotoDetail asked for on the plane; before the picture has loaded, its load does it. */
+  private applyPhotoDetail(): void {
+    const full = this.photoFull;
+    const img = full?.image as HTMLImageElement | undefined;
+    if (!this.photo || !full || !img?.width) return;
+    this.photoSmall?.dispose();
+    this.photoSmall = this.photoPx < img.width ? pictureCopy(img, this.photoPx) : null;
+    (this.photo.material as THREE.MeshBasicMaterial).map = this.photoSmall ?? full;
   }
 
   /** 0.2 – 4: how quickly dense areas saturate. */
@@ -1905,7 +1918,10 @@ export class GalaxyEngine {
       const m = this.photo.material as THREE.MeshBasicMaterial;
       // Under the clouds it is a base, not the picture: faint, and gone close in like before.
       m.opacity =
-        (this.clouds.length ? PLANE_UNDER_CLOUDS : 0.5) * Math.min(1, Math.max(0, (d - 4_000) / 30_000)) * backdropIn;
+        (this.clouds.length ? PLANE_UNDER_CLOUDS : 0.5) *
+        Math.min(1, Math.max(0, (d - 4_000) / 30_000)) *
+        backdropIn *
+        this.pictureGain;
     }
     if (this.clouds.length) {
       // Pixels per light year at unit distance, so a sprite is as big on screen as it is in space.
@@ -1913,9 +1929,10 @@ export class GalaxyEngine {
       this.cloudUniforms.uScale.value = h / (2 * Math.tan(((this.camera.fov / 2) * Math.PI) / 180));
       this.cloudUniforms.uMaxPx.value = Math.min(this.maxPointPx, Math.max(96, h * 0.35));
       // Close in the clouds thin out to a haze: the systems are what matters there.
-      // Half strength under the systems' own light, as the flat picture was.
+      // Half strength under the systems' own light, as the flat picture was. Past 100 % the light grows and the
+      // dust stays at full strength (cloudVertex caps it at uFull).
       this.cloudUniforms.uOpacity.value =
-        CLOUDS_OVER_PLANE * Math.min(1, Math.max(0.08, (d - 4_000) / 30_000)) * backdropIn;
+        CLOUDS_OVER_PLANE * Math.min(1, Math.max(0.08, (d - 4_000) / 30_000)) * backdropIn * this.cloudGain;
     }
     // Still fading: the next frame is wanted too.
     if (pointsIn < 1 || backdropIn < 1) this.invalidate();
@@ -2203,6 +2220,9 @@ export class GalaxyEngine {
       }
     };
     this.backdrop.traverse(dispose);
+    // Only the one on the plane is reached above.
+    this.photoFull?.dispose();
+    this.photoSmall?.dispose();
     this.points.traverse(dispose);
     this.pickScene.traverse(dispose);
     this.overlay.traverse(dispose);

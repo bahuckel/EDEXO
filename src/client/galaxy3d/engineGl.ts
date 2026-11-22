@@ -40,6 +40,54 @@ export const NAMES_RETRY_MS = 5_000;
 export const PLANE_UNDER_CLOUDS = 0.4;
 export const CLOUDS_OVER_PLANE = 0.24;
 
+/** The galaxy picture on the plane, already placed in ly; `loaded` runs once the image is in. */
+export function makePicturePlane(
+  photo: { url: string; x0: number; x1: number; zBottom: number; zTop: number },
+  loaded: () => void,
+): { plane: THREE.Mesh; tex: THREE.Texture } {
+  const tex = new THREE.TextureLoader().load(photo.url, loaded);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(photo.x1 - photo.x0, photo.zTop - photo.zBottom),
+    // Both sides: the Elite controls look at the map from under it too (owner, 2026-10-06).
+    // Added, not blended: the drawing's black margin is darker than the background, and blended it
+    // showed as a darker rectangle with a hard edge (owner, 2026-10-06). Black adds nothing, so the
+    // margin vanishes; the picture itself is brighter by a fraction of the near-black background.
+    new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      opacity: 0.7,
+      depthWrite: false,
+      depthTest: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  plane.rotation.x = -Math.PI / 2; // into the plane; the image's top toward the game's +z
+  plane.position.set((photo.x0 + photo.x1) / 2, -1, -(photo.zTop + photo.zBottom) / 2);
+  // Under the clouds.
+  plane.renderOrder = -3;
+  return { plane, tex };
+}
+
+/**
+ * A copy of the loaded galaxy picture `px` wide (Layers › Picture detail, owner 2026-11-23): the sharp 4096 px picture
+ * reads as a flat image under the soft clouds, a smaller one is soft like the 1212 px picture the clouds were first
+ * tuned over. Null where there is no 2D canvas; the plane then keeps the picture as loaded.
+ */
+export function pictureCopy(img: HTMLImageElement, px: number): THREE.CanvasTexture | null {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(px));
+  canvas.height = Math.max(1, Math.round((img.height * canvas.width) / img.width));
+  const g = canvas.getContext("2d");
+  if (!g) return null;
+  g.imageSmoothingQuality = "high";
+  g.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 export function makeRenderTarget(w: number, h: number): THREE.WebGLRenderTarget {
   return new THREE.WebGLRenderTarget(w, h, {
     type: THREE.HalfFloatType,

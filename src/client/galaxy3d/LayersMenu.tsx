@@ -4,7 +4,7 @@
  */
 import { GALAXY_LAYERS, type GalaxyLayerDTO, type GalaxyLayerKind } from "@shared/galaxyLayers.js";
 import { G3D_HELP, MenuHead, MenuRow, MenuToggle } from "./G3dMenu";
-import { WAIT_MAX_M } from "./mapConstants";
+import { PICTURE_DETAIL_PX, WAIT_MAX_M } from "./mapConstants";
 
 type MapLayerKey = "you" | "photo" | "borders" | "groups" | "labels";
 
@@ -21,6 +21,12 @@ export function LayersMenu({
   plottedCount,
   waitMinM,
   setWaitMinM,
+  cloudGain,
+  setCloudGain,
+  pictureGain,
+  setPictureGain,
+  pictureDetail,
+  setPictureDetail,
 }: {
   layers: Record<MapLayerKey, boolean>;
   toggle: (k: MapLayerKey) => void;
@@ -34,6 +40,12 @@ export function LayersMenu({
   plottedCount: number;
   waitMinM: number;
   setWaitMinM: (v: number) => void;
+  cloudGain: number;
+  setCloudGain: (v: number) => void;
+  pictureGain: number;
+  setPictureGain: (v: number) => void;
+  pictureDetail: number;
+  setPictureDetail: (v: number) => void;
 }) {
   return (
     <aside className="g3d-drawer g3d-menu" aria-label="Layers" data-testid="g3d-layers">
@@ -90,6 +102,55 @@ export function LayersMenu({
           );
         })}
       </div>
+      {layers.photo ? (
+        <>
+          <MenuRow
+            label="Clouds"
+            hint="How strong the Milky Way's 3D clouds are; past 100 % they glow brighter and their dust stays as it is"
+          >
+            <input
+              type="range"
+              className="g3d-row__range"
+              min={0}
+              max={3}
+              step={0.05}
+              value={cloudGain}
+              aria-label="Clouds (share of usual strength)"
+              onChange={(ev) => setCloudGain(Number(ev.target.value))}
+            />
+            <span className="g3d-slider-val g3d-slider-val--short">{Math.round(cloudGain * 100)} %</span>
+          </MenuRow>
+          <MenuRow label="Picture" hint="How strong the flat picture of the Milky Way under the clouds is">
+            <input
+              type="range"
+              className="g3d-row__range"
+              min={0}
+              max={2}
+              step={0.05}
+              value={pictureGain}
+              aria-label="Picture (share of usual strength)"
+              onChange={(ev) => setPictureGain(Number(ev.target.value))}
+            />
+            <span className="g3d-slider-val g3d-slider-val--short">{Math.round(pictureGain * 100)} %</span>
+          </MenuRow>
+          <MenuRow
+            label="Picture detail"
+            hint="How many pixels across the picture under the clouds is drawn with: fewer is softer, more cloud-like"
+          >
+            <input
+              type="range"
+              className="g3d-row__range"
+              min={0}
+              max={PICTURE_DETAIL_PX.length - 1}
+              step={1}
+              value={Math.max(0, PICTURE_DETAIL_PX.indexOf(pictureDetail as (typeof PICTURE_DETAIL_PX)[number]))}
+              aria-label="Picture detail (pixels across)"
+              onChange={(ev) => setPictureDetail(PICTURE_DETAIL_PX[Number(ev.target.value)] ?? 4096)}
+            />
+            <span className="g3d-slider-val g3d-slider-val--short">{pictureDetail} px</span>
+          </MenuRow>
+        </>
+      ) : null}
       <MenuToggle
         label="NavRoute – unvisited"
         hint="The systems on the route you plotted in the game that you have not been to, placed from NavRoute.json"

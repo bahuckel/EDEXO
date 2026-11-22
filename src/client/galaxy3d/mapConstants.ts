@@ -76,6 +76,9 @@ export const PLAN_MARGIN = 1.7;
 /** The waiting slider: 0 – 500 M CR in 1 M steps, the same range as the Classic map's. */
 export const WAIT_MAX_M = 500;
 
+/** Layers › Picture detail's stops: the picture under the clouds, pixels across (4096 = the picture as it is). */
+export const PICTURE_DETAIL_PX = [256, 512, 1024, 2048, 4096] as const;
+
 /**
  * G5's galaxy-wide floor, in million CR at 1×. Steps rather than a linear slider: nearly everything
  * recorded is under 50 M, and a linear 0–500 M slider spends nine tenths of its travel on a handful.
