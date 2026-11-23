@@ -25,6 +25,7 @@ import { BodyTabStrip, TabSection } from "./BodyTabStrip";
 import { BodyJumpPalette, bodyJumpItems } from "./BodyJumpPalette";
 import { BodyPane } from "./BodyPane";
 import { HeaderBar } from "./HeaderBar";
+import { loadHeaderSnapshot, saveHeaderSnapshot } from "./headerCache";
 import { CopySystemButton } from "./CopySystemButton";
 import { LifelessEmblem } from "./LifelessEmblem";
 import { setSnapshotStamp } from "./panelSnapshot";
@@ -167,12 +168,41 @@ function BioEmptyState({ snap }: { snap: AppSnapshot }) {
   );
 }
 
+/** How long a load waits for the live state before it draws the kept header instead (headerCache.ts). */
+const CACHED_HEADER_AFTER_MS = 150;
+
 /** One empty list for every render that has no snapshot yet, so its identity holds still. */
 const NO_BODIES: BodyComputed[] = [];
 
 export function App() {
   const toast = useToast();
   const { snapshot, connected } = useLiveSnapshot();
+  /*
+    The header from this window's last load, drawn until the first live state is in (headerCache.ts) — once that is
+    late. Drawn at once, it held the live content back ~25 ms on this PC, where the state is in at ~90 ms. Built app,
+    reloads, 20 Mbit link: the state took 2.1 s, the header now comes at ~265 ms; on this PC nothing changes.
+  */
+  const [cachedHeader] = useState(loadHeaderSnapshot);
+  const [cachedHeaderDue, setCachedHeaderDue] = useState(false);
+  useEffect(() => {
+    if (!cachedHeader) return;
+    const t = setTimeout(() => setCachedHeaderDue(true), CACHED_HEADER_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [cachedHeader]);
+  const latestSnapshot = useRef(snapshot);
+  latestSnapshot.current = snapshot;
+  useEffect(() => {
+    const save = () => saveHeaderSnapshot(latestSnapshot.current);
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") save();
+    };
+    window.addEventListener("pagehide", save);
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      window.removeEventListener("pagehide", save);
+      document.removeEventListener("visibilitychange", onHidden);
+    };
+  }, []);
   // Shared constant, not a literal: `?? []` mints a new array every render, and anything downstream
   // keyed on its identity treats "still nothing" as "something changed" (§49).
   const rawBodies = snapshot?.bodies ?? NO_BODIES;
@@ -473,6 +503,28 @@ export function App() {
   );
   // The boot screen, held for the loaded tick (M6) once the journal is in.
   const bootScreen = useBootTick(snapshot?.journalBoot);
+
+  if (!snapshot && cachedHeader && cachedHeaderDue) {
+    // The same tree as below up to the header, so React keeps it when the live state comes.
+    return (
+      <TabHost>
+        <div className="app-shell">
+          <HeaderBar
+            snap={cachedHeader}
+            connected={false}
+            connecting
+            encyclopediaSpawnCompare={null}
+            onOpenSystemMap={openSystemMap}
+            onGoToBioBody={focusBodyKey}
+            onFootCatalogNavigate={footCatalogNavigate}
+            onDiscoveriesNavigate={discoveriesNavigate}
+          />
+          <div className="panel load">Connecting to journal service…</div>
+          <AppLegalFooter />
+        </div>
+      </TabHost>
+    );
+  }
 
   if (!snapshot) {
     return (

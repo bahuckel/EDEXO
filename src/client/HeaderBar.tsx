@@ -50,6 +50,7 @@ const NOTABLE_HOVER_MS = 150;
 export const HeaderBar = memo(function HeaderBar({
   snap,
   connected,
+  connecting = false,
   onFootCatalogNavigate,
   onDiscoveriesNavigate,
   onGoToBioBody,
@@ -61,7 +62,9 @@ export const HeaderBar = memo(function HeaderBar({
 }: {
   snap: AppSnapshot;
   connected: boolean;
-  onFootCatalogNavigate?: (e: FootScannedEntry) => void;
+  /** Drawn from the last load's copy while the live state is on its way (headerCache.ts). */
+  connecting?: boolean;
+  onFootCatalogNavigate?:(e: FootScannedEntry) => void;
   onDiscoveriesNavigate?: (systemAddress: number, bodyKey?: string) => void;
   onGoToBioBody?: (bodyKey: string) => void;
   encyclopediaSpawnCompare: EncyclopediaSpawnCompare | null;
@@ -371,15 +374,19 @@ export const HeaderBar = memo(function HeaderBar({
           <Tooltip
             className="appbar-status"
             text={
-              connected
-                ? "Connected to the journal service — live snapshots are arriving."
-                : "No live connection to the journal service. Check that it is still running."
+              connecting
+                ? "Shown from this window's last load; the live state from the journal service is on its way."
+                : connected
+                  ? "Connected to the journal service — live snapshots are arriving."
+                  : "No live connection to the journal service. Check that it is still running."
             }
           >
-            <span className={`appbar-dot${connected ? " appbar-dot--ok" : " appbar-dot--err"}`}>
+            <span
+              className={`appbar-dot${connecting ? " appbar-dot--pending" : connected ? " appbar-dot--ok" : " appbar-dot--err"}`}
+            >
               <span className="top-live-dot" aria-hidden />
               <span className="appbar-dot-text">
-                {connected ? "Live" : "Error"}
+                {connecting ? "Connecting" : connected ? "Live" : "Error"}
                 <LiveSnapshotFreshness connected={connected} />
               </span>
             </span>

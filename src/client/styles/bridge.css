@@ -151,10 +151,18 @@
   .body-pane-left {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    /* both columns run to the same line: the planet card on the left, sell range + Exo-signals
-       on the right; whichever side is shorter stretches (owner, 2026-09-25) */
+    /* the planet card and the sell range run to the same line, whichever is shorter stretches (owner,
+       2026-09-25); Exo-signals takes the row below across both, or the right column without a sell range */
     align-items: stretch;
     gap: 0.8rem;
+  }
+  /* the grid's gap spaces the cards; a card's own bottom margin would end it short of its neighbour */
+  .body-pane-left > *,
+  .dossier-side > section:last-of-type {
+    margin-bottom: 0;
+  }
+  .body-pane-left {
+    margin-bottom: 0.75rem;
   }
   .body-pane-left > .planetary-info-card {
     grid-column: 1;
@@ -162,9 +170,22 @@
   .body-pane-left > .dossier-side {
     grid-column: 2;
   }
-  /* the last card in the right-hand stack takes up whatever height the planet card leaves over */
   .dossier-side > section:last-of-type {
     flex: 1 1 auto;
+  }
+  .body-pane-left > .exo-signals-card--wide {
+    grid-column: 1 / -1;
+  }
+  /* across the full width the genera run two to a line, read left to right */
+  .exo-signals-card--wide .genus-progress {
+    grid-template-columns: repeat(2, minmax(6.5rem, auto) 1fr auto);
+  }
+  .exo-signals-card--wide .genus-progress-row:nth-child(even) > span:first-child {
+    padding-left: 1.2rem;
+    border-left: 1px solid var(--accent-a12);
+  }
+  .exo-signals-card--wide .genus-progress-row:nth-last-child(2):nth-child(odd) > span {
+    border-bottom: none;
   }
 }
 /* facts: three tiles across when the panel has 32 rem, two below that; the sell range's three

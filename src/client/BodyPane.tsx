@@ -448,183 +448,183 @@ export const BodyPane = memo(function BodyPane({
             </FoldPanel>
 
             {/*
-              Sell range and Exo-signals stack in one column beside the planet card, and the two
-              columns end on the same line whatever is in them (owner, 2026-09-25: "cards same
-              length, dynamically changing based on contents"). See bridge.css.
+              Sell range beside the planet card, both ending on the same line (owner, 2026-09-25: "cards
+              same length, dynamically changing based on contents"); Exo-signals below them across both
+              columns, or beside the planet card when there is no sell range. Stacked under the planet
+              card, the two right-hand cards left its lower half empty (UI ideas 2026-11-16 §4.2). See
+              bridge.css.
             */}
-            <div className="dossier-side">
-              {body.exoPayoutRange ? (
-                <>
-                  <FoldPanel
-                    foldKey="sell-range"
-                    className="exo-payout-collapsible card-neon"
-                    title="Organic sell range"
-                    help={
-                      <>
-                        <p>
-                          <strong>One price, the right one.</strong> First footfall on a body pays five times
-                          the list price for every species there. When your journal shows the footfall is
-                          still open you see the ×5 figures; when the body has been walked, ×1; when it is
-                          unknown, ×1 with the ×5 as a second line.
-                        </p>
-                        <p>
-                          <strong>The band</strong> takes k = min(bio signals, priced candidates) and shows
-                          the k cheapest against the k priciest distinct list prices. The detail view (click
-                          the price) has the per-species table.
-                        </p>
-                        <p>
-                          <strong>Bio signals</strong> is the FSS or DSS count from the journal, falling back
-                          to the DSS genus list length. <strong>Candidates</strong> counts species after the
-                          same gates as the candidate list; only rows with a strict price-list match are
-                          priced. Fewer candidates than signals means a gate is too narrow: try Include
-                          Bacterium or narrow with a DSS or an on-foot confirmation.
-                        </p>
-                      </>
-                    }
-                    summary={(() => {
-                      const h = payoutHeadline(body.exoPayoutRange);
-                      return `${fmtCrRangeShort(h.min, h.max)} CR · ${h.tag}`;
-                    })()}
+            {body.exoPayoutRange ? (
+              <div className="dossier-side">
+                <FoldPanel
+                  foldKey="sell-range"
+                  className="exo-payout-collapsible card-neon"
+                  title="Organic sell range"
+                  help={
+                    <>
+                      <p>
+                        <strong>One price, the right one.</strong> First footfall on a body pays five times
+                        the list price for every species there. When your journal shows the footfall is
+                        still open you see the ×5 figures; when the body has been walked, ×1; when it is
+                        unknown, ×1 with the ×5 as a second line.
+                      </p>
+                      <p>
+                        <strong>The band</strong> takes k = min(bio signals, priced candidates) and shows
+                        the k cheapest against the k priciest distinct list prices. The detail view (click
+                        the price) has the per-species table.
+                      </p>
+                      <p>
+                        <strong>Bio signals</strong> is the FSS or DSS count from the journal, falling back
+                        to the DSS genus list length. <strong>Candidates</strong> counts species after the
+                        same gates as the candidate list; only rows with a strict price-list match are
+                        priced. Fewer candidates than signals means a gate is too narrow: try Include
+                        Bacterium or narrow with a DSS or an on-foot confirmation.
+                      </p>
+                    </>
+                  }
+                  summary={(() => {
+                    const h = payoutHeadline(body.exoPayoutRange);
+                    return `${fmtCrRangeShort(h.min, h.max)} CR · ${h.tag}`;
+                  })()}
+                >
+                  <button
+                    type="button"
+                    className="exo-payout-range-panel exo-payout-range-panel--clickable exo-payout-inner-click"
+                    onClick={() => setExoPayoutDetailOpen(true)}
                   >
-                    <button
-                      type="button"
-                      className="exo-payout-range-panel exo-payout-range-panel--clickable exo-payout-inner-click"
-                      onClick={() => setExoPayoutDetailOpen(true)}
-                    >
-                      <ExoPayoutRangePanel pr={body.exoPayoutRange} variant="main" />
-                    </button>
-                  </FoldPanel>
-                  {exoPayoutDetailOpen ? (
-                    <ExoPayoutRangeDetailModal
-                      pr={body.exoPayoutRange}
-                      bodyTabLabel={body.tabLabel}
-                      includeBacteriumInSearch={includeBacteriumInSearch}
-                      onClose={() => setExoPayoutDetailOpen(false)}
-                    />
-                  ) : null}
-                </>
-              ) : null}
+                    <ExoPayoutRangePanel pr={body.exoPayoutRange} variant="main" />
+                  </button>
+                </FoldPanel>
+                {exoPayoutDetailOpen ? (
+                  <ExoPayoutRangeDetailModal
+                    pr={body.exoPayoutRange}
+                    bodyTabLabel={body.tabLabel}
+                    includeBacteriumInSearch={includeBacteriumInSearch}
+                    onClose={() => setExoPayoutDetailOpen(false)}
+                  />
+                ) : null}
+              </div>
+            ) : null}
 
-              {/*
+            {/*
               Exo-signals, on its own (guild request, 2026-09-24): one row per genus with what has been
               done to it, so "what is left to scan here" is a glance, not a read through the candidate
               cards. Replaces the one-line strip that used to sit in the planetary card.
             */}
-              {genusRows.length > 0 || (signalCount ?? 0) > 0 ? (
-                <FoldPanel
-                  foldKey="exo-signals"
-                  className="exo-signals-card"
-                  title="Exo-signals"
-                  help={
-                    <>
-                      <p>
-                        <strong>One row per genus.</strong> The count is the FSS signal count; the game places
-                        one genus per signal and never repeats a genus on a body. The genus names arrive with
-                        a DSS.
-                      </p>
-                      <p>
-                        <strong>Tags</strong> — none: the DSS named it and nothing is scanned yet.{" "}
-                        <em>[CS]</em>: the ship's composition scanner named the species. <em>[SEEN]</em>:
-                        sampled on foot but never analysed, and not the plant you are sampling now.{" "}
-                        <em>[1/3]</em>–<em>[3/3]</em>: the samples taken, live while you sample and kept once
-                        analysed.
-                      </p>
-                      <p>
-                        A <em>(!)</em> after a genus means the DSS reported it but no candidate species uses
-                        that genus under the current scan and filters.
-                      </p>
-                    </>
-                  }
-                  defaultOpen
-                  summary={
-                    <>
-                      {signalCount != null ? `${signalCount} bio` : "? bio"}
-                      {genusRows.length > 0
-                        ? ` · ${genusRows.map((r) => `${r.genus}${genusProgressTag(r) ? ` ${genusProgressTag(r)}` : ""}`).join(", ")}`
-                        : ""}
-                    </>
-                  }
-                  tools={<SnapshotButton what="exo-signals" />}
-                  aside={
-                    <button
-                      type="button"
-                      className={`facts-dss${s.dssComplete ? " facts-dss--yes" : " facts-dss--no"}`}
-                      disabled={!canOpenJournalScanModal}
-                      title={
-                        canOpenJournalScanModal
-                          ? "Open merged journal / DSS breakdown for this body (same layout as similarity index)"
-                          : "Need merged detailed scan rows in loaded journals for breakdown"
-                      }
-                      onClick={() => {
-                        if (canOpenJournalScanModal) setJournalScanModalOpen(true);
-                      }}
+            {genusRows.length > 0 || (signalCount ?? 0) > 0 ? (
+              <FoldPanel
+                foldKey="exo-signals"
+                className={`exo-signals-card${body.exoPayoutRange ? " exo-signals-card--wide" : ""}`}
+                title="Exo-signals"
+                help={
+                  <>
+                    <p>
+                      <strong>One row per genus.</strong> The count is the FSS signal count; the game places
+                      one genus per signal and never repeats a genus on a body. The genus names arrive with
+                      a DSS.
+                    </p>
+                    <p>
+                      <strong>Tags</strong> — none: the DSS named it and nothing is scanned yet.{" "}
+                      <em>[CS]</em>: the ship's composition scanner named the species. <em>[SEEN]</em>:
+                      sampled on foot but never analysed, and not the plant you are sampling now.{" "}
+                      <em>[1/3]</em>–<em>[3/3]</em>: the samples taken, live while you sample and kept once
+                      analysed.
+                    </p>
+                    <p>
+                      A <em>(!)</em> after a genus means the DSS reported it but no candidate species uses
+                      that genus under the current scan and filters.
+                    </p>
+                  </>
+                }
+                defaultOpen
+                summary={
+                  <>
+                    {signalCount != null ? `${signalCount} bio` : "? bio"}
+                    {genusRows.length > 0
+                      ? ` · ${genusRows.map((r) => `${r.genus}${genusProgressTag(r) ? ` ${genusProgressTag(r)}` : ""}`).join(", ")}`
+                      : ""}
+                  </>
+                }
+                tools={<SnapshotButton what="exo-signals" />}
+                aside={
+                  <button
+                    type="button"
+                    className={`facts-dss${s.dssComplete ? " facts-dss--yes" : " facts-dss--no"}`}
+                    disabled={!canOpenJournalScanModal}
+                    title={
+                      canOpenJournalScanModal
+                        ? "Open merged journal / DSS breakdown for this body (same layout as similarity index)"
+                        : "Need merged detailed scan rows in loaded journals for breakdown"
+                    }
+                    onClick={() => {
+                      if (canOpenJournalScanModal) setJournalScanModalOpen(true);
+                    }}
+                  >
+                    DSS {s.dssComplete ? <Done /> : <NotDone />}
+                  </button>
+                }
+              >
+                <div className="genus-progress" role="table" aria-label="Genera on this body">
+                  {genusRows.map((r) => (
+                    <div
+                      key={r.genus}
+                      className={`genus-progress-row genus-progress-row--${r.status}`}
+                      role="row"
                     >
-                      DSS {s.dssComplete ? <Done /> : <NotDone />}
-                    </button>
-                  }
-                >
-                  <div className="genus-progress" role="table" aria-label="Genera on this body">
-                    {genusRows.map((r) => (
-                      <div
-                        key={r.genus}
-                        className={`genus-progress-row genus-progress-row--${r.status}`}
-                        role="row"
+                      <span
+                        className="genus-progress-genus"
+                        role="cell"
+                        title={dssLabelNote(r.hint?.Genus_Localised, r.genus)}
                       >
-                        <span
-                          className="genus-progress-genus"
-                          role="cell"
-                          title={dssLabelNote(r.hint?.Genus_Localised, r.genus)}
-                        >
-                          {r.genus}
-                          {r.hint && genusHintIsDssOrphan(r.hint, body.dssGenusOrphanHints) ? (
+                        {r.genus}
+                        {r.hint && genusHintIsDssOrphan(r.hint, body.dssGenusOrphanHints) ? (
+                          <span
+                            className="dss-genus-orphan-mark"
+                            title="DSS lists this genus, but no candidate row matches it — check filters, bacterium toggle, or codex gates."
+                          >
+                            (!)
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="genus-progress-species" role="cell">
+                        {genusRowSpecies(r) || <span className="genus-progress-none">not scanned</span>}
+                      </span>
+                      <span className="genus-progress-tag" role="cell">
+                        <GenusTag row={r} />
+                        {codexGenera.has(r.genus.trim().toLowerCase()) ? (
+                          codexGenera.get(r.genus.trim().toLowerCase())!.codexFirst ? (
                             <span
-                              className="dss-genus-orphan-mark"
-                              title="DSS lists this genus, but no candidate row matches it — check filters, bacterium toggle, or codex gates."
+                              className="genus-tag genus-tag--codex genus-tag--codex-first"
+                              title={codexFirstTitle(codexGenera.get(r.genus.trim().toLowerCase())!)}
                             >
-                              (!)
+                              [CODEX FIRST]
                             </span>
-                          ) : null}
-                        </span>
-                        <span className="genus-progress-species" role="cell">
-                          {genusRowSpecies(r) || <span className="genus-progress-none">not scanned</span>}
-                        </span>
-                        <span className="genus-progress-tag" role="cell">
-                          <GenusTag row={r} />
-                          {codexGenera.has(r.genus.trim().toLowerCase()) ? (
-                            codexGenera.get(r.genus.trim().toLowerCase())!.codexFirst ? (
-                              <span
-                                className="genus-tag genus-tag--codex genus-tag--codex-first"
-                                title={codexFirstTitle(codexGenera.get(r.genus.trim().toLowerCase())!)}
-                              >
-                                [CODEX FIRST]
-                              </span>
-                            ) : (
-                              <span
-                                className="genus-tag genus-tag--codex"
-                                title={codexMarkTitle(codexGenera.get(r.genus.trim().toLowerCase())!)}
-                              >
-                                [CODEX]
-                              </span>
-                            )
-                          ) : null}
-                        </span>
-                      </div>
-                    ))}
-                    {unnamedSignals > 0 ? (
-                      <div className="genus-progress-row genus-progress-row--unnamed" role="row">
-                        <span className="genus-progress-genus" role="cell">
-                          {unnamedSignals === 1 ? "1 more signal" : `${unnamedSignals} more signals`}
-                        </span>
-                        <span className="genus-progress-species" role="cell">
-                          <span className="genus-progress-none">genus named after a DSS</span>
-                        </span>
-                        <span className="genus-progress-tag" role="cell" />
-                      </div>
-                    ) : null}
-                  </div>
-                </FoldPanel>
-              ) : null}
-            </div>
+                          ) : (
+                            <span
+                              className="genus-tag genus-tag--codex"
+                              title={codexMarkTitle(codexGenera.get(r.genus.trim().toLowerCase())!)}
+                            >
+                              [CODEX]
+                            </span>
+                          )
+                        ) : null}
+                      </span>
+                    </div>
+                  ))}
+                  {unnamedSignals > 0 ? (
+                    <div className="genus-progress-row genus-progress-row--unnamed" role="row">
+                      <span className="genus-progress-genus" role="cell">
+                        {unnamedSignals === 1 ? "1 more signal" : `${unnamedSignals} more signals`}
+                      </span>
+                      <span className="genus-progress-species" role="cell">
+                        <span className="genus-progress-none">genus named after a DSS</span>
+                      </span>
+                      <span className="genus-progress-tag" role="cell" />
+                    </div>
+                  ) : null}
+                </div>
+              </FoldPanel>
+            ) : null}
           </div>
           <div className="body-pane-right">
             <FoldPanel
