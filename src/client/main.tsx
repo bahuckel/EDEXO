@@ -1,9 +1,8 @@
 import { HexSignals } from "./HexSignals";
 import { createRoot } from "react-dom/client";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import "./styles.css";
 import { UiFeedbackProvider } from "./ui/feedback";
-import { LoadingNote } from "./ui/Loading";
 import { applyAppTheme, followAppThemeChanges } from "./appTheme";
 import { applyMotion } from "./motion";
 import { installPressFx } from "./ui/pressFx";
@@ -19,8 +18,24 @@ const screen = new URLSearchParams(window.location.search).get("screen");
   galaxy, map and triage windows fetch, parse and run its whole chunk (BodyPane, SpeciesCard and the rest) for a
   screen they never draw. Asked for here, before the streamer view's await below, so Compare's own window starts the
   download first thing.
+
+  The other windows' own chunks the same way (2026-11-23): as a lazy() under Suspense each drew a loading note first,
+  and React then held the window back until 300 ms after it (see App below). Each chunk carries its window only:
+  three.js stays in the galaxy map's, Colonize's code in its own. An unknown `?screen=` opens Compare.
 */
-const appImport = screen ? null : import("./App");
+const SCREENS: Record<string, () => Promise<ComponentType>> = {
+  // `?screen=triage`: the second screen (§51) — a query parameter rather than a router, a bookmark on a phone is the
+  // whole delivery mechanism.
+  triage: () => import("./SecondScreen").then((m) => m.SecondScreen),
+  // `?screen=map`: the galaxy sector map (Phase 10).
+  map: () => import("./GalaxyMapScreen").then((m) => m.GalaxyMapScreen),
+  // `?screen=galaxy`: the 3D galaxy map (docs/galaxy-plan-28092026.md), with three.js.
+  galaxy: () => import("./GalaxyMap3D").then((m) => m.GalaxyMap3D),
+  // `?screen=colonize`: the Colonize window (1.3.0, docs/plan-colonize-integration.md).
+  colonize: () => import("./colonize/ColonizeScreen").then((m) => m.ColonizeScreen),
+};
+const screenImport = screen && Object.hasOwn(SCREENS, screen) ? SCREENS[screen]!() : null;
+const appImport = screenImport ? null : import("./App");
 
 // The streamer view takes the streamer's own settings first (uiMirror.ts), so even its first paint
 // is what the streamer sees.
@@ -42,29 +57,7 @@ applyStreamerMode();
   of fallback). Measured on the built app: every script was in by 90-140 ms, the header came at 450-480 ms.
 */
 const App = appImport ? (await appImport).App : null;
-
-/**
- * `?screen=triage` gets the second screen (§51) instead of the app.
- *
- * A query parameter rather than a router: this app has exactly two views and no history to manage,
- * and a bookmark on a phone is the whole delivery mechanism. Lazy so the main app does not carry it.
- */
-const SecondScreen = lazy(() => import("./SecondScreen").then((m) => ({ default: m.SecondScreen })));
-/** `?screen=map` gets the galaxy sector map (Phase 10). Lazy for the same reason. */
-const GalaxyMapScreen = lazy(() => import("./GalaxyMapScreen").then((m) => ({ default: m.GalaxyMapScreen })));
-
-/**
- * `?screen=galaxy`: the 3D galaxy map (docs/galaxy-plan-28092026.md). Lazy like the others, and it
- * carries three.js, so the main app never downloads it.
- */
-const GalaxyMap3D = lazy(() => import("./GalaxyMap3D").then((m) => ({ default: m.GalaxyMap3D })));
-/** `?screen=colonize`: the Colonize window (1.3.0, docs/plan-colonize-integration.md). Lazy like the others. */
-const ColonizeScreen = lazy(() => import("./colonize/ColonizeScreen").then((m) => ({ default: m.ColonizeScreen })));
-
-const wantsSecondScreen = screen === "triage";
-const wantsMap = screen === "map";
-const wants3d = screen === "galaxy";
-const wantsColonize = screen === "colonize";
+const Screen = screenImport ? await screenImport : null;
 
 /** The streamer view, drawn afresh whenever the streamer changes a setting in the app. */
 function StreamerApp() {
@@ -78,25 +71,11 @@ function StreamerApp() {
   return App ? <App key={gen} /> : null;
 }
 // The app on this PC tells the streamer view how it is set up.
-if (!STREAMER_MODE && !screen) startUiMirrorSource();
+if (!STREAMER_MODE && !Screen) startUiMirrorSource();
 
 createRoot(document.getElementById("root")!).render(
-  wantsColonize ? (
-    <Suspense fallback={<LoadingNote className="screen-loading" />}>
-      <ColonizeScreen />
-    </Suspense>
-  ) : wants3d ? (
-    <Suspense fallback={<LoadingNote className="screen-loading" />}>
-      <GalaxyMap3D />
-    </Suspense>
-  ) : wantsMap ? (
-    <Suspense fallback={<LoadingNote className="screen-loading" />}>
-      <GalaxyMapScreen />
-    </Suspense>
-  ) : wantsSecondScreen ? (
-    <Suspense fallback={<LoadingNote className="screen-loading" />}>
-      <SecondScreen />
-    </Suspense>
+  Screen ? (
+    <Screen />
   ) : (
     <UiFeedbackProvider>
       <HexSignals />

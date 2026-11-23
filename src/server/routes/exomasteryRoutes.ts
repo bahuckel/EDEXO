@@ -8,6 +8,7 @@ import { localOnly, requestIsFromThisPc } from "../lanAuth.js";
 
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { contentSecurityPolicyFor } from "../csp.js";
+import { compressedStatic } from "../compressedStatic.js";
 import {
   eliteAccountsRoot,
   findVisitedCacheFiles,
@@ -139,16 +140,19 @@ export function registerExomasteryRoutes(
     }
   });
 
+  // The built files (hashed names) are kept a year; the rest asks again each time, as express.static's default does.
+  const assetCache = (absPath: string) =>
+    /\/assets\//.test(absPath.replace(/\\/g, "/").toLowerCase()) ? "public, max-age=31536000, immutable" : "public, max-age=0";
+  app.use(compressedStatic(webRoot, assetCache));
   app.use(
     express.static(webRoot, {
       index: false,
       setHeaders(res, absPath) {
-        const norm = absPath.replace(/\\/g, "/").toLowerCase();
-        if (norm.endsWith(".html")) {
+        if (absPath.toLowerCase().endsWith(".html")) {
           res.setHeader("Cache-Control", "no-store, max-age=0, must-revalidate");
           res.setHeader("Content-Security-Policy", contentSecurityPolicyFor(res.req.headers.host));
-        } else if (/\/assets\//.test(norm)) {
-          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        } else {
+          res.setHeader("Cache-Control", assetCache(absPath));
         }
       },
     }),

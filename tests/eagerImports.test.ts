@@ -69,6 +69,10 @@ describe("what a window loads up front", () => {
     expect(g.has("src/client/main.tsx")).toBe(true);
     expect(g.has("src/client/App.tsx")).toBe(false);
     expect(g.has("src/client/BodyPane.tsx")).toBe(false);
+    // Nor each other's: every window's chunk is asked for only by that window (main.tsx SCREENS).
+    for (const w of ["GalaxyMap3D.tsx", "GalaxyMapScreen.tsx", "SecondScreen.tsx", "colonize/ColonizeScreen.tsx"]) {
+      expect(g.has(`src/client/${w}`), w).toBe(false);
+    }
   });
 
   it("the Colonize window does not load Compare's App (the legal footer has its own module)", () => {
