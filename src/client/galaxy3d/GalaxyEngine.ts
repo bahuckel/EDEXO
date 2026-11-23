@@ -214,7 +214,7 @@ export class GalaxyEngine {
   /** The layer switches, kept so a picture or outline that arrives after them still obeys them. */
   private photoOn = true;
   /** setMilkyWay's shares; the picture as loaded and setPhotoDetail's smaller copy of it (null at full size). */
-  private cloudGain = 1;
+  private cloudGain = 2;
   private pictureGain = 1;
   private photoFull: THREE.Texture | null = null;
   private photoSmall: THREE.CanvasTexture | null = null;

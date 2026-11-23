@@ -235,7 +235,8 @@ export function GalaxyMap3D() {
   const [codexSystems, setCodexSystems] = useState<Map<string, CodexMapSystemDTO>>(new Map());
   const [search, setSearch] = useKeptState<GalaxySearchApplied | null>("galaxy.search", null);
   const [waitMinM, setWaitMinM] = usePersistedState("galaxy.layer.waitMinM", 0, isWaitMinM);
-  const [cloudGain, setCloudGain] = usePersistedState("galaxy.layer.clouds", 1, isCloudGain);
+  // 200 % by default: the clouds over the 4096 px picture (owner, 2026-11-23).
+  const [cloudGain, setCloudGain] = usePersistedState("galaxy.layer.clouds", 2, isCloudGain);
   const [pictureGain, setPictureGain] = usePersistedState("galaxy.layer.picture", 1, isPictureGain);
   const [pictureDetail, setPictureDetail] = usePersistedState("galaxy.layer.pictureDetail", 4096, isPictureDetail);
   const [findText, setFindText] = useKeptState("galaxy.findText", "");
