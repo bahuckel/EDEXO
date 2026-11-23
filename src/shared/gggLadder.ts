@@ -21,7 +21,14 @@
  *
  * Some giants get a random nudge of their temperature before the ladder is built (his ranges in
  * `nudgeOf`): below a class's lower bound nothing can be said; between it and the upper bound a
- * crack hit still holds if the nudge left the planet alone ("maybe").
+ * crack hit still holds if the nudge left the planet alone ("maybe"), with the chance of
+ * `nudgeKeepChance`.
+ *
+ * One line is not his (study of 2026-11-17 on a year of EDDN scans and Spansh's dump; built in on the
+ * owner's word, 2026-11-22): a cold giant the nudge may leave alone builds its ladder from
+ * T · 0.9 / f32(0.9), not from T (`COLD_KEPT`). A rung a float step or two off a crack is no longer a
+ * hit of any kind: no such giant is green, and the three catalogued ones that needed it land exactly
+ * with this line.
  */
 
 const f = Math.fround;
@@ -66,6 +73,18 @@ const NUDGE: Partial<Record<LadderClass, readonly [number, number]>> = {
   V: [1000, 1500],
 };
 
+/**
+ * What the cold nudge leaves of a temperature it does not move: T · 0.9 / f32(0.9), 2.65 parts in 100
+ * million above T, kept in 64 bits. The nudge works on 0.9 · T (his test `t < 110 + 0.1·t` is
+ * 0.9 · t < 110) and seems to divide by a 32-bit 0.9 on the way back: x = max(0.9 · T, 90 + 20 · draw),
+ * T' = x / 0.9f. With T itself, three of the five catalogued GGGs of the range miss their crack by one
+ * float step (Boekh AO-H b27-33 1, Dryooe Groa QX-F c16 A 7, Synookio EI-J d9-1 7); with this all five
+ * land exactly, and of Spansh's 3,524,714 cold giants of the range with a real-precision temperature
+ * the ladder lands on those five and no other. Whether class II–V keep theirs the same way is not
+ * known: no body tests it (the one catalogued GGG there sits on a crack at its surface either way).
+ */
+const COLD_KEPT = 0.9 / f(0.9);
+
 /** The journal's PlanetClass → the ladder's class; null for a body that is not a gas or water giant. */
 export function ladderClassOf(planetClass: string | null | undefined): LadderClass | null {
   switch ((planetClass ?? "").trim()) {
@@ -108,9 +127,14 @@ export function gasGiantDensity(massEM: number, radiusM: number): number {
   return (massEM * EARTH_KG) / ((4 / 3) * Math.PI * radiusM ** 3);
 }
 
+/** His depth for the temperature the ladder is built from (the shown one, or the cold nudge's 64-bit one). */
+function depthOf(t: number, density: number): number {
+  return Math.pow((density / 1300) * t, 1.2) * (1 / 180) * (130000 / density);
+}
+
 /** How far up the clouds reach above the surface, in K (the "depth"), as his code computes it. */
 export function ladderDepth(tempK: number, density: number): number {
-  return Math.pow((density / 1300) * f(tempK), 1.2) * (1 / 180) * (130000 / density);
+  return depthOf(f(tempK), density);
 }
 
 /**
@@ -130,31 +154,47 @@ export function inNudgeRange(cls: LadderClass, tempK: number): boolean {
   return nudgeOf(cls, tempK) !== "none";
 }
 
+/**
+ * The chance the nudge leaves a giant alone: 1 outside the nudge ranges, 0 where it always moves, and
+ * in a "maybe" range the giant's place in it, (T − lower) / (upper − lower) — the draw is even over
+ * the range and never lowers a temperature. Cold giants: (T − 100) / 22.22; the five catalogued GGGs
+ * there that kept their temperature stand at 0.62 to 0.95 of the range, the four that were moved at
+ * 0.00 to 0.44. For class II–V it is his description of the nudge, with one GGG to go by.
+ */
+export function nudgeKeepChance(cls: LadderClass, tempK: number): number {
+  const t = f(tempK);
+  const nudge = nudgeOf(cls, t);
+  if (nudge !== "maybe") return nudge === "none" ? 1 : 0;
+  const [lo, hi] = nudgeRange(cls);
+  return (t - lo) / (hi - lo);
+}
+
 interface Ladder {
   rungs: number[];
-  /** The rungs before their 32-bit rounding. */
-  raw: number[];
   /** The density set the step: the clouds stop short of the ceiling and the step is not held to a limit. */
   densityDecided: boolean;
   /** The step was raised to the class's smallest step: then no density can change it. */
   heldAtMin: boolean;
 }
 
-/** His `ladder`; without a density the clouds are assumed to reach the ceiling. */
+/**
+ * His `ladder`, built from the temperature the nudge left (`COLD_KEPT` for a cold giant in its "maybe"
+ * range); without a density the clouds are assumed to reach the ceiling.
+ */
 function buildLadder(cls: LadderClass, tempK: number, density: number | null): Ladder {
-  const t = f(tempK);
+  const shown = f(tempK);
+  const t = !NUDGE[cls] && nudgeOf(cls, shown) === "maybe" ? shown * COLD_KEPT : shown;
   const ceil = ceilingOf(t);
-  const top = density != null ? ladderDepth(t, density) + t : Infinity;
+  const top = density != null ? depthOf(t, density) + t : Infinity;
   let step = ((ceil < top ? ceil : top) - t) * (1 / 7);
   const free = step;
   const lim = STEP_LIMITS[cls];
   if (lim) step = Math.max(Math.min(step, lim[1]), lim[0]);
   const bottom = ceil < t ? ceil : t;
-  const raw: number[] = [];
-  for (let k = 0; k < 7; k++) raw.push(step * k + bottom);
+  const rungs: number[] = [];
+  for (let k = 0; k < 7; k++) rungs.push(f(step * k + bottom));
   return {
-    rungs: raw.map(f),
-    raw,
+    rungs,
     densityDecided: top < ceil && step === free,
     heldAtMin: !!lim && free < lim[0],
   };
@@ -167,7 +207,7 @@ export function ladderRungs(cls: LadderClass, tempK: number, density: number | n
 
 /**
  * His nudge range for a class, [lower, upper] in K: class II–V their own; every other giant 100 K to
- * where his `t < 110 + 0.1·t` ends (122.2 K).
+ * where 0.9 · T reaches 110 (122.2 K).
  */
 export function nudgeRange(cls: LadderClass): readonly [number, number] {
   return NUDGE[cls] ?? [100, 110 / 0.9];
@@ -179,76 +219,16 @@ export interface LadderVerdict {
   door: number;
   /** `ceiling`: temperature alone decides (certain); `density`: the density's float path matters (likely). */
   basis: "ceiling" | "density";
-  /** How far the rung is from the crack, in float steps at the crack: 0 is exact. */
-  offUlp: number;
   /** `maybe`: the planet can be nudged; the hit holds only if the nudge left it alone. */
   nudge: "none" | "maybe";
-  /**
-   * A near miss only: how far the rung stays from rounding onto the crack, in float steps at the
-   * crack, at the best true mass and radius the journal's rounding allows (0: it can land on it).
-   */
-  reachUlp?: number;
-}
-
-/** Float steps a density-decided rung may miss by and still count ("on the edge", his 2). */
-const DENSITY_TOLERANCE_ULP = 2;
-
-/**
- * A near miss counts only when the journal's rounding of mass and radius can close it (owner,
- * 2026-10-07): the game works from exact values (gravity, g·R²/M, is one constant across 2.5 M giants
- * to 1 part in 10 million) and the journal keeps them as 32-bit floats, so the true mass and radius lie
- * within half a float step of the shown ones. A little slack for the rest of the float path: catalogued
- * Boekh AO-H b27-33 1 stays 0.035 float steps short.
- */
-export const REACH_SLACK_ULP = 0.05;
-
-/** The 32-bit float spacing around x (half of it on each side is what rounding hides). */
-function spacing(x: number): number {
-  const a = new Float32Array([x]);
-  const u = new Uint32Array(a.buffer);
-  const v = a[0]!;
-  u[0]! += 1;
-  return a[0]! - v;
+  /** The chance the nudge left it alone (`nudgeKeepChance`): 1 unless `maybe`. */
+  keepChance: number;
 }
 
 /**
- * How far a density-decided rung stays from rounding onto `door`, in float steps at the door, over
- * every true mass and radius that round to the shown ones (0: some of them put it on the door). The
- * rung grows with the density, so the two ends of the density range bound it.
- */
-export function roundingReach(
-  cls: LadderClass,
-  tempK: number,
-  massEM: number,
-  radiusM: number,
-  rung: number,
-  door: number,
-): number {
-  const m = f(massEM);
-  const r = f(radiusM);
-  const dm = spacing(m) / 2;
-  const dr = spacing(r) / 2;
-  const lo = buildLadder(cls, tempK, gasGiantDensity(m - dm, r + dr)).raw[rung - 1]!;
-  const hi = buildLadder(cls, tempK, gasGiantDensity(m + dm, r - dr)).raw[rung - 1]!;
-  // Values that round onto the door: half a float step either side (no door is a power of two).
-  const onDoorFrom = door - ulp(door) / 2;
-  const onDoorTo = door + ulp(door) / 2;
-  if (hi >= onDoorFrom && lo <= onDoorTo) return 0;
-  const gap = hi < onDoorFrom ? onDoorFrom - hi : lo - onDoorTo;
-  return gap / ulp(door);
-}
-
-/** His `nextUp`: the 32-bit float spacing just above x. */
-function ulp(x: number): number {
-  const a = new Float32Array([x]);
-  new Uint32Array(a.buffer)[0]! += 1;
-  return a[0]! - x;
-}
-
-/**
- * The ladder's verdict for one gas giant, or null when no rung lands on a crack (or the planet is
- * always nudged, or the inputs are missing). Exact hits are his "green"; a density-decided rung one or
- * two float steps off is his "on the edge", kept with its `offUlp` for a lower score.
+ * The ladder's verdict for one gas giant, or null when no rung lands exactly on a crack (or the planet
+ * is always nudged, or the inputs are missing). A rung next to a crack is not his "green", and his "on
+ * the edge" finds nothing: of the year's 16 giants one to three float steps off, none is green.
  */
 export function ladderGreen(opts: {
   planetClass: string | null | undefined;
@@ -266,32 +246,19 @@ export function ladderGreen(opts: {
       ? gasGiantDensity(opts.massEM, opts.radiusM)
       : null;
   const L = buildLadder(cls, T, density);
-  let best: LadderVerdict | null = null;
-  L.rungs.forEach((r, k) => {
-    for (const door of cracksOf(cls)) {
-      const offUlp = Math.abs(r - door) / ulp(door);
-      if (offUlp !== 0 && !(k > 0 && density != null && L.densityDecided && offUlp <= DENSITY_TOLERANCE_ULP))
-        continue;
-      if (best && best.offUlp <= offUlp) continue;
-      // Certain when no density can move the rung: the surface, a scanned density that reaches the
-      // ceiling, or a step held at its smallest. Without a mass the ceiling is only assumed.
-      const certain = k === 0 || L.heldAtMin || (density != null && !L.densityDecided);
-      let reachUlp: number | undefined;
-      if (offUlp !== 0) {
-        reachUlp = roundingReach(cls, T, opts.massEM!, opts.radiusM!, k + 1, door);
-        if (reachUlp > REACH_SLACK_ULP) continue;
-      }
-      best = {
-        rung: k + 1,
-        door,
-        basis: certain ? "ceiling" : "density",
-        offUlp,
-        nudge,
-        ...(reachUlp != null ? { reachUlp } : {}),
-      };
-    }
-  });
-  return best;
+  const cracks = cracksOf(cls);
+  const k = L.rungs.findIndex((r) => cracks.includes(r));
+  if (k < 0) return null;
+  // Certain when no density can move the rung: the surface, a scanned density that reaches the
+  // ceiling, or a step held at its smallest. Without a mass the ceiling is only assumed.
+  const certain = k === 0 || L.heldAtMin || (density != null && !L.densityDecided);
+  return {
+    rung: k + 1,
+    door: L.rungs[k]!,
+    basis: certain ? "ceiling" : "density",
+    nudge,
+    keepChance: nudgeKeepChance(cls, T),
+  };
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   ladderClassOf,
   ladderGreen,
   ladderRungs,
+  nudgeKeepChance,
   nudgeOf,
   nudgeRange,
   type LadderClass,
@@ -90,13 +91,13 @@ export function GggLadderDrawer({ detail }: { detail: SystemMapBodyDetailDTO }) 
   const cracks = cracksOf(cls);
   const nudge = known ? nudgeOf(cls, T) : "none";
   const [nLo, nHi] = nudgeRange(cls);
+  const keepPct = known ? Math.round(nudgeKeepChance(cls, T) * 100) : 0;
   const verdict = known ? ladderGreen({ planetClass: detail.planetClass, tempK: T, massEM: m, radiusM: r }) : null;
-  // Layers exactly on a border (his "green"); the verdict may also name a near miss the rounding closes.
+  // Layers exactly on a border (his "green").
   const onCrack = new Set<number>();
   rungs.forEach((x, i) => {
     if (cracks.includes(x)) onCrack.add(i);
   });
-  if (verdict) onCrack.add(verdict.rung - 1);
 
   return (
     <details className="ggg-ladder" open={open} onToggle={(ev) => setOpen((ev.currentTarget as HTMLDetailsElement).open)}>
@@ -143,12 +144,12 @@ export function GggLadderDrawer({ detail }: { detail: SystemMapBodyDetailDTO }) 
             {nudge === "always"
               ? `Below ${nLo} K the game always nudges the temperature before it builds the ladder, so the ladder cannot say.`
               : nudge === "maybe"
-                ? `Between ${nLo} and ${nHi} K the game may nudge the temperature first: a border hit holds only if it did not.`
-                : `Outside the nudge range (${nLo}–${nHi} K): the ladder reads this temperature as it is.`}
+                ? `Between ${nLo} and ${fmtK(nHi)} the game may nudge the temperature first: a border hit holds only if it did not (${keepPct} % chance at this temperature).`
+                : `Outside the nudge range (${nLo}–${fmtK(nHi)}): the ladder reads this temperature as it is.`}
           </p>
           <p className={`ggg-ladder__verdict${verdict ? " ggg-ladder__verdict--green" : ""}`}>
             {verdict
-              ? `Layer ${verdict.rung} lands on the ${verdict.door} K border: green by the ladder${verdict.offUlp ? " (within the scan's rounding)" : ""}${verdict.nudge === "maybe" ? ", if the nudge left it alone" : ""}.`
+              ? `Layer ${verdict.rung} lands on the ${verdict.door} K border: green by the ladder${verdict.nudge === "maybe" ? `, if the nudge left it alone (${keepPct} % chance)` : ""}.`
               : nudge === "always"
                 ? "No verdict: always nudged at this temperature."
                 : "No layer lands on a border: not green by the ladder."}

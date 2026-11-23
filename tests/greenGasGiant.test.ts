@@ -112,9 +112,9 @@ describe("codex ids", () => {
     expect(greenCodexId("$Codex_Ent_Green_Sudarsky_Class_III_Name;")).toBe("codex_ent_green_sudarsky_class_iii");
     expect(greenCodexId("$Codex_Ent_Gas_Clds_Green_Storm_Name;")).toBeNull();
     expect(greenCodexId("$Codex_Ent_Sudarsky_Class_III_Name;")).toBeNull();
-    // An ammonia-life GGG logs under the water-life entry.
+    // An ammonia-life GGG logs under the water-life entry, and a water-life GGG logs nothing.
     expect(greenCodexFits("codex_ent_green_giant_with_water_life", "Gas giant with ammonia based life")).toBe(true);
-    expect(greenCodexFits("codex_ent_green_giant_with_water_life", "Gas giant with water based life")).toBe(true);
+    expect(greenCodexFits("codex_ent_green_giant_with_water_life", "Gas giant with water based life")).toBe(false);
     expect(greenCodexFits("codex_ent_green_sudarsky_class_i", C3)).toBe(false);
     expect(isK10CodexName("$Codex_Ent_L_Phn_Part_Cld_011_Name;")).toBe(true);
     expect(isK10CodexName("$Codex_Ent_L_Phn_Part_Cld_001_Name;")).toBe(false);
@@ -400,20 +400,21 @@ describe("the cloud ladder (shared/gggLadder.ts)", () => {
     // greens share is left, and the ladder's no drops it to 1.5.
     const off = classifyGreenGiant({ ...water, surfaceTemperatureK: 176.666626 })!;
     expect(off).toMatchObject({ level: "possible", score: 1.5 });
-    // In his "maybe" nudge range half a point less (Vegnao PA-S c6-43 3, catalogue #38, under no name).
+    // In his "maybe" nudge range the score goes from 1 to the full one with the chance the nudge left
+    // it alone (Vegnao PA-S c6-43 3, catalogue #38, under no name: 62 % of the way from 1 to 4.7).
     const vegnao = { planetClass: C1, surfaceTemperatureK: 113.841248, massEM: 306.238953, radiusM: 72_590_296 };
-    expect(classifyGreenGiant(vegnao)).toMatchObject({ level: "likely", score: 4.2 });
-    expect(classifyGreenGiant(vegnao)!.why).toMatch(/holds if the random nudge left it alone\)$/);
+    expect(classifyGreenGiant(vegnao)).toMatchObject({ level: "possible", score: 3.3 });
+    expect(classifyGreenGiant(vegnao)!.why).toMatch(/\(cloud ladder; 62 % chance the random nudge left it alone\)$/);
     // A shared temperature the ladder rejects at its density drops to 1.5.
     const thin = classifyGreenGiant({ planetClass: WATER, surfaceTemperatureK: 176.666687, massEM: 1, radiusM: 3.05e7 })!;
     expect(thin).toMatchObject({ level: "possible", score: 1.5 });
     expect(thin.why).toMatch(/but at its density no cloud layer lands on a colour border/);
-    // One float step off a border that the scan's rounding can close (Synookio EI-J d9-1 7, catalogue
-    // #19, under no name), in the maybe nudge range: 4.5 − 0.5, likely.
+    // Exactly on a border with the cold nudge's own factor, a float step off it without (Synookio
+    // EI-J d9-1 7, catalogue #19, under no name), high in the maybe nudge range: 90 % of 4.7, likely.
     const near = { planetClass: C1, surfaceTemperatureK: 119.986717, massEM: 21.216078, radiusM: 20_795_606 };
-    expect(classifyGreenGiant(near)).toMatchObject({ level: "likely", score: 4 });
-    expect(classifyGreenGiant(near)!.why).toMatch(/within 1 float step, which the scan's rounding of mass and radius can close \(cloud ladder; holds if/);
-    // One the rounding cannot close (Leami SL-W c18-375 8, 0.5 float steps short; not green by his tool): no sign.
+    expect(classifyGreenGiant(near)).toMatchObject({ level: "likely", score: 4.3 });
+    expect(classifyGreenGiant(near)!.why).toMatch(/temperature and density cloud layer 6 of 7 lands on the 270 K colour border \(cloud ladder; 90 % chance/);
+    // A layer next to a border (Leami SL-W c18-375 8, half a float step short; not green by his tool): no sign.
     expect(
       classifyGreenGiant({ planetClass: "Gas giant with ammonia based life", surfaceTemperatureK: 119.724983, massEM: 346.083435, radiusM: 70_950_224 }),
     ).toBeNull();

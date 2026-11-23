@@ -2,18 +2,17 @@
  * The cloud ladder (src/shared/gggLadder.ts), checked against CMDR Arcanic's "The Mystery Property:
  * Revealed" (2026) and his own code and tables on https://ed-ggg.github.io/edggg/densitydemo.html
  * (aligned 2026-10-07): his always-green temperatures float value by float value, his worked examples
- * and the catalogued GGGs with their Spansh values.
+ * and the catalogued GGGs with their Spansh values. And the one line that is not his (2026-11-22): a
+ * cold giant the nudge left alone builds its ladder from T · 0.9 / f32(0.9).
  */
 import { describe, expect, it } from "vitest";
 import {
   alwaysGreenTemps,
   gasGiantDensity,
   ladderDepth,
-  ladderClassOf,
   ladderGreen,
+  nudgeKeepChance,
   nudgeOf,
-  REACH_SLACK_ULP,
-  roundingReach,
 } from "../src/shared/gggLadder.js";
 
 const round6 = (xs: number[]) => xs.map((x) => Number(x.toFixed(6)));
@@ -68,8 +67,8 @@ describe("the cloud ladder", () => {
       rung: 5,
       door: 250,
       basis: "ceiling",
-      offUlp: 0,
       nudge: "none",
+      keepChance: 1,
     });
     // 1,000 kg/m³: the ladder stops short of 340 K and no rung lands on a door.
     const r = Math.cbrt((18.154175 * 5.97219e24) / (1000 * (4 / 3) * Math.PI));
@@ -81,8 +80,8 @@ describe("the cloud ladder", () => {
       rung: 6,
       door: 270,
       basis: "density",
-      offUlp: 0,
       nudge: "none",
+      keepChance: 1,
     });
   });
 
@@ -91,8 +90,8 @@ describe("the cloud ladder", () => {
       rung: 1,
       door: 210,
       basis: "ceiling",
-      offUlp: 0,
       nudge: "none",
+      keepChance: 1,
     });
     expect(green("Sudarsky class II gas giant", 217.87532, 300, 70_000)).toBeNull();
     // A class III step held at its 30 K smallest is the temperature's alone, scanned mass or not.
@@ -108,49 +107,42 @@ describe("the cloud ladder", () => {
     ["Pheia Aewsy LV-Y d11 B 4", 126.062111, 212.034698, 67972.136, 6, 250],
     ["Syrivu AN-M c7-2 3", 125.933167, 159.549011, 65058.884, 7, 270],
   ])("puts a rung of %s exactly on a crack", (_name, T, mass, rkm, rung, door) => {
-    expect(green(C1, T, mass, rkm)).toEqual({ rung, door, basis: "density", offUlp: 0, nudge: "none" });
+    expect(green(C1, T, mass, rkm)).toEqual({ rung, door, basis: "density", nudge: "none", keepChance: 1 });
   });
 
-  // His five that "can escape the nudge": in the maybe range, on or next to a crack (Spansh values).
+  // The five catalogued GGGs of the cold "maybe" range that kept their temperature (Spansh values, and
+  // where each stands in the range): every one exactly on a crack with the bottom layer at
+  // T · 0.9 / f32(0.9). With T itself, his rule, Synookio, Dryooe Groa and Boekh miss by a float step.
   it.each([
-    ["Vegnao PA-S c6-43 3", C1, 113.841248, 306.238953, 72590.296, 7, 250, 0],
-    ["Floawns FX-L b36-24 1", AMMONIA, 121.179939, 450.12088, 75688.808, 6, 250, 0],
-    ["Synookio EI-J d9-1 7", C1, 119.986717, 21.216078, 20795.606, 6, 270, 1],
-    ["Dryooe Groa QX-F c16 A 7", C1, 120.72538, 83.17791, 57642.944, 7, 250, 1],
-  ])("puts %s on a crack if the nudge left it alone", (_name, pc, T, mass, rkm, rung, door, off) => {
-    expect(green(pc, T, mass, rkm)).toMatchObject({
-      rung,
-      door,
-      basis: "density",
-      offUlp: off,
-      nudge: "maybe",
-    });
+    ["Vegnao PA-S c6-43 3 (#38)", C1, 113.841248, 306.238953, 72590.296, 7, 250, 0.62],
+    ["Floawns FX-L b36-24 1 (#40)", AMMONIA, 121.179939, 450.12088, 75688.808, 6, 250, 0.95],
+    ["Synookio EI-J d9-1 7 (#19)", C1, 119.986717, 21.216078, 20795.606, 6, 270, 0.9],
+    ["Dryooe Groa QX-F c16 A 7 (#43)", C1, 120.72538, 83.17791, 57642.944, 7, 250, 0.93],
+    ["Boekh AO-H b27-33 1 (#29)", C1, 117.776886, 491.461853, 75535.464, 7, 270, 0.8],
+  ])("puts %s exactly on a crack if the nudge left it alone", (_name, pc, T, mass, rkm, rung, door, place) => {
+    const v = green(pc, T, mass, rkm);
+    expect(v).toMatchObject({ rung, door, basis: "density", nudge: "maybe" });
+    expect(v!.keepChance).toBeCloseTo(place, 2);
   });
 
-  // A near miss counts only when the journal's rounding of mass and radius can close it.
+  // A layer next to a crack is not green, in the nudge ranges or out of them.
   it.each([
-    ["Synookio EI-J d9-1 7 (#19, green)", C1, 119.986717, 21.216078, 20795.606, 6, 270, true],
-    ["Dryooe Groa QX-F c16 A 7 (#43, green)", C1, 120.72538, 83.17791, 57642.944, 7, 250, true],
-    ["Boekh AO-H b27-33 1 (#29, green)", C1, 117.776886, 491.461853, 75535.464, 7, 270, true],
-    ["Blaa Eork EH-S d5-4 7 (not green)", AMMONIA, 116.959549, 228.807571, 57220.672, 7, 270, false],
-    ["Leami SL-W c18-375 8 (not green)", AMMONIA, 119.724983, 346.083435, 70950.224, 7, 270, false],
-    [
-      "Plaa Eurk CA-P d6-6 ABC 1 (ruled out by Arcanic)",
-      C1,
-      125.288841,
-      195.145721,
-      68355.944,
-      7,
-      270,
-      false,
-    ],
-  ])("rounding check: %s", (_name, pc, T, mass, rkm, rung, door, reachable) => {
-    const cls = ladderClassOf(pc)!;
-    if (mass > 0)
-      expect(roundingReach(cls, T, mass, rkm * 1000, rung, door) <= REACH_SLACK_ULP).toBe(reachable);
-    const v = mass > 0 ? green(pc, T, mass, rkm) : null;
-    if (reachable) expect(v).toMatchObject({ rung, door, offUlp: 1 });
-    else expect(v).toBeNull();
+    ["Blaa Eork EH-S d5-4 7 (not green)", AMMONIA, 116.959549, 228.807571, 57220.672],
+    ["Leami SL-W c18-375 8 (not green)", AMMONIA, 119.724983, 346.083435, 70950.224],
+    ["Plaa Eurk CA-P d6-6 ABC 1 (ruled out by Arcanic)", C1, 125.288841, 195.145721, 68355.944],
+  ])("no near misses: %s", (_name, pc, T, mass, rkm) => {
+    expect(green(pc, T, mass, rkm)).toBeNull();
+  });
+
+  it("the chance the nudge leaves a giant alone: its place in the maybe range", () => {
+    expect(nudgeKeepChance("I", 130)).toBe(1);
+    expect(nudgeKeepChance("I", 90.14109)).toBe(0);
+    expect(nudgeKeepChance("II", 217.87532)).toBe(0);
+    // Cold giants: (T − 100) / 22.22.
+    expect(nudgeKeepChance("ammonia", 111.111111)).toBeCloseTo(0.5, 5);
+    // Class III: (T − 365) / 50 (Blaa Hype TF-V d3-144 3 at 370 K: one in ten).
+    expect(nudgeKeepChance("III", 370)).toBeCloseTo(0.1, 6);
+    expect(green(C3, 370, null, null)?.keepChance).toBeCloseTo(0.1, 6);
   });
 
   it("his nudge ranges: nothing to say below, maybe between, none above", () => {

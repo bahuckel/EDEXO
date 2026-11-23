@@ -117,7 +117,9 @@ const fmtK = (t: number) => `${Number(t.toFixed(6))} K`;
 /**
  * The codex ids that name a green gas giant, and which journal classes each can stand for.
  * A known codex bug (edGGG): a GGG with ammonia-based life logs as the *water*-based-life entry, and a
- * real water-based-life GGG logs nothing — so that one id covers both classes.
+ * real water-based-life GGG logs nothing — so that id stands for ammonia-based life alone. On a year
+ * of EDDN (2026-11-17): the water-life entry came from an ammonia-life GGG's system 180 times of 180,
+ * and 648 visits to water-life GGGs logged no green entry at all.
  */
 const CODEX_CLASSES: Record<string, readonly string[]> = {
   codex_ent_green_sudarsky_class_i: ["Sudarsky class I gas giant"],
@@ -125,7 +127,7 @@ const CODEX_CLASSES: Record<string, readonly string[]> = {
   codex_ent_green_sudarsky_class_iii: [CLASS_III],
   codex_ent_green_sudarsky_class_iv: ["Sudarsky class IV gas giant"],
   codex_ent_green_water_giant: ["Water giant"],
-  codex_ent_green_giant_with_water_life: ["Gas giant with water based life", "Gas giant with ammonia based life"],
+  codex_ent_green_giant_with_water_life: ["Gas giant with ammonia based life"],
   codex_ent_green_giant_with_ammonia_life: ["Gas giant with ammonia based life"],
 };
 
@@ -138,8 +140,7 @@ export function greenCodexId(codexName: string | null | undefined): string | nul
 /** A green codex id in words: `codex_ent_green_sudarsky_class_ii` → "class II". */
 export function greenCodexClassLabel(codexId: string): string {
   const cls = CODEX_CLASSES[codexId];
-  if (!cls) return "green gas giant";
-  return cls.length > 1 ? "water- or ammonia-based-life giant" : shortClass(cls[0]!);
+  return cls ? shortClass(cls[0]!) : "green gas giant";
 }
 
 /** Whether a green codex entry can be this class of gas giant. */
@@ -239,16 +240,16 @@ export function classifyGreenGiant(i: GreenGiantInput): GreenGiantVerdict | null
  * each sign is worth on its own:
  * - cloud ladder, mass and radius scanned: 5 when the temperature alone puts a layer on a border and
  *   the temperature is on CMDR Arcanic's always-green tables (the model reproduces them value by
- *   value); 4.7 when the density decides and the float match is exact; 4.5 for a float step or two
- *   off that the journal's rounding of mass and radius can close (shared/gggLadder.ts
- *   `roundingReach`; a miss it cannot close is no sign). Measured on the whole Spansh dump with his
- *   float path (33.7 M gas giants with real-precision temperatures, 2026-10-07): 25 exact hits, all
- *   green — 24 catalogued and Cyoilz JM-N b26-0 1, found green on 1 Oct 3312; of the 35 near misses,
- *   the 3 catalogued ones are the only ones rounding can close (0 to 0.034 float steps short), the
- *   other 32 stay 0.15 to 1.8 short — Blaa Eork EH-S d5-4 7 and Leami SL-W c18-375 8 among them, both
- *   not green by his own tool (owner, 2026-10-07);
- * - a hit in his "maybe" nudge range, exact or without a mass: half a point less (it holds only if
- *   the random nudge left the planet alone; on the dump both exact ones were green);
+ *   value); 4.7 when the density decides and the float match is exact. A layer next to a border is
+ *   no sign. Measured on the whole Spansh dump with his float path (33.7 M gas giants with
+ *   real-precision temperatures, 2026-10-07): 25 exact hits, all green — 24 catalogued and Cyoilz
+ *   JM-N b26-0 1, found green on 1 Oct 3312; and on a year of EDDN scans (2026-11-17): 39 exact hits
+ *   among 3.6 M giants that cannot be nudged, all catalogued, and none of the 16 giants one to three
+ *   float steps off green — Blaa Eork EH-S d5-4 7 and Leami SL-W c18-375 8 among the near misses,
+ *   both not green by his own tool (owner, 2026-10-07);
+ * - a hit in his "maybe" nudge range holds only if the random nudge left the planet alone: its score
+ *   goes from 1 to the full one with that chance (shared/gggLadder.ts `nudgeKeepChance`; 62 % keeps
+ *   3.3 of a 4.7), and the chance is in the line;
  * - cloud ladder without a scanned mass: 2.5 (the clouds may not reach their ceiling);
  * - EDAstro's green report for its class in the system: 1 + 3.5 / the bodies of that class there
  *   (4.5 for the only one);
@@ -258,12 +259,6 @@ export function classifyGreenGiant(i: GreenGiantInput): GreenGiantVerdict | null
  * The strongest sign sets the score, each other one adds `agreeing`, and only the ladder's 5 reaches 5.
  */
 const PLAUSIBILITY = { agreeing: 0.25, likelyFrom: 3.5 };
-
-/** An exact or no-mass hit in one of his "maybe" nudge ranges, this much lower (see `PLAUSIBILITY`). */
-const MAYBE_NUDGED = 0.5;
-
-/** A density-decided layer a float step or two off its border that rounding can close. */
-const NEAR_MISS_SCORE = 4.5;
 
 /**
  * The cloud ladder's sign, scored as above. A whole-kelvin temperature is left to the rules above:
@@ -281,19 +276,16 @@ function cloudLadder(i: GreenGiantInput): { score: number; why: string } | null 
   });
   if (!v) return null;
   const layer = `cloud layer ${v.rung} of 7 lands on the ${v.door} K colour border`;
-  const maybe = v.nudge === "maybe";
-  const tag = maybe ? "cloud ladder; holds if the random nudge left it alone" : "cloud ladder";
-  const sign = (score: number, why: string) => ({ score: maybe ? Math.max(1, score - MAYBE_NUDGED) : score, why });
+  const tag =
+    v.nudge === "maybe"
+      ? `cloud ladder; ${Math.round(v.keepChance * 100)} % chance the random nudge left it alone`
+      : "cloud ladder";
+  const sign = (score: number, why: string) => ({ score: 1 + (score - 1) * v.keepChance, why });
   if (v.basis === "ceiling") return sign(5, `${fmtK(t)} — at this temperature ${layer} (${tag})`);
   if (!hasDensity(i)) {
     return sign(2.5, `${fmtK(t)} — ${layer} if its clouds reach their ceiling (${tag}; no mass scanned)`);
   }
-  if (v.offUlp === 0) return sign(4.7, `${fmtK(t)} — at this temperature and density ${layer} (${tag})`);
-  const steps = Math.round(v.offUlp * 10) / 10;
-  return sign(
-    NEAR_MISS_SCORE,
-    `${fmtK(t)} — at this temperature and density ${layer} within ${steps} float step${steps === 1 ? "" : "s"}, which the scan's rounding of mass and radius can close (${tag})`,
-  );
+  return sign(4.7, `${fmtK(t)} — at this temperature and density ${layer} (${tag})`);
 }
 
 function hasDensity(i: GreenGiantInput): boolean {
