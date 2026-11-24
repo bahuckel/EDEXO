@@ -139,6 +139,16 @@ export function unflownShare(b: ExpeditionBoxelDTO): number {
   return Math.max(0, b.systems - Math.max(b.visited, (b.barren ?? 0) + b.recorded)) / b.systems;
 }
 
+/** What Spansh said of a whole-galaxy hunt's boxel: the systems it knows there, and the target already found. */
+export function spanshLine(b: ExpeditionBoxelDTO): string {
+  if (!b.spansh) return "";
+  const found = b.spansh.found ? ` · ${b.spansh.found} already found` : "";
+  return ` · Spansh: ${b.spansh.known.toLocaleString("en-US")} known${found}`;
+}
+
+/** While the nearest boxels are being looked up on Spansh, the hunt is asked again this often. */
+const LOOKUP_POLL_MS = 15_000;
+
 /** Where a boxel is: its distance from the ship, or on a route the detour of going by it. */
 function whereOf(b: ExpeditionBoxelDTO): string {
   return b.detourLy != null ? `${fmtLy(b.detourLy)} off the route` : fmtLy(b.distanceLy);
@@ -190,6 +200,8 @@ export function ExpeditionDrawer({
   // Plan 5.2 (owner, 2026-10-12): a sphere or a route to a system, and what to look for.
   const [mode, setMode] = useState<Mode>("sphere");
   const [galaxyCodes, setGalaxyCodes] = useState("");
+  // Bumped while Spansh look-ups of a whole-galaxy hunt are still coming, so the field is asked again.
+  const [poll, setPoll] = useState(0);
   const [end, setEnd] = useState<EndPoint | null>(null);
   const [widthLy, setWidthLy] = useState(250);
   const [lookFor, setLookFor] = useState<LookFor>("exobio");
@@ -320,7 +332,13 @@ export function ExpeditionDrawer({
       });
     return () => ac.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromKey, radius, species, lookFor, target, route?.name, widthLy, mode, galaxyCodes]);
+  }, [fromKey, radius, species, lookFor, target, route?.name, widthLy, mode, galaxyCodes, poll]);
+  const lookupsQueued = field?.galaxy ? (field.lookups?.queued ?? 0) : 0;
+  useEffect(() => {
+    if (!lookupsQueued) return;
+    const t = window.setTimeout(() => setPoll((n) => n + 1), LOOKUP_POLL_MS);
+    return () => window.clearTimeout(t);
+  }, [lookupsQueued, field]);
 
   useEffect(() => {
     if (!planKeys.length || !ship) {
@@ -503,7 +521,8 @@ export function ExpeditionDrawer({
               : field.to
               ? `along ${fmtLy(Math.hypot(field.to.x - field.from.x, field.to.y - field.from.y, field.to.z - field.from.z))} to ${end?.name ?? "the end"}, ${(field.widthLy ?? 0).toLocaleString("en-US")} ly either side`
               : `within ${field.radiusLy.toLocaleString("en-US")} ly`}
-            {field.skipped.length ? ` (${field.skipped.join(", ")} boxels left out: too many at this radius)` : ""} · jump range{" "}
+            {field.skipped.length ? ` (${field.skipped.join(", ")} boxels left out: too many at this radius)` : ""}
+            {lookupsQueued ? ` · looking up the nearest on Spansh (${lookupsQueued} to go)` : ""} · jump range{" "}
             {Math.round(field.jumpRangeLy)} ly
           </p>
         ) : null}
@@ -529,7 +548,7 @@ export function ExpeditionDrawer({
                 </strong>
                 <span className="tw:text-2xs tw:text-text-dim">
                   {whereOf(b)} · {boxelLine(b, isSpecies, label)}
-                  {field?.galaxy ? ` · ${Math.round(unflownShare(b) * 100)} % unflown` : ""}
+                  {field?.galaxy ? ` · ${Math.round(unflownShare(b) * 100)} % unflown${spanshLine(b)}` : ""}
                 </span>
               </button>
               <button
@@ -632,6 +651,16 @@ export function ExpeditionBoxelCard({
             <dd>
               ≈{b.matches < 10 ? b.matches.toFixed(2) : Math.round(b.matches)} {targetLabel ?? "matches"} in its unflown systems (from the
               systems Spansh holds whole like it)
+            </dd>
+          </>
+        ) : null}
+        {b.spansh ? (
+          <>
+            <dt>Spansh</dt>
+            <dd>
+              {b.spansh.known.toLocaleString("en-US")} of its systems known
+              {b.spansh.found != null ? `, ${b.spansh.found} of them with it already` : ""} (looked up{" "}
+              {b.spansh.fetchedAt.slice(0, 10)}; the expected count is after both)
             </dd>
           </>
         ) : null}

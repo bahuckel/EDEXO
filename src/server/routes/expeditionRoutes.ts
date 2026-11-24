@@ -27,6 +27,7 @@ import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { massCodeOfSystem } from "../../shared/id64.js";
 import type { MassCode } from "../../shared/boxelAdvice.js";
 import { systemPrefixOf } from "../expedition.js";
+import { huntLookupState, queueHuntLookups } from "../galaxyHuntLookups.js";
 import { expeditionCandidates, expeditionField, expeditionPlan, parseCodes, type ExpeditionDeps } from "../expeditionService.js";
 import { BODY_KINDS, circleSuggestions, loadFeatureTable, parseTarget, starTypes } from "../expeditionTargets.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
@@ -88,8 +89,7 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
       const species = typeof req.query.species === "string" && req.query.species.trim() ? req.query.species.trim().slice(0, 80) : null;
       // The whole galaxy (plan-1.4.0 §6.2): its codes are the target's commonest unless asked for.
       const galaxy = req.query.galaxy === "1";
-      res.json(
-        await expeditionField(
+      const field = await expeditionField(
           {
             from,
             radiusLy: Number.isFinite(radius) ? radius : 0,
@@ -111,8 +111,17 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
             widthLy: Number(req.query.width) || undefined,
           },
           await deps(req.query.light === "1" ? "peek" : true),
-        ),
-      );
+        );
+      if (!galaxy) return void res.json(field);
+      // Looking for bodies or stars, its nearest listed boxels go to Spansh one at a time (server/galaxyHuntLookups.ts).
+      if (field.target && field.target !== "exobio")
+        queueHuntLookups(
+          field.boxels
+            .filter((b) => b.name)
+            .sort((a, b) => a.distanceLy - b.distanceLy)
+            .map((b) => systemPrefixOf(b.name!)),
+        );
+      res.json({ ...field, lookups: huntLookupState() });
     } catch (e) {
       res.status(500).json({ error: errorText(e) });
     }

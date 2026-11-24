@@ -8,6 +8,7 @@ import { parseBoxel, type SavedBoxelDTO } from "../../shared/boxel.js";
 import { shortestBoxelOrder } from "../../shared/boxelOrder.js";
 import { boxelPositionSet, setBoxelLookupSource, setBoxelSectorSource } from "../boxelPositions.js";
 import { createBoxelLookups } from "../boxelLookup.js";
+import { setGalaxyHuntLookupService } from "../galaxyHuntLookups.js";
 import { boxelJournalFacts, notableBodiesForSystem, systemBodyTally } from "../snapshotSystemInfo.js";
 import type { GameStateStore } from "../gameState.js";
 import { getCachedSpeciesDatabase } from "../snapshot.js";
@@ -99,6 +100,8 @@ export function registerBoxelRoutes(
     },
   });
   setBoxelLookupSource((prefix) => lookups.get(prefix));
+  // The whole-galaxy hunt looks up its nearest boxels with it too (server/galaxyHuntLookups.ts).
+  setGalaxyHuntLookupService(lookups);
   /*
     A generated sector's name → its place on the 1,280 ly grid, for the predicted positions
     (shared/stellarPlacement.ts). Read on the first question; a name two cells share answers nothing.

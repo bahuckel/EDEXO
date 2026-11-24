@@ -75,7 +75,7 @@ function starKeys(subtype: string): string[] {
 }
 
 /** "F (White) Star" → "F", "Neutron Star" → "Neutron Star", "M (Red giant) Star" → "M giant". */
-function starLabel(subtype: string): string {
+export function starLabel(subtype: string): string {
   const m = /^([OBAFGKMLTY]) \(([^)]*)\) Star$/.exec(subtype);
   if (m)
     return /giant/i.test(m[2]!)

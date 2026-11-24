@@ -53,6 +53,7 @@ import {
   type ExpeditionBoxel,
 } from "./expedition.js";
 import { barrenIn, barrenNumbersIn, loadBarrenTable } from "./boxelBarren.js";
+import { huntLookupFor, huntLookupRevision, knownTargetsIn } from "./galaxyHuntLookups.js";
 
 type Xyz = { x: number; y: number; z: number };
 
@@ -307,6 +308,8 @@ export async function expeditionField(
     Math.round(q.from.x / 10), Math.round(q.from.y / 10), Math.round(q.from.z / 10),
     radiusLy, Math.round(jumpRangeLy), entry?.id ?? "", codes.join(""), q.minEv ?? 0, limit, q.visitedPoints?.length ?? 0,
     deps.index ? 1 : 0,
+    // A whole-galaxy hunt is scored again when a Spansh look-up of one of its boxels comes in.
+    galaxy ? huntLookupRevision() : 0,
   ].join("|");
   const hit = fieldCache.get(key);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.value;
@@ -368,14 +371,22 @@ export async function expeditionField(
           the recorded ones had been left in (2026-11-24, for the whole-galaxy hunt, where well-flown boxels ranked as
           if untouched). Barren and recorded are apart (one has biology, the other none); his own are among them.
         */
-        const unflown = Math.max(0, s.systems - Math.max(vis, s.barren + rec));
+        // A whole-galaxy hunt's nearest boxels, looked up on Spansh: its known systems are flown too.
+        const look = galaxy && b.name ? huntLookupFor(systemPrefixOf(b.name)) : null;
+        const spanshKnown = look ? Object.keys(look.systems).length : 0;
+        const unflown = Math.max(0, s.systems - Math.max(vis, s.barren + rec, spanshKnown));
         // A bio system carries the boxel's exobiology: its EV over the bio systems expected in it.
         const bioSystems = Math.max(0, s.remaining * s.pBio - s.recorded);
-        const m = expectedMatches(target, cell, features, unflown, {
+        let m = expectedMatches(target, cell, features, unflown, {
           p: unflown > 0 ? Math.min(1, bioSystems / unflown) : 0,
           perBioSystem: bioSystems > 0 ? s.ev / bioSystems : 0,
         });
-        if (!(m > 0)) continue;
+        if (look) {
+          // Already found there (owner 2026-11-24): ranked lower by what was found, and kept in the list.
+          const found = knownTargetsIn(look, target);
+          m = Math.max(0, m - (found ?? 0));
+          dto.spansh = { known: spanshKnown, ...(found != null ? { found } : {}), fetchedAt: look.fetchedAt };
+        } else if (!(m > 0)) continue;
         dto.matches = Math.round(m * 1000) / 1000;
         dto.matchesPerJump = Math.round((m / dto.jumps) * 10000) / 10000;
         scored.push(dto);
