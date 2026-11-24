@@ -96,6 +96,7 @@ describe("the phone rule, read off the table", () => {
       "POST /api/hud/layout",
       "POST /api/launcher/open-mode",
       "POST /api/notices/test",
+      "POST /api/settings/hud-prefs",
     ])
       expect([k, ROUTE_REACH[k]]).toEqual([k, "pc"]);
   });

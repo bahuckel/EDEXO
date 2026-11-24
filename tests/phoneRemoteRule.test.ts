@@ -53,6 +53,8 @@ const PC_ONLY = [
   "/api/hud/visibility",
   "/api/launcher/open-mode",
   "/api/notices/test",
+  // The PC screen marker's pitch and distance readers start from the HUD settings (lan audit 2026-11-24).
+  "/api/settings/hud-prefs",
 ];
 
 describe("the phone as a remote", () => {

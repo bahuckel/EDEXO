@@ -178,7 +178,8 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "POST /api/feeder/import-dump": "pc",
   "GET /api/feeder/import-dump/status": "pc",
   // routes/settingsRoutes.ts
-  "POST /api/settings/hud-prefs": "lan",
+  // Only the PC's launcher sends it, and the PC's screen marker starts its pitch and distance readers from it.
+  "POST /api/settings/hud-prefs": "pc",
   "POST /api/settings/poll-rates": "lan",
   "GET /api/settings/collection-focus": "lan",
   "POST /api/settings/collection-focus": "lan",

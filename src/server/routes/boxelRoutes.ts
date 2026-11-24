@@ -374,6 +374,12 @@ export function registerBoxelRoutes(
     // The cut drops systems: a delete, which the phone rule keeps on this PC (review 2026-11-10 C3).
     if (typeof body.cutFrom === "number" && !requestIsFromThisPc(req))
       return void res.status(403).json({ ok: false, error: "Systems are cut from a boxel on the PC running the app." });
+    // `lastIs` below the end drops the systems after it the same way; the probe's button only ever sends the end.
+    if (typeof body.lastIs === "number" && !requestIsFromThisPc(req)) {
+      const endNow = opts.savedBoxels.list([]).find((x) => x.id === id)?.end;
+      if (endNow != null && body.lastIs < endNow)
+        return void res.status(403).json({ ok: false, error: "Systems are cut from a boxel on the PC running the app." });
+    }
     if (typeof body.cutFrom === "number") done = opts.savedBoxels.cutFrom(id, body.cutFrom);
     else if (typeof body.skip === "number")
       done = opts.savedBoxels.setSkipped(id, body.skip, body.on !== false);
