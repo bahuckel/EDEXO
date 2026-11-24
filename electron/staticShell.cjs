@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /**
@@ -23,6 +24,7 @@ const fs = require("fs");
 const path = require("path");
 
 /** The types express.static would send for what the web root holds. Anything else goes to the server. */
+/** @type {Readonly<Record<string, string>>} */
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -69,8 +71,13 @@ function shellFileFor(webRoot, pathname) {
   return abs;
 }
 
-/** @param {string} abs */
+/**
+ * @param {string} abs
+ * @param {string} csp
+ * @returns {Record<string, string>}
+ */
 function headersFor(abs, csp) {
+  /** @type {Record<string, string>} */
   const h = { "Content-Type": TYPES[path.extname(abs).toLowerCase()] };
   const norm = abs.replace(/\\/g, "/").toLowerCase();
   if (norm.endsWith(".html")) {
@@ -94,6 +101,7 @@ function headersFor(abs, csp) {
 function installStaticShell(o) {
   const origin = new URL(o.baseUrl).origin;
   let served = 0;
+  /** @type {import("electron").Session[]} */
   const installed = [];
   for (const ses of o.sessions) {
     try {

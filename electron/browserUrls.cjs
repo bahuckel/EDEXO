@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -11,6 +12,8 @@ const { httpUrl } = require("./browserPrefs.cjs");
 /**
  * Hosts plain HTTP is never upgraded for: this machine and the home network. The private ranges as addresses only
  * (review 2026-11-10 D7: "10.example.com" and "192.168.evil.com" are public names, and were sent plain).
+ * @param {string} host
+ * @returns {boolean}
  */
 function isLocalHost(host) {
   const ipv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
@@ -26,6 +29,9 @@ function isLocalHost(host) {
 /**
  * What the address bar's text means: an http(s) URL, a host name ("edsm.net", "localhost:7111"), or a search.
  * Anything with another scheme (file:, javascript:, chrome: …) is searched for, never opened.
+ * @param {unknown} text
+ * @param {(query: string) => string} searchUrl
+ * @returns {string | null}
  */
 function resolveTyped(text, searchUrl) {
   const t = String(text ?? "")
@@ -45,6 +51,8 @@ function resolveTyped(text, searchUrl) {
 /**
  * Inara's commodity search (owner, 2026-10-22: "Inara inside the EDEXO Browser"): the only pages the EDEXO pop-up
  * reads. https only, inara.cz or www.inara.cz, the /elite/commodities/ path.
+ * @param {unknown} url
+ * @returns {boolean}
  */
 function isInaraCommodityPage(url) {
   try {
