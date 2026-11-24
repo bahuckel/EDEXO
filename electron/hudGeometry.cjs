@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -34,8 +35,13 @@ const HUD_DEFAULT_PATH = "/distance-overlay.html";
 const HUD_DEFAULT_WIDTH = 404;
 const HUD_DEFAULT_HEIGHT = 330;
 
+/**
+ * @param {unknown} opts  `{ pathname }` from the launcher or a paired device
+ * @param {string} [fallback]
+ * @returns {string}
+ */
 function hudPathFrom(opts, fallback = HUD_DEFAULT_PATH) {
-  const o = opts && typeof opts === "object" ? opts : {};
+  const o = /** @type {{ pathname?: unknown }} */ (opts && typeof opts === "object" ? opts : {});
   const raw = typeof o.pathname === "string" && o.pathname.trim() ? o.pathname.trim() : fallback;
   return raw.startsWith("/") ? raw : `/${raw}`;
 }
@@ -48,19 +54,23 @@ function hudPathFrom(opts, fallback = HUD_DEFAULT_PATH) {
 const HUD_MIN_WIDTH = 200;
 const HUD_MAX_WIDTH = 1600;
 
+/** @param {unknown} opts @returns {number} */
 function hudWidthFrom(opts) {
-  const n = Number(opts && typeof opts === "object" ? opts.width : NaN);
+  const n = Number(opts && typeof opts === "object" ? /** @type {{ width?: unknown }} */ (opts).width : NaN);
   return Number.isFinite(n) && n > 0 ? Math.max(HUD_MIN_WIDTH, Math.min(HUD_MAX_WIDTH, Math.floor(n))) : HUD_DEFAULT_WIDTH;
 }
 
+/** @param {unknown} opts @returns {number} */
 function hudHeightFrom(opts) {
-  const n = Number(opts && typeof opts === "object" ? opts.height : NaN);
+  const n = Number(opts && typeof opts === "object" ? /** @type {{ height?: unknown }} */ (opts).height : NaN);
   return Number.isFinite(n) && n > 0 ? Math.max(HUD_MIN_HEIGHT, Math.min(HUD_MAX_HEIGHT, Math.floor(n))) : HUD_DEFAULT_HEIGHT;
 }
 
 /**
  * The slot identity: the page, not its query string (the merged HUD changes sections via the query) — except a
  * chained group's `g`, so several groups can be open at once (owner, 2026-11-01: chain two panels into one).
+ * @param {string} pathNorm
+ * @returns {string}
  */
 function hudSlotKey(pathNorm) {
   const [page, query = ""] = String(pathNorm).split("?");
@@ -76,6 +86,7 @@ function hudSlotKey(pathNorm) {
   the two equal).
 */
 const HUD_MERGED_PAGE = "/hud-overlay.html";
+/** @type {Readonly<Record<string, string>>} */
 const HUD_SECTION_BY_PATH = {
   "/jump-overlay.html": "jump",
   "/fss-scan-overlay.html": "fss",
@@ -91,7 +102,11 @@ const HUD_SECTION_BY_PATH = {
 };
 const HUD_PATH_BY_SECTION = Object.fromEntries(Object.entries(HUD_SECTION_BY_PATH).map(([p, s]) => [s, p]));
 
-/** The sections a window shows: its own one, or the merged page's `s` (every section when absent). */
+/**
+ * The sections a window shows: its own one, or the merged page's `s` (every section when absent).
+ * @param {string} pathNorm
+ * @returns {string[]}
+ */
 function hudSectionsOf(pathNorm) {
   const [page, query = ""] = String(pathNorm).split("?");
   if (page !== HUD_MERGED_PAGE) return HUD_SECTION_BY_PATH[page] ? [HUD_SECTION_BY_PATH[page]] : [];
@@ -101,14 +116,14 @@ function hudSectionsOf(pathNorm) {
   return decodeURIComponent(m[1]).split(",").filter((x) => all.includes(x));
 }
 
-/** A chained group's id, or null for any other window. */
+/** A chained group's id, or null for any other window. @param {string} pathNorm @returns {number | null} */
 function hudGroupOf(pathNorm) {
   const query = String(pathNorm).split("?")[1] || "";
   const g = /(?:^|&)g=(\d+)/.exec(query);
   return g ? Number(g[1]) : null;
 }
 
-/** The page of a group: its sections in the order given, and its id. */
+/** The page of a group: its sections in the order given, and its id. @param {string[]} sections @param {number} g */
 function hudGroupPath(sections, g) {
   return `${HUD_MERGED_PAGE}?s=${sections.join(",")}&g=${g}`;
 }
@@ -119,12 +134,18 @@ const HUD_CHAIN_GAP = 40;
 /**
  * Which HUDs touch, for the chain buttons: for each window, the one right below it (`below`) and the one right of it
  * (`right`), by key; the nearest when several are. `rects`: { key, x, y, width, height } in screen pixels.
+ * @param {{ key: string; x: number; y: number; width: number; height: number }[]} rects
+ * @returns {Record<string, { below: string | null; right: string | null }>}
  */
 function hudChainOffers(rects) {
+  /** @type {Record<string, { below: string | null; right: string | null }>} */
   const out = {};
+  /** @param {number} a0 @param {number} a1 @param {number} b0 @param {number} b1 */
   const overlap = (a0, a1, b0, b1) => Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
   for (const a of rects) {
+    /** @type {{ key: string; d: number } | null} */
     let below = null;
+    /** @type {{ key: string; d: number } | null} */
     let right = null;
     for (const b of rects) {
       if (b === a) continue;
@@ -142,21 +163,29 @@ function hudChainOffers(rects) {
   return out;
 }
 
-/** A saved free spot, or null when it is not one (a hand-edited file). */
+/**
+ * A saved free spot, or null when it is not one (a hand-edited file).
+ * @param {unknown} v
+ * @returns {{ x: number; y: number; bottom: boolean } | null}
+ */
 function freePointFrom(v) {
   if (!v || typeof v !== "object") return null;
-  const x = Number(v.x);
-  const y = Number(v.y);
+  const o = /** @type {{ x?: unknown; y?: unknown; bottom?: unknown }} */ (v);
+  const x = Number(o.x);
+  const y = Number(o.y);
   if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > 1e5 || Math.abs(y) > 1e5) return null;
-  return { x: Math.round(x), y: Math.round(y), bottom: v.bottom === true };
+  return { x: Math.round(x), y: Math.round(y), bottom: o.bottom === true };
 }
 
 /**
  * The unmerged HUDs' own spots, by page key (owner, 2026-11-01: "When the HUD is not merged, every module is moved
  * separately in the free move mode"): each a free spot as above; anything else dropped. At most 16 (the stack's cap).
+ * @param {unknown} v
+ * @returns {Record<string, { x: number; y: number; bottom: boolean }> | null}
  */
 function freeEachFrom(v) {
   if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  /** @type {Record<string, { x: number; y: number; bottom: boolean }>} */
   const out = {};
   for (const [k, p] of Object.entries(v).slice(0, 16)) {
     const f = freePointFrom(p);
@@ -171,8 +200,16 @@ function freeEachFrom(v) {
   there were pushed up over the ones above). Each column holds what fits in `room`; a window taller
   than that gets a column to itself. Returns the indexes, column by column.
 */
+/**
+ * @param {(number | null | undefined)[]} heights  null for a window that takes no room
+ * @param {number} room
+ * @param {number} [gap]
+ * @returns {number[][]}
+ */
 function splitIntoColumns(heights, room, gap = HUD_STACK_GAP) {
+  /** @type {number[][]} */
   const cols = [];
+  /** @type {number[]} */
   let col = [];
   let used = 0;
   heights.forEach((h, i) => {
@@ -190,7 +227,16 @@ function splitIntoColumns(heights, room, gap = HUD_STACK_GAP) {
   return cols;
 }
 
-/** The x of column `c`: the next one goes inwards, away from the screen edge it started at. */
+/**
+ * The x of column `c`: the next one goes inwards, away from the screen edge it started at.
+ * @param {number} x0
+ * @param {number} c
+ * @param {number} w
+ * @param {{ x: number; width: number }} area
+ * @param {boolean} leftwards
+ * @param {number} [gap]
+ * @returns {number}
+ */
 function columnX(x0, c, w, area, leftwards, gap = HUD_STACK_GAP) {
   const step = (w + gap) * c * (leftwards ? -1 : 1);
   return Math.max(area.x, Math.min(x0 + step, area.x + area.width - w));
