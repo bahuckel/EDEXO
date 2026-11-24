@@ -62,6 +62,8 @@ export function EncyclopediaThumb({
 
   /** A WebP variant (320 px ~6 KB, 1024 px ~44 KB) rather than the original (~600 KB average). */
   const thumbUrl = speciesPhotoVariant(photoUrl, size);
+  // Its 16 px blur under it until it is in, as on the species cards (UI ideas 2026-11-16 §4.5).
+  const blurUrl = photoUrl.startsWith("/species-photos/") ? speciesPhotoVariant(photoUrl, "blur") : null;
 
   return (
     <img
@@ -71,6 +73,8 @@ export function EncyclopediaThumb({
       height={88}
       decoding="async"
       className={className}
+      data-blur={blurUrl ? "" : undefined}
+      style={blurUrl ? { backgroundImage: `url("${blurUrl}")` } : undefined}
       onError={(ev) => {
         const el = ev.target as HTMLImageElement;
         if (!retriedRef.current && !photoUrl.includes(BUILTIN_PLACEHOLDER)) {
