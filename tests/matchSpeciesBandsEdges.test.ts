@@ -34,7 +34,9 @@ const scan = (extra: Partial<PlanetScan> = {}): PlanetScan => ({
 });
 
 describe("the corpus check at a temperature edge", () => {
-  beforeEach(() => near.mockClear());
+  beforeEach(() => {
+    near.mockClear();
+  });
 
   it("below the band: a bin ending at or under the edge answers alone", () => {
     expect(sightingsBeyondEdge(entry, { binLowK: 160, binHighK: 179 }, 175, 180, 200)).toEqual(NOTHING);
@@ -155,11 +157,12 @@ describe("the body values the measured-exclusion rules read", () => {
         SurfaceTemperature: Number.NaN,
         MassEM: "5" as unknown as number,
         OrbitalPeriod: "86400" as unknown as number,
-        RotationPeriod: Number.POSITIVE_INFINITY,
+        RotationPeriod: "86400" as unknown as number,
+        Eccentricity: Number.POSITIVE_INFINITY,
       }),
       undefined,
     );
-    expect([v.temp, v.mass, v.orb_d, v.rot_d]).toEqual([undefined, undefined, undefined, undefined]);
+    expect([v.temp, v.mass, v.orb_d, v.rot_d, v.ecc]).toEqual([undefined, undefined, undefined, undefined, undefined]);
   });
 
   it("keys gases and materials by name without spaces, keeps the larger share, skips unreadable rows", () => {
