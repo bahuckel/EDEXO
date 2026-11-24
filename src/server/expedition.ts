@@ -158,6 +158,47 @@ export function boxelsWithin(
 }
 
 /**
+ * The mass codes a whole-galaxy hunt lists (owner 2026-11-15, plan-1.4.0 §6.2: "entire galaxy search"): one h boxel
+ * per named sector (11,662) and eight g (93,296). f would be 746,368, too many to score on the app's own thread, and
+ * the rarest stars sit in the big boxels anyway (h: black holes 44 %, Wolf-Rayet 26 %; shared/boxelAdvice.ts).
+ */
+export const GALAXY_CODES: readonly MassCode[] = ["g", "h"];
+
+/** Every boxel of the codes in every named sector of the galaxy (data/boxel/sector-names.json), with its distance from `from`. */
+export function boxelsInGalaxy(codes: readonly MassCode[], names: SectorNames, from: Xyz): ExpeditionBoxel[] {
+  const out: ExpeditionBoxel[] = [];
+  const o = SECTOR_ORIGIN;
+  for (const code of codes) {
+    const size = boxelCubeLy(code);
+    const per = boxelsPerAxis(code);
+    for (const [k, sector] of names.byCell) {
+      const cell = k.split(",").map(Number) as [number, number, number];
+      for (let bz = 0; bz < per; bz++)
+        for (let by = 0; by < per; by++)
+          for (let bx = 0; bx < per; bx++) {
+            const c = {
+              x: o.x + (cell[0] * per + bx + 0.5) * size,
+              y: o.y + (cell[1] * per + by + 0.5) * size,
+              z: o.z + (cell[2] * per + bz + 0.5) * size,
+            };
+            const position = bx + 128 * by + 16384 * bz;
+            out.push({
+              code,
+              cell,
+              position,
+              name: `${sector.name} ${boxelNameAt(code, position)}`,
+              mixed: sector.mixed,
+              center: c,
+              cubeLy: size,
+              distanceLy: Math.hypot(c.x - from.x, c.y - from.y, c.z - from.z),
+            });
+          }
+    }
+  }
+  return out;
+}
+
+/**
  * A boxel's place on its mass code's global grid as one number (gx + 2^14 gy + 2^28 gz; the galaxy is under
  * 10,000 a-boxels across): what the recorded count is keyed on, so a pass over 1.7 M systems builds no strings.
  */

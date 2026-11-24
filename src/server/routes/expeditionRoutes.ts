@@ -86,6 +86,8 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
     try {
       const radius = Number(req.query.radius);
       const species = typeof req.query.species === "string" && req.query.species.trim() ? req.query.species.trim().slice(0, 80) : null;
+      // The whole galaxy (plan-1.4.0 §6.2): its codes are the target's commonest unless asked for.
+      const galaxy = req.query.galaxy === "1";
       res.json(
         await expeditionField(
           {
@@ -95,7 +97,8 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
             speciesId: species,
             minEv: Math.max(0, Number(req.query.minEv) || 0),
             limit: Number(req.query.limit) || undefined,
-            codes: parseCodes(req.query.codes),
+            codes: galaxy && !req.query.codes ? undefined : parseCodes(req.query.codes),
+            galaxy,
             // Each in its own mass code's boxel (the name's letter, or the address when it is exact).
             visitedPoints: (opts.getMySystems?.().systems ?? []).map((v) => ({
               x: v.x,

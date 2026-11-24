@@ -73,6 +73,11 @@ export interface ExpeditionFieldDTO {
   /** A route's end and corridor, or null for a sphere. */
   to?: { x: number; y: number; z: number } | null;
   widthLy?: number | null;
+  /** A whole-galaxy hunt (plan-1.4.0 §6.2) and the mass codes it listed; absent for a sphere or a route. */
+  galaxy?: boolean;
+  codes?: string[];
+  /** A whole-galaxy hunt for bodies, stars or worth: the mass codes where it is commonest of all (the list may hold none of them). */
+  commonestCodes?: string[];
   /** The species' position rule, or null when it has none (or no species is picked). */
   rule: ExpeditionRuleDTO | null;
   boxels: ExpeditionBoxelDTO[];

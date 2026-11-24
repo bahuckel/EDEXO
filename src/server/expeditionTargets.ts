@@ -131,6 +131,28 @@ export function expectedMatches(
   return remaining * ((1 - p) * plain + p * withBio);
 }
 
+/**
+ * The mass codes of `among` where the target is commonest per system, for a whole-galaxy hunt (owner 2026-11-15: "it
+ * scans unfinished H boxels because that's where they are located most often"): every code at half the best share
+ * or more. Exobiology, or a target no code holds, keeps them all.
+ */
+export function galaxyCodesFor(target: ExpeditionTarget, table: FeatureTable, among: readonly MassCode[]): MassCode[] {
+  if (target.kind === "exobio") return [...among];
+  const share = (code: MassCode): number => {
+    const cell = table.byMass[code];
+    if (!cell || cell.complete <= 0) return 0;
+    if (target.kind === "star") return starShare(cell, target.star);
+    if (target.kind === "body") {
+      const b = cell.bodies[target.body];
+      return b ? (target.body === "gg" ? b.n : b.with) / cell.complete : 0;
+    }
+    return shareAtLeast(cell, table.valueEdgesM, target.minM);
+  };
+  const shares = among.map((c) => ({ c, s: share(c) }));
+  const best = Math.max(0, ...shares.map((x) => x.s));
+  return best > 0 ? shares.filter((x) => x.s >= best / 2).map((x) => x.c) : [...among];
+}
+
 /** Every main star type the table knows, commonest first: the Stars filter's list. */
 export function starTypes(table: FeatureTable): { name: string; systems: number }[] {
   const sum = new Map<string, number>();

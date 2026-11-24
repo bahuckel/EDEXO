@@ -43,6 +43,14 @@ const RADII = [250, 500, 1000, 2000, 3000];
 const MIN_PER_JUMP = [0, 5, 10, 25, 50, 100];
 const LIST_ROWS = 12;
 const ROUTE_WIDTHS = [100, 250, 500, 1000];
+/** A whole-galaxy hunt's boxels (server: GALAXY_CODES): the target's commonest, or one or both by hand. */
+const GALAXY_CODE_CHOICES: { value: string; label: string }[] = [
+  { value: "", label: "Where it is commonest" },
+  { value: "h", label: "h boxels (1,280 ly)" },
+  { value: "g", label: "g boxels (640 ly)" },
+  { value: "gh", label: "g and h" },
+];
+type Mode = "sphere" | "route" | "galaxy";
 
 type LookFor = "exobio" | "bodies" | "stars" | "systems";
 interface EndPoint {
@@ -122,6 +130,15 @@ function boxelLine(b: ExpeditionBoxelDTO, species: boolean, targetLabel: string 
     : `${crShort(b.evPerJump)} CR per jump · ${b.systems} systems${genera ? ` · ${genera}` : ""}`;
 }
 
+/**
+ * Its share nobody has flown: the estimate less what is known — his own systems, or the ones flown without biology
+ * plus the ones with biology recorded, whichever is more (his are among them).
+ */
+export function unflownShare(b: ExpeditionBoxelDTO): number {
+  if (!(b.systems > 0)) return 0;
+  return Math.max(0, b.systems - Math.max(b.visited, (b.barren ?? 0) + b.recorded)) / b.systems;
+}
+
 /** Where a boxel is: its distance from the ship, or on a route the detour of going by it. */
 function whereOf(b: ExpeditionBoxelDTO): string {
   return b.detourLy != null ? `${fmtLy(b.detourLy)} off the route` : fmtLy(b.distanceLy);
@@ -171,7 +188,8 @@ export function ExpeditionDrawer({
   const [error, setError] = useState<string | null>(null);
   const [speciesList, setSpeciesList] = useState<{ id: string; name: string; genus: string }[]>([]);
   // Plan 5.2 (owner, 2026-10-12): a sphere or a route to a system, and what to look for.
-  const [mode, setMode] = useState<"sphere" | "route">("sphere");
+  const [mode, setMode] = useState<Mode>("sphere");
+  const [galaxyCodes, setGalaxyCodes] = useState("");
   const [end, setEnd] = useState<EndPoint | null>(null);
   const [widthLy, setWidthLy] = useState(250);
   const [lookFor, setLookFor] = useState<LookFor>("exobio");
@@ -283,6 +301,7 @@ export function ExpeditionDrawer({
       z: String(from.z),
       radius: String(radius),
       limit: "500",
+      ...(mode === "galaxy" ? { galaxy: "1", ...(galaxyCodes ? { codes: galaxyCodes } : {}) } : {}),
       ...(lookFor === "exobio" && species ? { species } : {}),
       ...(target ? { target } : {}),
       ...(route ? { toX: String(route.x), toY: String(route.y), toZ: String(route.z), width: String(widthLy) } : {}),
@@ -301,7 +320,7 @@ export function ExpeditionDrawer({
       });
     return () => ac.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromKey, radius, species, lookFor, target, route?.name, widthLy, mode]);
+  }, [fromKey, radius, species, lookFor, target, route?.name, widthLy, mode, galaxyCodes]);
 
   useEffect(() => {
     if (!planKeys.length || !ship) {
@@ -333,13 +352,17 @@ export function ExpeditionDrawer({
     <aside className="g3d-drawer g3d-menu g3d-plan" aria-label="Expedition" data-testid="g3d-expedition">
       <MenuHead title="Expedition" help={G3D_HELP.expedition} />
       <div className="g3d-menu__section g3d-menu__section--first">
-        <MenuRow label="Type" hint="A sphere round your ship (or the selected point), or a route to a system: the boxels along the way">
-          <select className="g3d-select g3d-row__val" value={mode} onChange={(e) => setMode(e.target.value as "sphere" | "route")} aria-label="Type">
+        <MenuRow
+          label="Type"
+          hint="A sphere round your ship (or the selected point), a route to a system (the boxels along the way), or every big boxel in the galaxy, nearest first"
+        >
+          <select className="g3d-select g3d-row__val" value={mode} onChange={(e) => setMode(e.target.value as Mode)} aria-label="Type">
             <option value="sphere">Sphere</option>
             <option value="route">To a system</option>
+            <option value="galaxy">Whole galaxy</option>
           </select>
         </MenuRow>
-        {mode === "sphere" ? (
+        {mode === "sphere" || mode === "galaxy" ? (
           <>
             <MenuRow label="From" hint="Score the boxels around your ship, or around the point selected on the map">
               <select
@@ -354,15 +377,30 @@ export function ExpeditionDrawer({
                 </option>
               </select>
             </MenuRow>
-            <MenuRow label="Radius" hint="How far out to score boxels (the smallest boxels drop out past their limit)">
-              <select className="g3d-select g3d-row__val" value={radius} onChange={(e) => setRadius(Number(e.target.value))} aria-label="Radius">
-                {RADII.map((r) => (
-                  <option key={r} value={r}>
-                    {r.toLocaleString("en-US")} ly
-                  </option>
-                ))}
-              </select>
-            </MenuRow>
+            {mode === "sphere" ? (
+              <MenuRow label="Radius" hint="How far out to score boxels (the smallest boxels drop out past their limit)">
+                <select className="g3d-select g3d-row__val" value={radius} onChange={(e) => setRadius(Number(e.target.value))} aria-label="Radius">
+                  {RADII.map((r) => (
+                    <option key={r} value={r}>
+                      {r.toLocaleString("en-US")} ly
+                    </option>
+                  ))}
+                </select>
+              </MenuRow>
+            ) : (
+              <MenuRow
+                label="Boxels"
+                hint="Which boxels of the whole galaxy to score: by default the size where what you look for is commonest (Wolf-Rayet stars and black holes: h)"
+              >
+                <select className="g3d-select g3d-row__val" value={galaxyCodes} onChange={(e) => setGalaxyCodes(e.target.value)} aria-label="Boxels">
+                  {GALAXY_CODE_CHOICES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </MenuRow>
+            )}
           </>
         ) : (
           <>
@@ -460,7 +498,9 @@ export function ExpeditionDrawer({
         ) : field ? (
           <p className="dim g3d-panel__note" data-testid="g3d-expedition-status">
             {field.scored.toLocaleString("en-US")} boxels scored{" "}
-            {field.to
+            {field.galaxy
+              ? `across the galaxy (${(field.codes ?? []).join(" and ")} boxels), nearest first through the jumps`
+              : field.to
               ? `along ${fmtLy(Math.hypot(field.to.x - field.from.x, field.to.y - field.from.y, field.to.z - field.from.z))} to ${end?.name ?? "the end"}, ${(field.widthLy ?? 0).toLocaleString("en-US")} ly either side`
               : `within ${field.radiusLy.toLocaleString("en-US")} ly`}
             {field.skipped.length ? ` (${field.skipped.join(", ")} boxels left out: too many at this radius)` : ""} · jump range{" "}
@@ -489,6 +529,7 @@ export function ExpeditionDrawer({
                 </strong>
                 <span className="tw:text-2xs tw:text-text-dim">
                   {whereOf(b)} · {boxelLine(b, isSpecies, label)}
+                  {field?.galaxy ? ` · ${Math.round(unflownShare(b) * 100)} % unflown` : ""}
                 </span>
               </button>
               <button
@@ -503,7 +544,14 @@ export function ExpeditionDrawer({
             </li>
           ))}
         </ol>
-        {field && !rows.length && !busy ? <p className="dim g3d-panel__note">Nothing here meets that.</p> : null}
+        {field?.galaxy && field.commonestCodes?.length && !field.commonestCodes.some((c) => field.codes?.includes(c)) && !busy ? (
+          <p className="g3d-panel__note" data-testid="g3d-expedition-galaxy-note">
+            These are commonest in {field.commonestCodes.join(" and ")} boxels, too many to list across the whole galaxy: score them with
+            Sphere or To a system.
+          </p>
+        ) : field && !rows.length && !busy ? (
+          <p className="dim g3d-panel__note">Nothing here meets that.</p>
+        ) : null}
       </div>
       {plan?.stops.length ? (
         <div className="g3d-menu__section" data-testid="g3d-expedition-plan">

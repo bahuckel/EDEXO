@@ -20,6 +20,7 @@ import {
   boxelsAlong,
   expectedMatches,
   featureCellFor,
+  galaxyCodesFor,
   loadFeatureTable,
   type ExpeditionTarget,
 } from "./expeditionTargets.js";
@@ -35,10 +36,12 @@ import {
   boxelEVForSpecies,
   boxelFromKey,
   boxelKey,
+  boxelsInGalaxy,
   boxelsWithin,
   candidateSystems,
   EXPEDITION_CODES,
   evPerJump,
+  GALAXY_CODES,
   genusKey,
   genusValues,
   loadEvTable,
@@ -62,6 +65,10 @@ export const DEFAULT_JUMP_RANGE_LY = 50;
 export const DEFAULT_ROUTE_WIDTH_LY = 250;
 export const MAX_ROUTE_WIDTH_LY = 1000;
 const CACHE_MS = 10 * 60_000;
+/** A whole-galaxy hunt counts recorded systems this far from the ship: everywhere. */
+const GALAXY_REACH_LY = 1_000_000;
+/** Boxels scored between two yields of a sliced pass (a whole-galaxy hunt scores 105k). */
+const BOXELS_PER_STEP = 2048;
 
 export interface ExpeditionDeps {
   root: string;
@@ -265,19 +272,36 @@ export async function expeditionField(
     /** A route to this point instead of a sphere round `from`: boxels within `widthLy` of the line. */
     to?: Xyz | null;
     widthLy?: number;
+    /**
+     * Every boxel of the galaxy instead of a sphere (owner 2026-11-15, plan-1.4.0 §6.2): the g and h codes, by default
+     * those where the target is commonest (`galaxyCodesFor`), nearest first through the jumps they take.
+     */
+    galaxy?: boolean;
   },
   deps: ExpeditionDeps,
 ): Promise<ExpeditionFieldDTO> {
   const radiusLy = Math.max(10, Math.min(MAX_RADIUS_LY, q.radiusLy || DEFAULT_RADIUS_LY));
   const jumpRangeLy = q.jumpRangeLy && q.jumpRangeLy > 0 ? q.jumpRangeLy : DEFAULT_JUMP_RANGE_LY;
-  const codes = q.codes?.length ? q.codes : [...EXPEDITION_CODES];
   const entry = q.speciesId ? (deps.species.find((e) => e.id === q.speciesId) ?? null) : null;
   const limit = Math.max(1, Math.min(MAX_FIELD_BOXELS, q.limit ?? MAX_FIELD_BOXELS));
   const target: ExpeditionTarget = q.target ?? { kind: "exobio" };
+  const features = target.kind === "exobio" ? null : loadFeatureTable(deps.root);
+  const galaxy = q.galaxy === true;
+  const askedGalaxyCodes = (q.codes ?? []).filter((c) => GALAXY_CODES.includes(c));
+  const codes = galaxy
+    ? askedGalaxyCodes.length
+      ? askedGalaxyCodes
+      : features
+        ? galaxyCodesFor(target, features, GALAXY_CODES)
+        : [...GALAXY_CODES]
+    : q.codes?.length
+      ? q.codes
+      : [...EXPEDITION_CODES];
   const targetKey = target.kind === "body" ? `body:${target.body}` : target.kind === "star" ? `star:${target.star}` : target.kind === "value" ? `value:${target.minM}` : "exobio";
-  const to = q.to ?? null;
+  const to = galaxy ? null : (q.to ?? null);
   const widthLy = Math.max(50, Math.min(MAX_ROUTE_WIDTH_LY, q.widthLy || DEFAULT_ROUTE_WIDTH_LY));
   const key = [
+    galaxy ? "galaxy" : "",
     targetKey,
     to ? `${Math.round(to.x / 10)},${Math.round(to.y / 10)},${Math.round(to.z / 10)},${widthLy}` : "",
     Math.round(q.from.x / 10), Math.round(q.from.y / 10), Math.round(q.from.z / 10),
@@ -294,66 +318,83 @@ export async function expeditionField(
   // A sphere round the ship, or a tube along the route (plan 5.2); the recorded systems are counted in a
   // sphere that holds either.
   const along = to ? boxelsAlong(q.from, to, widthLy, codes, names) : null;
-  const { boxels, skipped } = along ?? boxelsWithin(q.from, radiusLy, codes, names);
+  const { boxels, skipped } = galaxy
+    ? { boxels: boxelsInGalaxy(codes, names, q.from), skipped: [] as MassCode[] }
+    : (along ?? boxelsWithin(q.from, radiusLy, codes, names));
   const mid = to ? { x: (q.from.x + to.x) / 2, y: (q.from.y + to.y) / 2, z: (q.from.z + to.z) / 2 } : q.from;
   /*
     A route keeps boxels whose centre is up to the width plus a half-diagonal past either end (boxelsAlong), so their
     systems reach one more half-diagonal: the counters (which add one half-diagonal themselves) are given the other.
   */
   const halfDiag = Math.max(0, ...codes.map((c) => (boxelCubeLy(c) * Math.sqrt(3)) / 2));
-  const reach = to ? Math.hypot(to.x - q.from.x, to.y - q.from.y, to.z - q.from.z) / 2 + widthLy + halfDiag : radiusLy;
+  const reach = galaxy
+    ? GALAXY_REACH_LY
+    : to
+      ? Math.hypot(to.x - q.from.x, to.y - q.from.y, to.z - q.from.z) / 2 + widthLy + halfDiag
+      : radiusLy;
   const recorded = await recordedNear(deps.index, mid, reach, codes.filter((c) => !skipped.includes(c)));
   const mine = new RecordedCounter(mid, reach, codes.filter((c) => !skipped.includes(c)));
-  const features = target.kind === "exobio" ? null : loadFeatureTable(deps.root);
   for (const p of q.visitedPoints ?? []) mine.add(p.x, p.y, p.z, p.code);
   const share = entry ? shareInGenus(entry, deps.species) : 0;
   const gate = entry ? gateForSpeciesId(entry.id) : null;
   // Cut round the field that is scored: the sphere, or the whole route's tube (it was the ship's sphere, so a boxel
   // by a nebula 3 kly down the route failed its rule against points near the ship).
-  const catalogue = gate
+  const catalogue = gate && !galaxy
     ? catalogueNear(deps.catalogue, mid, reach + gate.thresholdLy + (gate.records?.withinLy ?? 0) + 1280 * Math.sqrt(3) / 2)
     : deps.catalogue;
   const scored: ExpeditionBoxelDTO[] = [];
   let passing = 0;
-  for (const b of boxels) {
-    const region = deps.regionMap ? regionForCoords(deps.regionMap, b.center.x, b.center.y, b.center.z) : null;
-    const rec = recorded.countIn(b);
-    const vis = mine.countIn(b);
-    const barren = barrenIn(barrenTable, b.code, gridIdOf(b));
-    const s = boxelEV(b, { table, region, genusValue, recorded: rec, visited: vis, barren });
-    const routed = b as typeof b & { detourLy?: number; offLy?: number; t?: number };
-    const dto = dtoOf(b, region, s, rec, jumpRangeLy, vis, routed.detourLy);
-    if (routed.detourLy != null) {
-      dto.detourLy = Math.round(routed.detourLy);
-      dto.offLy = Math.round(routed.offLy ?? 0);
-      dto.along = Math.round((routed.t ?? 0) * 1000) / 1000;
-    }
-    if (features) {
-      const cell = featureCellFor(features, region, b.code);
-      // A bio system carries the boxel's exobiology: its EV over the bio systems expected in it.
-      const bioSystems = Math.max(0, s.remaining * s.pBio - s.recorded);
-      const m = expectedMatches(target, cell, features, s.remaining, {
-        p: s.remaining > 0 ? bioSystems / s.remaining : 0,
-        perBioSystem: bioSystems > 0 ? s.ev / bioSystems : 0,
-      });
-      if (!(m > 0)) continue;
-      dto.matches = Math.round(m * 1000) / 1000;
-      dto.matchesPerJump = Math.round((m / dto.jumps) * 10000) / 10000;
+  // In slices: a whole-galaxy hunt scores 105k boxels on the app's own thread (the server runs in Electron's main process).
+  function* scoreAll(): Generator<void, void> {
+    let step = 0;
+    for (const b of boxels) {
+      if (++step % BOXELS_PER_STEP === 0) yield;
+      const region = deps.regionMap ? regionForCoords(deps.regionMap, b.center.x, b.center.y, b.center.z) : null;
+      const rec = recorded.countIn(b);
+      const vis = mine.countIn(b);
+      const barren = barrenIn(barrenTable, b.code, gridIdOf(b));
+      const s = boxelEV(b, { table, region, genusValue, recorded: rec, visited: vis, barren });
+      const routed = b as typeof b & { detourLy?: number; offLy?: number; t?: number };
+      const dto = dtoOf(b, region, s, rec, jumpRangeLy, vis, routed.detourLy);
+      if (routed.detourLy != null) {
+        dto.detourLy = Math.round(routed.detourLy);
+        dto.offLy = Math.round(routed.offLy ?? 0);
+        dto.along = Math.round((routed.t ?? 0) * 1000) / 1000;
+      }
+      if (features) {
+        const cell = featureCellFor(features, region, b.code);
+        /*
+          The systems nobody has flown: his own, the barren ones and the ones with biology recorded are all known, and
+          the recorded ones had been left in (2026-11-24, for the whole-galaxy hunt, where well-flown boxels ranked as
+          if untouched). Barren and recorded are apart (one has biology, the other none); his own are among them.
+        */
+        const unflown = Math.max(0, s.systems - Math.max(vis, s.barren + rec));
+        // A bio system carries the boxel's exobiology: its EV over the bio systems expected in it.
+        const bioSystems = Math.max(0, s.remaining * s.pBio - s.recorded);
+        const m = expectedMatches(target, cell, features, unflown, {
+          p: unflown > 0 ? Math.min(1, bioSystems / unflown) : 0,
+          perBioSystem: bioSystems > 0 ? s.ev / bioSystems : 0,
+        });
+        if (!(m > 0)) continue;
+        dto.matches = Math.round(m * 1000) / 1000;
+        dto.matchesPerJump = Math.round((m / dto.jumps) * 10000) / 10000;
+        scored.push(dto);
+        continue;
+      }
+      if (entry) {
+        const sp = boxelEVForSpecies(b, {
+          table, region, genus: entry.genus ?? "", speciesId: entry.id, shareInGenus: share, catalogue, recorded: rec, barren,
+        });
+        dto.speciesBodies = Math.round(sp.bodies * 1000) / 1000;
+        dto.passesGate = sp.passesGate;
+        if (sp.passesGate) passing++;
+        // Under half a thousandth of a body reads 0.000 in the list: not worth a row.
+        if (!(dto.speciesBodies > 0)) continue;
+      } else if (dto.ev < (q.minEv ?? 0)) continue;
       scored.push(dto);
-      continue;
     }
-    if (entry) {
-      const sp = boxelEVForSpecies(b, {
-        table, region, genus: entry.genus ?? "", speciesId: entry.id, shareInGenus: share, catalogue, recorded: rec, barren,
-      });
-      dto.speciesBodies = Math.round(sp.bodies * 1000) / 1000;
-      dto.passesGate = sp.passesGate;
-      if (sp.passesGate) passing++;
-      // Under half a thousandth of a body reads 0.000 in the list: not worth a row.
-      if (!(dto.speciesBodies > 0)) continue;
-    } else if (dto.ev < (q.minEv ?? 0)) continue;
-    scored.push(dto);
   }
+  await runSliced(scoreAll());
   scored.sort(
     features
       ? (a, b) => (b.matchesPerJump ?? 0) - (a.matchesPerJump ?? 0)
@@ -371,6 +412,14 @@ export async function expeditionField(
     target: targetKey,
     to: to ? { x: to.x, y: to.y, z: to.z } : null,
     widthLy: to ? widthLy : null,
+    ...(galaxy
+      ? {
+          galaxy: true,
+          codes,
+          // Where the target is commonest over every code: a neutron star is a d or e boxel's, which the galaxy cannot list.
+          ...(features ? { commonestCodes: galaxyCodesFor(target, features, MASS_CODE_LETTERS) } : {}),
+        }
+      : {}),
     rule: gate
       ? { text: ruleText(gate), ...rulePoints(gate, deps.catalogue, mid, reach), boxelsChecked: boxels.length, boxelsPassing: passing }
       : null,
