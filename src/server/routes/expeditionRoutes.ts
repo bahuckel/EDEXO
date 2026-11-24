@@ -27,7 +27,7 @@ import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { massCodeOfSystem } from "../../shared/id64.js";
 import type { MassCode } from "../../shared/boxelAdvice.js";
 import { systemPrefixOf } from "../expedition.js";
-import { huntLookupState, queueHuntLookups } from "../galaxyHuntLookups.js";
+import { huntLookupState, lastGalaxyHunt, queueHuntLookups, rememberHunt } from "../galaxyHuntLookups.js";
 import { expeditionCandidates, expeditionField, expeditionPlan, parseCodes, type ExpeditionDeps } from "../expeditionService.js";
 import { BODY_KINDS, circleSuggestions, loadFeatureTable, parseTarget, starTypes } from "../expeditionTargets.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
@@ -113,15 +113,57 @@ export function registerExpeditionRoutes(app: express.Express, opts: HttpServerO
           await deps(req.query.light === "1" ? "peek" : true),
         );
       if (!galaxy) return void res.json(field);
-      // Looking for bodies or stars, its nearest listed boxels go to Spansh one at a time (server/galaxyHuntLookups.ts).
-      if (field.target && field.target !== "exobio")
+      // The HUD's own ask (light) scores the hunt again from the ship; it starts nothing.
+      if (req.query.light === "1") return void res.json({ ...field, lookups: huntLookupState() });
+      // Looking for bodies or stars, its nearest listed boxels go to Spansh one at a time (server/galaxyHuntLookups.ts),
+      // and the HUD shows its best one.
+      if (field.target && field.target !== "exobio") {
+        rememberHunt(field.target, typeof req.query.codes === "string" ? req.query.codes : null);
         queueHuntLookups(
           field.boxels
             .filter((b) => b.name)
             .sort((a, b) => a.distanceLy - b.distanceLy)
             .map((b) => systemPrefixOf(b.name!)),
         );
+      }
       res.json({ ...field, lookups: huntLookupState() });
+    } catch (e) {
+      res.status(500).json({ error: errorText(e) });
+    }
+  });
+
+  /*
+    The HUD's hunt line (owner 2026-11-24): the last whole-galaxy hunt the galaxy map ran, its best boxel from where the
+    ship is now. Light, as the HUD's "Next boxel": it never makes the server load the galaxy index, and starts no look-up.
+  */
+  app.get("/api/expedition/hunt", async (req, res) => {
+    const hunt = lastGalaxyHunt();
+    const s = ship();
+    if (!hunt || !s.from) return void res.json({ hunt: null });
+    try {
+      const target = parseTarget(hunt.target);
+      const field = await expeditionField(
+        {
+          from: s.from,
+          radiusLy: 0,
+          jumpRangeLy: s.jumpRangeLy,
+          limit: 1,
+          galaxy: true,
+          target,
+          ...(hunt.codes ? { codes: parseCodes(hunt.codes) } : {}),
+        },
+        await deps("peek"),
+      );
+      const b = field.boxels[0];
+      res.json({
+        hunt: {
+          target: hunt.target,
+          label: target.kind === "star" ? target.star.replace(/ Star$/, "") : target.kind === "body" ? (BODY_KINDS.find((k) => k.key === target.body)?.label ?? target.body) : `worth ${hunt.target.slice(6)} M`,
+          boxel: b
+            ? { name: b.name ?? `${b.code} boxel`, distanceLy: b.distanceLy, matches: b.matches ?? 0, ...(b.spansh ? { spansh: b.spansh } : {}) }
+            : null,
+        },
+      });
     } catch (e) {
       res.status(500).json({ error: errorText(e) });
     }

@@ -123,6 +123,59 @@ function NextBoxel({ d }: { d: HudSnapshot }) {
 }
 
 /*
+  The hunt (owner 2026-11-24, plan-1.4.0 §6.2: "the same list on the 3D map and the HUD"): the last whole-galaxy hunt
+  started in the galaxy map's Expedition drawer, its best boxel from where the ship is now (/api/expedition/hunt).
+  Shown only once a hunt was run; asked once per system and every two minutes, so a new hunt shows without a jump.
+*/
+type Hunt = { label: string; boxel: { name: string; distanceLy: number; matches: number; spansh?: { known: number; found?: number } } | null };
+const HUNT_EVERY_MS = 120_000;
+const hunt: { key: string | null; at: number; value: Hunt | null } = { key: null, at: 0, value: null };
+const huntListeners = new Set<() => void>();
+let huntRev = 0;
+function askHunt(key: string): void {
+  if (!key || (key === hunt.key && Date.now() - hunt.at < HUNT_EVERY_MS)) return;
+  hunt.key = key;
+  hunt.at = Date.now();
+  fetch(api("/api/expedition/hunt"), { cache: "no-store" })
+    .then((r) => (r.ok ? (r.json() as Promise<{ hunt?: Hunt | null }>) : null))
+    .then((j) => {
+      hunt.value = j?.hunt ?? null;
+      huntRev++;
+      for (const l of huntListeners) l();
+    })
+    .catch(() => undefined);
+}
+
+function NextHunt({ d }: { d: HudSnapshot }) {
+  useSyncExternalStore(
+    (l) => {
+      huntListeners.add(l);
+      return () => huntListeners.delete(l);
+    },
+    () => huntRev,
+  );
+  const key = d.currentSystemAddress != null ? String(d.currentSystemAddress) : "";
+  useLayoutEffect(() => {
+    askHunt(key);
+  });
+  const h = hunt.value;
+  const b = h?.boxel ?? null;
+  return (
+    <div className="jump__boxel" data-f="hunt" hidden={!b}>
+      {h && b ? (
+        <>
+          <span className="jump__boxel-k">Hunt</span> {b.name}{" "}
+          <span className="jump__boxel-v">
+            {Math.round(b.distanceLy).toLocaleString("en-US")} ly · ≈{b.matches < 10 ? b.matches.toFixed(1) : Math.round(b.matches)} {h.label}
+            {b.spansh?.found ? ` · ${b.spansh.found} found` : ""}
+          </span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/*
   Boxel scanning (owner, 2026-10-06): what the boxel run or the F6 / F8 / F9 keys put on the clipboard,
   since a key press in the game shows nothing else — paste it in the galaxy map.
 */
@@ -516,6 +569,7 @@ function Jump({ d }: { d: HudSnapshot }) {
       <FsdHealth d={d} />
       <BoxelCopied d={d} />
       <NextBoxel d={d} />
+      <NextHunt d={d} />
     </>
   );
 }

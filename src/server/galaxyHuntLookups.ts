@@ -9,6 +9,20 @@ import type { BoxelLookupRecord, BoxelLookupService } from "./boxelLookup.js";
 import { LOOKUP_GAP_MS, starLabel } from "./boxelLookup.js";
 import type { ExpeditionTarget } from "./expeditionTargets.js";
 
+/**
+ * The last whole-galaxy hunt the galaxy map's drawer ran for bodies or stars (its target and the codes asked for),
+ * for the HUD's line (owner 2026-11-24: "HUD your way"). This session only.
+ */
+let lastHunt: { target: string; codes: string | null } | null = null;
+
+export function rememberHunt(target: string, codes: string | null): void {
+  lastHunt = { target, codes };
+}
+
+export function lastGalaxyHunt(): { target: string; codes: string | null } | null {
+  return lastHunt;
+}
+
 /** Boxels looked up per hunt: the nearest of the listed ones not looked up in the last 30 days. */
 export const HUNT_LOOKUPS = 20;
 /** How often the runner checks whether the look-up it started has finished. */

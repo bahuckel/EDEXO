@@ -82,6 +82,7 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   // routes/expeditionRoutes.ts
   "GET /api/expedition/field": "lan",
   "GET /api/expedition/targets": "lan",
+  "GET /api/expedition/hunt": "lan",
   "GET /api/expedition/ends": "lan",
   "GET /api/expedition/plan": "lan",
   "GET /api/expedition/boxel": "lan",
