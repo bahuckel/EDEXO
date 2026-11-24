@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /**
@@ -48,8 +49,15 @@ function startServerChild(o) {
   });
 
   let seq = 0;
+  /** @type {Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>} */
   const waiting = new Map();
+  /** @type {{ boxelNext: Set<(name: string) => void>; gameRunning: Set<(running: boolean | null) => void> }} */
   const listeners = { boxelNext: new Set(), gameRunning: new Set() };
+  /**
+   * What the server reported in "started" and in its events (src/server/serverChild.ts).
+   * @type {{ baseUrl: string | null; portMovedFrom: number | null; layoutPath: string | null; gameRunning: boolean | null;
+   *   backupRunning: boolean; linuxTrayHost: unknown; webRoot: string | null; csp: string | null; exited: boolean }}
+   */
   const state = {
     baseUrl: null,
     portMovedFrom: null,
@@ -61,12 +69,15 @@ function startServerChild(o) {
     csp: null,
     exited: false,
   };
+  /** @type {(value?: unknown) => void} */
   let resolveReady;
+  /** @type {(e: Error) => void} */
   let rejectReady;
   const ready = new Promise((res, rej) => {
     resolveReady = res;
     rejectReady = rej;
   });
+  /** @type {(value?: unknown) => void} */
   let resolveBooted;
   // Resolved on exit too: nothing waiting on it should wait forever.
   const booted = new Promise((res) => {
@@ -78,6 +89,12 @@ function startServerChild(o) {
     Every call gives up after a while (review 2026-10-10 A12): a server that is alive but stuck never replies and
     never exits, and "Wait, then close" or a boxel key would wait on it for the rest of the run.
   */
+  /**
+   * @param {number} ms
+   * @param {string} method
+   * @param {...unknown} args
+   * @returns {Promise<unknown>}
+   */
   const callWithin = (ms, method, ...args) =>
     new Promise((resolve, reject) => {
       if (state.exited) return reject(new Error("The server is not running."));
@@ -86,6 +103,7 @@ function startServerChild(o) {
         if (!waiting.delete(id)) return;
         reject(new Error(`The server did not answer "${method}" within ${Math.round(ms / 1000)} s.`));
       }, ms);
+      /** @type {<T>(fn: (v: T) => void) => (v: T) => void} */
       const done = (fn) => (v) => {
         clearTimeout(timer);
         fn(v);
@@ -93,6 +111,7 @@ function startServerChild(o) {
       waiting.set(id, { resolve: done(resolve), reject: done(reject) });
       child.postMessage({ type: "call", id, method, args });
     });
+  /** @param {string} method @param {...unknown} args */
   const call = (method, ...args) => callWithin(CALL_TIMEOUT_MS, method, ...args);
 
   const runtime = {
@@ -108,19 +127,23 @@ function startServerChild(o) {
     linuxTrayHost: () => state.linuxTrayHost,
     gameRunning: () => state.gameRunning,
     backupRunning: () => state.backupRunning,
+    /** @param {(running: boolean | null) => void} cb */
     onGameRunning: (cb) => {
       listeners.gameRunning.add(cb);
       return () => listeners.gameRunning.delete(cb);
     },
+    /** @param {(name: string) => void} cb */
     onBoxelNext: (cb) => {
       listeners.boxelNext.add(cb);
       return () => listeners.boxelNext.delete(cb);
     },
     // Fire and forget, as before (main never used their answers except to log).
+    /** @param {unknown} cmd  a UiCommand (src/shared/dto/hud.ts), passed through as is */
     uiCommand: (cmd) => void call("uiCommand", cmd).catch(() => {}),
     clearNotices: () => call("clearNotices"),
     clearPlanetMarks: () => call("clearPlanetMarks"),
     boxelCopyNext: () => call("boxelCopyNext"),
+    /** @param {-1 | 1} dir */
     boxelStep: (dir) => call("boxelStep", dir),
     boxelRunToggle: () => call("boxelRunToggle"),
     openMainAppInBrowser: () => void call("openMainAppInBrowser").catch(() => {}),
@@ -132,7 +155,10 @@ function startServerChild(o) {
       the buffered foot catalog when the message lands, which is the same best effort as before.
     */
     flushNow: () => void call("flushNow").catch(() => {}),
-    /** Ask the server to stop, and end its process if it has not within a few seconds. */
+    /**
+     * Ask the server to stop, and end its process if it has not within a few seconds.
+     * @returns {Promise<void>}
+     */
     shutdown: () =>
       new Promise((resolve) => {
         if (state.exited) return resolve();
