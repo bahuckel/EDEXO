@@ -423,10 +423,6 @@ button.body-detail-kv-value.body-detail-kv-interactive:hover {
   display: block;
 }
 
-.exo-payout-range-panel--clickable:hover {
-  filter: brightness(1.06);
-}
-
 .exo-payout-range-panel--clickable:focus-visible {
   outline: 2px solid rgba(79, 208, 255, 0.85);
   outline-offset: 2px;

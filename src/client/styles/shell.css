@@ -512,13 +512,9 @@ button.data-value-pill.data-value-pill--clickable {
   appearance: none;
 }
 
+/* Lift and brightness are the clickable tiles' rule (primitives.css, button.tray-tile). */
 button.data-value-pill.data-value-pill--clickable:hover {
-  filter: brightness(1.08);
   border-color: var(--tint-ff9a4d);
-}
-
-button.data-value-pill.data-value-pill--clickable:active {
-  transform: scale(0.99);
 }
 
 .data-value-label {

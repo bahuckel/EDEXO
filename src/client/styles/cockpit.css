@@ -537,9 +537,6 @@ input[type="text"]:focus {
   box-shadow: none;
   clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
 }
-.species-quad-cell--click:hover {
-  filter: brightness(1.2);
-}
 .species-quad-label {
   font-size: var(--fs-2xs) !important;
   font-weight: 700 !important;

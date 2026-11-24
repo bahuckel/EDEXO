@@ -315,8 +315,7 @@
 /* ---- controls: tabs, pills, chips, buttons ------------------------------- */
 .tab,
 .btn-top-neutral,
-.modal-close,
-.species-thumb-btn {
+.modal-close {
   transition:
     background-color var(--motion-fast) var(--motion-ease),
     border-color var(--motion-fast) var(--motion-ease),
@@ -332,6 +331,51 @@
 
 .tab:active,
 .btn-top-neutral:active {
+  transform: translateY(0);
+}
+
+/*
+  Tiles and cards that can be clicked (UI ideas 2026-11-16 §4.10): one rule for all of them, lift 1 px and brighten
+  under the pointer; a tile that only shows a value does nothing, so the two no longer look alike until the cursor
+  changes. The lift follows Options › Motion (--motion-shift is 0 at "reduced", motion.css). Brightness is the one
+  filter animated here: one element, while hovered.
+*/
+:where(
+    button.tray-tile,
+    .fact--click,
+    .exo-payout-range-panel--clickable,
+    .species-thumb-btn,
+    .species-quad-cell--click,
+    .species-similarity-index--clickable
+  ) {
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease),
+    filter var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
+}
+:is(
+    button.tray-tile,
+    .fact--click,
+    .exo-payout-range-panel--clickable,
+    .species-thumb-btn,
+    .species-quad-cell--click,
+    .species-similarity-index--clickable
+  ):not(:disabled):hover {
+  transform: translateY(calc(-1px * var(--motion-shift, 1)));
+  filter: brightness(1.12);
+}
+:is(
+    button.tray-tile,
+    .fact--click,
+    .exo-payout-range-panel--clickable,
+    .species-thumb-btn,
+    .species-quad-cell--click,
+    .species-similarity-index--clickable
+  ):not(:disabled):active {
   transform: translateY(0);
 }
 
@@ -515,6 +559,17 @@
 
   .tab:hover,
   .btn-top-neutral:hover {
+    transform: none;
+  }
+
+  :is(
+      button.tray-tile,
+      .fact--click,
+      .exo-payout-range-panel--clickable,
+      .species-thumb-btn,
+      .species-quad-cell--click,
+      .species-similarity-index--clickable
+    ):not(:disabled):hover {
     transform: none;
   }
 

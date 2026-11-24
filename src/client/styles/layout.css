@@ -261,13 +261,7 @@
   border: 1px solid var(--accent-a22);
   clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
 }
-.fact--click {
-  cursor: pointer;
-  transition: filter 0.15s;
-}
-.fact--click:hover {
-  filter: brightness(1.2);
-}
+/* Its hover is the clickable tiles' one (primitives.css). */
 .fact--click:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 2px;
