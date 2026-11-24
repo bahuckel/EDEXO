@@ -14,8 +14,10 @@ import {
   boxelFrameAt,
   boxelKindFrom,
   likelyBoxelKind,
+  NORMAL_FROM_LY,
   PLACEMENT_EXACT_KNOWN_KIND,
   placementKnown,
+  SCATTER_WITHIN_LY,
   predictBoxelPositions,
   systemRolls,
   wang64to32,
@@ -147,6 +149,27 @@ describe("the two kinds of boxel", () => {
     expect(likelyBoxelKind("c", 1001)).toBeNull();
     expect(likelyBoxelKind("c", -1)).toBeNull();
   });
+
+  it("knows the kind from where the boxel is: normal far from the galaxy's centre, scatter close to it", () => {
+    const sure = (kind: BoxelKind) => ({ kind, exact: PLACEMENT_EXACT_KNOWN_KIND });
+    // Around Sol, 25,900 ly out: a crowded b boxel is no coin toss there.
+    expect(likelyBoxelKind("b", 200, [0, 0, 0])).toEqual(sure("normal"));
+    expect(likelyBoxelKind("a", 50, [120, -40, 310])).toEqual(sure("normal"));
+    expect(likelyBoxelKind("f", 300, [0, 0, 0])).toEqual(sure("normal"));
+    // At the centre.
+    expect(likelyBoxelKind("b", 5, [25, -20, 25900])).toEqual(sure("scatter"));
+    expect(likelyBoxelKind("d", 5, [1000, 300, 23000])).toEqual(sure("scatter"));
+    expect(likelyBoxelKind("g", 5, [25, -20, 25900])).toEqual(sure("normal"));
+    // The limits themselves, in the plane: 22,000 ly out and 4,000 ly out.
+    expect(likelyBoxelKind("b", 200, [25.21875, 0, 25899.96875 - NORMAL_FROM_LY])).toEqual(sure("normal"));
+    expect(likelyBoxelKind("b", 200, [25.21875, 0, 25899.96875 - NORMAL_FROM_LY + 1])).toBeNull();
+    expect(likelyBoxelKind("b", 5, [25.21875, 0, 25899.96875 - SCATTER_WITHIN_LY + 1])).toEqual(sure("scatter"));
+    expect(likelyBoxelKind("b", 5, [25.21875, 0, 25899.96875 - SCATTER_WITHIN_LY])!.kind).toBe("normal");
+    // Between the two the crowding decides, as with no place given; height over the plane does not count.
+    expect(likelyBoxelKind("c", 200, [25, 3000, 25900 - 12000])).toEqual(likelyBoxelKind("c", 200));
+    expect(likelyBoxelKind("h", 5, [0, 0, 0])).toBeNull();
+    expect(likelyBoxelKind("b", 2000, [0, 0, 0])).toEqual(sure("normal"));
+  });
 });
 
 describe("a boxel's positions for the shortest order", () => {
@@ -215,6 +238,15 @@ describe("a boxel's positions for the shortest order", () => {
     for (const r of b.systems) expect(there.positions.get(numberOf(r[1]))).toEqual(real(r));
     // Somewhere else entirely: where he is says nothing about this boxel.
     expect(boxelPositionSet(boxel, last, { name: "Sol", pos: [0, 0, 0] }).checked).toBe(0);
+  });
+
+  it("needs no guess around Sol, however crowded the boxel", () => {
+    // The sector that holds Sol: 22,000 ly and more from the galaxy's centre every boxel is normal.
+    setBoxelSectorSource((s) => (s === "Wregoe" ? [39, 32, 18] : null));
+    const s = boxelPositionSet("Wregoe AA-A b", 200);
+    expect(s.predicted.size).toBe(201);
+    expect(s.exact).toBe(PLACEMENT_EXACT_KNOWN_KIND);
+    expect(s.checked).toBe(0);
   });
 
   it("predicts nothing where the kind would be a coin toss", () => {

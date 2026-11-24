@@ -7,8 +7,9 @@
  *
  * The third source is a prediction and is told apart ({@link BoxelPositionSet.predicted}). A boxel is of one of two
  * kinds, and the prediction is exact once the kind is right: the seen positions say which it is, where he is
- * included; with none seen the kind is guessed from how crowded the boxel is, and nothing is predicted when that
- * guess is close to a coin toss. Not made for mass code h.
+ * included; with none seen, where the boxel is in the galaxy says it (far from the centre, as around Sol, every
+ * boxel is of the normal kind); in the zone between it is guessed from how crowded the boxel is, and nothing is
+ * predicted when that guess is close to a coin toss. Not made for mass code h.
  */
 import { boxelIndexOf, parseBoxel } from "../shared/boxel.js";
 import { boxelPositionOf, MASS_CODE_LETTERS, type MassCode } from "../shared/boxelAdvice.js";
@@ -85,7 +86,7 @@ function frameOf(prefix: string, addresses: readonly number[]): BoxelFrame | nul
 
 /**
  * The predictions for a boxel listed up to `highest`, with what they stand on: the kind the seen positions show,
- * else the likelier kind of a boxel this crowded. Null: nothing to show (the seen positions fit neither kind well,
+ * else the kind of its part of the galaxy, else the likelier kind of a boxel this crowded. Null: nothing to show (the seen positions fit neither kind well,
  * or the guess is too close to a coin toss).
  */
 function predictionsOf(
@@ -102,7 +103,12 @@ function predictionsOf(
     kind = read.kind;
     exact = PLACEMENT_EXACT_KNOWN_KIND;
   } else {
-    const likely = likelyBoxelKind(frame.code, highest);
+    const middle = frame.cubeLy / 2;
+    const likely = likelyBoxelKind(frame.code, highest, [
+      frame.origin[0] + middle,
+      frame.origin[1] + middle,
+      frame.origin[2] + middle,
+    ]);
     if (!likely) return null;
     ({ kind, exact } = likely);
   }

@@ -20,8 +20,9 @@
  * with the same rolls, and for mass codes a and b the grid has twice the cells per axis. With the right kind the
  * positions are exact for 99.5 to 100 % of systems, mass codes a to g. What makes a boxel scatter is not known, so
  * the kind is read from real positions when there are any ({@link boxelKindFrom}: one is enough for a and b, one
- * that rolled "tied" for the rest), and guessed from how crowded the boxel is when there are none
- * ({@link likelyBoxelKind}). A wrong guess puts every system of an a or b boxel, and half of the others', in
+ * that rolled "tied" for the rest). With none, where the boxel is in the galaxy says it for most of space (far
+ * from the centre every boxel is normal, close to it every one is scatter), and between it is guessed from how
+ * crowded the boxel is ({@link likelyBoxelKind}). A wrong guess puts every system of an a or b boxel, and half of the others', in
  * another cell: right inside the cell, about half the boxel off. Mass code h is left out: it rolls once more
  * before the placement for a reason outside the address. A system whose real position is known also puts the chain
  * back on track for the ones after it.
@@ -56,17 +57,42 @@ export const PLACEMENT_EXACT_KNOWN_KIND = 0.99;
 /** A guessed kind that would be exact for fewer systems than this is not shown: too close to a coin toss. */
 export const PLACEMENT_MIN_EXACT = 0.6;
 
+/**
+ * Sagittarius A*, light years from Sol, in the galaxy's plane (x, z). The kind goes by the distance from it (one
+ * sector in 8, 631,778 boxels with their kind, 2026-11-25: docs/perf/ggg-study-23112026/forge_scatter.py): from
+ * 22,000 ly out no boxel is scatter (0 of 285,916; Sol is 25,900 ly out), within 4,000 ly every one is (5,279 of
+ * 5,279), mass codes a to f.
+ */
+const CENTRE_X = 25.21875;
+const CENTRE_Z = 25899.96875;
+export const NORMAL_FROM_LY = 22_000;
+export const SCATTER_WITHIN_LY = 4_000;
+
 /** Mass codes whose systems can be placed at all. */
 export const placementKnown = (code: MassCode): boolean => SCATTER_SHARE[code] != null;
 
 /**
- * With no real position to read the kind from: the likelier kind of a boxel this crowded, and the share of its
- * systems that would then be exact. A wrong kind leaves no system of an a or b boxel in its cell (another grid),
- * and about half of the others' (the ones that roll "anywhere" either way). Null when the mass code is not
- * predicted, the boxel is listed past the measured sizes, or the share is under {@link PLACEMENT_MIN_EXACT}.
+ * With no real position to read the kind from. `at`, a place in the boxel (light years): far from the galaxy's
+ * centre the boxel is normal and close to it scatter, whatever its size. Between, or with no place given: the
+ * likelier kind of a boxel this crowded, and the share of its systems that would then be exact. A wrong kind leaves
+ * no system of an a or b boxel in its cell (another grid), and about half of the others' (the ones that roll
+ * "anywhere" either way). Null when the mass code is not predicted, the boxel is listed past the measured sizes,
+ * or the share is under {@link PLACEMENT_MIN_EXACT}.
  */
-export function likelyBoxelKind(code: MassCode, highest: number): { kind: BoxelKind; exact: number } | null {
-  const row = highest >= 0 ? SCATTER_SHARE[code]?.find(([upTo]) => highest <= upTo) : undefined;
+export function likelyBoxelKind(
+  code: MassCode,
+  highest: number,
+  at?: Vec3,
+): { kind: BoxelKind; exact: number } | null {
+  if (!placementKnown(code) || !(highest >= 0)) return null;
+  if (at) {
+    const fromCentre = Math.hypot(at[0] - CENTRE_X, at[2] - CENTRE_Z);
+    if (fromCentre >= NORMAL_FROM_LY) return { kind: "normal", exact: PLACEMENT_EXACT_KNOWN_KIND };
+    // g places every system anywhere: its two kinds are one.
+    if (fromCentre < SCATTER_WITHIN_LY)
+      return { kind: code === "g" ? "normal" : "scatter", exact: PLACEMENT_EXACT_KNOWN_KIND };
+  }
+  const row = SCATTER_SHARE[code]?.find(([upTo]) => highest <= upTo);
   if (!row) return null;
   const scatter = row[1];
   const likelier = Math.max(scatter, 1 - scatter);
