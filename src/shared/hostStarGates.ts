@@ -69,8 +69,13 @@ export interface HostStarGate {
    * the star the body orbits. The codex CSV records the main star, and for most species the two
    * agree; where they do not (a body orbiting a brown dwarf in an A-star system), judging a
    * main-star rule on the body's host would demote the species on its own bodies.
+   *
+   * `"orbit"` when it was measured on the star the body orbits and is judged on that star, not on the brightest star
+   * at the body, which the other host gates read (speciesMatchContext.ts, 2026-09-27). Crystalline Shards: its
+   * evidence was counted on the orbital host, and a neutron main star 62,680 ls away outshining the K2 a body orbits
+   * refused it on Flyae Bli SD-Z d1-97 B 4 (docs/shards-misses-24112026.md).
    */
-  judgedOn?: "main";
+  judgedOn?: "main" | "orbit";
   /**
    * With `judgedOn: "main"`: the body's own host star passes it too. Electricae pluma is measured on
    * the main star, but a body orbiting a white dwarf 81,000 ls from a G primary grows it as well
@@ -383,6 +388,7 @@ export const HOST_STAR_GATES: { idIncludes: string; gate: HostStarGate }[] = [
      */
     idIncludes: "crystalline_shards",
     gate: {
+      judgedOn: "orbit",
       allowed: ["A", "F", "G", "K", "M", "L", "T", "Y", "TTS", "other"],
       evidence:
         "host of 4,832 Shards bodies: K 43 %, M 36 %, G 10 %, F 6 %, brown dwarf 4 %, A 1 % — never O, B, D, N or H",
@@ -420,6 +426,18 @@ export function hostStarGateForSpeciesId(speciesId: string): HostStarGate | null
   const id = speciesId.toLowerCase();
   for (const { idIncludes, gate } of HOST_STAR_GATES) if (id.includes(idIncludes)) return gate;
   return null;
+}
+
+/**
+ * The host classes a species' gate reads: the orbital host for an `"orbit"` gate where it is known, else the set the
+ * other gates read (the brightest star where one outshines the host).
+ */
+export function hostClassesForGate(
+  speciesId: string,
+  ctx: { hostStarClasses?: string[]; orbitalHostStarClasses?: string[] } | null | undefined,
+): string[] | undefined {
+  const orbital = ctx?.orbitalHostStarClasses;
+  return hostStarGateForSpeciesId(speciesId)?.judgedOn === "orbit" && orbital?.length ? orbital : ctx?.hostStarClasses;
 }
 
 /**

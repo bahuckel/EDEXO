@@ -750,7 +750,7 @@ export function buildSpeciesMatchContextFromRecords(i: MatchContextInputs): Spec
     if (p0) ctx.parentKind = p0.kind;
   }
   if (signalHints?.length) ctx.signalHints = signalHints;
-  if (hostStarClasses?.length) ctx.hostStarClasses = hostStarClasses;
+  if (hostStarClasses?.length) ctx.hostStarClasses = ctx.orbitalHostStarClasses = hostStarClasses;
   if (colourCandidateStarTypes?.length) ctx.colourCandidateStarTypes = colourCandidateStarTypes;
   const mainStar = mainStarClassOf(byId);
   if (Number.isFinite(exo.systemAddress)) ctx.systemAddress = exo.systemAddress;

@@ -31,6 +31,7 @@ import {
   HOST_STAR_GATES,
   describeHostStarVerdict,
   evaluateHostStarGate,
+  hostClassesForGate,
   hostStarClassKeys,
   hostStarGateForSpeciesId,
 } from "../src/shared/hostStarGates.js";
@@ -457,5 +458,34 @@ describe("Amphora's star", () => {
     const a = { type: "A", luminosity: "Va" };
     expect(evaluateHostStarGate("amphora_amphora_plant", ["K"], "F", main, [main, a])!.passes).toBe(true);
     expect(evaluateHostStarGate("amphora_amphora_plant", ["K"], "F", main, [main])!.passes).toBe(false);
+  });
+});
+
+// Flyae Bli SD-Z d1-97 B 4 (EDDN year, docs/shards-misses-24112026.md): Shards round a K2 whose brightest star at the
+// body is the neutron main star. Shards' evidence was counted on the orbital host; the other gates read the brightest.
+describe("Crystalline Shards' star", () => {
+  const shards = "crystalline_shards_crystalline_shards";
+  const ctx = { hostStarClasses: ["N"], orbitalHostStarClasses: ["K"] };
+  type Row = Omit<SpeciesMatch, "photoUrl" | "photoNote" | "priceCredits">;
+  const shardsRow = (): Row =>
+    ({ entry: { id: shards, displayName: "Crystalline Shards", genusDataDir: "crystalline-shards" } as SpeciesEntry, reasons: [] }) as Row;
+
+  it("is judged on the star the body orbits, not the brightest star", () => {
+    expect(hostClassesForGate(shards, ctx)).toEqual(["K"]);
+    expect(evaluateHostStarGate(shards, hostClassesForGate(shards, ctx), "N")!.passes).toBe(true);
+    // Still never under a neutron star it orbits.
+    expect(evaluateHostStarGate(shards, hostClassesForGate(shards, { orbitalHostStarClasses: ["N"] }), "N")!.passes).toBe(false);
+  });
+
+  it("falls back to the brightest star when the orbit names none, and leaves the other gates on it", () => {
+    expect(hostClassesForGate(shards, { hostStarClasses: ["N"] })).toEqual(["N"]);
+    expect(hostClassesForGate("amphora_amphora_plant", ctx)).toEqual(["N"]);
+  });
+
+  it("lists Shards on such a body", () => {
+    const strict: Row[] = [shardsRow()];
+    const unlikely: Row[] = [];
+    demoteFailedHostStarGates(strict, unlikely, { ...ctx, systemMainStarClass: "N" } as SpeciesMatchContext);
+    expect(strict.map((m) => m.entry.id)).toEqual([shards]);
   });
 });

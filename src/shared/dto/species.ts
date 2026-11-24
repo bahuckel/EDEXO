@@ -39,6 +39,11 @@ export interface SpeciesMatchContext {
    */
   hostStarClasses?: string[];
   /**
+   * The same set before the brightest-star override: the star (or stars) the body orbits. Read by host gates judged
+   * on the orbit (`judgedOn: "orbit"`, Crystalline Shards).
+   */
+  orbitalHostStarClasses?: string[];
+  /**
    * Journal star types of every star that could colour this body (the stars behind {@link hostStarClasses}, before
    * the brightest-star override), as the journal writes them — "A" and "AeBe" kept apart. Read by the Stratum
    * colour rule in matchSpecies (owner, 2026-10-16).

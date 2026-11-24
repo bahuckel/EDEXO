@@ -4,6 +4,7 @@
 import {
   describeHostStarVerdict,
   evaluateHostStarGate,
+  hostClassesForGate,
   hostStarGateForSpeciesId,
 } from "../shared/hostStarGates.js";
 import {
@@ -313,7 +314,7 @@ export function demoteFailedHostStarGates(
 
   for (let i = strict.length - 1; i >= 0; i--) {
     const m = strict[i]!;
-    const verdict = evaluateHostStarGate(m.entry.id, classes, mainStar, {
+    const verdict = evaluateHostStarGate(m.entry.id, hostClassesForGate(m.entry.id, matchContext), mainStar, {
       type: matchContext?.systemMainStarType,
       luminosity: matchContext?.systemMainStarLuminosity,
     }, matchContext?.systemStars);
@@ -342,7 +343,7 @@ export function demoteFailedHostStarGates(
   for (let i = 0; i < unlikely.length; i++) {
     const m = unlikely[i]!;
     if ((m.unlikelyReasons ?? []).some((r) => r.field === "StarType")) continue;
-    const verdict = evaluateHostStarGate(m.entry.id, classes, mainStar, {
+    const verdict = evaluateHostStarGate(m.entry.id, hostClassesForGate(m.entry.id, matchContext), mainStar, {
       type: matchContext?.systemMainStarType,
       luminosity: matchContext?.systemMainStarLuminosity,
     }, matchContext?.systemStars);
@@ -432,7 +433,7 @@ export function dropUnprovenStrictSpecies(
       if (v?.kind !== "pass") return false;
     }
     if (hostStarGateForSpeciesId(m.entry.id)) {
-      const v = evaluateHostStarGate(m.entry.id, matchContext?.hostStarClasses, matchContext?.systemMainStarClass ?? null, {
+      const v = evaluateHostStarGate(m.entry.id, hostClassesForGate(m.entry.id, matchContext), matchContext?.systemMainStarClass ?? null, {
         type: matchContext?.systemMainStarType,
         luminosity: matchContext?.systemMainStarLuminosity,
       }, matchContext?.systemStars);
