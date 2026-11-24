@@ -32,6 +32,7 @@ import { NOTABLE_KINDS, notableKindFor, starTypeLabel, type NotableKind } from "
 import { BODY_TRAITS, planetClassIndex, STAR_CLASSES, starClassIndex } from "../shared/galaxyTraits.js";
 import { confirmedOn } from "./discoveries.js";
 import type { JournalSystemFacts } from "./boxel.js";
+import type { ArrivalStarScan } from "../shared/stellarClass.js";
 
 /**
  * One lookup for the life of the process, bound to whichever store is building the snapshot.
@@ -518,6 +519,19 @@ function boxelStarLabel(rec: ExplorationScanRecord): string {
  * and green gas giants (the app's green rule, as on the Notable card) —, planet types and biology.
  * Sold bodies count: a cashed-in system still has its stars and its worlds.
  */
+/**
+ * The arrival star of a flown system as he scanned it, for the star predictions' own check (server/boxelStars.ts);
+ * null when the journals hold no scan of it with its class, mass and temperature.
+ */
+export function arrivalStarScan(store: GameStateStore, systemAddress: number): ArrivalStarScan | null {
+  const stars = [...store.liveScansInSystem(systemAddress), ...store.soldScansInSystem(systemAddress)].filter(
+    (r) => !r.isSynthetic && explorationRecordIsStellar(r) && !!r.starType?.trim(),
+  );
+  const main = stars.find((r) => r.bodyId === 0) ?? stars.find((r) => !((r.distanceFromArrivalLs ?? 0) > 0));
+  if (!main || !(main.stellarMass! > 0) || !(main.surfaceTemperature! > 0)) return null;
+  return { starType: main.starType!.trim(), stellarMass: main.stellarMass!, temperature: main.surfaceTemperature! };
+}
+
 export function boxelJournalFacts(store: GameStateStore, systemAddress: number): JournalSystemFacts {
   const live = store.liveScansInSystem(systemAddress);
   const liveIds = new Set(live.map((r) => r.bodyId));

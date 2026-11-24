@@ -1,0 +1,3825 @@
+{
+ "note": "real Spansh systems; written by docs/perf/ggg-study-23112026/forge_golden3.py",
+ "stars": {
+  "b": [
+   {
+    "name": "Veqo LJ-M b48-0",
+    "address": "164685176737",
+    "n": 0,
+    "after": 11,
+    "temperature": 3524,
+    "cls": "M",
+    "solarMasses": 0.43359375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.433594,
+     "temperature": 3542.0
+    }
+   },
+   {
+    "name": "Tosia GI-U b16-0",
+    "address": "164953614481",
+    "n": 0,
+    "after": 11,
+    "temperature": 3240,
+    "cls": "M",
+    "solarMasses": 0.4375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.4375,
+     "temperature": 3257.0
+    }
+   },
+   {
+    "name": "Smooruae JR-O b12-0",
+    "address": "179180495465",
+    "n": 0,
+    "after": 12,
+    "temperature": 2412,
+    "cls": "M",
+    "solarMasses": 0.25,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.25,
+     "temperature": 2419.0
+    }
+   },
+   {
+    "name": "Preia Flyou LJ-D b46-0",
+    "address": "193676075913",
+    "n": 0,
+    "after": 12,
+    "temperature": 2266,
+    "cls": "M",
+    "solarMasses": 0.22265625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.222656,
+     "temperature": 2240.0
+    }
+   },
+   {
+    "name": "Dehio XP-H b16-0",
+    "address": "213003351177",
+    "n": 0,
+    "after": 11,
+    "temperature": 3461,
+    "cls": "M",
+    "solarMasses": 0.4453125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.445313,
+     "temperature": 3386.0
+    }
+   },
+   {
+    "name": "Ploi Brai UN-C b54-0",
+    "address": "248705742289",
+    "n": 0,
+    "after": 12,
+    "temperature": 3489,
+    "cls": "M",
+    "solarMasses": 0.43359375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.433594,
+     "temperature": 3419.0
+    }
+   },
+   {
+    "name": "Dryao Brai XU-C b2-0",
+    "address": "255418521105",
+    "n": 0,
+    "after": 12,
+    "temperature": 2985,
+    "cls": "M",
+    "solarMasses": 0.37890625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.378906,
+     "temperature": 2992.0
+    }
+   },
+   {
+    "name": "Hypuehia DM-V b47-0",
+    "address": "259709686169",
+    "n": 0,
+    "after": 11,
+    "temperature": 2102,
+    "cls": "M",
+    "solarMasses": 0.2265625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.226563,
+     "temperature": 2107.0
+    }
+   },
+   {
+    "name": "Qoefua MA-G b17-0",
+    "address": "278233245841",
+    "n": 0,
+    "after": 12,
+    "temperature": 3484,
+    "cls": "M",
+    "solarMasses": 0.42578125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.425781,
+     "temperature": 3455.0
+    }
+   },
+   {
+    "name": "Plua Chraea LV-Y b0",
+    "address": "278502010889",
+    "n": 0,
+    "after": 12,
+    "temperature": 2045,
+    "cls": "M",
+    "solarMasses": 0.2109375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.210938,
+     "temperature": 2038.0
+    }
+   },
+   {
+    "name": "Chraufoe HF-S b45-0",
+    "address": "281723218313",
+    "n": 0,
+    "after": 12,
+    "temperature": 3551,
+    "cls": "M",
+    "solarMasses": 0.421875,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.421875,
+     "temperature": 3534.0
+    }
+   },
+   {
+    "name": "Fojaea HX-H b37-0",
+    "address": "283870636865",
+    "n": 0,
+    "after": 11,
+    "temperature": 2508,
+    "cls": "M",
+    "solarMasses": 0.23046875,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.230469,
+     "temperature": 2501.0
+    }
+   },
+   {
+    "name": "Eishoqs CP-C b40-0",
+    "address": "296487108953",
+    "n": 0,
+    "after": 11,
+    "temperature": 3705,
+    "cls": "K",
+    "solarMasses": 0.4375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.4375,
+     "temperature": 3693.0
+    }
+   },
+   {
+    "name": "Ainais NH-Y b19-0",
+    "address": "299438786217",
+    "n": 0,
+    "after": 11,
+    "temperature": 3340,
+    "cls": "M",
+    "solarMasses": 0.3828125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.382813,
+     "temperature": 3272.0
+    }
+   },
+   {
+    "name": "Dryeia Gruia OT-X b57-0",
+    "address": "300778805233",
+    "n": 0,
+    "after": 12,
+    "temperature": 2246,
+    "cls": "M",
+    "solarMasses": 0.26171875,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.261719,
+     "temperature": 2238.0
+    }
+   },
+   {
+    "name": "Clookeia SL-J b14-0",
+    "address": "301854898297",
+    "n": 0,
+    "after": 12,
+    "temperature": 3223,
+    "cls": "M",
+    "solarMasses": 0.37109375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.371094,
+     "temperature": 3124.0
+    }
+   },
+   {
+    "name": "Fojie NQ-N b48-0",
+    "address": "309640768417",
+    "n": 0,
+    "after": 12,
+    "temperature": 3100,
+    "cls": "M",
+    "solarMasses": 0.4140625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.414063,
+     "temperature": 3115.0
+    }
+   },
+   {
+    "name": "Plua Thio JQ-R b45-0",
+    "address": "315009016201",
+    "n": 0,
+    "after": 12,
+    "temperature": 3519,
+    "cls": "M",
+    "solarMasses": 0.42578125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.425781,
+     "temperature": 3501.0
+    }
+   },
+   {
+    "name": "Phrua Flyiae RG-U b33-0",
+    "address": "319301765921",
+    "n": 0,
+    "after": 11,
+    "temperature": 2342,
+    "cls": "M",
+    "solarMasses": 0.27734375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.277344,
+     "temperature": 2344.0
+    }
+   },
+   {
+    "name": "Syniechia NQ-I b56-0",
+    "address": "347220701665",
+    "n": 0,
+    "after": 12,
+    "temperature": 2844,
+    "cls": "M",
+    "solarMasses": 0.2890625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.289063,
+     "temperature": 2757.0
+    }
+   },
+   {
+    "name": "Preou Broo XF-C b40-0",
+    "address": "352590002009",
+    "n": 0,
+    "after": 12,
+    "temperature": 2808,
+    "cls": "M",
+    "solarMasses": 0.33203125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.332031,
+     "temperature": 2824.0
+    }
+   },
+   {
+    "name": "Flyue Eorg HI-Y b19-0",
+    "address": "356347093161",
+    "n": 0,
+    "after": 12,
+    "temperature": 2413,
+    "cls": "M",
+    "solarMasses": 0.23828125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.238281,
+     "temperature": 2412.0
+    }
+   },
+   {
+    "name": "Bla Flye VF-M b41-0",
+    "address": "356347963745",
+    "n": 0,
+    "after": 11,
+    "temperature": 2792,
+    "cls": "M",
+    "solarMasses": 0.28125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.28125,
+     "temperature": 2765.0
+    }
+   },
+   {
+    "name": "Prai Gruia BR-K b54-0",
+    "address": "366010660817",
+    "n": 0,
+    "after": 11,
+    "temperature": 2175,
+    "cls": "M",
+    "solarMasses": 0.23828125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.238281,
+     "temperature": 2182.0
+    }
+   },
+   {
+    "name": "Prai Pre YV-F b30-0",
+    "address": "368963905281",
+    "n": 0,
+    "after": 14,
+    "temperature": 3194,
+    "cls": "M",
+    "solarMasses": 0.4140625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.414063,
+     "temperature": 3185.0
+    }
+   },
+   {
+    "name": "Prai Pre CC-E b31-0",
+    "address": "368963905289",
+    "n": 0,
+    "after": 11,
+    "temperature": 2021,
+    "cls": "M",
+    "solarMasses": 0.21875,
+    "real": {
+     "starType": "L (Brown dwarf) Star",
+     "stellarMass": 0.21875,
+     "temperature": 1953.0
+    }
+   },
+   {
+    "name": "Flyai Pre AK-M b38-0",
+    "address": "370573272393",
+    "n": 0,
+    "after": 11,
+    "temperature": 2840,
+    "cls": "M",
+    "solarMasses": 0.3125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.3125,
+     "temperature": 2844.0
+    }
+   },
+   {
+    "name": "Phrooe Hypeia DG-O b26-0",
+    "address": "371380263649",
+    "n": 0,
+    "after": 11,
+    "temperature": 2295,
+    "cls": "M",
+    "solarMasses": 0.21875,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.21875,
+     "temperature": 2293.0
+    }
+   },
+   {
+    "name": "Muenaa SW-Y b0",
+    "address": "373259718153",
+    "n": 0,
+    "after": 12,
+    "temperature": 2926,
+    "cls": "M",
+    "solarMasses": 0.30859375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.308594,
+     "temperature": 2910.0
+    }
+   },
+   {
+    "name": "Preou Thio WN-E b39-0",
+    "address": "382386512721",
+    "n": 0,
+    "after": 11,
+    "temperature": 2256,
+    "cls": "M",
+    "solarMasses": 0.26171875,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.261719,
+     "temperature": 2267.0
+    }
+   },
+   {
+    "name": "Chraufeia QD-X b42-0",
+    "address": "389365705073",
+    "n": 0,
+    "after": 11,
+    "temperature": 2094,
+    "cls": "M",
+    "solarMasses": 0.203125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.203125,
+     "temperature": 2077.0
+    }
+   },
+   {
+    "name": "Graei Eom AJ-M b39-0",
+    "address": "391511812945",
+    "n": 0,
+    "after": 12,
+    "temperature": 2232,
+    "cls": "M",
+    "solarMasses": 0.2265625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.226563,
+     "temperature": 2204.0
+    }
+   },
+   {
+    "name": "Phrua Hypooe FW-A b5-0",
+    "address": "414866151977",
+    "n": 0,
+    "after": 11,
+    "temperature": 3272,
+    "cls": "M",
+    "solarMasses": 0.3828125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.382813,
+     "temperature": 3212.0
+    }
+   },
+   {
+    "name": "Phae Phlai TI-P b7-0",
+    "address": "418626280001",
+    "n": 0,
+    "after": 12,
+    "temperature": 2058,
+    "cls": "M",
+    "solarMasses": 0.19921875,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.199219,
+     "temperature": 2022.0
+    }
+   },
+   {
+    "name": "Stroifooe KE-O b37-0",
+    "address": "425875156801",
+    "n": 0,
+    "after": 12,
+    "temperature": 2986,
+    "cls": "M",
+    "solarMasses": 0.31640625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.316406,
+     "temperature": 2981.0
+    }
+   },
+   {
+    "name": "Hedgia WX-A b55-0",
+    "address": "430705025497",
+    "n": 0,
+    "after": 12,
+    "temperature": 2698,
+    "cls": "M",
+    "solarMasses": 0.3125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.3125,
+     "temperature": 2646.0
+    }
+   },
+   {
+    "name": "Schafaei YA-K b10-0",
+    "address": "433927100505",
+    "n": 0,
+    "after": 11,
+    "temperature": 2607,
+    "cls": "M",
+    "solarMasses": 0.3125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.3125,
+     "temperature": 2611.0
+    }
+   },
+   {
+    "name": "Pra Bliae XJ-O b39-0",
+    "address": "434193789777",
+    "n": 0,
+    "after": 11,
+    "temperature": 2582,
+    "cls": "M",
+    "solarMasses": 0.2578125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.257813,
+     "temperature": 2588.0
+    }
+   },
+   {
+    "name": "Flya Bliae QR-Y b6-0",
+    "address": "436609904697",
+    "n": 0,
+    "after": 11,
+    "temperature": 3098,
+    "cls": "M",
+    "solarMasses": 0.3828125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.382813,
+     "temperature": 3052.0
+    }
+   },
+   {
+    "name": "Ridgeia QB-K b10-0",
+    "address": "438758942297",
+    "n": 0,
+    "after": 11,
+    "temperature": 2141,
+    "cls": "M",
+    "solarMasses": 0.21484375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.214844,
+     "temperature": 2143.0
+    }
+   },
+   {
+    "name": "Flya Proae JO-K b37-0",
+    "address": "439559939393",
+    "n": 0,
+    "after": 11,
+    "temperature": 2397,
+    "cls": "M",
+    "solarMasses": 0.2578125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.257813,
+     "temperature": 2381.0
+    }
+   },
+   {
+    "name": "Synuedee ZW-B b30-0",
+    "address": "440634778881",
+    "n": 0,
+    "after": 11,
+    "temperature": 3023,
+    "cls": "M",
+    "solarMasses": 0.390625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.390625,
+     "temperature": 3031.0
+    }
+   },
+   {
+    "name": "Phooe Ail PU-B b54-0",
+    "address": "441173680081",
+    "n": 0,
+    "after": 12,
+    "temperature": 2519,
+    "cls": "M",
+    "solarMasses": 0.296875,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.296875,
+     "temperature": 2516.0
+    }
+   },
+   {
+    "name": "Hedgia NQ-R b4-0",
+    "address": "442784423977",
+    "n": 0,
+    "after": 11,
+    "temperature": 1969,
+    "cls": "M",
+    "solarMasses": 0.19921875,
+    "real": {
+     "starType": "L (Brown dwarf) Star",
+     "stellarMass": 0.199219,
+     "temperature": 1965.0
+    }
+   },
+   {
+    "name": "Fojeau PD-G b13-0",
+    "address": "446007159409",
+    "n": 0,
+    "after": 12,
+    "temperature": 2801,
+    "cls": "M",
+    "solarMasses": 0.35546875,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.355469,
+     "temperature": 2814.0
+    }
+   },
+   {
+    "name": "Flyoo Hypoo KQ-S b34-0",
+    "address": "447345537321",
+    "n": 0,
+    "after": 12,
+    "temperature": 3246,
+    "cls": "M",
+    "solarMasses": 0.37109375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.371094,
+     "temperature": 3242.0
+    }
+   },
+   {
+    "name": "Schafea IL-L b9-0",
+    "address": "453791193169",
+    "n": 0,
+    "after": 12,
+    "temperature": 2645,
+    "cls": "M",
+    "solarMasses": 0.265625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.265625,
+     "temperature": 2639.0
+    }
+   },
+   {
+    "name": "Pyralu TL-R b36-0",
+    "address": "461036531513",
+    "n": 0,
+    "after": 12,
+    "temperature": 2570,
+    "cls": "M",
+    "solarMasses": 0.27734375,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.277344,
+     "temperature": 2579.0
+    }
+   }
+  ],
+  "c": [
+   {
+    "name": "Kasao QV-C c26-0",
+    "address": "17884556514",
+    "n": 0,
+    "after": 12,
+    "temperature": 4342,
+    "cls": "K",
+    "solarMasses": 0.75390625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.753906,
+     "temperature": 4356.0
+    }
+   },
+   {
+    "name": "Kasao US-J c22-0",
+    "address": "19092483266",
+    "n": 0,
+    "after": 11,
+    "temperature": 4461,
+    "cls": "K",
+    "solarMasses": 0.68359375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.683594,
+     "temperature": 4485.0
+    }
+   },
+   {
+    "name": "Breerua IZ-S c3-0",
+    "address": "20568879138",
+    "n": 0,
+    "after": 11,
+    "temperature": 3693,
+    "cls": "M",
+    "solarMasses": 0.50390625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.503906,
+     "temperature": 3705.0
+    }
+   },
+   {
+    "name": "Smooruae VS-X c3-0",
+    "address": "23454331170",
+    "n": 0,
+    "after": 11,
+    "temperature": 5540,
+    "cls": "G",
+    "solarMasses": 0.828125,
+    "real": {
+     "starType": "G",
+     "stellarMass": 0.828125,
+     "temperature": 5533.0
+    }
+   },
+   {
+    "name": "Scheau Flyou QV-N c23-0",
+    "address": "23521633482",
+    "n": 0,
+    "after": 12,
+    "temperature": 3345,
+    "cls": "M",
+    "solarMasses": 0.47265625,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.472656,
+     "temperature": 3354.0
+    }
+   },
+   {
+    "name": "Dryuae Aob YD-I c23-0",
+    "address": "23521698250",
+    "n": 0,
+    "after": 12,
+    "temperature": 4845,
+    "cls": "K",
+    "solarMasses": 0.8125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.8125,
+     "temperature": 4748.0
+    }
+   },
+   {
+    "name": "Scaukea RC-C c29-0",
+    "address": "25064942074",
+    "n": 0,
+    "after": 11,
+    "temperature": 3993,
+    "cls": "K",
+    "solarMasses": 0.51953125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.519531,
+     "temperature": 3987.0
+    }
+   },
+   {
+    "name": "Sphiesu IX-A c27-0",
+    "address": "25132281578",
+    "n": 0,
+    "after": 11,
+    "temperature": 3931,
+    "cls": "K",
+    "solarMasses": 0.484375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.484375,
+     "temperature": 3860.0
+    }
+   },
+   {
+    "name": "Flyeia Prou IM-Q c7-0",
+    "address": "25266238018",
+    "n": 0,
+    "after": 11,
+    "temperature": 4658,
+    "cls": "K",
+    "solarMasses": 0.734375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.734375,
+     "temperature": 4659.0
+    }
+   },
+   {
+    "name": "Preia Flyou UW-D c28-0",
+    "address": "25534706162",
+    "n": 0,
+    "after": 11,
+    "temperature": 4916,
+    "cls": "K",
+    "solarMasses": 0.734375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.734375,
+     "temperature": 4827.0
+    }
+   },
+   {
+    "name": "Schiqia SX-J c22-0",
+    "address": "25534968514",
+    "n": 0,
+    "after": 11,
+    "temperature": 4755,
+    "cls": "K",
+    "solarMasses": 0.69140625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.691406,
+     "temperature": 4727.0
+    }
+   },
+   {
+    "name": "Kasu ZG-D c12-0",
+    "address": "25870511210",
+    "n": 0,
+    "after": 14,
+    "temperature": 4765,
+    "cls": "K",
+    "solarMasses": 0.67578125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.675781,
+     "temperature": 4772.0
+    }
+   },
+   {
+    "name": "Kasu HA-H c10-0",
+    "address": "27078503514",
+    "n": 0,
+    "after": 11,
+    "temperature": 4831,
+    "cls": "K",
+    "solarMasses": 0.71484375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.714844,
+     "temperature": 4837.0
+    }
+   },
+   {
+    "name": "Stralaae RA-Q c5-0",
+    "address": "27481184050",
+    "n": 0,
+    "after": 11,
+    "temperature": 4030,
+    "cls": "K",
+    "solarMasses": 0.6328125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.632813,
+     "temperature": 3946.0
+    }
+   },
+   {
+    "name": "Eos Fraae MG-I c11-0",
+    "address": "27951440482",
+    "n": 0,
+    "after": 11,
+    "temperature": 5213,
+    "cls": "G",
+    "solarMasses": 0.82421875,
+    "real": {
+     "starType": "G",
+     "stellarMass": 0.824219,
+     "temperature": 5237.0
+    }
+   },
+   {
+    "name": "Plaa Flee NF-N c20-0",
+    "address": "28152180914",
+    "n": 0,
+    "after": 12,
+    "temperature": 4805,
+    "cls": "K",
+    "solarMasses": 0.7109375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.710938,
+     "temperature": 4782.0
+    }
+   },
+   {
+    "name": "Praea Fraae JP-E c25-0",
+    "address": "28420649946",
+    "n": 0,
+    "after": 12,
+    "temperature": 5251,
+    "cls": "G",
+    "solarMasses": 0.8359375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.835938,
+     "temperature": 5153.0
+    }
+   },
+   {
+    "name": "Phraa Flyoae DZ-T c18-0",
+    "address": "28554339746",
+    "n": 0,
+    "after": 11,
+    "temperature": 5023,
+    "cls": "K",
+    "solarMasses": 0.73828125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.738281,
+     "temperature": 5031.0
+    }
+   },
+   {
+    "name": "Flyooe Proae ZI-I c26-0",
+    "address": "29628510946",
+    "n": 0,
+    "after": 12,
+    "temperature": 4323,
+    "cls": "K",
+    "solarMasses": 0.6484375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.648438,
+     "temperature": 4229.0
+    }
+   },
+   {
+    "name": "Schiqeou DJ-B c13-0",
+    "address": "29628576370",
+    "n": 0,
+    "after": 12,
+    "temperature": 4745,
+    "cls": "K",
+    "solarMasses": 0.66015625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.660156,
+     "temperature": 4651.0
+    }
+   },
+   {
+    "name": "Fraufoi HE-R c21-0",
+    "address": "29762720954",
+    "n": 0,
+    "after": 11,
+    "temperature": 3948,
+    "cls": "K",
+    "solarMasses": 0.48046875,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.480469,
+     "temperature": 3805.0
+    }
+   },
+   {
+    "name": "Flyae Eaewsy DW-U c3-0",
+    "address": "30567373346",
+    "n": 0,
+    "after": 11,
+    "temperature": 4862,
+    "cls": "K",
+    "solarMasses": 0.86328125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.863281,
+     "temperature": 4767.0
+    }
+   },
+   {
+    "name": "Smooro LD-I c26-0",
+    "address": "30702219746",
+    "n": 0,
+    "after": 12,
+    "temperature": 4043,
+    "cls": "K",
+    "solarMasses": 0.56640625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.566406,
+     "temperature": 4004.0
+    }
+   },
+   {
+    "name": "Bleae Thoi AU-I c9-0",
+    "address": "31172138066",
+    "n": 0,
+    "after": 12,
+    "temperature": 5386,
+    "cls": "G",
+    "solarMasses": 0.796875,
+    "real": {
+     "starType": "G",
+     "stellarMass": 0.796875,
+     "temperature": 5403.0
+    }
+   },
+   {
+    "name": "Bleae Airg VO-W c3-0",
+    "address": "31239806498",
+    "n": 0,
+    "after": 11,
+    "temperature": 4365,
+    "cls": "K",
+    "solarMasses": 0.71875,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.71875,
+     "temperature": 4380.0
+    }
+   },
+   {
+    "name": "Byua Aob YK-A c0",
+    "address": "31977452802",
+    "n": 0,
+    "after": 12,
+    "temperature": 4697,
+    "cls": "K",
+    "solarMasses": 0.80078125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.800781,
+     "temperature": 4625.0
+    }
+   },
+   {
+    "name": "Eufac GL-Y c0",
+    "address": "32514292746",
+    "n": 0,
+    "after": 12,
+    "temperature": 4865,
+    "cls": "K",
+    "solarMasses": 0.71875,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.71875,
+     "temperature": 4780.0
+    }
+   },
+   {
+    "name": "Blu Aob CB-F c11-0",
+    "address": "32782726242",
+    "n": 0,
+    "after": 11,
+    "temperature": 5164,
+    "cls": "K",
+    "solarMasses": 0.87109375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.871094,
+     "temperature": 5169.0
+    }
+   },
+   {
+    "name": "Eos Brai QN-K c8-0",
+    "address": "32916974154",
+    "n": 0,
+    "after": 11,
+    "temperature": 4635,
+    "cls": "K",
+    "solarMasses": 0.64453125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.644531,
+     "temperature": 4640.0
+    }
+   },
+   {
+    "name": "Plaa Aob DV-G c10-0",
+    "address": "33118269530",
+    "n": 0,
+    "after": 11,
+    "temperature": 3740,
+    "cls": "K",
+    "solarMasses": 0.51953125,
+    "real": {
+     "starType": "M",
+     "stellarMass": 0.519531,
+     "temperature": 3683.0
+    }
+   },
+   {
+    "name": "Phraa Greau FV-E c28-0",
+    "address": "33789259762",
+    "n": 0,
+    "after": 12,
+    "temperature": 5405,
+    "cls": "G",
+    "solarMasses": 0.89453125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.894531,
+     "temperature": 5183.0
+    }
+   },
+   {
+    "name": "Prooe Hypoo YO-E c13-0",
+    "address": "34124372338",
+    "n": 0,
+    "after": 12,
+    "temperature": 4682,
+    "cls": "K",
+    "solarMasses": 0.75,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.75,
+     "temperature": 4676.0
+    }
+   },
+   {
+    "name": "Blae Hypoo JW-Q c7-0",
+    "address": "34191776834",
+    "n": 0,
+    "after": 12,
+    "temperature": 3747,
+    "cls": "K",
+    "solarMasses": 0.5546875,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.554688,
+     "temperature": 3763.0
+    }
+   },
+   {
+    "name": "Plua Fruia SC-Z c27-0",
+    "address": "34527523570",
+    "n": 0,
+    "after": 12,
+    "temperature": 5276,
+    "cls": "G",
+    "solarMasses": 0.82421875,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.824219,
+     "temperature": 5179.0
+    }
+   },
+   {
+    "name": "Pidgua PP-C c1-0",
+    "address": "34728547082",
+    "n": 0,
+    "after": 12,
+    "temperature": 5289,
+    "cls": "G",
+    "solarMasses": 0.76171875,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.761719,
+     "temperature": 5198.0
+    }
+   },
+   {
+    "name": "Plua Eun PN-T c3-0",
+    "address": "34728940066",
+    "n": 0,
+    "after": 11,
+    "temperature": 4586,
+    "cls": "K",
+    "solarMasses": 0.703125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.703125,
+     "temperature": 4611.0
+    }
+   },
+   {
+    "name": "Plua Eun LS-B c13-0",
+    "address": "35131560562",
+    "n": 0,
+    "after": 12,
+    "temperature": 4855,
+    "cls": "K",
+    "solarMasses": 0.859375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.859375,
+     "temperature": 4749.0
+    }
+   },
+   {
+    "name": "Flyoo Phroo BK-G c27-0",
+    "address": "35802487530",
+    "n": 0,
+    "after": 11,
+    "temperature": 5010,
+    "cls": "K",
+    "solarMasses": 0.765625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.765625,
+     "temperature": 5012.0
+    }
+   },
+   {
+    "name": "Whanuae AU-G c11-0",
+    "address": "36004241762",
+    "n": 0,
+    "after": 12,
+    "temperature": 5110,
+    "cls": "K",
+    "solarMasses": 0.78125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.78125,
+     "temperature": 5095.0
+    }
+   },
+   {
+    "name": "Flyoo Phroo JF-G c27-0",
+    "address": "36205107946",
+    "n": 0,
+    "after": 12,
+    "temperature": 5054,
+    "cls": "K",
+    "solarMasses": 0.703125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.703125,
+     "temperature": 5041.0
+    }
+   },
+   {
+    "name": "Proo Pre BB-H c13-0",
+    "address": "36473615218",
+    "n": 0,
+    "after": 11,
+    "temperature": 4156,
+    "cls": "K",
+    "solarMasses": 0.5390625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.539063,
+     "temperature": 4165.0
+    }
+   },
+   {
+    "name": "Fraufae YZ-E c12-0",
+    "address": "37748020330",
+    "n": 0,
+    "after": 12,
+    "temperature": 3986,
+    "cls": "K",
+    "solarMasses": 0.65234375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.652344,
+     "temperature": 3968.0
+    }
+   },
+   {
+    "name": "Eullogh DN-W c1-0",
+    "address": "37950068242",
+    "n": 0,
+    "after": 12,
+    "temperature": 4499,
+    "cls": "K",
+    "solarMasses": 0.58203125,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.582031,
+     "temperature": 4556.0
+    }
+   },
+   {
+    "name": "Pleia Thoe EK-Y c14-0",
+    "address": "38151491714",
+    "n": 0,
+    "after": 11,
+    "temperature": 3707,
+    "cls": "K",
+    "solarMasses": 0.47265625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.472656,
+     "temperature": 3720.0
+    }
+   },
+   {
+    "name": "Greou Eorg FH-I c24-0",
+    "address": "38352033234",
+    "n": 0,
+    "after": 12,
+    "temperature": 4948,
+    "cls": "K",
+    "solarMasses": 0.875,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.875,
+     "temperature": 4978.0
+    }
+   },
+   {
+    "name": "Eocs Chria IN-O c8-0",
+    "address": "39896983626",
+    "n": 0,
+    "after": 12,
+    "temperature": 3836,
+    "cls": "K",
+    "solarMasses": 0.49609375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.496094,
+     "temperature": 3800.0
+    }
+   },
+   {
+    "name": "Pra Drya DZ-L c22-0",
+    "address": "41439073218",
+    "n": 0,
+    "after": 12,
+    "temperature": 4362,
+    "cls": "K",
+    "solarMasses": 0.62890625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.628906,
+     "temperature": 4381.0
+    }
+   },
+   {
+    "name": "Flya Eom AC-Q c7-0",
+    "address": "41640726594",
+    "n": 0,
+    "after": 11,
+    "temperature": 4569,
+    "cls": "K",
+    "solarMasses": 0.73046875,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.730469,
+     "temperature": 4571.0
+    }
+   }
+  ],
+  "d": [
+   {
+    "name": "Hypoe Groa OO-O d7-0",
+    "address": "1786746691",
+    "n": 0,
+    "after": 11,
+    "temperature": 6234,
+    "cls": "F",
+    "solarMasses": 1.3203125,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.320313,
+     "temperature": 6241.0
+    }
+   },
+   {
+    "name": "Hypio Ble PU-V d3-0",
+    "address": "1937757731",
+    "n": 0,
+    "after": 11,
+    "temperature": 7663,
+    "cls": "A",
+    "solarMasses": 1.6875,
+    "real": {
+     "starType": "A",
+     "stellarMass": 1.6875,
+     "temperature": 7677.0
+    }
+   },
+   {
+    "name": "Dryaa Groa EN-Q d6-0",
+    "address": "1988089275",
+    "n": 0,
+    "after": 12,
+    "temperature": 7952,
+    "cls": "A",
+    "solarMasses": 1.74609375,
+    "real": {
+     "starType": "A",
+     "stellarMass": 1.746094,
+     "temperature": 7792.0
+    }
+   },
+   {
+    "name": "Blaiche IW-E d11-0",
+    "address": "2357205731",
+    "n": 0,
+    "after": 11,
+    "temperature": 6209,
+    "cls": "F",
+    "solarMasses": 1.07421875,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.074219,
+     "temperature": 6140.0
+    }
+   },
+   {
+    "name": "Spooraa LX-L d7-0",
+    "address": "2508200131",
+    "n": 0,
+    "after": 11,
+    "temperature": 7187,
+    "cls": "F",
+    "solarMasses": 1.296875,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.296875,
+     "temperature": 7164.0
+    }
+   },
+   {
+    "name": "Xotheia FS-B d13-0",
+    "address": "2508232051",
+    "n": 0,
+    "after": 11,
+    "temperature": 7339,
+    "cls": "F",
+    "solarMasses": 1.74609375,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.746094,
+     "temperature": 7347.0
+    }
+   },
+   {
+    "name": "Phaa Chrie UJ-I d9-0",
+    "address": "2524976851",
+    "n": 0,
+    "after": 12,
+    "temperature": 7126,
+    "cls": "F",
+    "solarMasses": 1.44921875,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.449219,
+     "temperature": 7104.0
+    }
+   },
+   {
+    "name": "Choomeia HF-A d0",
+    "address": "2575323907",
+    "n": 0,
+    "after": 12,
+    "temperature": 6837,
+    "cls": "F",
+    "solarMasses": 1.44921875,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.449219,
+     "temperature": 6739.0
+    }
+   },
+   {
+    "name": "Schee Bliae MC-B d1-0",
+    "address": "2625623563",
+    "n": 0,
+    "after": 12,
+    "temperature": 5975,
+    "cls": "G",
+    "solarMasses": 0.99609375,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.777344,
+     "temperature": 4526.0
+    }
+   },
+   {
+    "name": "Styux LW-C d0",
+    "address": "2675954819",
+    "n": 0,
+    "after": 12,
+    "temperature": 5203,
+    "cls": "G",
+    "solarMasses": 0.91015625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.910156,
+     "temperature": 4860.0
+    }
+   },
+   {
+    "name": "Hypuehau NQ-B d14-0",
+    "address": "2709443707",
+    "n": 0,
+    "after": 11,
+    "temperature": 8491,
+    "cls": "A",
+    "solarMasses": 1.6328125,
+    "real": {
+     "starType": "A",
+     "stellarMass": 1.632813,
+     "temperature": 8507.0
+    }
+   },
+   {
+    "name": "Xothae TO-I d9-0",
+    "address": "2810205523",
+    "n": 0,
+    "after": 12,
+    "temperature": 6594,
+    "cls": "F",
+    "solarMasses": 1.453125,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.453125,
+     "temperature": 6618.0
+    }
+   },
+   {
+    "name": "Zehaei FN-H d11-0",
+    "address": "2877263331",
+    "n": 0,
+    "after": 11,
+    "temperature": 6801,
+    "cls": "F",
+    "solarMasses": 1.51953125,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.519531,
+     "temperature": 6807.0
+    }
+   },
+   {
+    "name": "Loihaei UY-Z d0",
+    "address": "3095286027",
+    "n": 0,
+    "after": 12,
+    "temperature": 6955,
+    "cls": "F",
+    "solarMasses": 1.24609375,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.246094,
+     "temperature": 6947.0
+    }
+   },
+   {
+    "name": "Hypoae Chreou SX-U d2-0",
+    "address": "3095418395",
+    "n": 0,
+    "after": 12,
+    "temperature": 8313,
+    "cls": "A",
+    "solarMasses": 1.57421875,
+    "real": {
+     "starType": "A",
+     "stellarMass": 1.574219,
+     "temperature": 8269.0
+    }
+   },
+   {
+    "name": "Slacheae VD-J d9-0",
+    "address": "3212647251",
+    "n": 0,
+    "after": 11,
+    "temperature": 8187,
+    "cls": "A",
+    "solarMasses": 1.6796875,
+    "real": {
+     "starType": "A",
+     "stellarMass": 1.679688,
+     "temperature": 8186.0
+    }
+   },
+   {
+    "name": "Slachaea RL-J d10-0",
+    "address": "3548371803",
+    "n": 0,
+    "after": 11,
+    "temperature": 5644,
+    "cls": "G",
+    "solarMasses": 1.0234375,
+    "real": {
+     "starType": "G",
+     "stellarMass": 1.023438,
+     "temperature": 5517.0
+    }
+   },
+   {
+    "name": "Hypuae Auvsky AF-R d4-0",
+    "address": "3598979883",
+    "n": 0,
+    "after": 12,
+    "temperature": 7341,
+    "cls": "F",
+    "solarMasses": 1.49609375,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.496094,
+     "temperature": 7392.0
+    }
+   },
+   {
+    "name": "Spoorooe TS-U d2-0",
+    "address": "3615496347",
+    "n": 0,
+    "after": 12,
+    "temperature": 5125,
+    "cls": "K",
+    "solarMasses": 0.921875,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.921875,
+     "temperature": 5002.0
+    }
+   },
+   {
+    "name": "Dryao Scroi OA-A d0",
+    "address": "4001632387",
+    "n": 0,
+    "after": 12,
+    "temperature": 7794,
+    "cls": "A",
+    "solarMasses": 1.44921875,
+    "real": {
+     "starType": "N",
+     "stellarMass": 0.507813,
+     "temperature": 7708322.0
+    }
+   },
+   {
+    "name": "Byeia Airg NE-X d2-0",
+    "address": "4051914651",
+    "n": 0,
+    "after": 11,
+    "temperature": 7842,
+    "cls": "A",
+    "solarMasses": 1.66015625,
+    "real": {
+     "starType": "N",
+     "stellarMass": 0.703125,
+     "temperature": 6183545.0
+    }
+   },
+   {
+    "name": "Pyroomuae VQ-C d13-0",
+    "address": "4387623795",
+    "n": 0,
+    "after": 11,
+    "temperature": 5612,
+    "cls": "G",
+    "solarMasses": 1.06640625,
+    "real": {
+     "starType": "White Dwarf (DAB) Star",
+     "stellarMass": 0.402344,
+     "temperature": 10976.0
+    }
+   },
+   {
+    "name": "Spoorue SS-T d3-0",
+    "address": "4471199907",
+    "n": 0,
+    "after": 11,
+    "temperature": 4957,
+    "cls": "K",
+    "solarMasses": 0.90625,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.90625,
+     "temperature": 4877.0
+    }
+   },
+   {
+    "name": "Plua Fruia RG-Y d0",
+    "address": "4521466123",
+    "n": 0,
+    "after": 11,
+    "temperature": 5117,
+    "cls": "K",
+    "solarMasses": 0.96875,
+    "real": {
+     "starType": "K",
+     "stellarMass": 0.96875,
+     "temperature": 5131.0
+    }
+   },
+   {
+    "name": "Eishoqs KY-Y d1-0",
+    "address": "4605562899",
+    "n": 0,
+    "after": 12,
+    "temperature": 8222,
+    "cls": "A",
+    "solarMasses": 1.55078125,
+    "real": {
+     "starType": "A",
+     "stellarMass": 1.550781,
+     "temperature": 8213.0
+    }
+   },
+   {
+    "name": "Hypao Chraea PE-X d2-0",
+    "address": "4622341659",
+    "n": 0,
+    "after": 12,
+    "temperature": 6985,
+    "cls": "F",
+    "solarMasses": 1.328125,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.328125,
+     "temperature": 6954.0
+    }
+   },
+   {
+    "name": "Eishoqs AY-F d12-0",
+    "address": "4639150187",
+    "n": 0,
+    "after": 12,
+    "temperature": 5446,
+    "cls": "G",
+    "solarMasses": 1.00390625,
+    "real": {
+     "starType": "G",
+     "stellarMass": 1.003906,
+     "temperature": 5348.0
+    }
+   },
+   {
+    "name": "Eishoqs AM-C d13-0",
+    "address": "4706111603",
+    "n": 0,
+    "after": 12,
+    "temperature": 6133,
+    "cls": "F",
+    "solarMasses": 1.08984375,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.089844,
+     "temperature": 6123.0
+    }
+   },
+   {
+    "name": "Agnaihs ML-P d5-0",
+    "address": "4806414899",
+    "n": 0,
+    "after": 11,
+    "temperature": 6933,
+    "cls": "F",
+    "solarMasses": 1.32421875,
+    "real": {
+     "starType": "White Dwarf (DC) Star",
+     "stellarMass": 0.609375,
+     "temperature": 6477.0
+    }
+   },
+   {
+    "name": "Groomeau MV-Y d0",
+    "address": "4806464267",
+    "n": 0,
+    "after": 11,
+    "temperature": 8219,
+    "cls": "A",
+    "solarMasses": 1.76171875,
+    "real": {
+     "starType": "N",
+     "stellarMass": 0.84375,
+     "temperature": 2411347.0
+    }
+   },
+   {
+    "name": "Pria Phlue OX-T d3-0",
+    "address": "4974529699",
+    "n": 0,
+    "after": 12,
+    "temperature": 5371,
+    "cls": "G",
+    "solarMasses": 0.9453125,
+    "real": {
+     "starType": "G",
+     "stellarMass": 0.945313,
+     "temperature": 5369.0
+    }
+   },
+   {
+    "name": "Byooe Thio II-I d10-0",
+    "address": "5243030235",
+    "n": 0,
+    "after": 11,
+    "temperature": 7741,
+    "cls": "A",
+    "solarMasses": 1.72265625,
+    "real": {
+     "starType": "A",
+     "stellarMass": 1.722656,
+     "temperature": 7707.0
+    }
+   },
+   {
+    "name": "Dryeae Chria FW-U d3-0",
+    "address": "5259826339",
+    "n": 0,
+    "after": 11,
+    "temperature": 8647,
+    "cls": "A",
+    "solarMasses": 1.6796875,
+    "real": {
+     "starType": "A",
+     "stellarMass": 1.679688,
+     "temperature": 8683.0
+    }
+   },
+   {
+    "name": "Pra Eom TC-V d2-0",
+    "address": "5292984475",
+    "n": 0,
+    "after": 11,
+    "temperature": 7903,
+    "cls": "A",
+    "solarMasses": 1.5859375,
+    "real": {
+     "starType": "N",
+     "stellarMass": 0.742188,
+     "temperature": 2888084.0
+    }
+   },
+   {
+    "name": "Syroomoo FB-O d6-0",
+    "address": "5495100219",
+    "n": 0,
+    "after": 11,
+    "temperature": 7226,
+    "cls": "F",
+    "solarMasses": 1.62109375,
+    "real": {
+     "starType": "K (Yellow-Orange giant) Star",
+     "stellarMass": 1.621094,
+     "temperature": 3915.0
+    }
+   },
+   {
+    "name": "Wruegneou IC-V d2-0",
+    "address": "5645573147",
+    "n": 0,
+    "after": 12,
+    "temperature": 6648,
+    "cls": "F",
+    "solarMasses": 1.1015625,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.101563,
+     "temperature": 6634.0
+    }
+   },
+   {
+    "name": "Pha Flaae MN-B d0",
+    "address": "5679223427",
+    "n": 0,
+    "after": 11,
+    "temperature": 6015,
+    "cls": "F",
+    "solarMasses": 0.9921875,
+    "real": {
+     "starType": "F",
+     "stellarMass": 0.992188,
+     "temperature": 6067.0
+    }
+   },
+   {
+    "name": "Fraufue NI-S d4-0",
+    "address": "5729258027",
+    "n": 0,
+    "after": 11,
+    "temperature": 7107,
+    "cls": "F",
+    "solarMasses": 1.65234375,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.652344,
+     "temperature": 6956.0
+    }
+   },
+   {
+    "name": "Dryu Airgh BL-P d5-0",
+    "address": "5964301747",
+    "n": 0,
+    "after": 11,
+    "temperature": 6350,
+    "cls": "F",
+    "solarMasses": 1.3046875,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.304688,
+     "temperature": 6349.0
+    }
+   },
+   {
+    "name": "Eufarb CC-J d10-0",
+    "address": "6081961563",
+    "n": 0,
+    "after": 11,
+    "temperature": 7962,
+    "cls": "A",
+    "solarMasses": 1.5390625,
+    "real": {
+     "starType": "N",
+     "stellarMass": 0.460938,
+     "temperature": 8654584.0
+    }
+   },
+   {
+    "name": "Boerst EG-F d11-0",
+    "address": "6115069923",
+    "n": 0,
+    "after": 11,
+    "temperature": 7174,
+    "cls": "F",
+    "solarMasses": 1.453125,
+    "real": {
+     "starType": "N",
+     "stellarMass": 0.605469,
+     "temperature": 3211491.0
+    }
+   },
+   {
+    "name": "Praei Chria KM-L d8-0",
+    "address": "6417407179",
+    "n": 0,
+    "after": 11,
+    "temperature": 8094,
+    "cls": "A",
+    "solarMasses": 1.484375,
+    "real": {
+     "starType": "A",
+     "stellarMass": 1.484375,
+     "temperature": 8071.0
+    }
+   },
+   {
+    "name": "Pyreou Thoea TS-U d2-0",
+    "address": "6568288411",
+    "n": 0,
+    "after": 12,
+    "temperature": 6600,
+    "cls": "F",
+    "solarMasses": 1.25390625,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.253906,
+     "temperature": 6479.0
+    }
+   },
+   {
+    "name": "Eowyg Ail KR-W d1-0",
+    "address": "6786401555",
+    "n": 0,
+    "after": 11,
+    "temperature": 7170,
+    "cls": "F",
+    "solarMasses": 1.58203125,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.582031,
+     "temperature": 7178.0
+    }
+   },
+   {
+    "name": "Flyiedgoi VE-H d10-0",
+    "address": "6870060251",
+    "n": 0,
+    "after": 12,
+    "temperature": 7355,
+    "cls": "F",
+    "solarMasses": 1.48046875,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.480469,
+     "temperature": 7338.0
+    }
+   },
+   {
+    "name": "Sponguae PA-A d0",
+    "address": "6970934659",
+    "n": 0,
+    "after": 12,
+    "temperature": 6313,
+    "cls": "F",
+    "solarMasses": 1.16015625,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.160156,
+     "temperature": 6249.0
+    }
+   },
+   {
+    "name": "Phooe Euhn CB-F d11-0",
+    "address": "7390381027",
+    "n": 0,
+    "after": 12,
+    "temperature": 5545,
+    "cls": "G",
+    "solarMasses": 1.11328125,
+    "real": {
+     "starType": "G",
+     "stellarMass": 1.113281,
+     "temperature": 5445.0
+    }
+   },
+   {
+    "name": "Eock Hypoo NE-F d12-0",
+    "address": "7407060075",
+    "n": 0,
+    "after": 11,
+    "temperature": 7215,
+    "cls": "F",
+    "solarMasses": 1.66015625,
+    "real": {
+     "starType": "F",
+     "stellarMass": 1.660156,
+     "temperature": 7221.0
+    }
+   }
+  ],
+  "e": [
+   {
+    "name": "Spooroea JG-Y e0",
+    "address": "257952844",
+    "n": 0,
+    "after": 12,
+    "temperature": 10633,
+    "cls": "B",
+    "solarMasses": 2.8984375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 2.898438,
+     "temperature": 10467.0
+    }
+   },
+   {
+    "name": "Hypiae Brue YK-P e5-0",
+    "address": "270535604",
+    "n": 0,
+    "after": 12,
+    "temperature": 14094,
+    "cls": "B",
+    "solarMasses": 4.91015625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.910156,
+     "temperature": 15577.0
+    }
+   },
+   {
+    "name": "Tosaea XE-R e4-0",
+    "address": "283118892",
+    "n": 0,
+    "after": 12,
+    "temperature": 12992,
+    "cls": "B",
+    "solarMasses": 3.296875,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.296875,
+     "temperature": 12771.0
+    }
+   },
+   {
+    "name": "Oushaind GH-U e3-0",
+    "address": "287304548",
+    "n": 0,
+    "after": 12,
+    "temperature": 14069,
+    "cls": "B",
+    "solarMasses": 3.9765625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.976563,
+     "temperature": 14081.0
+    }
+   },
+   {
+    "name": "Wraukio GH-U e3-0",
+    "address": "287304612",
+    "n": 0,
+    "after": 12,
+    "temperature": 9954,
+    "cls": "A",
+    "solarMasses": 2.28125,
+    "real": {
+     "starType": "B",
+     "stellarMass": 2.28125,
+     "temperature": 10002.0
+    }
+   },
+   {
+    "name": "Plio Flee EL-P e5-0",
+    "address": "295701556",
+    "n": 0,
+    "after": 11,
+    "temperature": 9713,
+    "cls": "A",
+    "solarMasses": 2.57421875,
+    "real": {
+     "starType": "A",
+     "stellarMass": 2.574219,
+     "temperature": 9506.0
+    }
+   },
+   {
+    "name": "Blaiche ZJ-R e4-0",
+    "address": "299904364",
+    "n": 0,
+    "after": 11,
+    "temperature": 9700,
+    "cls": "A",
+    "solarMasses": 2.6875,
+    "real": {
+     "starType": "A",
+     "stellarMass": 2.6875,
+     "temperature": 9526.0
+    }
+   },
+   {
+    "name": "Oushaisc AB-W e2-0",
+    "address": "312470364",
+    "n": 0,
+    "after": 12,
+    "temperature": 13125,
+    "cls": "B",
+    "solarMasses": 3.6015625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.601563,
+     "temperature": 13150.0
+    }
+   },
+   {
+    "name": "Phaa Chrie HR-N e6-0",
+    "address": "325061500",
+    "n": 0,
+    "after": 12,
+    "temperature": 14278,
+    "cls": "B",
+    "solarMasses": 4.13671875,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.136719,
+     "temperature": 14335.0
+    }
+   },
+   {
+    "name": "Dryuae Freau AA-A e0",
+    "address": "337643716",
+    "n": 0,
+    "after": 11,
+    "temperature": 15783,
+    "cls": "B",
+    "solarMasses": 5.15234375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 5.152344,
+     "temperature": 17016.0
+    }
+   },
+   {
+    "name": "Veqeae XE-R e4-0",
+    "address": "350227436",
+    "n": 0,
+    "after": 12,
+    "temperature": 12726,
+    "cls": "B",
+    "solarMasses": 3.984375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.984375,
+     "temperature": 12609.0
+    }
+   },
+   {
+    "name": "Flyua Prou QI-B e0",
+    "address": "354413700",
+    "n": 0,
+    "after": 12,
+    "temperature": 12995,
+    "cls": "B",
+    "solarMasses": 4.140625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.140625,
+     "temperature": 12968.0
+    }
+   },
+   {
+    "name": "Scaukaei SI-B e0",
+    "address": "362801732",
+    "n": 0,
+    "after": 11,
+    "temperature": 13854,
+    "cls": "B",
+    "solarMasses": 4.453125,
+    "real": {
+     "starType": "Herbig Ae/Be Star",
+     "stellarMass": 4.453125,
+     "temperature": 5501.0
+    }
+   },
+   {
+    "name": "Eoch Greau EB-W e2-0",
+    "address": "362801820",
+    "n": 0,
+    "after": 11,
+    "temperature": 9117,
+    "cls": "A",
+    "solarMasses": 2.44921875,
+    "real": {
+     "starType": "A",
+     "stellarMass": 2.449219,
+     "temperature": 9108.0
+    }
+   },
+   {
+    "name": "Crookae AF-R e4-0",
+    "address": "362809132",
+    "n": 0,
+    "after": 12,
+    "temperature": 10163,
+    "cls": "B",
+    "solarMasses": 2.6796875,
+    "real": {
+     "starType": "A",
+     "stellarMass": 2.679688,
+     "temperature": 9992.0
+    }
+   },
+   {
+    "name": "Scaukea MI-B e0",
+    "address": "371190340",
+    "n": 0,
+    "after": 12,
+    "temperature": 14185,
+    "cls": "B",
+    "solarMasses": 4.90625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.90625,
+     "temperature": 15460.0
+    }
+   },
+   {
+    "name": "Systeasai DR-N e6-0",
+    "address": "375393148",
+    "n": 0,
+    "after": 12,
+    "temperature": 10663,
+    "cls": "B",
+    "solarMasses": 2.67578125,
+    "real": {
+     "starType": "B",
+     "stellarMass": 2.675781,
+     "temperature": 10288.0
+    }
+   },
+   {
+    "name": "Flyeia Prou CG-X e1-0",
+    "address": "379554964",
+    "n": 0,
+    "after": 11,
+    "temperature": 14651,
+    "cls": "B",
+    "solarMasses": 3.8671875,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.867188,
+     "temperature": 14571.0
+    }
+   },
+   {
+    "name": "Phroea Greau AB-W e2-0",
+    "address": "379579356",
+    "n": 0,
+    "after": 11,
+    "temperature": 16084,
+    "cls": "B",
+    "solarMasses": 4.80859375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.808594,
+     "temperature": 14054.0
+    }
+   },
+   {
+    "name": "Xothooe WE-R e4-0",
+    "address": "379587244",
+    "n": 0,
+    "after": 12,
+    "temperature": 14172,
+    "cls": "B",
+    "solarMasses": 3.92578125,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.925781,
+     "temperature": 13721.0
+    }
+   },
+   {
+    "name": "Phaa Brai PS-U e2-0",
+    "address": "383781852",
+    "n": 0,
+    "after": 11,
+    "temperature": 17114,
+    "cls": "B",
+    "solarMasses": 5.6484375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 5.648438,
+     "temperature": 16212.0
+    }
+   },
+   {
+    "name": "Eord Bloae SZ-O e6-0",
+    "address": "387967548",
+    "n": 0,
+    "after": 11,
+    "temperature": 14379,
+    "cls": "B",
+    "solarMasses": 4.01953125,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.019531,
+     "temperature": 14025.0
+    }
+   },
+   {
+    "name": "Preae Airg RS-U e2-0",
+    "address": "392169180",
+    "n": 0,
+    "after": 12,
+    "temperature": 15172,
+    "cls": "B",
+    "solarMasses": 5.50390625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 5.503906,
+     "temperature": 15250.0
+    }
+   },
+   {
+    "name": "Sphuqe IM-W e1-0",
+    "address": "404753300",
+    "n": 0,
+    "after": 12,
+    "temperature": 18991,
+    "cls": "B",
+    "solarMasses": 5.92578125,
+    "real": {
+     "starType": "B",
+     "stellarMass": 5.925781,
+     "temperature": 16882.0
+    }
+   },
+   {
+    "name": "Flyae Hypooe FC-U e3-0",
+    "address": "408929828",
+    "n": 0,
+    "after": 11,
+    "temperature": 12537,
+    "cls": "B",
+    "solarMasses": 3.41015625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.410156,
+     "temperature": 12588.0
+    }
+   },
+   {
+    "name": "Pru Fraae BQ-Y e0",
+    "address": "408964300",
+    "n": 0,
+    "after": 11,
+    "temperature": 14345,
+    "cls": "B",
+    "solarMasses": 4.0625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.0625,
+     "temperature": 14108.0
+    }
+   },
+   {
+    "name": "Shruez IX-T e3-0",
+    "address": "413116004",
+    "n": 0,
+    "after": 12,
+    "temperature": 18600,
+    "cls": "B",
+    "solarMasses": 5.640625,
+    "real": {
+     "starType": "Herbig Ae/Be Star",
+     "stellarMass": 5.640625,
+     "temperature": 3986.0
+    }
+   },
+   {
+    "name": "Gyrafaae GG-Y e0",
+    "address": "413141708",
+    "n": 0,
+    "after": 11,
+    "temperature": 14439,
+    "cls": "B",
+    "solarMasses": 3.859375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.859375,
+     "temperature": 14430.0
+    }
+   },
+   {
+    "name": "Pru Ail BF-A e0",
+    "address": "417343172",
+    "n": 0,
+    "after": 12,
+    "temperature": 11779,
+    "cls": "B",
+    "solarMasses": 3.4765625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.476563,
+     "temperature": 11798.0
+    }
+   },
+   {
+    "name": "Systease XY-S e3-0",
+    "address": "434113380",
+    "n": 0,
+    "after": 12,
+    "temperature": 18117,
+    "cls": "B",
+    "solarMasses": 5.30078125,
+    "real": {
+     "starType": "B",
+     "stellarMass": 5.300781,
+     "temperature": 17656.0
+    }
+   },
+   {
+    "name": "Ploi Ail VT-R e4-0",
+    "address": "434136748",
+    "n": 0,
+    "after": 14,
+    "temperature": 12514,
+    "cls": "B",
+    "solarMasses": 3.95703125,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.957031,
+     "temperature": 12505.0
+    }
+   },
+   {
+    "name": "Prooe Eaescs OT-R e4-0",
+    "address": "438265580",
+    "n": 0,
+    "after": 11,
+    "temperature": 11840,
+    "cls": "B",
+    "solarMasses": 2.7890625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 2.789063,
+     "temperature": 11608.0
+    }
+   },
+   {
+    "name": "Prooe Flyoae YA-W e2-0",
+    "address": "438299740",
+    "n": 0,
+    "after": 15,
+    "temperature": 17433,
+    "cls": "B",
+    "solarMasses": 5.7890625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 5.085938,
+     "temperature": 18744.0
+    }
+   },
+   {
+    "name": "Oombaiwns QT-R e4-0",
+    "address": "446655980",
+    "n": 0,
+    "after": 12,
+    "temperature": 11985,
+    "cls": "B",
+    "solarMasses": 3.578125,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.578125,
+     "temperature": 11815.0
+    }
+   },
+   {
+    "name": "Pheia Flee WE-R e4-0",
+    "address": "446695788",
+    "n": 0,
+    "after": 12,
+    "temperature": 12729,
+    "cls": "B",
+    "solarMasses": 3.94140625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.941406,
+     "temperature": 12787.0
+    }
+   },
+   {
+    "name": "Dryaa Proae FH-U e3-0",
+    "address": "450881764",
+    "n": 0,
+    "after": 11,
+    "temperature": 15313,
+    "cls": "B",
+    "solarMasses": 4.4140625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.414063,
+     "temperature": 13307.0
+    }
+   },
+   {
+    "name": "Byeia Flee AA-Z e0",
+    "address": "455118156",
+    "n": 0,
+    "after": 12,
+    "temperature": 15859,
+    "cls": "B",
+    "solarMasses": 4.59375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.59375,
+     "temperature": 14171.0
+    }
+   },
+   {
+    "name": "Phraifaae QO-Q e5-0",
+    "address": "455133748",
+    "n": 0,
+    "after": 11,
+    "temperature": 11408,
+    "cls": "B",
+    "solarMasses": 2.93359375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 2.933594,
+     "temperature": 11485.0
+    }
+   },
+   {
+    "name": "Ovopp TD-B e0",
+    "address": "459261444",
+    "n": 0,
+    "after": 11,
+    "temperature": 16173,
+    "cls": "B",
+    "solarMasses": 5.765625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 5.765625,
+     "temperature": 18375.0
+    }
+   },
+   {
+    "name": "Chraudaae HR-N e6-0",
+    "address": "459277628",
+    "n": 0,
+    "after": 12,
+    "temperature": 12741,
+    "cls": "B",
+    "solarMasses": 3.6015625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.601563,
+     "temperature": 12680.0
+    }
+   },
+   {
+    "name": "Glaisoo OI-S e4-0",
+    "address": "463457004",
+    "n": 0,
+    "after": 15,
+    "temperature": 11638,
+    "cls": "B",
+    "solarMasses": 3.12109375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.121094,
+     "temperature": 11526.0
+    }
+   },
+   {
+    "name": "Chraudaae WY-S e3-0",
+    "address": "463471908",
+    "n": 0,
+    "after": 11,
+    "temperature": 11103,
+    "cls": "B",
+    "solarMasses": 3.34765625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.347656,
+     "temperature": 11092.0
+    }
+   },
+   {
+    "name": "Veqia BF-R e4-0",
+    "address": "467667948",
+    "n": 0,
+    "after": 15,
+    "temperature": 18416,
+    "cls": "B",
+    "solarMasses": 5.8671875,
+    "real": {
+     "starType": "B",
+     "stellarMass": 5.867188,
+     "temperature": 17945.0
+    }
+   },
+   {
+    "name": "Flyae Prou VU-X e1-0",
+    "address": "476048532",
+    "n": 0,
+    "after": 12,
+    "temperature": 14482,
+    "cls": "B",
+    "solarMasses": 3.875,
+    "real": {
+     "starType": "B",
+     "stellarMass": 3.875,
+     "temperature": 14516.0
+    }
+   },
+   {
+    "name": "Fraufaa PO-Q e5-0",
+    "address": "484427060",
+    "n": 0,
+    "after": 11,
+    "temperature": 10724,
+    "cls": "B",
+    "solarMasses": 2.8359375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 2.835938,
+     "temperature": 10556.0
+    }
+   },
+   {
+    "name": "Spooroo IR-N e6-0",
+    "address": "497028220",
+    "n": 0,
+    "after": 11,
+    "temperature": 15228,
+    "cls": "B",
+    "solarMasses": 4.50390625,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.503906,
+     "temperature": 15064.0
+    }
+   },
+   {
+    "name": "Myoageou SS-U e2-0",
+    "address": "497028316",
+    "n": 0,
+    "after": 12,
+    "temperature": 16662,
+    "cls": "B",
+    "solarMasses": 4.8984375,
+    "real": {
+     "starType": "B",
+     "stellarMass": 4.898438,
+     "temperature": 16365.0
+    }
+   },
+   {
+    "name": "Prooe Flyou OZ-O e6-0",
+    "address": "505408636",
+    "n": 0,
+    "after": 12,
+    "temperature": 17042,
+    "cls": "B",
+    "solarMasses": 5.1328125,
+    "real": {
+     "starType": "B",
+     "stellarMass": 5.132813,
+     "temperature": 17125.0
+    }
+   }
+  ]
+ },
+ "boxels": [
+  {
+   "kind": "low",
+   "base": "4622127219",
+   "factor": 0.9849399118314123,
+   "wrongAsRuleStands": 4,
+   "fixedByFactor": 3,
+   "systems": [
+    {
+     "address": "4622127219",
+     "n": 0,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.726563,
+      "temperature": 7323.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "38981865587",
+     "n": 1,
+     "after": 12,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.042969,
+      "temperature": 5491.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "G"
+    },
+    {
+     "address": "73341603955",
+     "n": 2,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.132813,
+      "temperature": 6295.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "107701342323",
+     "n": 3,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 0.984375,
+      "temperature": 6159.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "142061080691",
+     "n": 4,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.132813,
+      "temperature": 6653.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "176420819059",
+     "n": 5,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.273438,
+      "temperature": 7000.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "210780557427",
+     "n": 6,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.652344,
+      "temperature": 7428.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "245140295795",
+     "n": 7,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.445313,
+      "temperature": 6668.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "279500034163",
+     "n": 8,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.316406,
+      "temperature": 7269.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "313859772531",
+     "n": 9,
+     "after": 12,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.519531,
+      "temperature": 7742.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "348219510899",
+     "n": 10,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.0,
+      "temperature": 6111.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "382579249267",
+     "n": 11,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.667969,
+      "temperature": 7619.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "416938987635",
+     "n": 12,
+     "after": 12,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.480469,
+      "temperature": 7920.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "A"
+    },
+    {
+     "address": "451298726003",
+     "n": 13,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.476563,
+      "temperature": 7034.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "485658464371",
+     "n": 14,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.152344,
+      "temperature": 6169.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "520018202739",
+     "n": 15,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.460938,
+      "temperature": 7292.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "554377941107",
+     "n": 16,
+     "after": 12,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.097656,
+      "temperature": 5664.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "G"
+    },
+    {
+     "address": "588737679475",
+     "n": 17,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.042969,
+      "temperature": 6107.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "623097417843",
+     "n": 18,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.71875,
+      "temperature": 8333.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "657457156211",
+     "n": 19,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.628906,
+      "temperature": 7996.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "691816894579",
+     "n": 20,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 0.984375,
+      "temperature": 6131.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "726176632947",
+     "n": 21,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.707031,
+      "temperature": 7327.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "760536371315",
+     "n": 22,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.46875,
+      "temperature": 7330.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "794896109683",
+     "n": 23,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.648438,
+      "temperature": 8322.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "829255848051",
+     "n": 24,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.582031,
+      "temperature": 6823.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "863615586419",
+     "n": 25,
+     "after": 12,
+     "cls": "A",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.429688,
+      "temperature": 7416.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "897975324787",
+     "n": 26,
+     "after": 12,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.933594,
+      "temperature": 5335.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "G"
+    },
+    {
+     "address": "932335063155",
+     "n": 27,
+     "after": 11,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.140625,
+      "temperature": 5751.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "G"
+    },
+    {
+     "address": "966694801523",
+     "n": 28,
+     "after": 11,
+     "cls": "G",
+     "real": {
+      "starType": "K",
+      "stellarMass": 1.007813,
+      "temperature": 5199.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "G"
+    },
+    {
+     "address": "1001054539891",
+     "n": 29,
+     "after": 12,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.992188,
+      "temperature": 5666.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "G"
+    },
+    {
+     "address": "1035414278259",
+     "n": 30,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.160156,
+      "temperature": 6827.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "1069774016627",
+     "n": 31,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.132813,
+      "temperature": 6470.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "1104133754995",
+     "n": 32,
+     "after": 12,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.410156,
+      "temperature": 7598.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "1138493493363",
+     "n": 33,
+     "after": 12,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.160156,
+      "temperature": 5602.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "G"
+    },
+    {
+     "address": "1172853231731",
+     "n": 34,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.382813,
+      "temperature": 6831.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "1207212970099",
+     "n": 35,
+     "after": 12,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.730469,
+      "temperature": 7942.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "A"
+    },
+    {
+     "address": "1241572708467",
+     "n": 36,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.414063,
+      "temperature": 6651.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "1275932446835",
+     "n": 37,
+     "after": 12,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.949219,
+      "temperature": 5411.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "G"
+    },
+    {
+     "address": "1310292185203",
+     "n": 38,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.148438,
+      "temperature": 6464.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "1344651923571",
+     "n": 39,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.738281,
+      "temperature": 8704.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "1379011661939",
+     "n": 40,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.734375,
+      "temperature": 7760.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "1413371400307",
+     "n": 41,
+     "after": 11,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.027344,
+      "temperature": 5716.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "G"
+    },
+    {
+     "address": "1447731138675",
+     "n": 42,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.121094,
+      "temperature": 6327.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "1482090877043",
+     "n": 43,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.238281,
+      "temperature": 6821.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "1516450615411",
+     "n": 44,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.101563,
+      "temperature": 5955.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "G"
+    },
+    {
+     "address": "1550810353779",
+     "n": 45,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.253906,
+      "temperature": 7144.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "1585170092147",
+     "n": 46,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.421875,
+      "temperature": 7249.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    }
+   ]
+  },
+  {
+   "kind": "plain",
+   "base": "3665825027",
+   "factor": 1.002909720535925,
+   "wrongAsRuleStands": 0,
+   "fixedByFactor": 0,
+   "systems": [
+    {
+     "address": "3665825027",
+     "n": 0,
+     "after": 12,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.75,
+      "temperature": 8949.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "A"
+    },
+    {
+     "address": "38025563395",
+     "n": 1,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.484375,
+      "temperature": 6695.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "72385301763",
+     "n": 2,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.066406,
+      "temperature": 6159.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "106745040131",
+     "n": 3,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.636719,
+      "temperature": 8360.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "141104778499",
+     "n": 4,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.25,
+      "temperature": 6056.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "175464516867",
+     "n": 5,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.40625,
+      "temperature": 7303.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "209824255235",
+     "n": 6,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.425781,
+      "temperature": 6858.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "244183993603",
+     "n": 7,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.683594,
+      "temperature": 8342.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "278543731971",
+     "n": 8,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.503906,
+      "temperature": 7036.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "312903470339",
+     "n": 9,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 0.972656,
+      "temperature": 6060.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "347263208707",
+     "n": 10,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.664063,
+      "temperature": 8202.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "381622947075",
+     "n": 11,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.269531,
+      "temperature": 6911.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "415982685443",
+     "n": 12,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.128906,
+      "temperature": 6137.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "450342423811",
+     "n": 13,
+     "after": 11,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.046875,
+      "temperature": 5577.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "G"
+    },
+    {
+     "address": "484702162179",
+     "n": 14,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.257813,
+      "temperature": 6106.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    },
+    {
+     "address": "519061900547",
+     "n": 15,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.371094,
+      "temperature": 6992.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "553421638915",
+     "n": 16,
+     "after": 12,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.949219,
+      "temperature": 5900.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "G"
+    },
+    {
+     "address": "587781377283",
+     "n": 17,
+     "after": 11,
+     "cls": "K",
+     "real": {
+      "starType": "K",
+      "stellarMass": 0.933594,
+      "temperature": 5012.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "K"
+    },
+    {
+     "address": "622141115651",
+     "n": 18,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.289063,
+      "temperature": 7238.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "656500854019",
+     "n": 19,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.632813,
+      "temperature": 8374.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "690860592387",
+     "n": 20,
+     "after": 12,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.59375,
+      "temperature": 7878.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "725220330755",
+     "n": 21,
+     "after": 11,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.03125,
+      "temperature": 5556.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "G"
+    },
+    {
+     "address": "759580069123",
+     "n": 22,
+     "after": 12,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.011719,
+      "temperature": 5359.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "G"
+    },
+    {
+     "address": "793939807491",
+     "n": 23,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.453125,
+      "temperature": 7101.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "828299545859",
+     "n": 24,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.359375,
+      "temperature": 6708.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "862659284227",
+     "n": 25,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.613281,
+      "temperature": 7124.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "897019022595",
+     "n": 26,
+     "after": 12,
+     "cls": "G",
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.898438,
+      "temperature": 5822.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "G"
+    },
+    {
+     "address": "931378760963",
+     "n": 27,
+     "after": 12,
+     "cls": "G",
+     "real": {
+      "starType": "K",
+      "stellarMass": 0.734375,
+      "temperature": 4220.0
+     },
+     "alive": false,
+     "calm": false
+    },
+    {
+     "address": "965738499331",
+     "n": 28,
+     "after": 11,
+     "cls": "A",
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.628906,
+      "temperature": 8177.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "A"
+    },
+    {
+     "address": "1000098237699",
+     "n": 29,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.121094,
+      "temperature": 6893.0
+     },
+     "alive": false,
+     "calm": false
+    },
+    {
+     "address": "1034457976067",
+     "n": 30,
+     "after": 11,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.335938,
+      "temperature": 7102.0
+     },
+     "alive": true,
+     "calm": true,
+     "sharpened": "F"
+    },
+    {
+     "address": "1068817714435",
+     "n": 31,
+     "after": 12,
+     "cls": "F",
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.367188,
+      "temperature": 6963.0
+     },
+     "alive": true,
+     "calm": false,
+     "sharpened": "F"
+    }
+   ]
+  }
+ ]
+}

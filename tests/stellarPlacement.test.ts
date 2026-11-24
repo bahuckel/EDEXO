@@ -26,6 +26,7 @@ import {
 import {
   boxelPositionSet,
   PREDICT_MAX_NUMBER,
+  setBoxelFlownSource,
   setBoxelLookupSource,
   setBoxelSectorSource,
 } from "../src/server/boxelPositions.js";
@@ -176,6 +177,7 @@ describe("a boxel's positions for the shortest order", () => {
   beforeEach(() => {
     setBoxelLookupSource(null);
     setBoxelSectorSource(null);
+    setBoxelFlownSource(null);
   });
   const g = golden.eembaids;
   const prefix = "Eembaids EG-Y g";
@@ -238,6 +240,40 @@ describe("a boxel's positions for the shortest order", () => {
     for (const r of b.systems) expect(there.positions.get(numberOf(r[1]))).toEqual(real(r));
     // Somewhere else entirely: where he is says nothing about this boxel.
     expect(boxelPositionSet(boxel, last, { name: "Sol", pos: [0, 0, 0] }).checked).toBe(0);
+  });
+
+  it("takes the systems he has flown as seen positions: they place the boxel and tell its kind", () => {
+    const b = golden.kinds.find((k) => k.code === "b")!;
+    const name = b.systems[0]![1];
+    const boxel = name.slice(0, name.lastIndexOf("-") + 1);
+    const last = b.systems.length - 1;
+    // No sector table, no look-up, not there now: nothing to stand on.
+    expect(boxelPositionSet(boxel, last).predicted.size).toBe(0);
+    const flown = b.systems.slice(0, 2).map((r) => ({ n: numberOf(r[1]), address: Number(r[0]), pos: real(r) }));
+    setBoxelFlownSource((prefix) => (prefix === boxel ? flown : []));
+    const s = boxelPositionSet(boxel, last);
+    expect(s.checked).toBe(2);
+    expect(s.exact).toBe(PLACEMENT_EXACT_KNOWN_KIND);
+    expect(s.frame?.code).toBe("b");
+    expect([...s.predicted].some((n) => flown.some((f) => f.n === n))).toBe(false);
+    for (const r of b.systems) expect(s.positions.get(numberOf(r[1]))).toEqual(real(r));
+    // Where each system's dice stand after its placement, for the star's own rolls: every number, once the kind is known.
+    expect(s.after?.size).toBe(last + 1);
+    expect(boxelPositionSet("Some Other AA-A b", last).predicted.size).toBe(0);
+  });
+
+  it("gives the dice's place only when the boxel's kind is known", () => {
+    const b = golden.kinds.find((k) => k.code === "b")!;
+    const frame = boxelFrame(b.systems[0]![0])!;
+    const name = b.systems[0]![1];
+    const boxel = name.slice(0, name.lastIndexOf("-") + 1);
+    const sector = [0, 1, 2].map((i) => Math.floor((frame.origin[i]! + [49985, 40985, 24105][i]!) / 1280)) as [number, number, number];
+    setBoxelSectorSource((s) => (boxel.startsWith(`${s} `) ? sector : null));
+    // A guessed kind: positions are shown with their lower share, the stars are not predicted from it.
+    const blind = boxelPositionSet(boxel, b.systems.length - 1);
+    expect(blind.predicted.size).toBeGreaterThan(0);
+    expect(blind.exact).toBeLessThan(PLACEMENT_EXACT_KNOWN_KIND);
+    expect(blind.after).toBeNull();
   });
 
   it("needs no guess around Sol, however crowded the boxel", () => {

@@ -107,6 +107,23 @@ export interface BoxelDTO {
 }
 
 /**
+ * The arrival star a system's address predicts (shared/stellarClass.ts; owner, 2026-11-24): not seen by anyone, and
+ * the class the star has if it is still on the main sequence.
+ */
+export interface PredictedStarDTO {
+  /** M, K, G, F, A, B or O. */
+  cls: string;
+  /** Of the arrival stars still on the main sequence, the share whose class such a prediction gets right, as measured. */
+  right: number;
+  /** The share of this mass code's arrival stars that are still on the main sequence; the rest are something else. */
+  alive: number;
+  /** Right for under 95 %: shown as likely, not as predicted. */
+  likely?: boolean;
+  /** One of his own scans in the boxel showed the boxel's temperature factor, which sharpens every other star's. */
+  sharpened?: boolean;
+}
+
+/**
  * A boxel the commander is scanning (owner, 2026-09-30): he types its last system, the app lists -0
  * up to it and ticks off the ones he has flown as he goes. Kept in `edexo-boxels.json`.
  */
@@ -150,10 +167,11 @@ export interface SavedBoxelDTO {
   next: string | null;
   /**
    * Flown in the shortest order (owner, 2026-11-04; shared/boxelOrder.ts) rather than by number: `order` is what is
-   * left, each with the light years from the one before (null: no position known, flown last, by number).
+   * left, each with the light years from the one before (null: no position known, flown last, by number), whether
+   * its position is a predicted one, and the arrival star its address predicts when nothing has recorded its star.
    */
   shortest?: boolean;
-  order?: { n: number; ly: number | null; predicted?: boolean }[];
+  order?: { n: number; ly: number | null; predicted?: boolean; star?: PredictedStarDTO }[];
   /** How many of `order` have a position (they come first); their light years, and the same systems by number. */
   placed?: number;
   /**
@@ -219,6 +237,8 @@ export interface BoxelTableRowDTO {
   notOnSpansh?: boolean;
   /** "K5 V" from a scan, "K" from the index or the jump. */
   mainStar: string | null;
+  /** No main star recorded anywhere: the one its address predicts. Never part of `starClasses` (the filter). */
+  predictedStar?: PredictedStarDTO;
   otherStars: string[];
   /** STAR_CLASSES keys of every star, main first (the Star type filter). */
   starClasses: string[];

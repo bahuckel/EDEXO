@@ -418,3 +418,49 @@ describe("History a page at a time, newest first (owner, 2026-10-06)", () => {
     ).toBe(2);
   });
 });
+
+describe("predicted stars in the Boxels table (star predictor step E, 2026-11-24)", () => {
+  it("shows the address's star only where no main star is recorded, and hands over his arrival scans", async () => {
+    const { boxelTable } = await import("../src/server/boxel.js");
+    const likely = { cls: "F", right: 0.94, alive: 0.8, likely: true };
+    const scan = { starType: "F", stellarMass: 1.2, temperature: 6500 };
+    const asked: [string, [number, unknown][]][] = [];
+    const t = boxelTable({
+      boxels: [{ id: "a", prefix: "Eol Prou AB-C d1-", end: 3, skipped: [], boxel: "AB-C d1", sector: "Eol Prou" } as never],
+      index: null,
+      visited: [[11, "Eol Prou AB-C d1-0"], [12, "Eol Prou AB-C d1-1"], "Eol Prou AB-C d1-9"],
+      speciesName: (id) => id,
+      journal: () => ({
+        mainStar: "F5 V",
+        otherStars: [],
+        starClasses: ["F"],
+        bodies: { scanned: 1, total: 1 },
+        notables: [],
+        bodyTypes: [],
+        bio: { signals: 0, species: [] },
+      }),
+      routed: [{ name: "Eol Prou AB-C d1-2", starClass: "N" }],
+      arrival: (addr) => (addr === 11 ? scan : null),
+      stars: (b, scans) => {
+        asked.push([b.prefix, [...scans]]);
+        return new Map([0, 1, 2, 3].map((n) => [n, likely]));
+      },
+    });
+    expect(asked).toEqual([["Eol Prou AB-C d1-", [[0, scan]]]]);
+    expect(t.rows.map((r) => [r.n, r.mainStar, r.predictedStar ?? null, r.starClasses])).toEqual([
+      [0, "F5 V", null, ["F"]],
+      [1, "F5 V", null, ["F"]],
+      [2, "N", null, ["N"]],
+      // Nothing recorded: the prediction, and never a class for the star filter to hide a system by.
+      [3, null, likely, []],
+    ]);
+    const none = boxelTable({
+      boxels: [{ id: "a", prefix: "Eol Prou AB-C d1-", end: 1, skipped: [], boxel: "AB-C d1", sector: "Eol Prou" } as never],
+      index: null,
+      visited: [],
+      speciesName: (id) => id,
+      stars: () => null,
+    });
+    expect(none.rows.every((r) => r.predictedStar === undefined)).toBe(true);
+  });
+});

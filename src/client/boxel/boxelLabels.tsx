@@ -1,7 +1,7 @@
 /**
  * The Boxels screen's labels, page sizes and small helpers (moved out of Boxel.tsx, audit 2026-10-22).
  */
-import type { BoxelTableRowDTO } from "@shared/boxel";
+import type { BoxelTableRowDTO, PredictedStarDTO } from "@shared/boxel";
 import { NOTABLE_KINDS, type NotableKind } from "@shared/notices";
 import { STAR_CLASSES } from "@shared/galaxyTraits";
 import { isStrArr } from "../usePersistedState";
@@ -26,6 +26,25 @@ export function fromIndex(r: BoxelTableRowDTO, text: string) {
   ) : (
     <span>{text}</span>
   );
+}
+
+/**
+ * A star nobody has recorded, as its system's address predicts it (shared/stellarClass.ts; owner, 2026-11-24: "show
+ * threshold and mark predicted"): the class with a "?" while it is only likely, and what the prediction stands on.
+ */
+export function predictedStarLabel(p: PredictedStarDTO): { text: string; title: string } {
+  const pct = (share: number) => Math.round(share * 100);
+  return {
+    text: `${p.cls}${p.likely ? "?" : ""}`,
+    title: [
+      `${p.likely ? "Likely" : "Predicted"} from the system's address, not seen by anyone: class ${p.cls} if the star is still on the main sequence.`,
+      `Right for about ${pct(p.right)} % of such stars${p.sharpened ? ", sharpened by an arrival star you scanned in this boxel" : ""}.`,
+      p.likely ? "Scan one arrival star of this boxel and the rest of it gets sharper." : "",
+      `About ${Math.max(1, pct(1 - p.alive))} % of this mass code's arrival stars are something else by now (a dead star, a T Tauri star, a brown dwarf).`,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  };
 }
 
 /** Previous boxels drawn at once: a long log holds thousands. */

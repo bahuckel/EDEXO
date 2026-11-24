@@ -1,8 +1,8 @@
 /**
  * Where a boxel's systems are, for the shortest order (shared/boxelOrder.ts): every route he plotted (NavRoute.json
- * gives each system's StarPos, the destination too; server/navRouteLog.ts keeps them), then Spansh's look-up of the
- * boxel (server/boxelLookup.ts), then the place the game's own dice give it (shared/stellarPlacement.ts; owner,
- * 2026-11-24). A galaxy-map target gives none: FSDTarget and Status.json carry a name and an address only (owner's
+ * gives each system's StarPos, the destination too; server/navRouteLog.ts keeps them), the systems he has flown (the
+ * journals' own StarPos), then Spansh's look-up of the boxel (server/boxelLookup.ts), then the place the game's own
+ * dice give it (shared/stellarPlacement.ts; owner, 2026-11-24). A galaxy-map target gives none: FSDTarget and Status.json carry a name and an address only (owner's
  * test, 2026-11-04), and the address places a g system no closer than its 640 ly cube.
  *
  * The third source is a prediction and is told apart ({@link BoxelPositionSet.predicted}). A boxel is of one of two
@@ -21,7 +21,7 @@ import {
   likelyBoxelKind,
   PLACEMENT_EXACT_KNOWN_KIND,
   PLACEMENT_MIN_EXACT,
-  predictBoxelPositions,
+  predictBoxelPlacement,
   type BoxelFrame,
   type BoxelKind,
 } from "../shared/stellarPlacement.js";
@@ -33,6 +33,18 @@ let lookupOf: ((prefix: string) => BoxelLookupRecord | null) | null = null;
 
 export function setBoxelLookupSource(get: ((prefix: string) => BoxelLookupRecord | null) | null): void {
   lookupOf = get;
+}
+
+/**
+ * The systems of a boxel he has flown, with where the journals put them; null until set up. They are not left to
+ * fly, but each is a seen position: it tells the boxel's kind and sets the chain right for the systems after it.
+ */
+let flownOf: ((prefix: string) => Iterable<{ n: number; address: number; pos: Vec3 }>) | null = null;
+
+export function setBoxelFlownSource(
+  get: ((prefix: string) => Iterable<{ n: number; address: number; pos: Vec3 }>) | null,
+): void {
+  flownOf = get;
 }
 
 /** A generated sector's place on the 1,280 ly grid, by its name (data/boxel/sector-names.json); null until set up. */
@@ -56,6 +68,14 @@ export interface BoxelPositionSet {
    * (shared/stellarPlacement.ts).
    */
   checked: number;
+  /** The boxel as the placement sees it; null when it could not be worked out or nothing is predicted. */
+  frame: BoxelFrame | null;
+  /**
+   * System number → where its dice stand once it is placed, for every number up to the boxel's highest; null unless
+   * the boxel's kind is known (read from a seen position, or sure from where the boxel is). The star's own rolls
+   * are counted from there (server/boxelStars.ts).
+   */
+  after: Map<number, number> | null;
 }
 
 /**
@@ -66,7 +86,8 @@ export interface BoxelPositionSet {
 export const PREDICT_MAX_NUMBER = 1000;
 
 /** The last few predictions: the Boxels screen and the run ask again after every refresh. */
-const memo = new Map<string, { guess: Map<number, Vec3>; exact: number; checked: number } | null>();
+type Made = { guess: Map<number, Vec3>; after: Map<number, number>; exact: number; checked: number };
+const memo = new Map<string, Made | null>();
 
 /**
  * The boxel's frame: from the address of one of its systems when one is at hand (exact, and the only way for a
@@ -89,11 +110,7 @@ function frameOf(prefix: string, addresses: readonly number[]): BoxelFrame | nul
  * else the kind of its part of the galaxy, else the likelier kind of a boxel this crowded. Null: nothing to show (the seen positions fit neither kind well,
  * or the guess is too close to a coin toss).
  */
-function predictionsOf(
-  frame: BoxelFrame,
-  highest: number,
-  seen: ReadonlyMap<number, Vec3>,
-): { guess: Map<number, Vec3>; exact: number; checked: number } | null {
+function predictionsOf(frame: BoxelFrame, highest: number, seen: ReadonlyMap<number, Vec3>): Made | null {
   const read = boxelKindFrom(frame, seen);
   let kind: BoxelKind;
   let exact: number;
@@ -112,8 +129,8 @@ function predictionsOf(
     if (!likely) return null;
     ({ kind, exact } = likely);
   }
-  const guess = predictBoxelPositions(frame, highest, seen, kind);
-  return guess ? { guess, exact, checked: read?.checked ?? 0 } : null;
+  const placed = predictBoxelPlacement(frame, highest, seen, kind);
+  return placed ? { guess: placed.positions, after: placed.after, exact, checked: read?.checked ?? 0 } : null;
 }
 
 /**
@@ -134,6 +151,10 @@ export function boxelPositionSet(
     positions.set(n, s.pos);
     addresses.push(s.address);
   }
+  for (const f of flownOf?.(prefix) ?? []) {
+    if (!positions.has(f.n)) positions.set(f.n, f.pos);
+    addresses.push(f.address);
+  }
   for (const [k, f] of Object.entries(lookupOf?.(prefix)?.systems ?? {})) {
     const n = Number(k);
     if (!Number.isInteger(n)) continue;
@@ -143,7 +164,7 @@ export function boxelPositionSet(
   const at = here ? boxelIndexOf(here.name, prefix) : null;
   if (at != null && !positions.has(at)) positions.set(at, here!.pos);
   const predicted = new Set<number>();
-  const none = { positions, predicted, exact: null, checked: 0 };
+  const none = { positions, predicted, exact: null, checked: 0, frame: null, after: null };
   if (upTo == null || !(upTo >= 0) || upTo > PREDICT_MAX_NUMBER) return none;
   const frame = frameOf(prefix, addresses);
   if (!frame) return none;
@@ -163,7 +184,14 @@ export function boxelPositionSet(
     positions.set(n, p);
     predicted.add(n);
   }
-  return { positions, predicted, exact: made.exact, checked: made.checked };
+  return {
+    positions,
+    predicted,
+    exact: made.exact,
+    checked: made.checked,
+    frame,
+    after: made.exact >= PLACEMENT_EXACT_KNOWN_KIND ? made.after : null,
+  };
 }
 
 export function boxelPositions(

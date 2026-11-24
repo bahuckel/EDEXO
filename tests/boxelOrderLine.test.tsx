@@ -87,4 +87,34 @@ describe("the shortest-order line", () => {
     expect(sure).toContain("Such predictions are exact for 99 % of systems.");
     expect(sure).not.toContain("guess");
   });
+
+  it("puts the star each address predicts in brackets, a likely one with a question mark", () => {
+    const star = { cls: "F", right: 0.94, alive: 0.8, likely: true };
+    const text = show(
+      boxel({
+        order: [{ n: 4, ly: 12 }, { n: 7, ly: 30, predicted: true, star }, { n: 5, ly: 78, star: { ...star, cls: "A" } }],
+      }),
+    );
+    expect(text).toContain("d1-4 12 ly");
+    expect(text).toContain("d1-7 (F?) ≈ 30 ly");
+    expect(text).toContain("d1-5 (A?) 78 ly");
+    expect(text).toContain("A letter in brackets is the arrival star the system's address predicts, if it is still on the main sequence");
+    expect(text).toContain("about 20 % in this mass code are something else by now");
+    expect(text).toContain("a ? marks a likely one: scan one arrival star of this boxel and the rest gets sharper.");
+    const title = host.querySelector('[title^="Likely from the system"]')!.getAttribute("title")!;
+    expect(title).toContain("class F if the star is still on the main sequence. Right for about 94 % of such stars.");
+    expect(title).toContain("About 20 % of this mass code's arrival stars are something else by now");
+  });
+
+  it("says a sharpened star is predicted, and keeps quiet when no stop has a star", () => {
+    const star = { cls: "K", right: 0.985, alive: 0.99, sharpened: true };
+    const text = show(boxel({ order: [{ n: 4, ly: 12, star }, { n: 7, ly: 30 }, { n: 5, ly: 78 }] }));
+    expect(text).toContain("d1-4 (K) 12 ly");
+    expect(text).toContain("(about 1 % in this mass code are something else by now).");
+    expect(text).not.toContain("a ? marks");
+    expect(host.querySelector('[title^="Predicted from the system"]')!.getAttribute("title")).toContain(
+      "Right for about 99 % of such stars, sharpened by an arrival star you scanned in this boxel.",
+    );
+    expect(show(boxel({ order: [{ n: 4, ly: 12 }, { n: 7, ly: 30 }, { n: 5, ly: 78 }] }))).not.toContain("brackets");
+  });
 });

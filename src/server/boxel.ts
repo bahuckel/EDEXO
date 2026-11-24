@@ -11,6 +11,7 @@ import {
   type BoxelTableDTO,
   type BoxelNotableDTO,
   type BoxelTableRowDTO,
+  type PredictedStarDTO,
   type PreviousBoxelDTO,
   type SavedBoxelDTO,
 } from "../shared/boxel.js";
@@ -20,6 +21,7 @@ import { TIER_DSS, TIER_FSS } from "./bioIndex.js";
 import type { SystemTraits } from "./galaxyTraits.js";
 import { BODY_TRAITS, STAR_CLASSES, STAR_NONE, starClassIndex } from "../shared/galaxyTraits.js";
 import type { BoxelLookupRecord } from "./boxelLookup.js";
+import type { ArrivalStarScan } from "../shared/stellarClass.js";
 
 /*
   No cap in practice (ticket T-MVS9JTOP-A782, owner 2026-10-31: "some boxels have above 10000 systems, there should
@@ -184,6 +186,16 @@ export function boxelTable(opts: {
   lookup?: (prefix: string) => BoxelLookupRecord | null;
   /** Systems on routes he plotted (the NavRoute finder's list): name and the star class NavRoute.json gave. */
   routed?: Iterable<{ name: string; starClass: string }>;
+  /** systemAddress → the arrival star as he scanned it (null: no such scan). */
+  arrival?: (systemAddress: number) => ArrivalStarScan | null;
+  /**
+   * The stars a boxel's addresses predict (server/boxelStars.ts), given his scans of its arrival stars by system
+   * number; null when they cannot be predicted. Shown only where no main star is recorded.
+   */
+  stars?: (
+    b: SavedBoxelDTO,
+    scans: ReadonlyMap<number, ArrivalStarScan>,
+  ) => ReadonlyMap<number, PredictedStarDTO> | null;
 }): BoxelTableDTO {
   const lookups: BoxelTableDTO["lookups"] = [];
   const visited = [...opts.visited].map(visitedEntry);
@@ -207,6 +219,15 @@ export function boxelTable(opts: {
         const n = boxelIndexOf(opts.index.index.nameOf(i), b.prefix);
         if (n != null) known.set(n, i);
       }
+    }
+    let predictedStars: ReadonlyMap<number, PredictedStarDTO> | null = null;
+    if (opts.stars) {
+      const scans = new Map<number, ArrivalStarScan>();
+      for (const [n, addr] of mine) {
+        const scan = addr != null ? opts.arrival?.(addr) : null;
+        if (scan) scans.set(n, scan);
+      }
+      predictedStars = opts.stars(b, scans);
     }
     const skipped = new Set(b.skipped);
     const looked = opts.lookup?.(b.prefix) ?? null;
@@ -319,6 +340,8 @@ export function boxelTable(opts: {
       */
       if (!flown && looked?.complete && foundAny && !looked.systems[String(n)]) row.notOnSpansh = true;
       if (!flown && row.from == null && gapless && n < highestKnown) row.gap = true;
+      const predictedStar = row.mainStar == null ? predictedStars?.get(n) : undefined;
+      if (predictedStar) row.predictedStar = predictedStar;
       rows.push(row);
       for (const sp of new Set(indexSpecies)) tally.set(sp, (tally.get(sp) ?? 0) + 1);
     }

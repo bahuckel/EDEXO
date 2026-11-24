@@ -150,6 +150,12 @@ order of the re-rolls, worked out by its author from EDSM and Spansh data. It wa
 rules. None of its source is in EDEXO (it is GPL-3.0; EDEXO is not): the code here was written from the rules and
 from this project's own measurements on Spansh's galaxy dump, and is tested against real system positions.
 
+The predicted arrival star of a system nobody has recorded (`src/shared/stellarClass.ts`) is rolled on the same
+dice. What those rolls do to the star (its birth mass, the factor on its temperature, the class limits) was
+measured by this project on the star scans commanders sent to EDDN over one year and on Spansh's galaxy dump; the
+temperature per birth mass (`src/shared/stellarBaseTemperature.ts`) is a table of middle values from those EDDN
+scans. It is tested against real stars in Spansh's dump.
+
 ### Ship outlines — the HUD's Ship section
 
 The ships seen from above (`src/shared/shipOutlines.ts`) are simplified silhouettes traced from other

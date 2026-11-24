@@ -8,7 +8,7 @@ import { CopySystemButton } from "../CopySystemButton";
 import { Tooltip } from "../ui/Tooltip";
 import type { Column } from "../ui/DataTable";
 import { NOTABLE_SHORT } from "../boxelFilter";
-import { fromIndex, NOTABLE_LABEL, OTHER_STARS_SHOWN } from "./boxelLabels";
+import { fromIndex, NOTABLE_LABEL, OTHER_STARS_SHOWN, predictedStarLabel } from "./boxelLabels";
 import { Done } from "../ui/glyphs";
 
 export function boxelColumns({
@@ -83,19 +83,31 @@ export function boxelColumns({
       key: "main",
       label: "Main star",
       title:
-        "Flown: the arrival star as you scanned it. Not flown: its class in the galaxy index (no luminosity)",
-      value: (r) => r.mainStar,
-      render: (r) =>
-        r.notOnSpansh && !r.from ? (
-          <span
-            className="dim"
-            title="Looked up: Spansh has no record of it — undiscovered, as far as anyone uploaded"
-          >
-            not on Spansh
-          </span>
-        ) : (
-          fromIndex(r, r.mainStar ?? "—")
-        ),
+        "Flown: the arrival star as you scanned it. Not flown: its class in the galaxy index (no luminosity). ≈: recorded nowhere, the class the system's address predicts",
+      value: (r) => r.mainStar ?? (r.predictedStar ? `≈ ${r.predictedStar.cls}` : null),
+      render: (r) => {
+        const notOnSpansh =
+          r.notOnSpansh && !r.from ? (
+            <span
+              className="dim"
+              title="Looked up: Spansh has no record of it — undiscovered, as far as anyone uploaded"
+            >
+              not on Spansh
+            </span>
+          ) : null;
+        if (!r.mainStar && r.predictedStar) {
+          const p = predictedStarLabel(r.predictedStar);
+          return (
+            <span>
+              <span className="boxel-from-index" title={p.title}>
+                ≈ {p.text}
+              </span>
+              {notOnSpansh ? <> {notOnSpansh}</> : null}
+            </span>
+          );
+        }
+        return notOnSpansh ?? fromIndex(r, r.mainStar ?? "—");
+      },
     },
     {
       key: "stars",

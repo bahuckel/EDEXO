@@ -198,6 +198,18 @@ export function boxelFrameAt(
   return boxelFrame(v);
 }
 
+/** A boxel's placement: where each system goes, and where its dice stand once it is placed. */
+export interface BoxelPlacement {
+  /** System number → predicted position, light years (for the systems with a known position too). */
+  positions: Map<number, Vec3>;
+  /**
+   * System number → the index of its first roll after the placement (the three offsets are the rolls before it):
+   * the star's own rolls are counted from there (shared/stellarClass.ts). Of the try the real position shows when
+   * one is known and fits, else of the predicted try.
+   */
+  after: Map<number, number>;
+}
+
 /**
  * The predicted position of every system 0 to `upTo` of a boxel, light years; null for a mass code that is not
  * predicted. `known`: real positions (visited, plotted, looked up), which set the chain right for the systems
@@ -210,6 +222,16 @@ export function predictBoxelPositions(
   known?: ReadonlyMap<number, Vec3>,
   kind: BoxelKind = "normal",
 ): Map<number, Vec3> | null {
+  return predictBoxelPlacement(frame, upTo, known, kind)?.positions ?? null;
+}
+
+/** {@link predictBoxelPositions}, with where each system's dice stand after its placement. */
+export function predictBoxelPlacement(
+  frame: BoxelFrame,
+  upTo: number,
+  known?: ReadonlyMap<number, Vec3>,
+  kind: BoxelKind = "normal",
+): BoxelPlacement | null {
   if (!placementKnown(frame.code) || !(upTo >= 0)) return null;
   const mc = MASS_CODE_LETTERS.indexOf(frame.code);
   const scatter = kind === "scatter";
@@ -221,6 +243,7 @@ export function predictBoxelPositions(
   const taken = new Set<number>();
   let prev: readonly number[] = [0, 0, 0];
   const out = new Map<number, Vec3>();
+  const after = new Map<number, number>();
   for (let n = 0; n <= upTo; n++) {
     const v = systemRolls(frame.base | (BigInt(n) << frame.shift));
     const phase = (mc === 0 ? v[2]! : v[1]!) % 100 <= 50 ? 7 : 8;
@@ -252,6 +275,7 @@ export function predictBoxelPositions(
     const along = (i: number) =>
       frame.origin[i]! + (cell[i]! * stepsPerCell + (v[cellAt + 3 + i]! % stepsPerCell)) / STEPS_PER_LY;
     out.set(n, [along(0), along(1), along(2)]);
+    after.set(n, cellAt + 6);
     // The real position, when known, is what the next system sees.
     const real = known?.get(n);
     const steps = real?.map((p, i) => Math.round((p - frame.origin[i]!) * STEPS_PER_LY));
@@ -263,13 +287,14 @@ export function predictBoxelPositions(
         const s = start + attempt * 3;
         if (![0, 1, 2].every((i) => v[s + 3 + i]! % stepsPerCell === steps[i]! % stepsPerCell)) continue;
         anywhere = anywhereCell(s).every((c, i) => c === cell[i]);
+        after.set(n, s + 6);
         break;
       }
     }
     if (anywhere) taken.add(key(cell));
     prev = cell;
   }
-  return out;
+  return { positions: out, after };
 }
 
 /**
