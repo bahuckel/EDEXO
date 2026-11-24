@@ -43,14 +43,28 @@ describe("the shortest-order line", () => {
           { n: 5, ly: 78, predicted: true },
         ],
         predicted: 2,
-        predictedExact: 0.96,
+        predictedExact: 0.8,
+        predictedChecked: 0,
       }),
     );
     expect(text).toContain("d1-4 12 ly");
     expect(text).toContain("d1-7 ≈ 30 ly");
     expect(text).toContain("2 of the 3 positions are predicted from the system's address");
-    expect(text).toContain("exact for 96 % of mass code d systems");
+    expect(text).toContain("its kind is a guess: exact for about 80 % of systems in a mass code d boxel this crowded");
     expect(host.querySelectorAll('[title="Predicted position"]')).toHaveLength(2);
+  });
+
+  it("says so once a real position has told the boxel's kind", () => {
+    const text = show(
+      boxel({
+        order: [{ n: 4, ly: 12 }, { n: 7, ly: 30, predicted: true }, { n: 5, ly: 78, predicted: true }],
+        predicted: 2,
+        predictedExact: 0.99,
+        predictedChecked: 1,
+      }),
+    );
+    expect(text).toContain("The boxel's kind was read from 1 real position: such predictions are exact for 99 % of systems.");
+    expect(text).not.toContain("guess");
   });
 
   it("says nothing about predictions when every position was seen", () => {
@@ -62,9 +76,15 @@ describe("the shortest-order line", () => {
 
   it("reads the mass code of a sector's first boxel, which has no number", () => {
     const text = show(
-      boxel({ prefix: "Eembaids EG-Y g", order: [{ n: 4, ly: 12, predicted: true }], placed: 1, predicted: 1, predictedExact: 1 }),
+      boxel({ prefix: "Eembaids EG-Y g", order: [{ n: 4, ly: 12, predicted: true }], placed: 1, predicted: 1, predictedExact: 0.7 }),
     );
     expect(text).toContain("1 of the 1 positions is predicted");
-    expect(text).toContain("exact for 100 % of mass code g systems");
+    expect(text).toContain("in a mass code g boxel this crowded");
+    // A mass code with one kind only needs no guess.
+    const sure = show(
+      boxel({ prefix: "Eembaids EG-Y g", order: [{ n: 4, ly: 12, predicted: true }], placed: 1, predicted: 1, predictedExact: 0.99 }),
+    );
+    expect(sure).toContain("Such predictions are exact for 99 % of systems.");
+    expect(sure).not.toContain("guess");
   });
 });

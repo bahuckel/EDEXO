@@ -15,32 +15,65 @@
  * (github.com/Intergalactic-Astronomical-Union/ED-Procgen_ID64-XYZ), which worked them out from EDSM and Spansh
  * data. None of its code is here; this file was written from the rules and checked against Spansh.
  *
- * A prediction, not a fact: a boxel also inherits state from its parent boxel that is not understood yet, so some
- * systems land in another cell ({@link PLACEMENT_EXACT}: the measured share per mass code, with nothing known).
- * A miss keeps its place inside the cell and is off by about half the boxel. Mass codes f and h are left out (66 %
- * and 38 %: h rolls once more before the placement for a reason outside the address). A system whose real position
- * is known puts the chain back on track for the ones after it.
+ * A boxel is of one of two kinds ({@link BoxelKind}; found 2026-11-25, docs/boxel-star-placement-23112026.md §3f).
+ * In a normal one a system that rolls "tied" is tied. In a scatter one nothing is tied: every system goes anywhere,
+ * with the same rolls, and for mass codes a and b the grid has twice the cells per axis. With the right kind the
+ * positions are exact for 99.5 to 100 % of systems, mass codes a to g. What makes a boxel scatter is not known, so
+ * the kind is read from real positions when there are any ({@link boxelKindFrom}: one is enough for a and b, one
+ * that rolled "tied" for the rest), and guessed from how crowded the boxel is when there are none
+ * ({@link likelyBoxelKind}). A wrong guess puts every system of an a or b boxel, and half of the others', in
+ * another cell: right inside the cell, about half the boxel off. Mass code h is left out: it rolls once more
+ * before the placement for a reason outside the address. A system whose real position is known also puts the chain
+ * back on track for the ones after it.
  */
 import { MASS_CODE_LETTERS, type MassCode } from "./boxelAdvice.js";
 import type { Vec3 } from "./boxelOrder.js";
 import { id64Boxel } from "./id64.js";
 import { SECTOR_ORIGIN } from "./sectorName.js";
 
+/** Normal: a system that rolls "tied" is tied. Scatter: none is, and a and b boxels have the finer grid. */
+export type BoxelKind = "normal" | "scatter";
+
 /**
- * Share of systems placed exactly, per mass code, with nothing but the address known and every system before it
- * predicted too (system numbers up to 300, 1,200 to 1,500 boxels each, Spansh, 2026-11-24:
- * docs/perf/ggg-study-23112026/forge_place2.py). Null: not good enough to show.
+ * Share of scatter boxels per mass code, by the boxel's highest listed number (up to and including the first
+ * figure of each pair), on Spansh, 100 to 200 boxels per group, 2026-11-25:
+ * docs/perf/ggg-study-23112026/forge_kind.py. g goes anywhere by rule, so it has one kind; h is not predicted.
+ * Mass code a past 511: 9 boxels only, left out.
  */
-export const PLACEMENT_EXACT: Record<MassCode, number | null> = {
-  a: 0.931,
-  b: 0.958,
-  c: 0.928,
-  d: 0.96,
-  e: 0.866,
-  f: null,
-  g: 1,
+const SCATTER_SHARE: Record<MassCode, readonly (readonly [number, number])[] | null> = {
+  a: [[15, 0.015], [31, 0.255], [63, 0.585], [127, 0.545], [255, 0.365], [511, 0.37]],
+  b: [[15, 0.005], [31, 0.035], [63, 0.27], [127, 0.35], [255, 0.455], [511, 0.33], [1000, 0.46]],
+  c: [[15, 0], [31, 0.005], [63, 0.045], [127, 0.17], [255, 0.39], [511, 0.54], [1000, 0.65]],
+  d: [[15, 0], [31, 0.025], [63, 0.01], [127, 0.04], [255, 0.045], [511, 0.19], [1000, 0.37]],
+  e: [[15, 0.045], [31, 0.045], [63, 0.205], [127, 0.455], [255, 0.57], [511, 0.65], [1000, 0.86]],
+  f: [[15, 0.2], [31, 0.795], [63, 0.68], [127, 0.73], [255, 0.93], [511, 0.97], [1000, 0.97]],
+  g: [[1000, 0]],
   h: null,
 };
+
+/** Share of exact positions once the boxel's kind is known (measured 99.5 to 100 % in every group, a to g). */
+export const PLACEMENT_EXACT_KNOWN_KIND = 0.99;
+/** A guessed kind that would be exact for fewer systems than this is not shown: too close to a coin toss. */
+export const PLACEMENT_MIN_EXACT = 0.6;
+
+/** Mass codes whose systems can be placed at all. */
+export const placementKnown = (code: MassCode): boolean => SCATTER_SHARE[code] != null;
+
+/**
+ * With no real position to read the kind from: the likelier kind of a boxel this crowded, and the share of its
+ * systems that would then be exact. A wrong kind leaves no system of an a or b boxel in its cell (another grid),
+ * and about half of the others' (the ones that roll "anywhere" either way). Null when the mass code is not
+ * predicted, the boxel is listed past the measured sizes, or the share is under {@link PLACEMENT_MIN_EXACT}.
+ */
+export function likelyBoxelKind(code: MassCode, highest: number): { kind: BoxelKind; exact: number } | null {
+  const row = highest >= 0 ? SCATTER_SHARE[code]?.find(([upTo]) => highest <= upTo) : undefined;
+  if (!row) return null;
+  const scatter = row[1];
+  const likelier = Math.max(scatter, 1 - scatter);
+  const fine = code === "a" || code === "b";
+  const exact = PLACEMENT_EXACT_KNOWN_KIND * (likelier + (fine ? 0 : (1 - likelier) / 2));
+  return exact < PLACEMENT_MIN_EXACT ? null : { kind: scatter > 0.5 ? "scatter" : "normal", exact };
+}
 
 const MODULUS = 2147483647;
 const MULTIPLIER = 48271;
@@ -142,16 +175,20 @@ export function boxelFrameAt(
 /**
  * The predicted position of every system 0 to `upTo` of a boxel, light years; null for a mass code that is not
  * predicted. `known`: real positions (visited, plotted, looked up), which set the chain right for the systems
- * after them. The answer holds a prediction for the known ones too, so a caller can compare.
+ * after them. The answer holds a prediction for the known ones too, so a caller can compare. `kind`: the boxel's
+ * kind, from {@link boxelKindFrom} or {@link likelyBoxelKind}.
  */
 export function predictBoxelPositions(
   frame: BoxelFrame,
   upTo: number,
   known?: ReadonlyMap<number, Vec3>,
+  kind: BoxelKind = "normal",
 ): Map<number, Vec3> | null {
-  if (PLACEMENT_EXACT[frame.code] == null || !(upTo >= 0)) return null;
+  if (!placementKnown(frame.code) || !(upTo >= 0)) return null;
   const mc = MASS_CODE_LETTERS.indexOf(frame.code);
-  const cells = CELLS[mc]!;
+  const scatter = kind === "scatter";
+  // A scatter boxel of mass code a or b has twice the cells per axis.
+  const cells = CELLS[mc]! * (scatter && mc <= 1 ? 2 : 1);
   const stepsPerCell = ((10 << mc) * STEPS_PER_LY) / cells;
   const boxelSteps = cells * stepsPerCell;
   const key = (c: readonly number[]) => c[0]! + cells * (c[1]! + cells * c[2]!);
@@ -161,8 +198,9 @@ export function predictBoxelPositions(
   for (let n = 0; n <= upTo; n++) {
     const v = systemRolls(frame.base | (BigInt(n) << frame.shift));
     const phase = (mc === 0 ? v[2]! : v[1]!) % 100 <= 50 ? 7 : 8;
-    // g goes anywhere, always; the rest roll for it. The first try's cell rolls start at `start`.
-    let tied = mc === 6 ? false : v[phase - (mc === 0 ? 2 : 3)]! % 100 <= 49;
+    // g goes anywhere, always, and so does every system of a scatter boxel; the rest roll for it. The first try's
+    // cell rolls start at `start`.
+    let tied = mc === 6 || scatter ? false : v[phase - (mc === 0 ? 2 : 3)]! % 100 <= 49;
     const start = mc === 6 ? phase - 3 : mc === 0 ? phase - 1 : phase - 2;
     const tiedCell = (s: number) =>
       [0, 1, 2].map((i) => {
@@ -206,4 +244,29 @@ export function predictBoxelPositions(
     prev = cell;
   }
   return out;
+}
+
+/**
+ * Which kind of boxel the real positions show, or null when they do not tell (none known, or only systems that
+ * roll "anywhere" in a c to f boxel, which land the same either way). Each known system is predicted both ways
+ * from the real position of the ones before it; the kind that puts more of them where they are is the answer.
+ * `checked`: the known systems looked at, `hits`: how many of them that kind puts right.
+ */
+export function boxelKindFrom(
+  frame: BoxelFrame,
+  known: ReadonlyMap<number, Vec3>,
+): { kind: BoxelKind; checked: number; hits: number } | null {
+  if (!placementKnown(frame.code) || !known.size) return null;
+  let upTo = -1;
+  for (const n of known.keys()) if (Number.isInteger(n) && n > upTo) upTo = n;
+  const score = (kind: BoxelKind): number => {
+    const guess = predictBoxelPositions(frame, upTo, known, kind);
+    let hits = 0;
+    for (const [n, real] of known) if (guess?.get(n)?.every((v, i) => v === real[i])) hits++;
+    return hits;
+  };
+  const normal = score("normal");
+  const scatter = score("scatter");
+  if (normal === scatter) return null;
+  return { kind: scatter > normal ? "scatter" : "normal", checked: known.size, hits: Math.max(normal, scatter) };
 }

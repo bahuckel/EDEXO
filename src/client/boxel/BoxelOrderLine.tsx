@@ -8,7 +8,8 @@ const SHOWN = 20;
  * A boxel flown in the shortest order (owner, 2026-11-04; shared/boxelOrder.ts): what is left in that order with the
  * light years of each leg, what it saves against flying by number, and how many still lack a position. A position
  * worked out from the system's address (shared/stellarPlacement.ts) is marked as predicted, with how often such a
- * prediction is exact (owner, 2026-11-24: "show threshold and mark predicted").
+ * prediction is exact (owner, 2026-11-24: "show threshold and mark predicted"). That share is high once a real
+ * position has told the boxel's kind, and lower while the kind is a guess (2026-11-25).
  */
 export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
   const order = b.order ?? [];
@@ -63,9 +64,13 @@ export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
       {b.predicted && b.predictedExact != null ? (
         <span className="dim">
           {b.predicted.toLocaleString("en-US")} of the {placed.toLocaleString("en-US")} positions{" "}
-          {b.predicted === 1 ? "is" : "are"} predicted from the system's address (≈): exact for{" "}
-          {Math.round(b.predictedExact * 100)} % of mass code {suffix.replace(/\d+-?$/, "")} systems, about half the boxel off for the
-          rest. A plotted route or a Spansh look-up replaces them.{" "}
+          {b.predicted === 1 ? "is" : "are"} predicted from the system's address (≈).{" "}
+          {b.predictedChecked
+            ? `The boxel's kind was read from ${b.predictedChecked.toLocaleString("en-US")} real ${b.predictedChecked === 1 ? "position" : "positions"}: such predictions are exact for ${Math.round(b.predictedExact * 100)} % of systems.`
+            : b.predictedExact >= 0.98
+              ? `Such predictions are exact for ${Math.round(b.predictedExact * 100)} % of systems.`
+              : `No real position in this boxel is known yet, so its kind is a guess: exact for about ${Math.round(b.predictedExact * 100)} % of systems in a mass code ${suffix.replace(/\d+-?$/, "")} boxel this crowded, about half the boxel off for the rest. Flying into the boxel or plotting a route to one of its systems settles it.`}{" "}
+          A plotted route or a Spansh look-up replaces a prediction.{" "}
         </span>
       ) : null}
       {unplaced ? (

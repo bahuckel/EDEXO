@@ -12,10 +12,14 @@ import type { Vec3 } from "../src/shared/boxelOrder.js";
 import {
   boxelFrame,
   boxelFrameAt,
-  PLACEMENT_EXACT,
+  boxelKindFrom,
+  likelyBoxelKind,
+  PLACEMENT_EXACT_KNOWN_KIND,
+  placementKnown,
   predictBoxelPositions,
   systemRolls,
   wang64to32,
+  type BoxelKind,
 } from "../src/shared/stellarPlacement.js";
 import {
   boxelPositionSet,
@@ -33,7 +37,9 @@ const golden = JSON.parse(
   boxels: { code: MassCode; systems: Row[] }[];
   eembaids: Row[];
   repair: { code: MassCode; missed: number; systems: Row[] };
+  kinds: { code: MassCode; kind: BoxelKind; systems: Row[] }[];
 };
+const real = (r: Row): Vec3 => [r[2], r[3], r[4]];
 const numberOf = (name: string) => parseBoxel(name)!.index!;
 
 describe("a system's own dice", () => {
@@ -71,11 +77,11 @@ describe("predicted positions against Spansh", () => {
     for (const [, name, x, y, z] of golden.eembaids) expect(got.get(numberOf(name))).toEqual([x, y, z]);
   });
 
-  it("does not predict mass codes f and h, nor a place that does not exist", () => {
-    expect(PLACEMENT_EXACT.f).toBeNull();
-    expect(PLACEMENT_EXACT.h).toBeNull();
+  it("does not predict mass code h, nor a place that does not exist", () => {
+    expect(placementKnown("h")).toBe(false);
+    expect(placementKnown("f")).toBe(true);
     expect(predictBoxelPositions({ ...boxelFrame(golden.eembaids[0]![0])!, code: "h" }, 5)).toBeNull();
-    expect(predictBoxelPositions({ ...boxelFrame(golden.eembaids[0]![0])!, code: "f" }, 5)).toBeNull();
+    expect(boxelKindFrom({ ...boxelFrame(golden.eembaids[0]![0])!, code: "h" }, new Map([[0, [0, 0, 0]]]))).toBeNull();
     // A g boxel has two places per axis in its sector.
     expect(boxelFrameAt("g", [10, 10, 10], 2)).toBeNull();
     expect(boxelFrameAt("g", [200, 10, 10], 0)).toBeNull();
@@ -84,7 +90,6 @@ describe("predicted positions against Spansh", () => {
   it("a known position sets the chain right for the system after it", () => {
     const [missed, next] = golden.repair.systems;
     const frame = boxelFrame(missed![0])!;
-    const real = (r: Row): Vec3 => [r[2], r[3], r[4]];
     const n = golden.repair.missed;
     const blind = predictBoxelPositions(frame, n + 1)!;
     // With nothing known both land in another cell: the miss the measured share speaks of.
@@ -94,6 +99,53 @@ describe("predicted positions against Spansh", () => {
     expect(seen.get(n + 1)).toEqual(real(next!));
     // A miss keeps its place inside the cell: 5 ly cells at mass code d.
     for (let i = 0; i < 3; i++) expect(Math.abs((blind.get(n)![i]! - real(missed!)[i]!) * 32) % 160).toBe(0);
+  });
+});
+
+describe("the two kinds of boxel", () => {
+  for (const b of golden.kinds) {
+    it(`places a ${b.kind} mass code ${b.code} boxel, and reads its kind from its real positions`, () => {
+      const frame = boxelFrame(b.systems[0]![0])!;
+      const got = predictBoxelPositions(frame, b.systems.length - 1, undefined, b.kind)!;
+      for (const r of b.systems) expect(got.get(numberOf(r[1]))).toEqual(real(r));
+      // The other kind misses at least three of them.
+      const other = predictBoxelPositions(frame, b.systems.length - 1, undefined, b.kind === "normal" ? "scatter" : "normal")!;
+      expect(b.systems.filter((r) => other.get(numberOf(r[1]))!.every((v, i) => v === real(r)[i])).length).toBeLessThan(
+        b.systems.length - 2,
+      );
+      const known = new Map(b.systems.map((r) => [numberOf(r[1]), real(r)] as const));
+      expect(boxelKindFrom(frame, known)).toEqual({ kind: b.kind, checked: known.size, hits: known.size });
+    });
+  }
+
+  it("one real position tells the kind of an a or b boxel: the cell is half the size", () => {
+    for (const b of golden.kinds.filter((k) => k.code === "a" || k.code === "b")) {
+      const frame = boxelFrame(b.systems[0]![0])!;
+      for (const r of b.systems.slice(0, 4))
+        expect(boxelKindFrom(frame, new Map([[numberOf(r[1]), real(r)]]))?.kind).toBe("scatter");
+    }
+  });
+
+  it("tells nothing without a real position, or from one outside the boxel", () => {
+    const frame = boxelFrame(golden.kinds[0]!.systems[0]![0])!;
+    expect(boxelKindFrom(frame, new Map())).toBeNull();
+    expect(boxelKindFrom(frame, new Map([[0, [1, 2, 3]]]))).toBeNull();
+  });
+
+  it("guesses the likelier kind of a boxel by how crowded it is, or nothing near a coin toss", () => {
+    expect(likelyBoxelKind("g", 900)).toEqual({ kind: "normal", exact: PLACEMENT_EXACT_KNOWN_KIND });
+    expect(likelyBoxelKind("d", 10)).toEqual({ kind: "normal", exact: PLACEMENT_EXACT_KNOWN_KIND });
+    expect(likelyBoxelKind("f", 300)?.kind).toBe("scatter");
+    // c, 128 to 255: 39 % scatter; a wrong guess still leaves half of them right.
+    expect(likelyBoxelKind("c", 200)!.exact).toBeCloseTo(0.99 * (0.61 + 0.195), 6);
+    // a and b have another grid when wrong: nothing right. 54.5 % and 45.5 % are too close to a coin toss.
+    expect(likelyBoxelKind("b", 200)).toBeNull();
+    expect(likelyBoxelKind("a", 50)).toBeNull();
+    expect(likelyBoxelKind("b", 20)!.exact).toBeCloseTo(0.99 * 0.965, 6);
+    expect(likelyBoxelKind("h", 5)).toBeNull();
+    expect(likelyBoxelKind("a", 600)).toBeNull();
+    expect(likelyBoxelKind("c", 1001)).toBeNull();
+    expect(likelyBoxelKind("c", -1)).toBeNull();
   });
 });
 
@@ -119,7 +171,8 @@ describe("a boxel's positions for the shortest order", () => {
     const s = boxelPositionSet(prefix, 21);
     expect(s.positions.size).toBe(22);
     expect(s.predicted.size).toBe(22);
-    expect(s.exact).toBe(1);
+    expect(s.exact).toBe(PLACEMENT_EXACT_KNOWN_KIND);
+    expect(s.checked).toBe(0);
     for (const [, name, x, y, z] of g) expect(s.positions.get(numberOf(name))).toEqual([x, y, z]);
     expect(boxelPositionSet("Nowhere EG-Y g", 21).positions.size).toBe(0);
     // A boxel listed past the limit keeps to seen positions: the order's cost grows with the square.
@@ -139,5 +192,43 @@ describe("a boxel's positions for the shortest order", () => {
     expect(s.predicted.has(3)).toBe(false);
     expect([...s.predicted].sort()).toEqual([0, 1, 2, 4, 5]);
     expect(s.positions.get(0)).toEqual([g[0]![2], g[0]![3], g[0]![4]]);
+  });
+
+  it("reads a scatter boxel's kind from where he is, and guesses without", () => {
+    const b = golden.kinds.find((k) => k.code === "b")!;
+    const frame = boxelFrame(b.systems[0]![0])!;
+    const name = b.systems[0]![1];
+    const boxel = name.slice(0, name.lastIndexOf("-") + 1);
+    const sector = [0, 1, 2].map((i) => Math.floor((frame.origin[i]! + [49985, 40985, 24105][i]!) / 1280)) as [number, number, number];
+    setBoxelSectorSource((s) => (boxel.startsWith(`${s} `) ? sector : null));
+    const last = b.systems.length - 1;
+    // Nothing seen: a b boxel this small is nearly always normal, and here that guess is wrong.
+    const blind = boxelPositionSet(boxel, last);
+    expect(blind.checked).toBe(0);
+    expect(blind.exact).toBeCloseTo(0.99 * 0.995, 6);
+    expect(blind.positions.get(3)).not.toEqual(real(b.systems[3]!));
+    // In its first system: one real position, and every other system is where the game put it.
+    const there = boxelPositionSet(boxel, last, { name, pos: real(b.systems[0]!) });
+    expect(there.checked).toBe(1);
+    expect(there.exact).toBe(PLACEMENT_EXACT_KNOWN_KIND);
+    expect(there.predicted.has(0)).toBe(false);
+    for (const r of b.systems) expect(there.positions.get(numberOf(r[1]))).toEqual(real(r));
+    // Somewhere else entirely: where he is says nothing about this boxel.
+    expect(boxelPositionSet(boxel, last, { name: "Sol", pos: [0, 0, 0] }).checked).toBe(0);
+  });
+
+  it("predicts nothing where the kind would be a coin toss", () => {
+    const b = golden.kinds.find((k) => k.code === "b")!;
+    const frame = boxelFrame(b.systems[0]![0])!;
+    const name = b.systems[0]![1];
+    const boxel = name.slice(0, name.lastIndexOf("-") + 1);
+    const sector = [0, 1, 2].map((i) => Math.floor((frame.origin[i]! + [49985, 40985, 24105][i]!) / 1280)) as [number, number, number];
+    setBoxelSectorSource((s) => (boxel.startsWith(`${s} `) ? sector : null));
+    // Listed to 200: 45.5 % of such b boxels are scatter.
+    expect(boxelPositionSet(boxel, 200).predicted.size).toBe(0);
+    // One real position settles it, however crowded.
+    const there = boxelPositionSet(boxel, 200, { name, pos: real(b.systems[0]!) });
+    expect(there.predicted.size).toBe(200);
+    expect(there.exact).toBe(PLACEMENT_EXACT_KNOWN_KIND);
   });
 });

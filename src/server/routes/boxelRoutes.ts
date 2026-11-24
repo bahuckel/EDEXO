@@ -153,14 +153,17 @@ export function registerBoxelRoutes(
     const r = opts.savedBoxels!.remaining(b.id, store ? store.visitedSystems.entries() : [], sightings(store), store?.currentSystem ?? null);
     if (!r) return b;
     const p = store?.commanderPos;
-    const where = boxelPositionSet(b.prefix, r.todo.reduce((m, n) => Math.max(m, n), -1));
-    const o = shortestBoxelOrder(r.todo, where.positions, p ? [p.x, p.y, p.z] : null);
+    const at = p ? ([p.x, p.y, p.z] as const) : null;
+    const where = boxelPositionSet(b.prefix, r.end, at && store?.currentSystem ? { name: store.currentSystem, pos: at } : null);
+    const o = shortestBoxelOrder(r.todo, where.positions, at);
     const predicted = o.order.slice(0, o.placed).filter((n) => where.predicted.has(n)).length;
     return {
       ...b,
       order: o.order.map((n, i) => ({ n, ly: o.legs[i] ?? null, ...(where.predicted.has(n) ? { predicted: true } : {}) })),
       placed: o.placed,
-      ...(predicted && where.exact != null ? { predicted, predictedExact: where.exact } : {}),
+      ...(predicted && where.exact != null
+        ? { predicted, predictedExact: where.exact, predictedChecked: where.checked }
+        : {}),
       orderLy: o.orderLy,
       numericLy: o.numericLy,
       // No position known: next in line as before; nothing left: the probe past the end, as the run takes it.

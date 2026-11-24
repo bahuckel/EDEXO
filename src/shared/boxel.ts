@@ -158,10 +158,12 @@ export interface SavedBoxelDTO {
   placed?: number;
   /**
    * How many of the placed ones have a predicted position (shared/stellarPlacement.ts: worked out from the system's
-   * address, not seen), and the share of such predictions that are exact at this mass code, as measured.
+   * address, not seen), the share of such predictions that are exact, as measured, and how many real positions the
+   * boxel's kind was read from (0: guessed from how crowded the boxel is, which is what lowers the share).
    */
   predicted?: number;
   predictedExact?: number;
+  predictedChecked?: number;
   orderLy?: number;
   numericLy?: number;
 }
