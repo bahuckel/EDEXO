@@ -241,6 +241,16 @@ function normalizeLoadedProfile(j: Record<string, unknown>): ExomasteryProfileV1
   return prof;
 }
 
+/** A profile file read and normalised as {@link loadExomasteryProfile} does, or null when unreadable or unusable. */
+export function readExomasteryProfileFile(path: string): ExomasteryProfileV1 | null {
+  try {
+    const j = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    return profileLooksUsable(j) ? normalizeLoadedProfile(j) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** One usable profile file of a genus folder: its path, `speciesLabel` and file stem. */
 type ProfileIndexRow = { path: string; label: string | undefined; stem: string };
 /**

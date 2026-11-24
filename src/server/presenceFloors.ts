@@ -9,6 +9,7 @@ import type {
   PlanetScan,
   SpeciesDatabase,
   SpeciesMatch,
+  SpeciesMatchContext,
 } from "../shared/types.js";
 import type { GameStateStore } from "./gameState.js";
 import { collectOwnOrganicLockSpeciesIds } from "./organicLocks.js";
@@ -83,12 +84,15 @@ export function attachPresenceProbability(
   store: GameStateStore,
   /** The system's main star (the match context's), for a measured rate that rests on it (measuredOdds.ts). */
   mainStarClass: string | null = null,
+  /** The body's match context, so each species is scored on its predicted colour's profile (colourProfiles.ts). */
+  matchContext: SpeciesMatchContext | null = null,
 ): void {
   if (!scan) return;
   const shown = matches.filter((m) => !m.unlikely);
   if (shown.length === 0) return;
   const { ranked } = rankSpeciesOnBody(shown, scan, rec, journalHost, {
     root,
+    matchContext,
     regionPrior: true,
     regionIndex: regionIndexForBody(store, b, root),
     regionPriorWeight: REGION_PRIOR_WEIGHT,

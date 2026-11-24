@@ -30,12 +30,14 @@ import type {
   JournalHostStarObservation,
   PlanetScan,
   SpeciesEntry,
+  SpeciesMatchContext,
 } from "../shared/types.js";
 import { histogramBin, type HistogramEdgesFile, type SpeciesHistograms } from "../shared/likelihoodBins.js";
 import { speciesPrior, type SpeciesPrevalenceFile } from "../shared/speciesPrior.js";
 import { regionalSpeciesCount } from "./regionSpeciesData.js";
 import { bucketCategoricalValue } from "../feeder/parameterImportance.js";
 import { loadExomasteryProfile, type ExomasteryProfileV1 } from "./exomasteryProfile.js";
+import { COLOUR_PROFILES_IN_CHANCE, profileForBody } from "./colourProfiles.js";
 import { valueForCategoricalPath, valueForNumericPath } from "./exomasteryBodyValues.js";
 import { shouldOmitExomasterySciencePath } from "./exomasteryPathHygiene.js";
 import { loadHistogramEdges, loadSpeciesPrevalence } from "./likelihoodData.js";
@@ -275,6 +277,11 @@ export function speciesLogScore(
     root?: string;
     damping?: number;
     profile?: ExomasteryProfileV1 | null;
+    /**
+     * The body's match context: with no `profile` given, the predicted colour's own profile is scored where it has one
+     * (colourProfiles.ts, while {@link COLOUR_PROFILES_IN_CHANCE}); without it, the species profile.
+     */
+    matchContext?: SpeciesMatchContext | null;
     paths?: Set<string>;
     /** Probe seam: drop the corpus prior, to measure what the likelihood is worth on its own. */
     noPrior?: boolean;
@@ -375,7 +382,11 @@ export function speciesLogScore(
 ): SpeciesLikelihood | null {
   const root = opts?.root ?? getProjectRoot();
   const damping = opts?.damping ?? TERM_DAMPING;
-  const profile = opts?.profile ?? loadExomasteryProfile(root, entry);
+  const profile =
+    opts?.profile ??
+    (opts?.matchContext && COLOUR_PROFILES_IN_CHANCE
+      ? profileForBody(root, entry, opts.matchContext, scan).profile
+      : loadExomasteryProfile(root, entry));
   if (!profile) return null;
 
   const edgesFile: HistogramEdgesFile | null = loadHistogramEdges(root);
@@ -567,6 +578,8 @@ export function rankSpeciesOnBody<T extends { entry: SpeciesEntry }>(
   opts?: {
     root?: string;
     damping?: number;
+    /** Passed to each score: the predicted colour's profile where it has one (see speciesLogScore). */
+    matchContext?: SpeciesMatchContext | null;
     paths?: Set<string>;
     noPrior?: boolean;
     minSamples?: number;

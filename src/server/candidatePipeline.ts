@@ -116,7 +116,7 @@ export function rankCandidates(
 ): Set<string> {
   const { scan, rec, ctx, journalHost } = inputs;
   const locked = () => new Set(collectResolvedOrganicLockSpeciesIds(b.organicGenusLocks, db));
-  attachPresenceProbability(matches, b, scan, rec, journalHost, root, store, ctx.systemMainStarClass ?? null);
+  attachPresenceProbability(matches, b, scan, rec, journalHost, root, store, ctx.systemMainStarClass ?? null, ctx);
   // Which species of a genus, where the ranking model cannot tell them apart (Phase A.6).
   applyGenusBodySplit(matches, scan, ctx.regionName ?? null, root, locked());
   // After the ranking, because the floor is a rule about the ranking's own output.

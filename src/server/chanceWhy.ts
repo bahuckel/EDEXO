@@ -139,6 +139,7 @@ function withinGenus(
       const terms = new Map<string, number>();
       speciesLogScore(m.entry, inputs.scan, inputs.rec, inputs.journalHost, {
         root,
+        matchContext: inputs.ctx,
         onTerm: (path, lp) => terms.set(path, (terms.get(path) ?? 0) + TERM_DAMPING * lp),
       });
       per.set(m.entry.id, terms);
@@ -178,11 +179,12 @@ function regionNudges(rows: SpeciesMatch[], inputs: CandidateInputs & { scan: Pl
   for (const m of rows) {
     const withRegion = speciesLogScore(m.entry, inputs.scan, inputs.rec, inputs.journalHost, {
       root,
+      matchContext: inputs.ctx,
       regionPrior: true,
       regionIndex,
       regionPriorWeight: REGION_PRIOR_WEIGHT,
     });
-    const without = speciesLogScore(m.entry, inputs.scan, inputs.rec, inputs.journalHost, { root });
+    const without = speciesLogScore(m.entry, inputs.scan, inputs.rec, inputs.journalHost, { root, matchContext: inputs.ctx });
     if (withRegion && without) moved.set(m.entry.id, withRegion.logPrior - without.logPrior);
   }
   if (moved.size < 2) return out;

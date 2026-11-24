@@ -178,6 +178,16 @@ export function SpeciesExomasterySimilarityContent({ m }: { m: BodyComputed["mat
         </div>
       ) : null}
       <ThinSampleNote sampleN={sampleN} unlikely={unlikely} />
+      {/* The figures are the predicted colour's own (server/colourProfiles.ts), not the whole species'. */}
+      {m.exomasteryProfileColour ? (
+        <div
+          className="species-habitat-colour dim tiny"
+          title="This body's predicted colour has a habitat profile of its own; these figures are read from it. The chance uses the whole species."
+        >
+          {m.exomasteryProfileColour} colour
+          {sampleN != null ? ` · ${sampleN.toLocaleString("en-US")} bodies` : ""}
+        </div>
+      ) : null}
       <div className="species-similarity-index-cols">
         {cols.map((c) => (
           <div key={c.key} className="species-similarity-index-col" title={c.help}>

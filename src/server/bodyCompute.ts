@@ -71,7 +71,6 @@ import {
   exomasteryOtherMatchCardDeckScore,
   feederProfileBodyCount,
   hasExomasteryProfileFile,
-  loadExomasteryProfile,
   resolveExomasteryExportBasename,
 } from "./exomasteryProfile.js";
 import { shortBodyLabel } from "../shared/systemMapLabels.js";
@@ -83,7 +82,7 @@ import {
   codexSpeciesKey,
   gameOrderSpeciesName,
 } from "../shared/codexLog.js";
-import { candidateMorphColorLabelByLight } from "../shared/candidateSpawnHints.js";
+import { predictedColourFor, profileForBody } from "./colourProfiles.js";
 import { genusLikelihoods, type GenusLikelihood } from "../shared/genusCooccurrence.js";
 import { computeExoDataAlertsForBody } from "./exoDataConsistencyAlerts.js";
 import { recordColourOutliersForBody, recordExoOutliersForBody } from "./exoOutlierLog.js";
@@ -111,6 +110,7 @@ export function attachOtherMatchCardScores(
   root: string,
   journalHost: ReturnType<typeof journalHostObservationFromSpeciesContext>,
   decks: CandidateDecks,
+  ctx: SpeciesMatchContext | null = null,
 ): void {
   if (!scanForExo) {
     for (const m of matches) {
@@ -123,7 +123,7 @@ export function attachOtherMatchCardScores(
       m.exomasteryOtherMatchCardScore = null;
       continue;
     }
-    const prof = loadExomasteryProfile(root, m.entry);
+    const prof = profileForBody(root, m.entry, ctx, scanForExo).profile;
     if (!prof) {
       m.exomasteryOtherMatchCardScore = null;
       continue;
@@ -144,6 +144,7 @@ export function attachOtherMatchDetailCardsToMatches(
   root: string,
   journalHost: ReturnType<typeof journalHostObservationFromSpeciesContext>,
   decks: CandidateDecks,
+  ctx: SpeciesMatchContext | null = null,
 ): SpeciesMatch[] {
   if (!scanForExo) {
     return matches.map((m) => ({ ...m, otherMatchDetailCards: null }));
@@ -156,7 +157,7 @@ export function attachOtherMatchDetailCardsToMatches(
       return { ...m, otherMatchDetailCards: sim ? both.withSimilarity : both.withoutSimilarity };
     }
     // A row added after the scores were taken (none today): built as it always was.
-    const prof = loadExomasteryProfile(root, m.entry);
+    const prof = profileForBody(root, m.entry, ctx, scanForExo).profile;
     if (!prof) return { ...m, otherMatchDetailCards: null };
     return {
       ...m,
@@ -552,21 +553,8 @@ export function lowChanceWhy(m: SpeciesMatch, k: { why: string; pct: number } | 
   );
 }
 
-/**
- * The colour predicted for a species on this body: its own table or materials first, then the stars by
- * their light on the body, brightest first — a star whose class has no colour row hands over to the
- * next, and with none left it is "(unknown)", never a guessed class (owner, 2026-09-28).
- */
-export function predictedColourFor(
-  entry: SpeciesEntry,
-  ctx: SpeciesMatchContext | null,
-  scan: PlanetScan | null,
-): string {
-  const stars = ctx?.colourStarTypes?.length
-    ? ctx.colourStarTypes
-    : [ctx?.colourStarType ?? ctx?.parentStarType];
-  return candidateMorphColorLabelByLight(entry, stars, scan?.materials);
-}
+// The colour predicted for a species on this body, now beside the colour profiles it picks (colourProfiles.ts).
+export { predictedColourFor };
 
 /**
  * The tracked achievement (owner, 2026-09-27): mark the rows whose plant, here, would advance it —
@@ -899,7 +887,8 @@ export function computeBodyUncached(
     );
     const priceCredits = lookupPrice(prices, m.entry.displayName, m.entry.id);
     const hasFile = hasExomasteryProfileFile(root, m.entry);
-    const profile = loadExomasteryProfile(root, m.entry);
+    // The predicted colour's habitat where it has its own profile (colourProfiles.ts), else the species'.
+    const { profile, colour: profileColour } = profileForBody(root, m.entry, speciesMatchCtx, scanForExo);
     const hq =
       profile && scanForExo
         ? exomasteryHabitatQualityPercent(profile, scanForExo, explorationRec ?? undefined, journalHost)
@@ -924,6 +913,7 @@ export function computeBodyUncached(
             exomasteryProfilePresent: true,
             exomasteryHabitatQuality: hq ?? null,
             exomasteryProfileSampleCount: profile ? feederProfileBodyCount(profile) : null,
+            ...(profileColour ? { exomasteryProfileColour: profileColour } : {}),
             exomasterySimilarityPercent: null,
             exomasteryVarietyHints: profile ? buildExomasteryVarietyHints(profile) : null,
             exomasteryExportBasename: resolveExomasteryExportBasename(root, m.entry),
@@ -1023,7 +1013,7 @@ export function computeBodyUncached(
     }
   }
   const decks: CandidateDecks = new Map();
-  attachOtherMatchCardScores(matches, scanForExo, explorationRec, root, journalHost, decks);
+  attachOtherMatchCardScores(matches, scanForExo, explorationRec, root, journalHost, decks, speciesMatchCtx);
   applyExomasteryGenusCompetitivePercent(matches);
   if (matches.length > 0 && scanForExo) {
     matches = attachOtherMatchDetailCardsToMatches(
@@ -1033,6 +1023,7 @@ export function computeBodyUncached(
       root,
       journalHost,
       decks,
+      speciesMatchCtx,
     );
   }
   // `approximateMatchingUsed` (an on-foot scan named a species the gates rejected) is no longer

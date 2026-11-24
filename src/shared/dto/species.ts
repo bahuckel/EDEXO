@@ -717,6 +717,11 @@ export interface SpeciesMatch {
    */
   exomasteryProfileSampleCount?: number | null;
   /**
+   * The colour whose own profile the habitat figures were read from (the chance stays on the species): the predicted colour, when it has
+   * a profile of enough bodies (server/colourProfiles.ts). Absent when they are the whole species'.
+   */
+  exomasteryProfileColour?: string;
+  /**
    * Profile present, habitat quality exactly 0, and enough samples for that to mean something:
    * the body does not resemble anywhere this species has been observed. The candidate is still
    * listed — it is ranked last and labelled, never removed. Species that only matched through a

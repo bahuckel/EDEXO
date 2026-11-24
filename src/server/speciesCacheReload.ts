@@ -5,6 +5,7 @@ import { clearChanceRecalibrationCache } from "./chanceRecalibration.js";
 import { clearCodexFirstCache } from "./codexFirst.js";
 import { clearCodexMapCache } from "./codexMap.js";
 import { clearCodexVariantCountsCache } from "./codexVariantCounts.js";
+import { clearColourProfileCache } from "./colourProfiles.js";
 import { clearColourStarNeverCache } from "./colourStarNever.js";
 import { clearEddnTemperatureRangeCache } from "./eddnTemperatureRange.js";
 import { clearEddsnColourVariantsCache } from "./eddsnColourVariants.js";
@@ -58,6 +59,7 @@ export function reloadSpeciesDerivedCaches(): void {
   clearFootScannedCatalogCache();
   clearFootCatalogSpeciesDb();
   clearExomasteryProfileCache();
+  clearColourProfileCache();
   clearEncyclopediaPayloadCache();
   clearFieldGuideCache();
   clearExpeditionCache();
