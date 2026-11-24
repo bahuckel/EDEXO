@@ -76,8 +76,11 @@ describe("socket channels: slim snapshots per client kind", () => {
     (s.bodies[0]!.matches[0] as unknown as Record<string, unknown>).exomasteryDetail = withDetail;
     (s.bodies[0]!.matches[0] as unknown as Record<string, unknown>).exomasteryVarietyHints = [{ big: 1 }];
     const out = slimSnapshotForChannel(s, "app") as AppSnapshot;
-    expect(Object.keys(out).sort()).toEqual(Object.keys(s).sort());
-    expect(out.journalSystems).toBe(s.journalSystems);
+    // Every field but the two lists fetched when shown (APP_LAZY), with a stamp for each in their place.
+    expect(Object.keys(out).sort()).toEqual([...Object.keys(s).filter((k) => k !== "journalSystems"), "lazyVersions"].sort());
+    expect(out.journalSystems).toBeUndefined();
+    expect(out.lazyVersions?.journalSystems).toMatch(/^\d+:/);
+    expect(out.lazyVersions?.footScannedEntries).toBe("none");
     const m = out.bodies[0]!.matches[0]! as unknown as Record<string, unknown>;
     expect(m.exomasteryDetail).toBeUndefined();
     expect(m.exomasteryVarietyHints).toBeUndefined();
@@ -116,6 +119,18 @@ describe("socket channels: slim snapshots per client kind", () => {
     expect(v()).toBe(fresh);
     m0.exomasteryDetail = { ...detail, stats: [{ id: "b" }] };
     expect(v()).not.toBe(fresh);
+  });
+
+  it("stamps the lists it leaves out by content, on the app and the shell alike (UI ideas §4.7)", () => {
+    const s = snap();
+    const stamp = (x: AppSnapshot, ch: "app" | "shell") => (slimSnapshotForChannel(x, ch) as AppSnapshot).lazyVersions!;
+    const first = stamp(s, "app");
+    expect(stamp(s, "shell")).toEqual(first);
+    // A new list with the same content: the same stamp; one more system: a new one.
+    expect(stamp({ ...s, journalSystems: structuredClone(s.journalSystems) }, "app")).toEqual(first);
+    const more = stamp({ ...s, journalSystems: [...s.journalSystems, { systemAddress: 2, starSystem: "B" }] } as AppSnapshot, "app");
+    expect(more.journalSystems).not.toBe(first.journalSystems);
+    expect(more.footScannedEntries).toBe(first.footScannedEntries);
   });
 
   it("gives the Colonize window's shell everything but the big fields only Compare's own screen uses (item 22)", () => {

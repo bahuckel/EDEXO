@@ -205,17 +205,13 @@ export function createWsHub(deps: {
     system of 114 bio bodies, more than building the snapshot. The body cache (bodyCompute.ts computeBody) hands back
     the same BodyComputed while every input of its signature stands, and nothing changes one afterwards: its slimmed
     JSON's digest and length are kept against it (not the JSON, RAM audit 2026-10-22), and the JSON is made only for
-    a body that is sent. Two big fields are one memoised object while their inputs stand, never changed in place:
-    journalSystems (buildJournalSystems) and footScannedEntries (ownFootEntriesNewestFirst).
+    a body that is sent. The two big lists that were kept the same way no longer travel (wsChannels.ts APP_LAZY).
   */
   const bodyMemo = new WeakMap<BodyComputed, { digest: string; length: number }>();
-  const SAME_OBJECT_SAME_JSON = new Set(["journalSystems", "footScannedEntries"]);
-  let lastFieldObject = new Map<string, { value: unknown; digest: string; length: number }>();
   const pushMessage = (snap: AppSnapshot, channel: WsChannel): string => {
     if (channel !== "app") return stateMessage(snap, channel, "__REV__");
     const prev = lastFieldDigest.get(channel);
     const next = new Map<string, string>();
-    const nextObjects = new Map<string, { value: unknown; digest: string; length: number }>();
     const parts: string[] = [];
     const unchanged: string[] = [];
     let bodiesDelta = "";
@@ -255,22 +251,12 @@ export function createWsHub(deps: {
         } else parts.push(whole());
         continue;
       }
-      const kept = SAME_OBJECT_SAME_JSON.has(k) ? lastFieldObject.get(k) : undefined;
-      let j: string | null = null;
-      let d: string;
-      let length: number;
-      if (kept && kept.value === v) ({ digest: d, length } = kept);
-      else {
-        j = JSON.stringify(v);
-        d = digestOf(j);
-        length = j.length;
-      }
-      if (SAME_OBJECT_SAME_JSON.has(k)) nextObjects.set(k, { value: v, digest: d, length });
+      const j = JSON.stringify(v);
+      const d = digestOf(j);
       next.set(k, d);
-      if (length >= OMIT_UNCHANGED_MIN_BYTES && prev?.get(k) === d) unchanged.push(k);
-      else parts.push(`${JSON.stringify(k)}:${j ?? JSON.stringify(v)}`);
+      if (j.length >= OMIT_UNCHANGED_MIN_BYTES && prev?.get(k) === d) unchanged.push(k);
+      else parts.push(`${JSON.stringify(k)}:${j}`);
     }
-    lastFieldObject = nextObjects;
     // Nothing at all changed since the last push (same fields, same content): no frame.
     if (prev && prev.size === next.size && [...next].every(([k, d]) => prev.get(k) === d)) return "";
     lastFieldDigest.set(channel, next);

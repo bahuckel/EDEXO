@@ -10,6 +10,7 @@ import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Tooltip } from "./ui/Tooltip";
 import { sendJson } from "./http";
+import { useLazyList } from "./useLazyList";
 
 /**
  * The header's system search: the journals first, Spansh as you type (owner, 2026-09-25).
@@ -24,7 +25,14 @@ import { sendJson } from "./http";
 /** One empty list, so a snapshot without systems does not bust the memos below on every render. */
 const NO_SYSTEMS: JournalSystemInfo[] = [];
 
-const SEARCH_FIELDS = ["journalSystems", "bodies", "journalBoot", "remoteView", "viewingSystemAddress"] as const;
+const SEARCH_FIELDS = [
+  "journalSystems",
+  "lazyVersions",
+  "bodies",
+  "journalBoot",
+  "remoteView",
+  "viewingSystemAddress",
+] as const;
 
 /** Re-rendered when the systems or the viewed system change, not on every push (snapSlice.ts). */
 export const JournalSystemSearch = memoOnSnapSlice(SEARCH_FIELDS, function JournalSystemSearch({
@@ -35,9 +43,16 @@ export const JournalSystemSearch = memoOnSnapSlice(SEARCH_FIELDS, function Journ
   onGoToBioBody?: (bodyKey: string) => void;
 }) {
   const toast = useToast();
-  const systems: JournalSystemInfo[] = snap.journalSystems ?? NO_SYSTEMS;
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  // Not in the live state (server/wsChannels.ts APP_LAZY): fetched when the search opens, again when it changes.
+  const fetchedSystems = useLazyList<JournalSystemInfo>(
+    "/api/journal-systems",
+    "systems",
+    snap.lazyVersions?.journalSystems,
+    open && snap.journalSystems === undefined,
+  );
+  const systems: JournalSystemInfo[] = snap.journalSystems ?? fetchedSystems ?? NO_SYSTEMS;
   const [remote, setRemote] = useState<{
     q: string;
     busy: boolean;

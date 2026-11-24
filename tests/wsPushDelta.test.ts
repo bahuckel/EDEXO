@@ -55,55 +55,56 @@ const big = (tag: string) => Array.from({ length: 400 }, (_, i) => ({ starSystem
 
 describe("snapshot pushes", () => {
   it("send the whole snapshot first, then leave out big fields that did not change", async () => {
-    const t = await start({ journalSystems: big("A"), liveShipFuelRange: { ly: 10 } });
+    const t = await start({ organicPendingLines: big("A"), liveShipFuelRange: { ly: 10 } });
     const first = await t.next(1);
-    expect((first.payload as Record<string, unknown>).journalSystems).toHaveLength(400);
+    expect((first.payload as Record<string, unknown>).organicPendingLines).toHaveLength(400);
     expect(first.unchanged).toBeUndefined();
 
     // First push: every field is new to the push history, so all go out.
-    t.set({ journalSystems: big("A"), liveShipFuelRange: { ly: 11 } });
+    t.set({ organicPendingLines: big("A"), liveShipFuelRange: { ly: 11 } });
     const p1 = await t.next(2);
-    expect(Object.keys(p1.payload as object).sort()).toEqual(["journalSystems", "liveShipFuelRange"]);
+    expect(Object.keys(p1.payload as object).sort()).toEqual(["lazyVersions", "liveShipFuelRange", "organicPendingLines"]);
 
     // Only the fuel changed: the big list stays home.
-    t.set({ journalSystems: big("A"), liveShipFuelRange: { ly: 12 } });
+    t.set({ organicPendingLines: big("A"), liveShipFuelRange: { ly: 12 } });
     const p2 = await t.next(3);
-    expect(Object.keys(p2.payload as object)).toEqual(["liveShipFuelRange"]);
-    expect(p2.unchanged).toEqual(["journalSystems"]);
+    expect(Object.keys(p2.payload as object)).toEqual(["liveShipFuelRange", "lazyVersions"]);
+    expect(p2.unchanged).toEqual(["organicPendingLines"]);
     expect(JSON.stringify(p2).length).toBeLessThan(200);
 
     // The big list changes: it goes out again.
-    t.set({ journalSystems: big("B"), liveShipFuelRange: { ly: 12 } });
+    t.set({ organicPendingLines: big("B"), liveShipFuelRange: { ly: 12 } });
     const p3 = await t.next(4);
-    expect(((p3.payload as Record<string, unknown>).journalSystems as unknown[])[0]).toMatchObject({ starSystem: "B 0" });
+    expect(((p3.payload as Record<string, unknown>).organicPendingLines as unknown[])[0]).toMatchObject({ starSystem: "B 0" });
     expect(p3.unchanged).toBeUndefined();
   });
 
   it("does not push a frame when nothing changed, and small fields are always sent", async () => {
-    const t = await start({ journalSystems: big("A"), commanderName: "X" });
+    const t = await start({ organicPendingLines: big("A"), commanderName: "X" });
     await t.next(1);
-    t.set({ journalSystems: big("A"), commanderName: "X" });
+    t.set({ organicPendingLines: big("A"), commanderName: "X" });
     await t.next(2);
-    t.set({ journalSystems: big("A"), commanderName: "X" });
-    t.set({ journalSystems: big("A"), commanderName: "Y" });
+    t.set({ organicPendingLines: big("A"), commanderName: "X" });
+    t.set({ organicPendingLines: big("A"), commanderName: "Y" });
     const p = await t.next(3);
-    expect(p.payload).toEqual({ commanderName: "Y" });
-    expect(p.unchanged).toEqual(["journalSystems"]);
+    // The lists' stamps are small, so they go with every push, as small fields do (wsChannels.ts APP_LAZY).
+    expect(p.payload).toEqual({ commanderName: "Y", lazyVersions: { footScannedEntries: "none", journalSystems: "none" } });
+    expect(p.unchanged).toEqual(["organicPendingLines"]);
   });
 
   it("answers the revision of the last push, and sends it with /api/state", async () => {
-    const t = await start({ journalSystems: big("A"), n: 0 });
+    const t = await start({ organicPendingLines: big("A"), n: 0 });
     await t.next(1);
-    t.set({ journalSystems: big("A"), n: 1 });
+    t.set({ organicPendingLines: big("A"), n: 1 });
     const p1 = await t.next(2);
-    t.set({ journalSystems: big("A"), n: 2 });
+    t.set({ organicPendingLines: big("A"), n: 2 });
     const p2 = await t.next(3);
     expect(p2.rev).toBe((p1.rev as number) + 1);
     const rev = (await (await fetch(`http://127.0.0.1:${t.port}/api/state/rev`)).json()) as { rev: number };
     expect(rev.rev).toBe(p2.rev);
     const full = await fetch(`http://127.0.0.1:${t.port}/api/state`);
     expect(full.headers.get("x-edexo-rev")).toBe(String(p2.rev));
-    expect(((await full.json()) as { journalSystems: unknown[] }).journalSystems).toHaveLength(400);
+    expect(((await full.json()) as { organicPendingLines: unknown[] }).organicPendingLines).toHaveLength(400);
   });
 
   it("sends only the bodies that changed, with every key in order", async () => {
@@ -138,23 +139,23 @@ describe("snapshot pushes", () => {
     const one = body("1", 0);
     const two = body("2", 0);
     const list = big("A");
-    const t = await start({ bodies: [one, two], journalSystems: list, footScannedEntries: big("F") });
+    const t = await start({ bodies: [one, two], organicPendingLines: list, systemMap: big("F") });
     await t.next(1);
-    t.set({ bodies: [one, two], journalSystems: list, footScannedEntries: big("F"), tick: 1 });
+    t.set({ bodies: [one, two], organicPendingLines: list, systemMap: big("F"), tick: 1 });
     const p1 = await t.next(2);
-    expect(Object.keys(p1.payload as object).sort()).toEqual(["bodies", "footScannedEntries", "journalSystems", "tick"]);
+    expect(Object.keys(p1.payload as object).sort()).toEqual(["bodies", "lazyVersions", "organicPendingLines", "systemMap", "tick"]);
     // The body cache's same objects, one body recomputed (a new object, same key, new content).
-    t.set({ bodies: [one, body("2", 1)], journalSystems: list, footScannedEntries: big("F"), tick: 2 });
+    t.set({ bodies: [one, body("2", 1)], organicPendingLines: list, systemMap: big("F"), tick: 2 });
     const p2 = await t.next(3);
-    expect(p2.unchanged).toEqual(["journalSystems", "footScannedEntries"]);
+    expect(p2.unchanged).toEqual(["organicPendingLines", "systemMap"]);
     const d = p2.bodiesDelta as { changed: { state: { key: string; n: number } }[] };
     expect(d.changed.map((b) => [b.state.key, b.state.n])).toEqual([["2", 1]]);
     // A recomputed body with the same content is still unchanged, and a new list object with new content goes out.
-    t.set({ bodies: [one, body("2", 1)], journalSystems: big("B"), footScannedEntries: big("F"), tick: 3 });
+    t.set({ bodies: [one, body("2", 1)], organicPendingLines: big("B"), systemMap: big("F"), tick: 3 });
     const p3 = await t.next(4);
     expect(p3.bodiesDelta).toBeUndefined();
-    expect(p3.unchanged).toEqual(["bodies", "footScannedEntries"]);
-    expect(((p3.payload as Record<string, unknown>).journalSystems as { starSystem: string }[])[0]!.starSystem).toBe("B 0");
+    expect(p3.unchanged).toEqual(["bodies", "systemMap"]);
+    expect(((p3.payload as Record<string, unknown>).organicPendingLines as { starSystem: string }[])[0]!.starSystem).toBe("B 0");
   });
 
   it("serves a candidate's habitat detail that the pushes leave out", async () => {
@@ -251,12 +252,12 @@ describe("socket robustness (combined plan 1.3)", () => {
   });
 
   it("gives a socket that connected between pushes a whole frame, so a field that changed back is not stale", async () => {
-    const t = await start({ journalSystems: big("A"), n: 0 });
+    const t = await start({ organicPendingLines: big("A"), n: 0 });
     await t.next(1);
-    t.set({ journalSystems: big("A"), n: 1 }); // the push baseline: list A
+    t.set({ organicPendingLines: big("A"), n: 1 }); // the push baseline: list A
     await t.next(2);
     // Between pushes the list becomes B and a second socket connects, receiving B.
-    let snapB = { journalSystems: big("B"), n: 1 };
+    let snapB = { organicPendingLines: big("B"), n: 1 };
     t.setQuiet(snapB);
     await new Promise((r) => setTimeout(r, 1100));
     const late = new WebSocket(`ws://127.0.0.1:${t.port}/ws`);
@@ -267,14 +268,14 @@ describe("socket robustness (combined plan 1.3)", () => {
     t.setQuiet(snapB);
     await new Promise((r) => late.once("open", r));
     for (let i = 0; i < 100 && lateMsgs.length < 1; i++) await new Promise((r) => setTimeout(r, 10));
-    expect(((lateMsgs[0]!.payload as Record<string, unknown>).journalSystems as { starSystem: string }[])[0]!.starSystem).toBe("B 0");
-    // Back to A before the next push: a delta would say "journalSystems unchanged" (same as the last push).
-    snapB = { journalSystems: big("A"), n: 2 };
+    expect(((lateMsgs[0]!.payload as Record<string, unknown>).organicPendingLines as { starSystem: string }[])[0]!.starSystem).toBe("B 0");
+    // Back to A before the next push: a delta would say "organicPendingLines unchanged" (same as the last push).
+    snapB = { organicPendingLines: big("A"), n: 2 };
     t.set(snapB);
     for (let i = 0; i < 100 && lateMsgs.length < 2; i++) await new Promise((r) => setTimeout(r, 10));
     const p = lateMsgs[1]!;
     expect(p.unchanged).toBeUndefined();
-    expect(((p.payload as Record<string, unknown>).journalSystems as { starSystem: string }[])[0]!.starSystem).toBe("A 0");
+    expect(((p.payload as Record<string, unknown>).organicPendingLines as { starSystem: string }[])[0]!.starSystem).toBe("A 0");
   });
 });
 
@@ -284,7 +285,7 @@ describe("socket robustness (combined plan 1.3)", () => {
 */
 describe("the channel in the address", () => {
   it("makes the first frame the channel's own slice", async () => {
-    const t = await start({ journalSystems: big("A"), n: 0, hudPrefs: null });
+    const t = await start({ organicPendingLines: big("A"), n: 0, hudPrefs: null });
     await t.next(1);
     const appFirst = JSON.stringify(t.messages[0]).length;
     const hud = new WebSocket(`ws://127.0.0.1:${t.port}/ws?channel=hud`);
@@ -294,8 +295,8 @@ describe("the channel in the address", () => {
     await new Promise((r) => hud.once("open", r));
     for (let i = 0; i < 100 && hudMsgs.length < 1; i++) await new Promise((r) => setTimeout(r, 10));
     const first = JSON.parse(hudMsgs[0]!) as { payload: Record<string, unknown> };
-    // The HUD slice has no journal system list; the app frame does.
-    expect(first.payload.journalSystems).toBeUndefined();
+    // The HUD slice has no unsold-organics list; the app frame does.
+    expect(first.payload.organicPendingLines).toBeUndefined();
     expect(hudMsgs[0]!.length).toBeLessThan(appFirst / 10);
   });
 });

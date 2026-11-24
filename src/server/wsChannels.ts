@@ -9,7 +9,7 @@
  */
 import { createHash } from "node:crypto";
 import { lazyDetailOf } from "./lazyMatchDetail.js";
-import type { AppSnapshot, BodyComputed } from "../shared/types.js";
+import type { AppSnapshot, BodyComputed, LazyFieldVersions } from "../shared/types.js";
 import { footfallCertainty, type FootfallCertainty } from "../shared/footfallValue.js";
 
 /**
@@ -37,6 +37,31 @@ export const SHELL_OMIT = [
   "organicPendingLines",
   "systemMap",
 ] as const satisfies readonly (keyof AppSnapshot)[];
+
+/**
+ * Left out of Compare's state too (UI ideas 2026-11-16 §4.7): 820 of the 1,027 KB every new socket's first frame
+ * carried, to draw a header that reads neither. The on-foot scans are fetched when the Encyclopedia or My exobiology
+ * opens (/api/foot-scanned), the system list when the header's search does (/api/journal-systems); `lazyVersions`
+ * stamps each, so a screen showing one fetches it again when it changes.
+ */
+export const APP_LAZY = ["footScannedEntries", "journalSystems"] as const satisfies readonly (keyof AppSnapshot)[];
+
+/** A stamp per list object: the two are memoised objects while their inputs stand, so each is hashed once. */
+const lazyStamps = new WeakMap<object, string>();
+function lazyStamp(v: unknown): string {
+  if (!v || typeof v !== "object") return "none";
+  let s = lazyStamps.get(v);
+  if (!s) {
+    const j = JSON.stringify(v);
+    s = `${j.length}:${createHash("sha1").update(j).digest("base64").slice(0, 10)}`;
+    lazyStamps.set(v, s);
+  }
+  return s;
+}
+
+export function lazyVersionsOf(snap: AppSnapshot): LazyFieldVersions {
+  return { footScannedEntries: lazyStamp(snap.footScannedEntries), journalSystems: lazyStamp(snap.journalSystems) };
+}
 
 /** What a Colonize window reads off the app's state: the connection, the boot, where the ship is. */
 const COLONIZE_KEYS = [
@@ -282,15 +307,18 @@ export function findMatchDetail(
 
 /** The app channel's fields with `bodies` still as computed: the socket push slims only the bodies it sends. */
 export function appFieldsBodiesUnslimmed(snap: AppSnapshot): Partial<AppSnapshot> {
-  return {
+  const out: Partial<AppSnapshot> = {
     ...snap,
     exoOverlayFocusBody: snap.exoOverlayFocusBody ? slimBodyForApp(snap.exoOverlayFocusBody) : snap.exoOverlayFocusBody,
+    lazyVersions: lazyVersionsOf(snap),
   };
+  for (const k of APP_LAZY) delete out[k];
+  return out;
 }
 
 export function slimSnapshotForChannel(snap: AppSnapshot, channel: WsChannel): Partial<AppSnapshot> {
   if (channel === "shell") {
-    const out: Record<string, unknown> = { ...snap };
+    const out: Record<string, unknown> = { ...snap, lazyVersions: lazyVersionsOf(snap) };
     for (const k of SHELL_OMIT) delete out[k];
     if (snap.exoOverlayFocusBody) out.exoOverlayFocusBody = slimBodyForApp(snap.exoOverlayFocusBody);
     return out as Partial<AppSnapshot>;

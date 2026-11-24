@@ -149,6 +149,7 @@ export const ROUTE_REACH: Readonly<Record<string, RouteReach>> = {
   "GET /api/match-detail": "lan",
   "GET /api/state": "lan",
   "GET /api/foot-scanned": "lan",
+  "GET /api/journal-systems": "lan",
   // routes/serverStatusRoutes.ts
   "GET /api/elite-server-status/orerve": "lan",
   "GET /api/elite-server-status/edsm": "lan",

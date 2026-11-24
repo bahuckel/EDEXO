@@ -1,29 +1,24 @@
 /*
-  The on-foot scans for the Encyclopedia and My exobiology. Compare's live state carries them; the Colonize window's
-  `shell` feed leaves them out (discuss item 22, 1.3.1: 501 KB on the owner's profile, sent to a window that seldom
-  shows them), so there they are asked for when one of those screens opens, and again on each later open.
+  The on-foot scans for the Encyclopedia and My exobiology. The sockets leave them out (discuss item 22, 1.3.1, for
+  the Colonize window; Compare's too since UI ideas 2026-11-16 §4.7: 501 KB on the owner's profile, in every first
+  frame, for screens seldom open), so they are asked for when one of those screens opens, and again while it is open
+  when a scan changes them (`lazyVersions`).
 */
-import { useEffect, useState } from "react";
 import type { AppSnapshot, FootScannedEntry } from "@shared/types";
-import { jsonOrNull } from "../http";
+import { useLazyList } from "../useLazyList";
 
 const NONE: FootScannedEntry[] = [];
 
-export function useFootScanned(snap: Pick<AppSnapshot, "footScannedEntries">, open: boolean): FootScannedEntry[] {
+export function useFootScanned(
+  snap: Pick<AppSnapshot, "footScannedEntries" | "lazyVersions">,
+  open: boolean,
+): FootScannedEntry[] {
   const fromState = snap.footScannedEntries;
-  const [fetched, setFetched] = useState<FootScannedEntry[] | null>(null);
-  useEffect(() => {
-    if (fromState !== undefined || !open) return;
-    let live = true;
-    void fetch("/api/foot-scanned", { cache: "no-store" })
-      .then(jsonOrNull<{ entries?: FootScannedEntry[] }>)
-      .then((j) => {
-        if (live && j && Array.isArray(j.entries)) setFetched(j.entries);
-      })
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, [fromState, open]);
+  const fetched = useLazyList<FootScannedEntry>(
+    "/api/foot-scanned",
+    "entries",
+    snap.lazyVersions?.footScannedEntries,
+    open && fromState === undefined,
+  );
   return fromState ?? fetched ?? NONE;
 }

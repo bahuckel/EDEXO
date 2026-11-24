@@ -33,6 +33,12 @@ import type { BookmarkDTO } from "../bookmarks.js";
 import type { FsdHealthDTO, NeutronLiveDTO } from "./neutron.js";
 import type { JumponiumDTO } from "../jumponium.js";
 
+/** A stamp per list a socket leaves out, changing when the list does (server/wsChannels.ts APP_LAZY). */
+export interface LazyFieldVersions {
+  footScannedEntries: string;
+  journalSystems: string;
+}
+
 export interface AppSnapshot {
   journalPath: string | null;
   /** How many Journal.*.log files were merged (oldest → newest) */
@@ -101,7 +107,10 @@ export interface AppSnapshot {
   sharedExomastery?: SharedExomasteryDTO | null;
   /** How far each bio body is from the ship, for the "Closest" body sort (server/shipProximity.ts). */
   shipProximity?: ShipProximityDTO | null;
-  /** Distinct systems from merged journal (and any body rows) for search / picker. */
+  /**
+   * Distinct systems from merged journal (and any body rows) for search / picker. Not on the sockets of Compare and
+   * Colonize (server/wsChannels.ts APP_LAZY): the header's search fetches it, `lazyVersions` says when.
+   */
   journalSystems: JournalSystemInfo[];
   bodies: BodyComputed[];
   speciesCount: number;
@@ -305,8 +314,13 @@ export interface AppSnapshot {
   /** Metres walked while tracking (great-circle on `PlanetRadius`); persisted in `data/organic_sample_session.json`. */
   footTravelDistanceMeters: number;
 
-  /** Completed on-foot analyses (`ScanOrganic` Analyse) persisted in `data/foot_scanned.json`, newest first. */
+  /**
+   * Completed on-foot analyses (`ScanOrganic` Analyse) persisted in `data/foot_scanned.json`, newest first. Not on the
+   * sockets of Compare and Colonize (server/wsChannels.ts APP_LAZY): fetched when shown, `lazyVersions` says when.
+   */
   footScannedEntries: FootScannedEntry[];
+  /** Added by the app and shell channels in place of the lists they leave out (server/wsChannels.ts APP_LAZY). */
+  lazyVersions?: LazyFieldVersions;
   /**
    * Live organic sample-distance overlay (journal tail + Status.json).
    * Null when inactive (no scans or post-celebration cooldown).

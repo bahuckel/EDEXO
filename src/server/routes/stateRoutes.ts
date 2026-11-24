@@ -57,11 +57,17 @@ export function registerStateRoutes(app: express.Express, opts: HttpServerOption
   });
 
   /*
-    The on-foot scans alone (discuss item 22, 1.3.1): the Colonize window's `shell` channel leaves them out (501 KB on
-    the owner's profile), and its Encyclopedia and My exobiology ask for them here when they open.
+    The on-foot scans alone (discuss item 22, 1.3.1; Compare's too since UI ideas §4.7): the sockets leave them out
+    (501 KB on the owner's profile), and the Encyclopedia and My exobiology ask for them here when they open.
   */
-  app.get("/api/foot-scanned", (_req, res) => {
+  app.get("/api/foot-scanned", (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.json({ entries: hub.recentSnapshot().footScannedEntries ?? [] });
+    sendJson(req, res, JSON.stringify({ entries: hub.recentSnapshot().footScannedEntries ?? [] }));
+  });
+
+  /** The journal's system list alone, for the header's search (wsChannels.ts APP_LAZY: 319 KB on the owner's profile). */
+  app.get("/api/journal-systems", (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    sendJson(req, res, JSON.stringify({ systems: hub.recentSnapshot().journalSystems ?? [] }));
   });
 }

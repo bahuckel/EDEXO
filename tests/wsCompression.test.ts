@@ -97,7 +97,7 @@ describe("JSON answers", () => {
 describe("a window on this PC", () => {
   it("agrees no deflate, and still gets big frames and /api/state whole", async () => {
     const rows = Array.from({ length: 1500 }, (_, i) => ({ starSystem: `S ${i}`, systemAddress: i }));
-    let snap = { journalSystems: rows, n: 0 } as unknown as AppSnapshot;
+    let snap = { organicPendingLines: rows, n: 0 } as unknown as AppSnapshot;
     const { server, broadcast, listening } = createHttpServer({
       port: 0,
       bindHost: "127.0.0.1",
@@ -121,13 +121,13 @@ describe("a window on this PC", () => {
       return messages[n - 1]!;
     };
     const first = await next(1);
-    expect((first.payload as { journalSystems: unknown[] }).journalSystems).toHaveLength(1500);
-    snap = { journalSystems: rows, n: 1 } as unknown as AppSnapshot;
+    expect((first.payload as { organicPendingLines: unknown[] }).organicPendingLines).toHaveLength(1500);
+    snap = { organicPendingLines: rows, n: 1 } as unknown as AppSnapshot;
     broadcast(snap);
     expect(((await next(2)).payload as { n: number }).n).toBe(1);
 
     const res = await fetch(`http://127.0.0.1:${port}/api/state`, { headers: { "Accept-Encoding": "gzip" } });
     expect(res.headers.get("content-encoding")).toBeNull();
-    expect(((await res.json()) as { journalSystems: unknown[] }).journalSystems).toHaveLength(1500);
+    expect(((await res.json()) as { organicPendingLines: unknown[] }).organicPendingLines).toHaveLength(1500);
   });
 });
