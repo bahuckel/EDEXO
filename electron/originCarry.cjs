@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 /**
  * The windows' saved settings, carried to the server's new address after a port move (src/server/listenPort.ts).

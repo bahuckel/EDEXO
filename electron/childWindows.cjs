@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Windows the app window opens for its own pages (owner, 2026-09-29: "fix the galaxy window size and
  * remember it"). A plain `window.open` child came up at Electron's 800 × 600 every time, which wrapped
@@ -9,7 +10,11 @@
 /** The smallest the map window may be, or come back as. */
 const GALAXY_MIN = { w: 900, h: 560 };
 
-/** Which remembered window a URL opens in, or null for a plain child window. */
+/**
+ * Which remembered window a URL opens in, or null for a plain child window.
+ * @param {string} url
+ * @returns {"galaxy" | null}
+ */
 function childWindowKind(url) {
   let screen = null;
   try {

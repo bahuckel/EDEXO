@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Safe graphics mode: hardware acceleration off (L1, Linux ticket T-MVFLSBPM-E5DC, 2026-10-23).
  *
@@ -25,7 +26,10 @@ const STARTUP_WINDOW_MS = 30_000;
 /** Reasons Electron gives for a GPU process that did not go normally (`child-process-gone`). */
 const BAD_EXITS = new Set(["crashed", "abnormal-exit", "launch-failed", "integrity-failure", "oom"]);
 
-/** @returns {{ on: boolean, auto: boolean, reason: string, at: string } | null} */
+/**
+ * @param {string} dir  Electron's own directory
+ * @returns {{ on: boolean, auto: boolean, reason: string, at: string } | null}
+ */
 function readGpuSafe(dir) {
   try {
     const j = JSON.parse(fs.readFileSync(path.join(dir, GPU_SAFE_FILE), "utf8"));
@@ -41,6 +45,11 @@ function readGpuSafe(dir) {
   }
 }
 
+/**
+ * @param {string} dir
+ * @param {{ auto: boolean, reason: string, at: string }} rec
+ * @returns {boolean}
+ */
 function writeGpuSafe(dir, rec) {
   try {
     fs.mkdirSync(dir, { recursive: true });
@@ -51,6 +60,7 @@ function writeGpuSafe(dir, rec) {
   }
 }
 
+/** @param {string} dir */
 function clearGpuSafe(dir) {
   try {
     fs.rmSync(path.join(dir, GPU_SAFE_FILE), { force: true });
@@ -63,7 +73,7 @@ function clearGpuSafe(dir) {
  * Whether this start runs without the GPU, and why: "argv" (the commander's own `--disable-gpu`), "env"
  * (`EDEXO_SAFE_GRAPHICS=1`), "flag" (the remembered mode), or null.
  *
- * @param {{ env: Record<string, string | undefined>, argv: string[], flag: object | null }} o
+ * @param {{ env: Record<string, string | undefined>, argv: string[], flag: { on?: boolean } | null }} o
  */
 function graphicsMode(o) {
   if (o.argv.some((a) => a === "--disable-gpu")) return { safe: true, why: "argv", addSwitches: false };
