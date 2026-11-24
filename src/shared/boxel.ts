@@ -153,9 +153,15 @@ export interface SavedBoxelDTO {
    * left, each with the light years from the one before (null: no position known, flown last, by number).
    */
   shortest?: boolean;
-  order?: { n: number; ly: number | null }[];
+  order?: { n: number; ly: number | null; predicted?: boolean }[];
   /** How many of `order` have a position (they come first); their light years, and the same systems by number. */
   placed?: number;
+  /**
+   * How many of the placed ones have a predicted position (shared/stellarPlacement.ts: worked out from the system's
+   * address, not seen), and the share of such predictions that are exact at this mass code, as measured.
+   */
+  predicted?: number;
+  predictedExact?: number;
   orderLy?: number;
   numericLy?: number;
 }

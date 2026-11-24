@@ -6,7 +6,9 @@ const SHOWN = 20;
 
 /**
  * A boxel flown in the shortest order (owner, 2026-11-04; shared/boxelOrder.ts): what is left in that order with the
- * light years of each leg, what it saves against flying by number, and how many still lack a position.
+ * light years of each leg, what it saves against flying by number, and how many still lack a position. A position
+ * worked out from the system's address (shared/stellarPlacement.ts) is marked as predicted, with how often such a
+ * prediction is exact (owner, 2026-11-24: "show threshold and mark predicted").
  */
 export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
   const order = b.order ?? [];
@@ -33,7 +35,13 @@ export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
               {suffix}
               {o.n}
             </strong>
-            {o.ly != null ? <span className="dim"> {o.ly.toLocaleString("en-US")} ly</span> : null}
+            {o.ly != null ? (
+              <span className="dim" title={o.predicted ? "Predicted position" : undefined}>
+                {" "}
+                {o.predicted ? "≈ " : ""}
+                {o.ly.toLocaleString("en-US")} ly
+              </span>
+            ) : null}
           </span>
         </Fragment>
       ))}
@@ -50,6 +58,14 @@ export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
         <span>
           <strong>{b.orderLy.toLocaleString("en-US")} ly</strong> for the {placed} with a position;{" "}
           <span className="dim">by number {b.numericLy.toLocaleString("en-US")} ly.</span>{" "}
+        </span>
+      ) : null}
+      {b.predicted && b.predictedExact != null ? (
+        <span className="dim">
+          {b.predicted.toLocaleString("en-US")} of the {placed.toLocaleString("en-US")} positions{" "}
+          {b.predicted === 1 ? "is" : "are"} predicted from the system's address (≈): exact for{" "}
+          {Math.round(b.predictedExact * 100)} % of mass code {suffix.replace(/\d+-?$/, "")} systems, about half the boxel off for the
+          rest. A plotted route or a Spansh look-up replaces them.{" "}
         </span>
       ) : null}
       {unplaced ? (

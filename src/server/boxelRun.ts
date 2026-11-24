@@ -44,8 +44,11 @@ export function createBoxelRun(d: {
   sightings: () => Iterable<{ name: string }>;
   currentSystem: () => string | null;
   deliver: (name: string) => void;
-  /** System number → position for a boxel (default: server/boxelPositions.ts), and where he is: for the shortest order. */
-  positions?: (prefix: string) => ReadonlyMap<number, Vec3>;
+  /**
+   * System number → position for a boxel, up to a system number (default: server/boxelPositions.ts), and where he
+   * is: for the shortest order.
+   */
+  positions?: (prefix: string, upTo?: number) => ReadonlyMap<number, Vec3>;
   here?: () => Vec3 | null;
 }): BoxelRun {
   const positionsOf = d.positions ?? boxelPositions;
@@ -73,7 +76,9 @@ export function createBoxelRun(d: {
     const probe = r.endKnown || r.end >= BOXEL_MAX_ROWS - 1 ? [] : [r.end + 1];
     // The shortest order: previous / next step along it, so `todo` is the same list as `queue`. With no position known
     // yet it is next in line as before, not the lowest number (review 2026-11-05).
-    const o = r.shortest ? shortestBoxelOrder(r.todo, positionsOf(r.prefix), d.here?.() ?? null) : null;
+    const o = r.shortest
+      ? shortestBoxelOrder(r.todo, positionsOf(r.prefix, r.todo.reduce((m, n) => Math.max(m, n), -1)), d.here?.() ?? null)
+      : null;
     const order = o?.placed ? [...o.order, ...probe] : null;
     return {
       prefix: r.prefix,

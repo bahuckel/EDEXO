@@ -142,6 +142,14 @@ longer be reached, so naming some and not others would be worse than naming none
 The catalogue of green gas giants (`src/shared/gggCatalogue.ts`) and the cloud-ladder method the app follows are
 edGGG's, included with credit under their author's terms (also named in `data/LICENSE-DATA.txt`).
 
+### ED-Procgen_ID64-XYZ — [github.com/Intergalactic-Astronomical-Union/ED-Procgen_ID64-XYZ](https://github.com/Intergalactic-Astronomical-Union/ED-Procgen_ID64-XYZ)
+
+The predicted system positions of the Boxels screen (`src/shared/stellarPlacement.ts`) follow rules this project
+published: the hash and the number generator a system's place is rolled with, which roll decides what, and the
+order of the re-rolls, worked out by its author from EDSM and Spansh data. It was used as the reference for those
+rules. None of its source is in EDEXO (it is GPL-3.0; EDEXO is not): the code here was written from the rules and
+from this project's own measurements on Spansh's galaxy dump, and is tested against real system positions.
+
 ### Ship outlines — the HUD's Ship section
 
 The ships seen from above (`src/shared/shipOutlines.ts`) are simplified silhouettes traced from other

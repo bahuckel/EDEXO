@@ -6,7 +6,7 @@ import { localOnly, requestIsFromThisPc } from "../lanAuth.js";
 import { boxelSystems, boxelTable, previousBoxelsPage, type SystemStats } from "../boxel.js";
 import { parseBoxel, type SavedBoxelDTO } from "../../shared/boxel.js";
 import { shortestBoxelOrder } from "../../shared/boxelOrder.js";
-import { boxelPositions, setBoxelLookupSource } from "../boxelPositions.js";
+import { boxelPositionSet, setBoxelLookupSource, setBoxelSectorSource } from "../boxelPositions.js";
 import { createBoxelLookups } from "../boxelLookup.js";
 import { boxelJournalFacts, notableBodiesForSystem, systemBodyTally } from "../snapshotSystemInfo.js";
 import type { GameStateStore } from "../gameState.js";
@@ -17,6 +17,7 @@ import { tileIndex, tileIndexAsync } from "../galaxyTiles.js";
 import { touchGalaxyMemory } from "../galaxyMemory.js";
 import { loadSystemTraits, loadSystemTraitsAsync } from "../galaxyTraits.js";
 import { navRouteLog } from "../navRouteLog.js";
+import { loadSectorNames } from "../expedition.js";
 import type { HttpServerOptions, RouteContext } from "../httpServerTypes.js";
 import { resolveCommanderDataDir } from "../paths.js";
 
@@ -31,7 +32,7 @@ function boxelStats(store: GameStateStore): SystemStats {
 export function registerBoxelRoutes(
   app: express.Express,
   opts: HttpServerOptions,
-  _ctx: RouteContext,
+  ctx: RouteContext,
 ): void {
   /*
     One boxel (shared/boxel.ts): `?name=` any system in it (or the boxel with a trailing "-"), `?end=`
@@ -99,6 +100,26 @@ export function registerBoxelRoutes(
   });
   setBoxelLookupSource((prefix) => lookups.get(prefix));
   /*
+    A generated sector's name → its place on the 1,280 ly grid, for the predicted positions
+    (shared/stellarPlacement.ts). Read on the first question; a name two cells share answers nothing.
+  */
+  let sectorCells: Map<string, readonly [number, number, number] | null> | null = null;
+  setBoxelSectorSource((sector) => {
+    if (!sectorCells) {
+      sectorCells = new Map();
+      try {
+        for (const [cell, { name }] of loadSectorNames(ctx.root).byCell) {
+          const k = name.toLowerCase();
+          const [x, y, z] = cell.split(",").map(Number) as [number, number, number];
+          sectorCells.set(k, sectorCells.has(k) ? null : [x, y, z]);
+        }
+      } catch {
+        // No sector table in this build: positions are predicted only where an address is known.
+      }
+    }
+    return sectorCells.get(sector.toLowerCase()) ?? null;
+  });
+  /*
     Systems known to exist without being flown (auto-boxel detector, owner 2026-10-06): every route he
     plotted (the NavRoute finder) and every system he targeted in the galaxy map (journals' FSDTarget,
     Status.json's destination).
@@ -132,11 +153,14 @@ export function registerBoxelRoutes(
     const r = opts.savedBoxels!.remaining(b.id, store ? store.visitedSystems.entries() : [], sightings(store), store?.currentSystem ?? null);
     if (!r) return b;
     const p = store?.commanderPos;
-    const o = shortestBoxelOrder(r.todo, boxelPositions(b.prefix), p ? [p.x, p.y, p.z] : null);
+    const where = boxelPositionSet(b.prefix, r.todo.reduce((m, n) => Math.max(m, n), -1));
+    const o = shortestBoxelOrder(r.todo, where.positions, p ? [p.x, p.y, p.z] : null);
+    const predicted = o.order.slice(0, o.placed).filter((n) => where.predicted.has(n)).length;
     return {
       ...b,
-      order: o.order.map((n, i) => ({ n, ly: o.legs[i] ?? null })),
+      order: o.order.map((n, i) => ({ n, ly: o.legs[i] ?? null, ...(where.predicted.has(n) ? { predicted: true } : {}) })),
       placed: o.placed,
+      ...(predicted && where.exact != null ? { predicted, predictedExact: where.exact } : {}),
       orderLy: o.orderLy,
       numericLy: o.numericLy,
       // No position known: next in line as before; nothing left: the probe past the end, as the run takes it.
