@@ -27,10 +27,10 @@ export function setGalaxyHuntLookupService(s: BoxelLookupService | null): void {
   service = s;
 }
 
-/** A finished, whole look-up of the boxel, or null. */
+/** A finished look-up of the boxel — every Spansh page read, or EDSM's list when Spansh was down — or null. */
 export function huntLookupFor(prefix: string): BoxelLookupRecord | null {
   const r = service?.get(prefix) ?? null;
-  return r?.complete ? r : null;
+  return r?.complete || r?.source === "edsm" ? r : null;
 }
 
 /** Moves each time a look-up finishes, so a cached hunt is scored again with it. */

@@ -31,6 +31,8 @@ import { writeFileAtomic } from "./atomicWrite.js";
 import { errorText } from "./errorText.js";
 
 const SEARCH_URL = "https://spansh.co.uk/api/systems/search";
+/** EDSM's system list by name prefix: the fallback when Spansh cannot be read (owner 2026-11-24). */
+const EDSM_SYSTEMS_URL = "https://www.edsm.net/api-v1/systems";
 /** Check EDSM's spacing (navRouteLog.ts): one request every five seconds. */
 export const LOOKUP_GAP_MS = 5_000;
 const PAGE = 100;
@@ -60,6 +62,8 @@ export interface BoxelLookupRecord {
   /** Every page was read: a system missing from `systems` is not on Spansh. */
   complete: boolean;
   systems: Record<string, LookupSystemFacts>;
+  /** Read from EDSM because Spansh could not be: names, main stars and places only, no bodies. Absent: Spansh. */
+  source?: "edsm";
 }
 
 const obj = (v: unknown): Record<string, unknown> | null =>
@@ -82,6 +86,30 @@ export function starLabel(subtype: string): string {
       ? `${m[1]} ${m[2]!.toLowerCase().includes("super") ? "supergiant" : "giant"}`
       : m[1]!;
   return subtype.replace(/ Star$/, "") || subtype;
+}
+
+/**
+ * One EDSM system (api-v1/systems with showPrimaryStar, showCoordinates, showId) → its facts: the main star and the
+ * place; EDSM's list carries no bodies. Exported for tests.
+ */
+export function edsmSystemFacts(sys: unknown): LookupSystemFacts | null {
+  const s = obj(sys);
+  if (!s) return null;
+  const type = str(obj(s.primaryStar)?.type);
+  const c = obj(s.coords);
+  return {
+    ...(typeof s.id64 === "number" && Number.isSafeInteger(s.id64) ? { id64: s.id64 } : {}),
+    mainStar: type ? starLabel(type) : null,
+    otherStars: [],
+    starClasses: type ? starKeys(type) : [],
+    bodyCount: 0,
+    notables: [],
+    bodyTypes: [],
+    species: [],
+    ...(c && [c.x, c.y, c.z].every((v) => typeof v === "number" && Number.isFinite(v))
+      ? { pos: [c.x, c.y, c.z] as [number, number, number] }
+      : {}),
+  };
 }
 
 /**
@@ -235,6 +263,23 @@ export function createBoxelLookups(opts: {
             : "Spansh lists none of its systems (none uploaded yet, or its search missed them).",
       };
     } catch (e) {
+      // Spansh down: EDSM's list of the boxel's names, main stars and places, one request.
+      const edsm = stopAsked ? null : await fromEdsm(prefix).catch(() => null);
+      if (edsm) {
+        records = [
+          // Not `complete`: a system EDSM does not list says nothing about Spansh (the Boxels table's "not on Spansh").
+          { prefix, fetchedAt: new Date(now()).toISOString(), complete: false, systems: edsm, source: "edsm" as const },
+          ...records.filter((r) => !same(r)),
+        ];
+        persist();
+        state = {
+          ...state!,
+          running: false,
+          systems: Object.keys(edsm).length,
+          note: `Spansh could not be read (${errorText(e)}); EDSM lists ${Object.keys(edsm).length} of its systems (main stars only, no bodies).`,
+        };
+        return;
+      }
       // A failed look-up leaves the last whole one in place.
       records = [...(before ? [before] : []), ...records.filter((r) => !same(r))];
       state = {
@@ -243,6 +288,25 @@ export function createBoxelLookups(opts: {
         note: `Spansh could not be read: ${errorText(e)}`,
       };
     }
+  }
+
+  /** The boxel's systems on EDSM, by system number; null when EDSM cannot be read either. */
+  async function fromEdsm(prefix: string): Promise<Record<string, LookupSystemFacts> | null> {
+    const url = `${EDSM_SYSTEMS_URL}?systemName=${encodeURIComponent(prefix)}&showPrimaryStar=1&showCoordinates=1&showId=1`;
+    const res = await (opts.fetchImpl ?? fetch)(url, {
+      headers: { "User-Agent": APP_USER_AGENT },
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!res.ok) return null;
+    const list = (await res.json()) as unknown;
+    if (!Array.isArray(list)) return null;
+    const out: Record<string, LookupSystemFacts> = {};
+    for (const r of list) {
+      const n = boxelIndexOf(str(obj(r)?.name), prefix);
+      const f = n == null ? null : edsmSystemFacts(r);
+      if (f) out[String(n)] = f;
+    }
+    return out;
   }
 
   return {

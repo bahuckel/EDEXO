@@ -118,3 +118,34 @@ describe("looking a boxel up", () => {
     expect(none.rows.some((r) => r.notOnSpansh)).toBe(false);
   });
 });
+
+// Owner 2026-11-24 (the whole-galaxy hunt's "EDSM only when Spansh fails"): one EDSM request for the boxel's names,
+// main stars and places, kept as EDSM's and not as a whole Spansh list.
+describe("EDSM when Spansh cannot be read", () => {
+  it("lists the boxel's systems from EDSM, main stars only", async () => {
+    const urls: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      urls.push(url);
+      if (url.startsWith("https://spansh.co.uk")) return new Response("down", { status: 503 });
+      return new Response(
+        JSON.stringify([
+          { name: "Skaudao AA-A h21", id64: 178879703, coords: { x: 3112, y: -731, z: 9348 }, primaryStar: { type: "O (Blue-White) Star" } },
+          { name: "Skaudao AA-A h22", id64: 187268311, coords: { x: 3564, y: -132, z: 9484 }, primaryStar: { type: "Wolf-Rayet O Star" } },
+          { name: "Skaudao AB-A h3", primaryStar: { type: "K (Yellow-Orange) Star" } },
+        ]),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+    const l = createBoxelLookups({ filePath: null, isPlant: () => false, fetchImpl, gapMs: 0 });
+    expect(l.start("Skaudao AA-A h")).toBe(true);
+    while (l.status()?.running) await new Promise((r) => setTimeout(r, 5));
+    expect(urls[1]).toContain("edsm.net/api-v1/systems?systemName=Skaudao%20AA-A%20h");
+    const rec = l.get("Skaudao AA-A h")!;
+    expect(rec.source).toBe("edsm");
+    expect(rec.complete).toBe(false);
+    expect(Object.keys(rec.systems)).toEqual(["21", "22"]);
+    expect(rec.systems["22"]!.mainStar).toBe("Wolf-Rayet O");
+    expect(rec.systems["21"]!.pos).toEqual([3112, -731, 9348]);
+    expect(l.status()!.note).toContain("EDSM lists 2");
+  });
+});
