@@ -8,6 +8,17 @@ import { PRESETS } from "../hud/presets";
 import { HUD_MERGED, HUD_PATH_BY_SECTION, HUD_SECTION_BY_PATH, HUD_SECTION_LABEL, HUD_SECTION_ORDER, HUD_W, activeSections, hudMergeOn, hudPaths, hudPhoneSections, inHudQueue, pickOverlay, refreshPhoneSections, showSections } from "./hudOverlays.js";
 import { MOTION_EVENT, fxOn } from "../motionCore";
 
+/*
+  A caught error leaves a counted warning (review 2026-11-10 E6: the empty catches clustered here). Once per place,
+  then again at 10, 100, 1,000 with the count. The launcher's console is its devtools.
+*/
+var caughtCounts = new Map();
+function caught(where, e) {
+  var n = (caughtCounts.get(where) || 0) + 1;
+  caughtCounts.set(where, n);
+  if (n === 1 || /^10+$/.test(String(n))) console.warn("HUD settings: caught " + where + " (" + n + "×): " + (e && e.message ? e.message : String(e)));
+}
+
 /* ------------------------------------------------------------------ HUD settings (theme, order, corner) */
 var LS_HUD_THEME = "edexoHudTheme";
 var LS_HUD_CAND = "edexoHudCandOrder";
@@ -70,29 +81,29 @@ function readTheme() {
 var syncHudPrefsTimer = null;
 function hudPrefsNow() {
   var prefs = {};
-  try { prefs.theme = JSON.parse(localStorage.getItem(LS_HUD_THEME) || "{}") || {}; } catch (e) {}
-  try { var sc = parseFloat(localStorage.getItem(LS_HUD_SCALE) || ""); if (isFinite(sc)) prefs.scale = sc; } catch (e) {}
-  try { var op = parseFloat(localStorage.getItem(LS_HUD_ALPHA) || ""); if (isFinite(op)) prefs.opacity = op; } catch (e) {}
-  try { prefs.candOrder = localStorage.getItem(LS_HUD_CAND) || "likelihood"; } catch (e) {}
-  try { prefs.region = localStorage.getItem(LS_HUD_REGION) !== "0"; } catch (e) {}
-  try { prefs.candScanned = localStorage.getItem(LS_HUD_CAND_SCANNED) || "place"; } catch (e) {}
+  try { prefs.theme = JSON.parse(localStorage.getItem(LS_HUD_THEME) || "{}") || {}; } catch (e) { caught("read " + LS_HUD_THEME, e); }
+  try { var sc = parseFloat(localStorage.getItem(LS_HUD_SCALE) || ""); if (isFinite(sc)) prefs.scale = sc; } catch (e) { caught("read " + LS_HUD_SCALE, e); }
+  try { var op = parseFloat(localStorage.getItem(LS_HUD_ALPHA) || ""); if (isFinite(op)) prefs.opacity = op; } catch (e) { caught("read " + LS_HUD_ALPHA, e); }
+  try { prefs.candOrder = localStorage.getItem(LS_HUD_CAND) || "likelihood"; } catch (e) { caught("read " + LS_HUD_CAND, e); }
+  try { prefs.region = localStorage.getItem(LS_HUD_REGION) !== "0"; } catch (e) { caught("read " + LS_HUD_REGION, e); }
+  try { prefs.candScanned = localStorage.getItem(LS_HUD_CAND_SCANNED) || "place"; } catch (e) { caught("read " + LS_HUD_CAND_SCANNED, e); }
   prefs.candMax = readCandMax();
-  try { prefs.candActiveTop = localStorage.getItem(LS_HUD_CAND_ACTIVE_TOP) !== "0"; } catch (e) {}
-  try { prefs.audio = localStorage.getItem(LS_HUD_AUDIO) === "1"; } catch (e) {}
-  try { prefs.compact = localStorage.getItem(LS_HUD_COMPACT) === "1"; } catch (e) {}
-  try { prefs.relevant = localStorage.getItem(LS_HUD_RELEVANT) === "1"; } catch (e) {}
-  try { prefs.hudType = localStorage.getItem(LS_HUD_TYPE) || "original"; } catch (e) {}
-  try { prefs.credit = localStorage.getItem(LS_HUD_CREDIT) || "off"; } catch (e) {}
-  try { prefs.nextBoxel = localStorage.getItem(LS_HUD_NEXT_BOXEL) === "1"; } catch (e) {}
-  try { prefs.refuelBar = localStorage.getItem(LS_HUD_REFUEL_BAR) !== "0"; } catch (e) {}
-  try { prefs.radarAlways = localStorage.getItem(LS_HUD_RADAR_ALWAYS) === "1"; } catch (e) {}
-  try { prefs.pitchReader = localStorage.getItem(LS_HUD_PITCH_READER) === "1"; } catch (e) {}
-  try { prefs.distanceReader = localStorage.getItem(LS_HUD_DISTANCE_READER) === "1"; } catch (e) {}
-  try { prefs.hudColour = localStorage.getItem(LS_HUD_COLOUR) === "xml" ? "xml" : "default"; } catch (e) {}
+  try { prefs.candActiveTop = localStorage.getItem(LS_HUD_CAND_ACTIVE_TOP) !== "0"; } catch (e) { caught("read " + LS_HUD_CAND_ACTIVE_TOP, e); }
+  try { prefs.audio = localStorage.getItem(LS_HUD_AUDIO) === "1"; } catch (e) { caught("read " + LS_HUD_AUDIO, e); }
+  try { prefs.compact = localStorage.getItem(LS_HUD_COMPACT) === "1"; } catch (e) { caught("read " + LS_HUD_COMPACT, e); }
+  try { prefs.relevant = localStorage.getItem(LS_HUD_RELEVANT) === "1"; } catch (e) { caught("read " + LS_HUD_RELEVANT, e); }
+  try { prefs.hudType = localStorage.getItem(LS_HUD_TYPE) || "original"; } catch (e) { caught("read " + LS_HUD_TYPE, e); }
+  try { prefs.credit = localStorage.getItem(LS_HUD_CREDIT) || "off"; } catch (e) { caught("read " + LS_HUD_CREDIT, e); }
+  try { prefs.nextBoxel = localStorage.getItem(LS_HUD_NEXT_BOXEL) === "1"; } catch (e) { caught("read " + LS_HUD_NEXT_BOXEL, e); }
+  try { prefs.refuelBar = localStorage.getItem(LS_HUD_REFUEL_BAR) !== "0"; } catch (e) { caught("read " + LS_HUD_REFUEL_BAR, e); }
+  try { prefs.radarAlways = localStorage.getItem(LS_HUD_RADAR_ALWAYS) === "1"; } catch (e) { caught("read " + LS_HUD_RADAR_ALWAYS, e); }
+  try { prefs.pitchReader = localStorage.getItem(LS_HUD_PITCH_READER) === "1"; } catch (e) { caught("read " + LS_HUD_PITCH_READER, e); }
+  try { prefs.distanceReader = localStorage.getItem(LS_HUD_DISTANCE_READER) === "1"; } catch (e) { caught("read " + LS_HUD_DISTANCE_READER, e); }
+  try { prefs.hudColour = localStorage.getItem(LS_HUD_COLOUR) === "xml" ? "xml" : "default"; } catch (e) { caught("read " + LS_HUD_COLOUR, e); }
   HUD_CZ_PREFS.forEach(function (p) { prefs[p.key] = readCzPref(p); });
-  try { var tl = parseFloat(localStorage.getItem(LS_HUD_TILT) || ""); prefs.tilt = isFinite(tl) ? tl : 15; } catch (e) {}
-  try { prefs.tiltMode = localStorage.getItem(LS_HUD_TILT_MODE) === "slant" ? "slant" : "turn"; } catch (e) {}
-  try { var sl = parseFloat(localStorage.getItem(LS_HUD_SLANT) || ""); prefs.slant = isFinite(sl) ? sl : 6; } catch (e) {}
+  try { var tl = parseFloat(localStorage.getItem(LS_HUD_TILT) || ""); prefs.tilt = isFinite(tl) ? tl : 15; } catch (e) { caught("read " + LS_HUD_TILT, e); }
+  try { prefs.tiltMode = localStorage.getItem(LS_HUD_TILT_MODE) === "slant" ? "slant" : "turn"; } catch (e) { caught("read " + LS_HUD_TILT_MODE, e); }
+  try { var sl = parseFloat(localStorage.getItem(LS_HUD_SLANT) || ""); prefs.slant = isFinite(sl) ? sl : 6; } catch (e) { caught("read " + LS_HUD_SLANT, e); }
   if (hudPhoneSections) prefs.sections = hudPhoneSections.slice();
   return prefs;
 }
@@ -108,7 +119,7 @@ export function syncHudPrefs() {
       window.edexoElectron.pushHudPrefs(hudPrefsNow());
     }
   } catch (e) {
-    /* the mirror below still gets there */
+    caught("push HUD prefs", e); /* the mirror below still gets there */
   }
   if (syncHudPrefsTimer) clearTimeout(syncHudPrefsTimer);
   syncHudPrefsTimer = setTimeout(function () {
@@ -118,13 +129,13 @@ export function syncHudPrefs() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(prefs),
-    }).catch(function () {});
+    }).catch(function (e) { caught("POST hud-prefs", e); });
   }, 400);
 }
 function writeTheme(t) {
   try {
     localStorage.setItem(LS_HUD_THEME, JSON.stringify(t));
-  } catch (e) {}
+  } catch (e) { caught("save " + LS_HUD_THEME, e); }
   renderSwatches();
   syncHudPrefs();
 }
@@ -144,7 +155,7 @@ function readSchemes() {
   }
 }
 function writeSchemes(list) {
-  try { localStorage.setItem(LS_HUD_SCHEMES, JSON.stringify(list.slice(0, 20))); } catch (e) {}
+  try { localStorage.setItem(LS_HUD_SCHEMES, JSON.stringify(list.slice(0, 20))); } catch (e) { caught("save " + LS_HUD_SCHEMES, e); }
 }
 var hudThemeAccent = document.getElementById("hudThemeAccent");
 var hudThemeText = document.getElementById("hudThemeText");
@@ -298,7 +309,7 @@ function pushLayout() {
       function () {
         return refreshPhoneSections();
       },
-    ).catch(function () {});
+    ).catch(function (e) { caught("setHudLayout", e); });
   }
   // The merged HUD orders its sections itself; re-show it so the panel follows the list.
   if (hudMergeOn()) {
@@ -384,7 +395,7 @@ function startOrderDrag(ev, li, from) {
   try {
     grip.setPointerCapture(ev.pointerId);
   } catch (e) {
-    /* no such pointer any more: the moves still reach the grip while over it */
+    caught("pointer capture", e); /* no such pointer any more: the moves still reach the grip while over it */
   }
   function move(e) {
     var dy = e.clientY - startY;
@@ -460,7 +471,7 @@ function setHudMoving(on) {
   if (!ee || typeof ee.setHudMoveMode !== "function") return;
   ee.setHudMoveMode({ on: on }).then(function (r) {
     renderFreeMove(hudFree && hudFree.checked, r && r.moving);
-  }).catch(function () {});
+  }).catch(function (e) { caught("setHudMoveMode", e); });
 }
 
 /*
@@ -488,7 +499,7 @@ function setHudVisibility(hidden) {
   if (!ee || typeof ee.toggleHudVisibility !== "function") return;
   ee.toggleHudVisibility({ hidden: hidden }).then(function (r) {
     renderHudVisibility({ hidden: r && r.hidden });
-  }).catch(function () {});
+  }).catch(function (e) { caught("toggleHudVisibility", e); });
 }
 // Hide when Elite is not in front (owner, 2026-09-30): saved by the app with the HUD layout, on by default.
 var hudHideUnfocused = document.getElementById("hudHideUnfocused");
@@ -529,7 +540,7 @@ async function loadHudSettingsIntoModal() {
         var secs = lay.order.map(function (k) { return HUD_SECTION_BY_PATH[k]; }).filter(Boolean);
         hudOrder = secs.concat(HUD_SECTION_ORDER.filter(function (s) { return secs.indexOf(s) < 0; }));
       }
-    } catch (e) {}
+    } catch (e) { caught("read the HUD layout", e); }
   }
   renderOrderList();
 }
@@ -557,27 +568,27 @@ export function start() {
   if (hudScale) {
     hudScale.addEventListener("input", function () {
       showSizeOutputs();
-      try { localStorage.setItem(LS_HUD_SCALE, String(Number(hudScale.value) / 100)); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_SCALE, String(Number(hudScale.value) / 100)); } catch (e) { caught("save " + LS_HUD_SCALE, e); }
       syncHudPrefs();
     });
   }
   if (hudAlpha) {
     hudAlpha.addEventListener("input", function () {
       showSizeOutputs();
-      try { localStorage.setItem(LS_HUD_ALPHA, String(Number(hudAlpha.value) / 100)); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_ALPHA, String(Number(hudAlpha.value) / 100)); } catch (e) { caught("save " + LS_HUD_ALPHA, e); }
       syncHudPrefs();
     });
   }
   if (hudTiltMode) {
     hudTiltMode.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_TILT_MODE, hudTiltMode.value); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_TILT_MODE, hudTiltMode.value); } catch (e) { caught("save " + LS_HUD_TILT_MODE, e); }
       syncHudTypeUi();
       syncHudPrefs();
     });
   }
   if (hudSlant) {
     hudSlant.addEventListener("input", function () {
-      try { localStorage.setItem(LS_HUD_SLANT, hudSlant.value); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_SLANT, hudSlant.value); } catch (e) { caught("save " + LS_HUD_SLANT, e); }
       syncHudTypeUi();
       syncHudPrefs();
     });
@@ -589,34 +600,34 @@ export function start() {
       var v = localStorage.getItem(key);
       if (v === "1") d.open = true;
       else if (v === "0") d.open = false;
-    } catch (e) {}
+    } catch (e) { caught("read " + key, e); }
     d.addEventListener("toggle", function () {
-      try { localStorage.setItem(key, d.open ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(key, d.open ? "1" : "0"); } catch (e) { caught("save " + key, e); }
     });
   });
   if (hudType) {
     hudType.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_TYPE, hudType.value); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_TYPE, hudType.value); } catch (e) { caught("save " + LS_HUD_TYPE, e); }
       syncHudTypeUi();
       syncHudPrefs();
     });
   }
   if (hudTilt) {
     hudTilt.addEventListener("input", function () {
-      try { localStorage.setItem(LS_HUD_TILT, hudTilt.value); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_TILT, hudTilt.value); } catch (e) { caught("save " + LS_HUD_TILT, e); }
       syncHudTypeUi();
       syncHudPrefs();
     });
   }
   if (hudCredit) {
     hudCredit.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_CREDIT, hudCredit.value); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_CREDIT, hudCredit.value); } catch (e) { caught("save " + LS_HUD_CREDIT, e); }
       syncHudPrefs();
     });
   }
   if (hudNextBoxel) {
     hudNextBoxel.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_NEXT_BOXEL, hudNextBoxel.checked ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_NEXT_BOXEL, hudNextBoxel.checked ? "1" : "0"); } catch (e) { caught("save " + LS_HUD_NEXT_BOXEL, e); }
       syncHudPrefs();
     });
   }
@@ -626,17 +637,17 @@ export function start() {
     hudAim.checked = aimOn;
     var ee = window.edexoElectron;
     if (!ee || typeof ee.setAimOverlay !== "function") hudAim.disabled = true;
-    else if (aimOn) ee.setAimOverlay({ on: true }).catch(function () {});
+    else if (aimOn) ee.setAimOverlay({ on: true }).catch(function (e) { caught("setAimOverlay", e); });
     hudAim.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_AIM, hudAim.checked ? "1" : "0"); } catch (e) {}
-      if (ee && typeof ee.setAimOverlay === "function") ee.setAimOverlay({ on: hudAim.checked }).catch(function () {});
+      try { localStorage.setItem(LS_HUD_AIM, hudAim.checked ? "1" : "0"); } catch (e) { caught("save " + LS_HUD_AIM, e); }
+      if (ee && typeof ee.setAimOverlay === "function") ee.setAimOverlay({ on: hudAim.checked }).catch(function (e) { caught("setAimOverlay", e); });
     });
   }
   /* The pitch reader (the screen marker's page reads it from the HUD prefs mirror; local capture, aim/pitchCapture.ts). */
   if (hudPitchReader) {
     hudPitchReader.checked = (function () { try { return localStorage.getItem(LS_HUD_PITCH_READER) === "1"; } catch (e) { return false; } })();
     hudPitchReader.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_PITCH_READER, hudPitchReader.checked ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_PITCH_READER, hudPitchReader.checked ? "1" : "0"); } catch (e) { caught("save " + LS_HUD_PITCH_READER, e); }
       syncHudPrefs();
     });
   }
@@ -645,27 +656,27 @@ export function start() {
     hudDistanceReader.checked = (function () { try { return localStorage.getItem(LS_HUD_DISTANCE_READER) === "1"; } catch (e) { return false; } })();
     if (!window.edexoElectron) hudDistanceReader.disabled = true;
     hudDistanceReader.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_DISTANCE_READER, hudDistanceReader.checked ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_DISTANCE_READER, hudDistanceReader.checked ? "1" : "0"); } catch (e) { caught("save " + LS_HUD_DISTANCE_READER, e); }
       syncHudPrefs();
     });
   }
   /* HUD colours for the pitch reader: default or the XML's matrix. */
   if (hudColourSel) {
-    try { hudColourSel.value = localStorage.getItem(LS_HUD_COLOUR) === "xml" ? "xml" : "default"; } catch (e) {}
+    try { hudColourSel.value = localStorage.getItem(LS_HUD_COLOUR) === "xml" ? "xml" : "default"; } catch (e) { caught("read " + LS_HUD_COLOUR, e); }
     hudColourSel.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_COLOUR, hudColourSel.value); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_COLOUR, hudColourSel.value); } catch (e) { caught("save " + LS_HUD_COLOUR, e); }
       syncHudPrefs();
     });
   }
   if (hudRadarAlways) {
     hudRadarAlways.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_RADAR_ALWAYS, hudRadarAlways.checked ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_RADAR_ALWAYS, hudRadarAlways.checked ? "1" : "0"); } catch (e) { caught("save " + LS_HUD_RADAR_ALWAYS, e); }
       syncHudPrefs();
     });
   }
   if (hudRefuelBar) {
     hudRefuelBar.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_REFUEL_BAR, hudRefuelBar.checked ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_REFUEL_BAR, hudRefuelBar.checked ? "1" : "0"); } catch (e) { caught("save " + LS_HUD_REFUEL_BAR, e); }
       syncHudPrefs();
     });
   }
@@ -673,25 +684,25 @@ export function start() {
     var box = document.getElementById(p.id);
     if (!box) return;
     box.addEventListener("change", function () {
-      try { localStorage.setItem(p.ls, box.checked ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(p.ls, box.checked ? "1" : "0"); } catch (e) { caught("save " + p.ls, e); }
       syncHudPrefs();
     });
   });
   if (hudCompact) {
     hudCompact.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_COMPACT, hudCompact.checked ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_COMPACT, hudCompact.checked ? "1" : "0"); } catch (e) { caught("save " + LS_HUD_COMPACT, e); }
       syncHudPrefs();
     });
   }
   if (hudRelevant) {
     hudRelevant.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_RELEVANT, hudRelevant.checked ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_RELEVANT, hudRelevant.checked ? "1" : "0"); } catch (e) { caught("save " + LS_HUD_RELEVANT, e); }
       syncHudPrefs();
     });
   }
   if (hudAudio) {
     hudAudio.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_AUDIO, hudAudio.checked ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_AUDIO, hudAudio.checked ? "1" : "0"); } catch (e) { caught("save " + LS_HUD_AUDIO, e); }
       syncHudPrefs();
     });
   }
@@ -699,7 +710,7 @@ export function start() {
     hudCandOrder.addEventListener("change", function () {
       try {
         localStorage.setItem(LS_HUD_CAND, hudCandOrder.value);
-      } catch (e) {}
+      } catch (e) { caught("save " + LS_HUD_CAND, e); }
       syncHudPrefs();
     });
   }
@@ -707,26 +718,26 @@ export function start() {
     hudRegion.addEventListener("change", function () {
       try {
         localStorage.setItem(LS_HUD_REGION, hudRegion.checked ? "1" : "0");
-      } catch (e) {}
+      } catch (e) { caught("save " + LS_HUD_REGION, e); }
       syncHudPrefs();
     });
   }
   if (hudCandScanned) {
     hudCandScanned.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_CAND_SCANNED, hudCandScanned.value); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_CAND_SCANNED, hudCandScanned.value); } catch (e) { caught("save " + LS_HUD_CAND_SCANNED, e); }
       syncHudPrefs();
     });
   }
   if (hudCandMax) {
     hudCandMax.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_CAND_MAX, hudCandMax.value); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_CAND_MAX, hudCandMax.value); } catch (e) { caught("save " + LS_HUD_CAND_MAX, e); }
       hudCandMax.value = String(readCandMax());
       syncHudPrefs();
     });
   }
   if (hudCandActiveTop) {
     hudCandActiveTop.addEventListener("change", function () {
-      try { localStorage.setItem(LS_HUD_CAND_ACTIVE_TOP, hudCandActiveTop.checked ? "1" : "0"); } catch (e) {}
+      try { localStorage.setItem(LS_HUD_CAND_ACTIVE_TOP, hudCandActiveTop.checked ? "1" : "0"); } catch (e) { caught("save " + LS_HUD_CAND_ACTIVE_TOP, e); }
       syncHudPrefs();
     });
   }
@@ -741,7 +752,7 @@ export function start() {
         renderFreeMove(on, false);
         // Switching it on is asking to place it: start right away.
         if (on) setHudMoving(true);
-      }).catch(function () {});
+      }).catch(function (e) { caught("setHudLayout", e); });
     });
     if (hudMove) hudMove.addEventListener("click", function () { setHudMoving(!hudMoving); });
   } else if (hudFree) {
@@ -750,7 +761,7 @@ export function start() {
   if (hudHideUnfocused && window.edexoElectron && typeof window.edexoElectron.getHudLayout === "function") {
     window.edexoElectron.getHudLayout().then(function (l) {
       hudHideUnfocused.checked = !l || l.hideUnfocused !== false;
-    }).catch(function () {});
+    }).catch(function (e) { caught("getHudLayout", e); });
     hudHideUnfocused.addEventListener("change", function () {
       var ee = window.edexoElectron;
       if (ee && typeof ee.setHudLayout === "function") {

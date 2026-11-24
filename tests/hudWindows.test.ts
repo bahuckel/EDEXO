@@ -1089,3 +1089,21 @@ describe("a display change", () => {
     vi.useRealTimers();
   });
 });
+
+describe("a caught error leaves a counted line (review 2026-11-10 E6)", () => {
+  it("writes the first time and again at 10, with the count, to hud-events.log", async () => {
+    const huds = make();
+    await huds.request("/distance-overlay.html", 404, 330, null, "open");
+    const [w] = live();
+    w!.webContents.send = () => {
+      throw new Error("Object has been destroyed");
+    };
+    for (let i = 0; i < 12; i++) huds.pushPrefs({ scale: 1 });
+    const log = readFileSync(path.join(dir, "hud-events.log"), "utf8");
+    const lines = log.split("\n").filter((l) => l.includes("caught send prefs"));
+    expect(lines.map((l) => l.replace(/^\S+ /, ""))).toEqual([
+      "caught send prefs (1×): Object has been destroyed",
+      "caught send prefs (10×): Object has been destroyed",
+    ]);
+  });
+});

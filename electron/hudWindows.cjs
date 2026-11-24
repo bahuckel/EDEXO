@@ -151,6 +151,18 @@ function createHudWindows(deps) {
       /* a log must never be why a HUD misbehaves */
     }
   }
+  /*
+    A caught error that changes nothing on screen still leaves a line (review 2026-11-10 E6: the empty catches here
+    hid why a HUD misbehaved). Once per place, then again at 10, 100, 1,000 with the count, so a window going away
+    a thousand times writes four lines.
+  */
+  const caughtCounts = new Map();
+  function caught(where, e) {
+    const n = (caughtCounts.get(where) ?? 0) + 1;
+    caughtCounts.set(where, n);
+    if (n === 1 || /^10+$/.test(String(n)))
+      hudLog(`caught ${where} (${n}×): ${e instanceof Error ? e.message : String(e)}`);
+  }
   const slotName = (win) => hudOverlayStack.find((s) => s.win === win)?.pathname ?? "?";
 
   function hideWin(win) {
@@ -161,8 +173,8 @@ function createHudWindows(deps) {
     }
     try {
       win.hide();
-    } catch {
-      /* ignore */
+    } catch (e) {
+      caught("hide", e); /* ignore */
     }
   }
   /** The HUD size multiplier from the launcher's slider; the pages report it, the stack width follows. */
@@ -219,8 +231,8 @@ function createHudWindows(deps) {
     } catch {
       try {
         win.close();
-      } catch {
-        /* ignore */
+      } catch (e) {
+        caught("close", e); /* ignore */
       }
     }
   }
@@ -258,8 +270,8 @@ function createHudWindows(deps) {
     if (resolveHudLayoutPathFromBundle) {
       try {
         return resolveHudLayoutPathFromBundle();
-      } catch {
-        /* fall through to the Electron directory */
+      } catch (e) {
+        caught("layout path from the server", e); /* fall through to the Electron directory */
       }
     }
     return legacyHudLayoutPath();
@@ -285,8 +297,8 @@ function createHudWindows(deps) {
       fs.mkdirSync(path.dirname(live), { recursive: true });
       fs.copyFileSync(legacy, live);
       console.info("[edexo-compare] carried the HUD layout over from", legacy);
-    } catch {
-      /* an unreadable or unwritable location just means the defaults */
+    } catch (e) {
+      caught("carry the layout over", e); /* an unreadable or unwritable location just means the defaults */
     }
   }
   function loadHudLayout() {
@@ -329,8 +341,8 @@ function createHudWindows(deps) {
           if (hudRestoreList.length && !hudRememberedOpen.length) hudRememberedOpen = hudRestoreList.slice();
         }
       }
-    } catch {
-      /* first run, or unreadable: defaults */
+    } catch (e) {
+      caught("read the layout", e); /* first run, or unreadable: defaults */
     }
   }
   function persistHudFile() {
@@ -354,8 +366,8 @@ function createHudWindows(deps) {
         }),
         "utf8",
       );
-    } catch {
-      /* ignore */
+    } catch (e) {
+      caught("save the layout", e); /* ignore */
     }
   }
   function setHudLayout(next, persist) {
@@ -404,8 +416,8 @@ function createHudWindows(deps) {
     for (const o of list) {
       try {
         await requestHudOverlaySlot(o.pathname, o.width, o.height, iconForChild, "open");
-      } catch {
-        /* a page that no longer exists: skip it */
+      } catch (e) {
+        caught("restore a HUD", e); /* a page that no longer exists: skip it */
       }
     }
     /*
@@ -437,8 +449,8 @@ function createHudWindows(deps) {
     let visible = false;
     try {
       visible = win.isVisible();
-    } catch {
-      /* treat as hidden */
+    } catch (e) {
+      caught("isVisible", e); /* treat as hidden */
     }
     /*
       Shown only when it is not: showing a window that is already up repaints it, and coming back to
@@ -471,22 +483,22 @@ function createHudWindows(deps) {
     } catch {
       try {
         win.setAlwaysOnTop(true, "floating");
-      } catch {
-        /* ignore */
+      } catch (e) {
+        caught("always on top", e); /* ignore */
       }
     }
     try {
       win.moveTop();
-    } catch {
-      /* ignore */
+    } catch (e) {
+      caught("moveTop", e); /* ignore */
     }
   }
 
   function setClickThrough(win, on) {
     try {
       win.setIgnoreMouseEvents(on);
-    } catch {
-      /* a window closing */
+    } catch (e) {
+      caught("click-through", e); /* a window closing */
     }
   }
 
@@ -572,8 +584,8 @@ function createHudWindows(deps) {
         hudLog(`settle: ${b.width}x${b.height} back to ${rect.width}x${rect.height}`);
         win.setBounds({ ...rect, animate: false });
         if (tries > 1) settleLater(win, rect, tries - 1);
-      } catch {
-        /* a window going away */
+      } catch (e) {
+        caught("settle", e); /* a window going away */
       }
     }, 120);
     settleTimers.set(win, t);
@@ -585,8 +597,8 @@ function createHudWindows(deps) {
     try {
       const b0 = win.getBounds();
       if (b0.x === rect.x && b0.y === rect.y && b0.width === rect.width && b0.height === rect.height) return rect.height;
-    } catch {
-      /* set it */
+    } catch (e) {
+      caught("place: read bounds", e); /* set it */
     }
     win.setBounds({ ...rect, animate: false });
     let actual = rect.height;
@@ -596,8 +608,8 @@ function createHudWindows(deps) {
         win.setBounds({ ...rect, animate: false });
       }
       actual = win.getBounds().height;
-    } catch {
-      /* a window going away */
+    } catch (e) {
+      caught("place: check bounds", e); /* a window going away */
     }
     settleLater(win, rect);
     return Math.max(rect.height, actual);
@@ -657,8 +669,8 @@ function createHudWindows(deps) {
       try {
         const b = s.win.getBounds();
         if (!top || b.y < top.y) top = { x: b.x, y: b.y };
-      } catch {
-        /* a window going away */
+      } catch (e) {
+        caught("stack top", e); /* a window going away */
       }
     }
     return top ? { x: top.x, y: top.y, bottom: false } : null;
@@ -688,8 +700,8 @@ function createHudWindows(deps) {
     const y = fit(f.bottom ? f.y - h : f.y, area.y, Math.max(area.y, area.y + area.height - h));
     try {
       placeWindow(s.win, { x, y, width: w, height: h });
-    } catch {
-      /* ignore */
+    } catch (e) {
+      caught("fit", e); /* ignore */
     }
   }
 
@@ -732,8 +744,8 @@ function createHudWindows(deps) {
         let used = sizes[i];
         try {
           used = placeWindow(ordered[i].win, { x, y, width: w, height: sizes[i] });
-        } catch {
-          /* ignore */
+        } catch (e) {
+          caught("columns: place", e); /* ignore */
         }
         y += used + HUD_STACK_GAP;
       }
@@ -760,8 +772,8 @@ function createHudWindows(deps) {
       setClickThrough(s.win, !moving);
       try {
         s.win.webContents.send("edexo:hud-move-mode", { on: moving });
-      } catch {
-        /* a window closing mid-send */
+      } catch (e) {
+        caught("send move mode", e); /* a window closing mid-send */
       }
     }
     sendChainOffers();
@@ -784,8 +796,8 @@ function createHudWindows(deps) {
         try {
           const b = s.win.getBounds();
           rects.push({ key: s.key, x: b.x, y: b.y, width: b.width, height: slotHeight(s) ?? b.height });
-        } catch {
-          /* a window going away */
+        } catch (e) {
+          caught("chain offers: bounds", e); /* a window going away */
         }
       }
     }
@@ -799,8 +811,8 @@ function createHudWindows(deps) {
       chainSent.set(s.win, text);
       try {
         s.win.webContents.send("edexo:hud-chain-offers", msg);
-      } catch {
-        /* closing */
+      } catch (e) {
+        caught("send chain offers", e); /* closing */
       }
     }
   }
@@ -919,8 +931,8 @@ function createHudWindows(deps) {
           }
           try {
             fresh.setBounds(old.getBounds());
-          } catch {
-            /* the relayout below places it */
+          } catch (e) {
+            caught("renew: bounds", e); /* the relayout below places it */
           }
           slot.win = fresh;
           destroyHudWindow(old);
@@ -928,8 +940,8 @@ function createHudWindows(deps) {
           setClickThrough(fresh, false);
           try {
             fresh.webContents.send("edexo:hud-move-mode", { on: true });
-          } catch {
-            /* closing */
+          } catch (e) {
+            caught("renew: send move mode", e); /* closing */
           }
           hudLog(`renewed ${slot.pathname} for placing`);
         }),
@@ -1004,8 +1016,8 @@ function createHudWindows(deps) {
           const h = slotHeight(slot) ?? b.height;
           const lower = b.y + h / 2 > area.y + area.height / 2;
           hudLayout.freeEach = { ...hudLayout.freeEach, [key]: lower ? { x: b.x, y: b.y + h, bottom: true } : { x: b.x, y: b.y, bottom: false } };
-        } catch {
-          /* keep the spot as dragged */
+        } catch (e) {
+          caught("drag end: snap", e); /* keep the spot as dragged */
         }
         hudLog(`drag ${key} end after ${dragMoves} moves`);
         // The drop is where the buttons are worked out: during the drag they are not (owner, 2026-11-01: sometimes no
@@ -1028,15 +1040,15 @@ function createHudWindows(deps) {
         try {
           const b = s.win.getBounds();
           bottomEdge = Math.max(bottomEdge, b.y + (slotHeight(s) ?? b.height));
-        } catch {
-          /* ignore */
+        } catch (e) {
+          caught("drag end: stack bottom", e); /* ignore */
         }
       }
       let area = null;
       try {
         area = screen.getDisplayNearestPoint({ x: top.x, y: top.y }).bounds;
-      } catch {
-        /* no display API: keep the top edge */
+      } catch (e) {
+        caught("drag end: display", e); /* no display API: keep the top edge */
       }
       const lower = area ? (top.y + bottomEdge) / 2 > area.y + area.height / 2 : false;
       hudLayout.free = lower ? { x: top.x, y: bottomEdge, bottom: true } : top;
@@ -1065,8 +1077,8 @@ function createHudWindows(deps) {
         const dip = typeof screen.screenToDipPoint === "function" ? screen.screenToDipPoint(gamePoint) : gamePoint;
         const d = screen.getDisplayNearestPoint(dip);
         if (d && d.workArea) return d;
-      } catch {
-        /* the primary, as before */
+      } catch (e) {
+        caught("stack display", e); /* the primary, as before */
       }
     }
     return screen.getPrimaryDisplay();
@@ -1126,8 +1138,8 @@ function createHudWindows(deps) {
             width: w,
             height: h,
           });
-        } catch {
-          /* ignore */
+        } catch (e) {
+          caught("split: place", e); /* ignore */
         }
         y = atBottom ? y - HUD_STACK_GAP : y + used + HUD_STACK_GAP;
       }
@@ -1167,8 +1179,8 @@ function createHudWindows(deps) {
     for (const ev of ["display-metrics-changed", "display-added", "display-removed"]) {
       try {
         screen.on(ev, scheduleHudRelayout);
-      } catch {
-        /* a platform without it: the stack simply keeps its position */
+      } catch (e) {
+        caught("display events", e); /* a platform without it: the stack simply keeps its position */
       }
     }
   }
@@ -1184,8 +1196,8 @@ function createHudWindows(deps) {
     for (const o of list) {
       try {
         await requestHudOverlaySlot(o.pathname, o.width, o.height, hudChildIcon, "open");
-      } catch {
-        /* a page that no longer exists: skip it, the others still come back */
+      } catch (e) {
+        caught("reopen a HUD", e); /* a page that no longer exists: skip it, the others still come back */
       }
     }
     relayoutHudStack();
@@ -1299,8 +1311,8 @@ function createHudWindows(deps) {
     } catch {
       try {
         win.setVisibleOnAllWorkspaces(true);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        caught("all workspaces", e); /* ignore */
       }
     }
 
@@ -1320,8 +1332,8 @@ function createHudWindows(deps) {
       if (hiddenNow() || hudOverlayStack.some((s) => s.win === win && outOfStack(s))) {
         try {
           win.hide();
-        } catch {
-          /* ignore */
+        } catch (e) {
+          caught("ready: hide", e); /* ignore */
         }
         return;
       }
@@ -1339,15 +1351,15 @@ function createHudWindows(deps) {
       if (shared && win.webContents.getURL() !== "about:blank") onReady();
       try {
         win.setIgnoreMouseEvents(!moving);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        caught("ready: click-through", e); /* ignore */
       }
       // A window opened (or a page reloaded) while placing gets the frame too.
       if (moving) {
         try {
           win.webContents.send("edexo:hud-move-mode", { on: true });
-        } catch {
-          /* ignore */
+        } catch (e) {
+          caught("ready: send move mode", e); /* ignore */
         }
       }
       // A new page starts with no Combine / Split buttons: what the old one was sent counts for nothing
@@ -1426,8 +1438,8 @@ function createHudWindows(deps) {
     for (const o of lost) {
       try {
         await requestHudOverlaySlot(o.pathname, o.width, o.height, hudChildIcon, "open");
-      } catch {
-        /* the rest still come back */
+      } catch (e) {
+        caught("reopen after host", e); /* the rest still come back */
       }
     }
   }
@@ -1567,8 +1579,8 @@ function createHudWindows(deps) {
     for (const slot of hudOverlayStack) {
       try {
         if (slot.win && !slot.win.isDestroyed()) slot.win.webContents.send("edexo:hud-prefs", prefs);
-      } catch {
-        /* a window closing mid-send */
+      } catch (e) {
+        caught("send prefs", e); /* a window closing mid-send */
       }
     }
   }
