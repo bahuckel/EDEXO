@@ -1,6 +1,7 @@
 /**
  * The lightbox's 2048 px photo (owner, 2026-10-04): `?size=large` serves `_large/<stem>.webp`, and a
- * tree without it — a packaged build has no originals — falls back to the best image there is.
+ * tree without it — a packaged build has no originals — falls back to the best image there is. And `?size=blur`, the
+ * card's 16 px placeholder (UI ideas 2026-11-16 §4.5), never falls back: a whole photo would defeat it.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,7 +19,7 @@ let close: () => void;
 beforeAll(async () => {
   root = mkdtempSync(path.join(tmpdir(), "edexo-photo-large-"));
   const photos = path.join(root, "data", "species", "aleoida", "aleoida_photos");
-  for (const d of ["_cards", "_large"]) mkdirSync(path.join(photos, d), { recursive: true });
+  for (const d of ["_cards", "_large", "_blur"]) mkdirSync(path.join(photos, d), { recursive: true });
   // "both": original, card and large. "packaged": card and large only. "cardonly": a card only.
   writeFileSync(path.join(photos, "both.jpg"), "original");
   writeFileSync(path.join(photos, "_cards", "both.webp"), "card");
@@ -26,6 +27,7 @@ beforeAll(async () => {
   writeFileSync(path.join(photos, "_cards", "packaged.webp"), "card");
   writeFileSync(path.join(photos, "_large", "packaged.webp"), "large");
   writeFileSync(path.join(photos, "_cards", "cardonly.webp"), "card");
+  writeFileSync(path.join(photos, "_blur", "both.webp"), "blur");
   const app = express();
   registerSpeciesFilesRoutes(app, {} as HttpServerOptions, { root, webRoot: root } as RouteContext);
   const { server, base: origin } = await listenLocal(app);
@@ -55,5 +57,11 @@ describe("species photo sizes", () => {
     expect(await body("cardonly.jpg?size=large")).toBe("card");
     expect(await body("cardonly.jpg")).toBe("card");
     expect(await body("missing.jpg?size=large")).toBe("HTTP 404");
+  });
+
+  it("serves the blur where it exists and nothing in its place where it does not", async () => {
+    expect(await body("both.jpg?size=blur")).toBe("blur");
+    expect(await body("packaged.jpg?size=blur")).toBe("HTTP 404");
+    expect(await body("cardonly.jpg?size=blur")).toBe("HTTP 404");
   });
 });

@@ -293,3 +293,9 @@
 .species-img {
   transition: opacity var(--motion-in) var(--motion-ease-out);
 }
+/* Under it, the photo's own 16 px blur (§4.5, SpeciesCard sets it inline), so the fade starts from its colours. */
+.species-thumb-btn[data-blur] {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}

@@ -51,6 +51,24 @@ export function registerSpeciesFilesRoutes(
       // falls back to the original, so hand-added artwork keeps working until derivatives are rebuilt.
       // "large" is the lightbox's 2048 px (owner, 2026-10-04), generated at build time.
       const size = String(req.query.size ?? "");
+      /*
+        "blur" is the 16 px placeholder a card shows while its photo loads (UI ideas 2026-11-16 §4.5): never a
+        fallback, since the original or a card in its place would be the very download it stands in for.
+      */
+      if (size === "blur") {
+        const blur = path.join(photosDir, "_blur", `${file.replace(/\.[^.]+$/, "")}.webp`);
+        try {
+          if (!assertInsideDir(photosDir, blur) || !(await fsp.stat(blur)).isFile()) throw new Error("none");
+        } catch {
+          res.status(404).end();
+          return;
+        }
+        res.setHeader("Cache-Control", `public, max-age=${SPECIES_PHOTO_MAX_AGE_S}`);
+        res.sendFile(blur, (err) => {
+          if (err && !res.headersSent) res.status(404).end();
+        });
+        return;
+      }
       const derivativeDir =
         size === "thumb" ? "_thumbs" : size === "card" ? "_cards" : size === "large" ? "_large" : null;
       let abs = path.join(photosDir, file);

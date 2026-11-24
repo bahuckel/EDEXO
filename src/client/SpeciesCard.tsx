@@ -196,6 +196,8 @@ export const SpeciesCard = memo(function SpeciesCard({
    * average, up to 2.8 MB); the lightbox still opens the full-size file.
    */
   const heroSrc = speciesPhotoVariant(heroPhotoUrl, "card");
+  // Its 16 px blur under it while it loads (UI ideas 2026-11-16 §4.5); the house placeholder has none.
+  const heroBlur = heroPhotoUrl.startsWith("/species-photos/") ? speciesPhotoVariant(heroPhotoUrl, "blur") : null;
   const [photoLightbox, setPhotoLightbox] = useState(false);
   const toast = useToast();
   useEffect(() => {
@@ -256,6 +258,8 @@ export const SpeciesCard = memo(function SpeciesCard({
       }
       onClick={() => setPhotoLightbox(true)}
       aria-label="Enlarge species photo"
+      data-blur={heroBlur ? "" : undefined}
+      style={heroBlur ? { backgroundImage: `url("${heroBlur}")` } : undefined}
       // The compact card has no room for a caption, so the credit rides on the hover here and is
       // shown in full once the photo is opened.
       title={[

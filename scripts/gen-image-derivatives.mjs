@@ -12,6 +12,8 @@
  *   data/species/<genus>/<genus>_photos/_large/<name>.webp   2048 px — the photo lightbox (not committed:
  *       ~25 MB; every dist script runs this first, and builds ship it in place of the 105 MB of
  *       originals — owner, 2026-10-04: 1024 px looked soft on a 4K screen)
+ *   data/species/<genus>/<genus>_photos/_blur/<name>.webp      16 px — the card's placeholder while its photo
+ *       loads, ~150 bytes, so the fade starts from the photo's own colours (UI ideas 2026-11-16 §4.5)
  *   src/client/assets/fss-required.webp                              — CSS backdrop (source docs/fss-required.png, local)
  *   public/edexo-icon-124.webp                                       — 62 px header mark at 2x
  *
@@ -31,9 +33,11 @@ const force = process.argv.includes("--force");
 const THUMB_DIR = "_thumbs";
 const CARD_DIR = "_cards";
 const LARGE_DIR = "_large";
+const BLUR_DIR = "_blur";
 const THUMB_WIDTH = 320;
 const CARD_WIDTH = 1024;
 const LARGE_WIDTH = 2048;
+const BLUR_WIDTH = 16;
 const IMAGE_RE = /\.(png|jpe?g|webp)$/i;
 
 let made = 0;
@@ -78,6 +82,8 @@ async function speciesPhotos() {
       mkdirSync(cards, { recursive: true });
       const large = join(photosDir, LARGE_DIR);
       mkdirSync(large, { recursive: true });
+      const blur = join(photosDir, BLUR_DIR);
+      mkdirSync(blur, { recursive: true });
       for (const file of readdirSync(photosDir)) {
         if (!IMAGE_RE.test(file)) continue;
         const src = join(photosDir, file);
@@ -86,6 +92,7 @@ async function speciesPhotos() {
         await derive(src, join(thumbs, `${stem}.webp`), THUMB_WIDTH, 72);
         await derive(src, join(cards, `${stem}.webp`), CARD_WIDTH, 76);
         await derive(src, join(large, `${stem}.webp`), LARGE_WIDTH, 74);
+        await derive(src, join(blur, `${stem}.webp`), BLUR_WIDTH, 50);
       }
     }
   }

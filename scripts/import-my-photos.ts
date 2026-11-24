@@ -456,7 +456,7 @@ function main(): void {
         const stem = f.replace(IMAGE, "");
         const lower = stem.toLowerCase();
         if (!contributed.some((c) => c.startsWith(`${lower}-`) || c.startsWith(`${lower}.`))) continue;
-        for (const p of [path.join(dir, f), ...["_cards", "_thumbs", "_large"].map((d) => path.join(dir, d, `${stem}.webp`))]) {
+        for (const p of [path.join(dir, f), ...["_cards", "_thumbs", "_large", "_blur"].map((d) => path.join(dir, d, `${stem}.webp`))]) {
           if (existsSync(p)) rmSync(p);
         }
         retired.push(`${genus}/${f}`);

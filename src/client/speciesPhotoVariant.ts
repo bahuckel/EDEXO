@@ -7,8 +7,9 @@
  *   "card"  — 1024 px, species card artwork
  *   "large" — 2048 px, the lightbox / zoom (owner, 2026-10-04: 1024 px looked soft on 4K); generated
  *             at build time, so a tree without it gets the original
+ *   "blur"  — 16 px, the placeholder under a loading photo; 404 rather than a fallback when missing
  */
-export function speciesPhotoVariant(url: string, size: "thumb" | "card" | "large"): string {
+export function speciesPhotoVariant(url: string, size: "thumb" | "card" | "large" | "blur"): string {
   if (!url || !url.startsWith("/species-photos/")) return url;
   return `${url}${url.includes("?") ? "&" : "?"}size=${size}`;
 }
