@@ -28,7 +28,7 @@ import { STATS_WINDOWS, type CarrierAccountDTO, type StatisticsDTO } from "@shar
 import { Tooltip } from "./ui/Tooltip";
 import { LoadingNote, RefreshBar } from "./ui/Loading";
 import { PredictionQualitySection } from "./PredictionQuality";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import { formatWeeks } from "@shared/carrierUpkeep";
 import type { RankEstimateDTO } from "@shared/rankProgress";
 import { RollingNumber } from "./ui/RollingNumber";
@@ -397,6 +397,7 @@ function CarrierBlock({ c }: { c: CarrierAccountDTO }) {
 
 export function StatisticsModal({ onClose }: { onClose: () => void }) {
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
+  const screenRole = useScreenRole();
   const [data, setData] = useState<StatisticsDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
@@ -454,8 +455,7 @@ export function StatisticsModal({ onClose }: { onClose: () => void }) {
       <div
         ref={dialogRef}
         className="modal-panel fdb-panel"
-        role="dialog"
-        aria-modal="true"
+        {...screenRole}
         aria-label="Statistics"
         onClick={(ev) => ev.stopPropagation()}
       >

@@ -25,7 +25,7 @@ import { PAGE } from "./ui/tablePage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CopySystemButton } from "./CopySystemButton";
 import { csvFileName, downloadCsv, toCsv, type CsvColumn } from "./csv";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import type { FirstDiscoveryBacklogDTO, FirstDiscoveryBacklogRowDTO } from "@shared/types";
 import { fmtLyAway } from "@shared/format";
 import { Tooltip } from "./ui/Tooltip";
@@ -86,6 +86,7 @@ export function FirstDiscoveryBacklogModal({
   onSelectSystem?: (systemAddress: number, starSystem: string) => void;
 }) {
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
+  const screenRole = useScreenRole();
   const [data, setData] = useState<FirstDiscoveryBacklogDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Remembered between opens (usePersistedState).
@@ -175,8 +176,7 @@ export function FirstDiscoveryBacklogModal({
       <div
         ref={dialogRef}
         className="modal-panel fdb-panel"
-        role="dialog"
-        aria-modal="true"
+        {...screenRole}
         aria-label="Unfinished business"
         onClick={(ev) => ev.stopPropagation()}
       >

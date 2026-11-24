@@ -12,6 +12,7 @@ import { act, createElement, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Dialog } from "../src/client/ui/Dialog";
 import { InTabContext } from "../src/client/tabs/TabHost";
+import { useScreenRole } from "../src/client/ui/useModal";
 
 let root: Root | null = null;
 let host: HTMLDivElement;
@@ -132,6 +133,23 @@ describe("Dialog", () => {
   });
 });
 
+describe("a screen's role (UI ideas 2026-11-16 §4.9)", () => {
+  function Screen() {
+    const screenRole = useScreenRole();
+    return createElement("div", { id: "screen", "aria-label": "Encyclopedia", ...screenRole });
+  }
+  it("is a modal dialog as a pop-up and a named region as a page in a tab", () => {
+    act(() => root!.render(createElement(Screen)));
+    const popUp = document.getElementById("screen")!;
+    expect(popUp.getAttribute("role")).toBe("dialog");
+    expect(popUp.getAttribute("aria-modal")).toBe("true");
+    act(() => root!.render(createElement(InTabContext.Provider, { value: "encyclopedia" }, createElement(Screen))));
+    const page = document.getElementById("screen")!;
+    expect(page.getAttribute("role")).toBe("region");
+    expect(page.hasAttribute("aria-modal")).toBe(false);
+  });
+});
+
 describe("no modal in name only", () => {
   const files: string[] = [];
   const walk = (d: string) => {
@@ -143,11 +161,17 @@ describe("no modal in name only", () => {
   };
   walk(path.join(__dirname, "..", "src", "client"));
 
+  // A screen's `{...screenRole}` is aria-modal as a pop-up (useScreenRole), so it is held to the same rule.
   it("every aria-modal element carries useModal's ref (or is ui/Dialog.tsx)", () => {
     const bad: string[] = [];
     for (const f of files) {
       const s = readFileSync(f, "utf8");
-      for (let i = s.indexOf("aria-modal"); i >= 0; i = s.indexOf("aria-modal", i + 1)) {
+      const at = (from: number) => {
+        const a = s.indexOf("aria-modal", from);
+        const b = s.indexOf("{...screenRole}", from);
+        return a < 0 ? b : b < 0 ? a : Math.min(a, b);
+      };
+      for (let i = at(0); i >= 0; i = at(i + 1)) {
         const open = s.lastIndexOf("<", i);
         const close = s.indexOf(">", i);
         const tag = s.slice(open, close);

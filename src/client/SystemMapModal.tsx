@@ -9,7 +9,7 @@ import { memoOnSnapSlice, type SnapSlice } from "./snapSlice";
 import { DetailBody } from "./PlanetQuickFactsPopup";
 import { recordMarksByBodyId } from "./noticesClient";
 import { ModalHead } from "./ui/ModalHead";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import {
   computeSystemMapLayout,
   neighbourInDirection,
@@ -320,6 +320,7 @@ export const SystemMapModal = memoOnSnapSlice(SYSTEM_MAP_FIELDS, function System
   const records = useMemo(() => recordMarksByBodyId({ notices }), [notices]);
 
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
+  const screenRole = useScreenRole();
 
   const onKeyDown = useCallback(
     (ev: React.KeyboardEvent) => {
@@ -370,8 +371,7 @@ export const SystemMapModal = memoOnSnapSlice(SYSTEM_MAP_FIELDS, function System
           ref={dialogRef}
           tabIndex={-1}
           className="modal-panel system-map-panel"
-          role="dialog"
-          aria-modal="true"
+          {...screenRole}
           onClick={(ev) => ev.stopPropagation()}
         >
           <ModalHead
@@ -410,8 +410,7 @@ export const SystemMapModal = memoOnSnapSlice(SYSTEM_MAP_FIELDS, function System
         ref={dialogRef}
         tabIndex={-1}
         className="modal-panel system-map-panel system-map-panel--wide"
-        role="dialog"
-        aria-modal="true"
+        {...screenRole}
         onClick={(ev) => ev.stopPropagation()}
         onKeyDown={onKeyDown}
       >

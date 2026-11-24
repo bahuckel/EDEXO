@@ -22,7 +22,7 @@ import { withTransition } from "./motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { POI_GROUP_OPTIONS } from "@shared/gecCategories";
 import { Tooltip } from "./ui/Tooltip";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import { LoadingNote, RefreshBar } from "./ui/Loading";
 import type { PoiQueryResultDTO } from "@shared/types";
 import { CopySystemButton } from "./CopySystemButton";
@@ -46,6 +46,7 @@ const ratingLabel = (n: number) => (n === 0 ? "Any rating" : `${n}+ rated`);
 
 export function PoiModal({ onClose }: { onClose: () => void }) {
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
+  const screenRole = useScreenRole();
   const [data, setData] = useState<PoiQueryResultDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   // A query on its way: the first one shows a note, later ones dim the rows they will replace.
@@ -123,8 +124,7 @@ export function PoiModal({ onClose }: { onClose: () => void }) {
       <div
         ref={dialogRef}
         className="modal-panel fdb-panel"
-        role="dialog"
-        aria-modal="true"
+        {...screenRole}
         aria-label="Points of interest"
         onClick={(ev) => ev.stopPropagation()}
       >

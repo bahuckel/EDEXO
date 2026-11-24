@@ -19,7 +19,7 @@ import { fuzzyRankAny } from "./fuzzyMatch";
 import { ScrollArea } from "./ui/ScrollArea";
 import { InfoPopover } from "./ui/Tooltip";
 import { ModalHead } from "./ui/ModalHead";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import { LoadingNote } from "./ui/Loading";
 import type { DiscoveriesDTO, FootScannedEntry } from "@shared/types";
 import { readableAtmosphereType } from "@shared/atmosphereLabel";
@@ -221,6 +221,7 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
     after React applies it and would take the focus straight back.
   */
   const dialogRef = useModal<HTMLDivElement>(true, onClose, { autoFocus: false });
+  const screenRole = useScreenRole();
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState("");
   useEffect(() => {
@@ -245,8 +246,7 @@ export const MyExobiologyModal = memo(function MyExobiologyModal({
         ref={dialogRef}
         tabIndex={-1}
         className="modal-panel modal-panel--my-exo"
-        role="dialog"
-        aria-modal="true"
+        {...screenRole}
         aria-labelledby="my-exo-title"
         onClick={(ev) => ev.stopPropagation()}
       >

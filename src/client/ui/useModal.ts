@@ -70,6 +70,14 @@ function focusEnds(root: HTMLElement | null): { first: HTMLElement | null; last:
   return { first, last };
 }
 
+/**
+ * The role a screen's panel takes (UI ideas 2026-11-16 §4.9): a dialog as a pop-up, a named region as a page in a tab,
+ * where Escape does not close it and nothing is trapped, so a screen reader is not told it is in a dialog.
+ */
+export function useScreenRole(): { role: "dialog"; "aria-modal": true } | { role: "region" } {
+  return useInTab() != null ? { role: "region" } : { role: "dialog", "aria-modal": true };
+}
+
 export function useModal<T extends HTMLElement = HTMLDivElement>(
   open: boolean,
   onClose: () => void,

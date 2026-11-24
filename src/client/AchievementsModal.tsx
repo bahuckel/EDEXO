@@ -9,7 +9,7 @@
 import { isStrOrNull, usePersistedState } from "./usePersistedState";
 import { withTransition } from "./motion";
 import { ModalHead } from "./ui/ModalHead";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import { useToast } from "./ui/feedback";
 import { LoadingNote } from "./ui/Loading";
 import type { AchievementDetailDTO, AchievementDTO, AchievementsDTO } from "@shared/types";
@@ -298,6 +298,7 @@ function CategoryCard({
 
 export function AchievementsModal({ onClose }: { onClose: () => void }) {
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
+  const screenRole = useScreenRole();
   const toast = useToast();
   const [data, setData] = useState<AchievementsDTO | null>(null);
   const [failed, setFailed] = useState(false);
@@ -413,8 +414,7 @@ export function AchievementsModal({ onClose }: { onClose: () => void }) {
       <div
         ref={dialogRef}
         className="modal-panel modal-panel--achievements"
-        role="dialog"
-        aria-modal="true"
+        {...screenRole}
         aria-labelledby="achievements-title"
         onClick={(e) => e.stopPropagation()}
       >

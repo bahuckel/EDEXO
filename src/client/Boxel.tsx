@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BoxelTableDTO, BoxelTableRowDTO, PreviousBoxelDTO, SavedBoxelDTO } from "@shared/boxel";
 import type { BoxelLookupStatus } from "@shared/boxel";
 import { boxelDone, parseBoxel } from "@shared/boxel";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import { useToast } from "./ui/feedback";
 import { isBool, isNum, oneOf, usePersistedState } from "./usePersistedState";
 import { Table, type Column } from "./ui/DataTable";
@@ -75,6 +75,7 @@ export function BoxelScreen({
   copied?: { name: string; at: string; run: boolean } | null;
 }) {
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
+  const screenRole = useScreenRole();
   const toast = useToast();
   const here = currentSystem ? parseBoxel(currentSystem) : null;
 
@@ -511,7 +512,7 @@ export function BoxelScreen({
   return (
     // In the backdrop only so the header's own layout rule (`.top > :not(.modal-backdrop)`) leaves it be.
     <div className="modal-backdrop" role="presentation">
-      <div ref={dialogRef} className="boxel-screen" role="dialog" aria-modal="true" aria-label="Boxels">
+      <div ref={dialogRef} className="boxel-screen" {...screenRole} aria-label="Boxels">
         <header className="modal-head boxel-screen__head">
           <h3 className="boxel-screen__title">Boxels</h3>
           {/*

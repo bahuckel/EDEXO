@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { withTransition } from "./motion";
 import { showPickedSystem } from "./tabs/tabStore";
 import { type BookmarkRowDTO, type BookmarksListDTO } from "@shared/bookmarks";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import { LoadingNote } from "./ui/Loading";
 import { CopySystemButton } from "./CopySystemButton";
 import { isStr, isStrArr, usePersistedState } from "./usePersistedState";
@@ -28,6 +28,7 @@ export function BookmarksModal({
   currentSystemAddress: number | null;
 }) {
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
+  const screenRole = useScreenRole();
   const [data, setData] = useState<BookmarksListDTO | null>(null);
   const [tagFilter, setTagFilter] = usePersistedState<string[]>("bookmarks.tags", [], isStrArr);
   const [sort, setSort] = usePersistedState("bookmarks.sort", "newest", isStr);
@@ -86,8 +87,7 @@ export function BookmarksModal({
       <div
         ref={dialogRef}
         className="modal-panel fdb-panel"
-        role="dialog"
-        aria-modal="true"
+        {...screenRole}
         aria-label="Bookmarks"
         onClick={(ev) => ev.stopPropagation()}
       >

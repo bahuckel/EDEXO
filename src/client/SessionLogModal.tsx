@@ -6,7 +6,7 @@ import { withTransition } from "./motion";
 import { fmtCrExact, fmtCrShort, fmtLy } from "@shared/format";
 import { useToast } from "./ui/feedback";
 import { ModalHead } from "./ui/ModalHead";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import type { SessionLogDTO } from "@shared/types";
 import { useState } from "react";
 import { copyText } from "./copyText";
@@ -52,6 +52,7 @@ function sessionLogMarkdown(log: SessionLogDTO): string {
 
 export function SessionLogModal({ log, onClose }: { log: SessionLogDTO | null; onClose: () => void }) {
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
+  const screenRole = useScreenRole();
   const toast = useToast();
   const [copied, setCopied] = useState(false);
   const fmtT = (iso: string) => {
@@ -79,8 +80,7 @@ export function SessionLogModal({ log, onClose }: { log: SessionLogDTO | null; o
       <div
         ref={dialogRef}
         className="modal-panel modal-panel--session"
-        role="dialog"
-        aria-modal="true"
+        {...screenRole}
         aria-labelledby="session-log-title"
         onClick={(e) => e.stopPropagation()}
       >

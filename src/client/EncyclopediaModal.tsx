@@ -4,7 +4,7 @@ import type { EncyclopediaSpeciesRowDTO, FootScannedEntry, SpeciesEntry } from "
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PhotoGallery } from "./PhotoGallery";
 import { ModalHead } from "./ui/ModalHead";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import { SkeletonRows } from "./ui/Skeleton";
 import {
   buildEncyclopediaFacetOptions,
@@ -119,6 +119,7 @@ export function EncyclopediaModal({
   }, [onClose, foundFor, photoZoom, inlineExo, exoClosing, scheduleCloseExo]);
 
   const dialogRef = useModal<HTMLDivElement>(true, closeTopLayer);
+  const screenRole = useScreenRole();
 
   const facets = useMemo(() => (rows?.length ? buildEncyclopediaFacetOptions(rows) : null), [rows]);
 
@@ -291,8 +292,7 @@ export function EncyclopediaModal({
         ref={dialogRef}
         tabIndex={-1}
         className="modal-panel encyclopedia-panel"
-        role="dialog"
-        aria-modal="true"
+        {...screenRole}
         aria-labelledby="encyclopedia-title"
         onClick={(ev) => ev.stopPropagation()}
       >

@@ -4,7 +4,7 @@
  * Each list is empty until asked; once fetched, the server keeps it current (dataAutoRefresh.ts).
  */
 import { withTransition } from "./motion";
-import { useModal } from "./ui/useModal";
+import { useModal, useScreenRole } from "./ui/useModal";
 import { X } from "lucide-react";
 import {
   CARRIERS_STATIONS_TITLE,
@@ -15,14 +15,14 @@ import {
 
 export function CarriersModal({ onClose }: { onClose: () => void }) {
   const dialogRef = useModal<HTMLDivElement>(true, onClose);
+  const screenRole = useScreenRole();
   const [tab, setTab] = useCarriersStationsTab();
   return (
     <div className="modal-backdrop" role="presentation" onClick={() => withTransition(onClose)}>
       <div
         ref={dialogRef}
         className="modal-panel fdb-panel"
-        role="dialog"
-        aria-modal="true"
+        {...screenRole}
         aria-label={CARRIERS_STATIONS_TITLE}
         onClick={(ev) => ev.stopPropagation()}
       >
