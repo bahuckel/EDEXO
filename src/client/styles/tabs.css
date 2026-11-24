@@ -41,6 +41,33 @@ html.tab-view {
   cursor: pointer;
   clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
 }
+/*
+  A full strip: the tabs give way like a browser's, each down to the start of its name, while Main and the + keep
+  their size (2026-11-24: at 375 px six screen tabs made the page 917 px wide and it scrolled sideways). Main gives
+  way less, the tab in front least, so its name stays readable. On a phone only the tab in front keeps its ×.
+*/
+.tab-strip__tab {
+  flex: 0 1 auto;
+  min-width: 2.6rem;
+}
+.tab-strip__tab--main {
+  flex-shrink: 0.5;
+}
+.tab-strip__add {
+  flex-shrink: 0;
+}
+.tab-strip__tab.tab-strip__tab--on {
+  flex-shrink: 0.15;
+  min-width: 5.5rem;
+}
+@media (max-width: 600px) {
+  .tab-strip__tab {
+    min-width: 2rem;
+  }
+  .tab-strip__tab:not(.tab-strip__tab--on) .tab-strip__close {
+    display: none;
+  }
+}
 .tab-strip__tab:hover {
   color: var(--text);
   background: rgba(var(--accent-rgb), 0.1);
