@@ -272,6 +272,37 @@
   min-height: 0;
   max-height: clamp(20rem, 26vw, 36rem);
 }
+/*
+  Photo beside the facts on a wide card (UI ideas 2026-11-16 §4.4): from 50 rem the photo takes the left 55 % and the
+  name, chance and tiles stand to its right, so the first species is whole on a 1080 px screen (card 940 → 609 px tall
+  at 1920 px). The photo fills its column: 16:9 whole when it is the taller side (a lone card across the panel, which
+  stacked showed a 1,780 × 499 strip), cropped to the facts' height when they are.
+*/
+.species-card {
+  container: species-card / inline-size;
+}
+@container species-card (min-width: 50rem) {
+  .species-card .species-card-hero {
+    display: grid;
+    grid-template-columns: 55% minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    align-items: start;
+  }
+  .species-card-hero > .species-hero-photo {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    align-self: stretch;
+  }
+  .species-card-hero > :not(.species-hero-photo) {
+    grid-column: 2;
+    width: auto;
+  }
+  .species-card-hero > .species-hero-photo > .species-thumb-btn--hero,
+  .species-card-hero .species-img--hero {
+    height: 100%;
+    max-height: none;
+  }
+}
 .species-quad-grid {
   grid-template-columns: repeat(auto-fill, minmax(8.25rem, 1fr));
   gap: 0.4rem;
