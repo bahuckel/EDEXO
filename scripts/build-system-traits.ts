@@ -18,7 +18,7 @@
  *
  * Two u32 arrays start at a multiple of 4 (padding after the u8 array).
  */
-import { createReadStream, writeFileSync } from "node:fs";
+import { createReadStream, mkdirSync, writeFileSync } from "node:fs";
 import { createGunzip, gzipSync } from "node:zlib";
 import { createInterface } from "node:readline";
 import path from "node:path";
@@ -107,6 +107,8 @@ buf.set(main, 12);
 Buffer.from(stars.buffer).copy(buf, 12 + n + pad);
 Buffer.from(bodies.buffer).copy(buf, 12 + n + pad + n * 4);
 const gz = gzipSync(buf, { level: 9 });
+// The folder made first: a missing one threw only after the whole ~6-minute pass over the dump (2026-11-25).
+mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
 writeFileSync(out, gz);
 console.log(
   `${lines.toLocaleString()} lines, ${systems.toLocaleString()} systems, ${matched.toLocaleString()} of ${n.toLocaleString()} index systems found; ` +

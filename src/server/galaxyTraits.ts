@@ -19,7 +19,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { gunzip, gunzipSync } from "node:zlib";
-import type { BioIndex } from "./bioIndex.js";
+import { peekBioIndex, type BioIndex } from "./bioIndex.js";
 import { getProjectRoot } from "./paths.js";
 import { galaxyIndexFilePath } from "./galaxyIndexFiles.js";
 import { BODY_TRAITS, STAR_CLASSES } from "../shared/galaxyTraits.js";
@@ -58,9 +58,25 @@ export function parseSystemTraits(raw: Buffer): SystemTraits {
 
 let cached: SystemTraits | null | undefined;
 
-/** The traits, or null on a build without the file. Read once and held. */
+/*
+  A traits file is numbered by one bio-index.bin (scripts/build-system-traits.ts): beside another, ordinal i is some
+  other system's record. 2026-11-25: the galaxy-index download carried the EDSM-merged index (5,406,581 systems) with
+  traits built for 5,337,927, so the map's star and body ticks matched nothing and the boxel table could read another
+  system's stars. Handed out only when the counts agree with the index held now (never loaded here for it).
+*/
+function fitsHeldIndex(t: SystemTraits | null): SystemTraits | null {
+  const index = peekBioIndex();
+  return t && index && t.count !== index.systemCount ? null : t;
+}
+
+/** The traits were read but belong to another bio-index than the one held (the map's drawer says so). */
+export function systemTraitsStale(): boolean {
+  return cached != null && fitsHeldIndex(cached) === null;
+}
+
+/** The traits, or null on a build without the file or when they belong to another index. Read once and held. */
 export function loadSystemTraits(file = systemTraitsPath()): SystemTraits | null {
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) return fitsHeldIndex(cached);
   if (!existsSync(file)) return (cached = null);
   try {
     cached = parseSystemTraits(gunzipSync(readFileSync(file)));
@@ -68,7 +84,7 @@ export function loadSystemTraits(file = systemTraitsPath()): SystemTraits | null
     console.warn(`ED Exo Compare — system traits unreadable, continuing without them: ${String(e)}`);
     cached = null;
   }
-  return cached;
+  return fitsHeldIndex(cached);
 }
 
 let pending: Promise<SystemTraits | null> | null = null;
@@ -77,7 +93,7 @@ let generation = 0;
 
 /** The same, read and unzipped off the main thread (bioIndex.ts loadBioIndexAsync says why). */
 export function loadSystemTraitsAsync(file = systemTraitsPath()): Promise<SystemTraits | null> {
-  if (cached !== undefined) return Promise.resolve(cached);
+  if (cached !== undefined) return Promise.resolve(fitsHeldIndex(cached));
   if (pending) return pending;
   const gen = generation;
   const p: Promise<SystemTraits | null> = (async () => {
@@ -87,9 +103,9 @@ export function loadSystemTraitsAsync(file = systemTraitsPath()): Promise<System
     } catch (e) {
       console.warn(`ED Exo Compare — system traits unreadable, continuing without them: ${String(e)}`);
     }
-    if (gen !== generation) return read;
+    if (gen !== generation) return fitsHeldIndex(read);
     if (cached === undefined) cached = read;
-    return cached ?? null;
+    return fitsHeldIndex(cached ?? null);
   })().finally(() => {
     if (pending === p) pending = null;
   });

@@ -7,7 +7,7 @@ import type { SpeciesDatabase } from "../../shared/types.js";
 import { getCachedSpeciesDatabase } from "../snapshot.js";
 import { galaxyPointsAsync } from "../galaxyPoints.js";
 import { loadBioIndexAsync } from "../bioIndex.js";
-import { galaxyFilterMask, loadSystemTraits, systemTraitCounts } from "../galaxyTraits.js";
+import { galaxyFilterMask, loadSystemTraits, systemTraitCounts, systemTraitsStale } from "../galaxyTraits.js";
 import { BODY_TRAIT_GROUP, BODY_TRAITS, STAR_CLASSES } from "../../shared/galaxyTraits.js";
 import { noIndex, sendBinary } from "./galaxyHttp.js";
 
@@ -33,12 +33,18 @@ export function registerGalaxyDataRoutes(app: express.Express): void {
 
   /**
    * The map's Bodies filters (owner, 2026-10-04): every star class and body trait with how many
-   * systems hold it. `available: false` on a build without `system-traits.bin.gz`.
+   * systems hold it. `available: false` on a build without `system-traits.bin.gz`, and with `reason: "stale"` when
+   * the file was numbered by another bio-index.bin than the one loaded: galaxyFilterMask then matches nothing, and
+   * the drawer offered ticks that could only empty the map (2026-11-25: the galaxy-index download carried the
+   * EDSM-merged index of 2026-11-01, 5,406,581 systems, beside traits built for 5,337,927).
    */
-  app.get("/api/galaxy/traits", (_req, res) => {
+  app.get("/api/galaxy/traits", async (_req, res) => {
+    // The index held first: the traits are handed out only when they fit it (galaxyTraits.ts fitsHeldIndex).
+    await loadBioIndexAsync();
     const traits = loadSystemTraits();
+    const stale = !traits && systemTraitsStale();
     if (!traits) {
-      res.json({ available: false, mainStars: [], stars: [], planets: [], features: [] });
+      res.json({ available: false, ...(stale ? { reason: "stale" } : {}), mainStars: [], stars: [], planets: [], features: [] });
       return;
     }
     const c = systemTraitCounts(traits);

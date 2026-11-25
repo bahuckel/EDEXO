@@ -67,6 +67,8 @@ interface TraitRow {
 }
 interface TraitsDTO {
   available: boolean;
+  /** "stale": the star and body list belongs to another galaxy index than the one loaded (galaxyDataRoutes.ts). */
+  reason?: "stale";
   mainStars: TraitRow[];
   stars: TraitRow[];
   planets: TraitRow[];
@@ -337,7 +339,11 @@ export function GalaxyFilterPanel({
             })
           )
         ) : traits && !traits.available ? (
-          <p className="g3d-panel__note">The star and body list is not in this build.</p>
+          <p className="g3d-panel__note">
+            {traits.reason === "stale"
+              ? "The star and body list was made for an older galaxy index than this one, so these filters are off until both are updated."
+              : "The star and body list is not in this build."}
+          </p>
         ) : !traits ? (
           <p className="g3d-panel__note">Loading the stars and bodies…</p>
         ) : (
