@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Which program owns the foreground window, for the HUD overlays (owner, 2026-09-30: "hide the HUD
  * when the game is not running or not in focus").
@@ -96,6 +97,7 @@ function parseForegroundLine(line) {
  */
 function watchForeground(onName, exe = null) {
   if (process.platform !== "win32") return { stop() {} };
+  /** @type {import("child_process").ChildProcessByStdio<null, import("stream").Readable, null> | null} */
   let child = null;
   let stopped = false;
   let restarts = 0;
@@ -160,27 +162,39 @@ function watchForeground(onName, exe = null) {
 }
 
 /**
+ * The utility process running foregroundHost.cjs, as far as this file uses it. The host posts
+ * `{ name, at }` (foregroundHost.cjs); `at` is checked before use.
+ * @typedef {{
+ *   on(event: "message", cb: (m: { name?: unknown, at?: { x: number, y: number } | null } | null | undefined) => void): void,
+ *   on(event: "exit", cb: () => void): void,
+ *   kill(): unknown,
+ * }} ForegroundHost
+ */
+
+/** How often a dead foreground host is started again within HOST_RESTART_WINDOW_MS before the fallback takes over. */
+const HOST_RESTARTS = 3;
+const HOST_RESTART_WINDOW_MS = 10 * 60_000;
+
+/**
  * The same watcher, run from a utility process of its own (electron/foregroundHost.cjs) so that starting PowerShell
  * never holds the main process (2026-10-19: `spawn` took 1,147 ms inside Electron's main process — 17 ms in plain
  * Node — right after the launcher window was created, so the launcher stayed black and the pages' files, which this
  * process serves during the boot, waited behind it). Falls back to the in-process watcher when the host cannot start
  * or ends before reporting anything.
  *
- * @param {{ fork: (modulePath: string, args?: string[], opts?: object) => any }} utilityProcess  Electron's
+ * @param {{ fork: (modulePath: string, args?: string[], opts?: object) => ForegroundHost }} utilityProcess  Electron's
  * @param {string} hostPath  electron/foregroundHost.cjs
  * @param {(processName: string, at: { x: number, y: number } | null) => void} onName  as watchForeground
  * @param {string | null} [exe]  the native watcher, handed to the host (it has no resourcesPath of its own)
  * @returns {{ stop: () => void }}
  */
-/** How often a dead foreground host is started again within HOST_RESTART_WINDOW_MS before the fallback takes over. */
-const HOST_RESTARTS = 3;
-const HOST_RESTART_WINDOW_MS = 10 * 60_000;
-
 function watchForegroundOffMain(utilityProcess, hostPath, onName, exe = null) {
   if (process.platform !== "win32") return { stop() {} };
   let stopped = false;
   let heard = false;
+  /** @type {{ stop: () => void } | null} */
   let fallback = null;
+  /** @type {ForegroundHost | null} */
   let host = null;
   const useFallback = () => {
     if (!stopped && !fallback) fallback = watchForeground(onName, exe);
@@ -249,7 +263,7 @@ function isGameOrOwn(name, own) {
   return n === "elitedangerous64" || own.includes(n);
 }
 
-/** The game itself, not this app's windows (the HUD follows the game's monitor). */
+/** The game itself, not this app's windows (the HUD follows the game's monitor). @param {string} name */
 function isGame(name) {
   return String(name || "").toLowerCase() === "elitedangerous64";
 }

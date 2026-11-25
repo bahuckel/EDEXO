@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -18,6 +19,11 @@ const { hudWindowOptions } = require("./hudWindowOptions.cjs");
  * The game monitor's screen among the capture sources. Another monitor only when there is no other to pick (one
  * screen, its id not reported): read on the wrong screen, the readers matched glyphs on whatever it showed (review
  * 2026-11-10 E3).
+ *
+ * @template {{ display_id: string }} S
+ * @param {S[]} sources
+ * @param {string} want  the display's id as a string
+ * @returns {S | undefined}
  */
 function gameSource(sources, want) {
   return sources.find((s) => String(s.display_id) === want) ?? (sources.length === 1 ? sources[0] : undefined);
@@ -28,22 +34,22 @@ function gameSource(sources, want) {
  *   BrowserWindow: any,
  *   getBaseUrl: () => string | null,
  *   preloadPath: string,
- *   getDisplay: () => { bounds: { x: number, y: number, width: number, height: number } },
+ *   getDisplay: () => { id?: number, bounds: { x: number, y: number, width: number, height: number } },
  *   isAllowed: () => boolean,
  *   guardWindow?: (win: any) => void,
- *   desktopCapturer?: any,
+ *   desktopCapturer?: Pick<import("electron").DesktopCapturer, "getSources">,
  *   isGameInFront?: () => boolean,
  * }} deps
  */
 function createAimWindow(deps) {
-  /** @type {any} */
+  /** @type {import("electron").BrowserWindow | null} */
   let win = null;
   let on = false;
   /** The distance reader (HUD prefs `distanceReader`): opens the window too, without the marks. */
   let reader = false;
   let disposed = false;
   /** The page's address as the switches want it. */
-  const pageUrl = (base) => `${base}/aim-overlay.html${on ? "" : "?marks=0"}`;
+  const pageUrl = (/** @type {string} */ base) => `${base}/aim-overlay.html${on ? "" : "?marks=0"}`;
 
   function place() {
     if (!win || win.isDestroyed()) return;
@@ -61,15 +67,17 @@ function createAimWindow(deps) {
       return;
     }
     const b = deps.getDisplay().bounds;
-    win = new deps.BrowserWindow({ ...hudWindowOptions(b.width, b.height, null, deps.preloadPath), x: b.x, y: b.y });
-    deps.guardWindow?.(win);
+    /** @type {import("electron").BrowserWindow} */
+    const w = new deps.BrowserWindow({ ...hudWindowOptions(b.width, b.height, null, deps.preloadPath), x: b.x, y: b.y });
+    win = w;
+    deps.guardWindow?.(w);
     // Never in the way: every click goes through to the game.
-    win.setIgnoreMouseEvents(true);
-    win.setAlwaysOnTop(true, "screen-saver");
-    win.on("closed", () => {
+    w.setIgnoreMouseEvents(true);
+    w.setAlwaysOnTop(true, "screen-saver");
+    w.on("closed", () => {
       win = null;
     });
-    void win.loadURL(pageUrl(base)).then(
+    void w.loadURL(pageUrl(base)).then(
       () => sync(),
       () => close(),
     );
@@ -116,6 +124,9 @@ function createAimWindow(deps) {
   /**
    * The pitch reader's capture (aim/pitchCapture.ts, the launcher's option): the page asks for the screen, and gets the
    * game's monitor only, and only when the request comes from this window's own page. Anything else gets nothing.
+   *
+   * @param {import("electron").DisplayMediaRequestHandlerHandlerRequest} request
+   * @param {(streams: import("electron").Streams) => void} callback
    */
   function displayMedia(request, callback) {
     const fromAim = win && !win.isDestroyed() && request && request.frame === win.webContents.mainFrame;
@@ -130,14 +141,20 @@ function createAimWindow(deps) {
       .catch(() => callback({}));
   }
 
-  /** The marker switched while the page is open for the reader: load it again with or without the marks. */
+  /**
+   * The marker switched while the page is open for the reader: load it again with or without the marks.
+   * @param {boolean} was
+   */
   function reloadForMarks(was) {
     if (was === on || !win || win.isDestroyed() || !reader) return;
     const base = deps.getBaseUrl();
     if (base) void win.loadURL(pageUrl(base)).catch(() => {});
   }
 
-  /** True for this window's own page (the only one the capture and its permission are for). */
+  /**
+   * True for this window's own page (the only one the capture and its permission are for).
+   * @param {unknown} wc
+   */
   function isAimContents(wc) {
     return !!win && !win.isDestroyed() && wc === win.webContents;
   }
@@ -145,6 +162,9 @@ function createAimWindow(deps) {
   /**
    * The game monitor's capture id, for this window's page only (2026-11-04: getDisplayMedia needs a click, and the
    * marker window is click-through, so the page asks for the screen by id through getUserMedia instead).
+   *
+   * @param {unknown} sender  the asking page's webContents
+   * @returns {Promise<string | null>}
    */
   async function captureSource(sender) {
     if (!isAimContents(sender) || !deps.desktopCapturer) return null;
@@ -159,7 +179,7 @@ function createAimWindow(deps) {
   }
 
   return {
-    /** The launcher's switch. */
+    /** The launcher's switch. @param {unknown} next */
     set(next) {
       const was = on;
       on = next === true;
@@ -168,7 +188,7 @@ function createAimWindow(deps) {
       return on;
     },
     isOn: () => on,
-    /** The distance reader (the launcher's HUD prefs, pushed at start and on each change). */
+    /** The distance reader (the launcher's HUD prefs, pushed at start and on each change). @param {unknown} next */
     setReader(next) {
       const was = reader;
       reader = next === true;
