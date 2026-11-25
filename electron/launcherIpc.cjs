@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -10,6 +11,29 @@ const path = require("path");
 const gpuSafe = require("./gpuSafeMode.cjs");
 const { hudPathFrom, hudWidthFrom, hudHeightFrom } = require("./hudWindows.cjs");
 
+/**
+ * What main.cjs hands over. The windows' helpers are typed from the modules that build them.
+ * @typedef {object} LauncherIpcDeps
+ * @property {Pick<typeof import("electron"), "app" | "dialog" | "ipcMain" | "BrowserWindow">} electron
+ * @property {ReturnType<typeof import("./hudWindows.cjs").createHudWindows>} huds
+ * @property {ReturnType<typeof import("./aimWindow.cjs").createAimWindow> | null} aim
+ * @property {ReturnType<typeof import("./appWindows.cjs").createAppWindows>} appWindows
+ * @property {ReturnType<typeof import("./keybinds.cjs").createKeybinds>} keybinds
+ * @property {ReturnType<typeof import("./tray.cjs").createTrayControl>} trayControl
+ * @property {ReturnType<typeof import("./quitFlow.cjs").createQuitFlow>} quitFlow
+ * @property {{ closeToTray: () => boolean, setCloseToTray: (on: boolean) => void,
+ *   trayAvailability: () => { available: boolean, reason?: string } }} tray
+ * @property {ReturnType<typeof gpuSafe.graphicsMode>} graphics  this start's graphics mode
+ * @property {string} gpuSafeDir
+ * @property {{ get: () => boolean | null, set: (registered: boolean) => void }} hotkey
+ * @property {() => { stagedUpdate?: () => Promise<import("./quitFlow.cjs").StagedUpdate | null> } | null} getRuntime
+ * @property {() => import("electron").BrowserWindow | null} getMainWindow
+ */
+
+/**
+ * @param {LauncherIpcDeps} deps
+ * @param {import("electron").NativeImage | null} iconForChild  the app's icon for the windows it opens
+ */
 function registerLauncherIpc(
   { electron, huds, aim, appWindows, keybinds, trayControl, quitFlow, tray, graphics, gpuSafeDir, hotkey, getRuntime, getMainWindow },
   iconForChild,
@@ -21,7 +45,11 @@ function registerLauncherIpc(
     caller is a launcher script, and another of the app's pages (or a frame inside one) has no business opening HUDs,
     moving them or switching the tray and the screen marker. A refused call gets the current state back.
   */
-  const fromLauncher = (evt) => !!getMainWindow() && !getMainWindow().isDestroyed() && evt.sender === getMainWindow().webContents;
+  /** @param {import("electron").IpcMainInvokeEvent} evt */
+  const fromLauncher = (evt) => {
+    const win = getMainWindow();
+    return !!win && !win.isDestroyed() && evt.sender === win.webContents;
+  };
 
   ipcMain.handle("edexo:foot-overlay-state", () => ({
     opened: huds.paths().length > 0,
@@ -66,7 +94,8 @@ function registerLauncherIpc(
   };
   ipcMain.handle("edexo:get-graphics-pref", () => graphicsPref());
   ipcMain.handle("edexo:set-graphics-pref", (evt, opts) => {
-    if (!getMainWindow() || evt.sender !== getMainWindow().webContents) return graphicsPref();
+    const win = getMainWindow();
+    if (!win || evt.sender !== win.webContents) return graphicsPref();
     const hardware = !!(opts && typeof opts === "object" && opts.hardware);
     if (hardware) gpuSafe.clearGpuSafe(gpuSafeDir);
     else gpuSafe.writeGpuSafe(gpuSafeDir, { auto: false, reason: "turned off in the launcher", at: new Date().toISOString() });
@@ -146,12 +175,13 @@ function registerLauncherIpc(
     Downloads with the name the server chose. Only the launcher may ask, and only for text.
   */
   ipcMain.handle("edexo:save-text-file", async (evt, opts) => {
-    if (!getMainWindow() || evt.sender !== getMainWindow().webContents) return { saved: false, error: "Not allowed." };
+    const win = getMainWindow();
+    if (!win || evt.sender !== win.webContents) return { saved: false, error: "Not allowed." };
     const text = opts && typeof opts.text === "string" ? opts.text : null;
     const rawName = opts && typeof opts.defaultName === "string" ? opts.defaultName : "EDEXO.json";
     const name = path.basename(rawName).replace(/[<>:"|?*]/g, "_") || "EDEXO.json";
     if (text == null) return { saved: false, error: "Nothing to save." };
-    const r = await dialog.showSaveDialog(getMainWindow(), {
+    const r = await dialog.showSaveDialog(win, {
       title: "Save",
       defaultPath: path.join(app.getPath("downloads"), name),
       filters: [{ name: "JSON", extensions: ["json"] }],
@@ -161,7 +191,8 @@ function registerLauncherIpc(
       fs.writeFileSync(r.filePath, text, "utf8");
       return { saved: true, path: r.filePath };
     } catch (e) {
-      return { saved: false, error: e && e.message ? e.message : String(e) };
+      const err = /** @type {any} */ (e);
+      return { saved: false, error: err && err.message ? err.message : String(err) };
     }
   });
 
@@ -172,9 +203,10 @@ function registerLauncherIpc(
     wrapper is about to delete, so the restart goes through the original file when there is one.
   */
   ipcMain.handle("edexo:pick-folder", async (evt, opts) => {
-    if (!getMainWindow() || evt.sender !== getMainWindow().webContents) return { path: null };
+    const win = getMainWindow();
+    if (!win || evt.sender !== win.webContents) return { path: null };
     const start = opts && typeof opts.defaultPath === "string" && opts.defaultPath ? opts.defaultPath : app.getPath("documents");
-    const r = await dialog.showOpenDialog(getMainWindow(), {
+    const r = await dialog.showOpenDialog(win, {
       title: "Choose a folder",
       defaultPath: start,
       properties: ["openDirectory", "createDirectory"],
@@ -187,15 +219,18 @@ function registerLauncherIpc(
     "Keep the app open" calls this off like a plain restart.
   */
   ipcMain.handle("edexo:install-update", async (evt) => {
-    if (!getMainWindow() || evt.sender !== getMainWindow().webContents) return { ok: false };
-    const staged = getRuntime() && typeof getRuntime().stagedUpdate === "function" ? await getRuntime().stagedUpdate().catch(() => null) : null;
+    const win = getMainWindow();
+    if (!win || evt.sender !== win.webContents) return { ok: false };
+    const rt = getRuntime();
+    const staged = rt && typeof rt.stagedUpdate === "function" ? await rt.stagedUpdate().catch(() => null) : null;
     if (!quitFlow.selfUpdateForm() || !staged) return { ok: false, error: "No downloaded update is waiting." };
     quitFlow.armInstall(staged);
     app.quit();
     return { ok: true };
   });
   ipcMain.handle("edexo:relaunch", (evt) => {
-    if (!getMainWindow() || evt.sender !== getMainWindow().webContents) return { ok: false };
+    const win = getMainWindow();
+    if (!win || evt.sender !== win.webContents) return { ok: false };
     /*
       Armed here, registered in will-quit (combined plan 1.6c): with a backup running, quitting asks
       first, and "Keep the app open" used to leave the relaunch armed for the next ordinary quit.
@@ -207,7 +242,8 @@ function registerLauncherIpc(
 
   // The launcher's HUD settings, forwarded to every overlay as they change (see preload `pushHudPrefs`).
   ipcMain.on("edexo:push-hud-prefs", (evt, prefs) => {
-    if (!getMainWindow() || evt.sender !== getMainWindow().webContents) return;
+    const win = getMainWindow();
+    if (!win || evt.sender !== win.webContents) return;
     huds.pushPrefs(prefs);
     // The Scan route's distance reader runs in the screen marker's window (aimWindow.cjs).
     aim?.setReader(!!(prefs && typeof prefs === "object" && prefs.distanceReader === true));
