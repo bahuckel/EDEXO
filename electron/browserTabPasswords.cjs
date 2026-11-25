@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -31,10 +32,24 @@ const OPS = new Set([
   "passwordNeverRemove",
 ]);
 
+/** @typedef {import("./browserTabs.cjs").BrowserTab} BrowserTab */
+
+/**
+ * @param {{
+ *   passwords: ReturnType<typeof import("./browserPasswords.cjs").createBrowserPasswords> | null,
+ *   prefs: ReturnType<typeof import("./browserPrefs.cjs").createBrowserPrefs>,
+ *   tabs: Map<number, BrowserTab>,
+ *   changed: () => void,
+ *   state: () => unknown,
+ * }} deps
+ */
 function createTabPasswords({ passwords, prefs, tabs, changed, state }) {
   const passwordsOn = () => !!passwords && prefs.rememberPasswords() && passwords.available().ok;
 
-  /** At each page's dom-ready, with the option on and an https page: a fresh nonce, and the watcher in. */
+  /**
+   * At each page's dom-ready, with the option on and an https page: a fresh nonce, and the watcher in.
+   * @param {BrowserTab} t @param {import("electron").WebContents} wc @param {string} url
+   */
   function watchPasswords(t, wc, url) {
     t.pw = null;
     t.pwField = false;
@@ -52,12 +67,17 @@ function createTabPasswords({ passwords, prefs, tabs, changed, state }) {
    * A console line from a page. Only one that starts with this page's nonce counts (only the password world knows
    * it), from the top frame, for the origin the nonce was made for. Never logged, never written: a password lives in
    * memory until the prompt is answered (or PASSWORD_PROMPT_MS), and on disk only encrypted.
+   *
+   * @param {BrowserTab} t
+   * @param {import("electron").WebContents} wc
+   * @param {unknown} message
+   * @param {{ parent?: unknown } | null | undefined} frame  the frame that logged it
    */
   function onPageConsole(t, wc, message, frame) {
     const pw = t.pw;
     if (!pw || typeof message !== "string" || !message.startsWith(pw.nonce)) return;
     if (frame && frame.parent) return;
-    if (!passwordsOn()) return;
+    if (!passwords || !passwordsOn()) return;
     let m;
     try {
       m = JSON.parse(message.slice(pw.nonce.length));
@@ -100,8 +120,9 @@ function createTabPasswords({ passwords, prefs, tabs, changed, state }) {
     for this exact origin. Only empty fields, and the keyboard focus stays where it is. Several logins: the key
     button chooses.
   */
+  /** @param {BrowserTab} t @param {import("electron").WebContents} wc @param {string} origin */
   function autoFill(t, wc, origin) {
-    if (t.pwAutoFilled || !passwordsOn() || wc.isDestroyed()) return;
+    if (t.pwAutoFilled || !passwords || !passwordsOn() || wc.isDestroyed()) return;
     const names = passwords.usernames(origin);
     if (names.length !== 1) return;
     const secret = passwords.lookup(origin, names[0]);
@@ -112,6 +133,7 @@ function createTabPasswords({ passwords, prefs, tabs, changed, state }) {
       .catch(() => {});
   }
 
+  /** @param {BrowserTab} t */
   function dropPrompt(t) {
     if (!t.pwPrompt) return;
     clearTimeout(t.pwPrompt.timer);
@@ -131,7 +153,12 @@ function createTabPasswords({ passwords, prefs, tabs, changed, state }) {
     };
   }
 
-  /** The toolbar's password requests (browserTabs.cjs `handle`). */
+  /**
+   * The toolbar's password requests (browserTabs.cjs `handle`).
+   * @param {string} op
+   * @param {any} a  the request, every field checked here
+   * @param {BrowserTab | null | undefined} t  the tab it names
+   */
   async function handle(op, a, t) {
     switch (op) {
       case "setRememberPasswords":
@@ -144,6 +171,7 @@ function createTabPasswords({ passwords, prefs, tabs, changed, state }) {
         const p = t?.pwPrompt;
         if (!t || !p) return { error: "Nothing to save." };
         dropPrompt(t);
+        /** @type {{ ok?: boolean, error?: string }} */
         let r = { ok: true };
         if (a?.answer === "save")
           r = passwords ? passwords.save(p.origin, p.username, p.password) : { error: "Not available." };
@@ -153,7 +181,7 @@ function createTabPasswords({ passwords, prefs, tabs, changed, state }) {
       }
       case "passwordFill": {
         const wcp = t?.view?.webContents;
-        if (!wcp || wcp.isDestroyed() || !passwordsOn()) return { error: "Nothing to fill." };
+        if (!wcp || wcp.isDestroyed() || !passwords || !passwordsOn()) return { error: "Nothing to fill." };
         const origin = passwordOrigin(wcp.getURL());
         const names = origin ? passwords.usernames(origin) : [];
         const username = typeof a?.username === "string" ? a.username : names.length === 1 ? names[0] : null;
@@ -226,7 +254,7 @@ function createTabPasswords({ passwords, prefs, tabs, changed, state }) {
     onPageConsole,
     dropPrompt,
     passwordsView,
-    owns: (op) => OPS.has(op),
+    owns: (/** @type {string} */ op) => OPS.has(op),
     handle,
   };
 }

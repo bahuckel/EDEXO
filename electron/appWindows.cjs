@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -15,15 +16,37 @@ const { guardWindowNavigation, isOwnUrl } = require("./windowGuards.cjs");
 /** The session the app, Colonize and torn-off tab windows share. */
 const APP_WINDOW_PARTITION = "persist:app-window";
 
+/**
+ * What main.cjs hands over. The helpers are typed from the modules that build them.
+ * @typedef {object} AppWindowsDeps
+ * @property {Pick<typeof import("electron"), "BrowserWindow" | "screen" | "shell">} electron
+ * @property {() => { getLocalBaseUrl: () => string | null } | null} getRuntime
+ * @property {() => import("electron").BrowserWindow | null} getMainWindow
+ * @property {() => ReturnType<typeof import("./diag.cjs").start> | null} getDiag  the diagnostic build's recorder
+ * @property {ReturnType<typeof import("./tabWindows.cjs").createTabWindows>} tabWindows
+ * @property {Pick<ReturnType<typeof import("./windowState.cjs").createWindowState>,
+ *   "readWindowStates" | "readWindowState" | "trackWindowState" | "windowStatePath">} windowState
+ * @property {() => string | null} ownBase  the server's address, once it listens
+ */
+
+/**
+ * The app's icon for the windows it opens (null or undefined: Electron's default).
+ * @typedef {import("electron").NativeImage | null | undefined} ChildIcon
+ */
+
+/** @param {AppWindowsDeps} deps */
 function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWindows, windowState, ownBase }) {
   const { BrowserWindow, screen, shell } = electron;
   const { readWindowStates, readWindowState, trackWindowState, windowStatePath } = windowState;
+  /** @type {import("electron").BrowserWindow | null} */
   let appUiWindow = null;
 
   /**
    * The app window's session is new, so its view settings (body sort, last tab, …) start empty. Copy
    * the launcher session's localStorage across once — same site, so the launcher can read it — and
    * reload. Marked done in window-state.json so it never runs again.
+   *
+   * @param {import("electron").BrowserWindow} win
    */
   async function carryAppStorageOver(win) {
     const mainWindow = getMainWindow();
@@ -49,7 +72,10 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
     }
   }
 
-  /** The galaxy map's window while it is open (one at a time; see childWindows.cjs). */
+  /**
+   * The galaxy map's window while it is open (one at a time; see childWindows.cjs).
+   * @type {import("electron").BrowserWindow | null}
+   */
   let galaxyWindow = null;
 
   /**
@@ -57,6 +83,10 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
    *
    * Links out of the app (Spansh, EDSM, the site) go to the commander's browser; the app's own pages
    * may still open in a window of their own, as they did when the UI ran in the launcher.
+   *
+   * @param {import("electron").BrowserWindow} win
+   * @param {string} base  the server's address
+   * @param {ChildIcon} iconForChild
    */
   function attachAppPageLinks(win, base, iconForChild) {
     win.webContents.setWindowOpenHandler(({ url }) => {
@@ -80,7 +110,7 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
             backgroundColor: "#050507",
             autoHideMenuBar: true,
             title: "Galaxy map — EDEXO",
-            icon: iconForChild,
+            icon: iconForChild ?? undefined,
           },
         };
       }
@@ -110,6 +140,7 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
     });
   }
 
+  /** @param {ChildIcon} iconForChild */
   function openAppUiWindow(iconForChild) {
     const runtime = getRuntime();
     if (!runtime) return { opened: false, error: "Server not ready yet." };
@@ -120,6 +151,7 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
       return { opened: true, focused: true };
     }
     const base = runtime.getLocalBaseUrl();
+    if (!base) return { opened: false, error: "Server not ready yet." };
     const saved = readWindowState("app");
     const area = screen.getPrimaryDisplay().workArea;
     const width = saved?.width ?? Math.min(1480, Math.round(area.width * 0.9));
@@ -140,7 +172,7 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
       backgroundColor: "#050507",
       autoHideMenuBar: true,
       title: "EDEXO Compare",
-      icon: iconForChild,
+      icon: iconForChild ?? undefined,
       ...(customTitleBar
         ? { titleBarStyle: "hidden", titleBarOverlay: { color: "#07060a", symbolColor: "#f0a050", height: 34 } }
         : {}),
@@ -177,7 +209,10 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
     return { opened: true, focused: false };
   }
 
-  /** The Colonize window while it is open (1.3.0): one at a time, beside the app window, never instead of it. */
+  /**
+   * The Colonize window while it is open (1.3.0): one at a time, beside the app window, never instead of it.
+   * @type {import("electron").BrowserWindow | null}
+   */
   let colonizeWindow = null;
 
   /**
@@ -186,6 +221,8 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
    * the HUD's "an app window is in front" rule (hudWindows.cjs) count it too. Compare's frame since 1.3.0 (owner,
    * 2026-10-22: "the same style as Compare's"): no Windows caption, the tab strip is the bar, Windows' buttons drawn in
    * EDEXO's colours over it.
+   *
+   * @param {ChildIcon} iconForChild
    */
   function openColonizeWindow(iconForChild) {
     const runtime = getRuntime();
@@ -197,6 +234,7 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
       return { opened: true, focused: true };
     }
     const base = runtime.getLocalBaseUrl();
+    if (!base) return { opened: false, error: "Server not ready yet." };
     const saved = readWindowState("colonize");
     const area = screen.getPrimaryDisplay().workArea;
     const preloadPath = path.join(__dirname, "preload.cjs");
@@ -210,7 +248,7 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
       backgroundColor: "#07060a",
       autoHideMenuBar: true,
       title: "EDEXO Colonize",
-      icon: iconForChild,
+      icon: iconForChild ?? undefined,
       ...(customTitleBar
         ? { titleBarStyle: "hidden", titleBarOverlay: { color: "#07060a", symbolColor: "#f0a050", height: 34 } }
         : {}),
@@ -241,7 +279,10 @@ function createAppWindows({ electron, getRuntime, getMainWindow, getDiag, tabWin
   return {
     openAppUiWindow,
     openColonizeWindow,
-    /** A detached tab window's links and navigation, the same as the app window's (review 2026-11-10 D4). */
+    /**
+     * A detached tab window's links and navigation, the same as the app window's (review 2026-11-10 D4).
+     * @param {import("electron").BrowserWindow} win
+     */
     attachLinks(win) {
       const base = ownBase();
       if (base) attachAppPageLinks(win, base, undefined);

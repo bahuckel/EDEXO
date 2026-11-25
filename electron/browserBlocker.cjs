@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -32,6 +33,12 @@ const { Worker } = require("node:worker_threads");
 const { createHash } = require("node:crypto");
 const { writeFileAtomic } = require("./atomicWrite.cjs");
 
+/**
+ * One file the blocker downloads: a filter list (`daily`: due every day, else every week) or the pinned scriptlets.
+ * @typedef {{ key: string, name: string, url: string, daily?: boolean, sha256?: string }} Download
+ */
+
+/** @type {Download[]} */
 const LISTS = [
   { key: "easylist", name: "EasyList", url: "https://easylist.to/easylist/easylist.txt" },
   { key: "easyprivacy", name: "EasyPrivacy", url: "https://easylist.to/easylist/easyprivacy.txt" },
@@ -65,6 +72,8 @@ const LISTS = [
 /**
  * The scriptlets the lists' `##+js(...)` rules run (uBlock Origin's library, packaged by Ghostery for its engine),
  * pinned: commit 7f5784d (2026-08-14, the newest change to the file on 2026-11-11, the same bytes as `master`).
+ *
+ * @type {Download & { sha256: string }}
  */
 const RESOURCES = {
   key: "resources",
@@ -72,7 +81,7 @@ const RESOURCES = {
   url: "https://raw.githubusercontent.com/ghostery/adblocker/7f5784d0a1dc177171ee3d6d39a7e4ac7a7eecec/packages/adblocker/assets/ublock-origin/resources.json",
   sha256: "5ce0ce483f0e5514308ccb0240960a9dd7bfeab417debeef96960dce2c95f690",
 };
-const sha256Of = (text) => createHash("sha256").update(text).digest("hex");
+const sha256Of = (/** @type {string | Buffer} */ text) => createHash("sha256").update(text).digest("hex");
 const DOWNLOADS = [...LISTS, RESOURCES];
 /** What the lists weighed when measured (2026-10-13), for the "needs N MB" line before the first download. */
 const ESTIMATE_BYTES = 5_800_000;
@@ -80,7 +89,10 @@ const WEEK_MS = 7 * 24 * 3600 * 1000;
 const DAY_MS = 24 * 3600 * 1000;
 const MAX_LIST_BYTES = 20_000_000;
 
-/** Electron's resource types, as the engine names them. */
+/**
+ * Electron's resource types, as the engine names them.
+ * @type {Record<string, string>}
+ */
 const TYPE = {
   mainFrame: "main_frame",
   subFrame: "sub_frame",
@@ -109,18 +121,25 @@ function createBrowserBlocker(o) {
   let lib = null;
   /** @type {any} */
   let engine = null;
+  /** @type {string | null} the job running: "download", "load" or "refresh" */
   let busy = null;
+  /** @type {string | null} */
   let error = null;
+  /** @type {{ done: number, total: number } | null} */
   let progress = null;
   let meta = readMeta();
   /** The Browser tab closed (release): a refresh still running does not bring the engine back. */
   let released = false;
 
-  /** When each download was fetched (`fetched[key]`), and the first time any was (consent: they are wanted). */
+  /**
+   * When each download was fetched (`fetched[key]`), and the first time any was (consent: they are wanted).
+   * @returns {{ fetchedAt: string | null, fetched: Record<string, string>, bytes: number }}
+   */
   function readMeta() {
     try {
       const m = JSON.parse(fs.readFileSync(metaPath, "utf8"));
       const fetchedAt = typeof m.fetchedAt === "string" ? m.fetchedAt : null;
+      /** @type {Record<string, string>} */
       const fetched = {};
       if (m.fetched && typeof m.fetched === "object")
         for (const [k, v] of Object.entries(m.fetched)) if (typeof v === "string") fetched[k] = v;
@@ -131,7 +150,7 @@ function createBrowserBlocker(o) {
       return { fetchedAt: null, fetched: {}, bytes: 0 };
     }
   }
-  const fileOf = (d) =>
+  const fileOf = (/** @type {Download} */ d) =>
     d === RESOURCES ? path.join(dir, "resources.json") : path.join(listDir, `${d.key}.txt`);
   /** The pinned scriptlets on disk, unless missing or not the pin's bytes (an older pin, a damaged file). */
   const resourcesPinned = () => {
@@ -166,7 +185,12 @@ function createBrowserBlocker(o) {
     };
   }
 
-  /** Parses the lists (and the scriptlets) in a worker; resolves with the serialized engine. */
+  /**
+   * Parses the lists (and the scriptlets) in a worker; resolves with the serialized engine.
+   * @param {string} text  the lists, one after another
+   * @param {string | null} resources  the pinned scriptlets, or null
+   * @returns {Promise<Uint8Array>}
+   */
   function parseInWorker(text, resources) {
     return new Promise((resolve, reject) => {
       const w = new Worker(o.bundlePath, { workerData: { lists: text, resources } });
@@ -218,7 +242,10 @@ function createBrowserBlocker(o) {
     return true;
   }
 
-  /** A download checked: a filter list starts with its header or a comment, the scriptlets are the pinned bytes. */
+  /**
+   * A download checked: a filter list starts with its header or a comment, the scriptlets are the pinned bytes.
+   * @param {Download} d @param {string} text
+   */
   function check(d, text) {
     if (text.length > MAX_LIST_BYTES) return false;
     if (d !== RESOURCES) return /^\s*[![]/.test(text);
@@ -231,12 +258,13 @@ function createBrowserBlocker(o) {
     }
   }
 
+  /** @param {Download[]} [which] */
   async function download(which = DOWNLOADS) {
     fs.mkdirSync(listDir, { recursive: true });
     progress = { done: 0, total: which.length };
     o.onChange();
     const now = new Date().toISOString();
-    /** The scriptlets refused: the lists still go in, then the refusal is the job's error. */
+    /** @type {Error | null} The scriptlets refused: the lists still go in, then the refusal is the job's error. */
     let refused = null;
     for (const d of which) {
       const r = await o.fetch(d.url);
@@ -276,7 +304,11 @@ function createBrowserBlocker(o) {
     if (refused) throw refused;
   }
 
-  /** One job at a time: "download" (asked for by the commander), "load", or the weekly "refresh". */
+  /**
+   * One job at a time: "download" (asked for by the commander), "load", or the weekly "refresh".
+   * @param {string} kind @param {() => Promise<unknown>} job
+   * @returns {Promise<boolean>}
+   */
   function run(kind, job) {
     if (busy) return Promise.resolve(false);
     busy = kind;
@@ -310,6 +342,7 @@ function createBrowserBlocker(o) {
       if (ok && due.length) void run("refresh", () => download(due));
       return engine != null;
     },
+    /** @param {string} url @returns {{ hostname: string | null, domain: string | null }} */
     hostOf: (url) => {
       try {
         return loadLib().hostOf(url);
@@ -320,6 +353,9 @@ function createBrowserBlocker(o) {
     /**
      * A request decided: `{ cancel }`, `{ redirectURL }` (a harmless stand-in the lists name), or `{}`.
      * `page` is the page's URL; null blocks nothing.
+     *
+     * @param {{ url: string, resourceType: string }} details  Electron's request details
+     * @param {string | null | undefined} page
      */
     decide(details, page) {
       if (!engine || !page || details.resourceType === "mainFrame") return null;
@@ -334,7 +370,7 @@ function createBrowserBlocker(o) {
       if (r.match) return { cancel: true };
       return null;
     },
-    /** The user stylesheet that hides what the lists hide on this page, or "". */
+    /** The user stylesheet that hides what the lists hide on this page, or "". @param {string} url */
     cosmetics(url) {
       if (!engine) return "";
       const h = this.hostOf(url);
@@ -355,7 +391,11 @@ function createBrowserBlocker(o) {
         return "";
       }
     },
-    /** The scriptlets the lists run on this page (its own hostname's rules), ready to inject; [] for most sites. */
+    /**
+     * The scriptlets the lists run on this page (its own hostname's rules), ready to inject; [] for most sites.
+     * @param {string} url
+     * @returns {string[]}
+     */
     scripts(url) {
       if (!engine) return [];
       const h = this.hostOf(url);
@@ -372,13 +412,17 @@ function createBrowserBlocker(o) {
           getRulesFromHostname: true,
         });
         return r && r.active && Array.isArray(r.scripts)
-          ? r.scripts.filter((x) => typeof x === "string")
+          ? r.scripts.filter((/** @type {unknown} */ x) => typeof x === "string")
           : [];
       } catch {
         return [];
       }
     },
-    /** The general hiding rules that match these class names, ids and links of the page, as a stylesheet. */
+    /**
+     * The general hiding rules that match these class names, ids and links of the page, as a stylesheet.
+     * @param {string} url
+     * @param {{ classes?: string[], ids?: string[], hrefs?: string[] }} dom  what the cosmetic pass read (browserPageScripts.cjs)
+     */
     domCosmetics(url, dom) {
       if (!engine) return "";
       const h = this.hostOf(url);

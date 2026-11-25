@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -56,6 +57,7 @@ const INARA_ANSWER_MS = 15_000;
   site visited in an earlier run loads from disk. Measured with docs/perf/browser/timing.cjs on five sites: a cold
   load took ~775-895 ms, a warm one ~142-300 ms. Every clearData data type but "cache" (Electron 42's list).
 */
+/** @type {NonNullable<import("electron").ClearDataOptions["dataTypes"]>} */
 const DATA_TYPES_BUT_CACHE = [
   "backgroundFetch",
   "cookies",
@@ -74,6 +76,35 @@ const INJECT_WAIT_MS = 1500;
 const COLLAPSE_TYPES = new Set(["subFrame", "image", "object", "media"]);
 
 /**
+ * One page of the browser (openTab makes it). `view` is null until the tab first loads a page.
+ * @typedef {object} BrowserTab
+ * @property {number} id
+ * @property {Set<string>} collapse  blocked frames and images of this page, collapsed by the cosmetic pass
+ * @property {{ key: string, id: string | null }} injected  the scriptlets registered (injectNow)
+ * @property {Promise<void>} [injecting]
+ * @property {boolean} pageDomain  DevTools' Page domain turned on
+ * @property {{ classes: Set<string>, ids: Set<string>, hrefs: Set<string> }} seen  what the cosmetic pass asked about
+ * @property {ReturnType<typeof setTimeout>[]} passTimers
+ * @property {import("electron").WebContentsView | null} view
+ * @property {string} title
+ * @property {string} url
+ * @property {boolean} loading
+ * @property {number} blocked
+ * @property {{ code: number, text: string, url: string, httpFallback: string | null } | null} error
+ * @property {boolean} startPage
+ * @property {{ nonce: string, origin: string } | null} pw  "Remember passwords" on this page (browserTabPasswords.cjs)
+ * @property {boolean} pwField
+ * @property {boolean} [pwAutoFilled]
+ * @property {{ origin: string, username: string, password: string, update: boolean,
+ *   timer: ReturnType<typeof setTimeout> } | null} pwPrompt
+ * @property {boolean} fromApp
+ * @property {{ nonce: string } | null} inara
+ * @property {ReturnType<typeof setTimeout> | undefined} inaraWait
+ * @property {number} [lastGesture]
+ * @property {number} [popups]
+ */
+
+/**
  * @param {object} o
  * @param {typeof import("electron")} o.electron
  * @param {ReturnType<typeof import("./browserPrefs.cjs").createBrowserPrefs>} o.prefs
@@ -81,25 +112,31 @@ const COLLAPSE_TYPES = new Set(["subFrame", "image", "object", "media"]);
  * @param {(wc: import("electron").WebContents) => boolean} o.isAppWindow  the sender is one of the app's windows
  * @param {(view: { webContents: import("electron").WebContents }) => void} [o.enableZoom]
  * @param {(msg: string) => void} [o.log]
+ * @param {ReturnType<typeof import("./browserPasswords.cjs").createBrowserPasswords> | null} [o.passwords]
  */
 function createBrowserTabs(o) {
   const { BrowserWindow, WebContentsView, Menu, clipboard, session, app } = o.electron;
   // Electron 44: the clipboard's calls return Promises; a failed copy is not worth a crash report.
-  const copyText = (t) => void Promise.resolve(clipboard.writeText(t)).catch(() => {});
-  /** @type {Map<number, any>} */
+  const copyText = (/** @type {string} */ t) => void Promise.resolve(clipboard.writeText(t)).catch(() => {});
+  /** @type {Map<number, BrowserTab>} */
   const tabs = new Map();
+  /** @type {number[]} tab ids, as the strip shows them */
   let order = [];
+  /** @type {number | null} */
   let active = null;
   let nextId = 1;
   /** @type {import("electron").BrowserWindow | null} */
   let host = null;
+  /** @type {{ x: number, y: number, width: number, height: number } | null} the page's box in the window (CSS pixels) */
   let bounds = null;
+  /** @type {ReturnType<typeof setTimeout> | null} */
   let detachTimer = null;
   /*
     Windows told the pages went to another window ("elsewhere"). When that window lets them go (its Browser tab or the
     window closes), they are told the pages are free and take them back; the pages used to close after the grace while
     the first window still had its Browser tab open (review 2026-10-24).
   */
+  /** @type {Set<import("electron").WebContents>} */
   const waiting = new Set();
   function offerToWaiting() {
     for (const wc of waiting) {
@@ -107,20 +144,24 @@ function createBrowserTabs(o) {
       else wc.send("edexo:browser-event", { type: "free" });
     }
   }
+  /** @type {import("electron").Session | null} */
   let ses = null;
   let cleared = false;
   /** Hosts whose https upgrade failed and that the commander chose to open over plain HTTP, this run. */
   const plainHttpOk = new Set();
   /** Hosts this run asked for over HTTPS instead of the HTTP a link named: only these may fall back to HTTP. */
   const upgradedHosts = new Set();
+  /** @type {{ name: string, state: string, received: number, total: number }[]} */
   const downloads = [];
 
-  const domainOf = (url) => o.blocker.hostOf(url).domain;
+  const domainOf = (/** @type {string} */ url) => o.blocker.hostOf(url).domain;
 
   // ---- session -------------------------------------------------------------------------------------------------
+  /** @returns {import("electron").Session} */
   function getSession() {
     if (ses) return ses;
-    ses = session.fromPartition(PARTITION);
+    const s = session.fromPartition(PARTITION);
+    ses = s;
     /*
       A plain Chrome user agent, as Electron's default for every page rather than an override on this session: an
       override leaves the page's client hints (navigator.userAgentData) without brands, which Cloudflare's "verify
@@ -156,10 +197,10 @@ function createBrowserTabs(o) {
           const limit = new Promise((r) => setTimeout(r, INJECT_WAIT_MS));
           return void Promise.race([injectFor(tab, details.url), limit]).finally(() => cb({}));
         }
-        const page = tab ? wc.getURL() || tab.url : null;
+        const page = tab && wc ? wc.getURL() || tab.url : null;
         if (!page || !o.prefs.site(domainOf(page) ?? "").blocking) return cb({});
         const d = o.blocker.decide(details, page);
-        if (d) {
+        if (d && tab) {
           tab.blocked++;
           if (d.cancel && COLLAPSE_TYPES.has(details.resourceType) && tab.collapse.size < 1000)
             tab.collapse.add(details.url);
@@ -210,11 +251,13 @@ function createBrowserTabs(o) {
     from site to site, and each runs only in the top frame of the hostname it was made for. Most sites have none:
     then nothing is attached at all.
   */
+  /** @param {BrowserTab} t @param {string} url */
   function injectFor(t, url) {
     // One at a time per tab (review 1.2.16: two at once could register a script twice and lose one of them).
     t.injecting = (t.injecting ?? Promise.resolve()).then(() => injectNow(t, url));
     return t.injecting;
   }
+  /** @param {BrowserTab} t @param {string} url */
   async function injectNow(t, url) {
     const wc = t.view?.webContents;
     if (!wc || wc.isDestroyed()) return;
@@ -248,7 +291,7 @@ function createBrowserTabs(o) {
       o.log?.(`browser: ${scripts.length} scriptlets registered`);
     } catch (e) {
       // Not attached (DevTools on the tab, a closed page): the page loads without its scriptlets.
-      o.log?.(`browser: scriptlets not set: ${e && e.message ? e.message : e}`);
+      o.log?.(`browser: scriptlets not set: ${e instanceof Error ? e.message : e}`);
       t.injected = { key: "", id: null };
     }
   }
@@ -256,6 +299,7 @@ function createBrowserTabs(o) {
   /** Everything a site stored, except the remembered sites' (plan 9.2: incognito by default), and the cache if kept. */
   async function clearUnremembered() {
     const keep = o.prefs.keptOrigins();
+    /** @type {import("electron").ClearDataOptions} */
     const what = {};
     if (o.prefs.keepCache()) what.dataTypes = [...DATA_TYPES_BUT_CACHE];
     if (keep.length) what.excludeOrigins = keep;
@@ -263,11 +307,12 @@ function createBrowserTabs(o) {
   }
 
   // ---- tabs ----------------------------------------------------------------------------------------------------
+  /** @param {unknown} wc */
   function tabOfContents(wc) {
     for (const t of tabs.values()) if (t.view && t.view.webContents === wc) return t;
     return null;
   }
-  const isBrowserContents = (wc) => tabOfContents(wc) != null;
+  const isBrowserContents = (/** @type {unknown} */ wc) => tabOfContents(wc) != null;
 
   let pushQueued = false;
   function changed() {
@@ -279,6 +324,7 @@ function createBrowserTabs(o) {
     }, 50);
   }
 
+  /** @param {BrowserTab} t */
   function tabView(t) {
     const live = t.view?.webContents;
     const wc = live && !live.isDestroyed() ? live : null;
@@ -303,15 +349,15 @@ function createBrowserTabs(o) {
         ? { origin: t.pwPrompt.origin, username: t.pwPrompt.username, update: t.pwPrompt.update }
         : null,
       // The key button: saved usernames for this exact origin, while the page shows a password field.
-      logins: t.pw && t.pwField && passwordsOn() ? passwords.usernames(t.pw.origin) : [],
+      logins: t.pw && t.pwField && passwords && passwordsOn() ? passwords.usernames(t.pw.origin) : [],
       // Logins saved for this origin that the master password still locks: the key button offers an unlock.
-      loginsLocked: t.pw && t.pwField && passwordsOn() ? passwords.lockedCount(t.pw.origin) : 0,
+      loginsLocked: t.pw && t.pwField && passwords && passwordsOn() ? passwords.lockedCount(t.pw.origin) : 0,
     };
   }
 
   function state() {
     return {
-      tabs: order.map((id) => tabView(tabs.get(id))),
+      tabs: order.map((id) => tabView(/** @type {BrowserTab} */ (tabs.get(id)))),
       active,
       blocker: o.blocker.status(),
       downloads: downloads.slice(0, 5),
@@ -325,6 +371,7 @@ function createBrowserTabs(o) {
     };
   }
 
+  /** @param {BrowserTab} t */
   function makeView(t) {
     const view = new WebContentsView({
       webPreferences: {
@@ -367,7 +414,7 @@ function createBrowserTabs(o) {
     wc.once("destroyed", () => {
       if (tabs.get(t.id)?.view === view) closeTab(t.id);
     });
-    const onlyHttp = (e, url) => {
+    const onlyHttp = (/** @type {{ preventDefault: () => void }} */ e, /** @type {string} */ url) => {
       if (!httpUrl(url)) e.preventDefault();
     };
     wc.on("will-navigate", onlyHttp);
@@ -498,6 +545,7 @@ function createBrowserTabs(o) {
       if (done) e.preventDefault();
     });
     wc.on("context-menu", (_e, p) => {
+      /** @type {import("electron").MenuItemConstructorOptions[]} */
       const items = [];
       if (p.linkURL && httpUrl(p.linkURL)) {
         items.push({ label: "Open link in a new tab", click: () => openTab(p.linkURL, t.id) });
@@ -535,6 +583,7 @@ function createBrowserTabs(o) {
     so they are asked for with those, a few times as the page fills; each new set of rules goes in as a user
     stylesheet (`display: none !important`, above the page's own styles), so the element leaves the layout.
   */
+  /** @param {BrowserTab} t */
   async function cosmeticPass(t) {
     const wc = t.view?.webContents;
     if (!wc || wc.isDestroyed()) return;
@@ -549,6 +598,7 @@ function createBrowserTabs(o) {
       return;
     }
     if (!r || wc.isDestroyed() || wc.getURL() !== url) return;
+    /** @param {unknown} list @param {Set<string>} seen @returns {string[]} */
     const fresh = (list, seen) =>
       (Array.isArray(list) ? list : []).filter((v) => typeof v === "string" && !seen.has(v));
     const classes = fresh(r.classes, t.seen.classes);
@@ -561,6 +611,7 @@ function createBrowserTabs(o) {
     const css = o.blocker.domCosmetics(url, { classes, ids, hrefs });
     if (css) await wc.insertCSS(css, { cssOrigin: "user" }).catch(() => {});
   }
+  /** @param {BrowserTab} t */
   function cosmeticPasses(t) {
     for (const x of t.passTimers.splice(0)) clearTimeout(x);
     void cosmeticPass(t);
@@ -573,6 +624,7 @@ function createBrowserTabs(o) {
   const { passwordsOn, watchPasswords, onPageConsole, dropPrompt, passwordsView } = tabPasswords;
 
   /** A tab opened from EDEXO's Inara links (`openInara`): each commodity search it loads gets the pop-up. */
+  /** @param {BrowserTab} t @param {import("electron").WebContents} wc @param {string} url */
   function offerInara(t, wc, url) {
     t.inara = null;
     if (!t.fromApp || !isInaraCommodityPage(url)) return;
@@ -582,6 +634,7 @@ function createBrowserTabs(o) {
   }
 
   /** What "EDEXO — Read" takes: the page's results table, its near star and the commodity picked, as shown. */
+  /** @param {BrowserTab | null | undefined} t */
   async function readInaraPage(t) {
     const wci = t?.view?.webContents;
     if (!t || t.startPage || !wci || wci.isDestroyed()) return { error: "No page open." };
@@ -592,13 +645,14 @@ function createBrowserTabs(o) {
     if (!table) return { error: "No results on this page yet: run the search on Inara first." };
     if (table.length > INARA_TABLE_MAX) return { error: "The results table is too large to read." };
     const commodities = Array.isArray(r?.commodities)
-      ? r.commodities.filter((c) => typeof c === "string" && c.length <= 80).slice(0, 10)
+      ? r.commodities.filter((/** @type {unknown} */ c) => typeof c === "string" && c.length <= 80).slice(0, 10)
       : [];
     const near = typeof r?.near === "string" ? r.near.slice(0, 120) : "";
     return { ok: true, url, table, near, commodities };
   }
 
   /** The pop-up's text, in the page. */
+  /** @param {BrowserTab} t @param {unknown} text @param {boolean} ok */
   function inaraSay(t, text, ok) {
     const wci = t?.view?.webContents;
     if (!wci || wci.isDestroyed() || !t.inara) return;
@@ -609,8 +663,13 @@ function createBrowserTabs(o) {
   /**
    * The pop-up's buttons: a console line with this page's Inara nonce, from the top frame. Read: the page is read
    * and handed to the app window, which saves the sellers and answers with `inaraResult`.
+   *
+   * @param {BrowserTab} t
+   * @param {import("electron").WebContents} _wc
+   * @param {unknown} message
+   * @param {{ parent?: unknown } | null | undefined} frame
    */
-  function onInaraConsole(t, wc, message, frame) {
+  function onInaraConsole(t, _wc, message, frame) {
     const inara = t.inara;
     if (!inara || typeof message !== "string" || !message.startsWith(inara.nonce)) return;
     if (frame && frame.parent) return;
@@ -637,6 +696,7 @@ function createBrowserTabs(o) {
     });
   }
 
+  /** @param {string} type */
   function send(type) {
     if (host && !host.isDestroyed()) host.webContents.send("edexo:browser-event", { type });
   }
@@ -646,6 +706,7 @@ function createBrowserTabs(o) {
     screen): the window goes fullscreen and that page covers all of it, over the app's toolbar and tabs, until the
     page leaves fullscreen (its button, or Esc). A window already fullscreen stays so afterwards.
   */
+  /** @type {{ id: number, wasFull: boolean } | null} */
   let fullscreen = null;
   function placeViews() {
     if (!host || host.isDestroyed()) return;
@@ -663,7 +724,7 @@ function createBrowserTabs(o) {
     for (const t of tabs.values()) {
       if (!t.view) continue;
       const show = t.id === active && bounds && !t.startPage;
-      if (show) {
+      if (show && bounds) {
         t.view.setBounds({
           x: Math.round(bounds.x * zoom),
           y: Math.round(bounds.y * zoom),
@@ -676,7 +737,9 @@ function createBrowserTabs(o) {
   }
 
   /** The host window's listeners, taken off when the pages move to another window (review 1.2.16: they piled up). */
+  /** @type {{ win: import("electron").BrowserWindow, resize: () => void, closed: () => void } | null} */
   let hostListeners = null;
+  /** @param {import("electron").BrowserWindow} win */
   function adopt(win) {
     if (host === win) return;
     for (const t of tabs.values()) {
@@ -713,6 +776,7 @@ function createBrowserTabs(o) {
     fullscreen = null;
   }
 
+  /** @param {BrowserTab} t @param {string} url */
   function load(t, url) {
     t.startPage = false;
     t.error = null;
@@ -727,9 +791,15 @@ function createBrowserTabs(o) {
     changed();
   }
 
-  /** A new tab after `after` (or at the end), on `url`, or on the start page when url is null; behind if asked. */
+  /**
+   * A new tab after `after` (or at the end), on `url`, or on the start page when url is null; behind if asked.
+   * @param {string | null} url
+   * @param {number} [after]  the tab it opens beside
+   * @param {{ background?: boolean }} [how]
+   */
   function openTab(url, after, how = {}) {
     if (tabs.size >= MAX_TABS) return null;
+    /** @type {BrowserTab} */
     const t = {
       id: nextId++,
       collapse: new Set(),
@@ -763,6 +833,7 @@ function createBrowserTabs(o) {
     return t.id;
   }
 
+  /** @param {number} id */
   function closeTab(id) {
     const t = tabs.get(id);
     if (!t) return;
@@ -794,9 +865,10 @@ function createBrowserTabs(o) {
     changed();
   }
 
+  /** @param {number} dir  1 the next tab, -1 the previous */
   function stepTab(dir) {
     if (order.length < 2) return;
-    const i = order.indexOf(active);
+    const i = active == null ? -1 : order.indexOf(active);
     active = order[(i + dir + order.length) % order.length];
     placeViews();
     changed();
@@ -827,7 +899,7 @@ function createBrowserTabs(o) {
   }
 
   function armDetach() {
-    clearTimeout(detachTimer);
+    clearTimeout(detachTimer ?? undefined);
     detachTimer = setTimeout(() => {
       detachTimer = null;
       if (!bounds || !host) closeAll();
@@ -835,7 +907,9 @@ function createBrowserTabs(o) {
   }
 
   // ---- calls from the app's window -------------------------------------------------------------------------------
+  /** @param {unknown} v @returns {number | null} */
   const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  /** @param {any} a */
   const idOf = (a) => (typeof a?.id === "number" && tabs.has(a.id) ? a.id : null);
 
   /** @param {import("electron").IpcMainInvokeEvent} e @param {any} a */
@@ -853,7 +927,7 @@ function createBrowserTabs(o) {
         return state();
       case "start": {
         // The Browser tab is on screen in this window: its pages come here, the engine is read.
-        clearTimeout(detachTimer);
+        clearTimeout(detachTimer ?? undefined);
         detachTimer = null;
         // The window that had them (Compare and Colonize can both have a Browser tab) is told, so it says so.
         if (host && host !== win && !host.isDestroyed()) {
@@ -913,7 +987,7 @@ function createBrowserTabs(o) {
         }
         const r = a?.rect;
         bounds =
-          r && num(r.x) != null && num(r.y) != null && num(r.width) > 0 && num(r.height) > 0
+          r && num(r.x) != null && num(r.y) != null && (num(r.width) ?? 0) > 0 && (num(r.height) ?? 0) > 0
             ? { x: r.x, y: r.y, width: r.width, height: r.height }
             : null;
         placeViews();
@@ -977,7 +1051,7 @@ function createBrowserTabs(o) {
       }
       case "siteBlocking": {
         const dom = t?.url ? domainOf(t.url) : null;
-        if (!dom) return { error: "No site." };
+        if (!t || !dom) return { error: "No site." };
         o.prefs.setBlocking(dom, a?.on !== false);
         /*
           A reload after blocking is switched on or off, or a site's data is cleared, skips the cache (owner,
@@ -993,7 +1067,7 @@ function createBrowserTabs(o) {
       }
       case "siteRemember": {
         const dom = t?.url ? domainOf(t.url) : null;
-        if (!dom) return { error: "No site." };
+        if (!t || !dom) return { error: "No site." };
         const on = a?.on === true;
         const before = o.prefs.site(dom).origins;
         o.prefs.setRemember(dom, on);
@@ -1007,7 +1081,7 @@ function createBrowserTabs(o) {
       }
       case "forgetSite": {
         const dom = t?.url ? domainOf(t.url) : null;
-        if (!dom) return { error: "No site." };
+        if (!t || !dom) return { error: "No site." };
         const before = o.prefs.site(dom).origins;
         o.prefs.forget(dom);
         await getSession()
@@ -1067,7 +1141,7 @@ function createBrowserTabs(o) {
      * takes the keyboard from the page. A menu open over the page (no box) or another tab of the app: the notices.
      */
     reloadShown() {
-      const reload = (t) => {
+      const reload = (/** @type {BrowserTab | null | undefined} */ t) => {
         const wc = t?.view?.webContents;
         if (!wc || wc.isDestroyed()) return false;
         wc.reload();
