@@ -43,11 +43,15 @@ function hudWindowOptions(width, height, icon, preloadPath) {
       // overlay pages, `resizeHudOverlay` silently no-ops, and every HUD stays at the size it was
       // opened with — which is why the tracker's radar was cut off at the bottom.
       preload: preloadPath,
-      // `sandbox: false` is the only explicit opt-out in the app. The overlays are frameless,
-      // transparent, always-on-top windows whose rendering cannot be verified from a test or a
-      // headless run, and changing the packaged app on an untested assumption is how §31 happened.
-      // Flip it, launch the app, and open the overlays before committing.
-      sandbox: false,
+      /*
+        Sandboxed like every other window of the app (plan 1.8). Was the one opt-out until 2026-11-25: the overlays'
+        rendering cannot be checked from a test, so it waited for a run of the real app. Checked then from the repo
+        on an isolated profile: nine HUDs opened in the shared host (hudHost.cjs) and again each in a window of its
+        own (shareRenderer off), the preload's bridge was there and each page sized itself through it, the screenshots
+        matched the unsandboxed run, no new page errors, and the screen marker's capture opened at full size. The
+        preload only requires "electron" and reads process.argv, both there in a sandbox (tests/hudWindowOptions.test.ts).
+      */
+      sandbox: true,
       /*
         A session of their own (owner, 2026-09-26): Chromium keeps one zoom per site per session, and
         the HUDs are the launcher's site, so zooming the launcher zoomed every overlay. Their
