@@ -29,7 +29,7 @@ const BACKUP_WAIT_MS = 10 * 60_000;
  * @param {(method: string, arg: unknown) => unknown} o.onHud  a HUD bridge call for main's windows
  * @param {(title: string, message: string) => void} o.onDialog
  * @param {(code: number) => void} o.onUnexpectedExit  the server process ended while the app runs
- * @returns {Promise<object>} the runtime, once the server listens
+ * @returns the runtime (ServerRuntime), once the server listens
  */
 function startServerChild(o) {
   const child = o.utilityProcess.fork(o.bundle, [], {
@@ -147,7 +147,8 @@ function startServerChild(o) {
     boxelStep: (dir) => call("boxelStep", dir),
     boxelRunToggle: () => call("boxelRunToggle"),
     openMainAppInBrowser: () => void call("openMainAppInBrowser").catch(() => {}),
-    stagedUpdate: () => call("stagedUpdate"),
+    /** The update downloaded and waiting (src/server), as quitFlow.cjs reads it. */
+    stagedUpdate: () => /** @type {Promise<import("./quitFlow.cjs").StagedUpdate | null>} */ (call("stagedUpdate")),
     // A backup takes seconds; this is only there so a stuck server cannot hold the quit for ever.
     whenBackupDone: () => callWithin(BACKUP_WAIT_MS, "whenBackupDone"),
     /*
@@ -179,7 +180,8 @@ function startServerChild(o) {
       }),
   };
 
-  return new Promise((resolveStart, rejectStart) => {
+  /** @type {Promise<typeof runtime>} */
+  const startedRuntime = new Promise((resolveStart, rejectStart) => {
     let started = false;
     child.on("message", async (m) => {
       if (!m || typeof m !== "object") return;
@@ -244,6 +246,9 @@ function startServerChild(o) {
     ready.catch(() => {});
     child.postMessage({ type: "start", mode: o.mode, argv: o.argv });
   });
+  return startedRuntime;
 }
+
+/** What main.cjs drives the server with. @typedef {Awaited<ReturnType<typeof startServerChild>>} ServerRuntime */
 
 module.exports = { startServerChild };

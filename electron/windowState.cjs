@@ -149,7 +149,7 @@ const ZOOM_STEP = 0.5;
 const ZOOM_MIN = -3;
 const ZOOM_MAX = 5;
 
-/** @param {import("electron").BrowserWindow} win */
+/** @param {{ webContents: import("electron").WebContents }} win  a window or a view (the browser's pages) */
 function enableZoom(win) {
   const wc = win.webContents;
   /** @param {number} dir */
