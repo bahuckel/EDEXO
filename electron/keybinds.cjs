@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -30,6 +31,7 @@ const { writeFileAtomic } = require("./atomicWrite.cjs");
   categories"), in the order of GROUPS.
 */
 const GROUPS = ["HUD", "Body tabs", "Screen tabs", "Notices", "Radar", "Boxels"];
+/** @type {Record<string, { default: string, label: string, gameOnly?: boolean, group: string }>} */
 const ACTIONS = {
   hudToggle: { default: "Control+Alt+H", label: "Show / hide the HUDs", group: "HUD" },
   bodyPrev: { default: "F1", label: "Previous body tab", gameOnly: true, group: "Body tabs" },
@@ -50,7 +52,11 @@ const ACTIONS = {
 const MODIFIERS = new Set(["Control", "Ctrl", "CommandOrControl", "CmdOrCtrl", "Alt", "Shift", "Super", "Meta"]);
 const KEY = /^([A-Z0-9]|F([1-9]|1[0-9]|2[0-4])|Space|Tab|Backspace|Delete|Insert|Return|Enter|Up|Down|Left|Right|Home|End|PageUp|PageDown|Escape|Esc|Plus|num[0-9]|numdec|numadd|numsub|nummult|numdiv|[`\-=[\]\\;',./])$/;
 
-/** An accelerator string we accept: 1-3 parts, modifiers first, exactly one non-modifier key last. */
+/**
+ * An accelerator string we accept: 1-3 parts, modifiers first, exactly one non-modifier key last.
+ * @param {unknown} acc
+ * @returns {acc is string}
+ */
 function validAccelerator(acc) {
   if (typeof acc !== "string") return false;
   if (acc === "") return true;
@@ -73,8 +79,12 @@ function validAccelerator(acc) {
  */
 function createKeybinds(deps) {
   let binds = Object.fromEntries(Object.entries(ACTIONS).map(([k, v]) => [k, v.default]));
-  /** What each action's bind did when applied: ok, taken (another program has it), duplicate, invalid, off. */
+  /**
+   * What each action's bind did when applied: ok, taken (another program has it), duplicate, invalid, off.
+   * @type {Record<string, string>}
+   */
   let status = {};
+  /** @type {string[]} */
   let registered = [];
   /** Elite is the window in front: the game-only binds are registered (see the note at the top). */
   let gameFocused = false;
@@ -151,12 +161,15 @@ function createKeybinds(deps) {
     return status;
   }
 
-  /** Replace some binds ("" turns one off, null puts the default back), save, and register again. */
+  /**
+   * Replace some binds ("" turns one off, null puts the default back), save, and register again.
+   * @param {unknown} next  `{ [action]: string | null }` from the launcher
+   */
   function set(next) {
     if (next && typeof next === "object") {
       for (const k of Object.keys(ACTIONS)) {
         if (!(k in next)) continue;
-        const v = next[k];
+        const v = /** @type {Record<string, unknown>} */ (next)[k];
         if (v === null) binds[k] = ACTIONS[k].default;
         else if (typeof v === "string" && validAccelerator(v)) binds[k] = v;
       }
@@ -188,6 +201,7 @@ function createKeybinds(deps) {
     reaches any window, so pressing F1 to keep F1 would otherwise record nothing.
   */
   /** The game came to the front (true) or something else did: game-only binds follow it. */
+  /** @param {boolean} on */
   function setGameFocused(on) {
     const next = on === true;
     if (next === gameFocused) return;
@@ -195,6 +209,7 @@ function createKeybinds(deps) {
     if (!paused) apply();
   }
 
+  /** @param {unknown} on */
   function pause(on) {
     paused = !!on;
     if (on) {
@@ -219,8 +234,8 @@ function createKeybinds(deps) {
     get,
     pause,
     setGameFocused,
-    bindFor: (k) => binds[k] ?? "",
-    statusFor: (k) => status[k] ?? "off",
+    bindFor: (/** @type {string} */ k) => binds[k] ?? "",
+    statusFor: (/** @type {string} */ k) => status[k] ?? "off",
   };
 }
 

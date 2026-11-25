@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /**
@@ -64,6 +65,7 @@ function warmupHtml(webRoot) {
 function startGpuWarmup(o) {
   const html = warmupHtml(o.webRoot);
   if (!html) return { done: () => {} };
+  /** @type {import("electron").BrowserWindow | null} */
   let win = null;
   try {
     win = new o.BrowserWindow({
@@ -90,7 +92,8 @@ function startGpuWarmup(o) {
     o.log?.(`gpu warm-up not started (${e instanceof Error ? e.message : String(e)})`);
     win = null;
   }
-  let timer = null;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timer;
   const done = () => {
     clearTimeout(timer);
     const w = win;

@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -9,7 +10,8 @@ const { HUD_TOGGLE_SHORTCUT } = require("./hudWindows.cjs");
 
 /**
  * @param {{ showLauncher: () => void, huds: { isHidden: () => boolean, count: () => number,
- *   toggleVisibility: (force?: boolean) => boolean }, getUiUrl: () => (string | null) }} deps
+ *   toggleVisibility: (force?: boolean) => boolean }, getUiUrl: () => (string | null),
+ *   hudShortcut?: () => string }} deps  `hudShortcut`: the launcher's HUD bind ("" when switched off)
  */
 function createTrayControl(deps) {
   /*
@@ -17,6 +19,7 @@ function createTrayControl(deps) {
     it again, toggles the HUDs, opens the UI in the browser, quits. One instance, rebuilt when the
     HUD visibility changes so the label reads right.
   */
+  /** @type {import("electron").Tray | null} */
   let tray = null;
   const showLauncher = deps.showLauncher;
   function buildTrayMenu() {
@@ -48,6 +51,7 @@ function createTrayControl(deps) {
       /* ignore */
     }
   }
+  /** @param {import("electron").NativeImage | null} iconImage */
   function createTray(iconImage) {
     if (tray) return;
     try {
@@ -73,7 +77,7 @@ function createTrayControl(deps) {
     tray = null;
   }
 
-  /** A short notice from the tray icon (Windows balloon; elsewhere nothing). */
+  /** A short notice from the tray icon (Windows balloon; elsewhere nothing). @param {string} title @param {string} content */
   function notify(title, content) {
     if (!tray || process.platform !== "win32") return;
     try {

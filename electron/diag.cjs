@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /**
@@ -28,11 +29,13 @@ const LOG_STALL_MS = 500;
 const KEEP_PROFILE_STALL_MS = 2000;
 const PROFILE_FOR_MS = 5 * 60 * 1000;
 
+/** @param {{ outDir: string }} o */
 function start({ outDir }) {
   fs.mkdirSync(outDir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const logPath = path.join(outDir, `stalls-${stamp}.log`);
   const t0 = performance.now();
+  /** @param {string} msg */
   const log = (msg) => {
     const up = ((performance.now() - t0) / 1000).toFixed(1);
     try {
@@ -66,10 +69,11 @@ function start({ outDir }) {
     session.post("Profiler.start");
     profiling = true;
   } catch (e) {
-    log(`cpu profiler unavailable: ${e && e.message ? e.message : e}`);
+    log(`cpu profiler unavailable: ${e instanceof Error ? e.message : e}`);
   }
 
   let stopped = false;
+  /** @param {string} why */
   const stop = (why) => {
     if (stopped) return;
     stopped = true;
@@ -82,7 +86,7 @@ function start({ outDir }) {
           fs.writeFileSync(file, JSON.stringify(res.profile));
           log(`cpu profile written (${why}): ${file}`);
         } catch (e) {
-          log(`cpu profile could not be written: ${e && e.message ? e.message : e}`);
+          log(`cpu profile could not be written: ${e instanceof Error ? e.message : e}`);
         }
       } else {
         log(`cpu profile discarded (${why}; worst stall ${Math.round(worstStall)} ms)`);
@@ -99,6 +103,7 @@ function start({ outDir }) {
   return {
     mark: log,
     stop,
+    /** @param {import("electron").BrowserWindow} win @param {string} name */
     watchWindow(win, name) {
       win.on("unresponsive", () => {
         windowHung = true;
