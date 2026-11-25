@@ -1,0 +1,12 @@
+{
+  // The launcher's page scripts (src/client/launcher/*.js, ES modules bundled by Vite), type-checked from their JSDoc
+  // (plan 2.6). As with tsconfig.electron.json, only files that start with `// @ts-check` are checked. The bridge
+  // preload.cjs exposes is typed in electron/preload-bridge.d.ts.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src/client/launcher/**/*.js", "electron/preload-bridge.d.ts"]
+}

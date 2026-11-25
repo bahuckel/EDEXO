@@ -1,3 +1,4 @@
+// @ts-check
 /*
   Imports: a Spansh export (the feeder's build-side tool) and the systems visited from another commander's or tool's list.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -5,21 +6,22 @@
 import { apiUrl } from "./network.js";
 
 /* ------------------------------------------------------------------ import Spansh export */
-var importModal = document.getElementById("importModal");
-var btnImportDump = document.getElementById("btnImportDump");
-var importClose = document.getElementById("importClose");
-var importStart = document.getElementById("importStart");
-var importFile = document.getElementById("importFile");
-var importApply = document.getElementById("importApply");
-var importStatus = document.getElementById("importStatus");
-var importNewer = document.getElementById("importNewer");
-var importNewerText = document.getElementById("importNewerText");
-var importNewerGo = document.getElementById("importNewerGo");
+const importModal = document.getElementById("importModal");
+const btnImportDump = document.getElementById("btnImportDump");
+const importClose = document.getElementById("importClose");
+const importStart = /** @type {HTMLButtonElement | null} */ (document.getElementById("importStart"));
+const importFile = /** @type {HTMLInputElement | null} */ (document.getElementById("importFile"));
+const importApply = /** @type {HTMLInputElement | null} */ (document.getElementById("importApply"));
+const importStatus = document.getElementById("importStatus");
+const importNewer = document.getElementById("importNewer");
+const importNewerText = document.getElementById("importNewerText");
+const importNewerGo = document.getElementById("importNewerGo");
 var LS_IMPORT_FILE = "edexo.launcher.importFile";
 function rememberedImportFile() {
   try { return localStorage.getItem(LS_IMPORT_FILE) || ""; } catch (e) { return ""; }
 }
 /* The "newer export on disk" chip (owner, 2026-09-13): mtime moved since the last import of that file. */
+/** @param {any} st  /api/feeder/import-dump/status */
 function renderImportNewer(st) {
   var show = !!(st && st.newerOnDisk && !st.running);
   if (importNewer) importNewer.hidden = !show;
@@ -35,6 +37,7 @@ function renderImportNewer(st) {
     importNewerText.textContent = "Newer export on disk" + (when ? " (" + when + ")" : "") + " — last imported " + (st.lastImport && st.lastImport.finishedAt ? new Date(st.lastImport.finishedAt).toLocaleString(undefined) : "before") + ".";
   }
 }
+/** @param {string} file @param {boolean} apply */
 function startImport(file, apply) {
   if (importStart) importStart.disabled = true;
   return fetch(apiUrl("/api/feeder/import-dump"), {
@@ -53,13 +56,16 @@ function startImport(file, apply) {
       showImportStatus(String(e && e.message ? e.message : e), "err");
     });
 }
+/** @type {ReturnType<typeof setTimeout> | null} */
 var importPollTimer = null;
+/** @param {string} text @param {string} cls */
 function showImportStatus(text, cls) {
   if (!importStatus) return;
   importStatus.hidden = false;
   importStatus.className = "import-status" + (cls ? " " + cls : "");
   importStatus.textContent = text;
 }
+/** @param {any} st */
 function renderImportStatus(st) {
   if (!st) return;
   if (st.running) {
@@ -85,22 +91,25 @@ function pollImport() {
     .catch(function () { importPollTimer = null; });
 }
 /* ------------------------------------------------------------------ import visited systems (plan 6.1) */
-var visitedModal = document.getElementById("visitedModal");
-var btnImportVisited = document.getElementById("btnImportVisited");
-var visitedList = document.getElementById("visitedList");
-var visitedImported = document.getElementById("visitedImported");
-var visitedStatus = document.getElementById("visitedStatus");
-var visitedRemove = document.getElementById("visitedRemove");
-var visitedClose = document.getElementById("visitedClose");
+const visitedModal = document.getElementById("visitedModal");
+const btnImportVisited = document.getElementById("btnImportVisited");
+const visitedList = /** @type {HTMLElement} */ (document.getElementById("visitedList"));
+const visitedImported = /** @type {HTMLElement} */ (document.getElementById("visitedImported"));
+const visitedStatus = document.getElementById("visitedStatus");
+const visitedRemove = /** @type {HTMLElement} */ (document.getElementById("visitedRemove"));
+const visitedClose = document.getElementById("visitedClose");
+/** @param {string} text @param {string} kind */
 function visitedSay(text, kind) {
   if (!visitedStatus) return;
   visitedStatus.hidden = !text;
   visitedStatus.className = "import-status" + (kind ? " " + kind : "");
   visitedStatus.textContent = text || "";
 }
+/** @param {string | null | undefined} iso */
 function visitedDate(iso) {
   return iso ? new Date(iso).toLocaleString(undefined) : "";
 }
+/** @param {any} j  /api/visited-cache */
 function visitedRender(j) {
   var imp = j && j.imported;
   visitedImported.hidden = !imp;
@@ -117,7 +126,7 @@ function visitedRender(j) {
       "%LOCALAPPDATA%\\Frontier Developments\\Elite Dangerous\\<account>) once you have played on this PC.", "err");
     return;
   }
-  files.forEach(function (f) {
+  files.forEach(function (/** @type {any} */ f) {
     var li = document.createElement("li");
     var text = document.createElement("span");
     text.textContent = "Account " + f.account + ": " + f.systems.toLocaleString("en-US") + " systems in the game's list, " +
@@ -140,6 +149,7 @@ function visitedLoad() {
     .then(visitedRender)
     .catch(function (e) { visitedSay("Could not read the game's list: " + String(e && e.message ? e.message : e), "err"); });
 }
+/** @param {string} account */
 function visitedImport(account) {
   visitedSay("Importing…", "");
   fetch(apiUrl("/api/visited-cache/import"), {

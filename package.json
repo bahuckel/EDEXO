@@ -60,12 +60,13 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:variety": "playwright test -c playwright.variety.config.ts",
-    "typecheck": "npm run typecheck:client && npm run typecheck:server && npm run typecheck:tests && npm run typecheck:electron",
+    "typecheck": "npm run typecheck:client && npm run typecheck:server && npm run typecheck:tests && npm run typecheck:electron && npm run typecheck:launcher",
     "typecheck:server": "tsc --noEmit -p tsconfig.server.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.test.json",
     "dev:perf": "cross-env EDEXO_PERF=1 npm run dev",
     "start:client:perf": "cross-env EDEXO_PERF=1 tsx src/server/devEntry.ts --host 127.0.0.1 --port 7111 --open",
     "typecheck:electron": "tsc --noEmit -p tsconfig.electron.json",
+    "typecheck:launcher": "tsc --noEmit -p tsconfig.launcher.json",
     "typecheck:client": "tsc --noEmit"
   },
   "devDependencies": {

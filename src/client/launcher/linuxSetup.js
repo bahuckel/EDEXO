@@ -1,3 +1,4 @@
+// @ts-check
 /*
   Linux setup: what this desktop needs for the tray and the HUD, checked and explained.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -17,7 +18,10 @@ var linuxSetupIntro = document.getElementById("linuxSetupIntro");
 var linuxSetupSig = "";
 // The first-run card goes first (the journal folder matters most); this one waits for it.
 export var linuxSetupPending = false;
-/** The first-run card puts the Linux setup card aside while it is up, and back when it closes (wizard.js). */
+/**
+ * The first-run card puts the Linux setup card aside while it is up, and back when it closes (wizard.js).
+ * @param {boolean} on
+ */
 export function setLinuxSetupPending(on) {
   linuxSetupPending = on;
 }
@@ -25,6 +29,11 @@ export function wizardIsOpen() {
   var wz = document.getElementById("wizardModal");
   return !!(wz && wz.classList.contains("on"));
 }
+/**
+ * One problem the server's check found (linuxCheck.ts), or the hotkey one added here.
+ * @typedef {{ id: string, severity?: string, title: string, detail: string, command?: string, packages?: string[], then?: string }} LinuxSetupItem
+ */
+/** @param {LinuxSetupItem} it */
 function linuxSetupItemEl(it) {
   var li = document.createElement("li");
   li.className = it.severity || "warning";
@@ -43,9 +52,10 @@ function linuxSetupItemEl(it) {
     copy.type = "button";
     copy.className = "btn-mini";
     copy.textContent = "Copy";
+    const command = it.command;
     copy.addEventListener("click", function () {
       try {
-        void navigator.clipboard.writeText(it.command).then(function () { copy.textContent = "Copied"; });
+        void navigator.clipboard.writeText(command).then(function () { copy.textContent = "Copied"; });
       } catch (e) {}
     });
     row.appendChild(code);
@@ -65,6 +75,7 @@ function linuxSetupItemEl(it) {
   }
   return li;
 }
+/** @param {boolean} force  show it even when this set of problems was closed before */
 export async function loadLinuxSetup(force) {
   var r;
   try {
@@ -73,6 +84,7 @@ export async function loadLinuxSetup(force) {
     return;
   }
   if (!r || !r.applicable) return;
+  /** @type {LinuxSetupItem[]} */
   var items = (r.items || []).slice();
   var ee = window.edexoElectron;
   if (ee && typeof ee.getHotkeyStatus === "function") {
@@ -106,8 +118,9 @@ export async function loadLinuxSetup(force) {
       " — " + items.length + (items.length === 1 ? " thing" : " things") + " to sort out:";
   }
   if (linuxSetupList) {
-    linuxSetupList.innerHTML = "";
-    items.forEach(function (it) { linuxSetupList.appendChild(linuxSetupItemEl(it)); });
+    const list = linuxSetupList;
+    list.innerHTML = "";
+    items.forEach(function (it) { list.appendChild(linuxSetupItemEl(it)); });
   }
   if (wizardIsOpen()) {
     linuxSetupPending = true;

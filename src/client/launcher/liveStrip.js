@@ -1,3 +1,4 @@
+// @ts-check
 /*
   The live strip under the status card and the journal health line.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -7,14 +8,16 @@ import { hudPaths } from "./hudOverlays.js";
 
 /* ------------------------------------------------------------------ live strip + journal health */
 var LS_STRIP = "edexo.launcher.strip";
-var toggleLiveStrip = document.getElementById("toggleLiveStrip");
+var toggleLiveStrip = /** @type {HTMLInputElement | null} */ (document.getElementById("toggleLiveStrip"));
 var liveStrip = document.getElementById("liveStrip");
+/** @param {string} id @param {unknown} text @param {string} [cls] */
 function setCell(id, text, cls) {
   var el = document.getElementById(id);
   if (!el) return;
   el.textContent = text == null || text === "" ? "—" : String(text);
   el.className = "v" + (text == null || text === "" ? " dim" : "") + (cls ? " " + cls : "");
 }
+/** @param {any} data  the server's /api/status answer */
 export function renderLiveStrip(data) {
   if (!liveStrip) return;
   liveStrip.hidden = !readBoolLs(LS_STRIP, false);
@@ -40,6 +43,7 @@ export function renderLiveStrip(data) {
   journal has gone quiet for ten minutes: a wrong folder or a game that stopped writing.
 */
 var lastHudPathCount = 0;
+/** @param {any} data  the server's /api/status answer */
 export function renderJournalHealth(data) {
   var el = document.getElementById("journalHealth");
   if (!el) return;
@@ -52,17 +56,18 @@ export function renderJournalHealth(data) {
   }
   el.hidden = false;
   el.textContent =
-    "A HUD is open but the journal has been silent for " + Math.round(ageMin) + " min. If the game is running, " +
+    "A HUD is open but the journal has been silent for " + Math.round(/** @type {number} */ (ageMin)) + " min. If the game is running, " +
     "check the journal folder (" + (data.journalDir || "?") + ") — the HUDs only move when the game writes.";
 }
 
 /** What ran when the page loaded, in the order it ran (main.js calls each module's in the file's old order). */
 export function start() {
   if (toggleLiveStrip) {
-    toggleLiveStrip.checked = readBoolLs(LS_STRIP, false);
-    toggleLiveStrip.addEventListener("change", function () {
-      writeBoolLs(LS_STRIP, toggleLiveStrip.checked);
-      if (liveStrip) liveStrip.hidden = !toggleLiveStrip.checked;
+    const box = toggleLiveStrip;
+    box.checked = readBoolLs(LS_STRIP, false);
+    box.addEventListener("change", function () {
+      writeBoolLs(LS_STRIP, box.checked);
+      if (liveStrip) liveStrip.hidden = !box.checked;
     });
   }
   setInterval(function () {

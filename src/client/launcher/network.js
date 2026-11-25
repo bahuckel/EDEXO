@@ -1,3 +1,4 @@
+// @ts-check
 /*
   The Network panel: the addresses this PC, the LAN and the internet reach the app by, which of them are shown, the LAN access switch and its warning.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -16,8 +17,10 @@ var LS_REVEAL_PUBLIC = "edexo.launcher.reveal.public";
 /* Where "Open Compare" (and "Open Colonize") opens. Defaults to the browser, per the owner. */
 export var LS_OPEN_MODE = "edexo.launcher.openMode";
 export var lastPort = 7111;
+/** @type {any} the last /api/status (or WebSocket slice) the Network panel drew */
 var lastConnectData = null;
 
+/** @param {string} key @param {boolean} defVal @returns {boolean} */
 export function readBoolLs(key, defVal) {
   try {
     var v = localStorage.getItem(key);
@@ -28,6 +31,7 @@ export function readBoolLs(key, defVal) {
   }
 }
 
+/** @param {string} key @param {unknown} val */
 export function writeBoolLs(key, val) {
   try {
     localStorage.setItem(key, val ? "1" : "0");
@@ -98,6 +102,7 @@ function syncNetworkModalControls() {
   }
 }
 
+/** @param {string} text */
 function makePlaceholderRow(text) {
   var li = document.createElement("li");
   li.className = "net-placeholder dim";
@@ -105,6 +110,7 @@ function makePlaceholderRow(text) {
   return li;
 }
 
+/** @param {string} savedPub @param {number} port */
 function publicUrlMatchesPort(savedPub, port) {
   if (!savedPub) return false;
   try {
@@ -135,6 +141,7 @@ function fetchPublicIpAndSave() {
     });
 }
 
+/** @param {string} pathname */
 export function apiUrl(pathname) {
   var proto = window.location.protocol || "";
   if (proto === "http:" || proto === "https:") return pathname;
@@ -149,18 +156,22 @@ function readUrlOn() {
     return {};
   }
 }
+/** @param {Record<string, boolean>} map */
 function writeUrlOn(map) {
   localStorage.setItem(LS_URL_ON, JSON.stringify(map));
 }
+/** @param {string} url */
 function isUrlEnabled(url) {
   return readUrlOn()[url] !== false;
 }
+/** @param {string} url @param {boolean} on */
 function setUrlEnabled(url, on) {
   var m = readUrlOn();
   m[url] = on;
   writeUrlOn(m);
 }
 
+/** @param {string} url @param {string} tag */
 function makeUrlRow(url, tag) {
   var on = isUrlEnabled(url);
   var li = document.createElement("li");
@@ -192,8 +203,9 @@ function makeUrlRow(url, tag) {
   return li;
 }
 
-var lanWarning = document.getElementById("lanWarning");
+const lanWarning = document.getElementById("lanWarning");
 
+/** @param {any} data */
 function renderLanWarning(data) {
   if (!lanWarning) return;
   if (!data || data.mode !== "server") {
@@ -210,18 +222,19 @@ function renderLanWarning(data) {
       "Start it with <strong>--local</strong> to bind to this PC only.";
 }
 
-var lanAccessBox = document.getElementById("lanAccessBox");
-export var lanAccessToggle = document.getElementById("lanAccessToggle");
-var lanAccessNote = document.getElementById("lanAccessNote");
-var lanAccessRestart = document.getElementById("lanAccessRestart");
+const lanAccessBox = document.getElementById("lanAccessBox");
+export const lanAccessToggle = /** @type {HTMLInputElement | null} */ (document.getElementById("lanAccessToggle"));
+const lanAccessNote = /** @type {HTMLElement} */ (document.getElementById("lanAccessNote"));
+const lanAccessRestart = /** @type {HTMLElement} */ (document.getElementById("lanAccessRestart"));
 var lanAccessBusy = false;
 
+/** @param {any} data */
 function renderLanAccess(data) {
   if (!lanAccessBox) return;
   var la = data && data.lanAccess;
   lanAccessBox.hidden = !la;
   if (!la) return;
-  if (!lanAccessBusy) lanAccessToggle.checked = !!la.saved;
+  if (!lanAccessBusy && lanAccessToggle) lanAccessToggle.checked = !!la.saved;
   var pending = !!la.saved !== !!la.active;
   var canRestart = !!(window.edexoElectron && typeof window.edexoElectron.relaunch === "function");
   lanAccessNote.textContent = pending
@@ -236,6 +249,7 @@ function renderLanAccess(data) {
 }
 
 /* The Network panel's switch and the first-run question both save through here. */
+/** @param {boolean} enabled */
 export function saveLanAccess(enabled) {
   lanAccessBusy = true;
   return fetch(apiUrl("/api/launcher/lan-access"), {
@@ -260,6 +274,7 @@ export function saveLanAccess(enabled) {
     });
 }
 
+/** @param {any} data  /api/status or the WebSocket slice */
 export function renderConnectUrls(data) {
   // The WebSocket frames carry no lanAccess, only /api/status does: keep the last one known.
   if (data && data.lanAccess === undefined && lastConnectData && lastConnectData.lanAccess !== undefined) {
@@ -305,7 +320,7 @@ export function renderConnectUrls(data) {
           : "No separate LAN IPv4 found (VPN off? single interface). This PC link still works.";
     modalLanUrlList.appendChild(note);
   } else {
-    data.lanUrls.forEach(function (u) {
+    data.lanUrls.forEach(function (/** @type {string} */ u) {
       modalLanUrlList.appendChild(makeUrlRow(u, "LAN"));
       /* The same address as the HUD for a phone: sections, theme and order as on the PC. */
       try {
@@ -365,8 +380,9 @@ function closeNetworkSettingsModal() {
 /** What ran when the page loaded, in the order it ran (main.js calls each module's in the file's old order). */
 export function start() {
   if (lanAccessToggle) {
-    lanAccessToggle.addEventListener("change", function () {
-      void saveLanAccess(lanAccessToggle.checked);
+    const box = lanAccessToggle;
+    box.addEventListener("change", function () {
+      void saveLanAccess(box.checked);
     });
   }
   if (lanAccessRestart) {

@@ -1,3 +1,4 @@
+// @ts-check
 /*
   Backups: where they go, how often, the list, and restoring app data or journals.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -5,38 +6,45 @@
 import { apiUrl } from "./network.js";
 
 /* ------------------------------------------------------------------------------ backups */
-var backupModal = document.getElementById("backupModal");
-var btnBackups = document.getElementById("btnBackups");
-var backupSub = document.getElementById("backupSub");
-var backupState = document.getElementById("backupState");
-var backupErr = document.getElementById("backupErr");
-var backupList = document.getElementById("backupList");
+const backupModal = document.getElementById("backupModal");
+const btnBackups = document.getElementById("btnBackups");
+const backupSub = document.getElementById("backupSub");
+const backupState = document.getElementById("backupState");
+const backupErr = document.getElementById("backupErr");
+const backupList = document.getElementById("backupList");
+// The panel's settings fields, all in launcher.html.
 var backupFields = {
-  onLeaveGame: document.getElementById("backupOnLeave"),
-  everyHours: document.getElementById("backupEvery"),
-  folder: document.getElementById("backupFolder"),
-  keep: document.getElementById("backupKeep"),
-  includeKeys: document.getElementById("backupKeys"),
-  includeBioBodies: document.getElementById("backupBio"),
+  onLeaveGame: /** @type {HTMLInputElement} */ (document.getElementById("backupOnLeave")),
+  everyHours: /** @type {HTMLSelectElement} */ (document.getElementById("backupEvery")),
+  folder: /** @type {HTMLInputElement} */ (document.getElementById("backupFolder")),
+  keep: /** @type {HTMLInputElement} */ (document.getElementById("backupKeep")),
+  includeKeys: /** @type {HTMLInputElement} */ (document.getElementById("backupKeys")),
+  includeBioBodies: /** @type {HTMLInputElement} */ (document.getElementById("backupBio")),
 };
+/** @typedef {keyof typeof backupFields} BackupField */
+/** @type {ReturnType<typeof setInterval> | null} */
 var backupPoll = null;
 /** What each field holds now (checkbox: checked, else its text), to tell later whether it was edited. */
 function backupFieldValues() {
+  /** @type {Record<string, string | boolean>} */
   var out = {};
-  Object.keys(backupFields).forEach(function (k) {
+  /** @type {BackupField[]} */ (Object.keys(backupFields)).forEach(function (k) {
     var f = backupFields[k];
-    out[k] = f.type === "checkbox" ? f.checked : f.value;
+    out[k] = f.type === "checkbox" ? /** @type {HTMLInputElement} */ (f).checked : f.value;
   });
   return out;
 }
 /** The last folder check ({level, against, …}), for the tile's line. */
+/** @type {any} */
 var backupRiskLast = null;
 /** From the last status: a folder was chosen (then saving keeps it). */
 var backupFolderChosen = false;
 
+/** @param {number} bytes */
 function backupMb(bytes) {
   return bytes >= 1e9 ? (bytes / 1e9).toFixed(2) + " GB" : (bytes / 1e6).toFixed(1) + " MB";
 }
+/** @param {string} iso */
 function backupWhen(iso) {
   var d = new Date(iso);
   var mins = Math.round((Date.now() - d.getTime()) / 60000);
@@ -45,17 +53,24 @@ function backupWhen(iso) {
   return d.toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + " (" + ago + ")";
 }
 /** The outcome of a restore: its own line, so the status refresh does not overwrite it. */
+/** @param {string} msg */
 function backupNote(msg) {
   var el = document.getElementById("backupMsg");
   if (!el) return;
   el.textContent = msg || "";
   el.hidden = !msg;
 }
+/** @param {string} msg */
 function backupShowErr(msg) {
   if (!backupErr) return;
   backupErr.textContent = msg || "";
   backupErr.style.display = msg ? "" : "none";
 }
+/**
+ * @param {string} path
+ * @param {unknown} [body]  sent as a POST when given
+ * @returns {Promise<any>}
+ */
 function backupJson(path, body) {
   return fetch(apiUrl(path), body === undefined ? undefined : {
     method: "POST",
@@ -75,6 +90,9 @@ function backupJson(path, body) {
  * then only fields still holding them are written, so what was typed meanwhile stays (2026-10-12: a
  * save's late answer put the suggested folder back over a folder typed after it, and "Use this
  * folder" then confirmed the suggestion).
+ *
+ * @param {boolean} fillFields
+ * @param {Record<string, string | boolean>} [sent]
  */
 function backupRefresh(fillFields, sent) {
   return backupJson("/api/backup/status")
@@ -112,11 +130,11 @@ function backupRefresh(fillFields, sent) {
       }
       var restartRow = document.getElementById("backupRestartRow");
       if (restartRow) restartRow.hidden = !s.restorePending;
-      var nowBtn = document.getElementById("backupNow");
+      var nowBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("backupNow"));
       if (nowBtn) nowBtn.disabled = !!s.running;
       if (fillFields) {
         var now = backupFieldValues();
-        var mine = function (k) { return !sent || now[k] === sent[k]; };
+        var mine = function (/** @type {string} */ k) { return !sent || now[k] === sent[k]; };
         if (mine("onLeaveGame")) backupFields.onLeaveGame.checked = !!s.settings.onLeaveGame;
         if (mine("everyHours")) backupFields.everyHours.value = String(s.settings.everyHours);
         if (mine("folder")) backupFields.folder.value = s.folder;
@@ -143,7 +161,7 @@ function backupLoadList() {
         backupList.appendChild(li);
         return;
       }
-      j.backups.forEach(function (b) {
+      j.backups.forEach(function (/** @type {any} */ b) {
         var li = document.createElement("li");
         var name = document.createElement("span");
         name.textContent = backupWhen(b.created) + " · " + backupMb(b.bytes);
@@ -176,9 +194,12 @@ function backupLoadList() {
     .catch(function (e) { backupShowErr("Could not list the backups: " + (e && e.message ? e.message : e)); });
 }
 
-/** Red: same partition as the journals or app data. Yellow: same physical drive. */
+/**
+ * Red: same partition as the journals or app data. Yellow: same physical drive.
+ * @param {string} folder @param {boolean} [forTile]
+ */
 function backupCheckFolder(folder, forTile) {
-  var box = document.getElementById("backupRisk");
+  const box = document.getElementById("backupRisk");
   if (!box) return;
   var q = folder ? "?folder=" + encodeURIComponent(folder) : "";
   backupJson("/api/backup/folder-check" + q)
@@ -228,6 +249,8 @@ function backupCheckFolder(folder, forTile) {
 /**
  * Save the panel. The folder counts as chosen only when the commander touched it (typed, Browse…,
  * Use this folder) or had chosen one before — ticking another box must not confirm the suggestion.
+ *
+ * @param {boolean} confirmFolder
  */
 function backupSave(confirmFolder) {
   backupShowErr("");
@@ -246,6 +269,7 @@ function backupSave(confirmFolder) {
     .catch(function (e) { backupShowErr("Could not save: " + (e && e.message ? e.message : e)); });
 }
 
+/** @param {string} start @returns {Promise<string | null>} */
 function backupPickFolder(start) {
   var bridge = window.edexoElectron;
   if (bridge && typeof bridge.pickFolder === "function") {
@@ -255,6 +279,7 @@ function backupPickFolder(start) {
   return Promise.resolve(typed && typed.trim() ? typed.trim() : null);
 }
 
+/** @param {string} file */
 function backupRestoreAppData(file) {
   if (!window.confirm(
     "Restore your app data from " + file + "?\n\nIt is put back the next time the app starts. Every file it replaces is moved into a before-restore folder, not deleted."
@@ -268,10 +293,11 @@ function backupRestoreAppData(file) {
     .catch(function (e) { backupShowErr("Could not restore: " + (e && e.message ? e.message : e)); });
 }
 
+/** @param {string} file */
 function backupRestoreJournals(file) {
   backupPickFolder("").then(function (target) {
     if (!target) return;
-    var send = function (allowGameFolder) {
+    var send = function (/** @type {boolean} */ allowGameFolder) {
       return backupJson("/api/backup/restore", { file: file, what: "journals", target: target, allowGameFolder: allowGameFolder });
     };
     backupShowErr("");
@@ -311,25 +337,26 @@ export function start() {
       if (backupPoll) clearInterval(backupPoll);
       backupPoll = null;
     };
-    document.getElementById("backupClose").addEventListener("click", closeBackups);
+    // The panel's buttons are all in launcher.html.
+    /** @type {HTMLElement} */ (document.getElementById("backupClose")).addEventListener("click", closeBackups);
     backupModal.addEventListener("click", function (e) { if (e.target === backupModal) closeBackups(); });
-    ["onLeaveGame", "everyHours", "keep", "includeKeys", "includeBioBodies"].forEach(function (k) {
+    /** @type {BackupField[]} */ (["onLeaveGame", "everyHours", "keep", "includeKeys", "includeBioBodies"]).forEach(function (k) {
       backupFields[k].addEventListener("change", function () { backupSave(false); });
     });
     backupFields.folder.addEventListener("change", function () { backupSave(true); });
     // Keeping the suggested folder is a choice too (one-drive PCs): confirm it as it stands.
-    document.getElementById("backupUseFolder").addEventListener("click", function () {
+    /** @type {HTMLElement} */ (document.getElementById("backupUseFolder")).addEventListener("click", function () {
       if (!backupFields.folder.value.trim()) return;
       backupSave(true);
     });
-    document.getElementById("backupBrowse").addEventListener("click", function () {
+    /** @type {HTMLElement} */ (document.getElementById("backupBrowse")).addEventListener("click", function () {
       backupPickFolder(backupFields.folder.value).then(function (p) {
         if (!p) return;
         backupFields.folder.value = p;
         backupSave(true);
       });
     });
-    document.getElementById("backupNow").addEventListener("click", function () {
+    /** @type {HTMLElement} */ (document.getElementById("backupNow")).addEventListener("click", function () {
       backupShowErr("");
       var p = backupJson("/api/backup/run", {});
       setTimeout(function () { backupRefresh(false); }, 150);
@@ -337,10 +364,10 @@ export function start() {
         .then(backupLoadList)
         .catch(function (e) { backupShowErr("Backup failed: " + (e && e.message ? e.message : e)); backupRefresh(false); });
     });
-    document.getElementById("backupOpenFolder").addEventListener("click", function () {
+    /** @type {HTMLElement} */ (document.getElementById("backupOpenFolder")).addEventListener("click", function () {
       backupJson("/api/backup/open-folder", {}).catch(function (e) { backupShowErr(String(e && e.message ? e.message : e)); });
     });
-    document.getElementById("backupRestart").addEventListener("click", function () {
+    /** @type {HTMLElement} */ (document.getElementById("backupRestart")).addEventListener("click", function () {
       var bridge = window.edexoElectron;
       if (bridge && typeof bridge.relaunch === "function") bridge.relaunch();
       else backupShowErr("Close the app and start it again to finish the restore.");

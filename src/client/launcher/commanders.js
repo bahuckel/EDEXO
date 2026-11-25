@@ -1,3 +1,4 @@
+// @ts-check
 /*
   The commander dropdown (per-commander profiles, 1.3.1, owner 2026-10-25): whose data Compare and Colonize show.
   Shown only when the journals name two or more commanders. At start the app shows the newest journal's commander
@@ -7,13 +8,19 @@
 import { apiUrl } from "./network.js";
 
 var cmdrPick = document.getElementById("cmdrPick");
-var cmdrSelect = document.getElementById("cmdrSelect");
+var cmdrSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById("cmdrSelect"));
 var cmdrNote = document.getElementById("cmdrNote");
+/**
+ * The last `commanders` of /api/status: who the journals name, who the app shows, who the game plays.
+ * @typedef {{ list?: { fid: string, name: string }[], active?: { fid: string, name: string } | null, game?: { fid: string, name: string } | null }} Commanders
+ */
+/** @type {Commanders | null} */
 var lastCommanders = null;
 var switching = false;
 /** An error stays readable this long; the status poll would otherwise replace it within seconds. */
 var errorUntil = 0;
 
+/** @param {string} text @param {boolean} warn */
 function setNote(text, warn) {
   if (!cmdrNote) return;
   cmdrNote.textContent = text || "";
@@ -21,9 +28,12 @@ function setNote(text, warn) {
 }
 
 /** From /api/status (`commanders`); a frame without it changes nothing. */
+/** @param {any} data */
 export function renderCommanders(data) {
+  /** @type {Commanders | undefined} */
   var c = data && data.commanders;
   if (!c || !cmdrPick || !cmdrSelect) return;
+  const select = cmdrSelect;
   lastCommanders = c;
   var list = c.list || [];
   cmdrPick.hidden = list.length < 2;
@@ -35,7 +45,7 @@ export function renderCommanders(data) {
       var o = document.createElement("option");
       o.value = x.fid;
       o.textContent = "CMDR " + x.name;
-      cmdrSelect.appendChild(o);
+      select.appendChild(o);
     });
     if (c.active) cmdrSelect.value = c.active.fid;
     cmdrSelect.dataset.key = key;
@@ -46,6 +56,7 @@ export function renderCommanders(data) {
   else setNote("", false);
 }
 
+/** @param {string} fid */
 function waitFor(fid) {
   var t0 = Date.now();
   (function check() {
@@ -65,14 +76,15 @@ function waitFor(fid) {
 /** What ran when the page loaded, in the order it ran (main.js calls each module's in the file's old order). */
 export function start() {
   if (!cmdrSelect) return;
-  cmdrSelect.addEventListener("change", function () {
-    var fid = cmdrSelect.value;
+  const select = cmdrSelect;
+  select.addEventListener("change", function () {
+    var fid = select.value;
     var c = lastCommanders;
     if (!c || (c.active && c.active.fid === fid)) return;
     var target = (c.list || []).find(function (x) { return x.fid === fid; });
     var name = target ? target.name : fid;
     switching = true;
-    cmdrSelect.disabled = true;
+    select.disabled = true;
     setNote("Switching to CMDR " + name + "…", false);
     fetch(apiUrl("/api/commanders/switch"), {
       method: "POST",
@@ -89,8 +101,8 @@ export function start() {
           return;
         }
         switching = false;
-        cmdrSelect.disabled = false;
-        if (c.active) cmdrSelect.value = c.active.fid;
+        select.disabled = false;
+        if (c && c.active) select.value = c.active.fid;
         errorUntil = Date.now() + 15000;
         setNote(r.error || "Could not switch commander.", true);
       });

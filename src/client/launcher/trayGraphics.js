@@ -1,3 +1,4 @@
+// @ts-check
 /*
   Close to tray and hardware acceleration: the launcher's two app-level switches.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -5,11 +6,12 @@
 
 /* ------------------------------------------------------------------ close to tray */
 var trayPrefRow = document.getElementById("trayPrefRow");
-var trayPref = document.getElementById("trayPref");
+var trayPref = /** @type {HTMLInputElement | null} */ (document.getElementById("trayPref"));
 var trayNote = document.getElementById("trayNote");
 export var trayWhere = /Windows/i.test(navigator.userAgent)
   ? "Closing (X) keeps the app running in the tray: the ˄ arrow next to the clock, bottom right of the taskbar. Click it, then the EDEXO icon to bring the launcher back; right-click the icon to quit."
   : "Closing (X) keeps the app running in the tray, the icon area in your desktop's panel. Click the EDEXO icon there to bring the launcher back; right-click it to quit.";
+/** @param {any} p  `{ enabled, available, reason? }` (main.cjs trayAvailability) */
 export function renderTrayPref(p) {
   if (!trayPrefRow || !trayPref || !p) return;
   trayPrefRow.hidden = false;
@@ -32,9 +34,10 @@ export function renderTrayPref(p) {
   from the next start, so the note says that and offers the restart.
 */
 var gfxPrefRow = document.getElementById("gfxPrefRow");
-var gfxPref = document.getElementById("gfxPref");
+var gfxPref = /** @type {HTMLInputElement | null} */ (document.getElementById("gfxPref"));
 var gfxNote = document.getElementById("gfxNote");
 var gfxRestart = document.getElementById("gfxRestart");
+/** @param {any} p  `{ safeNow, why, safeNext, locked, auto, reason }` (gpuSafeMode.cjs) */
 function renderGfxPref(p) {
   if (!gfxPrefRow || !gfxPref || !p) return;
   gfxPrefRow.hidden = false;
@@ -64,25 +67,29 @@ export function start() {
   (function () {
     var ee = window.edexoElectron;
     if (!ee || typeof ee.getTrayPref !== "function") return;
-    ee.getTrayPref().then(renderTrayPref).catch(function () {});
+    const bridge = ee;
+    bridge.getTrayPref().then(renderTrayPref).catch(function () {});
     if (trayPref) {
-      trayPref.addEventListener("change", function () {
-        ee.setTrayPref({ enabled: trayPref.checked }).then(renderTrayPref).catch(function () {});
+      const box = trayPref;
+      box.addEventListener("change", function () {
+        bridge.setTrayPref({ enabled: box.checked }).then(renderTrayPref).catch(function () {});
       });
     }
   })();
   (function () {
     var ee = window.edexoElectron;
     if (!ee || typeof ee.getGraphicsPref !== "function") return;
-    ee.getGraphicsPref().then(renderGfxPref).catch(function () {});
+    const bridge = ee;
+    bridge.getGraphicsPref().then(renderGfxPref).catch(function () {});
     if (gfxPref) {
-      gfxPref.addEventListener("change", function () {
-        ee.setGraphicsPref({ hardware: gfxPref.checked }).then(renderGfxPref).catch(function () {});
+      const box = gfxPref;
+      box.addEventListener("change", function () {
+        bridge.setGraphicsPref({ hardware: box.checked }).then(renderGfxPref).catch(function () {});
       });
     }
     if (gfxRestart) {
       gfxRestart.addEventListener("click", function () {
-        ee.relaunch();
+        bridge.relaunch();
       });
     }
   })();

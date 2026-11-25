@@ -1,3 +1,4 @@
+// @ts-check
 /*
   Options: the journal folder, the two live-file poll rates and the sample radar's radius.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -12,9 +13,12 @@ import { apiUrl } from "./network.js";
   input attributes here, so this window can never offer a number the server would clamp.
   A build without the setting sends no `pollRates` and the section simply stays hidden.
 */
+/** @type {any} the server's `pollRates` (shared/pollRates.ts): the rates and their bounds */
 let pollBounds = null;
+/** @type {ReturnType<typeof setTimeout> | null} */
 let pollAppliedTimer = null;
 
+/** @param {any} rates */
 export function renderPollRates(rates) {
   if (!pollSection) return;
   if (!rates || typeof rates !== "object") {
@@ -48,6 +52,7 @@ function flashPollApplied() {
   walk the server through 2, 20 and 200 ms — re-arming the timer three times on its way to a
   rate the commander never asked for.
 */
+/** @param {number} statusMs @param {number} journalMs */
 async function savePollRates(statusMs, journalMs) {
   if (!pollBounds) return;
   try {
@@ -88,8 +93,10 @@ function onPollFieldChange() {
   for the same reason as the poll rates: the input cannot then offer a value that gets
   clamped on arrival.
 */
+/** @type {any} the server's `radarRadius`: `{ radiusM, minM, maxM }` */
 var radarBounds = null;
 
+/** @param {any} r */
 export function renderRadarRadius(r) {
   if (!radarRadiusRow) return;
   if (!r || typeof r !== "object") {
@@ -103,6 +110,7 @@ export function renderRadarRadius(r) {
   if (document.activeElement !== radarRadiusM) radarRadiusM.value = String(r.radiusM);
 }
 
+/** @param {number} value */
 async function saveRadarRadius(value) {
   if (!radarBounds) return;
   try {

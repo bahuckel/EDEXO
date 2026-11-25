@@ -1,3 +1,4 @@
+// @ts-check
 /*
   The HUD settings panel: colour theme and saved schemes, size, opacity, type, tilt, the sections' options, order and free placement, visibility; all mirrored to the server for the phone HUD.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -12,11 +13,13 @@ import { MOTION_EVENT, fxOn } from "../motionCore";
   A caught error leaves a counted warning (review 2026-11-10 E6: the empty catches clustered here). Once per place,
   then again at 10, 100, 1,000 with the count. The launcher's console is its devtools.
 */
+/** @type {Map<string, number>} */
 var caughtCounts = new Map();
+/** @param {string} where @param {unknown} e */
 function caught(where, e) {
   var n = (caughtCounts.get(where) || 0) + 1;
   caughtCounts.set(where, n);
-  if (n === 1 || /^10+$/.test(String(n))) console.warn("HUD settings: caught " + where + " (" + n + "×): " + (e && e.message ? e.message : String(e)));
+  if (n === 1 || /^10+$/.test(String(n))) console.warn("HUD settings: caught " + where + " (" + n + "×): " + (e instanceof Error ? e.message : String(e)));
 }
 
 /* ------------------------------------------------------------------ HUD settings (theme, order, corner) */
@@ -52,11 +55,14 @@ var LS_HUD_DISTANCE_READER = "edexoHudDistanceReader";
 /* The pitch reader's HUD colours (owner 2026-11-06): default or the XML's GUIColour matrix. */
 var LS_HUD_COLOUR = "edexoHudColour";
 /* Colonize HUD (1.3.0): materials and other sites on unless switched off; finished lines off unless switched on. */
+/** @typedef {{ id: string, ls: string, key: string, def: boolean }} CzPref */
+/** @type {CzPref[]} */
 var HUD_CZ_PREFS = [
   { id: "hudCzNeeds", ls: "edexoHudCzNeeds", key: "czNeeds", def: true },
   { id: "hudCzSites", ls: "edexoHudCzSites", key: "czSites", def: true },
   { id: "hudCzFinished", ls: "edexoHudCzFinished", key: "czFinished", def: false },
 ];
+/** @param {CzPref} p */
 function readCzPref(p) {
   try {
     var v = localStorage.getItem(p.ls);
@@ -78,8 +84,10 @@ function readTheme() {
   }
 }
 /* Mirror every HUD setting to the server, so a phone renders the HUD the same way (task 13). */
+/** @type {ReturnType<typeof setTimeout> | null} */
 var syncHudPrefsTimer = null;
 function hudPrefsNow() {
+  /** @type {Record<string, unknown>} */
   var prefs = {};
   try { prefs.theme = JSON.parse(localStorage.getItem(LS_HUD_THEME) || "{}") || {}; } catch (e) { caught("read " + LS_HUD_THEME, e); }
   try { var sc = parseFloat(localStorage.getItem(LS_HUD_SCALE) || ""); if (isFinite(sc)) prefs.scale = sc; } catch (e) { caught("read " + LS_HUD_SCALE, e); }
@@ -132,6 +140,11 @@ export function syncHudPrefs() {
     }).catch(function (e) { caught("POST hud-prefs", e); });
   }, 400);
 }
+/**
+ * The HUD's colours: a preset, or "custom" with an accent; a text colour of one's own over either.
+ * @typedef {{ preset?: string, accent?: string, text?: string }} HudTheme
+ */
+/** @param {HudTheme} t */
 function writeTheme(t) {
   try {
     localStorage.setItem(LS_HUD_THEME, JSON.stringify(t));
@@ -139,7 +152,7 @@ function writeTheme(t) {
   renderSwatches();
   syncHudPrefs();
 }
-var hudSwatches = document.getElementById("hudSwatches");
+const hudSwatches = /** @type {HTMLElement} */ (document.getElementById("hudSwatches"));
 /* Saved HUD colours (guild tester report, 2026-09-30: "allow people to save their own"). */
 var LS_HUD_SCHEMES = "edexoHudSchemes";
 function readSchemes() {
@@ -154,11 +167,12 @@ function readSchemes() {
     return [];
   }
 }
+/** @param {{ name: string, accent: string, text: string }[]} list */
 function writeSchemes(list) {
   try { localStorage.setItem(LS_HUD_SCHEMES, JSON.stringify(list.slice(0, 20))); } catch (e) { caught("save " + LS_HUD_SCHEMES, e); }
 }
-var hudThemeAccent = document.getElementById("hudThemeAccent");
-var hudThemeText = document.getElementById("hudThemeText");
+const hudThemeAccent = /** @type {HTMLInputElement} */ (document.getElementById("hudThemeAccent"));
+const hudThemeText = /** @type {HTMLInputElement} */ (document.getElementById("hudThemeText"));
 function renderSwatches() {
   if (!hudSwatches) return;
   var t = readTheme();
@@ -212,7 +226,7 @@ function renderSwatches() {
   });
   if (hudThemeAccent && t.accent) hudThemeAccent.value = t.accent;
   if (hudThemeText) hudThemeText.value = t.text || (PRESETS[cur] && PRESETS[cur].text) || hudThemeText.value;
-  var reset = document.getElementById("hudThemeTextReset");
+  var reset = /** @type {HTMLButtonElement | null} */ (document.getElementById("hudThemeTextReset"));
   if (reset) {
     reset.disabled = !t.text;
     // Off, it says why rather than looking busy (owner, 2026-11-01: "loads forever").
@@ -235,8 +249,8 @@ function schemeText() {
   var now = readTheme();
   writeTheme({ preset: now.preset || "orange", accent: now.accent });
 }
-var hudSchemeName = document.getElementById("hudSchemeName");
-var hudSchemeSave = document.getElementById("hudSchemeSave");
+const hudSchemeName = /** @type {HTMLInputElement} */ (document.getElementById("hudSchemeName"));
+const hudSchemeSave = /** @type {HTMLButtonElement} */ (document.getElementById("hudSchemeSave"));
 function saveScheme() {
   var n = ((hudSchemeName && hudSchemeName.value) || "").trim().slice(0, 24);
   if (!n || !hudThemeAccent || !hudThemeText) return;
@@ -247,24 +261,24 @@ function saveScheme() {
   writeTheme({ preset: "custom", accent: hudThemeAccent.value, text: hudThemeText.value });
 }
 /* size + opacity: the HUD pages read the same keys and re-apply on the storage event */
-var hudScale = document.getElementById("hudScale");
-var hudScaleOut = document.getElementById("hudScaleOut");
-var hudAlpha = document.getElementById("hudAlpha");
-var hudAlphaOut = document.getElementById("hudAlphaOut");
+const hudScale = /** @type {HTMLInputElement} */ (document.getElementById("hudScale"));
+const hudScaleOut = /** @type {HTMLOutputElement} */ (document.getElementById("hudScaleOut"));
+const hudAlpha = /** @type {HTMLInputElement} */ (document.getElementById("hudAlpha"));
+const hudAlphaOut = /** @type {HTMLOutputElement} */ (document.getElementById("hudAlphaOut"));
 function showSizeOutputs() {
   if (hudScale && hudScaleOut) hudScaleOut.textContent = hudScale.value + " %";
   if (hudAlpha && hudAlphaOut) hudAlphaOut.textContent = hudAlpha.value + " %";
 }
 /* HUD type and the Elite Style's angle (owner, 2026-10-04). */
-var hudType = document.getElementById("hudType");
-var hudTilt = document.getElementById("hudTilt");
-var hudTiltOut = document.getElementById("hudTiltOut");
-var hudTiltRow = document.getElementById("hudTiltRow");
-var hudTiltMode = document.getElementById("hudTiltMode");
-var hudSlant = document.getElementById("hudSlant");
-var hudSlantOut = document.getElementById("hudSlantOut");
-var hudTurnRow = document.getElementById("hudTurnRow");
-var hudSlantRow = document.getElementById("hudSlantRow");
+const hudType = /** @type {HTMLSelectElement} */ (document.getElementById("hudType"));
+const hudTilt = /** @type {HTMLInputElement} */ (document.getElementById("hudTilt"));
+const hudTiltOut = /** @type {HTMLOutputElement} */ (document.getElementById("hudTiltOut"));
+const hudTiltRow = /** @type {HTMLElement} */ (document.getElementById("hudTiltRow"));
+const hudTiltMode = /** @type {HTMLSelectElement} */ (document.getElementById("hudTiltMode"));
+const hudSlant = /** @type {HTMLInputElement} */ (document.getElementById("hudSlant"));
+const hudSlantOut = /** @type {HTMLOutputElement} */ (document.getElementById("hudSlantOut"));
+const hudTurnRow = /** @type {HTMLElement} */ (document.getElementById("hudTurnRow"));
+const hudSlantRow = /** @type {HTMLElement} */ (document.getElementById("hudSlantRow"));
 function syncHudTypeUi() {
   if (hudTiltOut && hudTilt) hudTiltOut.textContent = hudTilt.value + "°";
   if (hudSlantOut && hudSlant) hudSlantOut.textContent = hudSlant.value + "°";
@@ -274,25 +288,26 @@ function syncHudTypeUi() {
   if (hudSlantRow) hudSlantRow.style.display = slant ? "" : "none";
 }
 /* "HUD Overlay by EDEXO" (owner, 2026-10-09; "by EDEXO-Compare" until 1.3.0): off unless chosen, at the top or the bottom. */
-var hudCredit = document.getElementById("hudCredit");
+const hudCredit = /** @type {HTMLSelectElement} */ (document.getElementById("hudCredit"));
 /* "Next boxel" under the Next jump HUD (plan 2.7): off unless chosen. */
-var hudNextBoxel = document.getElementById("hudNextBoxel");
-var hudRefuelBar = document.getElementById("hudRefuelBar");
-var hudRadarAlways = document.getElementById("hudRadarAlways");
-var hudAim = document.getElementById("hudAim");
-var hudPitchReader = document.getElementById("hudPitchReader");
-var hudDistanceReader = document.getElementById("hudDistanceReader");
-var hudColourSel = document.getElementById("hudColour");
-var hudCompact = document.getElementById("hudCompact");
-var hudRelevant = document.getElementById("hudRelevant");
-var hudAudio = document.getElementById("hudAudio");
-var hudCandOrder = document.getElementById("hudCandOrder");
-var hudRegion = document.getElementById("hudRegion");
-var hudCandScanned = document.getElementById("hudCandScanned");
-var hudCandMax = document.getElementById("hudCandMax");
-var hudCandActiveTop = document.getElementById("hudCandActiveTop");
-var hudCorner = document.getElementById("hudCorner");
-var hudOrderList = document.getElementById("hudOrderList");
+const hudNextBoxel = /** @type {HTMLInputElement} */ (document.getElementById("hudNextBoxel"));
+const hudRefuelBar = /** @type {HTMLInputElement} */ (document.getElementById("hudRefuelBar"));
+const hudRadarAlways = /** @type {HTMLInputElement} */ (document.getElementById("hudRadarAlways"));
+const hudAim = /** @type {HTMLInputElement} */ (document.getElementById("hudAim"));
+const hudPitchReader = /** @type {HTMLInputElement} */ (document.getElementById("hudPitchReader"));
+const hudDistanceReader = /** @type {HTMLInputElement} */ (document.getElementById("hudDistanceReader"));
+const hudColourSel = /** @type {HTMLSelectElement} */ (document.getElementById("hudColour"));
+const hudCompact = /** @type {HTMLInputElement} */ (document.getElementById("hudCompact"));
+const hudRelevant = /** @type {HTMLInputElement} */ (document.getElementById("hudRelevant"));
+const hudAudio = /** @type {HTMLInputElement} */ (document.getElementById("hudAudio"));
+const hudCandOrder = /** @type {HTMLSelectElement} */ (document.getElementById("hudCandOrder"));
+const hudRegion = /** @type {HTMLInputElement} */ (document.getElementById("hudRegion"));
+const hudCandScanned = /** @type {HTMLSelectElement} */ (document.getElementById("hudCandScanned"));
+const hudCandMax = /** @type {HTMLInputElement} */ (document.getElementById("hudCandMax"));
+const hudCandActiveTop = /** @type {HTMLInputElement} */ (document.getElementById("hudCandActiveTop"));
+const hudCorner = /** @type {HTMLSelectElement} */ (document.getElementById("hudCorner"));
+const hudOrderList = /** @type {HTMLElement} */ (document.getElementById("hudOrderList"));
+/** @type {string[]} the sections in the stack's order; set in start() */
 export var hudOrder;
 function layoutOrderKeys() {
   // window keys are page paths (query aside); the merged HUD is one window and sorts first
@@ -378,9 +393,11 @@ function renderOrderList() {
 window.addEventListener(MOTION_EVENT, function () {
   renderOrderList();
 });
+/** @param {PointerEvent} ev @param {HTMLLIElement} li @param {number} from */
 function startOrderDrag(ev, li, from) {
   if (ev.button !== 0 || !hudOrderList) return;
   ev.preventDefault();
+  /** @type {HTMLElement[]} */
   var rows = Array.prototype.slice.call(hudOrderList.children);
   var rects = rows.map(function (r) {
     return r.getBoundingClientRect();
@@ -391,12 +408,13 @@ function startOrderDrag(ev, li, from) {
   li.classList.add("is-lifted");
   li.style.transform = "scale(1.05)";
   hudOrderList.classList.add("is-sorting");
-  var grip = ev.currentTarget;
+  var grip = /** @type {HTMLElement} */ (ev.currentTarget);
   try {
     grip.setPointerCapture(ev.pointerId);
   } catch (e) {
     caught("pointer capture", e); /* no such pointer any more: the moves still reach the grip while over it */
   }
+  /** @param {PointerEvent} e */
   function move(e) {
     var dy = e.clientY - startY;
     // Kept inside the list.
@@ -417,6 +435,7 @@ function startOrderDrag(ev, li, from) {
       r.style.transform = shift ? "translateY(" + shift + "px)" : "";
     });
   }
+  /** @param {PointerEvent} e */
   function end(e) {
     grip.removeEventListener("pointermove", move);
     grip.removeEventListener("pointerup", end);
@@ -443,10 +462,11 @@ function startOrderDrag(ev, li, from) {
   screen. Electron keeps the spot with the layout; "Move HUD" starts placing (the HUDs take the
   mouse and show a frame), Done on the HUD or here ends it.
 */
-var hudFree = document.getElementById("hudFree");
-var hudMove = document.getElementById("hudMove");
-var hudMoveHint = document.getElementById("hudMoveHint");
+const hudFree = /** @type {HTMLInputElement} */ (document.getElementById("hudFree"));
+const hudMove = /** @type {HTMLButtonElement} */ (document.getElementById("hudMove"));
+const hudMoveHint = /** @type {HTMLElement} */ (document.getElementById("hudMoveHint"));
 var hudMoving = false;
+/** @param {boolean} freeOn @param {boolean} moving */
 function renderFreeMove(freeOn, moving) {
   if (hudFree) hudFree.checked = !!freeOn;
   if (hudCorner) hudCorner.disabled = !!freeOn;
@@ -466,6 +486,7 @@ function renderFreeMove(freeOn, moving) {
   }
   if (hudMoveHint) hudMoveHint.hidden = !hudMoving;
 }
+/** @param {boolean} on */
 function setHudMoving(on) {
   var ee = window.edexoElectron;
   if (!ee || typeof ee.setHudMoveMode !== "function") return;
@@ -479,9 +500,10 @@ function setHudMoving(on) {
   it survives a restart, and the hotkey and the tray change it too: Electron tells this page
   on every change (`onHudVisibility`), and the modal asks again whenever it opens.
 */
-var hudVisShow = document.getElementById("hudVisShow");
-var hudVisHide = document.getElementById("hudVisHide");
-var hudVisSummary = document.getElementById("hudVisSummary");
+const hudVisShow = /** @type {HTMLButtonElement} */ (document.getElementById("hudVisShow"));
+const hudVisHide = /** @type {HTMLButtonElement} */ (document.getElementById("hudVisHide"));
+const hudVisSummary = /** @type {HTMLElement} */ (document.getElementById("hudVisSummary"));
+/** @param {any} v  `{ hidden, count, gameAway, focusAway, moving }` (main.cjs edexo:hud-visibility) */
 function renderHudVisibility(v) {
   var hidden = !!(v && v.hidden);
   if (hudVisShow) hudVisShow.setAttribute("aria-pressed", hidden ? "false" : "true");
@@ -494,6 +516,7 @@ function renderHudVisibility(v) {
       (n === 0 ? " (none open)" : n ? " (" + n + " open)" : "");
   }
 }
+/** @param {boolean} hidden */
 function setHudVisibility(hidden) {
   var ee = window.edexoElectron;
   if (!ee || typeof ee.toggleHudVisibility !== "function") return;
@@ -502,7 +525,7 @@ function setHudVisibility(hidden) {
   }).catch(function (e) { caught("toggleHudVisibility", e); });
 }
 // Hide when Elite is not in front (owner, 2026-09-30): saved by the app with the HUD layout, on by default.
-var hudHideUnfocused = document.getElementById("hudHideUnfocused");
+const hudHideUnfocused = /** @type {HTMLInputElement} */ (document.getElementById("hudHideUnfocused"));
 async function loadHudSettingsIntoModal() {
   renderSwatches();
   if (hudCandOrder) hudCandOrder.value = (function () { try { return localStorage.getItem(LS_HUD_CAND) || "likelihood"; } catch (e) { return "likelihood"; } })();
@@ -518,7 +541,7 @@ async function loadHudSettingsIntoModal() {
   if (hudRefuelBar) hudRefuelBar.checked = (function () { try { return localStorage.getItem(LS_HUD_REFUEL_BAR) !== "0"; } catch (e) { return true; } })();
   if (hudRadarAlways) hudRadarAlways.checked = (function () { try { return localStorage.getItem(LS_HUD_RADAR_ALWAYS) === "1"; } catch (e) { return false; } })();
   HUD_CZ_PREFS.forEach(function (p) {
-    var box = document.getElementById(p.id);
+    var box = /** @type {HTMLInputElement | null} */ (document.getElementById(p.id));
     if (box) box.checked = readCzPref(p);
   });
   if (hudTilt) hudTilt.value = (function () { try { var v = parseFloat(localStorage.getItem(LS_HUD_TILT) || "15"); return String(isFinite(v) ? v : 15); } catch (e) { return "15"; } })();
@@ -537,20 +560,20 @@ async function loadHudSettingsIntoModal() {
       if (lay) renderFreeMove(lay.freeOn === true, lay.moving === true);
       if (lay) renderHudVisibility({ hidden: lay.hidden, count: lay.count });
       if (lay && Array.isArray(lay.order) && lay.order.length) {
-        var secs = lay.order.map(function (k) { return HUD_SECTION_BY_PATH[k]; }).filter(Boolean);
+        var secs = lay.order.map(function (/** @type {string} */ k) { return HUD_SECTION_BY_PATH[k]; }).filter(Boolean);
         hudOrder = secs.concat(HUD_SECTION_ORDER.filter(function (s) { return secs.indexOf(s) < 0; }));
       }
     } catch (e) { caught("read the HUD layout", e); }
   }
   renderOrderList();
 }
-var ovJump = document.getElementById("ovJump");
-var ovAchievement = document.getElementById("ovAchievement");
-var ovNotable = document.getElementById("ovNotable");
-var ovNotices = document.getElementById("ovNotices");
-var ovColonize = document.getElementById("ovColonize");
-var ovShip = document.getElementById("ovShip");
-var ovCarrier = document.getElementById("ovCarrier");
+const ovJump = /** @type {HTMLButtonElement} */ (document.getElementById("ovJump"));
+const ovAchievement = /** @type {HTMLButtonElement} */ (document.getElementById("ovAchievement"));
+const ovNotable = /** @type {HTMLButtonElement} */ (document.getElementById("ovNotable"));
+const ovNotices = /** @type {HTMLButtonElement} */ (document.getElementById("ovNotices"));
+const ovColonize = /** @type {HTMLButtonElement} */ (document.getElementById("ovColonize"));
+const ovShip = /** @type {HTMLButtonElement} */ (document.getElementById("ovShip"));
+const ovCarrier = /** @type {HTMLButtonElement} */ (document.getElementById("ovCarrier"));
 
 /** What ran when the page loaded, in the order it ran (main.js calls each module's in the file's old order). */
 export function start() {
@@ -594,7 +617,7 @@ export function start() {
     });
   }
   /* Each settings fold remembers whether it was open (owner, 2026-10-04). */
-  document.querySelectorAll("details.hud-group").forEach(function (d) {
+  /** @type {NodeListOf<HTMLDetailsElement>} */ (document.querySelectorAll("details.hud-group")).forEach(function (d) {
     var key = "edexoHudGroup." + d.getAttribute("data-group");
     try {
       var v = localStorage.getItem(key);
@@ -681,7 +704,7 @@ export function start() {
     });
   }
   HUD_CZ_PREFS.forEach(function (p) {
-    var box = document.getElementById(p.id);
+    const box = /** @type {HTMLInputElement | null} */ (document.getElementById(p.id));
     if (!box) return;
     box.addEventListener("change", function () {
       try { localStorage.setItem(p.ls, box.checked ? "1" : "0"); } catch (e) { caught("save " + p.ls, e); }
@@ -747,6 +770,7 @@ export function start() {
   if (hudFree && window.edexoElectron && typeof window.edexoElectron.setHudMoveMode === "function") {
     hudFree.addEventListener("change", function () {
       var ee = window.edexoElectron;
+      if (!ee) return;
       var on = hudFree.checked;
       ee.setHudLayout({ freeOn: on }).then(function () {
         renderFreeMove(on, false);
@@ -756,7 +780,7 @@ export function start() {
     });
     if (hudMove) hudMove.addEventListener("click", function () { setHudMoving(!hudMoving); });
   } else if (hudFree) {
-    hudFree.closest(".hud-set-row").hidden = true;
+    /** @type {HTMLElement} */ (hudFree.closest(".hud-set-row")).hidden = true;
   }
   if (hudHideUnfocused && window.edexoElectron && typeof window.edexoElectron.getHudLayout === "function") {
     window.edexoElectron.getHudLayout().then(function (l) {
@@ -769,7 +793,7 @@ export function start() {
       }
     });
   } else if (hudHideUnfocused) {
-    hudHideUnfocused.closest(".hud-set-row").hidden = true;
+    /** @type {HTMLElement} */ (hudHideUnfocused.closest(".hud-set-row")).hidden = true;
   }
   if (hudVisShow) hudVisShow.addEventListener("click", function () { setHudVisibility(false); });
   if (hudVisHide) hudVisHide.addEventListener("click", function () { setHudVisibility(true); });

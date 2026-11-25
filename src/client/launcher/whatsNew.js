@@ -1,3 +1,4 @@
+// @ts-check
 /*
   What's new: after an update the notes of every release since the version last seen, drawn from a small part of Markdown into elements, never as HTML.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -17,6 +18,7 @@ var btnWhatsNew = document.getElementById("btnWhatsNew");
 var whatsNewPending = false;
 var whatsNewPageUrl = "https://github.com/bahuckel/EDEXO/releases";
 
+/** @param {Node} parent @param {string} text */
 function notesInline(parent, text) {
   var re = /!\[[^\]]*\]\([^)]*\)|\[([^\]]+)\]\((https:\/\/[^)\s]+)\)|\*\*([^*]+)\*\*|`([^`]+)`/g;
   var last = 0;
@@ -43,9 +45,13 @@ function notesInline(parent, text) {
   if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
 }
 
+/** @param {string} md @param {HTMLElement} into */
 function renderNotes(md, into) {
+  /** @type {{ indent: number, el: HTMLElement }[]} */
   var lists = [];
+  /** @type {HTMLParagraphElement | null} */
   var para = null;
+  /** @type {HTMLLIElement | null} */
   var lastLi = null;
   function closeLists() {
     lists = [];
@@ -99,12 +105,14 @@ function renderNotes(md, into) {
   });
 }
 
+/** @param {any} info  the server's /api/app/whats-new answer (server/whatsNew.ts) */
 function showWhatsNew(info) {
   if (!whatsNewModal || !whatsNewBody) return;
+  const body = whatsNewBody;
   whatsNewPending = Boolean(info.pending);
-  whatsNewBody.innerHTML = "";
+  body.innerHTML = "";
   var rel = info.releases || [];
-  whatsNewTitle.textContent = (info.pending ? "Updated to v" : "What's new in v") + info.current;
+  if (whatsNewTitle) whatsNewTitle.textContent = (info.pending ? "Updated to v" : "What's new in v") + info.current;
   whatsNewPageUrl = rel.length ? rel[0].pageUrl : "https://github.com/bahuckel/EDEXO/releases";
   if (!rel.length) {
     var p = document.createElement("p");
@@ -112,16 +120,16 @@ function showWhatsNew(info) {
       "The notes for this version could not be read from GitHub" +
       (info.error ? " (" + info.error + ")" : "") +
       ". They are on the release page.";
-    whatsNewBody.appendChild(p);
+    body.appendChild(p);
   }
-  rel.forEach(function (r) {
+  rel.forEach(function (/** @type {any} */ r) {
     var v = document.createElement("div");
     v.className = "wn-version";
     v.textContent = "v" + r.version + (r.publishedAt ? " · " + String(r.publishedAt).slice(0, 10) : "");
-    whatsNewBody.appendChild(v);
-    renderNotes(r.notes, whatsNewBody);
+    body.appendChild(v);
+    renderNotes(r.notes, body);
   });
-  whatsNewBody.scrollTop = 0;
+  body.scrollTop = 0;
   whatsNewModal.classList.add("on");
 }
 
@@ -132,6 +140,7 @@ function closeWhatsNew() {
   fetch(apiUrl("/api/app/whats-new/seen"), { method: "POST" }).catch(function () {});
 }
 
+/** @param {boolean} any  every release's notes, not only the unseen ones */
 function fetchWhatsNew(any) {
   return fetch(apiUrl("/api/app/whats-new" + (any ? "?any=1" : "")), { cache: "no-store" }).then(function (r) {
     if (!r.ok) throw new Error("HTTP " + r.status);
@@ -140,6 +149,7 @@ function fetchWhatsNew(any) {
 }
 
 /* At start: once the server answers, and after any other card (first run, Linux setup) is closed. */
+/** @param {number} tries */
 function loadWhatsNew(tries) {
   fetchWhatsNew(false)
     .then(function (info) {

@@ -1,3 +1,4 @@
+// @ts-check
 /*
   Open Compare and Open Colonize: where each opens (app window, browser), their menus, and the streamer view links.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -17,6 +18,7 @@ import { LS_OPEN_MODE, apiUrl, lastPort } from "./network.js";
   Electron window, not a browser. The route takes a two-value enum rather than a URL, so it
   can only ever open this app's own views.
 */
+/** @type {Record<string, { sub: string, view: string | null }>} */
 var OPEN_MODES = {
   browser: { sub: "In your browser", view: "app" },
   window: { sub: "In an app window", view: null },
@@ -34,14 +36,16 @@ function readOpenMode() {
   return "window";
 }
 
+/** @param {string} mode */
 function applyOpenMode(mode) {
   btnMainUiSub.textContent = OPEN_MODES[mode].sub;
-  var items = mainUiMenu.querySelectorAll("button[data-open-mode]");
+  var items = /** @type {NodeListOf<HTMLElement>} */ (mainUiMenu.querySelectorAll("button[data-open-mode]"));
   for (var i = 0; i < items.length; i++) {
     items[i].setAttribute("aria-current", items[i].dataset.openMode === mode ? "true" : "false");
   }
 }
 
+/** @param {string} mode */
 function setOpenMode(mode) {
   try {
     localStorage.setItem(LS_OPEN_MODE, mode);
@@ -145,14 +149,15 @@ function openChosenUi() {
   view is an action in its menu, as Compare's is.
 */
 var LS_COLONIZE_OPEN_MODE = "edexo.launcher.colonizeOpenMode";
+/** @type {Record<string, { sub: string, view: string | null, page: string }>} */
 var COLONIZE_MODES = {
   browser: { sub: "Your construction sites and the haul plan · in your browser", view: "colonize", page: "/?screen=colonize" },
   window: { sub: "Your construction sites and the haul plan · in an app window", view: null, page: "/?screen=colonize" },
   phone: { sub: "Phone view — read-only sites and plan", view: "colonize-phone", page: "/?screen=colonize&phone=1" },
 };
-var colonizeSplit = document.getElementById("colonizeSplit");
-var btnColonizeMenu = document.getElementById("btnColonizeMenu");
-var colonizeMenu = document.getElementById("colonizeMenu");
+const colonizeSplit = /** @type {HTMLElement} */ (document.getElementById("colonizeSplit"));
+const btnColonizeMenu = document.getElementById("btnColonizeMenu");
+const colonizeMenu = document.getElementById("colonizeMenu");
 
 function readColonizeOpenMode() {
   try {
@@ -164,15 +169,17 @@ function readColonizeOpenMode() {
   return "window";
 }
 
+/** @param {string} mode */
 function applyColonizeOpenMode(mode) {
   if (btnColonizeSub) btnColonizeSub.textContent = COLONIZE_MODES[mode].sub;
   if (!colonizeMenu) return;
-  var items = colonizeMenu.querySelectorAll("button[data-colonize-mode]");
+  var items = /** @type {NodeListOf<HTMLElement>} */ (colonizeMenu.querySelectorAll("button[data-colonize-mode]"));
   for (var i = 0; i < items.length; i++) {
     items[i].setAttribute("aria-current", items[i].dataset.colonizeMode === mode ? "true" : "false");
   }
 }
 
+/** @param {string} mode */
 function setColonizeOpenMode(mode) {
   try {
     localStorage.setItem(LS_COLONIZE_OPEN_MODE, mode);
@@ -218,9 +225,9 @@ function closeColonizeMenu() {
 function openColonize() {
   var bridge = window.edexoElectron;
   var mode = readColonizeOpenMode();
-  var failed = function (e) {
+  var failed = function (/** @type {unknown} */ e) {
     launcherActionMsg.className = "msg-launcher err";
-    launcherActionMsg.textContent = "Could not open Colonize" + (e ? ": " + String(e && e.message ? e.message : e) : ".");
+    launcherActionMsg.textContent = "Could not open Colonize" + (e ? ": " + (e instanceof Error ? e.message : String(e)) : ".");
   };
   if (mode === "window") {
     if (bridge && typeof bridge.openColonizeWindow === "function") {
@@ -251,13 +258,13 @@ function openColonize() {
     });
 }
 /* Colonize's streamer view: the plan for an OBS Browser source, nothing clickable (owner, 2026-10-22). */
-var btnColonizeStreamLink = document.getElementById("btnColonizeStreamLink");
+const btnColonizeStreamLink = document.getElementById("btnColonizeStreamLink");
 /*
   Streamer view (owner, 2026-10-01): the main UI with every control taken away (?view=stream),
   for a Browser source in OBS on this PC. The link is copied for OBS, and (owner, 2026-10-04: "does
   not open") the view opens in the browser too, so what the viewers will see is on screen at once.
 */
-var btnStreamLink = document.getElementById("btnStreamLink");
+const btnStreamLink = document.getElementById("btnStreamLink");
 
 /** What ran when the page loaded, in the order it ran (main.js calls each module's in the file's old order). */
 export function start() {
@@ -278,15 +285,15 @@ export function start() {
       btnColonizeMenu.setAttribute("aria-expanded", open ? "true" : "false");
     });
     colonizeMenu.addEventListener("click", function (ev) {
-      var item = ev.target.closest("button[data-colonize-mode]");
+      var item = /** @type {HTMLElement | null} */ (/** @type {Element} */ (ev.target).closest("button[data-colonize-mode]"));
       if (!item) return;
-      setColonizeOpenMode(item.dataset.colonizeMode);
+      setColonizeOpenMode(/** @type {string} */ (item.dataset.colonizeMode));
       closeColonizeMenu();
       // As Compare's menu: choosing is also asking for it (owner, 2026-10-22).
       openColonize();
     });
     document.addEventListener("click", function (ev) {
-      if (!colonizeMenu.hidden && !colonizeSplit.contains(ev.target)) closeColonizeMenu();
+      if (!colonizeMenu.hidden && !colonizeSplit.contains(/** @type {Node | null} */ (ev.target))) closeColonizeMenu();
     });
     document.addEventListener("keydown", function (ev) {
       if (ev.key === "Escape" && !colonizeMenu.hidden) closeColonizeMenu();
@@ -295,7 +302,7 @@ export function start() {
   if (btnColonizeStreamLink) btnColonizeStreamLink.addEventListener("click", function () {
     closeColonizeMenu();
     var url = "http://127.0.0.1:" + (lastPort || 7111) + "/?screen=colonize&view=stream";
-    var say = function (copied) {
+    var say = function (/** @type {boolean} */ copied) {
       launcherActionMsg.className = "msg-launcher";
       launcherActionMsg.textContent =
         (copied ? "Copied: " : "Colonize streamer view: ") + url +
@@ -329,7 +336,7 @@ export function start() {
   if (btnStreamLink) btnStreamLink.addEventListener("click", function () {
     closeOpenMenu();
     var url = "http://127.0.0.1:" + (lastPort || 7111) + "/?view=stream";
-    var say = function (copied) {
+    var say = function (/** @type {boolean} */ copied) {
       launcherActionMsg.className = "msg-launcher";
       launcherActionMsg.textContent =
         (copied ? "Copied: " : "Streamer view: ") + url +
@@ -355,15 +362,15 @@ export function start() {
       });
   });
   mainUiMenu.addEventListener("click", function (ev) {
-    var item = ev.target.closest("button[data-open-mode]");
+    var item = /** @type {HTMLElement | null} */ (/** @type {Element} */ (ev.target).closest("button[data-open-mode]"));
     if (!item) return;
-    setOpenMode(item.dataset.openMode);
+    setOpenMode(/** @type {string} */ (item.dataset.openMode));
     closeOpenMenu();
     // Choosing is also asking for it: nobody opens this menu to browse it.
     openChosenUi();
   });
   document.addEventListener("click", function (ev) {
-    if (!mainUiMenu.hidden && !mainUiSplit.contains(ev.target)) closeOpenMenu();
+    if (!mainUiMenu.hidden && !mainUiSplit.contains(/** @type {Node | null} */ (ev.target))) closeOpenMenu();
   });
   document.addEventListener("keydown", function (ev) {
     if (ev.key === "Escape" && !mainUiMenu.hidden) closeOpenMenu();

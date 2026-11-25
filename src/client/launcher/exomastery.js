@@ -1,3 +1,4 @@
+// @ts-check
 /*
   The Exomastery button and menu: refresh, downloads of the commander's own exomastery and codex, the shared folder.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -9,10 +10,11 @@ import { apiUrl, lastPort } from "./network.js";
   Exomastery menu (owner, 2026-09-26): the main button still refreshes; the arrow offers the
   downloads and the shared folder. The line under the title says what the shared folder holds.
 */
-var exomasteryMenu = document.getElementById("exomasteryMenu");
-var btnExomasteryMenu = document.getElementById("btnExomasteryMenu");
-var exomasterySplit = document.getElementById("exomasterySplit");
-var exomasterySub = document.getElementById("exomasterySub");
+const exomasteryMenu = /** @type {HTMLElement} */ (document.getElementById("exomasteryMenu"));
+const btnExomasteryMenu = /** @type {HTMLElement} */ (document.getElementById("btnExomasteryMenu"));
+const exomasterySplit = /** @type {HTMLElement} */ (document.getElementById("exomasterySplit"));
+const exomasterySub = document.getElementById("exomasterySub");
+/** @type {string | null} */
 var EXO_SUB_DEFAULT;
 
 function closeExomasteryMenu() {
@@ -27,7 +29,7 @@ function refreshSharedLine() {
     })
     .then(function (j) {
       if (!j || !exomasterySub) return;
-      var used = (j.files || []).filter(function (f) {
+      var used = (j.files || []).filter(function (/** @type {any} */ f) {
         return !f.skipped;
       }).length;
       var skipped = (j.files || []).length - used;
@@ -46,7 +48,7 @@ function refreshSharedLine() {
       if (j.alerts > 0) parts.push(j.alerts + " gate notice" + (j.alerts === 1 ? "" : "s") + " (mail icon)");
       exomasterySub.textContent = parts.join(" · ");
       exomasterySub.title = (j.files || [])
-        .map(function (f) {
+        .map(function (/** @type {any} */ f) {
           return f.file + (f.skipped ? " — skipped: " + f.skipped : " — " + (f.commander || "?") + ", " + f.entries);
         })
         .join("\n");
@@ -56,6 +58,7 @@ function refreshSharedLine() {
     });
 }
 
+/** @param {"exomastery" | "codex"} kind */
 function exomasteryDownload(kind) {
   launcherActionMsg.className = "msg-launcher";
   launcherActionMsg.textContent = "";
@@ -132,7 +135,7 @@ export function start() {
     btnExomasteryMenu.setAttribute("aria-expanded", open ? "true" : "false");
   });
   exomasteryMenu.addEventListener("click", function (ev) {
-    var item = ev.target.closest("button[data-exo-action]");
+    var item = /** @type {HTMLElement | null} */ (/** @type {Element} */ (ev.target).closest("button[data-exo-action]"));
     if (!item) return;
     closeExomasteryMenu();
     var act = item.dataset.exoAction;
@@ -143,7 +146,7 @@ export function start() {
     // "import-dump" and "import-visited" open their panels from their own listeners (below).
   });
   document.addEventListener("click", function (ev) {
-    if (!exomasteryMenu.hidden && !exomasterySplit.contains(ev.target)) closeExomasteryMenu();
+    if (!exomasteryMenu.hidden && !exomasterySplit.contains(/** @type {Node | null} */ (ev.target))) closeExomasteryMenu();
   });
   document.addEventListener("keydown", function (ev) {
     if (ev.key === "Escape" && !exomasteryMenu.hidden) closeExomasteryMenu();

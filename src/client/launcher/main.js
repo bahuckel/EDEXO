@@ -1,3 +1,4 @@
+// @ts-check
 /*
   The launcher's page script (launcher.html), built by Vite since 1.3.1 (discuss item 19): minified, cached for a year
   under its hashed name, and able to import what the app shares (the HUD section list, the HUD's colours). It was one
@@ -51,8 +52,9 @@ loopPoll();
 
 // The logo hides itself when the icon cannot load (was an inline onerror, which the CSP forbids).
 (function () {
-  var logo = document.querySelector("img.logo");
-  if (!logo) return;
+  var found = /** @type {HTMLImageElement | null} */ (document.querySelector("img.logo"));
+  if (!found) return;
+  const logo = found;
   var hide = function () {
     logo.style.display = "none";
   };

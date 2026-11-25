@@ -1,3 +1,4 @@
+// @ts-check
 /*
   The version line and the updater: check for a newer release, and where this copy can replace itself, Download & Install.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -10,11 +11,14 @@ import { apiUrl } from "./network.js";
   download link: the server opens that release's page itself — the page, never a file, and
   nothing on this PC is replaced by the app.
 */
-const versionLine = document.getElementById("versionLine");
-const versionText = document.getElementById("versionText");
-const btnCheckUpdate = document.getElementById("btnCheckUpdate");
-const btnUpdatePage = document.getElementById("btnUpdatePage");
+// Always in launcher.html (the version line under the title).
+const versionLine = /** @type {HTMLElement} */ (document.getElementById("versionLine"));
+const versionText = /** @type {HTMLElement} */ (document.getElementById("versionText"));
+const btnCheckUpdate = /** @type {HTMLButtonElement} */ (document.getElementById("btnCheckUpdate"));
+const btnUpdatePage = /** @type {HTMLElement} */ (document.getElementById("btnUpdatePage"));
+/** @type {any} the server's last /api/app/update answer (server/updateCheck.ts) */
 var updateInfo = null;
+/** @type {ReturnType<typeof setInterval> | null} */
 var updatePoll = null;
 /* Set by the button: install as soon as the download is checked (owner: "Download & Install"). */
 var installWhenReady = false;
@@ -25,6 +29,7 @@ var installWhenReady = false;
   never by itself. The release page stays one click away. Elsewhere (a source run, the console
   builds) the button opens the page as before.
 */
+/** @param {any} info */
 function canSelfUpdate(info) {
   return Boolean(
     info && info.newer && info.download && info.download.supported &&
@@ -32,6 +37,7 @@ function canSelfUpdate(info) {
   );
 }
 
+/** @param {any} info @param {boolean} checking */
 function renderUpdateInfo(info, checking) {
   updateInfo = info;
   var cur = info && info.current ? "v" + info.current : "Version —";
@@ -86,6 +92,7 @@ function renderUpdateInfo(info, checking) {
   }
 }
 
+/** @param {boolean} force  ask GitHub again rather than the server's hour-old answer */
 function checkForUpdates(force) {
   renderUpdateInfo(updateInfo, true);
   fetch(apiUrl("/api/app/update" + (force ? "?force=1" : "")), { cache: "no-store" })
@@ -117,7 +124,7 @@ function pollDownload() {
       .then(function (info) {
         renderUpdateInfo(info, false);
         if (!(info.download && info.download.state === "downloading")) {
-          clearInterval(updatePoll);
+          clearInterval(updatePoll ?? undefined);
           updatePoll = null;
           if (info.download && info.download.state === "ready" && installWhenReady) installNow();
           else installWhenReady = false;
@@ -129,7 +136,8 @@ function pollDownload() {
 
 function installNow() {
   renderUpdateInfo(updateInfo, false);
-  window.edexoElectron.installUpdate().then(function (r) {
+  // Only reached through canSelfUpdate, which needs the bridge.
+  /** @type {EdexoBridge} */ (window.edexoElectron).installUpdate().then(function (r) {
     if (r && r.ok) {
       // Still here after a while: the quit was called off ("Keep the app open" while a backup
       // was written). Back to the button.

@@ -1,3 +1,4 @@
+// @ts-check
 /*
   The HUD overlays: separate windows or one merged panel, which sections are open, the phone HUD's sections, and Elite's display mode warning.
   Split out of public/launcher.js (discuss item 19, 1.3.1).
@@ -15,6 +16,7 @@ import { hudOrder, syncHudPrefs } from "./hudSettings.js";
 */
 export var HUD_W = 404;
 export var HUD_MERGED = "/hud-overlay.html";
+/** @type {Record<string, string>} */
 export var HUD_SECTION_BY_PATH = {
   "/jump-overlay.html": "jump",
   "/fss-scan-overlay.html": "fss",
@@ -29,7 +31,9 @@ export var HUD_SECTION_BY_PATH = {
   "/carrier-overlay.html": "carrier",
 };
 // The HUD's own list and order (shared/hudSections.ts); the launcher kept a copy of it until 1.3.1.
+/** @type {string[]} */
 export var HUD_SECTION_ORDER = HUD_SECTION_KEYS.slice();
+/** @type {Record<string, string>} */
 export var HUD_SECTION_LABEL = {
   jump: "Next jump",
   fss: "Discovery scan",
@@ -43,9 +47,10 @@ export var HUD_SECTION_LABEL = {
   ship: "Ship",
   carrier: "Carrier",
 };
+/** @type {Record<string, string>} */
 export var HUD_PATH_BY_SECTION = {};
 var LS_HUD_MERGE = "edexoHudMerge";
-var ovMerge = document.getElementById("ovMerge");
+const ovMerge = /** @type {HTMLInputElement | null} */ (document.getElementById("ovMerge"));
 export function hudMergeOn() {
   try {
     return localStorage.getItem(LS_HUD_MERGE) === "1";
@@ -53,6 +58,7 @@ export function hudMergeOn() {
     return false;
   }
 }
+/** @returns {Promise<string[]>} */
 export async function hudPaths() {
   var ee = window.edexoElectron;
   try {
@@ -65,7 +71,7 @@ export async function hudPaths() {
   }
   return [];
 }
-/** The sections of one merged page (`?s=`; every section when absent). */
+/** The sections of one merged page (`?s=`; every section when absent). @param {string} p */
 function sectionsOfMerged(p) {
   var m = /[?&]s=([^&]*)/.exec(p);
   if (!m) return HUD_SECTION_ORDER.slice();
@@ -77,13 +83,15 @@ function sectionsOfMerged(p) {
   Chained groups (owner, 2026-11-01): the merged page with some sections and an id, /hud-overlay.html?s=jump,fss&g=2,
   made by the chain buttons while placing (electron/hudWindows.cjs). Several can be open beside separate HUDs.
 */
+/** @param {string[]} paths */
 function groupPaths(paths) {
   return paths.filter(function (p) {
     return String(p).indexOf(HUD_MERGED) === 0 && /[?&]g=\d+/.test(String(p));
   });
 }
-/** Sections in every merged window: the whole panel and the chained groups. */
+/** Sections in every merged window: the whole panel and the chained groups. @param {string[]} paths */
 function mergedSections(paths) {
+  /** @type {string[]} */
   var out = [];
   for (var i = 0; i < paths.length; i++) {
     var p = String(paths[i]);
@@ -94,7 +102,7 @@ function mergedSections(paths) {
   }
   return out;
 }
-/** Sections active right now, in either form. */
+/** Sections active right now, in either form. @param {string[]} paths */
 export function activeSections(paths) {
   var out = mergedSections(paths);
   Object.keys(HUD_SECTION_BY_PATH).forEach(function (p) {
@@ -111,13 +119,20 @@ export function activeSections(paths) {
   set (hud-events.log: the merged panel came back with Discovery scan and Next jump only). Queued,
   each change starts from the finished state of the one before.
 */
+/** @type {Promise<unknown>} */
 var hudChain = Promise.resolve();
+/**
+ * @template T
+ * @param {() => T | Promise<T>} task
+ * @returns {Promise<T>}
+ */
 export function inHudQueue(task) {
   var run = hudChain.then(task);
   hudChain = run.catch(function () {});
   return run;
 }
 
+/** @param {string[]} sections */
 export async function showSections(sections) {
   var ee = window.edexoElectron;
   if (!ee) return;
@@ -133,7 +148,7 @@ export async function showSections(sections) {
     if (!sections.length) {
       if (typeof ee.closeHudOverlay === "function") await ee.closeHudOverlay({ pathname: HUD_MERGED });
     } else if (typeof ee.setHudOverlay === "function") {
-      var ordered = (typeof hudOrder !== "undefined" ? hudOrder : HUD_SECTION_ORDER).filter(function (x) {
+      var ordered = (typeof hudOrder !== "undefined" ? hudOrder : HUD_SECTION_ORDER).filter(function (/** @type {string} */ x) {
         return sections.indexOf(x) >= 0;
       });
       var r = await ee.setHudOverlay({
@@ -145,6 +160,7 @@ export async function showSections(sections) {
     }
   } else {
     if (typeof ee.closeHudOverlay === "function") await ee.closeHudOverlay({ pathname: HUD_MERGED });
+    /** @type {Record<string, boolean>} */
     var want = {};
     sections.forEach(function (s) {
       want[s] = true;
@@ -153,6 +169,7 @@ export async function showSections(sections) {
       A chained group keeps the sections still wanted: two or more stay a group (the same id, so its spot), one goes
       back to its own window below, none closes it.
     */
+    /** @type {Record<string, boolean>} */
     var inGroup = {};
     var groups = groupPaths(paths);
     for (var gi = 0; gi < groups.length; gi++) {
@@ -161,7 +178,8 @@ export async function showSections(sections) {
       var keep = had.filter(function (x) {
         return !!want[x];
       });
-      var gid = /[?&]g=(\d+)/.exec(gp)[1];
+      // groupPaths kept only the pages with a group id.
+      var gid = /** @type {RegExpExecArray} */ (/[?&]g=(\d+)/.exec(gp))[1];
       if (keep.length >= 2) {
         keep.forEach(function (x) {
           inGroup[x] = true;
@@ -205,6 +223,7 @@ async function refreshOverlayMenuChecks() {
   in its own order). Read from the windows that exist, so a HUD opened or closed any way — the picker, merge, the
   windows restored at start — reaches the phone on the next look; sent with the other HUD settings.
 */
+/** @type {string[] | null} */
 export var hudPhoneSections = null;
 export async function refreshPhoneSections() {
   var ee = window.edexoElectron;
@@ -214,7 +233,7 @@ export async function refreshPhoneSections() {
     if (typeof ee.getHudLayout === "function") {
       var lay = await ee.getHudLayout();
       if (lay && Array.isArray(lay.order) && lay.order.length) {
-        var secs = lay.order.map(function (k) { return HUD_SECTION_BY_PATH[k]; }).filter(Boolean);
+        var secs = lay.order.map(function (/** @type {string} */ k) { return HUD_SECTION_BY_PATH[k]; }).filter(Boolean);
         order = secs.concat(HUD_SECTION_ORDER.filter(function (s) { return secs.indexOf(s) < 0; }));
       }
     }
@@ -222,7 +241,7 @@ export async function refreshPhoneSections() {
     /* the launcher's own list */
   }
   var active = activeSections(await hudPaths());
-  var list = order.filter(function (s) {
+  var list = order.filter(function (/** @type {string} */ s) {
     return active.indexOf(s) >= 0;
   });
   if (hudPhoneSections && hudPhoneSections.join(",") === list.join(",")) return;
@@ -230,6 +249,7 @@ export async function refreshPhoneSections() {
   syncHudPrefs();
 }
 
+/** @param {string} pathname @param {number} width @param {number} height */
 async function toggleHudOverlayPath(pathname, width, height) {
   launcherActionMsg.className = "msg-launcher";
   launcherActionMsg.textContent = "";
@@ -249,12 +269,14 @@ async function toggleHudOverlayPath(pathname, width, height) {
   );
 }
 
+/** @param {string} pathname @param {number} width @param {number} height */
 export function pickOverlay(pathname, width, height) {
   return inHudQueue(function () {
     return pickOverlayNow(pathname, width, height);
   });
 }
 
+/** @param {string} pathname @param {number} width @param {number} height */
 async function pickOverlayNow(pathname, width, height) {
   // The picker stays open: with five HUDs and the settings below, one pick per open was a chore.
   try {
@@ -276,7 +298,7 @@ async function pickOverlayNow(pathname, width, height) {
     await toggleHudOverlayPath(pathname, width, height);
   } catch (eOv) {
     launcherActionMsg.className = "msg-launcher err";
-    launcherActionMsg.textContent = String(eOv && eOv.message ? eOv.message : eOv);
+    launcherActionMsg.textContent = eOv instanceof Error ? eOv.message : String(eOv);
   }
 }
 
@@ -291,7 +313,7 @@ async function pickOverlayNow(pathname, width, height) {
   is exactly when he comes looking for this menu.
 */
 function refreshDisplayModeWarning() {
-  var el = document.getElementById("hudDisplayWarn");
+  const el = document.getElementById("hudDisplayWarn");
   if (!el) return;
   fetch("/api/elite-display-mode")
     .then(function (r) {
@@ -338,7 +360,7 @@ export function start() {
           await refreshOverlayMenuChecks();
         } catch (eM) {
           launcherActionMsg.className = "msg-launcher err";
-          launcherActionMsg.textContent = String(eM && eM.message ? eM.message : eM);
+          launcherActionMsg.textContent = eM instanceof Error ? eM.message : String(eM);
         }
       });
     });
