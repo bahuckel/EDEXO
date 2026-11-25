@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -29,14 +30,19 @@ const MASTER_CHECK = "edexo-master-check-v1";
 // ~100 ms on a desktop CPU: cheap once per session, slow for guessing.
 const SCRYPT = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 
-/** The key for a master password: scrypt on libuv's thread pool, so the ~100 ms never stalls the app's windows. */
+/**
+ * The key for a master password: scrypt on libuv's thread pool, so the ~100 ms never stalls the app's windows.
+ * @param {string} password
+ * @param {string} saltB64
+ * @returns {Promise<Buffer>}
+ */
 function deriveKey(password, saltB64) {
   return new Promise((resolve, reject) =>
     nodeCrypto.scrypt(password, Buffer.from(saltB64, "base64"), 32, SCRYPT, (err, key) => (err ? reject(err) : resolve(key))),
   );
 }
 
-/** AES-256-GCM: iv (12) + tag (16) + ciphertext, base64. */
+/** AES-256-GCM: iv (12) + tag (16) + ciphertext, base64. @param {Buffer} key @param {string} text */
 function seal(key, text) {
   const iv = nodeCrypto.randomBytes(12);
   const c = nodeCrypto.createCipheriv("aes-256-gcm", key, iv);
@@ -44,7 +50,7 @@ function seal(key, text) {
   return Buffer.concat([iv, c.getAuthTag(), ct]).toString("base64");
 }
 
-/** The text, or a throw when the key is wrong or the data was changed. */
+/** The text, or a throw when the key is wrong or the data was changed. @param {Buffer} key @param {string} b64 */
 function open(key, b64) {
   const buf = Buffer.from(b64, "base64");
   const d = nodeCrypto.createDecipheriv("aes-256-gcm", key, buf.subarray(0, 12));
@@ -52,7 +58,11 @@ function open(key, b64) {
   return Buffer.concat([d.update(buf.subarray(28)), d.final()]).toString("utf8");
 }
 
-/** The exact origin of an https URL ("https://host[:port]"), or null (http, other schemes, junk). */
+/**
+ * The exact origin of an https URL ("https://host[:port]"), or null (http, other schemes, junk).
+ * @param {unknown} raw
+ * @returns {string | null}
+ */
 function passwordOrigin(raw) {
   if (typeof raw !== "string" || raw.length > 2048) return null;
   try {
@@ -68,6 +78,8 @@ function passwordOrigin(raw) {
  * @param {string} o.dir  the app's data folder
  * @param {import("electron").SafeStorage} o.safeStorage
  * @param {NodeJS.Platform} [o.platform]
+ *
+ * The methods are typed for what the IPC layer should send; it can still send anything, so their own checks stay.
  */
 function createBrowserPasswords(o) {
   const file = path.join(o.dir, "browser", "passwords.json");
@@ -85,18 +97,24 @@ function createBrowserPasswords(o) {
     if (raw && Array.isArray(raw.entries))
       entries = raw.entries
         .filter(
-          (e) =>
+          (/** @type {any} */ e) =>
             e && typeof e.u === "string" && typeof e.p === "string" && passwordOrigin(e.origin) === e.origin,
         )
         .slice(0, MAX_ENTRIES)
-        .map((e) => ({ origin: e.origin, u: e.u, p: e.p }));
+        .map((/** @type {{ origin: string, u: string, p: string }} */ e) => ({ origin: e.origin, u: e.u, p: e.p }));
   } catch {
     /* none saved yet, or a broken file: nothing saved */
   }
-  /** Origins and usernames, decrypted once (the toolbar's state is pushed often); never the passwords. */
+  /**
+   * Origins and usernames, decrypted once (the toolbar's state is pushed often); never the passwords.
+   * @type {{ origin: string, username: string }[] | null}
+   */
   let listCache = null;
 
-  /** Whether the operating system protects what is saved; if not, why (the settings say it). */
+  /**
+   * Whether the operating system protects what is saved; if not, why (the settings say it).
+   * @returns {{ ok: true, reason: null } | { ok: false, reason: string }}
+   */
   function available() {
     try {
       if (!o.safeStorage || !o.safeStorage.isEncryptionAvailable())
@@ -116,8 +134,13 @@ function createBrowserPasswords(o) {
   }
 
   const locked = () => master != null && key == null;
-  /** Sealed for the file: under the master key first when there is one (call only while unlocked). */
+  /**
+   * Sealed for the file: under the master key first when there is one (call only while unlocked).
+   * @param {string} s
+   * @param {Buffer | null} [k]
+   */
   const enc = (s, k = key) => o.safeStorage.encryptString(k ? seal(k, s) : s).toString("base64");
+  /** @param {string} b64 @returns {string | null} */
   const dec = (b64) => {
     try {
       const inner = o.safeStorage.decryptString(Buffer.from(b64, "base64"));
@@ -136,7 +159,7 @@ function createBrowserPasswords(o) {
     writeFileAtomic(file, `${JSON.stringify(doc, null, 1)}\n`);
   }
 
-  /** The key for this master password, or null when it is wrong. */
+  /** The key for this master password, or null when it is wrong. @param {unknown} password @returns {Promise<Buffer | null>} */
   async function tryKey(password) {
     if (!master || typeof password !== "string" || !password) return null;
     try {
@@ -150,6 +173,10 @@ function createBrowserPasswords(o) {
   /**
    * Seal every login again under `nextKey` (null: the operating system's lock only) and write the file; the old state
    * comes back when the write fails. `plain` is every entry, read before.
+   * @param {{ salt: string, check: string } | null} nextMaster
+   * @param {Buffer | null} nextKey
+   * @param {{ origin: string, u: string, p: string }[]} plain
+   * @returns {{ ok: true } | { error: string }}
    */
   function reseal(nextMaster, nextKey, plain) {
     const before = { master, key, entries };
@@ -168,6 +195,7 @@ function createBrowserPasswords(o) {
 
   /** Every entry readable now, as plain text; null when one cannot be read (locked, or another PC's). */
   function plainEntries() {
+    /** @type {{ origin: string, u: string, p: string }[]} */
     const out = [];
     for (const e of entries) {
       const u = dec(e.u);
@@ -182,6 +210,7 @@ function createBrowserPasswords(o) {
     if (listCache) return listCache;
     if (!entries.length || locked()) return (listCache = []);
     if (!available().ok) return [];
+    /** @type {{ origin: string, username: string }[]} */
     const out = [];
     for (const e of entries) {
       const username = dec(e.u);
@@ -191,13 +220,18 @@ function createBrowserPasswords(o) {
     return (listCache = out);
   }
 
-  /** The entry for origin + username, by index (decrypting the usernames of that origin only). */
+  /**
+   * The entry for origin + username, by index (decrypting the usernames of that origin only).
+   * @param {string} origin
+   * @param {string} username
+   */
   function indexOf(origin, username) {
     for (let i = 0; i < entries.length; i++)
       if (entries[i].origin === origin && dec(entries[i].u) === username) return i;
     return -1;
   }
 
+  /** @param {string} username @param {string} password */
   const validLogin = (username, password) =>
     typeof username === "string" &&
     username.length <= MAX_USERNAME &&
@@ -209,7 +243,7 @@ function createBrowserPasswords(o) {
     available,
     /** Every saved login, origin and username only. */
     list: () => list().map((x) => ({ ...x })),
-    /** The usernames saved for exactly this origin. */
+    /** The usernames saved for exactly this origin. @param {string} origin */
     usernames: (origin) =>
       list()
         .filter((x) => x.origin === origin)
@@ -217,6 +251,10 @@ function createBrowserPasswords(o) {
     /**
      * What a captured login means: "same" (saved already), "update" (that username, another password),
      * "new", or null (not something that could be saved: http, no protection, bad values).
+     * @param {string} origin
+     * @param {string} username
+     * @param {string} password
+     * @returns {"same" | "update" | "new" | null}
      */
     check(origin, username, password) {
       if (passwordOrigin(origin) !== origin || !validLogin(username, password) || !available().ok || locked())
@@ -225,7 +263,13 @@ function createBrowserPasswords(o) {
       if (i < 0) return entries.length >= MAX_ENTRIES ? null : "new";
       return dec(entries[i].p) === password ? "same" : "update";
     },
-    /** Saved, or why not. */
+    /**
+     * Saved, or why not.
+     * @param {string} origin
+     * @param {string} username
+     * @param {string} password
+     * @returns {{ ok: true } | { error: string }}
+     */
     save(origin, username, password) {
       if (passwordOrigin(origin) !== origin) return { error: "Passwords are saved for HTTPS pages only." };
       if (!validLogin(username, password)) return { error: "Nothing to save." };
@@ -244,12 +288,13 @@ function createBrowserPasswords(o) {
       }
       return { ok: true };
     },
-    /** The password for exactly this origin and username (for a fill), or null. */
+    /** The password for exactly this origin and username (for a fill), or null. @param {string} origin @param {string} username */
     lookup(origin, username) {
       if (passwordOrigin(origin) !== origin || typeof username !== "string" || !available().ok) return null;
       const i = indexOf(origin, username);
       return i < 0 ? null : dec(entries[i].p);
     },
+    /** @param {string} origin @param {string} username */
     remove(origin, username) {
       const i = indexOf(origin, username);
       if (i < 0) return false;
@@ -267,10 +312,10 @@ function createBrowserPasswords(o) {
     /** How many logins are saved (readable or not). */
     count: () => entries.length,
     /** Saved logins for this origin that the lock hides (0 when unlocked or no master). */
-    lockedCount: (origin) => (locked() ? entries.filter((e) => e.origin === origin).length : 0),
+    lockedCount: (/** @type {string} */ origin) => (locked() ? entries.filter((e) => e.origin === origin).length : 0),
     /** Whether a master password is set, and whether it is unlocked now. */
     masterState: () => ({ set: master != null, unlocked: master != null && key != null }),
-    /** Unlock with the master password; true when it was right. */
+    /** Unlock with the master password; true when it was right. @param {unknown} password */
     async unlock(password) {
       const k = await tryKey(password);
       if (!k) return false;
@@ -285,6 +330,9 @@ function createBrowserPasswords(o) {
     /**
      * Set or change the master password (`current` when one is set). Every saved login is sealed again under the new
      * key; nothing changes when one cannot be read.
+     * @param {unknown} password
+     * @param {unknown} [current]
+     * @returns {Promise<{ ok: true } | { error: string }>}
      */
     async setMaster(password, current) {
       if (typeof password !== "string" || password.length < MASTER_MIN || password.length > MAX_PASSWORD)
@@ -303,7 +351,11 @@ function createBrowserPasswords(o) {
       if (!plain) return { error: "A saved login cannot be read on this PC: delete it first." };
       return reseal({ salt, check: seal(k, MASTER_CHECK) }, k, plain);
     },
-    /** Drop the master password (the current one is asked): the logins go back to the operating system's lock only. */
+    /**
+     * Drop the master password (the current one is asked): the logins go back to the operating system's lock only.
+     * @param {unknown} current
+     * @returns {Promise<{ ok: true } | { error: string }>}
+     */
     async removeMaster(current) {
       if (!master) return { ok: true };
       const k = await tryKey(current);
