@@ -967,8 +967,20 @@ test("galaxy 3D: a galaxy tab let go behind another tab opens where it was, as i
   await page.evaluate(() => (window as unknown as { __galaxy: G }).__galaxy.lookAt(-1500, 0, 22500, 900));
   const before = await camera();
   await page.locator(".tab-strip__tab").first().click();
-  await page.clock.fastForward("11:00");
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __galaxy?: G }).__galaxy == null)).toBe(true);
+  /*
+    TabSlot sets its release timer in an effect once the tab is behind. One jump of 11 minutes right after the click
+    could come before that effect, leaving the timer on real time (the poll timed out once in three suite runs,
+    2026-11-25), so the clock moves a minute at a time until the map has let go.
+  */
+  await expect
+    .poll(
+      async () => {
+        await page.clock.fastForward("01:00");
+        return page.evaluate(() => (window as unknown as { __galaxy?: G }).__galaxy == null);
+      },
+      { timeout: 60_000 },
+    )
+    .toBe(true);
   await page.locator(".tab-strip__tab", { hasText: "Galaxy" }).first().click();
   await ready();
   expect(await camera()).toEqual(before);
