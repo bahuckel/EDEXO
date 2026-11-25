@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -27,31 +28,42 @@ const DETACHED = { w: 1180, h: 780 };
  *   baseUrl: () => string | null,
  *   preloadPath: string | undefined,
  *   partition: string,
- *   icon: unknown,
+ *   icon: import("electron").NativeImage | string | undefined,
  *   readWindowStates: () => Record<string, unknown>,
  *   readWindowState: (name: string) => ({ x: number, y: number, width: number, height: number, maximized: boolean } | null),
  *   writeWindowStates: (all: Record<string, unknown>) => void,
  *   trackWindowState: (name: string, win: import("electron").BrowserWindow) => void,
  *   enableZoom: (win: import("electron").BrowserWindow) => void,
  *   onExternalLink: (url: string) => void,
+ *   attachLinks?: (win: import("electron").BrowserWindow) => void,
  * }} d
  */
 function createTabWindows(d) {
-  /** key → window; "main" is the app window. */
+  /**
+   * key → window; "main" is the app window.
+   * @type {Map<string, import("electron").BrowserWindow>}
+   */
   const windows = new Map();
-  /** key → the tab kinds it shows. */
+  /**
+   * key → the tab kinds it shows.
+   * @type {Map<string, string[]>}
+   */
   const registry = new Map();
   let seq = 0;
   /** Tab windows, the one the commander was in last first: where the screen-tab keys go. */
   let focusOrder = ["main"];
-  const focused = (key) => {
+  const focused = (/** @type {string} */ key) => {
     focusOrder = [key, ...focusOrder.filter((k) => k !== key)];
   };
   /** The app window is closing (or the app quitting): the list of detached windows is kept as it is. */
   let frozen = false;
 
-  const live = (w) => w && !w.isDestroyed();
-  const keyOf = (wc) => {
+  /**
+   * @param {import("electron").BrowserWindow | null | undefined} w
+   * @returns {w is import("electron").BrowserWindow}
+   */
+  const live = (w) => !!w && !w.isDestroyed();
+  const keyOf = (/** @type {unknown} */ wc) => {
     for (const [k, w] of windows) if (live(w) && w.webContents === wc) return k;
     return null;
   };
@@ -70,6 +82,7 @@ function createTabWindows(d) {
     }
   }
 
+  /** @param {import("electron").BrowserWindow} win */
   function attachMain(win) {
     frozen = false;
     windows.set("main", win);
@@ -85,7 +98,9 @@ function createTabWindows(d) {
     });
   }
 
-  /** Colonize's window (`?screen=colonize`): a window with a home tab of its own, like the app window. */
+  /** Colonize's window (`?screen=colonize`): a window with a home tab of its own, like the app window.
+   * @param {import("electron").BrowserWindow} win
+   */
   function attachColonize(win) {
     windows.set("colonize", win);
     win.on("focus", () => focused("colonize"));
@@ -98,7 +113,11 @@ function createTabWindows(d) {
     });
   }
 
-  /** A detached window: `key` names its tabs' storage; `open` is the tab it is made for (a drag-out). */
+  /**
+   * A detached window: `key` names its tabs' storage; `open` is the tab it is made for (a drag-out).
+   * @param {string} key
+   * @param {{ open?: string, at?: { x: number, y: number } }} [opts]
+   */
   function openDetached(key, opts = {}) {
     const base = d.baseUrl();
     if (!base) return null;
@@ -243,6 +262,7 @@ function createTabWindows(d) {
     /**
      * A key bind's command for the app window's page (owner 2026-10-07), straight over IPC: through the
      * server and the socket it queued behind the game-state messages the page was still reading, 2-3 s.
+     * @param {unknown} cmd
      */
     sendToMain(cmd) {
       const w = windows.get("main");
@@ -252,13 +272,14 @@ function createTabWindows(d) {
      * The screen-tab keys (owner, 2026-10-07/08): one key pair for every window. They go to a window
      * with something to step to — two tabs or more, the app window's Main counting as one — and of
      * those to the one clicked last; with no such window, to the app window.
+     * @param {unknown} cmd
      */
     sendToFocused(cmd) {
       windows.get(this.focusedKey())?.webContents.send("edexo:ui-command", cmd);
     },
     /** The window the screen-tab keys act on. */
     focusedKey() {
-      const steps = (k) => (k === "main" ? 1 : 0) + (registry.get(k)?.length ?? 0);
+      const steps = (/** @type {string} */ k) => (k === "main" ? 1 : 0) + (registry.get(k)?.length ?? 0);
       // Colonize takes its keys from the socket (useLiveSnapshot.ts), as before it joined the registry.
       const open = [...windows.keys()].filter((k) => k !== "colonize" && live(windows.get(k)));
       const many = open.filter((k) => steps(k) >= 2);

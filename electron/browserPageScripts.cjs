@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -11,6 +12,8 @@
  * Reads the page's class names, ids and links (for the lists' general hiding rules, which match on them), and
  * collapses the frames and images whose request was blocked, as uBlock does: the element goes, not only its
  * content (owner, 2026-10-13: "it only removes its contents").
+ *
+ * @param {string[]} blocked  the blocked request URLs of this page
  */
 function cosmeticScript(blocked) {
   return `(() => {
@@ -46,6 +49,7 @@ function cosmeticScript(blocked) {
   the main process made for this page. The page's own scripts run in another world: they cannot read the nonce, so
   they cannot forge a report. It also says whether the page has a visible password field (the toolbar's key).
 */
+/** @param {string} nonce */
 function passwordCaptureScript(nonce) {
   return `(() => {
   if (globalThis.__pwWatch) return;
@@ -106,6 +110,8 @@ function passwordCaptureScript(nonce) {
 /**
  * Fills a saved login on the page it was saved for, as typed input, in the password world: the key button, or with
  * `auto` on its own when the page shows its password field (only empty fields, the keyboard focus left alone).
+ *
+ * @param {string} origin @param {string} username @param {string} password @param {boolean} [auto]
  */
 function passwordFillScript(origin, username, password, auto = false) {
   return `(() => {
@@ -173,6 +179,8 @@ function inaraReadScript() {
  * themed, with Read and Cancel"). Drawn in its own shadow root, so the page's styles neither reach nor read it; its
  * buttons report as a console line that starts with the nonce the main process made for this page (only this world
  * knows it). `__edexoInaraSay(text, ok)` puts the result in it.
+ *
+ * @param {string} nonce
  */
 function inaraOfferScript(nonce) {
   return `(() => {

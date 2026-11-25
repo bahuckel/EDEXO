@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 
 /*
@@ -12,7 +13,8 @@ const { FiltersEngine } = adblocker;
 const { parse: parseHost } = require("tldts-experimental");
 const wt = require("node:worker_threads");
 
-if (!wt.isMainThread && wt.workerData && typeof wt.workerData.lists === "string") {
+const port = wt.parentPort; // set in a worker, null on the main thread
+if (!wt.isMainThread && port && wt.workerData && typeof wt.workerData.lists === "string") {
   try {
     const engine = FiltersEngine.parse(wt.workerData.lists, {
       loadCosmeticFilters: true,
@@ -24,13 +26,18 @@ if (!wt.isMainThread && wt.workerData && typeof wt.workerData.lists === "string"
     // The scriptlets the `##+js(...)` rules run (browserBlocker.cjs RESOURCES); injected by browserTabs.cjs.
     if (typeof wt.workerData.resources === "string") engine.updateResources(wt.workerData.resources, "edexo");
     const bytes = engine.serialize();
-    wt.parentPort.postMessage({ ok: true, bytes }, [bytes.buffer]);
+    // A plain ArrayBuffer (serialize() allocates one), moved rather than copied.
+    port.postMessage({ ok: true, bytes }, [/** @type {ArrayBuffer} */ (bytes.buffer)]);
   } catch (e) {
-    wt.parentPort.postMessage({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    port.postMessage({ ok: false, error: e instanceof Error ? e.message : String(e) });
   }
 }
 
-/** A URL's hostname and registrable domain ("www.edsm.net" → "edsm.net"), or nulls. */
+/**
+ * A URL's hostname and registrable domain ("www.edsm.net" → "edsm.net"), or nulls.
+ * @param {string} url
+ * @returns {{ hostname: string | null, domain: string | null }}
+ */
 function hostOf(url) {
   // A site on a shared host is its own site ("ed-ggg.github.io", not all of github.io; review 1.2.16).
   const r = parseHost(url, { allowPrivateDomains: true });
