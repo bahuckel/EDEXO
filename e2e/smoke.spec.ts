@@ -1126,6 +1126,9 @@ test("galaxy 3D: the Filter drawer lights the systems that have what was ticked"
     await drawer.getByLabel("Search the filters").fill("neutron");
     await drawer.locator("fieldset", { hasText: "Any star in the system" }).getByLabel("Neutron star").check();
     await expect.poll(count, { timeout: 30_000 }).toBeLessThan(stratum);
+    // Not none: a traits file made for another bio-index matched nothing, and "fewer than Stratum" let it pass
+    // (2026-11-25).
+    expect(await count()).toBeGreaterThan(0);
     await page.screenshot({ path: `${OUT}/galaxy-3d-filter.png` });
     /*
       Owner, 2026-10-04: removed the plant from its chip, ticked main star O, and the map still lit the
@@ -1219,6 +1222,22 @@ test("galaxy 3D: NavRoute — Next is the plotted route with EDSM checks, Previo
     }));
     await route.fulfill({ response: res, json: body });
   });
+  /*
+    The server reads its route log once per profile (navRouteLog.ts ensureLoaded), and the galaxy tests before this
+    one have loaded it by now, so the file written above is not read again (it passed run alone, failed in the
+    suite). The log's answer for this route is given here too, as /api/navroutes sends it.
+  */
+  await page.route("**/api/navroutes", (route) =>
+    route.fulfill({
+      json: {
+        formatVersion: 1,
+        routes: [{ at, from: "Sol", to: "Hole C", systems: [1, 2, 3, 4] }],
+        systems: plotted,
+        last: plotted.map((s) => s.address),
+        checking: null,
+      },
+    }),
+  );
   await page.setViewportSize({ width: 1400, height: 820 });
   await page.goto("/?screen=galaxy");
   type G = { stats: () => { phase: string } };
@@ -1711,7 +1730,7 @@ test("phone hud: chips and the portrait layout", async ({ page }) => {
   const errors = watchErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/hud-overlay.html?phone=1");
-  await expect(page.locator(".phone-chip:not(.phone-chip--fs)")).toHaveCount(10); // one per section: Colonize the 9th (1.3.0), Ship the 10th
+  await expect(page.locator(".phone-chip:not(.phone-chip--fs)")).toHaveCount(11); // one per section: Colonize the 9th (1.3.0), Ship the 10th, Carrier the 11th
   await expect(page.locator(".phone-chip--fs")).toHaveCount(1);
   await expect(page.locator("body")).toHaveClass(/phone/);
   await page.screenshot({ path: `${OUT}/hud-phone.png`, fullPage: true });
