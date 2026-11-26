@@ -68,9 +68,10 @@ describe("which copies can update themselves", () => {
 });
 
 /*
-  The real swap starts a console PowerShell the way the app does on quit, and Windows shows its window
-  for a moment and moves the focus: run in every test pass, that flashed windows over whatever the
-  owner was doing (2026-10-02). On request only: EDEXO_SWAP_TESTS=1 npx vitest run tests/updateApply.test.ts
+  The real swap starts PowerShell the way the app does on quit. Until 1.4.0 Windows showed its window for a
+  moment and moved the focus: run in every test pass, that flashed windows over whatever the owner was doing
+  (2026-10-02). Since the windowless start (updater.cjs) none should show, but a regression would flash
+  again. On request only: EDEXO_SWAP_TESTS=1 npx vitest run tests/updateApply.test.ts
 */
 describe.runIf(win && process.env.EDEXO_SWAP_TESTS === "1")("the swap on Windows", () => {
   it("portable: waits for the app, replaces the exe, keeps the old one as .old, and the next start removes it", async () => {

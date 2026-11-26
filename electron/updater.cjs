@@ -15,7 +15,7 @@
  * program folder from the zip (Windows), and the AppImage (`APPIMAGE`). A source run, macOS and the
  * console builds keep the release-page link.
  */
-const { spawn } = require("node:child_process");
+const { spawnSync } = require("node:child_process");
 const { createHash } = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -163,22 +163,32 @@ function installOnQuit(staged, o) {
     o.logPath,
   ];
   /*
-    Through `cmd /c start`: PowerShell 5.1 started straight from a detached process (no console) exits
-    at once without running the script, and a child that is not detached is killed with this process
-    (libuv puts it in a kill-on-close job). `start /b` hands it off and lets this process go.
+    Through `cmd /c start /b`, with no window at any step. PowerShell 5.1 started straight from a detached process (no
+    console) exits at once without running the script, and a direct child of this process is killed with it (libuv
+    puts it in a kill-on-close job). The job lets a child's own children go (silent breakaway), so `start /b` hands
+    PowerShell off and this process can end.
+    `cmd` is NOT detached (a player's report, 1.4.0 update): detached, it had no console, so Windows opened a new,
+    visible one for PowerShell, and `-WindowStyle Hidden` hides it only after PowerShell is up (with Windows Terminal
+    as the default terminal, often not at all). Hidden and attached, `cmd` gets a console without a window, and
+    PowerShell started with `/b` shares it. Waited for (spawnSync): `cmd` ends as soon as PowerShell is started, and
+    must not be killed with this process before it has.
     Every argument quoted: paths have spaces ("ED Exo Compare 1.2.9").
   */
   const line = "powershell.exe " + args.map((a) => `"${String(a).replace(/"/g, "")}"`).join(" ");
-  const child = spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `start "" /b ${line}`], {
+  const r = spawnSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `start "" /b ${line}`], {
     // Never the app's own folder: a process working in a folder keeps Windows from renaming it, and
     // the folder swap would block itself (owner's .zip test, 2026-10-02).
     cwd: path.dirname(o.scriptPath),
-    detached: true,
     stdio: "ignore",
     windowsHide: true,
     windowsVerbatimArguments: true,
+    timeout: 15_000,
   });
-  child.unref();
+  if (r.error || r.status !== 0) {
+    const why = `the update helper did not start (${r.error ? r.error.message : `cmd exit ${r.status}`})`;
+    logFailure(o.logPath, why);
+    throw new Error(why);
+  }
   return { how: "helper" };
 }
 
