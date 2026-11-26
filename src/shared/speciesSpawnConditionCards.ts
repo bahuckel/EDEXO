@@ -40,8 +40,8 @@ const fmtK = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 /**
  * Genera that require active volcanism in game, enforced even where a species row omits `volcanismIncludes`. One list
  * for the matcher and the encyclopedia cards (review 2026-11-07 B16: each kept its own). The genus files' own
- * `planet_requirements.volcanism_required` also names bark-mound and sinuous-tubers and is read by nothing: adding
- * them would change predictions, so it waits on a measurement.
+ * `planet_requirements.volcanism_required` also names bark-mound and sinuous-tubers; their species rows carry
+ * `volcanismActiveRequired` already, so adding them here changes nothing (measured 2026-11-25: hold-out D identical).
  */
 export const GENUS_DATA_DIR_REQUIRING_VOLCANISM: ReadonlySet<string> = new Set<string>(["brain-tree"]);
 
