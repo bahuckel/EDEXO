@@ -103,9 +103,9 @@
         "temperature_K": {
           "max": 195
         },
-        "soft_max_semi_major_axis_ls": 28,
         "atmospherePressureCategory": "thin",
         "matchContextNotes": [
+          "Moon orbit ceiling removed 2026-11-27 (with its x0.15 for a planet round a star): on every thin-CO2 body of the EDDN year under 0.3 g orbiting past 27 ls (41,281), dropping it shows 23 more true labiata rows, drops none, and adds 39 wrong rows on 9,563 fully identified bodies; the measured exclusions already cover its wide orbits.",
           "Moon orbit ceiling 20 -> 28 ls and moons only, 2026-10-09: of 26,489 Concha labiata moons in a year of EDDN codex entries (EDGalaxyData archive), 99.5 % orbit within 18.6 ls and 99.9 % within 27.8 ls; the 926 bodies orbiting a star are no longer demoted for it.",
           "Removed 2026-11-14 (1.4.0): Carbon dioxide rich (thin) — the codex row names it, but the EDDN year has no more than one body of this species there (\"-rich\" is its own atmosphere since 1.4.0; a list says where the data sees it grow). Still listed as unlikely there, not hidden."
         ]

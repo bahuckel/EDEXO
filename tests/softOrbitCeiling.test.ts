@@ -24,7 +24,13 @@ describe("soft_max_semi_major_axis_ls", () => {
   });
 
   const db = loadSpeciesDatabase() as unknown as { species: SpeciesEntry[] };
-  const labiata = db.species.find((e) => e.id === "concha_concha_labiata")!;
+  /*
+    Labiata no longer carries the ceiling (2026-11-27, plan-1.4.0 §3.5: the EDDN year without it gains 23 labiata
+    rows and drops none, the measured exclusions cover its wide orbits). The mechanism is tested on its row with the
+    old 28 ls put back.
+  */
+  const shipped = db.species.find((e) => e.id === "concha_concha_labiata")!;
+  const labiata = { ...shipped, criteria: { ...shipped.criteria, softMaxSemiMajorAxisLs: 28 } } as SpeciesEntry;
   const body = (smaLs: number | undefined): PlanetScan => ({
     BodyName: "Test 1 a",
     BodyID: 1,
@@ -47,8 +53,8 @@ describe("soft_max_semi_major_axis_ls", () => {
     return speciesMatchesCriteria(labiata, scan, resolvePlanetTemperatureBand(scan, est), est, null);
   };
 
-  it("ships on labiata at 28 ls (2026-10-09: 99.9 % of 26,489 labiata moons in a year of EDDN)", () => {
-    expect(labiata.criteria.softMaxSemiMajorAxisLs).toBe(28);
+  it("no longer ships on labiata (2026-11-27: the year gains 23 labiata rows without it, loses none)", () => {
+    expect(shipped.criteria.softMaxSemiMajorAxisLs).toBeUndefined();
   });
 
   const withParents = (smaLs: number, parents: Record<string, number>[]) => {

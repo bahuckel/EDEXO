@@ -213,12 +213,15 @@ describe("the measured orbit card", () => {
   it("states the ceiling, blue on a close moon and yellow on a planet round a star", () => {
     const moon = { SemiMajorAxis: 4 * 299_792_458, PlanetClass: "Rocky body", AtmosphereType: "CarbonDioxide" } as unknown as PlanetScan;
     const planet = { SemiMajorAxis: 900 * 299_792_458, PlanetClass: "Rocky body", AtmosphereType: "CarbonDioxide" } as unknown as PlanetScan;
-    const near = card(species("Concha labiata"), "soft-orbit", moon)!;
+    // No shipped row carries the ceiling since 2026-11-27: labiata with its old 28 ls.
+    const shipped = species("Concha labiata");
+    const labiata = { ...shipped, criteria: { ...shipped.criteria, softMaxSemiMajorAxisLs: 28 } };
+    const near = card(labiata, "soft-orbit", moon)!;
     expect(near.lines.join(" ")).toContain("28 ls");
     expect(near.tier).toBe("blue");
-    expect(card(species("Concha labiata"), "soft-orbit", planet)!.tier).toBe("yellow");
+    expect(card(labiata, "soft-orbit", planet)!.tier).toBe("yellow");
     const roundStar = { ...planet, Parents: [{ Star: 0 }] } as unknown as PlanetScan;
-    expect(card(species("Concha labiata"), "soft-orbit", roundStar)!.caption).toMatch(/round a star .* lower chance/);
+    expect(card(labiata, "soft-orbit", roundStar)!.caption).toMatch(/round a star .* lower chance/);
   });
 });
 
