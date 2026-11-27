@@ -1651,5 +1651,19 @@
     0.99865
    ]
   ]
+ },
+ "dssAbout": "After a DSS (owner 2026-11-26): inside each named genus the listed species' chances are softened (T < 1) or sharpened (T > 1) as p^T, then scaled back to the genus's own total, so the order inside the genus, the genus total and which rows show stay as they were. Fitted per genus on fully identified bodies of the 1.4.0 year run (Brier on rows under 99.5 %, grid 0.05-3.0), only genera checked on held-back shards (fit 0-1, score 2-3); the others are left as they are. A genus with a row at 99.5 % or more is left alone. Bands after, held-back shards: 65-80 % said 70.6 came true 71.8 (before 70.7 / 60.4); 0-10 % said 2.7 came true 2.9 (before 2.6 / 7.0).",
+ "dssSoften": {
+  "bacterium": 0.8,
+  "stratum": 0.25,
+  "tubus": 0.05,
+  "cactoida": 0.65,
+  "concha": 0.45,
+  "tussock": 0.05,
+  "sinuous tuber": 3.0,
+  "brain trees": 1.65,
+  "clypeus": 0.45,
+  "fungoida": 0.65,
+  "frutexa": 0.05
  }
 }

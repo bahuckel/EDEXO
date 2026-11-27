@@ -34,7 +34,7 @@ import { applyGenusBodySplit } from "./genusBodySplit.js";
 import { applyGenusPrior, rescueByGenusPrior, vetoUnseenGenera } from "./genusPrior.js";
 import { applyMeasuredOdds } from "./measuredOdds.js";
 import { orderConchaPair } from "./conchaOrder.js";
-import { recalibrateFssChances } from "./chanceRecalibration.js";
+import { recalibrateChances } from "./chanceRecalibration.js";
 import { collectResolvedOrganicLockSpeciesIds } from "./organicLocks.js";
 import { ownGenusEvidence } from "../shared/genusEvidence.js";
 
@@ -151,8 +151,8 @@ export function rankCandidates(
   // the tables have ordered Concha already.
   if (!split.has("Concha")) orderConchaPair(matches, scan);
   markSampledDespiteUnlikely(matches, b, db);
-  // Last, on the chances as shown: the map was fitted on them (chanceRecalibration.ts; owner, 2026-11-02).
-  recalibrateFssChances(matches, !!b.genusHints?.length, root);
+  // Last, on the chances as shown: the maps were fitted on them (chanceRecalibration.ts; owner, 2026-11-02 and 2026-11-26).
+  recalibrateChances(matches, !!b.genusHints?.length, root);
   /*
     Before a DSS too, one genus's species add up to at most 100 % (review 2026-11-10 A6: Tussock read 174.7 % on a
     7-signal body). After the map, so the floors and the fitted map see the numbers they were measured on.

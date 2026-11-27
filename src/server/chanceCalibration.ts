@@ -10,6 +10,10 @@
  * (chanceRecalibration.ts, 1.3.7): before a DSS every band now comes true within about two points of what it says
  * (35-50 % said 42.3, came true 42.7; hold-out D agrees), where 1.2.19's table was fitted on the uncorrected chances.
  *
+ * The DSS cells were rebuilt 2026-11-26 on the chances softened per genus after a DSS (chanceRecalibration.ts
+ * `dssSoften`): rows said 65-80 % now come true 73 % (were 60 %), rows said 0-10 % 3 % (were 7 %). The band is looked up
+ * by the chance as shown (chanceWhy.ts), the one the table was built on.
+ *
  * Per genus where its band holds at least `minRows` rows, else all genera together. Read-only: this changes no chance.
  */
 import { existsSync, readFileSync } from "node:fs";
