@@ -104,7 +104,8 @@ one. Checked on 372,812 bodies other commanders logged on EDDN, where every spec
 (1.4.0, before a DSS): rows it calls 90–100 % turn up 99.1 % of the time, rows under 10 % 3.5 %.
 
 **Which species, once you have mapped it.** After a DSS names the genus, the same posterior
-renormalises inside that genus to say which of its species you are looking at.
+renormalises inside that genus to say which of its species you are looking at, weighed per genus so it
+is no surer than the data (1.4.1: rows called 65–80 % after a DSS turn up 73 % of the time).
 
 **What you have not logged before.** A badge marks species new to your codex.
 
@@ -192,7 +193,8 @@ game) or as pop-ups if Tab view is off.
 - **Boxels**: every system in your saved boxels, flown or not, with stars, notable bodies and biology;
   one field to add a boxel from any of its systems, each boxel's actions behind ⋯ (Fetch from Spansh, run,
   check the end); flown **by number or in the shortest order** from where you are (positions from your
-  plotted routes and Spansh); a Flying strip with the next system, the order and the run, which copies the
+  plotted routes, Spansh and the systems you flew; for a system nobody has flown, the place its address
+  predicts, marked ≈); the star class an unrecorded system's address predicts (≈ F); a Flying strip with the next system, the order and the run, which copies the
   next system after every jump (F6 copy, F7 start or stop, F8 / F9 previous and next); what each mass code
   holds across the galaxy; golden boxels where a genus is many times more common; To fly / Done / Flown
   through.
@@ -267,7 +269,9 @@ game) or as pop-ups if Tab view is off.
   jump, or by the bodies, star type or system worth you are looking for. Systems you visited, systems
   in the galaxy index and the 4.2 million flown since 2025 without biology are taken off. A boxel's
   card lists the system names nobody has recorded, ready to copy; a plan puts up to 20 boxels in
-  flying order; a species lights only the boxels its position rule allows.
+  flying order; a species lights only the boxels its position rule allows. **Whole galaxy** hunts every g
+  and h boxel of the named sectors for a star or body, nearest first, checks the nearest 20 on Spansh (EDSM
+  when Spansh is down) and puts the best one on the HUD.
 - The galaxy index, the stations and the neutron stars are one download from inside the map; its
   update button says how many systems it adds.
 
