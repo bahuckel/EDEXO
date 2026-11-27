@@ -160,17 +160,6 @@ export const SPATIAL_GATES: { idIncludes: string; gate: SpatialGate }[] = [
     },
   },
   {
-    idIncludes: "cone",
-    gate: {
-      kind: "nebula",
-      thresholdLy: 150,
-      evidence:
-        "93 % of 23,651 Bark Mound systems are within 150 ly of a nebula, 100 % within 300 ly; background 4–7 %",
-      softBandLy: 300,
-      softFactor: 0.5,
-    },
-  },
-  {
     idIncludes: "bark_mound",
     gate: {
       kind: "nebula",
