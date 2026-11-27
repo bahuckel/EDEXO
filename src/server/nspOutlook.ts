@@ -7,9 +7,35 @@
  * is kept per system until the phenomena file or the journals change.
  */
 import { nspFamilyLabel, nspSystemsView, readNspStatus } from "./edastroNsp.js";
-import { NSP_NEARBY_RADIUS_LY, nspPredict, type NspOutlookDTO } from "../shared/nspOutlook.js";
+import { NSP_NEARBY_RADIUS_LY, nspCardWorthShowing, nspGuessWhy, nspPredict, type NspOutlookDTO } from "../shared/nspOutlook.js";
 
 const memo = new Map<string, NspOutlookDTO>();
+
+/** Per store: the region the commander is in, and the system where the card gave its chance (null: not yet). */
+const regionTold = new WeakMap<object, { region: string | null; systemAddress: number | null }>();
+
+/**
+ * A rich region's chance is said once (owner 2026-11-27: "just shown once when you get into the
+ * sector"): on the first system since the commander came into the region where the card shows that
+ * line. Later systems there get `regionKnown`, so the card shows only for what the system adds or for
+ * what is known there. `current`: the commander's own system; a system he only views never moves the
+ * memory. Kept for the run of the app: after a restart the line shows once more.
+ */
+export function nspRegionOnce(owner: object, dto: NspOutlookDTO, current: boolean): NspOutlookDTO {
+  let told = regionTold.get(owner);
+  if (!told) regionTold.set(owner, (told = { region: null, systemAddress: null }));
+  if (current && dto.region && dto.region !== told.region) {
+    told.region = dto.region;
+    told.systemAddress = null;
+  }
+  const line = dto.guess?.regionReason;
+  if (!line || dto.region !== told.region) return dto;
+  if (told.systemAddress == null) {
+    if (current && nspCardWorthShowing(dto) && nspGuessWhy(dto) === line) told.systemAddress = dto.systemAddress;
+    return dto;
+  }
+  return told.systemAddress === dto.systemAddress ? dto : { ...dto, regionKnown: true };
+}
 
 export function nspOutlook(o: {
   systemAddress: number;

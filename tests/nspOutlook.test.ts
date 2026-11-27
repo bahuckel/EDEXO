@@ -10,13 +10,15 @@ import {
   isNspCodexName,
   nspCardWorthShowing,
   nspChanceWord,
+  nspGuessWhy,
   nspOdds,
   nspPredict,
   nspStarKey,
 } from "../src/shared/nspOutlook.js";
 import { readNspStatus, resetNspMemo, startNspDownload } from "../src/server/edastroNsp.js";
-import { nspOutlook } from "../src/server/nspOutlook.js";
+import { nspOutlook, nspRegionOnce } from "../src/server/nspOutlook.js";
 import { GameStateStore } from "../src/server/gameState.js";
+import type { NspOutlookDTO } from "../src/shared/nspOutlook.js";
 
 describe("which codex entries are phenomena", () => {
   it("the NSP families, never an L-type star", () => {
@@ -138,5 +140,60 @@ describe("the outlook", () => {
     const empty = nspOutlook({ systemAddress: 7, position: { x: 10, y: 0, z: 0 }, seen: [], region: "Inner Orion Spur", starType: "K" });
     expect(empty.nearest[0]).toMatchObject({ name: "Lagrange cloud", distanceLy: 10 });
     expect(empty.guess!.reasons.join(" ")).toMatch(/2 known within 100 ly/);
+  });
+});
+
+describe("a rich region's chance shows once, on the way in (owner 2026-11-27)", () => {
+  const dto = (systemAddress: number, region: string, starType: string, seen: string[] = []): NspOutlookDTO => ({
+    systemAddress,
+    seen,
+    logged: [],
+    loggedDetail: [],
+    guess: nspPredict({ region, starType, nearby: 2 }),
+    nearest: [],
+    region,
+  });
+  const ios = "Inner Orion Spur";
+
+  it("the first system in the region says it, the next ones only for what they add", () => {
+    const cmdr = {};
+    const a = nspRegionOnce(cmdr, dto(1, ios, "M"), true);
+    expect(nspCardWorthShowing(a)).toBe(true);
+    expect(nspGuessWhy(a)).toMatch(/Inner Orion Spur is rich in phenomena/);
+    // Still the same system: the card stays.
+    expect(nspCardWorthShowing(nspRegionOnce(cmdr, dto(1, ios, "M"), true))).toBe(true);
+    // The next M star there: the region alone no longer brings the card.
+    const b = nspRegionOnce(cmdr, dto(2, ios, "M"), true);
+    expect(b.regionKnown).toBe(true);
+    expect(nspCardWorthShowing(b)).toBe(false);
+    // A black hole there adds its own reason: the card shows, led by it, at the full chance.
+    const c = nspRegionOnce(cmdr, dto(3, ios, "H"), true);
+    expect(nspCardWorthShowing(c)).toBe(true);
+    expect(nspGuessWhy(c)).toMatch(/black hole/);
+    expect(c.guess!.p).toBeGreaterThan(c.guess!.pWithoutRegion!);
+    // What the journals saw always shows.
+    expect(nspCardWorthShowing(nspRegionOnce(cmdr, dto(4, ios, "M", ["Proto-Lagrange Cloud"]), true))).toBe(true);
+  });
+
+  it("viewing a system elsewhere moves nothing; leaving and coming back says it again", () => {
+    const cmdr = {};
+    nspRegionOnce(cmdr, dto(1, ios, "M"), true);
+    const viewed = nspRegionOnce(cmdr, dto(9, "Outer Orion Spur", "M"), false);
+    expect(viewed.regionKnown).toBeUndefined();
+    expect(nspRegionOnce(cmdr, dto(10, ios, "M"), false).regionKnown).toBe(true);
+    expect(nspCardWorthShowing(nspRegionOnce(cmdr, dto(5, "Outer Orion Spur", "M"), true))).toBe(true);
+    expect(nspRegionOnce(cmdr, dto(6, "Outer Orion Spur", "M"), true).regionKnown).toBe(true);
+    expect(nspCardWorthShowing(nspRegionOnce(cmdr, dto(7, ios, "M"), true))).toBe(true);
+    // Each commander (store) keeps its own.
+    expect(nspRegionOnce({}, dto(8, ios, "M"), true).regionKnown).toBeUndefined();
+  });
+
+  it("a card that showed what the journals saw has not said the region's chance yet", () => {
+    const cmdr = {};
+    expect(nspRegionOnce(cmdr, dto(1, ios, "M", ["Proto-Lagrange Cloud"]), true).regionKnown).toBeUndefined();
+    const next = nspRegionOnce(cmdr, dto(2, ios, "M"), true);
+    expect(next.regionKnown).toBeUndefined();
+    expect(nspGuessWhy(next)).toMatch(/rich in phenomena/);
+    expect(nspRegionOnce(cmdr, dto(3, ios, "M"), true).regionKnown).toBe(true);
   });
 });

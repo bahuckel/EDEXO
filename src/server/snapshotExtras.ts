@@ -11,7 +11,7 @@ import type { createBookmarksService } from "./bookmarks.js";
 import type { createCommanderWatch } from "./commanderWatch.js";
 import { perfTime } from "./perf.js";
 import { getProjectRoot } from "./paths.js";
-import { nspOutlook } from "./nspOutlook.js";
+import { nspOutlook, nspRegionOnce } from "./nspOutlook.js";
 import { regionForSystem } from "./regionMapData.js";
 import { fsdWearEstimate, FSD_WARN } from "../shared/fsdWear.js";
 import { jumponiumView } from "../shared/jumponium.js";
@@ -67,7 +67,8 @@ export function addSnapshotExtras(
       addr == null || snap.journalBoot
         ? null
         : perfTime("snap.nspOutlook", () =>
-            nspOutlook({
+            // A rich region's chance shows once, on the way in (owner 2026-11-27).
+            nspRegionOnce(store, nspOutlook({
               systemAddress: addr,
               position: store.systemPositions.get(addr) ?? null,
               seen: store.nspSeen.get(addr) ?? [],
@@ -78,7 +79,7 @@ export function addSnapshotExtras(
                   : (snap.currentRegion?.name ?? null);
               })(),
               starType: mainStarTypeOf(addr),
-            }),
+            }), addr === store.currentSystemAddress),
           );
   }
   snap.neutronLive = snap.journalBoot ? null : neutronLive.view(shipHere());

@@ -1,11 +1,12 @@
 /**
  * The phenomena card on the system row (shared/nspOutlook.ts): what the commander met here, what
  * EDAstro has logged here, or a prediction from the region, the main star and the phenomena nearby.
- * Shown only when one of those says there could be one (owner, 2026-09-30).
+ * Shown only when one of those says there could be one (owner, 2026-09-30); a rich region's chance
+ * only once on the way in (owner, 2026-11-27).
  */
 import type { ReactNode } from "react";
 import type { NspOutlookDTO } from "@shared/nspOutlook";
-import { nspCardWorthShowing, nspChanceWord, nspOdds } from "@shared/nspOutlook";
+import { nspCardWorthShowing, nspChanceWord, nspGuessWhy, nspOdds } from "@shared/nspOutlook";
 import { fmtLy, fmtPct } from "@shared/format";
 
 export function NspCard({ o }: { o: NspOutlookDTO | null | undefined }) {
@@ -64,7 +65,7 @@ export function NspCard({ o }: { o: NspOutlookDTO | null | undefined }) {
         <span className="dim"> · {nspOdds(g.p)}</span>
       </>
     );
-    why = g.reasons[0] ?? null;
+    why = nspGuessWhy(o);
   }
   return (
     <section className="nsp-card cockpit-card" title={title}>

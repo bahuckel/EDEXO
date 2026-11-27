@@ -13,7 +13,9 @@
  * nebulae nearby add almost nothing and are left out.
  *
  * The card shows only for a sighting, an EDAstro entry, or a prediction of 10 % or more (owner: "not
- * needed if nothing in the system indicates there could be one").
+ * needed if nothing in the system indicates there could be one"). A rich region's chance shows once, on
+ * the first system in the region where the card gives it (owner 2026-11-27: "just shown once when you
+ * get into the sector"); after that only what a system adds brings the card (server/nspOutlook.ts).
  */
 import { regionJoinKey } from "./regionMap.js";
 import { NSP_BASE, NSP_NEARBY_FACTOR, NSP_REGION_LIFT, NSP_STAR_LIFT } from "./nspModelData.js";
@@ -71,6 +73,10 @@ export interface NspPrediction {
   p: number;
   /** Why, in words, strongest first. */
   reasons: string[];
+  /** The region's line in `reasons` when the region raises the chance, else null. */
+  regionReason?: string | null;
+  /** The chance without a region's lift (never above `p`): what the system itself adds. */
+  pWithoutRegion?: number;
 }
 
 /** The prediction from what the system is. `nearby` is null without the EDAstro phenomena download. */
@@ -82,11 +88,14 @@ export function nspPredict(o: {
   /** `up`: raises the chance (listed first, the card shows the first). */
   const reasons: { text: string; w: number; up: boolean }[] = [];
   let p = NSP_BASE;
+  let regionReason: string | null = null;
   const rl = o.region ? NSP_REGION_LIFT[regionJoinKey(o.region)] : undefined;
   if (rl != null) {
     p *= rl;
-    if (rl >= 1.3) reasons.push({ text: `${o.region} is rich in phenomena (×${rl < 10 ? rl.toFixed(1) : Math.round(rl)})`, w: rl, up: true });
-    else if (rl <= 0.2) reasons.push({ text: `${o.region} has very few`, w: 1 / Math.max(rl, 0.001), up: false });
+    if (rl >= 1.3) {
+      regionReason = `${o.region} is rich in phenomena (×${rl < 10 ? rl.toFixed(1) : Math.round(rl)})`;
+      reasons.push({ text: regionReason, w: rl, up: true });
+    } else if (rl <= 0.2) reasons.push({ text: `${o.region} has very few`, w: 1 / Math.max(rl, 0.001), up: false });
   }
   const sk = nspStarKey(o.starType);
   const sl = sk ? NSP_STAR_LIFT[sk] : undefined;
@@ -109,6 +118,8 @@ export function nspPredict(o: {
   return {
     p: Math.min(0.9, p),
     reasons: reasons.sort((a, b) => Number(b.up) - Number(a.up) || b.w - a.w).map((r) => r.text),
+    regionReason,
+    pWithoutRegion: Math.min(0.9, p / Math.max(rl ?? 1, 1)),
   };
 }
 
@@ -139,10 +150,26 @@ export interface NspOutlookDTO {
   /** Nearest phenomena of different kinds, nearest first (up to 4); empty without the download. */
   nearest: { name: string; system: string; distanceLy: number }[];
   region: string | null;
+  /**
+   * The card already gave this region's chance on an earlier system since the commander came into the
+   * region (owner 2026-11-27: "just shown once when you get into the sector"). The region's lift then no
+   * longer brings the card on its own: only what the system adds (its star, phenomena nearby) or what is
+   * known there (journals, EDAstro).
+   */
+  regionKnown?: boolean;
 }
 
 /** Whether the card has anything worth showing. */
 export function nspCardWorthShowing(o: NspOutlookDTO | null | undefined): boolean {
   if (!o) return false;
-  return o.seen.length > 0 || o.logged.length > 0 || (o.guess != null && o.guess.p >= NSP_SHOW_FROM);
+  if (o.seen.length > 0 || o.logged.length > 0) return true;
+  if (o.guess == null) return false;
+  return (o.regionKnown ? (o.guess.pWithoutRegion ?? o.guess.p) : o.guess.p) >= NSP_SHOW_FROM;
+}
+
+/** The prediction's line under the chance (its strongest reason), null when the card shows no prediction. */
+export function nspGuessWhy(o: NspOutlookDTO): string | null {
+  const g = o.guess;
+  if (!g || o.seen.length > 0 || o.logged.length > 0) return null;
+  return (o.regionKnown ? g.reasons.find((r) => r !== g.regionReason) : g.reasons[0]) ?? null;
 }
