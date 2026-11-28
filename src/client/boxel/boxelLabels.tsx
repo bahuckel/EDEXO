@@ -28,24 +28,72 @@ export function fromIndex(r: BoxelTableRowDTO, text: string) {
   );
 }
 
+const STAGE_TEXT = {
+  small: ["small star", "small", "a small star in the place of the one the system was born with (a K, M or L dwarf, most often)"],
+  giant: ["giant", "giant", "a giant: the star has left the main sequence"],
+  whiteDwarf: ["white dwarf", "WD", "a white dwarf"],
+  neutron: ["neutron star", "N", "a neutron star"],
+  collapsed: ["neutron star or black hole", "N / BH", "a neutron star, or a black hole (about one in nine)"],
+} as const;
+
 /**
  * A star nobody has recorded, as its system's address predicts it (shared/stellarClass.ts; owner, 2026-11-24: "show
- * threshold and mark predicted"): the class with a "?" while it is only likely, and what the prediction stands on.
+ * threshold and mark predicted"): the class, or what the system's age has made of the star, with a "?" while it is
+ * only likely; a short form for the order line; and what the prediction stands on.
  */
-export function predictedStarLabel(p: PredictedStarDTO): { text: string; title: string } {
+export function predictedStarLabel(p: PredictedStarDTO): { text: string; short: string; title: string } {
   const pct = (share: number) => Math.round(share * 100);
+  const mark = p.likely ? "?" : "";
+  const how = p.likely ? "Likely" : "Predicted";
+  const age =
+    p.aged === "dice"
+      ? "its age is on the system's own dice"
+      : "its age follows from the ages of the systems you scanned in this boxel";
+  if (p.stage) {
+    const [text, short, what] = STAGE_TEXT[p.stage];
+    const why =
+      p.aged === "kind"
+        ? "In this boxel stars this heavy are replaced by small ones, as your scans here show"
+        : p.aged === "place"
+          ? "This close to Sol or to the galaxy's centre stars this heavy are replaced by small ones"
+          : `The system is old enough for it: ${age}`;
+    return {
+      text: `${text}${mark}`,
+      short: `${short}${mark}`,
+      title: `${how} from the system's address, not seen by anyone: ${what}. ${why}. Right for about ${pct(p.right)} % of such answers.`,
+    };
+  }
+  const alive = p.alive ?? 1;
   return {
-    text: `${p.cls}${p.likely ? "?" : ""}`,
+    text: `${p.cls}${mark}`,
+    short: `${p.cls}${mark}`,
     title: [
-      `${p.likely ? "Likely" : "Predicted"} from the system's address, not seen by anyone: class ${p.cls} if the star is still on the main sequence.`,
+      `${how} from the system's address, not seen by anyone: class ${p.cls}${p.aged ? "" : " if the star is still on the main sequence"}.`,
       `Right for about ${pct(p.right)} % of such stars${p.sharpened ? ", sharpened by an arrival star you scanned in this boxel" : ""}.`,
       p.likely ? "Scan one arrival star of this boxel and the rest of it gets sharper." : "",
-      `About ${Math.max(1, pct(1 - p.alive))} % of this mass code's arrival stars are something else by now (a dead star, a T Tauri star, a brown dwarf).`,
+      p.aged
+        ? `The star should still be itself: ${age} (right for about ${pct(alive)} %).`
+        : `About ${Math.max(1, pct(1 - alive))} % of this mass code's arrival stars are something else by now (a dead star, a giant, a T Tauri star, a small star in its place).`,
     ]
       .filter(Boolean)
       .join(" "),
   };
 }
+
+/** A scanned star in the words of the check (shared/boxel.ts `BoxelStarCheckDTO.real`). */
+export const scannedStarText = (real: string): string =>
+  (
+    ({
+      small: "a small star in its place",
+      giant: "a giant",
+      whiteDwarf: "a white dwarf",
+      neutron: "a neutron star",
+      blackHole: "a black hole",
+      tTauri: "a T Tauri star",
+      herbig: "a Herbig star",
+      other: "another kind of star",
+    }) as Record<string, string>
+  )[real] ?? `class ${real}`;
 
 /** Previous boxels drawn at once: a long log holds thousands. */
 export const PREV_PAGE = 60;

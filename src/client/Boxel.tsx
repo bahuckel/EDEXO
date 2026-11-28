@@ -45,6 +45,7 @@ import {
 } from "./boxel/boxelLabels";
 import { boxelColumns } from "./boxel/boxelColumns";
 import { BoxelOrderLine } from "./boxel/BoxelOrderLine";
+import { BoxelStarCheckLine } from "./boxel/BoxelStarCheckLine";
 import { BoxelSideActions } from "./boxel/BoxelSideActions";
 import { BoxelFlyingStrip } from "./boxel/BoxelFlyingStrip";
 import { RollingNumber } from "./ui/RollingNumber";
@@ -821,6 +822,7 @@ export function BoxelScreen({
               />
             ) : null}
             {lead?.shortest && lead.order ? <BoxelOrderLine b={lead} /> : null}
+            {table?.starChecks?.length ? <BoxelStarCheckLine checks={table.starChecks} byId={byId} /> : null}
             {lookup && (lookup.running || lookup.note) ? (
               <p className="boxel-lookup-status" role="status">
                 {lookup.running ? (

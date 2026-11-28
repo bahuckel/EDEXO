@@ -151,10 +151,12 @@ rules. None of its source is in EDEXO (it is GPL-3.0; EDEXO is not): the code he
 from this project's own measurements on Spansh's galaxy dump, and is tested against real system positions.
 
 The predicted arrival star of a system nobody has recorded (`src/shared/stellarClass.ts`) is rolled on the same
-dice. What those rolls do to the star (its birth mass, the factor on its temperature, the class limits) was
-measured by this project on the star scans commanders sent to EDDN over one year and on Spansh's galaxy dump; the
-temperature per birth mass (`src/shared/stellarBaseTemperature.ts`) is a table of middle values from those EDDN
-scans. It is tested against real stars in Spansh's dump.
+dice. What those rolls do to the star (its birth mass, the factor on its temperature, the class limits, the
+system's age and what the star is at that age) was measured by this project on the star scans commanders sent to
+EDDN over one year and on Spansh's galaxy dump; the temperature per birth mass
+(`src/shared/stellarBaseTemperature.ts`) is a table of middle values from those EDDN scans, and the main-sequence
+lengths young systems are rolled with (`src/shared/stellarYoungModulus.ts`) were read off them. It is tested
+against real stars in Spansh's dump and in those scans.
 
 ### Ship outlines — the HUD's Ship section
 

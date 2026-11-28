@@ -54,6 +54,34 @@ describe("the Main star column", () => {
     expect(host.querySelector("[title]")!.getAttribute("title")).toContain("Predicted from the system's address");
   });
 
+  it("says what the system's age has made of the star, once the age is known", () => {
+    const dead = row({ predictedStar: { cls: "A", right: 0.99, stage: "neutron", aged: "base" } });
+    expect(show(dead)).toBe("≈ neutron star");
+    expect(main.value(dead)).toBe("≈ neutron");
+    const title = host.querySelector("[title]")!.getAttribute("title")!;
+    expect(title).toContain("Predicted from the system's address, not seen by anyone: a neutron star.");
+    expect(title).toContain("its age follows from the ages of the systems you scanned in this boxel");
+    expect(title).toContain("Right for about 99 % of such answers.");
+    expect(show(row({ predictedStar: { cls: "F", right: 0.99, stage: "whiteDwarf", aged: "base" } }))).toBe("≈ white dwarf");
+    expect(show(row({ predictedStar: { cls: "F", right: 0.99, stage: "giant", aged: "base" } }))).toBe("≈ giant");
+    expect(show(row({ predictedStar: { cls: "B", right: 0.99, stage: "collapsed", aged: "base" } }))).toBe("≈ neutron star or black hole");
+    // A young system's own dice: one in twenty holds a small star in the star's place, and that call is a likely one.
+    expect(show(row({ predictedStar: { cls: "F", right: 0.89, stage: "small", aged: "dice", likely: true } }))).toBe("≈ small star?");
+    expect(host.querySelector("[title]")!.getAttribute("title")).toContain("Likely from the system's address, not seen by anyone: a small star in the place of the one the system was born with");
+    expect(host.querySelector("[title]")!.getAttribute("title")).toContain("its age is on the system's own dice");
+    // A boxel that replaces its heavy stars: by its place before any scan, by his scans after.
+    expect(show(row({ predictedStar: { cls: "A", right: 0.99, stage: "small", aged: "place" } }))).toBe("≈ small star");
+    expect(host.querySelector("[title]")!.getAttribute("title")).toContain("This close to Sol or to the galaxy's centre stars this heavy are replaced by small ones. Right for about 99 % of such answers.");
+    expect(show(row({ predictedStar: { cls: "A", right: 0.97, stage: "small", aged: "kind" } }))).toBe("≈ small star");
+    expect(host.querySelector("[title]")!.getAttribute("title")).toContain("In this boxel stars this heavy are replaced by small ones, as your scans here show. Right for about 97 % of such answers.");
+    // Still itself, and known to be: no "if it is still on the main sequence".
+    expect(show(row({ predictedStar: { cls: "F", right: 0.978, alive: 0.95, aged: "dice", sharpened: true } }))).toBe("≈ F");
+    const itself = host.querySelector("[title]")!.getAttribute("title")!;
+    expect(itself).toContain("not seen by anyone: class F. Right for about 98 % of such stars, sharpened by an arrival star you scanned in this boxel.");
+    expect(itself).toContain("The star should still be itself: its age is on the system's own dice (right for about 95 %).");
+    expect(itself).not.toContain("something else by now");
+  });
+
   it("keeps a recorded star before a prediction, and says when Spansh has no record", () => {
     const known = row({ from: "index", mainStar: "K", predictedStar: { cls: "G", right: 0.964, alive: 0.99 } });
     expect(show(known)).toBe("K");

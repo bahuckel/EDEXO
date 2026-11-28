@@ -117,4 +117,28 @@ describe("the shortest-order line", () => {
     );
     expect(show(boxel({ order: [{ n: 4, ly: 12 }, { n: 7, ly: 30 }, { n: 5, ly: 78 }] }))).not.toContain("brackets");
   });
+
+  it("shows what a known age has made of the star, in short", () => {
+    const text = show(
+      boxel({
+        order: [
+          { n: 4, ly: 12, star: { cls: "A", right: 0.99, stage: "neutron", aged: "base" } },
+          { n: 7, ly: 30, predicted: true, star: { cls: "F", right: 0.99, stage: "whiteDwarf", aged: "base" } },
+          { n: 5, ly: 78, star: { cls: "F", right: 0.978, alive: 0.99, aged: "base" } },
+        ],
+      }),
+    );
+    expect(text).toContain("d1-4 (N) 12 ly");
+    expect(text).toContain("d1-7 (WD) ≈ 30 ly");
+    expect(text).toContain("d1-5 (F) 78 ly");
+    expect(text).toContain("A letter in brackets is the arrival star the system's address predicts; N, WD, giant and small are what the star is by now (neutron star, white dwarf, giant, a small star in its place).");
+    // Every stop's age is known: nothing is left to "if it is still on the main sequence".
+    expect(text).not.toContain("something else by now");
+    expect(host.querySelector('[title*="a neutron star"]')!.getAttribute("title")).toContain("Right for about 99 % of such answers.");
+    // A likely stage is marked, without the advice that only sharpens a class.
+    const small = show(boxel({ order: [{ n: 4, ly: 12, star: { cls: "F", right: 0.89, stage: "small", aged: "dice", likely: true } }, { n: 7, ly: 30 }, { n: 5, ly: 78 }] }));
+    expect(small).toContain("d1-4 (small?) 12 ly");
+    expect(small).toContain("; a ? marks a likely one.");
+    expect(small).not.toContain("gets sharper");
+  });
 });

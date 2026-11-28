@@ -10,6 +10,7 @@ import {
   type BoxelRowDTO,
   type BoxelTableDTO,
   type BoxelNotableDTO,
+  type BoxelStarCheckDTO,
   type BoxelTableRowDTO,
   type PredictedStarDTO,
   type PreviousBoxelDTO,
@@ -196,8 +197,14 @@ export function boxelTable(opts: {
     b: SavedBoxelDTO,
     scans: ReadonlyMap<number, ArrivalStarScan>,
   ) => ReadonlyMap<number, PredictedStarDTO> | null;
+  /** Those predictions checked against the same scans (server/boxelStars.ts `boxelStarCheck`); null: none to check. */
+  starCheck?: (
+    b: SavedBoxelDTO,
+    scans: ReadonlyMap<number, ArrivalStarScan>,
+  ) => Omit<BoxelStarCheckDTO, "boxelId"> | null;
 }): BoxelTableDTO {
   const lookups: BoxelTableDTO["lookups"] = [];
+  const starChecks: BoxelStarCheckDTO[] = [];
   const visited = [...opts.visited].map(visitedEntry);
   const rows: BoxelTableRowDTO[] = [];
   const tally = new Map<string, number>();
@@ -228,6 +235,8 @@ export function boxelTable(opts: {
         if (scan) scans.set(n, scan);
       }
       predictedStars = opts.stars(b, scans);
+      const check = scans.size ? opts.starCheck?.(b, scans) : null;
+      if (check) starChecks.push({ boxelId: b.id, ...check });
     }
     const skipped = new Set(b.skipped);
     const looked = opts.lookup?.(b.prefix) ?? null;
@@ -355,6 +364,7 @@ export function boxelTable(opts: {
       .map(([name, systems]) => ({ name, systems })),
     noIndex: opts.index == null,
     lookups,
+    ...(starChecks.length ? { starChecks } : {}),
   };
 }
 

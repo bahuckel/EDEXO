@@ -16,7 +16,7 @@ import type { Vec3 } from "../../shared/boxelOrder.js";
 import { createBoxelLookups } from "../boxelLookup.js";
 import { setGalaxyHuntLookupService } from "../galaxyHuntLookups.js";
 import { arrivalStarScan, boxelJournalFacts, notableBodiesForSystem, systemBodyTally } from "../snapshotSystemInfo.js";
-import { boxelArrivalScans, boxelStarSet } from "../boxelStars.js";
+import { boxelArrivalScans, boxelStarCheck, boxelStarSet } from "../boxelStars.js";
 import type { GameStateStore } from "../gameState.js";
 import { getCachedSpeciesDatabase } from "../snapshot.js";
 import path from "node:path";
@@ -309,6 +309,7 @@ export function registerBoxelRoutes(
         routed: sightings(store),
         arrival: store ? (addr) => arrivalStarScan(store, addr) : undefined,
         stars: (b, scans) => boxelStarSet(b.prefix, b.end, hereOf(store), scans)?.stars ?? null,
+        starCheck: (b, scans) => boxelStarCheck(b.prefix, b.end, hereOf(store), scans),
       }),
     });
   });

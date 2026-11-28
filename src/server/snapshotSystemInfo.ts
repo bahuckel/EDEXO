@@ -529,7 +529,12 @@ export function arrivalStarScan(store: GameStateStore, systemAddress: number): A
   );
   const main = stars.find((r) => r.bodyId === 0) ?? stars.find((r) => !((r.distanceFromArrivalLs ?? 0) > 0));
   if (!main || !(main.stellarMass! > 0) || !(main.surfaceTemperature! > 0)) return null;
-  return { starType: main.starType!.trim(), stellarMass: main.stellarMass!, temperature: main.surfaceTemperature! };
+  return {
+    starType: main.starType!.trim(),
+    stellarMass: main.stellarMass!,
+    temperature: main.surfaceTemperature!,
+    ...(main.ageMy != null && main.ageMy >= 0 ? { age: main.ageMy } : {}),
+  };
 }
 
 export function boxelJournalFacts(store: GameStateStore, systemAddress: number): JournalSystemFacts {

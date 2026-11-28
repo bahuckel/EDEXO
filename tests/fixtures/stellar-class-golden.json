@@ -361,7 +361,7 @@
     "cls": "M",
     "solarMasses": 0.21875,
     "real": {
-     "starType": "L (Brown dwarf) Star",
+     "starType": "L",
      "stellarMass": 0.21875,
      "temperature": 1953.0
     }
@@ -610,10 +610,10 @@
     "n": 0,
     "after": 11,
     "temperature": 1969,
-    "cls": "M",
+    "cls": "L",
     "solarMasses": 0.19921875,
     "real": {
-     "starType": "L (Brown dwarf) Star",
+     "starType": "L",
      "stellarMass": 0.199219,
      "temperature": 1965.0
     }
@@ -3821,5 +3821,3917 @@
     }
    ]
   }
- ]
+ ],
+ "aged": {
+  "boxels": [
+   {
+    "kind": "wide",
+    "base": "14067489051",
+    "baseAge": 8830,
+    "width": 4000,
+    "readings": [
+     {
+      "upper": 11073,
+      "roll": 390250243
+     },
+     {
+      "upper": 9050,
+      "roll": 821676220
+     },
+     {
+      "upper": 9829,
+      "roll": 14684871
+     },
+     {
+      "upper": 10809,
+      "roll": 293405979
+     },
+     {
+      "upper": 9994,
+      "roll": 1029353036
+     },
+     {
+      "upper": 9988,
+      "roll": 1133257158
+     },
+     {
+      "upper": 12636,
+      "roll": 1437015806
+     },
+     {
+      "upper": 10549,
+      "roll": 2011317591
+     },
+     {
+      "upper": 10766,
+      "roll": 1223917808
+     },
+     {
+      "upper": 10104,
+      "roll": 515665146
+     },
+     {
+      "upper": 11050,
+      "roll": 117246220
+     },
+     {
+      "upper": 9082,
+      "roll": 115552124
+     },
+     {
+      "upper": 12597,
+      "roll": 2030895639
+     }
+    ],
+    "systems": [
+     {
+      "address": "14067489051",
+      "n": 0,
+      "after": 11,
+      "path": "a",
+      "age": 11138,
+      "real": {
+       "starType": "DC",
+       "stellarMass": 0.582031,
+       "temperature": 6609.0,
+       "age": 11138
+      },
+      "realStage": "whiteDwarf",
+      "ages": [
+       11073
+      ],
+      "stage": "whiteDwarf"
+     },
+     {
+      "address": "48427227419",
+      "n": 1,
+      "after": 12,
+      "path": "young",
+      "age": 6512,
+      "real": {
+       "starType": "G",
+       "stellarMass": 1.054688,
+       "temperature": 5823.0,
+       "age": 6512
+      },
+      "realStage": "main",
+      "ages": [
+       6328
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "82786965787",
+      "n": 2,
+      "after": 11,
+      "path": "a",
+      "age": 9140,
+      "real": {
+       "starType": "N",
+       "stellarMass": 0.652344,
+       "temperature": 2952636.0,
+       "age": 9140
+      },
+      "realStage": "neutron",
+      "ages": [
+       9050
+      ],
+      "stage": "neutron"
+     },
+     {
+      "address": "117146704155",
+      "n": 3,
+      "after": 11,
+      "path": "a",
+      "age": 9930,
+      "real": {
+       "starType": "DAB",
+       "stellarMass": 0.394531,
+       "temperature": 10664.0,
+       "age": 9930
+      },
+      "realStage": "whiteDwarf",
+      "ages": [
+       9701
+      ],
+      "stage": "whiteDwarf"
+     },
+     {
+      "address": "151506442523",
+      "n": 4,
+      "after": 11,
+      "path": "a",
+      "age": 10866,
+      "real": {
+       "starType": "DAB",
+       "stellarMass": 0.402344,
+       "temperature": 15256.0,
+       "age": 10866
+      },
+      "realStage": "whiteDwarf",
+      "ages": [
+       10809
+      ],
+      "stage": "whiteDwarf"
+     },
+     {
+      "address": "185866180891",
+      "n": 5,
+      "after": 11,
+      "path": "a",
+      "age": 10004,
+      "real": {
+       "starType": "DCV",
+       "stellarMass": 0.378906,
+       "temperature": 10967.0,
+       "age": 10004
+      },
+      "realStage": "whiteDwarf",
+      "ages": [
+       9866
+      ],
+      "stage": "whiteDwarf"
+     },
+     {
+      "address": "220225919259",
+      "n": 6,
+      "after": 12,
+      "path": "young",
+      "age": 2152,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.683594,
+       "temperature": 8380.0,
+       "age": 2152
+      },
+      "realStage": "main",
+      "ages": [
+       2100
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "254585657627",
+      "n": 7,
+      "after": 11,
+      "path": "a",
+      "age": 9992,
+      "real": {
+       "starType": "DAB",
+       "stellarMass": 0.371094,
+       "temperature": 10572.0,
+       "age": 9992
+      },
+      "realStage": "whiteDwarf",
+      "ages": [
+       9988
+      ],
+      "stage": "whiteDwarf"
+     },
+     {
+      "address": "288945395995",
+      "n": 8,
+      "after": 11,
+      "path": "a",
+      "age": 12728,
+      "real": {
+       "starType": "MS",
+       "stellarMass": 0.964844,
+       "temperature": 2800.0,
+       "age": 12728
+      },
+      "realStage": "giant",
+      "ages": [
+       12636
+      ],
+      "stage": "giant"
+     },
+     {
+      "address": "323305134363",
+      "n": 9,
+      "after": 11,
+      "path": "a",
+      "age": 10602,
+      "real": {
+       "starType": "N",
+       "stellarMass": 0.617188,
+       "temperature": 6850673.0,
+       "age": 10602
+      },
+      "realStage": "neutron",
+      "ages": [
+       10421
+      ],
+      "stage": "neutron"
+     },
+     {
+      "address": "357664872731",
+      "n": 10,
+      "after": 11,
+      "path": "a",
+      "age": 10780,
+      "real": {
+       "starType": "DC",
+       "stellarMass": 0.460938,
+       "temperature": 7044.0,
+       "age": 10780
+      },
+      "realStage": "whiteDwarf",
+      "ages": [
+       10638
+      ],
+      "stage": "whiteDwarf"
+     },
+     {
+      "address": "392024611099",
+      "n": 11,
+      "after": 11,
+      "path": "a",
+      "age": 10224,
+      "real": {
+       "starType": "MS",
+       "stellarMass": 1.054688,
+       "temperature": 2962.0,
+       "age": 10224
+      },
+      "realStage": "giant",
+      "ages": [
+       9976
+      ],
+      "stage": "giant"
+     },
+     {
+      "address": "426384349467",
+      "n": 12,
+      "after": 12,
+      "path": "old",
+      "age": 12438,
+      "real": {
+       "starType": "DC",
+       "stellarMass": 0.535156,
+       "temperature": 10051.0,
+       "age": 12438
+      },
+      "realStage": "whiteDwarf",
+      "ages": [
+       12363
+      ],
+      "stage": "whiteDwarf"
+     },
+     {
+      "address": "460744087835",
+      "n": 13,
+      "after": 11,
+      "path": "a",
+      "age": 11092,
+      "real": {
+       "starType": "N",
+       "stellarMass": 0.71875,
+       "temperature": 8774981.0,
+       "age": 11092
+      },
+      "realStage": "neutron",
+      "ages": [
+       11050
+      ],
+      "stage": "neutron"
+     },
+     {
+      "address": "495103826203",
+      "n": 14,
+      "after": 11,
+      "path": "a",
+      "age": 9204,
+      "real": {
+       "starType": "N",
+       "stellarMass": 0.621094,
+       "temperature": 5574206.0,
+       "age": 9204
+      },
+      "realStage": "neutron",
+      "ages": [
+       8954
+      ],
+      "stage": "neutron"
+     },
+     {
+      "address": "529463564571",
+      "n": 15,
+      "after": 11,
+      "path": "a",
+      "age": 12650,
+      "real": {
+       "starType": "N",
+       "stellarMass": 0.714844,
+       "temperature": 4791491.0,
+       "age": 12650
+      },
+      "realStage": "neutron",
+      "ages": [
+       12469
+      ],
+      "stage": "neutron"
+     }
+    ]
+   },
+   {
+    "kind": "disc",
+    "base": "10393487827",
+    "baseAge": 1216,
+    "width": 1270,
+    "readings": [
+     {
+      "upper": 1855,
+      "roll": 860101661
+     },
+     {
+      "upper": 2420,
+      "roll": 591466874
+     },
+     {
+      "upper": 1619,
+      "roll": 303409625
+     },
+     {
+      "upper": 2048,
+      "roll": 1543497872
+     },
+     {
+      "upper": 1313,
+      "roll": 1738746937
+     },
+     {
+      "upper": 1634,
+      "roll": 1280048530
+     },
+     {
+      "upper": 1633,
+      "roll": 1869980039
+     },
+     {
+      "upper": 1873,
+      "roll": 645986029
+     },
+     {
+      "upper": 1620,
+      "roll": 1785200034
+     },
+     {
+      "upper": 2147,
+      "roll": 1954759403
+     },
+     {
+      "upper": 1900,
+      "roll": 97769094
+     },
+     {
+      "upper": 1849,
+      "roll": 268110333
+     },
+     {
+      "upper": 1910,
+      "roll": 1608270274
+     },
+     {
+      "upper": 1335,
+      "roll": 506642489
+     },
+     {
+      "upper": 2385,
+      "roll": 114256719
+     },
+     {
+      "upper": 2136,
+      "roll": 1070362000
+     },
+     {
+      "upper": 2092,
+      "roll": 1555753416
+     },
+     {
+      "upper": 2424,
+      "roll": 127985458
+     },
+     {
+      "upper": 2395,
+      "roll": 273529969
+     },
+     {
+      "upper": 1391,
+      "roll": 1510388187
+     },
+     {
+      "upper": 1661,
+      "roll": 631003755
+     },
+     {
+      "upper": 1835,
+      "roll": 787632901
+     },
+     {
+      "upper": 1551,
+      "roll": 1633523737
+     },
+     {
+      "upper": 2171,
+      "roll": 1036003455
+     },
+     {
+      "upper": 2380,
+      "roll": 200051564
+     },
+     {
+      "upper": 1371,
+      "roll": 1153561347
+     },
+     {
+      "upper": 2307,
+      "roll": 216242721
+     },
+     {
+      "upper": 2392,
+      "roll": 1461504476
+     }
+    ],
+    "systems": [
+     {
+      "address": "44753226195",
+      "n": 1,
+      "after": 12,
+      "path": "old",
+      "age": 2896,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.460938,
+       "temperature": 6686.0,
+       "age": 2896
+      },
+      "realStage": "main",
+      "ages": [
+       2728
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "79112964563",
+      "n": 2,
+      "after": 12,
+      "path": "young",
+      "age": 1342,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.671875,
+       "temperature": 7737.0,
+       "age": 1342
+      },
+      "realStage": "main",
+      "ages": [
+       1183
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "147832441299",
+      "n": 4,
+      "after": 11,
+      "path": "a",
+      "age": 1918,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.714844,
+       "temperature": 8156.0,
+       "age": 1918
+      },
+      "realStage": "main",
+      "ages": [
+       1727
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "250911656403",
+      "n": 7,
+      "after": 12,
+      "path": "young",
+      "age": 2020,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.488281,
+       "temperature": 7531.0,
+       "age": 2020
+      },
+      "realStage": "main",
+      "ages": [
+       1778
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "353990871507",
+      "n": 10,
+      "after": 12,
+      "path": "old",
+      "age": 3160,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.597656,
+       "temperature": 8279.0,
+       "age": 3160
+      },
+      "realStage": "main",
+      "ages": [
+       2988
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "422710348243",
+      "n": 12,
+      "after": 11,
+      "path": "a",
+      "age": 2536,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.472656,
+       "temperature": 7324.0,
+       "age": 2536
+      },
+      "realStage": "main",
+      "ages": [
+       2420
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "525789563347",
+      "n": 15,
+      "after": 11,
+      "path": "a",
+      "age": 1702,
+      "real": {
+       "starType": "G",
+       "stellarMass": 1.0625,
+       "temperature": 5876.0,
+       "age": 1702
+      },
+      "realStage": "main",
+      "ages": [
+       1491
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "560149301715",
+      "n": 16,
+      "after": 11,
+      "path": "a",
+      "age": 2048,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.296875,
+       "temperature": 7221.0,
+       "age": 2048
+      },
+      "realStage": "main",
+      "ages": [
+       2048
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "628868778451",
+      "n": 18,
+      "after": 11,
+      "path": "a",
+      "age": 1346,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.121094,
+       "temperature": 6378.0,
+       "age": 1346
+      },
+      "realStage": "main",
+      "ages": [
+       1313
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "731947993555",
+      "n": 21,
+      "after": 12,
+      "path": "young",
+      "age": 2956,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.296875,
+       "temperature": 7232.0,
+       "age": 2956
+      },
+      "realStage": "main",
+      "ages": [
+       2886
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "938106423763",
+      "n": 27,
+      "after": 11,
+      "path": "a",
+      "age": 1732,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.660156,
+       "temperature": 8440.0,
+       "age": 1732
+      },
+      "realStage": "main",
+      "ages": [
+       1506
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "972466162131",
+      "n": 28,
+      "after": 12,
+      "path": "young",
+      "age": 2720,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.417969,
+       "temperature": 7691.0,
+       "age": 2720
+      },
+      "realStage": "main",
+      "ages": [
+       2512
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1006825900499",
+      "n": 29,
+      "after": 12,
+      "path": "young",
+      "age": 658,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.421875,
+       "temperature": 6926.0,
+       "age": 658
+      },
+      "realStage": "main",
+      "ages": [
+       457
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1041185638867",
+      "n": 30,
+      "after": 11,
+      "path": "a",
+      "age": 1730,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.558594,
+       "temperature": 7489.0,
+       "age": 1730
+      },
+      "realStage": "main",
+      "ages": [
+       1505
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1075545377235",
+      "n": 31,
+      "after": 12,
+      "path": "young",
+      "age": 10810,
+      "real": {
+       "starType": "G",
+       "stellarMass": 0.78125,
+       "temperature": 5871.0,
+       "age": 10810
+      },
+      "realStage": "small",
+      "ages": [
+       10781
+      ],
+      "stage": "small"
+     },
+     {
+      "address": "1109905115603",
+      "n": 32,
+      "after": 11,
+      "path": "a",
+      "age": 1954,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.488281,
+       "temperature": 7406.0,
+       "age": 1954
+      },
+      "realStage": "main",
+      "ages": [
+       1745
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1144264853971",
+      "n": 33,
+      "after": 12,
+      "path": "young",
+      "age": 2382,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.585938,
+       "temperature": 7298.0,
+       "age": 2382
+      },
+      "realStage": "main",
+      "ages": [
+       2343
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1522221976019",
+      "n": 44,
+      "after": 11,
+      "path": "a",
+      "age": 1704,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.410156,
+       "temperature": 7682.0,
+       "age": 1704
+      },
+      "realStage": "main",
+      "ages": [
+       1620
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1556581714387",
+      "n": 45,
+      "after": 12,
+      "path": "young",
+      "age": 1814,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.683594,
+       "temperature": 8622.0,
+       "age": 1814
+      },
+      "realStage": "main",
+      "ages": [
+       1675
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1625301191123",
+      "n": 47,
+      "after": 12,
+      "path": "young",
+      "age": 5032,
+      "real": {
+       "starType": "G",
+       "stellarMass": 1.050781,
+       "temperature": 5446.0,
+       "age": 5032
+      },
+      "realStage": "main",
+      "ages": [
+       4820
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1659660929491",
+      "n": 48,
+      "after": 11,
+      "path": "a",
+      "age": 2246,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.21875,
+       "temperature": 6762.0,
+       "age": 2246
+      },
+      "realStage": "main",
+      "ages": [
+       2019
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1728380406227",
+      "n": 50,
+      "after": 11,
+      "path": "a",
+      "age": 2008,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.445313,
+       "temperature": 7298.0,
+       "age": 2008
+      },
+      "realStage": "main",
+      "ages": [
+       1900
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1762740144595",
+      "n": 51,
+      "after": 12,
+      "path": "young",
+      "age": 1634,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.1875,
+       "temperature": 6285.0,
+       "age": 1634
+      },
+      "realStage": "main",
+      "ages": [
+       1457
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1797099882963",
+      "n": 52,
+      "after": 12,
+      "path": "young",
+      "age": 1746,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.292969,
+       "temperature": 6840.0,
+       "age": 1746
+      },
+      "realStage": "main",
+      "ages": [
+       1641
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1831459621331",
+      "n": 53,
+      "after": 11,
+      "path": "a",
+      "age": 1906,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.429688,
+       "temperature": 7463.0,
+       "age": 1906
+      },
+      "realStage": "main",
+      "ages": [
+       1849
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1865819359699",
+      "n": 54,
+      "after": 11,
+      "path": "a",
+      "age": 2028,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.597656,
+       "temperature": 7971.0,
+       "age": 2028
+      },
+      "realStage": "main",
+      "ages": [
+       1910
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "1900179098067",
+      "n": 55,
+      "after": 11,
+      "path": "a",
+      "age": 1390,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.738281,
+       "temperature": 8715.0,
+       "age": 1390
+      },
+      "realStage": "main",
+      "ages": [
+       1335
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2003258313171",
+      "n": 58,
+      "after": 12,
+      "path": "young",
+      "age": 3214,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.535156,
+       "temperature": 6862.0,
+       "age": 3214
+      },
+      "realStage": "main",
+      "ages": [
+       3015
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2037618051539",
+      "n": 59,
+      "after": 12,
+      "path": "young",
+      "age": 2336,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.414063,
+       "temperature": 7184.0,
+       "age": 2336
+      },
+      "realStage": "main",
+      "ages": [
+       2320
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2071977789907",
+      "n": 60,
+      "after": 12,
+      "path": "young",
+      "age": 3750,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.242188,
+       "temperature": 7794.0,
+       "age": 3750
+      },
+      "realStage": "small",
+      "ages": [
+       3667
+      ],
+      "stage": "small"
+     },
+     {
+      "address": "2106337528275",
+      "n": 61,
+      "after": 11,
+      "path": "a",
+      "age": 2466,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.519531,
+       "temperature": 7819.0,
+       "age": 2466
+      },
+      "realStage": "main",
+      "ages": [
+       2385
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2140697266643",
+      "n": 62,
+      "after": 12,
+      "path": "young",
+      "age": 2672,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.433594,
+       "temperature": 7184.0,
+       "age": 2672
+      },
+      "realStage": "main",
+      "ages": [
+       2616
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2175057005011",
+      "n": 63,
+      "after": 12,
+      "path": "old",
+      "age": 3394,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.417969,
+       "temperature": 7198.0,
+       "age": 3394
+      },
+      "realStage": "main",
+      "ages": [
+       3233
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2209416743379",
+      "n": 64,
+      "after": 11,
+      "path": "a",
+      "age": 2224,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.269531,
+       "temperature": 6144.0,
+       "age": 2224
+      },
+      "realStage": "main",
+      "ages": [
+       2136
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2346855696851",
+      "n": 68,
+      "after": 12,
+      "path": "young",
+      "age": 2612,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.351563,
+       "temperature": 7111.0,
+       "age": 2612
+      },
+      "realStage": "main",
+      "ages": [
+       2586
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2381215435219",
+      "n": 69,
+      "after": 11,
+      "path": "a",
+      "age": 2136,
+      "real": {
+       "starType": "G",
+       "stellarMass": 1.085938,
+       "temperature": 5682.0,
+       "age": 2136
+      },
+      "realStage": "main",
+      "ages": [
+       2092
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2415575173587",
+      "n": 70,
+      "after": 12,
+      "path": "old",
+      "age": 2286,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.753906,
+       "temperature": 8395.0,
+       "age": 2286
+      },
+      "realStage": "main",
+      "ages": [
+       2167
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2449934911955",
+      "n": 71,
+      "after": 12,
+      "path": "young",
+      "age": 4168,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.402344,
+       "temperature": 7821.0,
+       "age": 4168
+      },
+      "realStage": "main",
+      "ages": [
+       4004
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2518654388691",
+      "n": 73,
+      "after": 12,
+      "path": "old",
+      "age": 2954,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.667969,
+       "temperature": 7220.0,
+       "age": 2954
+      },
+      "realStage": "main",
+      "ages": [
+       2757
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2621733603795",
+      "n": 76,
+      "after": 11,
+      "path": "a",
+      "age": 2544,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.46875,
+       "temperature": 6856.0,
+       "age": 2544
+      },
+      "realStage": "main",
+      "ages": [
+       2424
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2862251772371",
+      "n": 83,
+      "after": 12,
+      "path": "young",
+      "age": 4490,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.363281,
+       "temperature": 6528.0,
+       "age": 4490
+      },
+      "realStage": "main",
+      "ages": [
+       4421
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "2896611510739",
+      "n": 84,
+      "after": 11,
+      "path": "a",
+      "age": 2486,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.402344,
+       "temperature": 7500.0,
+       "age": 2486
+      },
+      "realStage": "main",
+      "ages": [
+       2395
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "3068410202579",
+      "n": 89,
+      "after": 12,
+      "path": "old",
+      "age": 3622,
+      "real": {
+       "starType": "N",
+       "stellarMass": 0.585938,
+       "temperature": 4548264.0,
+       "age": 3622
+      },
+      "realStage": "neutron",
+      "ages": [
+       3475
+      ],
+      "stage": "neutron"
+     },
+     {
+      "address": "3171489417683",
+      "n": 92,
+      "after": 11,
+      "path": "a",
+      "age": 1502,
+      "real": {
+       "starType": "G",
+       "stellarMass": 1.054688,
+       "temperature": 5578.0,
+       "age": 1502
+      },
+      "realStage": "main",
+      "ages": [
+       1263
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "3205849156051",
+      "n": 93,
+      "after": 12,
+      "path": "young",
+      "age": 4784,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.164063,
+       "temperature": 6574.0,
+       "age": 4784
+      },
+      "realStage": "main",
+      "ages": [
+       4696
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "3377647847891",
+      "n": 98,
+      "after": 11,
+      "path": "a",
+      "age": 1786,
+      "real": {
+       "starType": "G",
+       "stellarMass": 1.0625,
+       "temperature": 5489.0,
+       "age": 1786
+      },
+      "realStage": "main",
+      "ages": [
+       1661
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "3412007586259",
+      "n": 99,
+      "after": 12,
+      "path": "old",
+      "age": 3486,
+      "real": {
+       "starType": "K_OrangeGiant",
+       "stellarMass": 1.605469,
+       "temperature": 3890.0,
+       "age": 3486
+      },
+      "realStage": "giant",
+      "ages": [
+       3407
+      ],
+      "stage": "giant"
+     },
+     {
+      "address": "3480727062995",
+      "n": 101,
+      "after": 12,
+      "path": "young",
+      "age": 1114,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.777344,
+       "temperature": 8083.0,
+       "age": 1114
+      },
+      "realStage": "main",
+      "ages": [
+       1069
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "3515086801363",
+      "n": 102,
+      "after": 11,
+      "path": "a",
+      "age": 1878,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.117188,
+       "temperature": 6220.0,
+       "age": 1878
+      },
+      "realStage": "main",
+      "ages": [
+       1707
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "3583806278099",
+      "n": 104,
+      "after": 12,
+      "path": "young",
+      "age": 1186,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.792969,
+       "temperature": 8540.0,
+       "age": 1186
+      },
+      "realStage": "main",
+      "ages": [
+       977
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "3789964708307",
+      "n": 110,
+      "after": 11,
+      "path": "a",
+      "age": 1566,
+      "real": {
+       "starType": "G",
+       "stellarMass": 0.929688,
+       "temperature": 5325.0,
+       "age": 1566
+      },
+      "realStage": "main",
+      "ages": [
+       1423
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "3893043923411",
+      "n": 113,
+      "after": 11,
+      "path": "a",
+      "age": 2294,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.761719,
+       "temperature": 8976.0,
+       "age": 2294
+      },
+      "realStage": "main",
+      "ages": [
+       2171
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "4099202353619",
+      "n": 119,
+      "after": 11,
+      "path": "a",
+      "age": 2456,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.753906,
+       "temperature": 8613.0,
+       "age": 2456
+      },
+      "realStage": "main",
+      "ages": [
+       2380
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "4133562091987",
+      "n": 120,
+      "after": 11,
+      "path": "a",
+      "age": 1462,
+      "real": {
+       "starType": "F",
+       "stellarMass": 1.234375,
+       "temperature": 7015.0,
+       "age": 1462
+      },
+      "realStage": "main",
+      "ages": [
+       1243
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "4236641307091",
+      "n": 123,
+      "after": 11,
+      "path": "a",
+      "age": 2310,
+      "real": {
+       "starType": "G",
+       "stellarMass": 1.082031,
+       "temperature": 5685.0,
+       "age": 2310
+      },
+      "realStage": "main",
+      "ages": [
+       2307
+      ],
+      "stage": "main"
+     },
+     {
+      "address": "4271001045459",
+      "n": 124,
+      "after": 11,
+      "path": "a",
+      "age": 2480,
+      "real": {
+       "starType": "A",
+       "stellarMass": 1.777344,
+       "temperature": 8376.0,
+       "age": 2480
+      },
+      "realStage": "main",
+      "ages": [
+       2392
+      ],
+      "stage": "main"
+     }
+    ]
+   }
+  ],
+  "young": {
+   "d": [
+    {
+     "address": "192528343077547",
+     "n": 5603,
+     "after": 24,
+     "path": "young",
+     "age": 2772,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.285156,
+      "temperature": 6112.0,
+      "age": 2772
+     },
+     "realStage": "main",
+     "ages": [
+      2666
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "8085150092931",
+     "n": 235,
+     "after": 12,
+     "path": "young",
+     "age": 148,
+     "real": {
+      "starType": "TTS",
+      "stellarMass": 0.90625,
+      "temperature": 4077.0,
+      "age": 148
+     },
+     "realStage": "main",
+     "ages": [
+      2747
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "801221150963",
+     "n": 23,
+     "after": 12,
+     "path": "young",
+     "age": 2076,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.65625,
+      "temperature": 7120.0,
+      "age": 2076
+     },
+     "realStage": "main",
+     "ages": [
+      2062
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "79247149683",
+     "n": 2,
+     "after": 12,
+     "path": "young",
+     "age": 3684,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.011719,
+      "temperature": 6174.0,
+      "age": 3684
+     },
+     "realStage": "main",
+     "ages": [
+      3634
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "184490674443",
+     "n": 5,
+     "after": 12,
+     "path": "young",
+     "age": 1778,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.289063,
+      "temperature": 7230.0,
+      "age": 1778
+     },
+     "realStage": "main",
+     "ages": [
+      1529
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "4722987083",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 5936,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.023438,
+      "temperature": 5500.0,
+      "age": 5936
+     },
+     "realStage": "main",
+     "ages": [
+      5784
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1003302555427",
+     "n": 29,
+     "after": 12,
+     "path": "young",
+     "age": 844,
+     "real": {
+      "starType": "K",
+      "stellarMass": 0.917969,
+      "temperature": 5179.0,
+      "age": 844
+     },
+     "realStage": "main",
+     "ages": [
+      23
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "2963888525691",
+     "n": 86,
+     "after": 12,
+     "path": "young",
+     "age": 5074,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.15625,
+      "temperature": 6162.0,
+      "age": 5074
+     },
+     "realStage": "main",
+     "ages": [
+      4969
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "250676627507",
+     "n": 7,
+     "after": 12,
+     "path": "young",
+     "age": 968,
+     "real": {
+      "starType": "K",
+      "stellarMass": 0.921875,
+      "temperature": 4913.0,
+      "age": 968
+     },
+     "realStage": "main",
+     "ages": [
+      1795
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "3068041103411",
+     "n": 89,
+     "after": 12,
+     "path": "young",
+     "age": 1166,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.355469,
+      "temperature": 7056.0,
+      "age": 1166
+     },
+     "realStage": "main",
+     "ages": [
+      1095
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "49886943675",
+     "n": 1,
+     "after": 12,
+     "path": "young",
+     "age": 820,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.40625,
+      "temperature": 6327.0,
+      "age": 820
+     },
+     "realStage": "main",
+     "ages": [
+      794
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "60000835572355",
+     "n": 1746,
+     "after": 15,
+     "path": "young",
+     "age": 11088,
+     "real": {
+      "starType": "F",
+      "stellarMass": 0.945313,
+      "temperature": 6094.0,
+      "age": 11088
+     },
+     "realStage": "main",
+     "ages": [
+      10920
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "10076689471259",
+     "n": 293,
+     "after": 12,
+     "path": "young",
+     "age": 3704,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.445313,
+      "temperature": 6710.0,
+      "age": 3704
+     },
+     "realStage": "main",
+     "ages": [
+      3516
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "149778604083",
+     "n": 4,
+     "after": 12,
+     "path": "young",
+     "age": 4208,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.222656,
+      "temperature": 6280.0,
+      "age": 4208
+     },
+     "realStage": "main",
+     "ages": [
+      4152
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "61687247950219",
+     "n": 1795,
+     "after": 15,
+     "path": "young",
+     "age": 4158,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.332031,
+      "temperature": 6773.0,
+      "age": 4158
+     },
+     "realStage": "main",
+     "ages": [
+      4127
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "147899533723",
+     "n": 4,
+     "after": 12,
+     "path": "young",
+     "age": 4112,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.308594,
+      "temperature": 6570.0,
+      "age": 4112
+     },
+     "realStage": "main",
+     "ages": [
+      3976
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "79045920827",
+     "n": 2,
+     "after": 12,
+     "path": "young",
+     "age": 6762,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.085938,
+      "temperature": 6273.0,
+      "age": 6762
+     },
+     "realStage": "main",
+     "ages": [
+      6709
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "732149320091",
+     "n": 21,
+     "after": 12,
+     "path": "young",
+     "age": 3300,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.371094,
+      "temperature": 6844.0,
+      "age": 3300
+     },
+     "realStage": "main",
+     "ages": [
+      1002
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "897874660363",
+     "n": 26,
+     "after": 12,
+     "path": "young",
+     "age": 1224,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.726563,
+      "temperature": 8703.0,
+      "age": 1224
+     },
+     "realStage": "main",
+     "ages": [
+      1124
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "44334640517931",
+     "n": 1290,
+     "after": 12,
+     "path": "young",
+     "age": 2330,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.320313,
+      "temperature": 6515.0,
+      "age": 2330
+     },
+     "realStage": "main",
+     "ages": [
+      2317
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "2690100775355",
+     "n": 78,
+     "after": 12,
+     "path": "young",
+     "age": 1944,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.105469,
+      "temperature": 6684.0,
+      "age": 1944
+     },
+     "realStage": "main",
+     "ages": [
+      7881
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "255055650123",
+     "n": 7,
+     "after": 12,
+     "path": "young",
+     "age": 682,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.550781,
+      "temperature": 7274.0,
+      "age": 682
+     },
+     "realStage": "main",
+     "ages": [
+      469
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "2618277499579",
+     "n": 76,
+     "after": 12,
+     "path": "young",
+     "age": 2184,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.476563,
+      "temperature": 7002.0,
+      "age": 2184
+     },
+     "realStage": "main",
+     "ages": [
+      1988
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "2661864722979",
+     "n": 77,
+     "after": 12,
+     "path": "young",
+     "age": 334,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.746094,
+      "temperature": 7941.0,
+      "age": 334
+     },
+     "realStage": "main",
+     "ages": [
+      167
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "4821025328323",
+     "n": 140,
+     "after": 12,
+     "path": "young",
+     "age": 5120,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.144531,
+      "temperature": 5842.0,
+      "age": 5120
+     },
+     "realStage": "main",
+     "ages": [
+      3709
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "233723957989595",
+     "n": 6802,
+     "after": 24,
+     "path": "young",
+     "age": 3800,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.507813,
+      "temperature": 6765.0,
+      "age": 3800
+     },
+     "realStage": "main",
+     "ages": [
+      3564
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "4335610104739",
+     "n": 126,
+     "after": 12,
+     "path": "young",
+     "age": 2794,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.609375,
+      "temperature": 7045.0,
+      "age": 2794
+     },
+     "realStage": "main",
+     "ages": [
+      2549
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "3101544926875",
+     "n": 90,
+     "after": 12,
+     "path": "young",
+     "age": 2250,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.082031,
+      "temperature": 5924.0,
+      "age": 2250
+     },
+     "realStage": "main",
+     "ages": [
+      2021
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "149023525963",
+     "n": 4,
+     "after": 12,
+     "path": "young",
+     "age": 806,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.550781,
+      "temperature": 7100.0,
+      "age": 806
+     },
+     "realStage": "main",
+     "ages": [
+      787
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "50054827011",
+     "n": 1,
+     "after": 12,
+     "path": "young",
+     "age": 3784,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.074219,
+      "temperature": 5881.0,
+      "age": 3784
+     },
+     "realStage": "main",
+     "ages": [
+      3556
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "2412437801571",
+     "n": 70,
+     "after": 12,
+     "path": "young",
+     "age": 1074,
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.90625,
+      "temperature": 5231.0,
+      "age": 1074
+     },
+     "realStage": "main",
+     "ages": [
+      5266
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "2003442764587",
+     "n": 58,
+     "after": 12,
+     "path": "young",
+     "age": 450,
+     "real": {
+      "starType": "F",
+      "stellarMass": 0.988281,
+      "temperature": 6055.0,
+      "age": 450
+     },
+     "realStage": "main",
+     "ages": [
+      353
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "181286259283",
+     "n": 5,
+     "after": 12,
+     "path": "young",
+     "age": 3696,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.46875,
+      "temperature": 7338.0,
+      "age": 3696
+     },
+     "realStage": "main",
+     "ages": [
+      3512
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1831744834379",
+     "n": 53,
+     "after": 12,
+     "path": "young",
+     "age": 4158,
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.960938,
+      "temperature": 5831.0,
+      "age": 4158
+     },
+     "realStage": "main",
+     "ages": [
+      3999
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "2347728491035",
+     "n": 68,
+     "after": 12,
+     "path": "young",
+     "age": 406,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.34375,
+      "temperature": 6409.0,
+      "age": 406
+     },
+     "realStage": "main",
+     "ages": [
+      331
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "45089004763",
+     "n": 1,
+     "after": 12,
+     "path": "young",
+     "age": 456,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.394531,
+      "temperature": 7106.0,
+      "age": 456
+     },
+     "realStage": "main",
+     "ages": [
+      356
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "419774369003",
+     "n": 12,
+     "after": 12,
+     "path": "young",
+     "age": 236,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.183594,
+      "temperature": 6431.0,
+      "age": 236
+     },
+     "realStage": "main",
+     "ages": [
+      118
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "284734523627",
+     "n": 8,
+     "after": 12,
+     "path": "young",
+     "age": 2330,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.269531,
+      "temperature": 6476.0,
+      "age": 2330
+     },
+     "realStage": "main",
+     "ages": [
+      2189
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "78978927171",
+     "n": 2,
+     "after": 12,
+     "path": "young",
+     "age": 1200,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.695313,
+      "temperature": 8191.0,
+      "age": 1200
+     },
+     "realStage": "main",
+     "ages": [
+      1112
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "558236602483",
+     "n": 16,
+     "after": 12,
+     "path": "young",
+     "age": 5246,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.136719,
+      "temperature": 5857.0,
+      "age": 5246
+     },
+     "realStage": "main",
+     "ages": [
+      5183
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "10645374963",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 2616,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.679688,
+      "temperature": 7800.0,
+      "age": 2616
+     },
+     "realStage": "main",
+     "ages": [
+      2460
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "113489382003",
+     "n": 3,
+     "after": 12,
+     "path": "young",
+     "age": 688,
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.757813,
+      "temperature": 5225.0,
+      "age": 688
+     },
+     "realStage": "small",
+     "ages": [
+      2195
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "3687774327475",
+     "n": 107,
+     "after": 12,
+     "path": "young",
+     "age": 4530,
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.933594,
+      "temperature": 5867.0,
+      "age": 4530
+     },
+     "realStage": "main",
+     "ages": [
+      4441
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "10645063771",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 1308,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.613281,
+      "temperature": 8198.0,
+      "age": 1308
+     },
+     "realStage": "main",
+     "ages": [
+      1166
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "2861899418387",
+     "n": 83,
+     "after": 12,
+     "path": "young",
+     "age": 3008,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.644531,
+      "temperature": 7244.0,
+      "age": 3008
+     },
+     "realStage": "main",
+     "ages": [
+      1710
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "41721270227251",
+     "n": 1214,
+     "after": 15,
+     "path": "young",
+     "age": 1558,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.679688,
+      "temperature": 8127.0,
+      "age": 1558
+     },
+     "realStage": "main",
+     "ages": [
+      1419
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "593284302963",
+     "n": 17,
+     "after": 12,
+     "path": "young",
+     "age": 2234,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.746094,
+      "temperature": 7883.0,
+      "age": 2234
+     },
+     "realStage": "main",
+     "ages": [
+      2013
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "76898404139",
+     "n": 2,
+     "after": 12,
+     "path": "young",
+     "age": 8628,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.058594,
+      "temperature": 5928.0,
+      "age": 8628
+     },
+     "realStage": "main",
+     "ages": [
+      8538
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "68284434862883",
+     "n": 1987,
+     "after": 15,
+     "path": "young",
+     "age": 950,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.753906,
+      "temperature": 8796.0,
+      "age": 950
+     },
+     "realStage": "main",
+     "ages": [
+      859
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "83122685283",
+     "n": 2,
+     "after": 12,
+     "path": "young",
+     "age": 682,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.683594,
+      "temperature": 8485.0,
+      "age": 682
+     },
+     "realStage": "main",
+     "ages": [
+      597
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "113808237067",
+     "n": 3,
+     "after": 12,
+     "path": "young",
+     "age": 4510,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.25,
+      "temperature": 6742.0,
+      "age": 4510
+     },
+     "realStage": "main",
+     "ages": [
+      4303
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "560401074595",
+     "n": 16,
+     "after": 12,
+     "path": "young",
+     "age": 4134,
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.972656,
+      "temperature": 5258.0,
+      "age": 4134
+     },
+     "realStage": "main",
+     "ages": [
+      2527
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "68556477534931",
+     "n": 1995,
+     "after": 12,
+     "path": "young",
+     "age": 1094,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.710938,
+      "temperature": 7706.0,
+      "age": 1094
+     },
+     "realStage": "main",
+     "ages": [
+      1059
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "22273624593131",
+     "n": 648,
+     "after": 12,
+     "path": "young",
+     "age": 3150,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.464844,
+      "temperature": 7139.0,
+      "age": 3150
+     },
+     "realStage": "main",
+     "ages": [
+      3111
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1970089756971",
+     "n": 57,
+     "after": 12,
+     "path": "young",
+     "age": 3372,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.011719,
+      "temperature": 5843.0,
+      "age": 3372
+     },
+     "realStage": "main",
+     "ages": [
+      3350
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "181286193355",
+     "n": 5,
+     "after": 12,
+     "path": "young",
+     "age": 728,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.644531,
+      "temperature": 7854.0,
+      "age": 728
+     },
+     "realStage": "main",
+     "ages": [
+      492
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "183595616473467",
+     "n": 5343,
+     "after": 24,
+     "path": "young",
+     "age": 3070,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.429688,
+      "temperature": 7680.0,
+      "age": 3070
+     },
+     "realStage": "main",
+     "ages": [
+      2943
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "733508373531",
+     "n": 21,
+     "after": 12,
+     "path": "young",
+     "age": 2662,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.402344,
+      "temperature": 6572.0,
+      "age": 2662
+     },
+     "realStage": "main",
+     "ages": [
+      2611
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "257879357543107",
+     "n": 7505,
+     "after": 24,
+     "path": "young",
+     "age": 512,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.515625,
+      "temperature": 7969.0,
+      "age": 512
+     },
+     "realStage": "main",
+     "ages": [
+      512
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1694775626035",
+     "n": 49,
+     "after": 12,
+     "path": "young",
+     "age": 4698,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.0,
+      "temperature": 5719.0,
+      "age": 4698
+     },
+     "realStage": "main",
+     "ages": [
+      4653
+     ],
+     "stage": "main"
+    }
+   ],
+   "e": [
+    {
+     "address": "173134571180",
+     "n": 40,
+     "after": 12,
+     "path": "young",
+     "age": 36,
+     "real": {
+      "starType": "B",
+      "stellarMass": 3.074219,
+      "temperature": 11125.0,
+      "age": 36
+     },
+     "realStage": "main",
+     "ages": [
+      18
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "14149437332",
+     "n": 3,
+     "after": 12,
+     "path": "young",
+     "age": 294,
+     "real": {
+      "starType": "B",
+      "stellarMass": 4.539063,
+      "temperature": 16202.0,
+      "age": 294
+     },
+     "realStage": "main",
+     "ages": [
+      57
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "2651297065356",
+     "n": 617,
+     "after": 12,
+     "path": "young",
+     "age": 60,
+     "real": {
+      "starType": "TTS",
+      "stellarMass": 0.886719,
+      "temperature": 4130.0,
+      "age": 60
+     },
+     "realStage": "tTauri",
+     "ages": [
+      252
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1307110787340",
+     "n": 304,
+     "after": 12,
+     "path": "young",
+     "age": 2098,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.824219,
+      "temperature": 8198.0,
+      "age": 2098
+     },
+     "realStage": "main",
+     "ages": [
+      2073
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "36087743416724",
+     "n": 8402,
+     "after": 24,
+     "path": "young",
+     "age": 2,
+     "real": {
+      "starType": "AeBe",
+      "stellarMass": 5.664063,
+      "temperature": 5152.0,
+      "age": 2
+     },
+     "realStage": "main",
+     "ages": [
+      88
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "20746132719988",
+     "n": 4830,
+     "after": 12,
+     "path": "young",
+     "age": 454,
+     "real": {
+      "starType": "B",
+      "stellarMass": 2.613281,
+      "temperature": 11169.0,
+      "age": 454
+     },
+     "realStage": "main",
+     "ages": [
+      227
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1377871124",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 214,
+     "real": {
+      "starType": "B",
+      "stellarMass": 4.15625,
+      "temperature": 12832.0,
+      "age": 214
+     },
+     "realStage": "main",
+     "ages": [
+      107
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1625288724",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 60,
+     "real": {
+      "starType": "B",
+      "stellarMass": 5.230469,
+      "temperature": 15137.0,
+      "age": 60
+     },
+     "realStage": "main",
+     "ages": [
+      100
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1335837804",
+     "n": 0,
+     "after": 15,
+     "path": "young",
+     "age": 138,
+     "real": {
+      "starType": "B",
+      "stellarMass": 5.90625,
+      "temperature": 16240.0,
+      "age": 138
+     },
+     "realStage": "main",
+     "ages": [
+      64
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "27437050300",
+     "n": 6,
+     "after": 12,
+     "path": "young",
+     "age": 228,
+     "real": {
+      "starType": "B",
+      "stellarMass": 5.441406,
+      "temperature": 15266.0,
+      "age": 228
+     },
+     "realStage": "main",
+     "ages": [
+      83
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "12491155237284",
+     "n": 2908,
+     "after": 12,
+     "path": "young",
+     "age": 90,
+     "real": {
+      "starType": "B",
+      "stellarMass": 5.082031,
+      "temperature": 15021.0,
+      "age": 90
+     },
+     "realStage": "main",
+     "ages": [
+      45
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1394640412",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 2,
+     "real": {
+      "starType": "AeBe",
+      "stellarMass": 4.546875,
+      "temperature": 3457.0,
+      "age": 2
+     },
+     "realStage": "main",
+     "ages": [
+      157
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "24662794799164",
+     "n": 5742,
+     "after": 24,
+     "path": "young",
+     "age": 154,
+     "real": {
+      "starType": "B",
+      "stellarMass": 3.898438,
+      "temperature": 12643.0,
+      "age": 154
+     },
+     "realStage": "main",
+     "ages": [
+      77
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "117379754532",
+     "n": 27,
+     "after": 12,
+     "path": "young",
+     "age": 506,
+     "real": {
+      "starType": "B",
+      "stellarMass": 4.097656,
+      "temperature": 13811.0,
+      "age": 506
+     },
+     "realStage": "main",
+     "ages": [
+      253
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "9447665204",
+     "n": 2,
+     "after": 12,
+     "path": "young",
+     "age": 342,
+     "real": {
+      "starType": "B",
+      "stellarMass": 2.960938,
+      "temperature": 11623.0,
+      "age": 342
+     },
+     "realStage": "main",
+     "ages": [
+      171
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "52581893636",
+     "n": 12,
+     "after": 12,
+     "path": "young",
+     "age": 2,
+     "real": {
+      "starType": "AeBe",
+      "stellarMass": 5.726563,
+      "temperature": 5997.0,
+      "age": 2
+     },
+     "realStage": "main",
+     "ages": [
+      46
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "20686019971444",
+     "n": 4816,
+     "after": 12,
+     "path": "young",
+     "age": 592,
+     "real": {
+      "starType": "F_WhiteSuperGiant",
+      "stellarMass": 3.308594,
+      "temperature": 6117.0,
+      "age": 592
+     },
+     "realStage": "giant",
+     "ages": [
+      552
+     ],
+     "stage": "giant"
+    },
+    {
+     "address": "1256195220",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 262,
+     "real": {
+      "starType": "B",
+      "stellarMass": 3.5625,
+      "temperature": 12238.0,
+      "age": 262
+     },
+     "realStage": "main",
+     "ages": [
+      98
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "5622498516",
+     "n": 1,
+     "after": 12,
+     "path": "young",
+     "age": 332,
+     "real": {
+      "starType": "B",
+      "stellarMass": 5.027344,
+      "temperature": 16481.0,
+      "age": 332
+     },
+     "realStage": "main",
+     "ages": [
+      160
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "9661720820",
+     "n": 2,
+     "after": 12,
+     "path": "young",
+     "age": 644,
+     "real": {
+      "starType": "B",
+      "stellarMass": 2.179688,
+      "temperature": 10001.0,
+      "age": 644
+     },
+     "realStage": "main",
+     "ages": [
+      450
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "3136716515500",
+     "n": 730,
+     "after": 12,
+     "path": "young",
+     "age": 248,
+     "real": {
+      "starType": "B",
+      "stellarMass": 4.90625,
+      "temperature": 14302.0,
+      "age": 248
+     },
+     "realStage": "small",
+     "ages": [
+      112
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1676234680436",
+     "n": 390,
+     "after": 12,
+     "path": "young",
+     "age": 752,
+     "real": {
+      "starType": "B",
+      "stellarMass": 3.15625,
+      "temperature": 11296.0,
+      "age": 752
+     },
+     "realStage": "main",
+     "ages": [
+      504
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "259059018140",
+     "n": 60,
+     "after": 12,
+     "path": "young",
+     "age": 158,
+     "real": {
+      "starType": "B",
+      "stellarMass": 4.285156,
+      "temperature": 14208.0,
+      "age": 158
+     },
+     "realStage": "main",
+     "ages": [
+      79
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "21518954203676",
+     "n": 5010,
+     "after": 24,
+     "path": "young",
+     "age": 58,
+     "real": {
+      "starType": "B",
+      "stellarMass": 4.683594,
+      "temperature": 14665.0,
+      "age": 58
+     },
+     "realStage": "main",
+     "ages": [
+      29
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "65710075596",
+     "n": 15,
+     "after": 12,
+     "path": "young",
+     "age": 224,
+     "real": {
+      "starType": "B",
+      "stellarMass": 4.289063,
+      "temperature": 14669.0,
+      "age": 224
+     },
+     "realStage": "main",
+     "ages": [
+      112
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "658189011012",
+     "n": 153,
+     "after": 12,
+     "path": "young",
+     "age": 348,
+     "real": {
+      "starType": "B",
+      "stellarMass": 2.375,
+      "temperature": 10186.0,
+      "age": 348
+     },
+     "realStage": "main",
+     "ages": [
+      174
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "18029217172",
+     "n": 4,
+     "after": 12,
+     "path": "young",
+     "age": 48,
+     "real": {
+      "starType": "B",
+      "stellarMass": 5.667969,
+      "temperature": 16172.0,
+      "age": 48
+     },
+     "realStage": "main",
+     "ages": [
+      55
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1191121594820",
+     "n": 277,
+     "after": 12,
+     "path": "young",
+     "age": 584,
+     "real": {
+      "starType": "B",
+      "stellarMass": 2.992188,
+      "temperature": 10631.0,
+      "age": 584
+     },
+     "realStage": "main",
+     "ages": [
+      420
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1256154188",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 158,
+     "real": {
+      "starType": "B",
+      "stellarMass": 4.039063,
+      "temperature": 14860.0,
+      "age": 158
+     },
+     "realStage": "main",
+     "ages": [
+      79
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "983606428",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 92,
+     "real": {
+      "starType": "A",
+      "stellarMass": 2.039063,
+      "temperature": 8258.0,
+      "age": 92
+     },
+     "realStage": "main",
+     "ages": [
+      46
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "78771118996",
+     "n": 18,
+     "after": 12,
+     "path": "young",
+     "age": 304,
+     "real": {
+      "starType": "B",
+      "stellarMass": 2.503906,
+      "temperature": 10342.0,
+      "age": 304
+     },
+     "realStage": "main",
+     "ages": [
+      280
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "25947283655580",
+     "n": 6041,
+     "after": 24,
+     "path": "young",
+     "age": 266,
+     "real": {
+      "starType": "B",
+      "stellarMass": 3.253906,
+      "temperature": 11004.0,
+      "age": 266
+     },
+     "realStage": "main",
+     "ages": [
+      261
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1424025140",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 464,
+     "real": {
+      "starType": "B",
+      "stellarMass": 3.085938,
+      "temperature": 11664.0,
+      "age": 464
+     },
+     "realStage": "main",
+     "ages": [
+      360
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "568355408372",
+     "n": 132,
+     "after": 12,
+     "path": "young",
+     "age": 152,
+     "real": {
+      "starType": "B",
+      "stellarMass": 5.878906,
+      "temperature": 17763.0,
+      "age": 152
+     },
+     "realStage": "main",
+     "ages": [
+      63
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "1524625516",
+     "n": 0,
+     "after": 12,
+     "path": "young",
+     "age": 182,
+     "real": {
+      "starType": "B",
+      "stellarMass": 6.011719,
+      "temperature": 17910.0,
+      "age": 182
+     },
+     "realStage": "main",
+     "ages": [
+      47
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "14153680124",
+     "n": 3,
+     "after": 12,
+     "path": "young",
+     "age": 114,
+     "real": {
+      "starType": "B",
+      "stellarMass": 5.757813,
+      "temperature": 17660.0,
+      "age": 114
+     },
+     "realStage": "main",
+     "ages": [
+      103
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "4889117641420",
+     "n": 1138,
+     "after": 12,
+     "path": "young",
+     "age": 1212,
+     "real": {
+      "starType": "A",
+      "stellarMass": 2.164063,
+      "temperature": 8771.0,
+      "age": 1212
+     },
+     "realStage": "small",
+     "ages": [
+      990
+     ],
+     "stage": "small"
+    },
+    {
+     "address": "4618211780532",
+     "n": 1075,
+     "after": 12,
+     "path": "young",
+     "age": 258,
+     "real": {
+      "starType": "B",
+      "stellarMass": 5.753906,
+      "temperature": 17615.0,
+      "age": 258
+     },
+     "realStage": "main",
+     "ages": [
+      123
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "3613470394820",
+     "n": 841,
+     "after": 12,
+     "path": "young",
+     "age": 88,
+     "real": {
+      "starType": "B",
+      "stellarMass": 4.378906,
+      "temperature": 13220.0,
+      "age": 88
+     },
+     "realStage": "main",
+     "ages": [
+      44
+     ],
+     "stage": "main"
+    },
+    {
+     "address": "19341342910612",
+     "n": 4503,
+     "after": 24,
+     "path": "young",
+     "age": 980,
+     "real": {
+      "starType": "B",
+      "stellarMass": 2.5,
+      "temperature": 10995.0,
+      "age": 980
+     },
+     "realStage": "main",
+     "ages": [
+      874
+     ],
+     "stage": "main"
+    }
+   ]
+  }
+ },
+ "replaced": {
+  "near": {
+   "base": "10427091331",
+   "centre": [
+    -265.0,
+    255.0,
+    255.0
+   ],
+   "fromSol": 447.52094923031257,
+   "systems": [
+    {
+     "address": "663262120323",
+     "n": 19,
+     "after": 11,
+     "birthMass": 278,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.085938,
+      "temperature": 6181.0,
+      "age": 1696
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "697621858691",
+     "n": 20,
+     "after": 11,
+     "birthMass": 241,
+     "real": {
+      "starType": "F",
+      "stellarMass": 0.941406,
+      "temperature": 6088.0,
+      "age": 1242
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "731981597059",
+     "n": 21,
+     "after": 11,
+     "birthMass": 351,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.371094,
+      "temperature": 7304.0,
+      "age": 606
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "766341335427",
+     "n": 22,
+     "after": 12,
+     "birthMass": 413,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.074219,
+      "temperature": 6472.0,
+      "age": 1274
+     },
+     "kind": "replaced"
+    },
+    {
+     "address": "800701073795",
+     "n": 23,
+     "after": 12,
+     "birthMass": 279,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.089844,
+      "temperature": 6490.0,
+      "age": 7574
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "869420550531",
+     "n": 25,
+     "after": 12,
+     "birthMass": 397,
+     "real": {
+      "starType": "M",
+      "stellarMass": 0.347656,
+      "temperature": 3163.0,
+      "age": 588
+     },
+     "kind": "replaced"
+    },
+    {
+     "address": "903780288899",
+     "n": 26,
+     "after": 11,
+     "birthMass": 301,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.175781,
+      "temperature": 6006.0,
+      "age": 1226
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "938140027267",
+     "n": 27,
+     "after": 11,
+     "birthMass": 396,
+     "real": {
+      "starType": "K",
+      "stellarMass": 0.851563,
+      "temperature": 5159.0,
+      "age": 980
+     },
+     "kind": "replaced"
+    },
+    {
+     "address": "972499765635",
+     "n": 28,
+     "after": 11,
+     "birthMass": 232,
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.90625,
+      "temperature": 5576.0,
+      "age": 998
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "1075578980739",
+     "n": 31,
+     "after": 11,
+     "birthMass": 402,
+     "real": {
+      "starType": "M",
+      "stellarMass": 0.242188,
+      "temperature": 2627.0,
+      "age": 1172
+     },
+     "kind": "replaced"
+    },
+    {
+     "address": "1109938719107",
+     "n": 32,
+     "after": 12,
+     "birthMass": 382,
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.957031,
+      "temperature": 5466.0,
+      "age": 8352
+     },
+     "kind": "replaced"
+    },
+    {
+     "address": "1178658195843",
+     "n": 34,
+     "after": 12,
+     "birthMass": 412,
+     "real": {
+      "starType": "M",
+      "stellarMass": 0.195313,
+      "temperature": 2035.0,
+      "age": 752
+     },
+     "kind": "replaced"
+    },
+    {
+     "address": "1213017934211",
+     "n": 35,
+     "after": 12,
+     "birthMass": 295,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.152344,
+      "temperature": 6460.0,
+      "age": 7394
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "1281737410947",
+     "n": 37,
+     "after": 11,
+     "birthMass": 420,
+     "real": {
+      "starType": "K",
+      "stellarMass": 0.652344,
+      "temperature": 4133.0,
+      "age": 1030
+     },
+     "kind": "replaced"
+    },
+    {
+     "address": "1316097149315",
+     "n": 38,
+     "after": 11,
+     "birthMass": 312,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.21875,
+      "temperature": 6617.0,
+      "age": 760
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "1384816626051",
+     "n": 40,
+     "after": 11,
+     "birthMass": 366,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.429688,
+      "temperature": 7486.0,
+      "age": 1742
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "1419176364419",
+     "n": 41,
+     "after": 11,
+     "birthMass": 370,
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.804688,
+      "temperature": 5465.0,
+      "age": 1270
+     },
+     "kind": "replaced"
+    },
+    {
+     "address": "1453536102787",
+     "n": 42,
+     "after": 11,
+     "birthMass": 283,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.105469,
+      "temperature": 5829.0,
+      "age": 1372
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "1487895841155",
+     "n": 43,
+     "after": 12,
+     "birthMass": 312,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.21875,
+      "temperature": 7110.0,
+      "age": 5448
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "1522255579523",
+     "n": 44,
+     "after": 12,
+     "birthMass": 454,
+     "real": {
+      "starType": "M",
+      "stellarMass": 0.527344,
+      "temperature": 3505.0,
+      "age": 424
+     },
+     "kind": "replaced"
+    },
+    {
+     "address": "1625334794627",
+     "n": 47,
+     "after": 12,
+     "birthMass": 237,
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.925781,
+      "temperature": 5439.0,
+      "age": 512
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "1659694532995",
+     "n": 48,
+     "after": 12,
+     "birthMass": 253,
+     "real": {
+      "starType": "K",
+      "stellarMass": 0.988281,
+      "temperature": 5190.0,
+      "age": 5278
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "1694054271363",
+     "n": 49,
+     "after": 11,
+     "birthMass": 294,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.148438,
+      "temperature": 6085.0,
+      "age": 458
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "1762773748099",
+     "n": 51,
+     "after": 11,
+     "birthMass": 341,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.332031,
+      "temperature": 6348.0,
+      "age": 1152
+     },
+     "kind": "kept"
+    }
+   ]
+  },
+  "far": {
+   "base": "4303359491",
+   "centre": [
+    -29465.0,
+    15.0,
+    11775.0
+   ],
+   "fromSol": 31730.696100148827,
+   "systems": [
+    {
+     "address": "4303359491",
+     "n": 0,
+     "after": 12,
+     "birthMass": 293,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.144531,
+      "temperature": 6580.0,
+      "age": 2698
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "38663097859",
+     "n": 1,
+     "after": 11,
+     "birthMass": 257,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.003906,
+      "temperature": 6066.0,
+      "age": 1390
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "73022836227",
+     "n": 2,
+     "after": 12,
+     "birthMass": 267,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.042969,
+      "temperature": 5456.0,
+      "age": 4470
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "107382574595",
+     "n": 3,
+     "after": 12,
+     "birthMass": 431,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.683594,
+      "temperature": 8213.0,
+      "age": 754
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "141742312963",
+     "n": 4,
+     "after": 12,
+     "birthMass": 419,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.636719,
+      "temperature": 7547.0,
+      "age": 86
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "176102051331",
+     "n": 5,
+     "after": 12,
+     "birthMass": 315,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.230469,
+      "temperature": 6180.0,
+      "age": 374
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "210461789699",
+     "n": 6,
+     "after": 11,
+     "birthMass": 233,
+     "real": {
+      "starType": "K",
+      "stellarMass": 0.910156,
+      "temperature": 4858.0,
+      "age": 466
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "244821528067",
+     "n": 7,
+     "after": 11,
+     "birthMass": 324,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.265625,
+      "temperature": 6252.0,
+      "age": 558
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "279181266435",
+     "n": 8,
+     "after": 11,
+     "birthMass": 305,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.191406,
+      "temperature": 5719.0,
+      "age": 874
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "313541004803",
+     "n": 9,
+     "after": 11,
+     "birthMass": 430,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.679688,
+      "temperature": 7184.0,
+      "age": 444
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "347900743171",
+     "n": 10,
+     "after": 12,
+     "birthMass": 282,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.101563,
+      "temperature": 6301.0,
+      "age": 4070
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "382260481539",
+     "n": 11,
+     "after": 11,
+     "birthMass": 438,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.710938,
+      "temperature": 8292.0,
+      "age": 734
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "416620219907",
+     "n": 12,
+     "after": 11,
+     "birthMass": 298,
+     "real": {
+      "starType": "G",
+      "stellarMass": 1.164063,
+      "temperature": 5699.0,
+      "age": 526
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "450979958275",
+     "n": 13,
+     "after": 11,
+     "birthMass": 404,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.578125,
+      "temperature": 7844.0,
+      "age": 542
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "485339696643",
+     "n": 14,
+     "after": 12,
+     "birthMass": 367,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.433594,
+      "temperature": 7435.0,
+      "age": 314
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "519699435011",
+     "n": 15,
+     "after": 12,
+     "birthMass": 255,
+     "real": {
+      "starType": "K",
+      "stellarMass": 0.996094,
+      "temperature": 5146.0,
+      "age": 504
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "554059173379",
+     "n": 16,
+     "after": 12,
+     "birthMass": 346,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.351563,
+      "temperature": 7395.0,
+      "age": 2914
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "588418911747",
+     "n": 17,
+     "after": 12,
+     "birthMass": 343,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.339844,
+      "temperature": 6717.0,
+      "age": 2970
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "622778650115",
+     "n": 18,
+     "after": 11,
+     "birthMass": 319,
+     "real": {
+      "starType": "F",
+      "stellarMass": 1.246094,
+      "temperature": 6753.0,
+      "age": 496
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "657138388483",
+     "n": 19,
+     "after": 12,
+     "birthMass": 239,
+     "real": {
+      "starType": "G",
+      "stellarMass": 0.933594,
+      "temperature": 5809.0,
+      "age": 270
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "691498126851",
+     "n": 20,
+     "after": 12,
+     "birthMass": 383,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.496094,
+      "temperature": 7748.0,
+      "age": 2078
+     },
+     "kind": "kept"
+    },
+    {
+     "address": "725857865219",
+     "n": 21,
+     "after": 11,
+     "birthMass": 458,
+     "real": {
+      "starType": "A",
+      "stellarMass": 1.789063,
+      "temperature": 8662.0,
+      "age": 944
+     },
+     "kind": "kept"
+    }
+   ]
+  }
+ }
 }

@@ -462,5 +462,24 @@ describe("predicted stars in the Boxels table (star predictor step E, 2026-11-24
       stars: () => null,
     });
     expect(none.rows.every((r) => r.predictedStar === undefined)).toBe(true);
+    expect(none.starChecks).toBeUndefined();
+  });
+
+  it("carries the check of those predictions against his scans, per boxel", async () => {
+    const { boxelTable } = await import("../src/server/boxel.js");
+    const scan = { starType: "F", stellarMass: 1.2, temperature: 6500 };
+    const miss = { n: 0, predicted: { cls: "G", right: 0.94, alive: 0.85 }, real: "F" };
+    const saved = (id: string, prefix: string) => ({ id, prefix, end: 1, skipped: [], boxel: "AB-C d1", sector: "Eol Prou" }) as never;
+    const t = boxelTable({
+      boxels: [saved("a", "Eol Prou AB-C d1-"), saved("b", "Eol Prou AB-C d2-"), saved("c", "Eol Prou AB-C d3-")],
+      index: null,
+      visited: [[11, "Eol Prou AB-C d1-0"], [12, "Eol Prou AB-C d2-0"]],
+      speciesName: (id) => id,
+      arrival: () => scan,
+      stars: () => new Map(),
+      // Nothing to check in the second boxel; the third has no scan and is not asked.
+      starCheck: (b, scans) => (b.id === "a" ? { checked: scans.size, right: 0, misses: [miss] } : b.id === "c" ? { checked: 9, right: 9, misses: [] } : null),
+    });
+    expect(t.starChecks).toEqual([{ boxelId: "a", checked: 1, right: 0, misses: [miss] }]);
   });
 });

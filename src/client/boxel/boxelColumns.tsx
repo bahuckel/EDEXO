@@ -84,7 +84,7 @@ export function boxelColumns({
       label: "Main star",
       title:
         "Flown: the arrival star as you scanned it. Not flown: its class in the galaxy index (no luminosity). ≈: recorded nowhere, the class the system's address predicts",
-      value: (r) => r.mainStar ?? (r.predictedStar ? `≈ ${r.predictedStar.cls}` : null),
+      value: (r) => r.mainStar ?? (r.predictedStar ? `≈ ${r.predictedStar.stage ?? r.predictedStar.cls}` : null),
       render: (r) => {
         const notOnSpansh =
           r.notOnSpansh && !r.from ? (

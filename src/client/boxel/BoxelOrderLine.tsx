@@ -20,7 +20,8 @@ export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
   const unplaced = order.length - placed;
   const suffix = b.prefix.slice(b.prefix.lastIndexOf(" ") + 1);
   const shown = order.slice(0, Math.min(placed, SHOWN));
-  const starShown = shown.find((o) => o.star)?.star;
+  const stars = shown.flatMap((o) => (o.star ? [o.star] : []));
+  const unaged = stars.find((p) => !p.aged);
   if (!placed)
     return (
       <p className="boxel-order dim">
@@ -43,7 +44,7 @@ export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
             {o.star ? (
               <span className="dim" title={predictedStarLabel(o.star).title}>
                 {" "}
-                ({predictedStarLabel(o.star).text})
+                ({predictedStarLabel(o.star).short})
               </span>
             ) : null}
             {o.ly != null ? (
@@ -83,13 +84,20 @@ export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
           A plotted route or a Spansh look-up replaces a prediction.{" "}
         </span>
       ) : null}
-      {starShown ? (
+      {stars.length ? (
         <span className="dim">
-          A letter in brackets is the arrival star the system's address predicts, if it is still on the main sequence
-          (about {Math.max(1, Math.round((1 - starShown.alive) * 100))} % in this mass code are something else by now)
-          {shown.some((o) => o.star?.likely)
-            ? "; a ? marks a likely one: scan one arrival star of this boxel and the rest gets sharper"
+          A letter in brackets is the arrival star the system's address predicts
+          {unaged
+            ? `, if it is still on the main sequence (about ${Math.max(1, Math.round((1 - (unaged.alive ?? 1)) * 100))} % in this mass code are something else by now)`
             : ""}
+          {stars.some((p) => p.stage)
+            ? "; N, WD, giant and small are what the star is by now (neutron star, white dwarf, giant, a small star in its place)"
+            : ""}
+          {stars.some((p) => p.likely && !p.stage)
+            ? "; a ? marks a likely one: scan one arrival star of this boxel and the rest gets sharper"
+            : stars.some((p) => p.likely)
+              ? "; a ? marks a likely one"
+              : ""}
           .{" "}
         </span>
       ) : null}

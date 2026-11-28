@@ -107,20 +107,53 @@ export interface BoxelDTO {
 }
 
 /**
- * The arrival star a system's address predicts (shared/stellarClass.ts; owner, 2026-11-24): not seen by anyone, and
- * the class the star has if it is still on the main sequence.
+ * The arrival star a system's address predicts (shared/stellarClass.ts; owner, 2026-11-24): not seen by anyone.
+ * The class is the one the star has while it is itself. What it is by now goes by the system's age, which is known
+ * for a young system of mass code d or e (its own dice) and, for the others, once his scans have shown the boxel's
+ * age window; with it the star's stage is told, without it only how often such a star is still itself.
  */
 export interface PredictedStarDTO {
-  /** M, K, G, F, A, B or O. */
+  /** L, M, K, G, F, A, B or O: the class while the star is itself. */
   cls: string;
-  /** Of the arrival stars still on the main sequence, the share whose class such a prediction gets right, as measured. */
+  /**
+   * How often the answer shown is right, as measured: the class (of the stars that are still themselves) when no
+   * `stage` is told, else the stage.
+   */
   right: number;
-  /** The share of this mass code's arrival stars that are still on the main sequence; the rest are something else. */
-  alive: number;
+  /**
+   * No `stage` told: how often the star is still itself. With no age known, the share of this mass code's arrival
+   * stars that are (the rest are dead stars, giants, small stars in their place, T Tauri stars); with the age
+   * known (`aged`), the share of "still itself" answers that are right.
+   */
+  alive?: number;
   /** Right for under 95 %: shown as likely, not as predicted. */
   likely?: boolean;
   /** One of his own scans in the boxel showed the boxel's temperature factor, which sharpens every other star's. */
   sharpened?: boolean;
+  /**
+   * What the answer stands on besides the address. The system's age: its own dice (a young system), or the boxel's
+   * age window from his scans ("base"). Or the boxel replacing such stars by small ones at any age: his scans in
+   * the boxel show it ("kind"), or its place does (this close to Sol or to the galaxy's centre: "place").
+   */
+  aged?: "dice" | "base" | "kind" | "place";
+  /**
+   * The age says the star is no longer itself: a small star in its place, a giant, a white dwarf, a neutron star,
+   * or (mass code e) a neutron star or black hole.
+   */
+  stage?: "small" | "giant" | "whiteDwarf" | "neutron" | "collapsed";
+}
+
+/**
+ * The star predictions of one boxel checked against his own scans (server/boxelStars.ts `boxelStarCheck`): of the
+ * systems whose arrival star he scanned, how many would have been predicted right from his other scans in the
+ * boxel, and the misses. `real`: the star's class while it is the one the system was born with, else "small",
+ * "giant", "whiteDwarf", "neutron", "blackHole", "tTauri", "herbig" or "other".
+ */
+export interface BoxelStarCheckDTO {
+  boxelId: string;
+  checked: number;
+  right: number;
+  misses: { n: number; predicted: PredictedStarDTO; real: string }[];
 }
 
 /**
@@ -260,6 +293,8 @@ export interface BoxelTableDTO {
   noIndex: boolean;
   /** The ticked boxels looked up on Spansh: when, and whether every page was read. */
   lookups: { boxelId: string; fetchedAt: string; complete: boolean; systems: number; highest: number }[];
+  /** The star predictions checked against his scans, for the ticked boxels where any could be. */
+  starChecks?: BoxelStarCheckDTO[];
 }
 
 /**
