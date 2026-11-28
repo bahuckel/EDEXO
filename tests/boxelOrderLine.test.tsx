@@ -67,6 +67,22 @@ describe("the shortest-order line", () => {
     expect(text).not.toContain("guess");
   });
 
+  it("says where the kind came from when the boxels of its sector gave it", () => {
+    const text = show(
+      boxel({
+        order: [{ n: 4, ly: 12 }, { n: 7, ly: 30, predicted: true }],
+        placed: 2,
+        predicted: 1,
+        predictedExact: 0.976,
+        predictedChecked: 0,
+        predictedNeighbours: 3,
+      }),
+    );
+    expect(text).toContain("its kind is taken from 3 boxels of its sector you have flown or plotted");
+    expect(text).toContain("exact for about 98 % of systems");
+    expect(text).not.toContain("this crowded");
+  });
+
   it("says nothing about predictions when every position was seen", () => {
     const text = show(boxel({ order: [{ n: 4, ly: 12 }, { n: 7, ly: 30 }, { n: 5, ly: 78 }] }));
     expect(text).not.toContain("predicted");

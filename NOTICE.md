@@ -158,6 +158,13 @@ EDDN over one year and on Spansh's galaxy dump; the temperature per birth mass
 lengths young systems are rolled with (`src/shared/stellarYoungModulus.ts`) were read off them. It is tested
 against real stars in Spansh's dump and in those scans.
 
+### Catalogue systems — the Intergalactic Astronomical Union's publications ([github.com/Intergalactic-Astronomical-Union/publications](https://github.com/Intergalactic-Astronomical-Union/publications))
+
+`data/boxel/boxel-catalogue.bin` holds the address and position of 143,105 catalogue systems (real stars such as
+FF Aquilae B, which hold a system number in their boxel), taken from the `catalog_systems.csv` this project
+published into the public domain (Unlicense). The predicted boxel positions place the systems after a catalogue
+star from where it really is (`src/server/boxelCatalogue.ts`). Credit is given though none is required.
+
 ### Ship outlines — the HUD's Ship section
 
 The ships seen from above (`src/shared/shipOutlines.ts`) are simplified silhouettes traced from other

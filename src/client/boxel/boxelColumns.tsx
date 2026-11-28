@@ -178,9 +178,17 @@ export function boxelColumns({
       key: "bio",
       label: "Biology",
       title:
-        "Flown: biology signals you saw and the species you logged, with what EDSM and Spansh recorded. Not flown: the galaxy index's records",
-      value: (r) => (r.bio ? r.bio.species.length * 1000 + (r.bio.signals ?? (r.bio.seen ? 1 : 0)) : null),
+        "Flown: biology signals you saw and the species you logged, with what EDSM and Spansh recorded. Not flown: the galaxy index's records. ≈: nothing recorded, how often a system on the same age path (its address says which) holds biology",
+      value: (r) =>
+        r.bio?.seen || r.bio?.species.length
+          ? r.bio.species.length * 1000 + (r.bio.signals ?? 1)
+          : r.bioOdds
+            ? r.bioOdds.chance
+            : r.bio
+              ? 0
+              : null,
       render: (r) => {
+        if (r.bioOdds && !r.bio?.seen && !r.bio?.species.length) return <BioOddsCell odds={r.bioOdds} />;
         if (!r.bio) return <span className="dim">—</span>;
         const signals = r.bio.signals ? `${r.bio.signals} signal${r.bio.signals === 1 ? "" : "s"}` : "";
         if (r.bio.species.length)
@@ -245,4 +253,31 @@ export function boxelColumns({
       },
     },
   ];
+}
+
+const THIRD_LABEL: Record<NonNullable<NonNullable<BoxelTableRowDTO["bioOdds"]>["third"]>, string> = {
+  light: "lightest third",
+  middle: "middle third",
+  heavy: "heaviest third",
+};
+
+const PATH_LABEL: Record<NonNullable<BoxelTableRowDTO["bioOdds"]>["path"], string> = {
+  A: "a system whose age comes from the boxel's window",
+  young: "a young system",
+  old: "an old system",
+};
+
+/** "≈ 5 %" for a system nobody has recorded biology in: the share of systems on its age path that hold some. */
+function BioOddsCell({ odds }: { odds: NonNullable<BoxelTableRowDTO["bioOdds"]> }) {
+  const pct = (x: number) => `${(x * 100).toFixed(x < 0.1 ? 1 : 0)} %`;
+  const ratio = odds.average > 0 ? odds.chance / odds.average : 1;
+  const star = odds.third ? `, its arrival star born among the ${THIRD_LABEL[odds.third]} of its mass code` : "";
+  const title =
+    `Nothing recorded here. By its address it is ${PATH_LABEL[odds.path]}${star}: ${pct(odds.chance)} of such systems hold a body with biology, ` +
+    `against ${pct(odds.average)} for every system of this mass code (Spansh's galaxy dump).`;
+  return (
+    <span className={`boxel-from-index${ratio >= 1.3 ? " boxel-bio-likelier" : ""}`} title={title}>
+      ≈ {pct(odds.chance)}
+    </span>
+  );
 }

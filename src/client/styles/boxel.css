@@ -324,6 +324,10 @@
   color: inherit;
   font-weight: 600;
 }
+/* A system whose age path makes biology clearly likelier than the mass code's average (owner 2026-11-28). */
+.boxel-from-index.boxel-bio-likelier {
+  color: var(--accent);
+}
 
 /* One search bar and what it searches (owner, 2026-10-05). */
 .boxel-filter {

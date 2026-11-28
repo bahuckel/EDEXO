@@ -80,7 +80,9 @@ export function BoxelOrderLine({ b }: { b: SavedBoxelDTO }) {
             ? `The boxel's kind was read from ${b.predictedChecked.toLocaleString("en-US")} real ${b.predictedChecked === 1 ? "position" : "positions"}: such predictions are exact for ${Math.round(b.predictedExact * 100)} % of systems.`
             : b.predictedExact >= 0.98
               ? `Such predictions are exact for ${Math.round(b.predictedExact * 100)} % of systems.`
-              : `No real position in this boxel is known yet, so its kind is a guess: exact for about ${Math.round(b.predictedExact * 100)} % of systems in a mass code ${suffix.replace(/\d+-?$/, "")} boxel this crowded, about half the boxel off for the rest. Flying into the boxel or plotting a route to one of its systems settles it.`}{" "}
+              : b.predictedNeighbours
+                ? `No real position in this boxel is known yet, so its kind is taken from ${b.predictedNeighbours.toLocaleString("en-US")} ${b.predictedNeighbours === 1 ? "boxel" : "boxels"} of its sector you have flown or plotted (neighbouring boxels share it): exact for about ${Math.round(b.predictedExact * 100)} % of systems. Flying into the boxel or plotting a route to one of its systems settles it.`
+                : `No real position in this boxel is known yet, so its kind is a guess: exact for about ${Math.round(b.predictedExact * 100)} % of systems in a mass code ${suffix.replace(/\d+-?$/, "")} boxel this crowded, about half the boxel off for the rest. Flying into the boxel or plotting a route to one of its systems settles it.`}{" "}
           A plotted route or a Spansh look-up replaces a prediction.{" "}
         </span>
       ) : null}

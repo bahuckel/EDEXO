@@ -543,7 +543,8 @@ Built on these communities' work, none of them affiliated with this project:
   tables, the nebula and Guardian-site coordinates, carriers, points of interest and galactic records.
 - **[ED-Procgen_ID64-XYZ](https://github.com/Intergalactic-Astronomical-Union/ED-Procgen_ID64-XYZ)** — the
   rules behind the predicted system positions of a boxel (the hash and the dice a system's place is rolled with),
-  used as the reference; no source of it is in EDEXO.
+  used as the reference; no source of it is in EDEXO. Its authors' **[publications](https://github.com/Intergalactic-Astronomical-Union/publications)**
+  (public domain) give the catalogue systems the predicted positions are placed around.
 - **zannyuk** — the galaxy map's picture of the Milky Way, a galaxy map made entirely of in-game screenshots
   and [shared on r/EliteDangerous](https://www.reddit.com/r/EliteDangerous/comments/4b95yy/65k_resolution_galaxy_map_made_entirely_of_ingame/) for anyone to use.
 - **[Canonn Research Group](https://canonn.science)** — the optional upload of your discoveries. Its

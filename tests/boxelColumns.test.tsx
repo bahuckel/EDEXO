@@ -92,3 +92,44 @@ describe("the Main star column", () => {
     expect(main.value(row({}))).toBeNull();
   });
 });
+
+describe("the Biology column", () => {
+  const bio = boxelColumns({
+    byId: new Map(),
+    order: new Map(),
+    knownMax: new Map(),
+    openRow: () => undefined,
+    patch: async () => undefined,
+    setCutAsk: () => undefined,
+  }).find((c) => c.key === "bio")!;
+  const shown = (r: BoxelTableRowDTO) => {
+    act(() => root.render(<>{bio.render(r)}</>));
+    return host.textContent ?? "";
+  };
+
+  it("gives a system with nothing recorded the chance its age path holds biology (owner 2026-11-28)", () => {
+    const young = row({ bio: null, bioOdds: { chance: 0.0594, path: "young", third: "light", average: 0.0325 } });
+    expect(shown(young)).toBe("≈ 5.9 %");
+    expect(bio.value(young)).toBe(0.0594);
+    const cell = host.querySelector("[title]")!;
+    expect(cell.className).toContain("boxel-bio-likelier");
+    expect(cell.getAttribute("title")).toContain(
+      "By its address it is a young system, its arrival star born among the lightest third of its mass code: 5.9 % of such systems hold a body with biology",
+    );
+    expect(cell.getAttribute("title")).toContain("against 3.3 % for every system of this mass code");
+    // Path A in e is less likely than the average: not marked.
+    shown(row({ bio: null, bioOdds: { chance: 0.0215, path: "A", average: 0.0325 } }));
+    expect(host.querySelector("[title]")!.className).not.toContain("boxel-bio-likelier");
+  });
+
+  it("keeps what is recorded before any chance", () => {
+    const seen = row({
+      bio: { signals: 2, seen: true, species: ["Stratum Tectonicas"] },
+      bioOdds: { chance: 0.05, path: "young", average: 0.03 },
+    });
+    expect(shown(seen)).toBe("2 signals: Stratum Tectonicas");
+    expect(bio.value(seen)).toBe(1002);
+    expect(shown(row({ bio: null }))).toBe("—");
+    expect(bio.value(row({ bio: null }))).toBeNull();
+  });
+});

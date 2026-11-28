@@ -214,15 +214,19 @@ export interface BoxelPlacement {
  * The predicted position of every system 0 to `upTo` of a boxel, light years; null for a mass code that is not
  * predicted. `known`: real positions (visited, plotted, looked up), which set the chain right for the systems
  * after them. The answer holds a prediction for the known ones too, so a caller can compare. `kind`: the boxel's
- * kind, from {@link boxelKindFrom} or {@link likelyBoxelKind}.
+ * kind, from {@link boxelKindFrom} or {@link likelyBoxelKind}. `notRolled`: system numbers the dice do not place
+ * (catalogue stars, server/boxelCatalogue.ts): with a known position, such a system takes its cell and is the one
+ * the next system sees, and it gets no prediction and no dice position (its star is not the dice's either).
+ * Measured: docs/boxel-star-placement-23112026.md §3m (mass code d misses 1,422 → 133).
  */
 export function predictBoxelPositions(
   frame: BoxelFrame,
   upTo: number,
   known?: ReadonlyMap<number, Vec3>,
   kind: BoxelKind = "normal",
+  notRolled?: ReadonlySet<number>,
 ): Map<number, Vec3> | null {
-  return predictBoxelPlacement(frame, upTo, known, kind)?.positions ?? null;
+  return predictBoxelPlacement(frame, upTo, known, kind, notRolled)?.positions ?? null;
 }
 
 /** {@link predictBoxelPositions}, with where each system's dice stand after its placement. */
@@ -231,6 +235,7 @@ export function predictBoxelPlacement(
   upTo: number,
   known?: ReadonlyMap<number, Vec3>,
   kind: BoxelKind = "normal",
+  notRolled?: ReadonlySet<number>,
 ): BoxelPlacement | null {
   if (!placementKnown(frame.code) || !(upTo >= 0)) return null;
   const mc = MASS_CODE_LETTERS.indexOf(frame.code);
@@ -244,7 +249,19 @@ export function predictBoxelPlacement(
   let prev: readonly number[] = [0, 0, 0];
   const out = new Map<number, Vec3>();
   const after = new Map<number, number>();
+  const stepsOf = (p: Vec3 | undefined): number[] | null => {
+    const steps = p?.map((q, i) => Math.round((q - frame.origin[i]!) * STEPS_PER_LY));
+    return steps && steps.every((s) => s >= 0 && s < boxelSteps) ? steps : null;
+  };
   for (let n = 0; n <= upTo; n++) {
+    // A catalogue star: not placed by the dice, but where it is, it takes its cell and the next system starts from it.
+    const fixed = notRolled?.has(n) ? stepsOf(known?.get(n)) : null;
+    if (fixed) {
+      const cell = fixed.map((s) => Math.floor(s / stepsPerCell));
+      taken.add(key(cell));
+      prev = cell;
+      continue;
+    }
     const v = systemRolls(frame.base | (BigInt(n) << frame.shift));
     const phase = (mc === 0 ? v[2]! : v[1]!) % 100 <= 50 ? 7 : 8;
     // g goes anywhere, always, and so does every system of a scatter boxel; the rest roll for it. The first try's
@@ -277,9 +294,8 @@ export function predictBoxelPlacement(
     out.set(n, [along(0), along(1), along(2)]);
     after.set(n, cellAt + 6);
     // The real position, when known, is what the next system sees.
-    const real = known?.get(n);
-    const steps = real?.map((p, i) => Math.round((p - frame.origin[i]!) * STEPS_PER_LY));
-    if (steps && steps.every((s) => s >= 0 && s < boxelSteps)) {
+    const steps = stepsOf(known?.get(n));
+    if (steps) {
       cell = steps.map((s) => Math.floor(s / stepsPerCell));
       // Which try it was says how it was placed: its offsets follow that try's cell rolls.
       anywhere = false;
@@ -306,18 +322,25 @@ export function predictBoxelPlacement(
 export function boxelKindFrom(
   frame: BoxelFrame,
   known: ReadonlyMap<number, Vec3>,
+  notRolled?: ReadonlySet<number>,
 ): { kind: BoxelKind; checked: number; hits: number } | null {
   if (!placementKnown(frame.code) || !known.size) return null;
   let upTo = -1;
-  for (const n of known.keys()) if (Number.isInteger(n) && n > upTo) upTo = n;
+  let checked = 0;
+  for (const n of known.keys()) {
+    if (Number.isInteger(n) && n > upTo) upTo = n;
+    if (!notRolled?.has(n)) checked++;
+  }
+  // A catalogue star tells nothing about the kind: the dice do not place it.
+  if (!checked) return null;
   const score = (kind: BoxelKind): number => {
-    const guess = predictBoxelPositions(frame, upTo, known, kind);
+    const guess = predictBoxelPositions(frame, upTo, known, kind, notRolled);
     let hits = 0;
-    for (const [n, real] of known) if (guess?.get(n)?.every((v, i) => v === real[i])) hits++;
+    for (const [n, real] of known) if (!notRolled?.has(n) && guess?.get(n)?.every((v, i) => v === real[i])) hits++;
     return hits;
   };
   const normal = score("normal");
   const scatter = score("scatter");
   if (normal === scatter) return null;
-  return { kind: scatter > normal ? "scatter" : "normal", checked: known.size, hits: Math.max(normal, scatter) };
+  return { kind: scatter > normal ? "scatter" : "normal", checked, hits: Math.max(normal, scatter) };
 }

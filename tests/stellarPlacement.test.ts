@@ -29,6 +29,7 @@ import {
   setBoxelFlownSource,
   setBoxelLookupSource,
   setBoxelSectorSource,
+  setBoxelSeenEverywhereSource,
 } from "../src/server/boxelPositions.js";
 import type { BoxelLookupRecord } from "../src/server/boxelLookup.js";
 
@@ -283,6 +284,37 @@ describe("a boxel's positions for the shortest order", () => {
     expect(s.predicted.size).toBe(201);
     expect(s.exact).toBe(PLACEMENT_EXACT_KNOWN_KIND);
     expect(s.checked).toBe(0);
+  });
+
+  it("takes an unvisited boxel's kind from the boxels of its sector he has flown (owner 2026-11-28)", () => {
+    // The real scatter b boxel of the golden file is the one flown; its neighbour in the same sector has no position
+    // of its own. Without the flown boxel the neighbour's kind is a crowding guess (normal: wrong here, §3m).
+    const b = golden.kinds.find((k) => k.code === "b" && k.kind === "scatter")!;
+    const frame = boxelFrame(b.systems[0]![0])!;
+    const parsed = parseBoxel(b.systems[0]![1])!;
+    const sector = [0, 1, 2].map((i) => Math.floor((frame.origin[i]! + [49985, 40985, 24105][i]!) / 1280)) as [number, number, number];
+    setBoxelSectorSource((s) => (s === parsed.sector ? sector : null));
+    const target = `${parsed.sector} ${parsed.prefix.endsWith("AA-A b") ? "BA-A" : "AA-A"} b`;
+    expect(target).not.toBe(parsed.prefix);
+    // Listed to 200 the crowding guess is a coin toss (45.5 % of such b boxels are scatter): nothing predicted.
+    expect(boxelPositionSet(target, 200).predicted.size).toBe(0);
+    const flown = b.systems.map((r) => ({ n: numberOf(r[1]), address: Number(r[0]), pos: real(r) }));
+    setBoxelSeenEverywhereSource(() => ({ size: flown.length, systems: flown }));
+    const s = boxelPositionSet(target, 200);
+    expect(s.neighbours).toBe(1);
+    expect(s.checked).toBe(0);
+    // One boxel voting, b: right for 82.7 %; a wrong kind leaves every system off, so that share alone.
+    expect(s.exact).toBeCloseTo(0.99 * 0.827, 6);
+    const scatter = predictBoxelPositions(s.frame!, 200, undefined, "scatter")!;
+    for (let n = 0; n <= 200; n++) expect(s.positions.get(n)).toEqual(scatter.get(n));
+    // Listed to 10 the crowding guess (normal for 99.5 % of such b boxels) beats one vote: it stays.
+    const sparse = boxelPositionSet(target, 10);
+    expect(sparse.neighbours).toBe(0);
+    expect(sparse.exact).toBeCloseTo(0.99 * 0.995, 6);
+    // The flown boxel itself keeps reading its kind from its own positions.
+    setBoxelFlownSource((p) => (p === parsed.prefix ? flown : []));
+    expect(boxelPositionSet(parsed.prefix, b.systems.length - 1).neighbours).toBe(0);
+    setBoxelSeenEverywhereSource(null);
   });
 
   it("predicts nothing where the kind would be a coin toss", () => {

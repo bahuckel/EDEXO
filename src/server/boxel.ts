@@ -202,6 +202,11 @@ export function boxelTable(opts: {
     b: SavedBoxelDTO,
     scans: ReadonlyMap<number, ArrivalStarScan>,
   ) => Omit<BoxelStarCheckDTO, "boxelId"> | null;
+  /**
+   * System number → how often a system on its age path holds biology (shared/bioByAgePath.ts), for a boxel whose
+   * addresses are known; null: not known. Shown on systems not flown with no biology recorded.
+   */
+  bioOdds?: (b: SavedBoxelDTO) => ((n: number) => NonNullable<BoxelTableRowDTO["bioOdds"]> | null) | null;
 }): BoxelTableDTO {
   const lookups: BoxelTableDTO["lookups"] = [];
   const starChecks: BoxelStarCheckDTO[] = [];
@@ -239,6 +244,7 @@ export function boxelTable(opts: {
       if (check) starChecks.push({ boxelId: b.id, ...check });
     }
     const skipped = new Set(b.skipped);
+    const oddsOf = opts.bioOdds?.(b) ?? null;
     const looked = opts.lookup?.(b.prefix) ?? null;
     const foundAny = !!looked && Object.keys(looked.systems).length > 0;
     if (looked)
@@ -351,6 +357,11 @@ export function boxelTable(opts: {
       if (!flown && row.from == null && gapless && n < highestKnown) row.gap = true;
       const predictedStar = row.mainStar == null ? predictedStars?.get(n) : undefined;
       if (predictedStar) row.predictedStar = predictedStar;
+      // Nothing known of its biology: the chance its age path gives (owner 2026-11-28).
+      if (oddsOf && !flown && !row.bio?.seen && !row.bio?.species.length) {
+        const odds = oddsOf(n);
+        if (odds) row.bioOdds = odds;
+      }
       rows.push(row);
       for (const sp of new Set(indexSpecies)) tally.set(sp, (tally.get(sp) ?? 0) + 1);
     }

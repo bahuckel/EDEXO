@@ -465,6 +465,47 @@ describe("predicted stars in the Boxels table (star predictor step E, 2026-11-24
     expect(none.starChecks).toBeUndefined();
   });
 
+  it("gives a system not flown and with no biology recorded its age path's chance of biology (owner 2026-11-28)", async () => {
+    const { boxelTable } = await import("../src/server/boxel.js");
+    const odds = { chance: 0.0508, path: "young" as const, average: 0.0325 };
+    const asked: number[] = [];
+    const t = boxelTable({
+      boxels: [{ id: "a", prefix: "Eol Prou AB-C d1-", end: 2, skipped: [], boxel: "AB-C d1", sector: "Eol Prou" } as never],
+      index: null,
+      visited: [[11, "Eol Prou AB-C d1-0"]],
+      speciesName: (id) => id,
+      journal: () => ({
+        mainStar: "F5 V",
+        otherStars: [],
+        starClasses: ["F"],
+        bodies: { scanned: 1, total: 1 },
+        notables: [],
+        bodyTypes: [],
+        bio: { signals: 0, species: [] },
+      }),
+      bioOdds: () => (n) => {
+        asked.push(n);
+        return odds;
+      },
+    });
+    // Flown systems speak for themselves; the rest get the chance.
+    expect(t.rows.map((r) => [r.n, r.bioOdds ?? null])).toEqual([
+      [0, null],
+      [1, odds],
+      [2, odds],
+    ]);
+    expect(asked).toEqual([1, 2]);
+    // No address known for the boxel: nothing to read the path from.
+    const none = boxelTable({
+      boxels: [{ id: "a", prefix: "Eol Prou AB-C d1-", end: 1, skipped: [], boxel: "AB-C d1", sector: "Eol Prou" } as never],
+      index: null,
+      visited: [],
+      speciesName: (id) => id,
+      bioOdds: () => null,
+    });
+    expect(none.rows.every((r) => r.bioOdds === undefined)).toBe(true);
+  });
+
   it("carries the check of those predictions against his scans, per boxel", async () => {
     const { boxelTable } = await import("../src/server/boxel.js");
     const scan = { starType: "F", stellarMass: 1.2, temperature: 6500 };

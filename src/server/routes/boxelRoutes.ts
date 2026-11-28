@@ -6,12 +6,17 @@ import { localOnly, requestIsFromThisPc } from "../lanAuth.js";
 import { boxelSystems, boxelTable, previousBoxelsPage, type SystemStats } from "../boxel.js";
 import { boxelIndexOf, parseBoxel, type SavedBoxelDTO } from "../../shared/boxel.js";
 import { shortestBoxelOrder } from "../../shared/boxelOrder.js";
+import { bioOddsOf } from "../../shared/bioByAgePath.js";
 import {
+  boxelFrameFor,
   boxelPositionSet,
+  setBoxelCatalogueSource,
   setBoxelFlownSource,
   setBoxelLookupSource,
   setBoxelSectorSource,
+  setBoxelSeenEverywhereSource,
 } from "../boxelPositions.js";
+import { catalogueSystemsIn, loadCatalogueTable } from "../boxelCatalogue.js";
 import type { Vec3 } from "../../shared/boxelOrder.js";
 import { createBoxelLookups } from "../boxelLookup.js";
 import { setGalaxyHuntLookupService } from "../galaxyHuntLookups.js";
@@ -130,14 +135,22 @@ export function registerBoxelRoutes(
     return sectorCells.get(sector.toLowerCase()) ?? null;
   });
   /*
+    Catalogue stars by boxel (data/boxel/boxel-catalogue.bin, server/boxelCatalogue.ts): real positions the dice do
+    not make, read on the first question. A build without the file predicts as before.
+  */
+  setBoxelCatalogueSource((base) => {
+    const table = loadCatalogueTable(ctx.root);
+    return table ? catalogueSystemsIn(table, base) : new Map();
+  });
+  /*
     The systems he has flown, by boxel, with the journals' own positions: seen positions for the predictions
     (server/boxelPositions.ts). Built once per journal store and again when a system is added.
   */
   let flown: { store: GameStateStore; size: number; by: Map<string, { n: number; address: number; pos: Vec3 }[]> } | null =
     null;
-  setBoxelFlownSource((prefix) => {
+  const flownBy = (): typeof flown => {
     const store = opts.getJournalStore?.() ?? null;
-    if (!store) return [];
+    if (!store) return null;
     if (!flown || flown.store !== store || flown.size !== store.visitedSystems.size) {
       const by = new Map<string, { n: number; address: number; pos: Vec3 }[]>();
       for (const [address, name] of store.visitedSystems) {
@@ -151,7 +164,21 @@ export function registerBoxelRoutes(
       }
       flown = { store, size: store.visitedSystems.size, by };
     }
-    return flown.by.get(prefix.toLowerCase()) ?? [];
+    return flown;
+  };
+  setBoxelFlownSource((prefix) => flownBy()?.by.get(prefix.toLowerCase()) ?? []);
+  // Every boxel he has flown: their kinds guess the kind of an unvisited boxel of the same sector.
+  setBoxelSeenEverywhereSource(() => {
+    const f = flownBy();
+    if (!f) return { size: 0, systems: [] };
+    // Walked only when the count has changed (server/boxelPositions.ts keeps the grouping until then).
+    const by = f.by;
+    return {
+      size: f.size,
+      systems: (function* () {
+        for (const list of by.values()) yield* list;
+      })(),
+    };
   });
   /*
     Systems known to exist without being flown (auto-boxel detector, owner 2026-10-06): every route he
@@ -227,7 +254,12 @@ export function registerBoxelRoutes(
       })),
       placed: o.placed,
       ...(predicted && where.exact != null
-        ? { predicted, predictedExact: where.exact, predictedChecked: where.checked }
+        ? {
+            predicted,
+            predictedExact: where.exact,
+            predictedChecked: where.checked,
+            ...(where.neighbours ? { predictedNeighbours: where.neighbours } : {}),
+          }
         : {}),
       orderLy: o.orderLy,
       numericLy: o.numericLy,
@@ -310,6 +342,10 @@ export function registerBoxelRoutes(
         arrival: store ? (addr) => arrivalStarScan(store, addr) : undefined,
         stars: (b, scans) => boxelStarSet(b.prefix, b.end, hereOf(store), scans)?.stars ?? null,
         starCheck: (b, scans) => boxelStarCheck(b.prefix, b.end, hereOf(store), scans),
+        bioOdds: (b) => {
+          const frame = boxelFrameFor(b.prefix);
+          return frame ? (n) => bioOddsOf(frame.code, frame.base | (BigInt(n) << frame.shift)) : null;
+        },
       }),
     });
   });

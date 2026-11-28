@@ -215,6 +215,11 @@ export interface SavedBoxelDTO {
   predicted?: number;
   predictedExact?: number;
   predictedChecked?: number;
+  /**
+   * With no real position of its own, how many other boxels of its sector (flown or plotted) the kind was taken from
+   * (server/boxelPositions.ts; absent: not taken that way).
+   */
+  predictedNeighbours?: number;
   orderLy?: number;
   numericLy?: number;
 }
@@ -282,6 +287,12 @@ export interface BoxelTableRowDTO {
   bodyTypes: string[];
   /** Biology signals (null: not counted), whether any were seen, and the species logged there. */
   bio: { signals: number | null; seen: boolean; species: string[] } | null;
+  /**
+   * Not flown and no biology recorded: how often a system on the same age path, with an arrival star born as heavy
+   * (thirds of the mass code), holds biology, by its address (shared/bioByAgePath.ts), with the mass code's average;
+   * absent for mass codes f to h.
+   */
+  bioOdds?: { chance: number; path: "A" | "young" | "old"; third?: "light" | "middle" | "heavy"; average: number };
 }
 
 export interface BoxelTableDTO {
