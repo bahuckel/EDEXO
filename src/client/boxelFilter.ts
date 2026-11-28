@@ -6,7 +6,8 @@
  * Plain substring matching, never a scattered fuzzy one: a filter has to say yes or no, and "helium
  * gas giant" must never take in a Helium-rich one (the body types name only the exact class).
  */
-import type { BoxelTableRowDTO } from "@shared/boxel";
+import type { BoxelTableRowDTO, PredictedStarDTO } from "@shared/boxel";
+import { predictedStarKeys, predictedStarLabel } from "./boxel/boxelLabels";
 import { BODY_TRAITS, STAR_CLASSES } from "@shared/galaxyTraits";
 import { NOTABLE_KINDS, type NotableKind } from "@shared/notices";
 
@@ -15,7 +16,7 @@ export type BoxelFilterKind = "system" | "body" | "star" | "species";
 export const BOXEL_FILTER_KINDS: readonly { value: BoxelFilterKind; label: string; hint: string }[] = [
   { value: "system", label: "System name", hint: "e.g. d1-12" },
   { value: "body", label: "Body type", hint: "e.g. Earth-like, Water world, Helium gas giant, green" },
-  { value: "star", label: "Star type", hint: "e.g. K, neutron, T Tauri, giant" },
+  { value: "star", label: "Star type", hint: "e.g. K, neutron, T Tauri, giant (≈ predicted ones too)" },
   { value: "species", label: "Exobio species", hint: "e.g. Stratum, Tussock Ignis, Anemone" },
 ];
 
@@ -70,9 +71,18 @@ export function boxelRowFilter(kind: BoxelFilterKind, raw: string): (r: BoxelTab
       return (r) => !!r.bio?.species.some((s) => s.toLowerCase().includes(q));
     case "star": {
       const keys = starQuery(q);
+      /*
+        A star nobody recorded, as its address predicts it (shown "≈"; plan §6j): by the classes it answers to when
+        the query names one, else by its words ("small star", "neutron star or black hole").
+      */
+      const predicted = (p: PredictedStarDTO) =>
+        keys.size
+          ? predictedStarKeys(p).some((k) => keys.has(k))
+          : predictedStarLabel(p).text.toLowerCase().includes(q);
       return (r) =>
         r.starClasses.some((k) => keys.has(k)) ||
-        [r.mainStar, ...r.otherStars].some((s) => !!s && s.toLowerCase().includes(q));
+        [r.mainStar, ...r.otherStars].some((s) => !!s && s.toLowerCase().includes(q)) ||
+        (!r.mainStar && !!r.predictedStar && predicted(r.predictedStar));
     }
     case "body": {
       const { traits, kinds } = bodyQuery(q);

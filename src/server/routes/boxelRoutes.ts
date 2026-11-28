@@ -22,6 +22,7 @@ import { createBoxelLookups } from "../boxelLookup.js";
 import { setGalaxyHuntLookupService } from "../galaxyHuntLookups.js";
 import { arrivalStarScan, boxelJournalFacts, notableBodiesForSystem, systemBodyTally } from "../snapshotSystemInfo.js";
 import { boxelArrivalScans, boxelStarCheck, boxelStarSet } from "../boxelStars.js";
+import { logBoxelStarMisses } from "../boxelStarMissLog.js";
 import type { GameStateStore } from "../gameState.js";
 import { getCachedSpeciesDatabase } from "../snapshot.js";
 import path from "node:path";
@@ -341,7 +342,11 @@ export function registerBoxelRoutes(
         routed: sightings(store),
         arrival: store ? (addr) => arrivalStarScan(store, addr) : undefined,
         stars: (b, scans) => boxelStarSet(b.prefix, b.end, hereOf(store), scans)?.stars ?? null,
-        starCheck: (b, scans) => boxelStarCheck(b.prefix, b.end, hereOf(store), scans),
+        starCheck: (b, scans) => {
+          const check = boxelStarCheck(b.prefix, b.end, hereOf(store), scans);
+          if (check?.misses.length) logBoxelStarMisses(b.prefix, check.misses, scans);
+          return check;
+        },
         bioOdds: (b) => {
           const frame = boxelFrameFor(b.prefix);
           return frame ? (n) => bioOddsOf(frame.code, frame.base | (BigInt(n) << frame.shift)) : null;

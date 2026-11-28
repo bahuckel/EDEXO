@@ -8,7 +8,7 @@ import { CopySystemButton } from "../CopySystemButton";
 import { Tooltip } from "../ui/Tooltip";
 import type { Column } from "../ui/DataTable";
 import { NOTABLE_SHORT } from "../boxelFilter";
-import { fromIndex, NOTABLE_LABEL, OTHER_STARS_SHOWN, predictedStarLabel } from "./boxelLabels";
+import { fromIndex, mainStarSortKey, NOTABLE_LABEL, OTHER_STARS_SHOWN, predictedStarLabel } from "./boxelLabels";
 import { Done } from "../ui/glyphs";
 
 export function boxelColumns({
@@ -85,6 +85,7 @@ export function boxelColumns({
       title:
         "Flown: the arrival star as you scanned it. Not flown: its class in the galaxy index (no luminosity). ≈: recorded nowhere, the class the system's address predicts",
       value: (r) => r.mainStar ?? (r.predictedStar ? `≈ ${r.predictedStar.stage ?? r.predictedStar.cls}` : null),
+      sortValue: mainStarSortKey,
       render: (r) => {
         const notOnSpansh =
           r.notOnSpansh && !r.from ? (

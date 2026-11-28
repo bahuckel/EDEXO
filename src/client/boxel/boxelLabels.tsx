@@ -80,6 +80,49 @@ export function predictedStarLabel(p: PredictedStarDTO): { text: string; short: 
   };
 }
 
+/**
+ * The Star type filter's keys (STAR_CLASSES) a predicted star answers to: its class while it is itself, or what its
+ * age has made of it. A small star in another's place names no class (a K, M or L dwarf, which one is not told): it
+ * answers to "small" only.
+ */
+export function predictedStarKeys(p: PredictedStarDTO): string[] {
+  switch (p.stage) {
+    case "giant":
+      return ["SG"];
+    case "whiteDwarf":
+      return ["D"];
+    case "neutron":
+      return ["N"];
+    case "collapsed":
+      return ["N", "H"];
+    case "small":
+      return [];
+    default:
+      return [p.cls];
+  }
+}
+
+const STAR_RANK = new Map(STAR_CLASSES.map((c, i) => [c.key, i]));
+
+/**
+ * The Main star column's sort: classes in spectral order (O, B, A … Y, then T Tauri, Herbig, Wolf-Rayet, carbon,
+ * white dwarfs, neutron stars, black holes, giants), a recorded star by its subclass, a predicted one ("≈") after the
+ * recorded ones of its class, likely ones last. A small star in another's place sorts with the M dwarfs. Null: nothing
+ * recorded or predicted.
+ */
+export function mainStarSortKey(r: BoxelTableRowDTO): number | null {
+  if (r.mainStar) {
+    const i = STAR_RANK.get(r.starClasses[0] ?? "");
+    if (i == null) return STAR_CLASSES.length * 100;
+    const sub = /^[A-Za-z]+(\d)/.exec(r.mainStar)?.[1];
+    return i * 100 + (sub ? Number(sub) : 0);
+  }
+  const p = r.predictedStar;
+  if (!p) return null;
+  const i = STAR_RANK.get(p.stage === "small" ? "M" : (predictedStarKeys(p)[0] ?? "")) ?? STAR_CLASSES.length;
+  return i * 100 + 50 + (p.likely ? 10 : 0);
+}
+
 /** A scanned star in the words of the check (shared/boxel.ts `BoxelStarCheckDTO.real`). */
 export const scannedStarText = (real: string): string =>
   (

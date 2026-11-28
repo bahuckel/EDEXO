@@ -45,6 +45,26 @@ describe("the Boxels filter", () => {
     expect(boxelRowFilter("star", "k5")(r)).toBe(true);
   });
 
+  it("Star type: a predicted star (≈) by the classes it answers to, or by its words", () => {
+    const k = row({ flown: false, from: null, predictedStar: { cls: "K", right: 0.97 } });
+    const dead = row({ flown: false, from: null, predictedStar: { cls: "B", right: 0.9, stage: "collapsed" } });
+    const small = row({ flown: false, from: null, predictedStar: { cls: "A", right: 0.9, stage: "small", likely: true } });
+    expect(boxelRowFilter("star", "K")(k)).toBe(true);
+    expect(boxelRowFilter("star", "G")(k)).toBe(false);
+    // "neutron star or black hole" answers to both, never to the class it was born with.
+    expect(boxelRowFilter("star", "neutron")(dead)).toBe(true);
+    expect(boxelRowFilter("star", "black hole")(dead)).toBe(true);
+    expect(boxelRowFilter("star", "B")(dead)).toBe(false);
+    // A small star in another's place names no class: its words only, and "g" asks for class G, not "giant".
+    expect(boxelRowFilter("star", "small")(small)).toBe(true);
+    expect(boxelRowFilter("star", "M")(small)).toBe(false);
+    expect(boxelRowFilter("star", "A")(small)).toBe(false);
+    expect(boxelRowFilter("star", "g")(row({ flown: false, from: null, predictedStar: { cls: "B", right: 0.9, stage: "giant" } }))).toBe(false);
+    expect(boxelRowFilter("star", "giant")(row({ flown: false, from: null, predictedStar: { cls: "B", right: 0.9, stage: "giant" } }))).toBe(true);
+    // A recorded main star wins: the prediction is not asked.
+    expect(boxelRowFilter("star", "K")(row({ mainStar: "G2 V", starClasses: ["G"], predictedStar: { cls: "K", right: 0.97 } }))).toBe(false);
+  });
+
   it("Exobio species and System name: plain substrings, an empty query lets all through", () => {
     const r = row({ bio: { signals: 2, seen: true, species: ["Stratum Tectonicas"] } });
     expect(boxelRowFilter("species", "stratum")(r)).toBe(true);

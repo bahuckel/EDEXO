@@ -93,6 +93,28 @@ describe("the Main star column", () => {
   });
 });
 
+describe("the Main star column's sort", () => {
+  it("goes in spectral order, a predicted star after the recorded ones of its class, the CSV keeping the words", () => {
+    const rows = [
+      row({ n: 1, mainStar: "M3 V", starClasses: ["M"] }),
+      row({ n: 2, predictedStar: { cls: "K", right: 0.97 } }),
+      row({ n: 3, mainStar: "K5 V", starClasses: ["K"] }),
+      row({ n: 4, mainStar: "K0 V", starClasses: ["K"] }),
+      row({ n: 5, predictedStar: { cls: "K", right: 0.9, likely: true } }),
+      row({ n: 6, predictedStar: { cls: "B", right: 0.95, stage: "neutron" } }),
+      row({ n: 7, mainStar: "F8 V", starClasses: ["F"] }),
+      row({ n: 8, predictedStar: { cls: "A", right: 0.9, stage: "small" } }),
+      row({ n: 9 }),
+    ];
+    const key = main.sortValue!;
+    const at = (r: BoxelTableRowDTO) => Number(key(r) ?? 1e9);
+    const order = [...rows].sort((a, b) => at(a) - at(b)).map((r) => r.n);
+    expect(order).toEqual([7, 4, 3, 2, 5, 1, 8, 6, 9]);
+    expect(key(rows[8]!)).toBeNull();
+    expect(main.value(rows[5]!)).toBe("≈ neutron");
+  });
+});
+
 describe("the Biology column", () => {
   const bio = boxelColumns({
     byId: new Map(),

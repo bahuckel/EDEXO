@@ -21,8 +21,10 @@ export interface Column<T> {
   label: string;
   /** Right-aligned, tabular figures — every numeric column. */
   numeric?: boolean;
-  /** Sort key. Null sorts last whichever way the column is pointing. */
+  /** Sort key (and the CSV field). Null sorts last whichever way the column is pointing. */
   value: (r: T) => number | string | null;
+  /** A sort key of its own, where the CSV field (`value`) would sort wrong: star classes in spectral order. */
+  sortValue?: (r: T) => number | string | null;
   render: (r: T) => React.ReactNode;
   title?: string;
 }
@@ -97,9 +99,10 @@ function TableInner<T>({
   const sorted = useMemo(() => {
     const col = columns.find((c) => c.key === sort.key) ?? columns[0]!;
     const out = [...rows];
+    const key = col.sortValue ?? col.value;
     out.sort((a, b) => {
-      const av = col.value(a);
-      const bv = col.value(b);
+      const av = key(a);
+      const bv = key(b);
       // Null is "not measured", never "zero" — it sorts to the bottom either way, so pointing a
       // column the other way does not fill the top of the screen with blanks.
       if (av == null && bv == null) return 0;

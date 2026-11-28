@@ -275,7 +275,10 @@ export interface BoxelTableRowDTO {
   notOnSpansh?: boolean;
   /** "K5 V" from a scan, "K" from the index or the jump. */
   mainStar: string | null;
-  /** No main star recorded anywhere: the one its address predicts. Never part of `starClasses` (the filter). */
+  /**
+   * No main star recorded anywhere: the one its address predicts. Never part of `starClasses`: the Star type filter
+   * asks it on its own (client/boxelFilter.ts), so a recorded class is never confused with a predicted one.
+   */
   predictedStar?: PredictedStarDTO;
   otherStars: string[];
   /** STAR_CLASSES keys of every star, main first (the Star type filter). */

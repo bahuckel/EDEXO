@@ -25,6 +25,7 @@ const RAW: Record<string, string> = {
   "src/server/exobioUnknown.ts": "appends to a log",
   "src/server/gggResearch.ts": "appends to a log",
   "src/server/scanLocateLog.ts": "appends to a log",
+  "src/server/boxelStarMissLog.ts": "appends to a log",
   "src/server/predictionAuditLog.ts": "appends to the change log; an unreadable log moved aside",
   "electron/diag.cjs": "the startup diagnostics log and a profile dump",
   "electron/hudWindows.cjs": "appends to the HUD log",

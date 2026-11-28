@@ -168,6 +168,14 @@ export function resolveExoOutlierLogPath(): string {
 }
 
 /**
+ * Arrival stars the Boxels screen's self-check predicted wrong (boxelStarMissLog.ts; plan §6j "a log of the misses").
+ * Beside the outlier log for the same reason: first-hand evidence a cache rebuild must not take.
+ */
+export function resolveBoxelStarMissLogPath(): string {
+  return join(dirname(resolveUserSettingsJsonPath()), "edexo-star-misses.jsonl");
+}
+
+/**
  * The learned on-foot catalog: every `ScanOrganic` analyse the commander has completed.
  *
  * Beside the outlier log, and it took a public release to notice it was not. It used to live at
